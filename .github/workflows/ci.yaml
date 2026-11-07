@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
         with: { repository: PNNL-CIM-Tools/CIM-Builder, path: CIM-Builder }
       - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Graph-Topology-Processor, path: CIM-Graph-Topology-Processor }
+      - uses: actions/checkout@v4
         with: { repository: PNNL-CIM-Tools/CIM-Tables, path: CIM-Tables, token: "${{ secrets.CIM_REPOS_TOKEN }}" }
 
       - uses: actions/setup-python@v5

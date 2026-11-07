@@ -29,7 +29,17 @@ Profile: **cim18v17 only** (`cimhub_core.cimtbl.CIM_PROFILE`). No other profile 
 | I6 | **CIM 18 templates, never `*Info` catalogs.** `TransformerTankConfiguration`, `WireConfiguration`, `XYSpacing(isTemplate)`, `PerLengthImpedance`, the `WireInfo` family. `WireSpacingInfo` does not exist. |
 | I7 | **Four-ABC filesystem rule.** Mappers are pure (objects in, documents out). Only readers and writers touch the disk. |
 | I8 | **Fail fast.** Unknown fields, unmapped codes, unresolved references and untypeable cell text raise. IDs with `# ( ) ,` are quoted, never sanitized. Nothing is dropped silently. |
-| I9 | **Upstream first.** Core holds only what no upstream library provides. Check cimtables (`graph_write.set_attr`/`get_qty`, `impedance.z_base`, `diff_models`, `document.*`, `load_model`), cimbuilder, cimgraph, cimprofiles (units, identity) and cim-topology first. Missing upstream? File it in that repo's requests doc (`.development/CIMTABLES_REQUESTS.md` for cimtables). Never write a local stand-in. |
+| I9 | **Upstream first.** Core holds only what no upstream library provides. Check cimtables (`graph_write.set_attr`/`get_qty`, `impedance.z_base`, `diff_models`, `document.*`, `load_model`), cimbuilder, cimgraph, cimprofiles (units, identity) and cim-topology first. Missing upstream? File it in that repo's requests doc (`.development/UPSTREAM_REQUESTS.md`). Never write a local stand-in. |
+
+## Topology (before any artifact)
+
+Spanning trees, islands, voltage zones, sorting and BaseVoltage assignment come from `cimtopology.core`.
+It is format-agnostic and runs before any CIM exists. The spoke translates its own records into
+`Network(sources, branches, transformers, nodes)`, using `Source`, `Branch` and `Transformer` with one `Coil` per
+winding. Equipment names must be unique, so prefix by class. The orchestrator then calls `walk(network)` (bus →
+`BusSystem`, which carries the BaseVoltage mRID) or `Topology(network)` (`islands()`, `voltage_zones()`, `sort()`,
+`gaps()`). Format-only parsing, such as DSS `bus.1.2.3` node suffixes, stays in the spoke. Never write a
+local graph walk or union-find.
 
 ## Layout
 
@@ -82,7 +92,7 @@ def map_linecode(native) -> Document:
 ```
 
 - Signature: `map_<native_table>(native: SpokeGraphModel, ...) -> Document`. It reads the whole native graph and
-  mutates nothing. Inputs the orchestrator computes (the topology walk's `BusSystem`s, the container mRID) are explicit
+  mutates nothing. Inputs the orchestrator computes (the `BusSystem`s from `cimtopology.core.walk`, the container mRID) are explicit
   arguments: `map_transformer(native, buses, container)`. No module globals.
 - `Document.name` is the artifact stem (D4) = the LinkML schema module of the native class: `linecode`.
 - Every document passes `profile=CIM_PROFILE`; `cimtbl_to_cim` rejects a master without it.

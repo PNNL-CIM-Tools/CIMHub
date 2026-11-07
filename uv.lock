@@ -149,6 +149,27 @@ requires-dist = [
 provides-extras = ["sparql", "neo4j", "mysql", "gridappsd", "rdflib", "all", "dev"]
 
 [[package]]
+name = "cim-topology"
+version = "0.0.1a0"
+source = { editable = "../CIM-Graph-Topology-Processor" }
+dependencies = [
+    { name = "cim-graph" },
+    { name = "cimprofiles" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cim-graph", editable = "../CIM-Graph" },
+    { name = "cimprofiles", editable = "../CIM-Profiles" },
+    { name = "cimtables", marker = "extra == 'dev'", editable = "../CIM-Tables" },
+    { name = "gridappsd-python", marker = "extra == 'gridappsd'" },
+    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.25.1" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=2.17.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
+]
+provides-extras = ["gridappsd", "dev"]
+
+[[package]]
 name = "cimhub"
 version = "3.0.0a0"
 source = { virtual = "." }
@@ -181,6 +202,7 @@ version = "3.0.0a0"
 source = { editable = "cimhub_core" }
 dependencies = [
     { name = "cim-graph" },
+    { name = "cim-topology" },
     { name = "cimprofiles" },
     { name = "cimtables" },
     { name = "linkml-runtime" },
@@ -191,6 +213,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", editable = "../CIM-Graph" },
+    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimprofiles", editable = "../CIM-Profiles" },
     { name = "cimtables", editable = "../CIM-Tables" },
     { name = "linkml-runtime", specifier = "~=1.9.5" },

@@ -27,7 +27,7 @@ They call getters, and only shape the result into the native format.
    `None` means unset. `'pu'`/`'percent'` on an ohm or siemens attribute inverts `set_attr` through the same
    `cimtables.impedance.z_base`; `base='system'` forces the system base like `(pu system)`. Never re-implement it:
    no `* 1e3`, no local `z_base`, no `float(obj.r)` arithmetic. A missing feature goes to
-   `.development/CIMTABLES_REQUESTS.md` (I9).
+   `.development/UPSTREAM_REQUESTS.md` (I9).
 5. **Base selection is `z_base`'s, never the getter's:** a rated class uses its own `baseU`/`baseS` (winding) or
    `ratedU`/`ratedS` (end); a `From*` reference uses the From end (mesh impedance); an unrated class (`ACLineSegment`,
    `EnergySource`) uses its `BaseVoltage` and the system base power (`network.base_power`). A missing rating raises.

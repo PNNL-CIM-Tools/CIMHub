@@ -42,6 +42,9 @@ The `.cimtbl` format itself is defined by `cimtables` (its `CLAUDE.md`). Model c
 
 - `cimhub_core/`: the thin shared layer (`cimtbl.py`, `cimtbl_testing.py`, `base.py`, `codes.py`, `getters/`,
   `derived/`, `shapes/`). Spoke sessions don't edit core; they send requests to the core owner.
+- Topology (spanning trees, islands, voltage zones, sorting, BaseVoltage walk) is `cimtopology.core` from
+  CIM-Graph-Topology-Processor, which is format-agnostic. A spoke builds a `Network` from its native records and never
+  writes its own graph walk.
 - `cimhub_<fmt>/`: `schema/`, reader, writer, `importer/<fmt>_to_cimtbl.py` + `importer/cimtbl/<native_table>.py`,
   `exporter/`, `tests/atoms/`, `docs/CIMTBL_MAPPING.md`.
 - Only the cleared packages live here. Vendor-format spokes stay in the private CIMHub_2_0 repo and are never

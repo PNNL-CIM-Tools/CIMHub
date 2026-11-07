@@ -103,8 +103,8 @@ skills; the originals stay in the private CIMHub_2_0 as history.
 
 | verdict | modules (old repo `cimhub_core/src/cimhub_core/`) |
 |---|---|
-| COPY | `base.py`, `cimtbl.py`, `cimtbl_testing.py`, `graph_model.py`, `serialization.py`, `topology.py` (native BusGraph; cim-topology works on CIM models, so it is not a substitute), `names.py` (export naming only), `registry.py` (+ fail on duplicate keys), `scaffold.py` (then regenerate its templates), `get_utils/mermaid.py` (native diagrams; use `cimgraph.utils.mermaid` for CIM), `development/shapes/` → `cimhub_core/shapes/` |
-| REPLACE-WITH-UPSTREAM | `connectivity/` → `cimtables.connectivity` / `graph_write.resolve`; `transformations/transformers/per_unit.py` → `cimtables.impedance.z_base`, `get_qty`, `(pu system)` headers; `units.py` → `cimprofiles.units` (native aliases `sf`, `$` → filed upstream); limit setters → cimbuilder `OperationalLimitSetBuilder` |
+| COPY | `base.py`, `cimtbl.py`, `cimtbl_testing.py`, `graph_model.py`, `serialization.py`, `names.py` (export naming only), `registry.py` (+ fail on duplicate keys), `scaffold.py` (then regenerate its templates), `get_utils/mermaid.py` (native diagrams; use `cimgraph.utils.mermaid` for CIM), `development/shapes/` → `cimhub_core/shapes/` |
+| REPLACE-WITH-UPSTREAM | `topology.py` → `cimtopology.core` (decided 2026-11-07: topology is a shared need, so the format-agnostic LinkNet core in CIM-Graph-Topology-Processor owns spanning trees, islands, voltage zones, `sort()`, `gaps()` and the BaseVoltage `walk`. Spokes build a `cimtopology.core.Network` from native records); `connectivity/` → `cimtables.connectivity` / `graph_write.resolve`; `transformations/transformers/per_unit.py` → `cimtables.impedance.z_base`, `get_qty`, `(pu system)` headers; `units.py` → `cimprofiles.units` (native aliases `sf`, `$` → filed upstream); limit setters → cimbuilder `OperationalLimitSetBuilder` |
 | PORT (into fresh `getters/`) | base-frequency, operational-limit, shunt and tap-changer reads, rebuilt on `cimtables.get_qty` with cim18v17 attribute names |
 | PORT (into fresh `derived/`) | star↔mesh, short-circuit-test → mesh/core math, trilateration (→ `XYSpacing(isTemplate)`), ZIPV. Pure, named, tested functions: the rewrite plan's "derived values come only from named, tested functions". Each one is filed as an upstream candidate in `CIMTABLES_REQUESTS.md` / CIM-Builder |
 | MOVE | `mcp/` → `cimhub_chat` (its only user) |
@@ -117,14 +117,15 @@ skills; the originals stay in the private CIMHub_2_0 as history.
   "no legacy profile" check is a grep of `cimhub_*/src` until U1 lands: today cimgraph itself loads cim17v40 and
   cimhub_2023 at import.
 
-**F1 status 2026-11-07:** seed copied and trimmed. 116/120 core tests pass; the 4 failures are U2 (3) plus the
-shape-catalog test, which reads the `cimtbl-shapes` skill.
+**F1 status 2026-11-07:** seed copied and trimmed. Core tests: 96/99 pass, and the 3 failures are U2. `topology.py` and its 21 tests
+were removed in favour of `cimtopology.core`, which carries ported copies of them.
 - Upstream caveats to file, not to work around: about 15 cimbuilder modules still import cimhub_2023/cim18gad
-  (`new_base_voltage` …), and the cim-topology profile is unverified. Spokes use only the cim18v17 builders.
+  (`new_base_voltage` …). Spokes use only the cim18v17 builders.
 
 **F2. Wave 1: OpenDSS** (`DSS_REWRITE_PLAN.md`, decisions DSS-1..12 still open)
 - Seed: the LinkML schema, `DssReader`/writer (with the four reader fixes), `importer/cimtbl/` slices (LineCode,
-  inline Transformer, `bus_graph.py`), and their atoms/goldens.
+  inline Transformer), and their atoms/goldens. `bus_graph.py` is rewritten to build a `cimtopology.core.Network`
+  (DSS bus/node parsing stays in the spoke; the walk is `cimtopology.core.walk`).
 - Fresh: the remaining mappers (S3-S5 …), the orchestrator `dss_to_cimtbl.py`, the cim18v17 exporter on the getters,
   and tier 1-3 tests.
 - Exit: `dss_to_cim` and `cim_to_dss` round-trip `IEEE13_CDPSM` with expected differences listed.

@@ -22,6 +22,7 @@ classifiers = [
 ]
 dependencies = [
   "cim-graph>=0.6.0a1,<0.7",
+  "cim-topology",
   "cimprofiles",
   "cimtables",
   "linkml-runtime~=1.9.5",

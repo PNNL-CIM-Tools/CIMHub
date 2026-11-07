@@ -12,7 +12,7 @@ commit once it is verified from this repo.
 | U4 | CIM-Tables or CIM-Builder | Upstream homes for derived math that is now in `cimhub_core/derived/`: star↔mesh impedance, short-circuit/no-load test → mesh/core admittance, trilateration of conductor distances → `XYSpacing`, ZIPV coefficients. | nothing; move upstream when accepted |
 | U5 | CIM-Builder | About 15 builder modules (`new_base_voltage`, …) still import cimhub_2023 or cim18gad. Spokes use only the cim18v17 builders until they are ported. | GDM wave, if it needs one of them |
 | U6 | CIM-Profiles | Native unit spellings that pint misreads (`sf`, `$` → `USD`) need a home in the shared unit registry. Today they are in the old core `units.py`, which is not carried over. | any spoke whose reader meets them |
-| U7 | all four | Releases of cim-graph 0.6, cimtables, cim-builder and cimprofiles to PyPI, so the path sources can become version pins. | CI on GitHub, PyPI release, going public |
+| U7 | all five | Releases of cim-graph 0.6, cimtables, cim-builder, cimprofiles and cim-topology (with `cimtopology.core`; PyPI has only the old CIM-model-bound version) to PyPI, so the path sources can become version pins. | CI on GitHub, PyPI release, going public |
 
 ## Closed (verified from this repo, 2026-11-07)
 
