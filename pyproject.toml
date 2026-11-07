@@ -1,0 +1,46 @@
+[project]
+name = "cimhub"
+version = "3.0.0a0"
+description = "CIMHub: CIM converters built on .cimtbl (development workspace)"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "cimhub-core",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pydantic",
+    "ruff~=0.14.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+# Add each spoke here when its wave starts (cleared packages only; see the split-readiness skill).
+members = [
+    "cimhub_core",
+]
+
+[tool.uv.sources]
+cimhub-core = { workspace = true }
+# Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
+# A public build cannot resolve these: switch to version pins before release.
+cim-graph = { path = "../CIM-Graph", editable = true }
+cimprofiles = { path = "../CIM-Profiles", editable = true }
+cimtables = { path = "../CIM-Tables", editable = true }
+cim-builder = { path = "../CIM-Builder", editable = true }
+
+[tool.pytest.ini_options]
+# One pytest process per package (scripts/test-all.sh): cimtables sets the CIM profile
+# and model scope process-wide, and tests/ dirs stay free of __init__.py.
+addopts = "-ra"
+markers = [
+    "roundtrip: end-to-end format roundtrip tests needing full models or external solvers",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"

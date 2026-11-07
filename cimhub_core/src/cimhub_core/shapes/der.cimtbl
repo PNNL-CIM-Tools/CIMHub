@@ -1,0 +1,12 @@
+# Shape: inverter-based DER. PowerElectronicsConnection on the node + its unit (PhotoVoltaicUnit, BatteryUnit).
+# Generation and discharge are negative p (CIM load sign).
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table PowerElectronicsConnection: mRID, node, phases, ratedS (kVA), ratedU (V), p (kW), q (kVAr), BaseVoltage=bv_480v, EquipmentContainer=fdr_shapes
+    pv_p1,      n2, ABC, 300, 480, -240, 0
+    storage_b1, n2, ABC, 100, 480, -100, 0
+Object PhotoVoltaicUnit: mRID=pv_p1_unit, maxP (kW)=300, PowerElectronicsConnection=pv_p1, EquipmentContainer=fdr_shapes
+Object BatteryUnit: mRID=storage_b1_unit, ratedE (kWh)=200, storedE (kWh)=100, batteryState=discharging, PowerElectronicsConnection=storage_b1, EquipmentContainer=fdr_shapes

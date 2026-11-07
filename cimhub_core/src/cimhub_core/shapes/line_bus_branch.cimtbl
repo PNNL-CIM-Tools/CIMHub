@@ -1,0 +1,17 @@
+# Shape: line lumped in per unit (bus-branch: PSS/E RAW, MATPOWER). bus1/bus2 are TopologicalNodes;
+# (pu system) values convert on the BaseVoltage and the model's BasePower, which must come first.
+# Load with cimtables.load_model(path, model_cls=BusBranchModel).
+
+Profile = cim18v17
+
+Object BasePower: mRID=sbase, basePower (MVA)=100
+Object GeographicalRegion: mRID=rgn_shapes, name=shapes
+Object SubGeographicalRegion: mRID=srgn_shapes, name=shapes, Region=rgn_shapes
+Object Substation: mRID=sub_bus1, name=bus1, Region=srgn_shapes
+Object BaseVoltage: mRID=bv_115kv, nominalVoltage (kV)=115
+
+Table TopologicalNode: mRID, name, BaseVoltage=bv_115kv, ConnectivityNodeContainer=sub_bus1
+    bus_1, 1
+    bus_2, 2
+
+Object ACLineSegment: mRID=ln_1_2_1, name=1-2 ckt 1, bus1=bus_1, bus2=bus_2, phases=ABC, r (pu system)=0.0194, x (pu system)=0.0592, bch (pu system)=0.0528, BaseVoltage=bv_115kv

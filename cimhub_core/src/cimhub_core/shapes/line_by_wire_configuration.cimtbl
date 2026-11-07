@@ -1,0 +1,24 @@
+# Shape: line by geometry. XYSpacing + XYConductorPosition (OpenDSS LineSpacing, GLM line_spacing),
+# WireConfiguration + one WireSequenceConfiguration per conductor (OpenDSS LineGeometry), ACLineSegment
+# referencing the WireConfiguration. Never substitute an impedance matrix for this geometry.
+
+Profile = cim18v17
+
+Import common.cimtbl
+Import wire_info.cimtbl
+
+Object XYSpacing: mRID=spc_500, name=500, isTemplate=true
+Table XYConductorPosition: mRID, XYSpacing=spc_500, sequenceNumber, xCoord (ft), yCoord (ft), kind
+    spc_500_1, 1, 0,   28, phase
+    spc_500_2, 2, 2.5, 28, phase
+    spc_500_3, 3, 7,   28, phase
+    spc_500_4, 4, 4,   24, neutral
+
+Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_601, sequenceNumber, WireInfo
+    wc_601_1, 1, wire_acsr_556_5
+    wc_601_2, 2, wire_acsr_556_5
+    wc_601_3, 3, wire_acsr_556_5
+    wc_601_4, 4, wire_acsr_4/0
+
+Object ACLineSegment: mRID=ln_g1, name=g1, node1=n1, node2=n5, phases=ABCN, length (ft)=2000, WireConfiguration=wc_601, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes

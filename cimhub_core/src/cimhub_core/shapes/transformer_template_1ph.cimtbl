@@ -1,0 +1,23 @@
+# Shape: transformer template, single-phase / center-tapped (catalog). TransformerPhaseEnds name the
+# tank's phase terminals; each half winding is a TransformerWinding. Source: OpenDSS XfmrCode (IEEE 13 ct5);
+# the curated original is CIMTBL-Models distribution/templates/padmount_1ph_250kva.cimtbl (with lugs).
+
+Profile = cim18v17
+
+Object TransformerTankConfiguration: mRID=xc_ct5, name=ct5, percentImpedance=2.08, percentMagnetizingCurrent=0.5, noLoadLoss (W)=10, loadLoss (W)=60
+
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, phaseNeutralU (V), TankConfiguration=xc_ct5
+    xc_ct5_h1, 1, 1, X,  2400
+    xc_ct5_x1, 2, 2, s1, 120
+    xc_ct5_x3, 2, 3, s2, 120
+    xc_ct5_n,  2, 4, N,  0
+
+Table TransformerWinding: mRID, ratedS (kVA), baseS (kVA), ratedU (V), baseU (V), r (percent), FromTransformerEnd, ToTransformerEnd, TankConfiguration=xc_ct5
+    xc_ct5_wdg1, 5,   5, 4160, 2400, 0.6, xc_ct5_h1, xc_ct5_n
+    xc_ct5_wdg2, 2.5, 5, 240,  120,  1.2, xc_ct5_x1, xc_ct5_n
+    xc_ct5_wdg3, 2.5, 5, 240,  120,  1.2, xc_ct5_n,  xc_ct5_x3
+
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_ct5_mesh_12, xc_ct5_wdg1, xc_ct5_wdg2, 2.04
+    xc_ct5_mesh_13, xc_ct5_wdg1, xc_ct5_wdg3, 2.04
+    xc_ct5_mesh_23, xc_ct5_wdg2, xc_ct5_wdg3, 1.36

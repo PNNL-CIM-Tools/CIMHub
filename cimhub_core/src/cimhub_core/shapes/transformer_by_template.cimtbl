@@ -1,0 +1,20 @@
+# Shape: transformer instance by template. PowerTransformer + TransformerTank(TankConfiguration) + one
+# PowerTransformerEnd per side on its node; ratings and impedances live only in the template.
+
+Profile = cim18v17
+
+Import common.cimtbl
+Import transformer_template.cimtbl
+Import transformer_template_1ph.cimtbl
+
+Object PowerTransformer: mRID=xf_t1, name=t1, vectorGroup=YNyn0, EquipmentContainer=fdr_shapes
+Object TransformerTank: mRID=xf_t1_tank, PowerTransformer=xf_t1, TankConfiguration=xc_xfm1, EquipmentContainer=fdr_shapes
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, BaseVoltage, PowerTransformer=xf_t1
+    xf_t1_1, n1,  ABCN, 1, Yn, true, bv_4p16kv
+    xf_t1_2, n2,  ABCN, 2, Yn, true, bv_480v
+
+Object PowerTransformer: mRID=xf_t2, name=t2, EquipmentContainer=fdr_shapes
+Object TransformerTank: mRID=xf_t2_tank, PowerTransformer=xf_t2, TankConfiguration=xc_ct5, EquipmentContainer=fdr_shapes
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, BaseVoltage, PowerTransformer=xf_t2
+    xf_t2_1, n1,    B,     1, Y, true, bv_4p16kv
+    xf_t2_2, house, s1s2N, 2, I, true, bv_240v

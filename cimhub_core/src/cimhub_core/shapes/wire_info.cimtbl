@@ -1,0 +1,14 @@
+# Shape: wire and cable catalogs. OverheadWireInfo (OpenDSS WireData, GLM overhead_line_conductor),
+# TapeShieldCableInfo / ConcentricNeutralCableInfo (OpenDSS TSData / CNData). Units as written.
+
+Profile = cim18v17
+
+Table OverheadWireInfo: mRID, name, ratedCurrent (A), radius (in), gmr (in), rDC20 (ohm/kft)
+    wire_acsr_556_5, ACSR_556_5, 730, 0.46350, 0.37320, 0.035227273
+    wire_acsr_4/0,   ACSR_4/0,   340, 0.2815,  0.09768, 0.112121212
+
+Table TapeShieldCableInfo: mRID, name, ratedCurrent (A), radius (in), gmr (in), rAC25 (ohm/mi), insulationThickness (in), diameterOverInsulation (in), diameterOverScreen (in), diameterOverJacket (in), tapeThickness (in), tapeLap
+    cable_ts_1/0, TS_1/0, 165, 0.184, 0.13320, 0.97, 0.220, 0.82, 0.870, 1.06, 0.005, 20
+
+Table ConcentricNeutralCableInfo: mRID, name, ratedCurrent (A), radius (in), gmr (in), rAC25 (ohm/mi), insulationThickness (in), diameterOverInsulation (in), diameterOverScreen (in), diameterOverNeutral (in), diameterOverJacket (in), neutralStrandCount, neutralStrandRadius (in), neutralStrandGmr (in), neutralStrandRDC20 (ohm/mi)
+    cable_cn_250, CN_250, 260, 0.2835, 0.20520, 0.41, 0.220, 1.06, 1.1618, 1.29, 1.29, 13, 0.03205, 0.02496, 14.8722

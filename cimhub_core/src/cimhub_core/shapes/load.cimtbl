@@ -1,0 +1,11 @@
+# Shape: load. EnergyConsumer on a node with its phases and connection; the ZIP model is a shared
+# LoadResponseCharacteristic (common). CIM load sign: consumption is positive p.
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_shapes
+    ld_y1, y1, n1,    ABC,  Y, true,  1155, 660, zip_constant_pq, bv_4p16kv
+    ld_d1, d1, n3,    BC,   D, false, 170,  80,  zip_constant_z,  bv_4p16kv
+    ld_s1, s1, house, s1s2, I, true,  5,    1,   zip_constant_pq, bv_240v
