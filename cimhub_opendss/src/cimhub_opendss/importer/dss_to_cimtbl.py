@@ -20,7 +20,7 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_opendss.dss_reader import dss_defaults
-from cimhub_opendss.importer.cimtbl import geometry, linecode, vsource, wire
+from cimhub_opendss.importer.cimtbl import geometry, line, linecode, regcontrol, transformer, vsource, wire
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -48,7 +48,15 @@ MAPPING_ORDER = (
     (linecode.NATIVE_CLASS, lambda native, site: linecode.map_linecode(
         native, base_frequency=site.base_frequency, length_unit=site.length_unit)),
     (vsource.NATIVE_CLASS, lambda native, site: vsource.map_vsource(native, site.buses, site.substation)),
+    (line.NATIVE_CLASS, lambda native, site: line.map_line(native, site.buses, site.feeder,
+                                                           base_frequency=site.base_frequency,
+                                                           length_unit=site.length_unit)),
+    (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(native, site.buses, site.feeder)),
+    (regcontrol.NATIVE_CLASS, lambda native, site: regcontrol.map_regcontrol(native)),
 )
+
+#: Classes a mapper of another class reads in full, so they are mapped too: the switch controls (DSS-9).
+READ_BY_OTHERS = tuple(native_class for native_class, _ in line.CONTROLS)
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
 AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
@@ -100,12 +108,20 @@ def _base_frequency(native) -> ObjectStatement:
                                              (Column("frequency", "Hz"), cell(float(frequency)))], comment=comment)
 
 
+def _limit_types() -> Table:
+    """The two ``OperationalLimitType``s every ``CurrentLimit`` names (R1, approved 2026-11-08)."""
+    rows = [Row([limit_mrid, kind, kind, infinite, "absoluteValue"]) for limit_mrid, kind, infinite in line.LIMIT_TYPES]
+    return Table("OperationalLimitType", [Column("mRID"), Column("name"), Column("durationKind"),
+                                          Column("isInfiniteDuration"), Column("direction")], rows)
+
+
 def map_master(native, parts: list[Document], site: Site, *, name: str, authority: str = AUTHORITY) -> Document:
     """The master document: containers, BaseFrequency, BaseVoltages, then one ``Import`` per non-empty part."""
-    mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options}
+    mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options, *READ_BY_OTHERS}
     counts = sorted((cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped)
-    if _options(native).open_terminals:
-        counts.append(("open terminals", len(_options(native).open_terminals)))  # switch states: S3
+    waiting = transformer.waiting_for_template(native)
+    if waiting:
+        counts.append(("Transformer by XfmrCode", waiting))  # the XfmrCode template: S3b
     comment = f"OpenDSS deck {name}\nMapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master"
     if counts:
         comment += "\n" + textwrap.fill("not mapped: " + ", ".join(f"{cls_name} {count}" for cls_name, count in counts),
@@ -116,6 +132,7 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
                                    (Column("NormalEnergizingSubstation"), site.substation)]),
         _base_frequency(native),
         _base_voltages(native, site.buses),
+        _limit_types(),
     ]
     return Document(name=name, statements=[*common, *(Import(part.name) for part in parts)], profile=CIM_PROFILE,
                     authority=authority, model=name, comment=comment)

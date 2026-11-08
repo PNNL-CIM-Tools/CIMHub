@@ -1,0 +1,37 @@
+# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or a synthesized template) or a Switch
+# (Fuse / Recloser / LoadBreakSwitch by the control that switches it; DSS-9).
+# Source table: Line (records: 3)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches
+
+Profile = cim18v17
+
+# synthesized: the spacing and conductors of Line s510
+Object WireConfiguration: mRID=ln_s510_wc, name=s510, numberOfPhases=1, WireSpacing=spc_510
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=ln_s510_wc, sequenceNumber, WireInfo
+    ln_s510_wc_1, 1, wire_acsr_1/0
+    ln_s510_wc_2, 2, wire_acsr_1/0
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    ln_g601, g601, sourcebus, n1, ABCN, 500.0, wc_601,     bv_4p16kv,
+    ln_s510, s510, n1,        n3, CN,   300.0, ln_s510_wc, bv_4p16kv,
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (m), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    # defaulted: units=m (the engine reads a unitless geometry line in metres)
+    ln_g_m, g_m, n1, n2, ABCN, 100.0, wc_601, bv_4p16kv,
+
+Table OperationalLimitSet: mRID, Equipment
+    # ratings: normamps from Wiredata ACSR_556_5, emergamps from 1.5 x normamps of Wiredata ACSR_556_5
+    ln_g601_limits, ln_g601
+    # ratings: normamps from Wiredata ACSR_556_5, emergamps from 1.5 x normamps of Wiredata ACSR_556_5
+    ln_g_m_limits,  ln_g_m
+    # ratings: normamps from Wiredata ACSR_1/0, emergamps from Wiredata ACSR_1/0
+    ln_s510_limits, ln_s510
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_g601_norm,  730.0,  olt_normal,    ln_g601_limits
+    ln_g601_emerg, 1095.0, olt_emergency, ln_g601_limits
+    ln_g_m_norm,   730.0,  olt_normal,    ln_g_m_limits
+    ln_g_m_emerg,  1095.0, olt_emergency, ln_g_m_limits
+    ln_s510_norm,  230.0,  olt_normal,    ln_s510_limits
+    ln_s510_emerg, 300.0,  olt_emergency, ln_s510_limits

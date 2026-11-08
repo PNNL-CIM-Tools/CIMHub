@@ -230,3 +230,79 @@ def test_geometry_units_carry_to_the_next_cond_block(tmp_path):
     model = read(tmp_path, "New LineGeometry.g nconds=2 nphases=1\n~ cond=1 x=0 h=10 units=m\n~ cond=2 x=1 h=9\n")
     geometry = only(model, schema.Linegeometry)
     assert (geometry.units, geometry.xs, geometry.hs) == ("m", [0.0, 1.0], [10.0, 9.0])
+
+
+POSITIONAL = """New Circuit.c
+New Linecode.a nphases=3 r1=0.1 x1=0.2 units=km Normamps=156 {156 1.25 *}
+New Linecode.b 3 0.3 0.4
+New Linecode.c nphases=3 r1=0.1 x1=0.2 units=km emergamps={2 3 ^ 10 *}
+"""
+
+
+def test_positional_values_match_the_engine(tmp_path):
+    # a value with no name goes to the property after the last one named; {...} is RPN
+    deck = tmp_path / "deck.dss"
+    deck.write_text(POSITIONAL)
+    codes = {code.name: code for code in DssReader(deck).read_all().list_by_class(schema.Linecode)}
+    dss.Text.Command("Clear")
+    dss.Text.Command(f"Redirect [{deck}]")
+    for name, code in codes.items():
+        dss.LineCodes.Name(name)
+        assert (code.nphases, code.r1, code.x1) == (dss.LineCodes.Phases(), dss.LineCodes.R1(), dss.LineCodes.X1())
+        if code.emergamps is not None:
+            assert code.emergamps == dss.LineCodes.EmergAmps()
+    assert codes["a"].emergamps == 195 and codes["c"].emergamps == 80
+
+
+@pytest.mark.parametrize("text, message", [
+    ("New Transformer.t phases=1 windings=2 2.4\n", "positional value '2.4' is not read"),
+    ("New Linecode.a nphases=3 r1={1 x +}\n", "could not convert"),
+    ("New Linecode.a nphases=3 r1={1 +}\n", "stack underflow"),
+    ("New Linecode.a like=b 1\n", "past the last property"),
+])
+def test_unreadable_positional_values_raise(tmp_path, text, message):
+    with pytest.raises(DssParseError, match=message):
+        read(tmp_path, "New Circuit.c\nNew Linecode.b nphases=3 r1=0.1 x1=0.2\n" + text)
+
+
+WINDING_SCALARS = [
+    "phases=3 windings=2 kVA=750 buses=[src b] kVs=[12.47 0.48]",
+    "phases=3 windings=2 wdg=1 bus=src kv=12.47 kva=500 wdg=2 bus=b kv=0.48 kva=300",
+    "phases=3 windings=2 buses=[src b] kVs=[12.47 0.48] kVA=750 kVAs=[400 300]",
+    "phases=3 windings=3 buses=[src b c] kVs=[12.47 0.48 0.48] kVAs=[900 800 700] wdg=2 kVA=50",
+]
+
+
+@pytest.mark.parametrize("text", WINDING_SCALARS)
+def test_winding_scalars_match_the_engine(tmp_path, text):
+    # a bare kV/kVA/conn/%R goes to the active winding (the last wdg=, else the last an array set, else 1);
+    # on a 2-winding transformer kVA sets both
+    xf = only(read(tmp_path, f"New Circuit.c bus1=src\nNew Transformer.t {text}\n"), schema.Transformer)
+    dss.Text.Command("Clear")
+    dss.Text.Command("New Circuit.c bus1=src")
+    dss.Text.Command(f"New Transformer.t {text}")
+    dss.Transformers.Name("t")
+    engine = []
+    for winding in range(1, dss.Transformers.NumWindings() + 1):
+        dss.Transformers.Wdg(winding)
+        engine.append((dss.Transformers.kVA(), dss.Transformers.R(), dss.Transformers.IsDelta()))
+    ours = [(float(kva), float(r) if r is not None else 0.2, str(conn).lower() == "delta")
+            for kva, r, conn in zip(xf.kVAs or [1000.0] * len(engine), xf.pct_Rs or [None] * len(engine),
+                                    [c.text if hasattr(c, "text") else c for c in xf.conns] or ["wye"] * len(engine))]
+    assert ours == engine
+
+
+@pytest.mark.parametrize("text", [
+    "phases=3 windings=2 buses=[src b] kVs=[12.47 0.48] kVA=750 %R=0.1 conn=delta",
+    "phases=3 windings=3 buses=[src b c] kVs=[12.47 0.48 0.48] wdg=2 %R=0.4",
+])
+def test_a_winding_left_unset_takes_the_engine_default(tmp_path, text, caplog):
+    # an array cannot hold an unset winding; it takes the DSS per-winding default, as the engine does
+    with caplog.at_level(logging.WARNING):
+        test_winding_scalars_match_the_engine(tmp_path, text)
+    assert "unset while another winding's is set" in caplog.text
+
+
+def test_a_bus_left_unset_raises(tmp_path):
+    with pytest.raises(DssParseError, match="buses: winding \\[1\\] unset .* bus has no default"):
+        read(tmp_path, "New Circuit.c bus1=src\nNew Transformer.t phases=1 windings=2 wdg=2 bus=b\n")

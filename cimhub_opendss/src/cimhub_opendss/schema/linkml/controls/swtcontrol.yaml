@@ -82,6 +82,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: string(closed)
 
       # (7) State
       State:
@@ -91,6 +92,7 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: string(closed)
 
       # (8) Reset
       Reset:

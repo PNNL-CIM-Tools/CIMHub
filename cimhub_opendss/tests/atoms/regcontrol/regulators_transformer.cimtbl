@@ -1,0 +1,48 @@
+# OpenDSS Transformer -> PowerTransformer + PowerTransformerEnd per bus;
+# 1-phase: TransformerTank + TransformerPhaseEnd + TransformerWinding; 3-phase: balanced ends.
+# Source table: Transformer (records: 5)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#transformer
+
+Profile = cim18v17
+
+# untranscribed: Xscarray, thermal, n, m, flrise, hsrise, normhkVA, emerghkVA, Seasons, Ratings, normamps, emergamps,
+# sub, subname, ppm_antifloat, bank, XRConst, LeadLag, Core, RdcOhms, faultrate, pct_perm, repair, basefreq, like
+Table PowerTransformer: mRID, name, EquipmentContainer, normallyInService
+    xf_ltc, ltc, fdr_atom,
+
+# 3-phase: by balanced ends
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, rground (ohm), xground (ohm), ratedU (kV), ratedS (kVA), r (percent), b (percent), g (percent), BaseVoltage
+    xf_ltc_1, xf_ltc, sourcebus, ABC,  1, D,  false, , , 115.0, 20000.0, 0.5, , , bv_115kv
+    xf_ltc_2, xf_ltc, sub,       ABCN, 2, Yn, true,  , , 12.47, 20000.0, 0.5, , , bv_12p47kv
+
+# x in percent on winding 1's kVA at the From end's voltage
+Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, x (percent)
+    xf_ltc_mesh_12, xf_ltc_1, xf_ltc_2, 8.0
+
+# regulators (DSS-13): a Transformer a RegControl names, with equal winding kV
+Table VoltageRegulator: mRID, name, EquipmentContainer, normallyInService
+    # values from XfmrCode regleg
+    # defaulted: conns=wye
+    xf_coded, coded, fdr_atom,
+    xf_gang,  gang,  fdr_atom,
+    # defaulted: conns=wye
+    xf_reg1,  reg1,  fdr_atom,
+    xf_vr_ll, vr_ll, fdr_atom,
+
+# the nameplate: baseU = the coil kV, ratedS = the kVA; phase is a PhaseCode on the end's Terminal
+Table AutoTransformerEnd: mRID, AutoTransformer, node, phase, endNumber, grounded, baseU (kV), ratedS (kVA), BaseVoltage
+    xf_coded_1, xf_coded, sub,   CN,   1, true,  7.2,   1666.0, bv_12p47kv
+    xf_coded_2, xf_coded, rc,    CN,   2, true,  7.2,   1666.0, bv_12p47kv
+    xf_gang_1,  xf_gang,  sub,   ABCN, 1, true,  12.47, 5000.0, bv_12p47kv
+    xf_gang_2,  xf_gang,  rgang, ABCN, 2, true,  12.47, 5000.0, bv_12p47kv
+    xf_reg1_1,  xf_reg1,  sub,   AN,   1, true,  7.2,   1666.0, bv_12p47kv
+    xf_reg1_2,  xf_reg1,  rg,    AN,   2, true,  7.2,   1666.0, bv_12p47kv
+    xf_vr_ll_1, xf_vr_ll, sub,   AB,   1, false, 12.47, 2000.0, bv_12p47kv
+    xf_vr_ll_2, xf_vr_ll, rl,    AB,   2, false, 12.47, 2000.0, bv_12p47kv
+
+# the engine's stand-in impedance (a regulator nameplate has no %Z): r = %R1 + %R2, x = XHL, in percent on end 1's baseU and ratedS
+Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, r (percent), x (percent)
+    xf_coded_mesh_12, xf_coded_1, xf_coded_2, 0.001, 0.1
+    xf_gang_mesh_12,  xf_gang_1,  xf_gang_2,  0.002, 0.01
+    xf_reg1_mesh_12,  xf_reg1_1,  xf_reg1_2,  0.01,  0.01
+    xf_vr_ll_mesh_12, xf_vr_ll_1, xf_vr_ll_2, 1e-05, 0.01

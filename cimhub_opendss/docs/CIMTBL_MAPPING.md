@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. XfmrCode is deferred to S3. `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. XfmrCode is deferred to S3b. **S3a done 2026-11-08** (lines, switches, transformers, regulators, RegControl). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -22,7 +22,9 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineSpacing` | `linespacing.cimtbl` | `line_by_wire_configuration` (`XYSpacing`) | nothing |
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
-| `Transformer` (inline) | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
+| `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
+| `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
+| `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 
 ## Master
 
@@ -460,7 +462,7 @@ IEEE13_Assets and IEEE4 decks). Checked by hand 2026-11-07, all match: IEEE9500 
 | `conductors` | `Union[str, list[str], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `like` | `Optional[str]` | `603` | untranscribed | the reader resolves like= before mapping |
 
-## XfmrCode (deferred to S3, approved 2026-11-07)
+## XfmrCode (deferred to S3b, approved 2026-11-07; split approved 2026-11-08)
 
 XfmrCode maps to `TransformerTankConfiguration` (`transformer_template`, `transformer_template_1ph`), but three
 things block it:
@@ -469,16 +471,16 @@ things block it:
 - **D10:** the 3-phase tank configuration convention is still open.
 - **Lugs:** the instance-by-template link (`TransformerLug.sequenceNumber`, now in cim18v17) has no shape yet.
 
-It moves to S3, next to the Transformer instances that use it (2,474 by code), once U2 is fixed.
+It moves to S3b, next to the Transformer instances that use it, once U2 is fixed. A regulated instance by code
+already maps in S3a (it takes its code's values; CIM has no AutoTransformer template).
 
 ## Transformer
 
 Mapper: `cimhub_opendss/importer/cimtbl/transformer.py` (`map_transformer(native, buses, container)`). Atoms:
 `tests/atoms/transformer/` — `xfm1` (3-phase, IEEE13), `sub3` (3-winding delta-wye-wye, neutral impedance on
 winding 2), `reg1` (1-phase regulator unit), `service` (EPRI J1 7.2/0.24 kV), `center_tap` (phase-to-phase primary,
-s1/s2 secondary), with `prereq.cimtbl`; tested by `tests/test_cimtbl_transformer.py`. Inline transformers only:
-`XfmrCode` instances wait for the lug template (`TransformerLug.sequenceNumber`, being added to CIM UML and
-cim-profiles).
+s1/s2 secondary), with `prereq.cimtbl`; tested by `tests/test_cimtbl_transformer.py`. Regulators and LTCs (S3a): see
+"Transformer: regulators and LTCs" below. An `XfmrCode` instance no RegControl names waits for the template (S3b).
 
 **Model (the user's, 2026-11-06).** Every DSS Transformer is its own `PowerTransformer` (`bank` is untranscribed),
 with one `PowerTransformerEnd` per distinct bus, numbered in winding order. The end's terminal holds the phases.
@@ -510,10 +512,10 @@ tag, else the last winding (the old importer's rule). Missing buses take DSS's d
 the neutral on 0.
 
 **Fail fast:**
-- an XfmrCode instance;
 - `phases` other than 1 or 3, or windings other than 2 or 3;
-- an active-winding scalar (`kV`, `kVA`, `conn`, `bus`, `tap`, `%R`) without `wdg=`;
-- a tap other than 1 (RegControl slice);
+- an active-winding scalar (`kV`, `kVA`, `conn`, `bus`, `tap`, `%R`) left over after the reader (it resolves them
+  to their winding, S3);
+- a tap other than 1 on a transformer no RegControl names;
 - `pct_Rs` and `pct_loadloss` that disagree, or `XHL` and `X12` that disagree;
 - 3-phase nodes other than `1.2.3`;
 - two windings on one bus that are not a split-phase secondary;
@@ -521,8 +523,8 @@ the neutral on 0.
 
 | Transformer field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, TransformerName]` | `Sub3`, `Reg1`, `Reg2` | copied | `PowerTransformer.name`; mRID = xf_ + name, lowercased |
-| `phases` | `Optional[int]` | `3`, `1` | structural | 1 = by phase ends, 3 = by balanced ends; default 3 |
+| `name` | `Union[str, TransformerName]` | `Reg1`, `Reg2`, `Reg3` | copied | `PowerTransformer.name`; mRID = xf_ + name, lowercased |
+| `phases` | `Optional[int]` | `1`, `3` | structural | 1 = by phase ends, 3 = by balanced ends; default 3 |
 | `windings` | `Optional[int]` | `3`, `2` | structural | 2 or 3; must match the buses |
 | `wdg` | `Optional[int]` | `2` | structural | the winding Rneut/Xneut belong to (the reader's tag); none = the last |
 | `bus` | `Optional[str]` |  | structural | the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises |
@@ -533,12 +535,12 @@ the neutral on 0.
 | `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises |
 | `Rneut` | `Optional[float]` | `0.0` | structural | rground (ohm) of its winding's end when >= 0; negative = no impedance |
 | `Xneut` | `Optional[float]` | `0.4` | structural | xground (ohm) of its winding's end, with Rneut >= 0 |
-| `buses` | `Union[str, list[str], NoneType]` | `['SourceBus', '650.1.2.3.4', '650z']`, `['BRKR.1', 'RG60.1']`, `['BRKR.2', 'RG60.2']` | structural | end node and terminal phases; one end per distinct bus |
+| `buses` | `Union[str, list[str], NoneType]` | `['BRKR.1', 'RG60.1']`, `['BRKR.2', 'RG60.2']`, `['BRKR.3', 'RG60.3']` | structural | end node and terminal phases; one end per distinct bus |
 | `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='delta', descrip...`, `[ConnectionType(text='wye', descripti...` | structural | connectionKind, grounded, default nodes; default wye |
-| `kVs` | `Union[float, list[float], NoneType]` | `[115.0, 4.16, 13.2]`, `[2.4, 2.4]`, `[4.16, 0.48]` | structural | 3-phase: end ratedU; 1-phase: winding baseU, ratedU derived (x sqrt 3, x 2) |
-| `kVAs` | `Union[float, list[float], NoneType]` | `[5000.0, 5000.0, 1000.0]`, `[1666.0, 1666.0]`, `[500.0, 500.0]` | structural | end ratedS / winding ratedS (halves / 2); winding 1's kVA is every baseS |
-| `taps` | `Union[float, list[float], NoneType]` |  | structural | a tap other than 1 raises until the RegControl slice (RatioTapChanger.step) |
-| `XHL` | `Optional[float]` | `0.01`, `2.0`, `11.63` | structural | mesh 1-2 x (percent on winding 1's kVA); default 7 |
+| `kVs` | `Union[float, list[float], NoneType]` | `[2.4, 2.4]`, `[115.0, 4.16, 13.2]`, `[4.16, 0.48]` | structural | 3-phase: end ratedU; 1-phase: winding baseU, ratedU derived (x sqrt 3, x 2) |
+| `kVAs` | `Union[float, list[float], NoneType]` | `[1666.0, 1666.0]`, `[5000.0, 5000.0, 1000.0]`, `[500.0, 500.0]` | structural | end ratedS / winding ratedS (halves / 2); winding 1's kVA is every baseS |
+| `taps` | `Union[float, list[float], NoneType]` | `[1.0, 1.0625]`, `[1.0, 1.05]`, `[1.0, 1.06875]` | structural | the regulated winding's tap is RatioTapChanger.step (regcontrol.cimtbl); any other tap other than 1 raises |
+| `XHL` | `Optional[float]` | `0.01`, `2.0`, `5.75` | structural | mesh 1-2 x (percent on winding 1's kVA); default 7 |
 | `XHT` | `Optional[float]` | `0.025` | structural | mesh 1-3 x; default 35 |
 | `XLT` | `Optional[float]` | `0.025` | structural | mesh 2-3 x; default 30 |
 | `Xscarray` | `Union[float, list[float], NoneType]` |  | untranscribed | for more than 3 windings, which raise |
@@ -547,20 +549,20 @@ the neutral on 0.
 | `m` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
 | `flrise` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
 | `hsrise` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
-| `pct_loadloss` | `Optional[float]` | `0.01`, `0.7221`, `0.7639` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
-| `pct_noloadloss` | `Optional[float]` | `0.2423`, `0.0851` | derived | 3-phase: end 1 g (percent); 1-phase: tank noLoadLoss = % x kVA |
-| `normhkVA` | `Optional[float]` | `40.0`, `25.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `emerghkVA` | `Optional[float]` | `56.0`, `35.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `sub` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
-| `MaxTap` | `Optional[float]` |  | untranscribed | tap changer range; RatioTapChanger with the RegControl slice |
-| `MinTap` | `Optional[float]` |  | untranscribed | tap changer range; RatioTapChanger with the RegControl slice |
-| `NumTaps` | `Optional[int]` | `16` | untranscribed | tap changer range; RatioTapChanger with the RegControl slice |
-| `subname` | `Optional[str]` |  | untranscribed | DSS report label |
-| `pct_imag` | `Optional[float]` |  | structural | 3-phase: end 1 b (percent); 1-phase: tank percentMagnetizingCurrent |
-| `ppm_antifloat` | `Optional[float]` | `5.0` | untranscribed | numerical aid of the DSS solver |
-| `pct_Rs` | `Union[float, list[float], NoneType]` | `[0.0005, 0.0005, 0.0005]`, `[0.55, 0.55]`, `[0.596, 0.596]` | structural | 3-phase: end r (percent); 1-phase: winding r (percent); default 0.2 |
-| `bank` | `Optional[str]` | `Reg` | untranscribed | each DSS Transformer is its own PowerTransformer |
-| `XfmrCode` | `Optional[str]` |  | structural | instances by code raise until the lug template (TransformerLug.sequenceNumber) |
+| `pct_loadloss` | `Optional[float]` | `0.01`, `0.001`, `0.7639` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
+| `pct_noloadloss` | `Optional[float]` | `0.0851`, `0.34`, `0.1348` | derived | 3-phase: end 1 g (percent); 1-phase: tank noLoadLoss = % x kVA; a regulator has no home for it (row comment) |
+| `normhkVA` | `Optional[float]` | `25.0`, `15.0`, `75.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
+| `emerghkVA` | `Optional[float]` | `35.0`, `21.0`, `105.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
+| `sub` | `Union[bool, Bool, NoneType]` | `True` | untranscribed | DSS report flag |
+| `MaxTap` | `Optional[float]` | `1.1`, `1.05` | structural | the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed; default 1.1 |
+| `MinTap` | `Optional[float]` | `0.9`, `0.95` | structural | the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed; default 0.9 |
+| `NumTaps` | `Optional[int]` | `16`, `32` | structural | the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed; default 32 |
+| `subname` | `Optional[str]` | `M1`, `HVMV_Sub` | untranscribed | DSS report label |
+| `pct_imag` | `Optional[float]` | `0.0001`, `0.5` | structural | 3-phase: end 1 b (percent); 1-phase: tank percentMagnetizingCurrent; a regulator has no home for it (row comment) |
+| `ppm_antifloat` | `Optional[float]` | `0.0`, `5.0` | untranscribed | numerical aid of the DSS solver |
+| `pct_Rs` | `Union[float, list[float], NoneType]` | `[0.0005, 0.0005, 0.0005]`, `[0.55, 0.55]`, `[0.67, 0.67]` | structural | 3-phase: end r (percent); 1-phase: winding r (percent); default 0.2 |
+| `bank` | `Optional[str]` | `Reg`, `FEEDER1_REG1`, `FEEDER2_REG2` | untranscribed | each DSS Transformer is its own PowerTransformer |
+| `XfmrCode` | `Optional[str]` | `CT5`, `RegLeg`, `SubXfmr` | structural | a regulated instance takes the code's values (with_code); any other waits for the template (S3b) and is counted on the master |
 | `XRConst` | `Union[bool, Bool, NoneType]` |  | untranscribed | harmonics option |
 | `X12` | `Optional[float]` |  | structural | alias of XHL |
 | `X13` | `Optional[float]` |  | structural | alias of XHT |
@@ -576,17 +578,380 @@ the neutral on 0.
 | `pct_perm` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `repair` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on a transformer |
-| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `PowerTransformer.normallyInService` |
-| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+| `enabled` | `Union[bool, Bool, NoneType]` | `True` | copied | `PowerTransformer.normallyInService` |
+| `like` | `Optional[str]` | `reg3a`, `reg4a`, `reg1a` | untranscribed | the reader resolves like= before mapping |
 
 **Deck sweep (2026-11-06, placeholder bus systems).** 1,365 of the 1,378 inline transformers in 11 decks map. Stops:
 
 | stop | count | next |
 |---|---|---|
-| taps ≠ 1 | 6 (IEEE13_original regulators) | RegControl slice |
-| `kVA=750` with no `wdg=` | 8 (ieee9500 `*-DIES1`) | the engine sets both windings of a 2-winding transformer ([750, 750]), but only the last of a 3-winding one; needs an engine-pinned rule |
-| `%R=0.1` with no `wdg=` | 2 (J1 `ExistingSite*`) | the engine applies it to the last winding ([0.2, 0.1]) |
+| taps ≠ 1 | 6 (IEEE13_original regulators) | lifted in S3a: regulators |
+| `kVA=750` with no `wdg=` | 8 (ieee9500 `*-DIES1`) | lifted in S3a: the reader's active-winding rule (2-winding kVA sets both) |
+| `%R=0.1` with no `wdg=` | 2 (J1 `ExistingSite*`) | lifted in S3a: winding 2 gets 0.1, winding 1 the default 0.2, as the engine |
 
 Reader fixes this slice needed: numeric bus and wire names stayed floats (`634` → `634.0`, i.e. node 0); quoted
 arrays (`conns='delta delta'`, IEEE37) failed to build, and the reader dropped `reg1a` with only a log line. A
 failed build now raises.
+
+## S3 (S3a approved and done 2026-11-08)
+
+S3 maps the network: lines and switches, the transformers into the orchestrator, regulators and LTCs, and their
+RegControls. Census of the 31 sweep decks, 2026-11-07:
+- **Lines:** 34,254 in all. By linecode 27,679; by geometry 5,294; inline sequence values 1,162 (678 of them
+  switches); inline matrix 4 (1 a switch); spacing + wires 3; switches with no impedance 112.
+- **Switch controls:** 98 Fuses, 161 Reclosers, 336 SwtControls.
+- **Regulators:** 176 RegControls.
+
+**Scope split (approved, R3).** A non-regulator Transformer by XfmrCode waits for U2. In the sweep that is IEEE8500
+1,177, IEEE9500 1,275, IEEE123_PV 82, IEEE13_OCHRE 16, IEEE13_CDPSM 1 (`Tpoletop`). So S3 splits:
+- **S3a** (done): lines, switches, transformers in `MAPPING_ORDER`, VoltageRegulators and LTCs (a regulator by
+  XfmrCode included), RegControl.
+- **S3b**: XfmrCode templates and their instances (once U2 and D10 are settled), and AutoTrans (an atom only; no
+  deck has one).
+
+Until S3b, a Transformer by XfmrCode that no RegControl names is counted on the master's `# not mapped:` line
+(`Transformer by XfmrCode 1177`), so its deck still binds.
+
+**Result (2026-11-08).** The S3a exit is met:
+- IEEE13_CDPSM, IEEE123 and IEEE8500 bind with every line, switch, transformer and regulator. Their XfmrCode
+  transformers are counted on the master.
+- 25 of the 31 sweep decks bind with every S3a part. The six stops:
+  - DSS-10, a line's phases ≠ its code's `nphases`: J1, K1, M1, IEEE13_OCHRE;
+  - the `ieee9500_2025` balanced copy (an `Open` of a line it never defines; the engine fails too);
+  - the PNNL balanced IEEE9500 deck, whose lines name LineCodes it never loads (the engine fails too).
+- Engine checks, on the atoms and the 8 engine decks (IEEE13 ×3, IEEE123, IEEE37, IEEE4, IEEE8500, IEEE9500):
+  - every line's ratings, and the z and b totals of every line by code or by inline values;
+  - every switch state;
+  - every RegControl setting, the tap range and the regulator nameplate and mesh;
+  - the tap position, on the atom (a deck that solves when compiled moves its taps).
+
+**Engine rules found in S3** (each pinned with a probe and kept in a test):
+- **Ratings.** A line copies each of `normamps`/`emergamps` it leaves unset from its LineCode, or from its
+  LineGeometry. A geometry rating left unset is its first conductor's. A wire with `normamps` and no `emergamps` is
+  rated 1.5 × normamps. A spacing + wires line takes its first wire's.
+- **Default C.** A matrix LineCode without `cmatrix` keeps the engine's default C matrix: self (2 C1 + C0)/3 and
+  mutual (C0 − C1)/3 from C1 = 3.4, C0 = 1.6 nF per unit length, on any number of phases
+  (`cimhub_core.derived.sequence.balanced_matrix`). IEEE13_original's codes are this case (an amendment to the S2
+  LineCode mapper; the row says `# defaulted: cmatrix from C1=3.4, C0=1.6`).
+- **Inline defaults.** A sequence line leaves some of r1, x1, r0, x0, C1, C0 unset; they take the DSS defaults.
+  r and x stay per unit length as they are. C1 and C0 are kept per kft and converted to the line's `units`.
+- **Unitless geometry line.** Its length is in metres.
+
+**Reader fixes in S3** (§3.4 of the plan; each checked against the engine):
+- A value with no name goes to the property after the last one named, in the schema's `order`. `{...}` is RPN.
+  The decks use this as `Normamps=156 {156 1.25 *}`: emergamps = 195 on the J1, K1, M1, IEEE8500 and IEEE9500
+  triplex codes, which the reader used to drop silently. A positional value on a class the reader rewrites by
+  blocks (Transformer, XfmrCode, AutoTrans, LineGeometry) raises.
+- A bare per-winding property (`bus kV kVA conn tap %R`) goes to the active winding: the last `wdg=`, else the last
+  winding an array set (an array sets every winding), else winding 1. On a 2-winding transformer, `kVA` sets both
+  windings, even inside a `wdg=` block (`wdg=1 kva=500 wdg=2 kva=300` is [300, 300] in the engine).
+  - This lifts the old `kVA=750` stop on the ieee9500 `*-DIES1`/`-ESS`/`-MT` transformers.
+  - A winding no property sets takes the per-winding default (`dss_default` on Transformer/XfmrCode `kV kVA conn
+    tap %R`, as the engine does), with a warning. J1's `ExistingSite*` `%R=0.1` was this case. An unset `bus`
+    raises.
+
+### Line and switches
+
+Mapper: `cimhub_opendss/importer/cimtbl/line.py` (`map_line`; `CONTROLS` for Fuse, Recloser, SwtControl).
+Artifact `line.cimtbl`; shapes `line_by_impedance`, `line_by_wire_configuration`, `switch`. Atoms in
+`tests/atoms/line/`, tested by `tests/test_cimtbl_line.py`:
+- `codes.dss` (after IEEE13_CDPSM): lines by code (one code without `cmatrix`), inline sequence lines (one with
+  defaults, one unitless 1-phase), and a LoadBreakSwitch, Fuse, Recloser, an open SwtControl tie and an `Open`
+  section;
+- `geometry.dss` (after IEEE13_Assets): geometry lines (one unitless), a spacing + wires line, ratings from the
+  first wire.
+
+**Identity.** An `ACLineSegment` is `ln_` + name and a switch `sw_` + name, lowercased. Every Switch subclass shares
+`sw_`, so the switch's class can change without changing its mRID.
+
+**Class (DSS-9).** A Line with `Switch=y` is a switch:
+- a `Fuse` whose `SwitchedObj` (else `MonitoredObj`, the DSS default) is that line makes it a `Fuse`, and its
+  `RatedCurrent` becomes `ratedCurrent`;
+- a `Recloser` makes it a `Recloser`;
+- otherwise (a `SwtControl`, or no control) it is a `LoadBreakSwitch`.
+
+What raises: a Fuse or Recloser on a line without `Switch=y`; two controls of different classes on one line; a
+control whose line no `New` defines. In the sweep, every Fuse and Recloser switches the line it monitors.
+
+**Switch state.**
+- `open`: an `Open` command on either terminal (`Options.open_terminals`), or a SwtControl with `State=Open`.
+- `normalOpen`: the SwtControl's `Normal`, else the same as `open`.
+
+An `Open` command and a SwtControl `State` that disagree raise. So does an `Open` on a line that is not a switch:
+`Terminal.connected` would be its home, but no deck needs it.
+- **Sweep:** 33 SwtControls are Open with `Normal` = `State` on every one. ieee9500 has 9 `Open` commands and
+  IEEE123_test_harness 2, all on switch lines.
+- **Dropped from switches:** a switch's impedance, length and ratings stay untranscribed (DSS-8). DSS needs them
+  only as numerical stand-ins: `r1=1e-4`, or the `Switch=y` defaults.
+
+**Template (`ACLineSegment`).** Exactly one of the following; a line that combines two raises:
+- `linecode=` → `PerLengthImpedance` = the code's template for the line's unit (`lc_<code>`, or `lc_<code>_<unit>`
+  when the code's lines disagree, DSS-3);
+- `geometry=` → `WireConfiguration` = `wc_<geometry>`;
+- `spacing=` + `wires=`/`cncables=`/`tscables=` → a synthesized `WireConfiguration` `ln_<name>_wc` on
+  `spc_<spacing>`, conductors in order (IEEE13_Assets `684652`). This is the counterpart of S2's synthesized
+  spacing;
+- inline `r1`…`B0` or `rmatrix`/`xmatrix`/`cmatrix` → a synthesized `PerLengthSequenceImpedance` or
+  `PerLengthPhaseImpedance` `ln_<name>_lc` under `# synthesized` in `line.cimtbl` (DSS-8). It goes through the
+  LineCode mapper's own functions, so DSS-3 (units, gate), DSS-3b and DSS-4 apply unchanged.
+  - **Naming:** DSS-8 said `lc_<line>`. A line and a code may share a name, so this proposes `ln_<name>_lc`.
+  - **Units:** a unitless inline line goes through the same magnitude gate, over the deck's unitless inline
+    lines (its own group, so its inference is stated on its own rows). Sweep: 432 in M1, 8 in IEEE123, 1 in IEEE37.
+  - Unset sequence values take the engine's defaults (above).
+
+**Length and units.** `length` (default 1, defaulted) is in the line's `units`. A unitless line by code takes the
+code's template unit: the code's units, else the gate (DSS-3). A unitless line by geometry (M1, 2 lines) takes
+metres, as the engine reads it (`# defaulted: units=m`).
+
+**Phases.** They come from bus1's nodes:
+- 1/2/3 → A/B/C, in bus order (`645.3.2` → `CB`, the matrix row order);
+- on a split-phase island (the walk, DSS-5): 1/2 → s1/s2;
+- no nodes → 1..`phases`;
+- a geometry with neutral conductors adds `N` (601: `ABCN`).
+
+What raises:
+- bus2's phase nodes differing from bus1's (a transposition);
+- `phases` ≠ the code's `nphases` (DSS-10, deferred). That leaves J1 (1,381 lines), K1 (743), M1 (1,949) and
+  IEEE13_OCHRE (50) in the sweep table. IEEE8500 and IEEE9500 have no mismatch: their lines take `phases` from the
+  code.
+
+**Ratings (R1, approved).** A line's `normamps` and `emergamps` go on an `OperationalLimitSet`
+`ln_<name>_limits` (`Equipment` = the segment) with one `CurrentLimit` (`normalValue`, A) each:
+- `ln_<name>_norm` on `OperationalLimitType` `olt_normal`: `durationKind=normal`, `isInfiniteDuration=true`,
+  `direction=absoluteValue`;
+- `ln_<name>_emerg` on `olt_emergency`: `durationKind=emergency`, `isInfiniteDuration=false`,
+  `direction=absoluteValue`.
+
+The two types (GridAPPS-D `LimitDurationKind`, added to cim18v17 2026-11-07) are written once in the master, so
+later slices (transformers, catalogs) share them. `season` (`CalendarSeasonKind`) stays unset. DSS's `Seasons` and
+`Ratings` are an indexed array that a `SeasonSignal` loadshape selects, and they name no calendar season. No deck
+in the sweep sets them, so they raise until a deck shows the index-to-season convention. Values:
+- the line's own value, else what the engine copies: its code's, else its geometry's, else the geometry's first
+  conductor's, with a wire's emergency rating defaulting to 1.5 × normamps (`# ratings: normamps from LineCode
+  mtx601`). DSS keeps the last value set, and the reader does not record the order. Decks give a line's ratings
+  after its `linecode=`, and the engine check agrees on every engine deck;
+- nothing from DSS's 400/600 A defaults.
+
+**Defaults** (from the `dss_default` annotations, filled for Line, Fuse, Recloser and SwtControl in this slice,
+DSS-6): `length` 1, `phases` 3, `units` none.
+
+**Expected differences from the hand translation:** IEEE13_CDPSM `Brkr1` becomes a `LoadBreakSwitch`, not a
+`Breaker`: DSS has no breaker class, and DSS-9 decides by control.
+
+| Line field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LineName]` | `632633`, `632645`, `632670` | copied | `ACLineSegment.name`, `Switch.name`; mRID = ln_ + name (segment) or sw_ + name (switch), lowercased |
+| `bus1` | `str` | `632.1.2.3`, `632.3.2`, `MID.1.2.3` | structural | node1, and the phases from its nodes: 1/2/3 = A/B/C, s1/s2 on a split-phase island (DSS-5); no nodes = 1..phases |
+| `bus2` | `Optional[str]` | `633.1.2.3`, `645.3.2`, `670.1.2.3` | structural | node2; its phase nodes must equal bus1's (a transposition raises) |
+| `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.PerLengthImpedance = the code's template for the line's unit (lc_<code> or lc_<code>_<unit>, DSS-3) |
+| `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({length}); default 1 (defaulted); none on a switch |
+| `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the phase count; unset = the code's or geometry's nphases, else 3; one that differs from the code's nphases raises (DSS-10) |
+| `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `x0` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `C1` | `Optional[float]` | `0.0`, `0.000212206590789194`, `0.000450939005427037` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `C0` | `Optional[float]` | `0.0`, `0.000636619772367581`, `0.00135281701628111` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `rmatrix` | `Union[float, list[float], NoneType]` | `[1.3238, 0.2066, 1.3294]`, `[0.0001]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `xmatrix` | `Union[float, list[float], NoneType]` | `[1.3569, 0.4591, 1.3471]`, `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
+| `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
+| `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
+| `rho` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (earth resistivity; home EarthResistivity) |
+| `geometry` | `Optional[str]` | `602`, `603`, `601` | structural | ACLineSegment.WireConfiguration = wc_<geometry> |
+| `units` | `Union[str, ForwardRef('LengthUnit'), NoneType]` | `Ft`, `mi`, `km` | mapped | the length unit (LENGTH_UNIT); unset: the template's unit (DSS-3) |
+| `spacing` | `Optional[str]` | `510` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
+| `cncables` | `Union[str, list[str], NoneType]` |  | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
+| `tscables` | `Union[str, list[str], NoneType]` |  | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
+| `wires` | `Union[str, list[str], NoneType]` | `['ACSR_1/0', 'ACSR_1/0']` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
+| `EarthModel` | `Union[str, ForwardRef('EarthModelType'), NoneType]` |  | untranscribed | the earth model of the impedance calculation; the consumer's choice |
+| `B1` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `B0` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
+| `LineType` | `Union[str, ForwardRef('LineTypeCode'), NoneType]` |  | untranscribed | no home in the network profile parts |
+| `EpsRmedium` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `HeightOffset` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `HeightUnit` | `Union[str, ForwardRef('LengthUnit'), NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `conductors` | `Union[str, list[str], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `normamps` | `Optional[float]` | `230.0`, `90.0`, `450.0` | structural | instance OperationalLimitSet ln_<name>_limits (see Ratings); on a switch untranscribed |
+| `emergamps` | `Optional[float]` | `130.0`, `600.0`, `300.0` | structural | instance OperationalLimitSet ln_<name>_limits (see Ratings); on a switch untranscribed |
+| `faultrate` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
+| `pct_perm` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
+| `repair` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | structural | the synthesized template's calculatedFrequency and the frequency of its b; unset: the deck's (DSS-3b) |
+| `enabled` | `Union[bool, Bool, NoneType]` | `True`, `False` | copied | `ACLineSegment.normallyInService`, `Switch.normallyInService` |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Fuse field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, FuseName]` | `Fuse1`, `2002200004641085`, `2002200004868472` | untranscribed | the switch takes the Line's name; the Fuse names no CIM object |
+| `MonitoredObj` | `Optional[str]` | `Line.Fuse1`, `Line.2002200004641085_sw`, `Line.2002200004868472_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
+| `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
+| `SwitchedObj` | `Optional[str]` | `Line.2002200004641085_sw`, `Line.2002200004868472_sw`, `Line.200220000499_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
+| `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
+| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `RatedCurrent` | `Optional[float]` | `100.0`, `65.0`, `15.0` | copied | `Fuse.ratedCurrent` (A) |
+| `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
+| `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
+| `Normal` | `Union[str, list[str], NoneType]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `State` | `Union[str, list[str], NoneType]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | untranscribed | a disabled control leaves its switch in place; no home |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Recloser field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, RecloserName]` | `Rec1`, `A333_48332`, `G9343_48332` | untranscribed | the switch takes the Line's name; the Recloser names no CIM object |
+| `MonitoredObj` | `Optional[str]` | `Line.Rec1`, `Line.A333_48332_sw`, `Line.G9343_48332_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
+| `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
+| `SwitchedObj` | `Optional[str]` | `Line.A333_48332_sw`, `Line.G9343_48332_sw`, `Line.L5397_48332_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
+| `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
+| `NumFast` | `Optional[int]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `Reset` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `Shots` | `Optional[int]` | `3` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
+| `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
+| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `Normal` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `State` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | untranscribed | a disabled control leaves its switch in place; no home |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Swtcontrol field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, SwtcontrolName]` | `2002200004641085`, `2002200004868472`, `200220000499` | untranscribed | the switch takes the Line's name; the SwtControl names no CIM object |
+| `SwitchedObj` | `Optional[str]` | `Line.2002200004641085_sw`, `Line.2002200004868472_sw`, `Line.200220000499_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
+| `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
+| `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
+| `Lock` | `Union[bool, Bool, NoneType]` | `True` | untranscribed | control lock; no home on a Switch |
+| `Delay` | `Optional[float]` |  | untranscribed | control timing; no home on a Switch |
+| `Normal` | `Optional[str]` | `Closed`, `Open` | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `State` | `Optional[str]` | `Closed`, `Open` | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
+| `Reset` | `Union[bool, Bool, NoneType]` |  | untranscribed | a command, not a setting |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | untranscribed | a disabled control leaves its switch in place; no home |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+### Transformer: regulators and LTCs
+
+`transformer.py` (seeded) joins `MAPPING_ORDER`. A Transformer named by a RegControl changes as follows
+(DSS-13):
+- **Regulator** (equal winding kV; 133 single-phase, 4 three-phase gang in the sweep): a `VoltageRegulator`
+  `xf_<name>` (same prefix, since it is the same DSS object) with two `AutoTransformerEnd`s `xf_<name>_1`,
+  `xf_<name>_2`.
+  - Each end carries `node`, `endNumber`, `grounded`, `baseU` (kV, the coil voltage), `ratedS` (kVA) and
+    `BaseVoltage`. Its `phase` is a PhaseCode: `AN` for a line-to-neutral unit, `AB` for a line-to-line unit
+    (IEEE37), `ABCN` for a 3-phase gang unit.
+  - **Impedance (the user's model, 2026-11-07):** one `TransformerMeshImpedance` `xf_<name>_mesh_12` from end 1 to
+    end 2, with x = `XHL` and r = %R1 + %R2 (percent). Their base is end 1's `baseU`/`ratedS`, the base CIM-Tables'
+    `z_base` gives an `AutoTransformerEnd`. The row comment says it is the engine's stand-in impedance: a
+    regulator's nameplate has no %Z, and OpenDSS needs XHL only because it has no real autotransformer.
+  - What raises: unequal kVAs, a delta winding, more than 2 windings. `%imag` and `%noloadloss` have no home on
+    an `AutoTransformerEnd`, so they are untranscribed.
+- **LTC** (unequal kV: J1 `SubXfmr`, M1 `M1_XFMR`, one 66/13.8 kV): stays a `PowerTransformer` (DSS-2); the tap
+  changer goes on the controlled `PowerTransformerEnd`.
+- **Taps** (the RegControl's transformer only; any other tap ≠ 1 still raises):
+  - The deck's `taps[winding]` becomes `RatioTapChanger.step` = (tap − 1) / increment, where increment =
+    (`MaxTap` − `MinTap`) / `NumTaps` (defaults 1.1, 0.9, 32). A step that is not whole within 1e-6 raises.
+  - The range: `highStep` = (`MaxTap` − 1) / increment, `lowStep` = −(1 − `MinTap`) / increment, `neutralStep` 0,
+    `stepVoltageIncrement` = increment × 100 (percent), `neutralU` = the winding kV.
+  - These sit in the RegControl's rows, because they belong to the tap changer.
+- **A regulator by XfmrCode** (the 36 coded RegControls in the sweep) takes the code's values, as the engine copies
+  them; the row comment names the code. CIM has no template for an AutoTransformer, so this needs neither U2 nor
+  S3b.
+
+The core shape `voltage_regulator.cimtbl` (added in S3a) holds the pattern: VoltageRegulator +
+AutoTransformerEnds + mesh + RatioTapChanger + TapChangerControl. The `regulator` shape (PowerTransformer + tap) is
+the LTC pattern. Atom: `tests/atoms/regcontrol/regulators.dss` (goldens `regulators_transformer.cimtbl`,
+`regulators.cimtbl`), tested by `tests/test_cimtbl_regcontrol.py`.
+
+### RegControl
+
+Mapper: `cimhub_opendss/importer/cimtbl/regcontrol.py` (`map_regcontrol`). Artifact `regcontrol.cimtbl`, after
+`transformer.cimtbl`. Atom `tests/atoms/regcontrol/regulators.dss`:
+- `reg1`: 1-phase line-to-neutral, LDC (after IEEE13_CDPSM);
+- `vr_ll`: 1-phase line-to-line (after IEEE37);
+- `gang`: 3-phase gang-operated, PTphase 2;
+- `coded`: by XfmrCode, reversible (after IEEE8500);
+- `ltc`: a step-down LTC (after M1).
+
+Values: `targetValue`, `targetDeadband`, the reverse ones and `ctRating` are plain floats in cim18v17, so their
+headers carry no unit (primary volts, amps).
+
+- `TapChangerControl` `rc_<name>`: `mode=voltage`, `discrete=true`, `Terminal` = `xf_<transformer>_T<winding>`,
+  `monitoredPhase` from `PTphase`.
+- `RatioTapChanger` `rc_<name>_tap`: `TransformerEnd` = `xf_<transformer>_<winding>`, `ltcFlag=true`,
+  `ctRatio` = `CTprim` / 0.2.
+- **Secondary to primary** (derived, named functions):
+  - targetValue (V) = `vreg` × `ptratio` (Reg1: 122 × 20 = 2440 V); the deadband and the reverse settings
+    the same way;
+  - line drop (ohm) = `R` × `ptratio` / `CTprim` (Reg1: 3 × 20 / 700 = 0.0857 Ω), and `X` likewise.
+- **Defaults** (`dss_default` annotations, filled for RegControl from the EPRI property page in this slice): `vreg`
+  120, `band` 3, `ptratio` 60, `CTprim` 300, `delay` 15, `tapdelay` 2, `winding` 1, `revThreshold` 100, `revDelay`
+  60.
+- **Fail fast:** remote sensing (`bus=`; 1 in the sweep), `tapwinding`, `vlimit`, `TapNum`, `LDC_Z`, any of the
+  idle/cogen modes; two RegControls on one transformer; a transformer no New defines.
+
+| Regcontrol field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, RegcontrolName]` | `Reg1`, `Reg2`, `Reg3` | copied | `TapChangerControl.name`, `RatioTapChanger.name`; mRID = rc_ + name (control) and rc_ + name + _tap (tap changer), lowercased |
+| `transformer` | `Optional[str]` | `Reg1`, `Reg2`, `Reg3` | structural | the regulator or LTC (DSS-13); a Transformer no New defines, or one two RegControls name, raises |
+| `winding` | `Optional[int]` | `2` | structural | RatioTapChanger.TransformerEnd = xf_<transformer>_<winding>; TapChangerControl.Terminal = xf_<transformer>_T<winding>; default 1 |
+| `vreg` | `Optional[float]` | `122.0`, `123.0`, `125.0` | derived | targetValue (V) = vreg x ptratio (secondary_to_primary); default 120 |
+| `band` | `Optional[float]` | `2.0`, `3.0`, `1.0` | derived | targetDeadband (V) = band x ptratio (secondary_to_primary); default 3 |
+| `ptratio` | `Optional[float]` | `20.0`, `60.0`, `63.50852961` | copied | `TapChangerControl.ptRatio`, `RatioTapChanger.ptRatio`; default 60 |
+| `CTprim` | `Optional[float]` | `700.0`, `50.0`, `300.0` | copied | `RatioTapChanger.ctRating` (A); default 300; also ctRatio = CTprim / 0.2 (the DSS CT secondary, 0.2 A) and the LDC base |
+| `R` | `Optional[float]` | `3.0`, `0.4`, `0.6` | derived | lineDropR (ohm) = R x ptratio / CTprim (line_drop_ohms); default 0; lineDropCompensation = R or X nonzero |
+| `X` | `Optional[float]` | `9.0`, `7.5`, `0.4` | derived | lineDropX (ohm) = X x ptratio / CTprim (line_drop_ohms); default 0 |
+| `bus` | `Optional[str]` | `temp` | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (remote sensing; 1 RegControl in the sweep, which raises) |
+| `delay` | `Optional[float]` | `90.0`, `47.0`, `50.0` | copied | `RatioTapChanger.initialDelay` (s); default 15 |
+| `reversible` | `Union[bool, Bool, NoneType]` | `True` | copied | `TapChangerControl.reversible`; default false |
+| `revvreg` | `Optional[float]` | `125.0` | derived | reverseTargetValue (V) = revvreg x ptratio (secondary_to_primary); default 120 |
+| `revband` | `Optional[float]` | `2.0` | derived | reverseTargetDeadband (V) = revband x ptratio (secondary_to_primary); default 3 |
+| `revR` | `Optional[float]` |  | derived | reverseLineDropR (ohm) = revR x ptratio / CTprim (line_drop_ohms); default 0 |
+| `revX` | `Optional[float]` |  | derived | reverseLineDropX (ohm) = revX x ptratio / CTprim (line_drop_ohms); default 0 |
+| `tapdelay` | `Optional[float]` | `30.0`, `45.0` | copied | `RatioTapChanger.subsequentDelay` (s); default 2 |
+| `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
+| `maxtapchange` | `Optional[float]` |  | untranscribed | DSS solution control; no home in the network profile parts |
+| `inversetime` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS solution control; no home in the network profile parts |
+| `tapwinding` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap winding other than the monitored one) |
+| `vlimit` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (home TapChangerControl.maxLimitVoltage) |
+| `PTphase` | `Optional[int]` |  | structural | TapChangerControl.monitoredPhase = the phase of the winding's conductor PTphase (default 1); MAX/MIN raise |
+| `revThreshold` | `Optional[float]` | `50.0` | copied | `TapChangerControl.reversingPowerThreshold` (kW); default 100 |
+| `revDelay` | `Optional[float]` |  | copied | `TapChangerControl.reversingDelay` (s); default 60 |
+| `revNeutral` | `Union[bool, Bool, NoneType]` |  | copied | `TapChangerControl.reverseToNeutral`; default false |
+| `EventLog` | `Optional[str]` |  | untranscribed | DSS report flag |
+| `RemotePTRatio` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `TapNum` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap position that overrides the transformer's tap) |
+| `Reset` | `Union[bool, Bool, NoneType]` |  | untranscribed | a command, not a setting |
+| `LDC_Z` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `rev_Z` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Cogen` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `idle` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `idleReverse` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `idleForward` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a control |
+| `enabled` | `Union[bool, Bool, NoneType]` | `True` | copied | `TapChangerControl.enabled`, `RatioTapChanger.controlEnabled`; default true |
+| `like` | `Optional[str]` | `creg3a`, `creg4a`, `creg1a` | untranscribed | the reader resolves like= before mapping |
+
+### Decisions for S3a (approved 2026-11-08)
+
+- **R1:** line ratings are mapped as above. The season goes on the `OperationalLimitType` when a deck gives one.
+- **R2:** `RatioTapChanger.normalStep` is not written. The converter writes `step` (the deck's tap position) only.
+- **R3:** S3a/S3b as proposed.
+- **R4:** synthesized templates are `ln_<name>_lc` and `ln_<name>_wc`.

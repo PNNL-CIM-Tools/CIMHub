@@ -1,0 +1,23 @@
+# Shape: voltage regulator. A VoltageRegulator (an AutoTransformer) with two AutoTransformerEnds that carry
+# the nameplate (baseU = coil voltage, ratedS = through rating) and a real PhaseCode phase, which goes on
+# each end's Terminal. The mesh impedance is a solver stand-in (a regulator nameplate has no %Z); its percent
+# base is end 1's baseU/ratedS. RatioTapChanger on the tap-side end + TapChangerControl monitoring that
+# end's generated Terminal. step is a tap position, never a ratio. A step-down LTC is the regulator shape.
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Object VoltageRegulator: mRID=xf_reg1, name=reg1, EquipmentContainer=fdr_shapes
+Table AutoTransformerEnd: mRID, node, phase, endNumber, grounded, baseU (kV), ratedS (kVA), BaseVoltage, AutoTransformer=xf_reg1
+    xf_reg1_1, n0,  AN, 1, true, 2.4, 1666, bv_4p16kv
+    xf_reg1_2, rg1, AN, 2, true, 2.4, 1666, bv_4p16kv
+Object TransformerMeshImpedance: mRID=xf_reg1_mesh_12, FromTransformerEnd=xf_reg1_1, ToTransformerEnd=xf_reg1_2, r (percent)=0.01, x (percent)=0.01
+Object TapChangerControl: mRID=rc_reg1, name=reg1, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, ptRatio=20, targetValue (V)=2440, targetDeadband (V)=40, lineDropCompensation=true, lineDropR (ohm)=0.085714, lineDropX (ohm)=0.257143, Terminal=xf_reg1_T2
+Object RatioTapChanger: mRID=rc_reg1_tap, name=reg1, lowStep=-16, highStep=16, neutralStep=0, step=10, stepVoltageIncrement (percent)=0.625, neutralU (kV)=2.4, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating (A)=700, ctRatio=3500, initialDelay (s)=15, subsequentDelay (s)=2, TapChangerControl=rc_reg1, TransformerEnd=xf_reg1_2
+
+Object VoltageRegulator: mRID=xf_vr3, name=vr3, EquipmentContainer=fdr_shapes
+Table AutoTransformerEnd: mRID, node, phase, endNumber, grounded, baseU (kV), ratedS (kVA), BaseVoltage, AutoTransformer=xf_vr3
+    xf_vr3_1, n1, ABCN, 1, true, 4.16, 5000, bv_4p16kv
+    xf_vr3_2, n2, ABCN, 2, true, 4.16, 5000, bv_4p16kv
+Object TransformerMeshImpedance: mRID=xf_vr3_mesh_12, FromTransformerEnd=xf_vr3_1, ToTransformerEnd=xf_vr3_2, r (percent)=0.002, x (percent)=0.01

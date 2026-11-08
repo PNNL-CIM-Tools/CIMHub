@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-07T19:07:33
+# Generation date: 2026-11-08T13:57:22
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -3586,7 +3586,7 @@ class Fuse(YAMLRoot):
     SwitchedObj: Optional[str] = None
     SwitchedTerm: Optional[int] = None
     FuseCurve: Optional[float] = None
-    RatedCurrent: Optional[str] = None
+    RatedCurrent: Optional[float] = None
     Delay: Optional[str] = None
     Action: Optional[str] = None
     Normal: Optional[Union[str, list[str]]] = empty_list()
@@ -3616,8 +3616,8 @@ class Fuse(YAMLRoot):
         if self.FuseCurve is not None and not isinstance(self.FuseCurve, float):
             self.FuseCurve = float(self.FuseCurve)
 
-        if self.RatedCurrent is not None and not isinstance(self.RatedCurrent, str):
-            self.RatedCurrent = str(self.RatedCurrent)
+        if self.RatedCurrent is not None and not isinstance(self.RatedCurrent, float):
+            self.RatedCurrent = float(self.RatedCurrent)
 
         if self.Delay is not None and not isinstance(self.Delay, str):
             self.Delay = str(self.Delay)
@@ -4066,19 +4066,19 @@ class Regcontrol(YAMLRoot):
     transformer: Optional[str] = None
     winding: Optional[int] = None
     vreg: Optional[float] = None
-    band: Optional[str] = None
+    band: Optional[float] = None
     ptratio: Optional[float] = None
     CTprim: Optional[float] = None
-    R: Optional[str] = None
-    X: Optional[str] = None
+    R: Optional[float] = None
+    X: Optional[float] = None
     bus: Optional[str] = None
     delay: Optional[float] = None
     reversible: Optional[Union[bool, Bool]] = None
     revvreg: Optional[float] = None
     revband: Optional[float] = None
-    revR: Optional[str] = None
-    revX: Optional[str] = None
-    tapdelay: Optional[str] = None
+    revR: Optional[float] = None
+    revX: Optional[float] = None
+    tapdelay: Optional[float] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     maxtapchange: Optional[float] = None
     inversetime: Optional[Union[bool, Bool]] = None
@@ -4086,7 +4086,7 @@ class Regcontrol(YAMLRoot):
     vlimit: Optional[float] = None
     PTphase: Optional[int] = None
     revThreshold: Optional[float] = None
-    revDelay: Optional[str] = None
+    revDelay: Optional[float] = None
     revNeutral: Optional[Union[bool, Bool]] = None
     EventLog: Optional[str] = None
     RemotePTRatio: Optional[float] = None
@@ -4117,8 +4117,8 @@ class Regcontrol(YAMLRoot):
         if self.vreg is not None and not isinstance(self.vreg, float):
             self.vreg = float(self.vreg)
 
-        if self.band is not None and not isinstance(self.band, str):
-            self.band = str(self.band)
+        if self.band is not None and not isinstance(self.band, float):
+            self.band = float(self.band)
 
         if self.ptratio is not None and not isinstance(self.ptratio, float):
             self.ptratio = float(self.ptratio)
@@ -4126,11 +4126,11 @@ class Regcontrol(YAMLRoot):
         if self.CTprim is not None and not isinstance(self.CTprim, float):
             self.CTprim = float(self.CTprim)
 
-        if self.R is not None and not isinstance(self.R, str):
-            self.R = str(self.R)
+        if self.R is not None and not isinstance(self.R, float):
+            self.R = float(self.R)
 
-        if self.X is not None and not isinstance(self.X, str):
-            self.X = str(self.X)
+        if self.X is not None and not isinstance(self.X, float):
+            self.X = float(self.X)
 
         if self.bus is not None and not isinstance(self.bus, str):
             self.bus = str(self.bus)
@@ -4147,14 +4147,14 @@ class Regcontrol(YAMLRoot):
         if self.revband is not None and not isinstance(self.revband, float):
             self.revband = float(self.revband)
 
-        if self.revR is not None and not isinstance(self.revR, str):
-            self.revR = str(self.revR)
+        if self.revR is not None and not isinstance(self.revR, float):
+            self.revR = float(self.revR)
 
-        if self.revX is not None and not isinstance(self.revX, str):
-            self.revX = str(self.revX)
+        if self.revX is not None and not isinstance(self.revX, float):
+            self.revX = float(self.revX)
 
-        if self.tapdelay is not None and not isinstance(self.tapdelay, str):
-            self.tapdelay = str(self.tapdelay)
+        if self.tapdelay is not None and not isinstance(self.tapdelay, float):
+            self.tapdelay = float(self.tapdelay)
 
         if self.debugtrace is not None and not isinstance(self.debugtrace, Bool):
             self.debugtrace = Bool(self.debugtrace)
@@ -4177,8 +4177,8 @@ class Regcontrol(YAMLRoot):
         if self.revThreshold is not None and not isinstance(self.revThreshold, float):
             self.revThreshold = float(self.revThreshold)
 
-        if self.revDelay is not None and not isinstance(self.revDelay, str):
-            self.revDelay = str(self.revDelay)
+        if self.revDelay is not None and not isinstance(self.revDelay, float):
+            self.revDelay = float(self.revDelay)
 
         if self.revNeutral is not None and not isinstance(self.revNeutral, Bool):
             self.revNeutral = Bool(self.revNeutral)
@@ -9564,7 +9564,7 @@ slots.fuse__FuseCurve = Slot(uri=DSS.FuseCurve, name="fuse__FuseCurve", curie=DS
                    model_uri=DSS.fuse__FuseCurve, domain=None, range=Optional[float])
 
 slots.fuse__RatedCurrent = Slot(uri=DSS.RatedCurrent, name="fuse__RatedCurrent", curie=DSS.curie('RatedCurrent'),
-                   model_uri=DSS.fuse__RatedCurrent, domain=None, range=Optional[str])
+                   model_uri=DSS.fuse__RatedCurrent, domain=None, range=Optional[float])
 
 slots.fuse__Delay = Slot(uri=DSS.Delay, name="fuse__Delay", curie=DSS.curie('Delay'),
                    model_uri=DSS.fuse__Delay, domain=None, range=Optional[str])
@@ -9843,7 +9843,7 @@ slots.regcontrol__vreg = Slot(uri=DSS.vreg, name="regcontrol__vreg", curie=DSS.c
                    model_uri=DSS.regcontrol__vreg, domain=None, range=Optional[float])
 
 slots.regcontrol__band = Slot(uri=DSS.band, name="regcontrol__band", curie=DSS.curie('band'),
-                   model_uri=DSS.regcontrol__band, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__band, domain=None, range=Optional[float])
 
 slots.regcontrol__ptratio = Slot(uri=DSS.ptratio, name="regcontrol__ptratio", curie=DSS.curie('ptratio'),
                    model_uri=DSS.regcontrol__ptratio, domain=None, range=Optional[float])
@@ -9852,10 +9852,10 @@ slots.regcontrol__CTprim = Slot(uri=DSS.CTprim, name="regcontrol__CTprim", curie
                    model_uri=DSS.regcontrol__CTprim, domain=None, range=Optional[float])
 
 slots.regcontrol__R = Slot(uri=DSS.R, name="regcontrol__R", curie=DSS.curie('R'),
-                   model_uri=DSS.regcontrol__R, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__R, domain=None, range=Optional[float])
 
 slots.regcontrol__X = Slot(uri=DSS.X, name="regcontrol__X", curie=DSS.curie('X'),
-                   model_uri=DSS.regcontrol__X, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__X, domain=None, range=Optional[float])
 
 slots.regcontrol__bus = Slot(uri=DSS.bus, name="regcontrol__bus", curie=DSS.curie('bus'),
                    model_uri=DSS.regcontrol__bus, domain=None, range=Optional[str])
@@ -9873,13 +9873,13 @@ slots.regcontrol__revband = Slot(uri=DSS.revband, name="regcontrol__revband", cu
                    model_uri=DSS.regcontrol__revband, domain=None, range=Optional[float])
 
 slots.regcontrol__revR = Slot(uri=DSS.revR, name="regcontrol__revR", curie=DSS.curie('revR'),
-                   model_uri=DSS.regcontrol__revR, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revR, domain=None, range=Optional[float])
 
 slots.regcontrol__revX = Slot(uri=DSS.revX, name="regcontrol__revX", curie=DSS.curie('revX'),
-                   model_uri=DSS.regcontrol__revX, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revX, domain=None, range=Optional[float])
 
 slots.regcontrol__tapdelay = Slot(uri=DSS.tapdelay, name="regcontrol__tapdelay", curie=DSS.curie('tapdelay'),
-                   model_uri=DSS.regcontrol__tapdelay, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__tapdelay, domain=None, range=Optional[float])
 
 slots.regcontrol__debugtrace = Slot(uri=DSS.debugtrace, name="regcontrol__debugtrace", curie=DSS.curie('debugtrace'),
                    model_uri=DSS.regcontrol__debugtrace, domain=None, range=Optional[Union[bool, Bool]])
@@ -9903,7 +9903,7 @@ slots.regcontrol__revThreshold = Slot(uri=DSS.revThreshold, name="regcontrol__re
                    model_uri=DSS.regcontrol__revThreshold, domain=None, range=Optional[float])
 
 slots.regcontrol__revDelay = Slot(uri=DSS.revDelay, name="regcontrol__revDelay", curie=DSS.curie('revDelay'),
-                   model_uri=DSS.regcontrol__revDelay, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revDelay, domain=None, range=Optional[float])
 
 slots.regcontrol__revNeutral = Slot(uri=DSS.revNeutral, name="regcontrol__revNeutral", curie=DSS.curie('revNeutral'),
                    model_uri=DSS.regcontrol__revNeutral, domain=None, range=Optional[Union[bool, Bool]])

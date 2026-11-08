@@ -1,7 +1,11 @@
-"""OpenDSS ``Transformer`` (inline, without ``XfmrCode``) -> ``transformer.cimtbl``.
+"""OpenDSS ``Transformer`` -> ``transformer.cimtbl``.
 
 Every DSS Transformer becomes a ``PowerTransformer`` with one ``PowerTransformerEnd`` per bus.
-The end's terminal carries the phases (``ABCN``, ``AN``, ``AB``, ``s1s2N``).
+The end's terminal carries the phases (``ABCN``, ``AN``, ``AB``, ``s1s2N``). A Transformer a RegControl names
+with equal winding kV is a ``VoltageRegulator`` instead (DSS-13): two ``AutoTransformerEnd``s with the nameplate
+(``baseU``, ``ratedS``, a PhaseCode ``phase``) and the engine's stand-in mesh impedance. A step-down one (an LTC)
+stays a PowerTransformer. An instance by ``XfmrCode`` waits for the template (S3b) unless it is regulated; then it
+takes its code's values, as the engine copies them (CIM has no AutoTransformer template).
 
 - 3-phase, by balanced ends: ``ratedU`` (the DSS kV, phase-to-phase), ``ratedS`` and ``r``
   (percent on the end's own rating) on each end; ``x`` on the mesh between ends, in percent on
@@ -21,6 +25,7 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#transformer``.
 
 from __future__ import annotations
 
+import dataclasses
 import math
 from collections.abc import Mapping
 from typing import NamedTuple
@@ -37,7 +42,7 @@ PREFIX = "xf_"
 _SCALAR = "the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises"
 _THERMAL = "thermal model; no home in the network profile parts"
 _RATING = "instance OperationalLimitSet or untranscribed (plan D9)"
-_TAP_CHANGER = "tap changer range; RatioTapChanger with the RegControl slice"
+_TAP_CHANGER = "the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed"
 _RELIABILITY = "reliability data; no home in the network profile parts"
 
 FIELDS = {
@@ -57,7 +62,8 @@ FIELDS = {
     "conns": Field("structural", note="connectionKind, grounded, default nodes; default wye"),
     "kVs": Field("structural", note="3-phase: end ratedU; 1-phase: winding baseU, ratedU derived (x sqrt 3, x 2)"),
     "kVAs": Field("structural", note="end ratedS / winding ratedS (halves / 2); winding 1's kVA is every baseS"),
-    "taps": Field("structural", note="a tap other than 1 raises until the RegControl slice (RatioTapChanger.step)"),
+    "taps": Field("structural", note="the regulated winding's tap is RatioTapChanger.step (regcontrol.cimtbl); "
+                                     "any other tap other than 1 raises"),
     "XHL": Field("structural", note="mesh 1-2 x (percent on winding 1's kVA); default 7"),
     "XHT": Field("structural", note="mesh 1-3 x; default 35"),
     "XLT": Field("structural", note="mesh 2-3 x; default 30"),
@@ -68,8 +74,10 @@ FIELDS = {
     "pct_Rs": Field("structural", note="3-phase: end r (percent); 1-phase: winding r (percent); default 0.2"),
     "pct_loadloss": Field("derived", note="when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; "
                                           "set with pct_Rs, the two must agree"),
-    "pct_noloadloss": Field("derived", note="3-phase: end 1 g (percent); 1-phase: tank noLoadLoss = % x kVA"),
-    "pct_imag": Field("structural", note="3-phase: end 1 b (percent); 1-phase: tank percentMagnetizingCurrent"),
+    "pct_noloadloss": Field("derived", note="3-phase: end 1 g (percent); 1-phase: tank noLoadLoss = % x kVA; a "
+                                            "regulator has no home for it (row comment)"),
+    "pct_imag": Field("structural", note="3-phase: end 1 b (percent); 1-phase: tank percentMagnetizingCurrent; a "
+                                         "regulator has no home for it (row comment)"),
     "thermal": Field("untranscribed", note=_THERMAL),
     "n": Field("untranscribed", note=_THERMAL),
     "m": Field("untranscribed", note=_THERMAL),
@@ -83,12 +91,13 @@ FIELDS = {
     "emergamps": Field("untranscribed", note=_RATING),
     "sub": Field("untranscribed", note="DSS report flag"),
     "subname": Field("untranscribed", note="DSS report label"),
-    "MaxTap": Field("untranscribed", note=_TAP_CHANGER),
-    "MinTap": Field("untranscribed", note=_TAP_CHANGER),
-    "NumTaps": Field("untranscribed", note=_TAP_CHANGER),
+    "MaxTap": Field("structural", note=_TAP_CHANGER + "; default 1.1"),
+    "MinTap": Field("structural", note=_TAP_CHANGER + "; default 0.9"),
+    "NumTaps": Field("structural", note=_TAP_CHANGER + "; default 32"),
     "ppm_antifloat": Field("untranscribed", note="numerical aid of the DSS solver"),
     "bank": Field("untranscribed", note="each DSS Transformer is its own PowerTransformer"),
-    "XfmrCode": Field("structural", note="instances by code raise until the lug template (TransformerLug.sequenceNumber)"),
+    "XfmrCode": Field("structural", note="a regulated instance takes the code's values (with_code); any other "
+                                         "waits for the template (S3b) and is counted on the master"),
     "XRConst": Field("untranscribed", note="harmonics option"),
     "LeadLag": Field("untranscribed", note="PowerTransformer.vectorGroup clock; vectorGroup not mapped yet"),
     "Core": Field("untranscribed", note="core type; no home in the network profile parts"),
@@ -168,13 +177,57 @@ def is_split_phase(on_bus) -> bool:
             and all(0 in winding.nodes for winding in on_bus) and nodes == {0, 1, 2})
 
 
+def with_code(xf, codes: Mapping[str, object]):
+    """``(Transformer, comment)``: an instance by XfmrCode with every slot it leaves unset taken from its code, as
+    the engine copies them; an unknown code raises."""
+    code = codes.get(str(xf.XfmrCode).lower())
+    if code is None:
+        raise ValueError(f"Transformer {xf.name}: XfmrCode={xf.XfmrCode} is not defined")
+    own = {field.lower(): field for field in xf.__dataclass_fields__}
+    filled = {}
+    for field in code.__dataclass_fields__:
+        if field in ("name", "like"):
+            continue
+        value, target = getattr(code, field), own.get(field.lower())
+        if target is None:
+            raise ValueError(f"XfmrCode {code.name}: {field} has no Transformer slot")
+        if value not in (None, []) and getattr(xf, target) in (None, []):
+            filled[target] = value
+    return dataclasses.replace(xf, **filled), f"values from XfmrCode {code.name}"
+
+
+def regulated_transformers(native) -> dict[str, object]:
+    """``{lowered transformer name: RegControl}``; a transformer two RegControls name raises."""
+    regulated: dict[str, object] = {}
+    for control in native.list_by_class(schema.Regcontrol):
+        key = str(control.transformer).lower()
+        if key in regulated:
+            raise ValueError(f"Transformer {control.transformer}: named by RegControls {regulated[key].name} and "
+                             f"{control.name}; one is mapped")
+        regulated[key] = control
+    return regulated
+
+
+def waiting_for_template(native) -> int:
+    """How many instances by XfmrCode no RegControl names: they wait for the template (S3b)."""
+    regulated = regulated_transformers(native)
+    return sum(1 for xf in native.list_by_class(NATIVE_CLASS)
+               if xf.XfmrCode and str(xf.name).lower() not in regulated)
+
+
+def is_regulator(windings: list[Winding]) -> bool:
+    """A regulated transformer with equal winding kV is a regulator; a step-down one is an LTC (DSS-13)."""
+    return len({winding.kv for winding in windings}) == 1
+
+
 def _defaulted(slot: str, value, notes: list[str]):
     notes.append(f"{slot}={cell(value)}")
     return value
 
 
-def _windings(xf, phases: int, notes: list[str]) -> list[Winding]:
-    """The windings of one transformer, with DSS defaults filled and listed in ``notes``."""
+def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -> list[Winding]:
+    """The windings of one transformer, with DSS defaults filled and listed in ``notes``. Only a regulated
+    transformer may have a tap other than 1 (its RatioTapChanger.step)."""
     name = xf.name
     for slot in _SCALAR_SLOTS:
         if getattr(xf, slot) is not None:
@@ -187,8 +240,8 @@ def _windings(xf, phases: int, notes: list[str]) -> list[Winding]:
     for slot in ("kVs", "kVAs"):
         if len(getattr(xf, slot) or []) != count:
             raise ValueError(f"Transformer {name}: {slot}={getattr(xf, slot)} needs {count} values")
-    if any(float(tap) != 1.0 for tap in xf.taps or []):
-        raise ValueError(f"Transformer {name}: taps={xf.taps} need a RatioTapChanger (the RegControl slice)")
+    if not regulated and any(float(tap) != 1.0 for tap in xf.taps or []):
+        raise ValueError(f"Transformer {name}: taps={xf.taps} with no RegControl; a fixed tap is not mapped yet")
 
     conns = [cell(conn) for conn in xf.conns or []] or [_defaulted("conns", "wye", notes)] * count
     if len(conns) != count:
@@ -231,7 +284,7 @@ def _x_percent(xf, pair: tuple[int, int], notes: list[str]) -> float:
     return values.pop()
 
 
-def _ends(windings: list[Winding], phases: int, *, name: str) -> list[End]:
+def ends_of(windings: list[Winding], phases: int, *, name: str) -> list[End]:
     """One end per distinct bus, numbered in winding order. On a 1-phase transformer, windings 2 and 3
     on one bus, both using node 0, with nodes 1 and 2, are a split-phase secondary (s1, s2, N)."""
     by_bus: dict[str, list[Winding]] = {}
@@ -285,6 +338,9 @@ class _Tables:
         self.phase_ends: list[Row] = []
         self.coils: list[Row] = []
         self.coil_mesh: list[Row] = []
+        self.regulators: list[Row] = []
+        self.auto_ends: list[Row] = []
+        self.auto_mesh: list[Row] = []
 
 
 def _map_three_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
@@ -362,6 +418,43 @@ def _map_single_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
                                    cell(_x_percent(xf, (i, j), notes))]))
 
 
+def regulator_phase(winding: Winding, phases: int, *, name: str) -> str:
+    """An AutoTransformerEnd's PhaseCode: ``AN`` (line to neutral), ``AB`` (line to line), ``ABCN`` (3-phase wye)."""
+    if phases == 3:
+        if not winding.wye or winding.nodes[:3] != (1, 2, 3):
+            raise ValueError(f"Transformer {name}: a 3-phase regulator is mapped as wye on nodes 1.2.3")
+        return "ABCN"
+    unknown = [node for node in winding.nodes if node not in _NODE_PHASE]
+    if unknown or len(set(winding.nodes)) != 2:
+        raise ValueError(f"Transformer {name}: regulator winding {winding.number} on nodes {winding.nodes}")
+    return "".join(sorted((_NODE_PHASE[node] for node in winding.nodes), key=_PHASE_ORDER.index))
+
+
+def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: Mapping[str, BusSystem],
+                   rows: _Tables, notes: list[str], container: str, source: str | None) -> None:
+    """A VoltageRegulator with two AutoTransformerEnds and the engine's stand-in mesh (DSS-13)."""
+    if len(windings) != 2 or windings[0].bus == windings[1].bus:
+        raise ValueError(f"Transformer {xf.name}: a regulator is mapped with 2 windings on 2 buses")
+    if windings[0].kva != windings[1].kva:
+        raise ValueError(f"Transformer {xf.name}: regulator kVAs {[w.kva for w in windings]} differ")
+    if xf.Rneut is not None and float(xf.Rneut) >= 0:
+        raise ValueError(f"Transformer {xf.name}: a regulator neutral impedance is not mapped yet")
+    unused = [f"{slot}={cell(getattr(xf, slot))}" for slot in ("pct_imag", "pct_noloadloss")
+              if getattr(xf, slot) is not None]
+    comment = "\n".join(part for part in (
+        source, _row_comment(notes),
+        f"no home on a VoltageRegulator: {', '.join(unused)}" if unused else None) if part) or None
+    rows.regulators.append(Row([xf_id, str(xf.name), container, cell(xf.enabled)], comment=comment))
+    for winding in windings:
+        phase = regulator_phase(winding, phases, name=xf.name)
+        rows.auto_ends.append(Row([f"{xf_id}_{winding.number}", xf_id, winding.bus, phase, str(winding.number),
+                                   cell(winding.wye and winding.nodes[-1] == 0 if phases == 1 else winding.wye),
+                                   cell(winding.kv), cell(winding.kva), buses[winding.bus].base_voltage]))
+    r = windings[0].r_percent + windings[1].r_percent
+    rows.auto_mesh.append(Row([f"{xf_id}_mesh_12", f"{xf_id}_1", f"{xf_id}_2", cell(r),
+                               cell(_x_percent(xf, (1, 2), notes))]))
+
+
 def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> Document:
     """Every inline ``Transformer`` of a DSS model as one ``transformer`` document.
 
@@ -369,28 +462,37 @@ def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> D
     EquipmentContainer mRID of every PowerTransformer and tank.
     """
     transformers = native.list_by_class(NATIVE_CLASS)
+    codes = {str(code.name).lower(): code for code in native.list_by_class(schema.Xfmrcode)}
+    regulated = regulated_transformers(native)
     rows = _Tables()
     for xf in transformers:
+        is_regulated = str(xf.name).lower() in regulated
+        source = None
         if xf.XfmrCode:
-            raise ValueError(f"Transformer {xf.name}: XfmrCode={xf.XfmrCode} instances wait for the lug template "
-                             "(TransformerLug.sequenceNumber)")
+            if not is_regulated:
+                continue  # waits for the XfmrCode template (S3b); counted on the master
+            xf, source = with_code(xf, codes)
         phases = xf.phases if xf.phases is not None else 3
         if phases not in (1, 3):
             raise ValueError(f"Transformer {xf.name}: phases={phases}; only 1 and 3 are mapped")
         notes = [] if xf.phases is not None else ["phases=3"]
-        windings = _windings(xf, phases, notes)
-        ends = _ends(windings, phases, name=xf.name)
+        windings = windings_of(xf, phases, notes, regulated=is_regulated)
         xf_id = mrid(PREFIX, xf.name, lowercase=True)
-        missing = [end.bus for end in ends if end.bus not in buses]
+        missing = [winding.bus for winding in windings if winding.bus not in buses]
         if missing:
             raise ValueError(f"Transformer {xf.name}: no bus voltage for {missing}")
+        if is_regulated and is_regulator(windings):
+            _map_regulator(xf, xf_id, windings, phases, buses, rows, notes, container, source)
+            continue
+        ends = ends_of(windings, phases, name=xf.name)
         first_row = len(rows.transformers)
         rows.transformers.append(Row([xf_id, str(xf.name), container, cell(xf.enabled)]))
         if phases == 3:
             _map_three_phase(xf, xf_id, windings, ends, buses, rows, notes)
         else:
             _map_single_phase(xf, xf_id, windings, ends, buses, rows, notes)
-        rows.transformers[first_row] = rows.transformers[first_row]._replace(comment=_row_comment(notes))
+        comment = "\n".join(part for part in (source, _row_comment(notes)) if part) or None
+        rows.transformers[first_row] = rows.transformers[first_row]._replace(comment=comment)
     return Document(name="transformer", statements=_statements(rows), profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(transformers)) if transformers else None)
 
@@ -419,6 +521,15 @@ def _statements(rows: _Tables) -> list[Table]:
                      "coil on a 3-phase system, x 2 for a split-phase half), ratedS of a half = kVA / 2"),
         ("TransformerMeshImpedance", ["mRID", "FromWinding", "ToWinding", ("x", "percent")], rows.coil_mesh,
          "x in percent on winding 1's kVA (every coil's baseS) at the From winding's baseU"),
+        ("VoltageRegulator", ["mRID", "name", "EquipmentContainer", "normallyInService"], rows.regulators,
+         "regulators (DSS-13): a Transformer a RegControl names, with equal winding kV"),
+        ("AutoTransformerEnd", ["mRID", "AutoTransformer", "node", "phase", "endNumber", "grounded", ("baseU", "kV"),
+                                ("ratedS", "kVA"), "BaseVoltage"], rows.auto_ends,
+         "the nameplate: baseU = the coil kV, ratedS = the kVA; phase is a PhaseCode on the end's Terminal"),
+        ("TransformerMeshImpedance", ["mRID", "FromTransformerEnd", "ToTransformerEnd", ("r", "percent"),
+                                      ("x", "percent")], rows.auto_mesh,
+         "the engine's stand-in impedance (a regulator nameplate has no %Z): r = %R1 + %R2, x = XHL, in percent "
+         "on end 1's baseU and ratedS"),
     ]
     statements = []
     for class_name, columns, table_rows, comment in layout:

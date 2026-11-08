@@ -19,7 +19,8 @@ from typing import NamedTuple
 from cimtables.document import Column, Document, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, copied_columns, lookup, mrid, untranscribed_values
-from cimhub_core.derived.sequence import phase_matrix
+from cimhub_core.derived.sequence import balanced_matrix, phase_matrix
+from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Linecode
@@ -206,22 +207,39 @@ def templates(native, length_unit: str | None = None) -> dict[str, list[Template
                                     note.format(unit=unit)) for unit in given]
         else:
             gated.append(code)
-    if gated:
-        if length_unit is not None:
-            unit = lookup(LENGTH_UNIT, length_unit, slot="length_unit", record_id="the importer")
-            note = f"units given: {unit} (length_unit=; no units on code or line)"
-        else:
-            unit, median = gated_unit(gated)
-            count = f"{len(gated)} code" + ("s" if len(gated) > 1 else "")
-            note = f"units inferred: {unit} (median r {median:.3g} per unit over {count}; no units on code or line)"
-        for code in gated:
-            result[str(code.name).lower()] = [Template(mrid(PREFIX, code.name, lowercase=True), unit, note)]
+    result.update(gated_templates(gated, length_unit, lambda code: mrid(PREFIX, code.name, lowercase=True)))
     return result
+
+
+def gated_templates(codes, length_unit: str | None, mrid_of) -> dict[str, list[Template]]:
+    """``{lowered name: [Template]}`` for codes with no units on code or line: ``length_unit`` if given, else
+    the magnitude gate over these codes (DSS-3). ``mrid_of(code)`` names each template."""
+    if not codes:
+        return {}
+    if length_unit is not None:
+        unit = lookup(LENGTH_UNIT, length_unit, slot="length_unit", record_id="the importer")
+        note = f"units given: {unit} (length_unit=; no units on code or line)"
+    else:
+        unit, median = gated_unit(codes)
+        count = f"{len(codes)} code" + ("s" if len(codes) > 1 else "")
+        note = f"units inferred: {unit} (median r {median:.3g} per unit over {count}; no units on code or line)"
+    return {str(code.name).lower(): [Template(mrid_of(code), unit, note)] for code in codes}
 
 
 def _has_capacitance(code) -> bool:
     values = list(code.cmatrix or []) + [code.C1, code.C0]
     return any(value is not None and float(value) != 0 for value in values)
+
+
+def with_default_capacitance(code):
+    """``(code, comment)``: a matrix code without ``cmatrix`` keeps the engine's default C matrix, self
+    (2 C1 + C0)/3 and mutual (C0 - C1)/3 from the default C1, C0 per unit length (balanced_matrix)."""
+    if code.cmatrix or not code.rmatrix:
+        return code, None
+    defaults = dss_defaults(NATIVE_CLASS)
+    c = balanced_matrix(float(defaults["C1"]), float(defaults["C0"]), code.nphases)
+    return dataclasses.replace(code, cmatrix=list(c.values())), \
+        f"defaulted: cmatrix from C1={cell(defaults['C1'])}, C0={cell(defaults['C0'])} (balanced_matrix)"
 
 
 def with_frequency(code, base_frequency: float):
@@ -306,26 +324,20 @@ def _sequence_row(code, template: Template, note: str | None) -> tuple[tuple[Col
     return columns, row
 
 
-def map_linecode(native, *, base_frequency: float, length_unit: str | None = None) -> Document:
-    """Every ``LineCode`` of a DSS model as one ``linecode`` document.
-
-    ``base_frequency`` (Hz) is the deck's, for a code with C and no ``baseFreq``; ``length_unit`` overrides the
-    magnitude gate for codes with no units on code or line.
+def impedance_statements(entries, base_frequency: float) -> list:
+    """The template tables of ``(code, [Template, ...])`` pairs: a phase table, its data per length unit, and
+    the sequence tables per header. The Line mapper passes its synthesized inline codes the same way (DSS-8).
     """
-    codes = native.list_by_class(NATIVE_CLASS)
-    if not codes:
-        return Document(name="linecode", statements=[], profile=CIM_PROFILE)
-
-    by_code = templates(native, length_unit)
     impedances: list[Row] = []
     data_by_unit: dict[str, list[Row]] = {}
     sequences_by_columns: dict[tuple[Column, ...], list[Row]] = {}
     derived_matrix = False
-    for original in codes:
+    for original, code_templates in entries:
         sequence = is_sequence(original)
-        code, defaulted = with_frequency(original, base_frequency)
-        for template in by_code[str(code.name).lower()]:
-            note = _comment(template.note, defaulted)
+        code, capacitance = with_default_capacitance(original)
+        code, defaulted = with_frequency(code, base_frequency)
+        for template in code_templates:
+            note = _comment(template.note, capacitance, defaulted)
             if sequence and code.nphases == 3:
                 columns, row = _sequence_row(code, template, note)
                 sequences_by_columns.setdefault(columns, []).append(row)
@@ -359,5 +371,20 @@ def map_linecode(native, *, base_frequency: float, length_unit: str | None = Non
         statements.append(Table(_SEQ, [Column("mRID"), *columns], rows,
                                 comment="derived: bch/b0ch = 2 pi baseFreq C1/C0 (b_from_c), from C (nF) -> nS"
                                 if derived else None))
+    return statements
+
+
+def map_linecode(native, *, base_frequency: float, length_unit: str | None = None) -> Document:
+    """Every ``LineCode`` of a DSS model as one ``linecode`` document.
+
+    ``base_frequency`` (Hz) is the deck's, for a code with C and no ``baseFreq``; ``length_unit`` overrides the
+    magnitude gate for codes with no units on code or line.
+    """
+    codes = native.list_by_class(NATIVE_CLASS)
+    if not codes:
+        return Document(name="linecode", statements=[], profile=CIM_PROFILE)
+    templates_of = templates(native, length_unit)
+    statements = impedance_statements([(code, templates_of[str(code.name).lower()]) for code in codes],
+                                      base_frequency)
     return Document(name="linecode", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(codes)))

@@ -28,6 +28,7 @@ import cimhub_opendss.schema.opendss_schema as dss_schema
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatReader
 from cimhub_core.cimtbl import schema_defaults
+from cimhub_core.serialization import get_schema_annotations
 from cimhub_opendss.dss_name_map import (
     DssClassMap,
     build_type_registry,
@@ -507,8 +508,8 @@ class DssReader(FormatReader):
 
         # Pre-process transformer wdg=N per-winding syntax before parsing
         if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text)
-        params = self._parse_params(param_text)
+            param_text = self._preprocess_winding_text(param_text, element_type)
+        params = _resolve_positional(self._param_pairs(param_text), element_type)
 
         return DssCommand(
             cmd=cmd,
@@ -538,7 +539,7 @@ class DssReader(FormatReader):
         param_text = f"{prop_name}={rhs}"
 
         if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text)
+            param_text = self._preprocess_winding_text(param_text, element_type)
         params = self._parse_params(param_text)
 
         return DssCommand(
@@ -572,14 +573,25 @@ class DssReader(FormatReader):
 
     @staticmethod
     def _parse_params(text: str) -> dict[str, str]:
-        """Parse ``Key1=Value1 Key2=Value2 ...`` into a dict.
+        """``Key1=Value1 Key2=Value2 ...`` as a dict; a value with no property name raises (``Set`` and the
+        dotted edit name every property)."""
+        params: dict[str, str] = {}
+        for key, value in DssReader._param_pairs(text):
+            if key is None:
+                raise ValueError(f"the value {value!r} names no property")
+            params[key] = value
+        return params
+
+    @staticmethod
+    def _param_pairs(text: str) -> list[tuple[str | None, str]]:
+        """``(key, value)`` in written order; ``key`` is ``None`` for a positional value (no ``name=``).
 
         Handles bracketed arrays like ``kVs=[115, 4.16, 13.2]`` and
         ``XSCArray=[ 0.00979 0.02491]``.
         """
-        params: dict[str, str] = {}
+        pairs: list[tuple[str | None, str]] = []
         if not text or not text.strip():
-            return params
+            return pairs
 
         current_key: str | None = None
         current_value_parts: list[str] = []
@@ -632,7 +644,7 @@ class DssReader(FormatReader):
                 if bracket_depth <= 0:
                     bracket_depth = 0
                     if current_key is not None:
-                        params[current_key] = " ".join(current_value_parts)
+                        pairs.append((current_key, " ".join(current_value_parts)))
                         current_key = None
                         current_value_parts = []
                 continue
@@ -649,7 +661,7 @@ class DssReader(FormatReader):
 
                 # Save the previously-accumulating param (if any)
                 if current_key is not None:
-                    params[current_key] = " ".join(current_value_parts)
+                    pairs.append((current_key, " ".join(current_value_parts)))
                     current_value_parts = []
 
                 current_key = key
@@ -665,9 +677,16 @@ class DssReader(FormatReader):
                     bracket_depth = opens - closes
                     current_value_parts = [value]
                 else:
-                    params[current_key] = value
+                    pairs.append((current_key, value))
                     current_key = None
                     current_value_parts = []
+            elif current_key is None:
+                # A value with no name: DSS gives it to the property after the last one named
+                opens = token.count("[") + token.count("(") + token.count("{")
+                closes = token.count("]") + token.count(")") + token.count("}")
+                if opens != closes:
+                    raise ValueError(f"unbalanced brackets in positional value {token!r}")
+                pairs.append((None, token))
             else:
                 # Continuation of previous value (e.g. space-separated items
                 # outside brackets, which can happen in some DSS variants)
@@ -675,9 +694,9 @@ class DssReader(FormatReader):
 
         # Flush last param
         if current_key is not None:
-            params[current_key] = " ".join(current_value_parts)
+            pairs.append((current_key, " ".join(current_value_parts)))
 
-        return params
+        return pairs
 
     # -----------------------------------------------------------------------
     # Instance construction
@@ -715,7 +734,7 @@ class DssReader(FormatReader):
         return values
 
     @staticmethod
-    def _preprocess_winding_text(param_text: str) -> str:
+    def _preprocess_winding_text(param_text: str, element_type: str) -> str:
         """Rewrite per-winding DSS transformer params into array form.
 
         Transforms the raw parameter text before ``_parse_params`` sees it,
@@ -762,57 +781,66 @@ class DssReader(FormatReader):
                 merged.append(tok)
                 i += 1
 
-        # Now walk tokens, collecting per-winding values
-        winding_data: dict[str, list[str]] = {v: [] for v in _WDG_ARRAY_MAP.values()}
+        # Walk the tokens in order, as DSS applies them. A per-winding scalar (bus, kV, kVA, conn, tap, %R)
+        # goes to the active winding: the last wdg=, else the last winding an array set (an array sets every
+        # winding), else winding 1. On a 2-winding transformer kVA sets both windings (all engine-checked).
+        count = next((int(_try_eval_rpn(tok.partition("=")[2])) for tok in merged
+                      if tok.partition("=")[0].strip().lower() == "windings"), 2)
+        array_keys = {name.lower(): name for name in _WDG_ARRAY_MAP.values()} | {"%rs": "pct_Rs"}
+        winding_data: dict[str, list[str]] = {}
         non_winding_tokens: list[str] = []
         scalar_overrides: dict[str, str] = {}
         scalar_neutral_wdg: int | None = None
-        current_wdg = 0
-        in_winding = False
+        active = 1
+
+        def put(target: str, number: int, value: str) -> None:
+            values = winding_data.setdefault(target, [])
+            values.extend([""] * (number - len(values)))
+            values[number - 1] = value
 
         for tok in merged:
             if "=" not in tok:
-                if not in_winding:
-                    non_winding_tokens.append(tok)
+                non_winding_tokens.append(tok)
                 continue
-
             key, _, value = tok.partition("=")
             key_lower = key.strip().lower()
-
             if key_lower == "wdg":
-                current_wdg = int(value)
-                in_winding = True
+                active = int(value)
                 continue
-
-            # Evaluate RPN before storing
+            if key_lower in array_keys:
+                items = _array_items(value)
+                winding_data[array_keys[key_lower]] = [_try_eval_rpn(item) for item in items]
+                active = max(len(items), 1)
+                continue
             resolved = _try_eval_rpn(value)
-
-            if in_winding and key_lower in _WDG_ARRAY_MAP:
+            if key_lower in _WDG_ARRAY_MAP:
                 target = _WDG_ARRAY_MAP[key_lower]
-                while len(winding_data[target]) < current_wdg - 1:
-                    winding_data[target].append("")
-                if len(winding_data[target]) < current_wdg:
-                    winding_data[target].append(resolved)
-                else:
-                    winding_data[target][current_wdg - 1] = resolved
-            elif in_winding and key_lower in _WDG_SCALAR_KEYS:
-                # Rneut/Xneut belong to the winding that was active when DSS parsed
-                # them. Flattening them to a bare scalar would lose that, and the
-                # importer would fall back to the last winding — leaving the
-                # intended one ungrounded. Keep the first winding that sets either
-                # and emit "wdg=N" alongside so the binding survives.
+                for number in (range(1, 3) if key_lower == "kva" and count == 2 else (active,)):
+                    put(target, number, resolved)
+            elif key_lower in _WDG_SCALAR_KEYS:
+                # Rneut/Xneut belong to the active winding; keep the first winding that sets either and emit
+                # "wdg=N" alongside so the binding survives.
                 if scalar_neutral_wdg is None:
-                    scalar_neutral_wdg = current_wdg
-                if current_wdg == scalar_neutral_wdg:
+                    scalar_neutral_wdg = active
+                if active == scalar_neutral_wdg:
                     scalar_overrides[key.strip()] = resolved
             else:
                 non_winding_tokens.append(f"{key.strip()}={resolved}")
 
-        # Append array params
+        defaults = schema_defaults(build_type_registry()[element_type.lower()], "dss_default")
         for array_key, values in winding_data.items():
-            if values and any(v for v in values):
-                non_winding_tokens.append(f"{array_key}=[{','.join(values)}]")
-        # Append scalar overrides, tagged with the winding they belong to
+            values.extend([""] * (count - len(values)) if any(values) else [])
+            unset = [number for number, value in enumerate(values, start=1) if value == ""]
+            if unset:
+                # The array cannot hold an unset winding: it takes the engine's per-winding default, as DSS does
+                scalar = _WINDING_SCALAR[array_key]
+                if scalar not in defaults:
+                    raise ValueError(f"{array_key}: winding {unset} unset while another winding's is set, and "
+                                     f"{scalar} has no default")
+                _log.warning("%s: winding %s unset while another winding's is set; the DSS default %s=%s",
+                             array_key, unset, scalar, defaults[scalar])
+                values = [str(defaults[scalar]) if value == "" else value for value in values]
+            non_winding_tokens.append(f"{array_key}=[{','.join(values)}]")
         if scalar_overrides and scalar_neutral_wdg is not None:
             non_winding_tokens.append(f"wdg={scalar_neutral_wdg}")
         for k, v in scalar_overrides.items():
@@ -1224,6 +1252,14 @@ def _try_eval_rpn(val: str) -> str:
         return val  # not valid RPN; return original
 
 
+def _array_items(value: str) -> list[str]:
+    """The items of a DSS array value: ``[a b]``, ``(a, b)``, ``'a b'``, ``"a b"`` or a bare ``a``."""
+    text = value.strip()
+    if len(text) >= 2 and (text[0], text[-1]) in (("[", "]"), ("(", ")"), ("'", "'"), ('"', '"')):
+        text = text[1:-1]
+    return [item for item in _tokenize_dss(text.replace(",", " ").replace("|", " ")) if item]
+
+
 def _extract_winding_arrays(raw_text: str) -> dict[str, str]:
     """Parse per-winding transformer params into array-form params.
 
@@ -1499,6 +1535,52 @@ def _strip_comment(line: str) -> str:
     return line
 
 
+#: The per-winding array of a transformer and the scalar slot whose ``dss_default`` fills an unset winding.
+_WINDING_SCALAR = {"buses": "bus", "kVs": "kV", "kVAs": "kVA", "conns": "conn", "taps": "tap", "pct_Rs": "pct_R"}
+#: Classes whose properties the reader rewrites by winding or conductor block, so a positional value raises.
+_BLOCK_CLASSES = ("transformer", "xfmrcode", "autotrans", "linegeometry")
+
+
+def rpn_value(text: str) -> str:
+    """A ``{...}`` value: an RPN expression (``_eval_rpn``) as its number (``{156 1.25 *}`` -> 195), else the
+    text inside the braces. An expression that does not evaluate raises."""
+    inner = text.strip()[1:-1].strip()
+    if not any(token.lower() in _RPN_OPERATORS for token in inner.replace(",", " ").split()):
+        return inner
+    return repr(_eval_rpn(inner))
+
+
+def _resolve_positional(pairs: list[tuple[str | None, str]], element_type: str) -> dict[str, str]:
+    """``{property: value}``: a value with no name goes to the property after the last one given (the first
+    property at the start), in the schema's DSS order, as DSS's parser does. ``{...}`` values are evaluated."""
+    params: dict[str, str] = {}
+    schema_class = build_type_registry().get(element_type.lower())
+    pointer = 0
+    for key, value in pairs:
+        if value.strip().startswith("{") and value.strip().endswith("}"):
+            value = rpn_value(value)
+        if key is not None:
+            params[key] = value
+            if schema_class is not None:
+                pointer = _property_order(schema_class).get(get_class_map(schema_class).field_for(key), pointer)
+            continue
+        if schema_class is None or element_type.lower() in _BLOCK_CLASSES:
+            raise ValueError(f"{element_type}: the positional value {value!r} is not read on this class")
+        pointer += 1
+        by_order = {order: slot for slot, order in _property_order(schema_class).items()}
+        if pointer not in by_order:
+            raise ValueError(f"{element_type}: positional value {value!r} is past the last property")
+        params[by_order[pointer]] = value
+    return params
+
+
+@functools.cache
+def _property_order(schema_class: type) -> dict[str, int]:
+    """``{field: DSS property index}`` from the schema's ``order`` annotations."""
+    return {slot: int(spec["order"]) for slot, spec in get_schema_annotations(schema_class).items()
+            if spec.get("order") is not None}
+
+
 def _tokenize_dss(text: str) -> list[str]:
     """Split DSS parameter text on whitespace, respecting quotes and brackets."""
     tokens: list[str] = []
@@ -1520,12 +1602,12 @@ def _tokenize_dss(text: str) -> list[str]:
             current.append(ch)
             continue
 
-        if ch in ("[", "("):
+        if ch in ("[", "(", "{"):
             bracket_depth += 1
             current.append(ch)
             continue
 
-        if ch in ("]", ")"):
+        if ch in ("]", ")", "}"):
             bracket_depth = max(0, bracket_depth - 1)
             current.append(ch)
             continue

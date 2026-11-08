@@ -142,23 +142,31 @@ def wire_infos(native) -> dict[str, list[str]]:
     return infos
 
 
-def conductor_infos(geometry, infos: dict[str, list[str]]) -> list[str]:
-    """The ``WireInfo`` mRID of each conductor, in cond order."""
-    arrays = [getattr(geometry, slot) for slot in _NAME_ARRAYS if getattr(geometry, slot)]
+def conductor_infos(record, nconds: int, infos: dict[str, list[str]]) -> list[str]:
+    """The ``WireInfo`` mRID of each conductor of a LineGeometry (or a Line with ``spacing=``), in cond order."""
+    label = f"{type(record).__name__} {record.name}"
+    arrays = [getattr(record, slot) for slot in _NAME_ARRAYS if getattr(record, slot)]
     if len(arrays) != 1:
-        raise ValueError(f"LineGeometry {geometry.name}: sets {len(arrays)} of wires, cncables, tscables; the "
-                         "order between them is not recorded, so give one")
+        raise ValueError(f"{label}: sets {len(arrays)} of wires, cncables, tscables; the order between them is "
+                         "not recorded, so give one")
     [names] = arrays
-    if len(names) != geometry.nconds:
-        raise ValueError(f"LineGeometry {geometry.name}: {len(names)} conductor names for nconds={geometry.nconds}")
+    if len(names) != nconds:
+        raise ValueError(f"{label}: {len(names)} conductor names for nconds={nconds}")
     resolved = []
     for name in names:
         found = infos.get(str(name).lower(), [])
         if len(found) != 1:
-            raise ValueError(f"LineGeometry {geometry.name}: conductor {name!r} is "
+            raise ValueError(f"{label}: conductor {name!r} is "
                              + ("in no wire catalog" if not found else f"in two catalogs ({', '.join(found)})"))
         resolved.append(found[0])
     return resolved
+
+
+def wire_sequence_table(configuration: str, wire_info_mrids: list[str]) -> Table:
+    """The ``WireSequenceConfiguration`` rows of one ``WireConfiguration``, sequenceNumber 1..n."""
+    rows = [Row([f"{configuration}_{k}", str(k), info]) for k, info in enumerate(wire_info_mrids, start=1)]
+    return Table("WireSequenceConfiguration", [Column("mRID"), Column("WireConfiguration", default=configuration),
+                                               Column("sequenceNumber"), Column("WireInfo")], rows)
 
 
 def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[str]) -> list:
@@ -180,15 +188,12 @@ def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[st
         statements += spacing_statements(spacing, geometry.name, geometry.xs, geometry.hs, geometry.units,
                                          geometry.nphases, geometry.nconds,
                                          comment=f"synthesized: the inline positions of LineGeometry {geometry.name}")
-    rows = [Row([f"{configuration}_{k}", str(k), info])
-            for k, info in enumerate(conductor_infos(geometry, infos), start=1)]
     statements += [
         ObjectStatement("WireConfiguration", [(Column("mRID"), configuration), (Column("name"), str(geometry.name)),
                                               (Column("numberOfPhases"), cell(geometry.nphases)),
                                               (Column("WireSpacing"), spacing)],
                         comment=untranscribed_values(LINEGEOMETRY_FIELDS, geometry)),
-        Table("WireSequenceConfiguration", [Column("mRID"), Column("WireConfiguration", default=configuration),
-                                            Column("sequenceNumber"), Column("WireInfo")], rows),
+        wire_sequence_table(configuration, conductor_infos(geometry, geometry.nconds, infos)),
     ]
     return statements
 

@@ -23,6 +23,7 @@ from pathlib import Path
 from cimgraph.core import get_cim_profile, get_model_authority, get_model_name, set_model_scope
 from cimtables.document import Document, DocumentSet, Import, format_document
 from cimtables.parser import parse_text
+from cimtables.records import ImportRecord
 
 from cimhub_core.cimtbl import CIM_PROFILE
 
@@ -64,6 +65,9 @@ def _keyed_records(text: str, source_file: str) -> dict[tuple[str, str], dict[st
     keyed = {("Profile", ""): {"value": str(header.profile)}}
     counts: dict[str, int] = {}
     for record in records:
+        if isinstance(record, ImportRecord):
+            keyed[("Import", record.path)] = {}
+            continue
         counts[record.cim_class] = counts.get(record.cim_class, 0) + 1
         key = (record.fields.get("mRID") or record.fields.get("identifier") or record.fields.get("path")
                or f"#{counts[record.cim_class]}")

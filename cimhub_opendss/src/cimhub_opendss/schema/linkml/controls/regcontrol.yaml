@@ -75,6 +75,7 @@ classes:
         required: false
         annotations:
           order: 2
+          dss_default: int(1)
         related_mappings:
           - cim:RatioTapChanger.TransformerEnd
         comments:
@@ -89,6 +90,7 @@ classes:
         required: false
         annotations:
           order: 3
+          dss_default: float(120.0)
         exact_mappings:
           - cim:TapChangerControl.targetValue
         comments:
@@ -98,10 +100,11 @@ classes:
       band:
         description: >-
           Bandwidth in VOLTS for the controlled bus (full bandwidth). Default is 3 V.
-        range: string
+        range: float
         required: false
         annotations:
           order: 4
+          dss_default: float(3.0)
         exact_mappings:
           - cim:TapChangerControl.targetDeadband
         comments:
@@ -117,6 +120,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 5
+          dss_default: float(60.0)
         exact_mappings:
           - cim:RatioTapChanger.ptRatio
         comments:
@@ -133,6 +137,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(300.0)
         exact_mappings:
           - cim:RatioTapChanger.ctRating
         comments:
@@ -147,10 +152,11 @@ classes:
         description: >-
           R setting on the line drop compensator in the regulator, expressed in
           VOLTS.
-        range: string
+        range: float
         required: false
         annotations:
           order: 7
+          dss_default: float(0.0)
         exact_mappings:
           - cim:TapChangerControl.lineDropR
         comments:
@@ -164,10 +170,11 @@ classes:
         description: >-
           X setting on the line drop compensator in the regulator, expressed in
           VOLTS.
-        range: string
+        range: float
         required: false
         annotations:
           order: 8
+          dss_default: float(0.0)
         exact_mappings:
           - cim:TapChangerControl.lineDropX
         comments:
@@ -197,6 +204,7 @@ classes:
         required: false
         annotations:
           order: 10
+          dss_default: float(15.0)
         exact_mappings:
           - cim:RatioTapChanger.initialDelay
         comments:
@@ -212,6 +220,7 @@ classes:
         required: false
         annotations:
           order: 11
+          dss_default: "false"
         exact_mappings:
           - cim:TapChangerControl.reversible
         comments:
@@ -232,6 +241,7 @@ classes:
         required: false
         annotations:
           order: 12
+          dss_default: float(120.0)
         exact_mappings:
           - cim:TapChangerControl.reverseTargetValue
         comments:
@@ -247,6 +257,7 @@ classes:
         required: false
         annotations:
           order: 13
+          dss_default: float(3.0)
         exact_mappings:
           - cim:TapChangerControl.reverseTargetDeadband
         comments:
@@ -258,10 +269,11 @@ classes:
       revR:
         description: >-
           R line drop compensator setting for reverse direction.
-        range: string
+        range: float
         required: false
         annotations:
           order: 14
+          dss_default: float(0.0)
         exact_mappings:
           - cim:TapChangerControl.reverseLineDropR
         comments:
@@ -273,10 +285,11 @@ classes:
       revX:
         description: >-
           X line drop compensator setting for reverse direction.
-        range: string
+        range: float
         required: false
         annotations:
           order: 15
+          dss_default: float(0.0)
         exact_mappings:
           - cim:TapChangerControl.reverseLineDropX
         comments:
@@ -288,10 +301,11 @@ classes:
       tapdelay:
         description: >-
           Delay in sec between tap changes. Default is 2 s.
-        range: string
+        range: float
         required: false
         annotations:
           order: 16
+          dss_default: float(2.0)
         exact_mappings:
           - cim:RatioTapChanger.subsequentDelay
         comments:
@@ -380,6 +394,7 @@ classes:
         required: false
         annotations:
           order: 22
+          dss_default: int(1)
         comments:
           - "OpenDSS-only (N/A): phase monitoring selector; no direct CIM equivalent on TapChangerControl."
 
@@ -392,6 +407,7 @@ classes:
         required: false
         annotations:
           order: 23
+          dss_default: float(100.0)
         exact_mappings:
           - cim:TapChangerControl.reversingPowerThreshold
         comments:
@@ -405,10 +421,11 @@ classes:
         description: >-
           Time Delay in seconds for executing the reversing action once the
           threshold for reversing has been exceeded. Default is 60 s.
-        range: string
+        range: float
         required: false
         annotations:
           order: 24
+          dss_default: float(60.0)
         exact_mappings:
           - cim:TapChangerControl.reversingDelay
         comments:
@@ -425,6 +442,7 @@ classes:
         required: false
         annotations:
           order: 25
+          dss_default: "false"
         exact_mappings:
           - cim:TapChangerControl.reverseToNeutral
         comments:
@@ -572,6 +590,7 @@ classes:
         required: false
         annotations:
           order: 37
+          dss_default: "true"
         exact_mappings:
           - cim:TapChanger.controlEnabled
         comments:
