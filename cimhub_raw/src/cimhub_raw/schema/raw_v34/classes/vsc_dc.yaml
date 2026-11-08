@@ -53,11 +53,12 @@ classes:
           order: 2
           value_type: int
           separator: ","
+          raw_default: 1
 
       rdc:
-        description: RDC - DC line resistance in ohms
+        description: RDC - DC line resistance in ohms (must be positive)
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -78,6 +79,7 @@ classes:
           order: 4
           value_type: int
           separator: ","
+          raw_default: 1
 
       f1:
         description: F1 - Fraction of ownership for owner 1 (0.0 to 1.0)
@@ -90,6 +92,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o2:
         description: O2 - Owner 2 number
@@ -101,6 +104,7 @@ classes:
           order: 6
           value_type: int
           separator: ","
+          raw_default: 0
 
       f2:
         description: F2 - Fraction of ownership for owner 2 (0.0 to 1.0)
@@ -113,6 +117,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o3:
         description: O3 - Owner 3 number
@@ -124,6 +129,7 @@ classes:
           order: 8
           value_type: int
           separator: ","
+          raw_default: 0
 
       f3:
         description: F3 - Fraction of ownership for owner 3 (0.0 to 1.0)
@@ -136,6 +142,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o4:
         description: O4 - Owner 4 number
@@ -147,6 +154,7 @@ classes:
           order: 10
           value_type: int
           separator: ","
+          raw_default: 0
 
       f4:
         description: F4 - Fraction of ownership for owner 4 (0.0 to 1.0)
@@ -159,6 +167,7 @@ classes:
           value_type: float
           precision: 4
           separator: ""
+          raw_default: 1.0
 
       # ==== LINE 2: Converter Data ====
       ibus:
@@ -172,9 +181,9 @@ classes:
           separator: ","
 
       converter_type:
-        description: TYPE - Converter type (0=rectifier, 1=inverter)
+        description: TYPE - Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
         range: integer
-        required: false
+        required: true
         ifabsent: int(1)
         annotations:
           line_number: 2
@@ -183,7 +192,7 @@ classes:
           separator: ","
 
       mode:
-        description: MODE - Converter control mode (1=power, 2=current, 3=voltage)
+        description: MODE - Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
         range: integer
         required: false
         ifabsent: int(1)
@@ -192,11 +201,12 @@ classes:
           order: 3
           value_type: int
           separator: ","
+          raw_default: 1
 
       dcset:
-        description: DCSET - DC voltage (kV) or power (MW) setpoint depending on mode
+        description: DCSET - DC voltage setpoint (TYPE 1) or power demand (TYPE 2, + into AC network)
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         annotations:
           line_number: 2
@@ -204,10 +214,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-          note: "Unit depends on mode - kV for voltage control, MW for power control"
+          note: "Unit depends on TYPE - kV for TYPE 1 (DC voltage), MW for TYPE 2 (power)"
 
       acset:
-        description: ACSET - AC voltage (pu) or reactive power (MVAr) setpoint
+        description: ACSET - AC voltage setpoint in pu (MODE 1) or power factor setpoint (MODE 2)
         range: float
         required: false
         ifabsent: float(1.0)
@@ -217,50 +227,56 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-          comments: "Unit depends on mode - pu for voltage, MVAr for reactive power"
+          comments: "Unit depends on MODE - pu for MODE 1 (AC voltage), power factor for MODE 2"
+          raw_default: 1.0
 
       aloss:
-        description: ALOSS - Constant loss coefficient in MW
+        description: ALOSS - Constant converter loss coefficient in kW
         range: float
         required: false
         ifabsent: float(0.0)
         unit:
-          ucum_code: "MW"
+          ucum_code: "kW"
         annotations:
           line_number: 2
           order: 6
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       bloss:
-        description: BLOSS - Linear loss coefficient (MW per unit current)
+        description: BLOSS - Linear converter loss coefficient in kW per ampere of DC current
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "kW/A"
         annotations:
           line_number: 2
           order: 7
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       minloss:
-        description: MINLOSS - Minimum loss in MW
+        description: MINLOSS - Minimum converter loss in kW
         range: float
         required: false
         ifabsent: float(0.0)
         unit:
-          ucum_code: "MW"
+          ucum_code: "kW"
         annotations:
           line_number: 2
           order: 8
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       smax:
-        description: SMAX - Maximum apparent power rating in MVA
+        description: SMAX - Converter MVA rating in MVA (0 = unlimited)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -272,21 +288,25 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       imax:
-        description: IMAX - Maximum DC current in amperes
+        description: IMAX - Converter AC current rating in amperes (0 = unlimited)
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "A"
         annotations:
           line_number: 2
           order: 10
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       pwf:
-        description: PWF - Power weighting factor for multi-terminal operation
+        description: PWF - Power weighting factor (0 to 1) splitting the reduction between active and reactive power when the rating is exceeded
         range: float
         required: false
         ifabsent: float(1.0)
@@ -296,9 +316,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       maxq:
-        description: MAXQ - Maximum reactive power limit in MVAr
+        description: MAXQ - Maximum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
         ifabsent: float(9999.0)
@@ -310,9 +331,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 9999.0
 
       minq:
-        description: MINQ - Minimum reactive power limit in MVAr
+        description: MINQ - Minimum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
         ifabsent: float(-9999.0)
@@ -324,9 +346,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: -9999.0
 
       vsreg:
-        description: VSREG - Remote bus number for voltage regulation (0=local)
+        description: VSREG - Bus number whose voltage is regulated by this converter (0=own bus)
         range: integer
         required: false
         ifabsent: int(0)
@@ -335,9 +358,10 @@ classes:
           order: 14
           value_type: int
           separator: ","
+          raw_default: 0
 
       rmpct:
-        description: RMPCT - Percent of required vars to be supplied by converter
+        description: RMPCT - Percent of the total Mvar at the regulated bus supplied by this converter (must be positive)
         range: float
         required: false
         ifabsent: float(100.0)
@@ -347,9 +371,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 100.0
 
       nreg:
-        description: NREG - Number of remote buses participating in regulation
+        description: NREG - Node number of bus VSREG (0 if VSREG is not in a substation)
         range: integer
         required: false
         ifabsent: int(0)
@@ -358,3 +383,4 @@ classes:
           order: 16
           value_type: int
           separator: ""
+          raw_default: 0

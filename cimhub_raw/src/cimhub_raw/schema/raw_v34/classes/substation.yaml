@@ -1,0 +1,362 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/substation
+name: substation
+title: Substation Records
+description: raw RAW Substation Data blocks (substation, node, station switching device and equipment terminal records)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  SubstationRecord:
+    description: Substation data record; the first record of each substation block
+    attributes:
+      substation_number:
+        description: IS - Substation number (1 through 99999)
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: NAME - Substation name (up to 40 characters)
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+
+      latitude:
+        description: LATI - Substation latitude in degrees (positive North)
+        range: float
+        required: false
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 3
+          value_type: float
+          precision: 7
+          separator: ","
+          raw_default: 0.0
+
+      longitude:
+        description: LONG - Substation longitude in degrees (positive East)
+        range: float
+        required: false
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 7
+          separator: ","
+          raw_default: 0.0
+
+      grounding_resistance:
+        description: SRG - Substation grounding DC resistance in ohms
+        range: float
+        required: false
+        unit:
+          ucum_code: "Ohm"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ""  # No separator after last field
+          raw_default: 0.1
+
+  SubstationNodeRecord:
+    description: Substation node data record; each node is a connection point inside a substation
+    attributes:
+      node_number:
+        description: NI - Node number (1 through 999)
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: NAME - Node name (up to 40 characters)
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+
+      bus_number:
+        description: I - Electrical bus number or extended bus name represented by this node
+        range: integer
+        required: true
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      status:
+        description: STATUS - Node status (1 in-service, 0 out-of-service)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      vm:
+        description: VM - Node voltage magnitude in pu
+        range: float
+        required: false
+        annotations:
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: -1.0
+
+      va:
+        description: VA - Node voltage phase angle in degrees
+        range: float
+        required: false
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      substation_number:
+        description: IS - Substation number of the enclosing substation block (filled by the reader)
+        range: integer
+        required: false
+        annotations:
+          order: 0
+          value_type: int
+          structural: true
+
+  StationSwitchingDeviceRecord:
+    description: Station switching device record; a breaker, disconnect or generic connector between two nodes of a substation
+    attributes:
+      from_node:
+        description: NI - From node number (1 through 999), must be in the substation
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      to_node:
+        description: NJ - To node number (1 through 999), must be in the substation
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      circuit:
+        description: CKT - Two-character switching device identifier
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: "1"
+
+      name:
+        description: NAME - Switching device name (up to 40 characters)
+        range: string
+        required: false
+        annotations:
+          order: 4
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+
+      device_type:
+        description: TYPE - Switching device type (1 generic connector, 2 circuit breaker, 3 disconnect switch)
+        range: integer
+        required: true
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+
+      status:
+        description: STATUS - Device status (1 closed, 0 open)
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      normal_status:
+        description: NSTAT - Normal device status (1 closed, 0 open)
+        range: integer
+        required: false
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      reactance:
+        description: X - Device reactance in pu (must be non-zero)
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0001
+
+      rate1:
+        description: RATE1 - First rating in MVA (or current expressed as MVA)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2:
+        description: RATE2 - Second rating in MVA (or current expressed as MVA)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate3:
+        description: RATE3 - Third rating in MVA (or current expressed as MVA)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 11
+          value_type: float
+          precision: 2
+          separator: ","
+
+      substation_number:
+        description: IS - Substation number of the enclosing substation block (filled by the reader)
+        range: integer
+        required: false
+        annotations:
+          order: 0
+          value_type: int
+          structural: true
+
+  EquipmentTerminalRecord:
+    description: >-
+      Equipment terminal record connecting a piece of equipment to a substation node.
+      One record shape covers every equipment form; TYP selects the form and tells
+      which optional fields are used (J/K for branches and transformers, identifier
+      for the equipment ID, CKT or NAME).
+    attributes:
+      bus_number:
+        description: I - Bus number or extended bus name of the equipment's bus (From bus for branches)
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      node_number:
+        description: NI - Node number (1 through 999) inside the substation
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      terminal_type:
+        description: TYP - Equipment form code (L load, F fixed shunt, M machine, B or 2 branch or two-winding transformer, 3 three-winding transformer, S switched shunt, I induction machine, D two-terminal DC, V VSC DC, N multi-terminal DC, A FACTS)
+        range: string
+        required: true
+        annotations:
+          order: 3
+          value_type: string
+          separator: ","
+
+      j_bus:
+        description: J - To bus number or extended bus name (branch and transformer forms only)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      k_bus:
+        description: K - Third bus number or extended bus name (three-winding transformer form only)
+        range: integer
+        required: false
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+
+      identifier:
+        description: ID, CKT or NAME - Equipment identifier for L, F, M, I, B, 2 and 3 forms; equipment name for D, V, N and A forms; absent for S
+        range: string
+        required: false
+        annotations:
+          order: 6
+          value_type: string
+          quote: true
+          quote_char: "'"
+          separator: ""  # No separator after last field
+          raw_default_rule: "'1' for L, F, M, I, B, 2 and 3 forms; no default for D, V, N and A"
+
+      substation_number:
+        description: IS - Substation number of the enclosing substation block (filled by the reader)
+        range: integer
+        required: false
+        annotations:
+          order: 0
+          value_type: int
+          structural: true

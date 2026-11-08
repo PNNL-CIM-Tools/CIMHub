@@ -2,42 +2,34 @@ id: https://gridappsd.org/cimhub/raw_v34/classes/switched_shunt
 name: switched_shunt
 title: Switched Shunt Record
 description: raw RAW Switched Shunt Record (variable-length single line)
-
 imports:
   - linkml:types
   - ../types/common_types
-
 prefixes:
   linkml: https://w3id.org/linkml/
   raw: https://gridappsd.org/cimhub/raw_v34
-
 default_prefix: raw
-
 classes:
   SwitchedShuntRecord:
     description: |
       Switched shunt compensator data record.
-
       Variable-length format:
       - Fixed fields: I, MODSW, ADJM, STAT, VSWHI, VSWLO, SWREG, RMPCT, RMIDNT, BINIT
       - Variable blocks: Up to 8 N/B pairs (only non-zero blocks are serialized)
       - Final field: NREG (only if remote regulation is used)
-
       Maps to CIM: cim.ShuntCompensator, cim.LinearShuntCompensator
-
     attributes:
       # ==== FIXED FIELDS ====
       bus_number:
-        description: I - Bus number where switched shunt is connected
+        description: I - Bus number or extended bus name where the switched shunt is connected
         range: integer
         required: true
         annotations:
           order: 1
           value_type: int
           separator: ","
-
       modsw:
-        description: MODSW - Control mode (0=fixed, 1=discrete, 2=continuous)
+        description: MODSW - Control mode (0 locked, 1 discrete local or remote voltage, 2 continuous voltage, 3-6 reactive power or admittance control)
         range: integer
         required: false
         ifabsent: int(1)
@@ -45,9 +37,9 @@ classes:
           order: 2
           value_type: int
           separator: ","
-
+          raw_default: 1
       adjm:
-        description: ADJM - Adjustment method (0=steps, 1=blocks)
+        description: ADJM - Adjustment method (0 switch in input order, 1 next highest or lowest total admittance)
         range: integer
         required: false
         ifabsent: int(0)
@@ -55,7 +47,7 @@ classes:
           order: 3
           value_type: int
           separator: ","
-
+          raw_default: 0
       status:
         description: STAT - Switched shunt status (0=out of service, 1=in service)
         range: integer
@@ -65,7 +57,7 @@ classes:
           order: 4
           value_type: int
           separator: ","
-
+          raw_default: 1
       vswhi:
         description: VSWHI - Voltage upper limit for switching in per-unit
         range: float
@@ -76,7 +68,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
-
+          raw_default: 1.0
       vswlo:
         description: VSWLO - Voltage lower limit for switching in per-unit
         range: float
@@ -87,9 +79,9 @@ classes:
           value_type: float
           precision: 5
           separator: ","
-
+          raw_default: 1.0
       swreg:
-        description: SWREG - Controlled bus number (0 or bus_number=local control)
+        description: SWREG - Bus number or extended bus name of the regulated bus (0 or own bus for local control)
         range: integer
         required: false
         ifabsent: int(0)
@@ -97,9 +89,9 @@ classes:
           order: 7
           value_type: int
           separator: ","
-
+          raw_default: 0
       rmpct:
-        description: RMPCT - Percent of required Mvar contribution (0.0 to 100.0)
+        description: RMPCT - Percent of required Mvar contribution (must be positive)
         range: float
         required: false
         ifabsent: float(100.0)
@@ -108,34 +100,36 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 100.0
       rmidnt:
-        description: RMIDNT - Remote identifier for grouping (alphanumeric, 3 characters)
+        description: RMIDNT - Name of the VSC dc line (MODSW 4) or FACTS device (MODSW 6)
         range: string
         required: false
         ifabsent: string("")
         annotations:
           order: 9
           value_type: string
-          width: 3
+          width: 12
           quote: true
           quote_char: "'"
           separator: ","
-
+          raw_default: ""
       binit:
-        description: BINIT - Initial switched shunt admittance in per-unit
+        description: BINIT - Initial switched shunt admittance in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 10
           value_type: float
           precision: 5
           separator: ","
-
+          raw_default: 0.0
       # ==== VARIABLE BLOCKS (N/B pairs) ====
       n1:
-        description: N1 - Number of steps for block 1
+        description: N1 - Number of steps for block 1 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -144,21 +138,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n1 != 0"
-
+          raw_default: 0
       b1:
-        description: B1 - Admittance increment for each step in block 1 (per-unit)
+        description: B1 - Admittance increment for each step in block 1 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 12
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n1 != 0"
-
+          raw_default: 0.0
       n2:
-        description: N2 - Number of steps for block 2
+        description: N2 - Number of steps for block 2 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -167,21 +163,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n2 != 0"
-
+          raw_default: 0
       b2:
-        description: B2 - Admittance increment for each step in block 2 (per-unit)
+        description: B2 - Admittance increment for each step in block 2 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 14
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n2 != 0"
-
+          raw_default: 0.0
       n3:
-        description: N3 - Number of steps for block 3
+        description: N3 - Number of steps for block 3 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -190,21 +188,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n3 != 0"
-
+          raw_default: 0
       b3:
-        description: B3 - Admittance increment for each step in block 3 (per-unit)
+        description: B3 - Admittance increment for each step in block 3 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 16
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n3 != 0"
-
+          raw_default: 0.0
       n4:
-        description: N4 - Number of steps for block 4
+        description: N4 - Number of steps for block 4 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -213,21 +213,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n4 != 0"
-
+          raw_default: 0
       b4:
-        description: B4 - Admittance increment for each step in block 4 (per-unit)
+        description: B4 - Admittance increment for each step in block 4 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 18
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n4 != 0"
-
+          raw_default: 0.0
       n5:
-        description: N5 - Number of steps for block 5
+        description: N5 - Number of steps for block 5 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -236,21 +238,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n5 != 0"
-
+          raw_default: 0
       b5:
-        description: B5 - Admittance increment for each step in block 5 (per-unit)
+        description: B5 - Admittance increment for each step in block 5 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 20
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n5 != 0"
-
+          raw_default: 0.0
       n6:
-        description: N6 - Number of steps for block 6
+        description: N6 - Number of steps for block 6 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -259,21 +263,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n6 != 0"
-
+          raw_default: 0
       b6:
-        description: B6 - Admittance increment for each step in block 6 (per-unit)
+        description: B6 - Admittance increment for each step in block 6 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 22
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n6 != 0"
-
+          raw_default: 0.0
       n7:
-        description: N7 - Number of steps for block 7
+        description: N7 - Number of steps for block 7 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -282,21 +288,23 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n7 != 0"
-
+          raw_default: 0
       b7:
-        description: B7 - Admittance increment for each step in block 7 (per-unit)
+        description: B7 - Admittance increment for each step in block 7 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 24
           value_type: float
           precision: 5
           separator: ","
           serialize_if: "custom:n7 != 0"
-
+          raw_default: 0.0
       n8:
-        description: N8 - Number of steps for block 8
+        description: N8 - Number of steps for block 8 (0 to 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -305,15 +313,28 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:n8 != 0"
-
+          raw_default: 0
       b8:
-        description: B8 - Admittance increment for each step in block 8 (per-unit)
+        description: B8 - Admittance increment for each step in block 8 in Mvar at unity voltage
         range: float
         required: false
         ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
         annotations:
           order: 26
           value_type: float
           precision: 5
-          separator: ""
+          separator: ","
           serialize_if: "custom:n8 != 0"
+          raw_default: 0.0
+      # ==== TRAILING FIELD ====
+      nreg:
+        description: NREG - Node number of bus SWREG (0 if SWREG is not in a substation)
+        range: integer
+        required: false
+        annotations:
+          order: 27
+          value_type: int
+          separator: ""  # No separator after last field
+          raw_default: 0

@@ -1,5 +1,5 @@
 # Auto generated from main.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-07-10T13:01:21
+# Generation date: 2026-11-08T14:51:37
 # Schema: raw-raw-v34-schema
 #
 # id: https://gridappsd.org/cimhub/raw_v34
@@ -63,9 +63,9 @@ version = "1.0.0"
 
 # Namespaces
 LINKML = CurieNamespace('linkml', 'https://w3id.org/linkml/')
-raw = CurieNamespace('raw', 'https://gridappsd.org/cimhub/raw_v34')
+RAW = CurieNamespace('raw', 'https://gridappsd.org/cimhub/raw_v34')
 XSD = CurieNamespace('xsd', 'http://www.w3.org/2001/XMLSchema#')
-DEFAULT_ = raw
+DEFAULT_ = RAW
 
 
 # Types
@@ -74,7 +74,7 @@ class BusNumber(Integer):
     type_class_uri = XSD["integer"]
     type_class_curie = "xsd:integer"
     type_name = "BusNumber"
-    type_model_uri = raw.BusNumber
+    type_model_uri = RAW.BusNumber
 
 
 class BusId(String):
@@ -82,7 +82,7 @@ class BusId(String):
     type_class_uri = XSD["string"]
     type_class_curie = "xsd:string"
     type_name = "BusId"
-    type_model_uri = raw.BusId
+    type_model_uri = RAW.BusId
 
 
 class CircuitId(String):
@@ -90,7 +90,7 @@ class CircuitId(String):
     type_class_uri = XSD["string"]
     type_class_curie = "xsd:string"
     type_name = "CircuitId"
-    type_model_uri = raw.CircuitId
+    type_model_uri = RAW.CircuitId
 
 
 class Status(Integer):
@@ -98,11 +98,15 @@ class Status(Integer):
     type_class_uri = XSD["integer"]
     type_class_curie = "xsd:integer"
     type_name = "Status"
-    type_model_uri = raw.Status
+    type_model_uri = RAW.Status
 
 
 # Class references
 class CaseIdentificationRecordNewCaseFlag(extended_int):
+    pass
+
+
+class RatingRecordRatingSetNumber(extended_int):
     pass
 
 
@@ -134,6 +138,10 @@ class OwnerRecordOwnerNumber(extended_int):
     pass
 
 
+class SubstationRecordSubstationNumber(extended_int):
+    pass
+
+
 @dataclass(repr=False)
 class RawModel(YAMLRoot):
     """
@@ -141,10 +149,10 @@ class RawModel(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["RawModel"]
+    class_class_uri: ClassVar[URIRef] = RAW["RawModel"]
     class_class_curie: ClassVar[str] = "raw:RawModel"
     class_name: ClassVar[str] = "RawModel"
-    class_model_uri: ClassVar[URIRef] = raw.RawModel
+    class_model_uri: ClassVar[URIRef] = RAW.RawModel
 
     case_record: Union[dict, "CaseIdentificationRecord"] = None
     bus_records: Optional[Union[dict[Union[int, BusRecordBusNumber], Union[dict, "BusRecord"]], list[Union[dict, "BusRecord"]]]] = empty_dict()
@@ -167,6 +175,13 @@ class RawModel(YAMLRoot):
     switched_shunt_records: Optional[Union[Union[dict, "SwitchedShuntRecord"], list[Union[dict, "SwitchedShuntRecord"]]]] = empty_list()
     gne_device_records: Optional[Union[Union[dict, "GneDeviceRecord"], list[Union[dict, "GneDeviceRecord"]]]] = empty_list()
     induction_machine_records: Optional[Union[Union[dict, "InductionMachineRecord"], list[Union[dict, "InductionMachineRecord"]]]] = empty_list()
+    substation_records: Optional[Union[dict[Union[int, SubstationRecordSubstationNumber], Union[dict, "SubstationRecord"]], list[Union[dict, "SubstationRecord"]]]] = empty_dict()
+    substation_node_records: Optional[Union[Union[dict, "SubstationNodeRecord"], list[Union[dict, "SubstationNodeRecord"]]]] = empty_list()
+    station_switching_device_records: Optional[Union[Union[dict, "StationSwitchingDeviceRecord"], list[Union[dict, "StationSwitchingDeviceRecord"]]]] = empty_list()
+    equipment_terminal_records: Optional[Union[Union[dict, "EquipmentTerminalRecord"], list[Union[dict, "EquipmentTerminalRecord"]]]] = empty_list()
+    multi_terminal_converter_records: Optional[Union[Union[dict, "MultiTerminalConverterRecord"], list[Union[dict, "MultiTerminalConverterRecord"]]]] = empty_list()
+    multi_terminal_dc_bus_records: Optional[Union[Union[dict, "MultiTerminalDCBusRecord"], list[Union[dict, "MultiTerminalDCBusRecord"]]]] = empty_list()
+    multi_terminal_dc_link_records: Optional[Union[Union[dict, "MultiTerminalDCLinkRecord"], list[Union[dict, "MultiTerminalDCLinkRecord"]]]] = empty_list()
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.case_record):
@@ -240,6 +255,32 @@ class RawModel(YAMLRoot):
             self.induction_machine_records = [self.induction_machine_records] if self.induction_machine_records is not None else []
         self.induction_machine_records = [v if isinstance(v, InductionMachineRecord) else InductionMachineRecord(**as_dict(v)) for v in self.induction_machine_records]
 
+        self._normalize_inlined_as_list(slot_name="substation_records", slot_type=SubstationRecord, key_name="substation_number", keyed=True)
+
+        if not isinstance(self.substation_node_records, list):
+            self.substation_node_records = [self.substation_node_records] if self.substation_node_records is not None else []
+        self.substation_node_records = [v if isinstance(v, SubstationNodeRecord) else SubstationNodeRecord(**as_dict(v)) for v in self.substation_node_records]
+
+        if not isinstance(self.station_switching_device_records, list):
+            self.station_switching_device_records = [self.station_switching_device_records] if self.station_switching_device_records is not None else []
+        self.station_switching_device_records = [v if isinstance(v, StationSwitchingDeviceRecord) else StationSwitchingDeviceRecord(**as_dict(v)) for v in self.station_switching_device_records]
+
+        if not isinstance(self.equipment_terminal_records, list):
+            self.equipment_terminal_records = [self.equipment_terminal_records] if self.equipment_terminal_records is not None else []
+        self.equipment_terminal_records = [v if isinstance(v, EquipmentTerminalRecord) else EquipmentTerminalRecord(**as_dict(v)) for v in self.equipment_terminal_records]
+
+        if not isinstance(self.multi_terminal_converter_records, list):
+            self.multi_terminal_converter_records = [self.multi_terminal_converter_records] if self.multi_terminal_converter_records is not None else []
+        self.multi_terminal_converter_records = [v if isinstance(v, MultiTerminalConverterRecord) else MultiTerminalConverterRecord(**as_dict(v)) for v in self.multi_terminal_converter_records]
+
+        if not isinstance(self.multi_terminal_dc_bus_records, list):
+            self.multi_terminal_dc_bus_records = [self.multi_terminal_dc_bus_records] if self.multi_terminal_dc_bus_records is not None else []
+        self.multi_terminal_dc_bus_records = [v if isinstance(v, MultiTerminalDCBusRecord) else MultiTerminalDCBusRecord(**as_dict(v)) for v in self.multi_terminal_dc_bus_records]
+
+        if not isinstance(self.multi_terminal_dc_link_records, list):
+            self.multi_terminal_dc_link_records = [self.multi_terminal_dc_link_records] if self.multi_terminal_dc_link_records is not None else []
+        self.multi_terminal_dc_link_records = [v if isinstance(v, MultiTerminalDCLinkRecord) else MultiTerminalDCLinkRecord(**as_dict(v)) for v in self.multi_terminal_dc_link_records]
+
         super().__post_init__(**kwargs)
 
 
@@ -250,17 +291,17 @@ class CaseIdentificationRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["CaseIdentificationRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["CaseIdentificationRecord"]
     class_class_curie: ClassVar[str] = "raw:CaseIdentificationRecord"
     class_name: ClassVar[str] = "CaseIdentificationRecord"
-    class_model_uri: ClassVar[URIRef] = raw.CaseIdentificationRecord
+    class_model_uri: ClassVar[URIRef] = RAW.CaseIdentificationRecord
 
     new_case_flag: Union[int, CaseIdentificationRecordNewCaseFlag] = 0
-    system_base_mva: float = 100.0
-    revision: float = 34.0
-    system_base_frequency: float = 60.0
+    system_base_mva: Optional[float] = 100.0
+    revision: Optional[float] = 34.0
     transformer_ratings_units: Optional[int] = 0
     branch_ratings_units: Optional[int] = 0
+    system_base_frequency: Optional[float] = 60.0
     titles: Optional[Union[str, list[str]]] = empty_list()
     general: Optional[str] = None
     gauss: Optional[str] = None
@@ -268,7 +309,7 @@ class CaseIdentificationRecord(YAMLRoot):
     adjust: Optional[str] = None
     tysl: Optional[str] = None
     solver: Optional[str] = None
-    ratings: Optional[Union[str, list[str]]] = empty_list()
+    ratings: Optional[Union[dict[Union[int, RatingRecordRatingSetNumber], Union[dict, "RatingRecord"]], list[Union[dict, "RatingRecord"]]]] = empty_dict()
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.new_case_flag):
@@ -276,26 +317,20 @@ class CaseIdentificationRecord(YAMLRoot):
         if not isinstance(self.new_case_flag, CaseIdentificationRecordNewCaseFlag):
             self.new_case_flag = CaseIdentificationRecordNewCaseFlag(self.new_case_flag)
 
-        if self._is_empty(self.system_base_mva):
-            self.MissingRequiredField("system_base_mva")
-        if not isinstance(self.system_base_mva, float):
+        if self.system_base_mva is not None and not isinstance(self.system_base_mva, float):
             self.system_base_mva = float(self.system_base_mva)
 
-        if self._is_empty(self.revision):
-            self.MissingRequiredField("revision")
-        if not isinstance(self.revision, float):
+        if self.revision is not None and not isinstance(self.revision, float):
             self.revision = float(self.revision)
-
-        if self._is_empty(self.system_base_frequency):
-            self.MissingRequiredField("system_base_frequency")
-        if not isinstance(self.system_base_frequency, float):
-            self.system_base_frequency = float(self.system_base_frequency)
 
         if self.transformer_ratings_units is not None and not isinstance(self.transformer_ratings_units, int):
             self.transformer_ratings_units = int(self.transformer_ratings_units)
 
         if self.branch_ratings_units is not None and not isinstance(self.branch_ratings_units, int):
             self.branch_ratings_units = int(self.branch_ratings_units)
+
+        if self.system_base_frequency is not None and not isinstance(self.system_base_frequency, float):
+            self.system_base_frequency = float(self.system_base_frequency)
 
         if not isinstance(self.titles, list):
             self.titles = [self.titles] if self.titles is not None else []
@@ -319,9 +354,42 @@ class CaseIdentificationRecord(YAMLRoot):
         if self.solver is not None and not isinstance(self.solver, str):
             self.solver = str(self.solver)
 
-        if not isinstance(self.ratings, list):
-            self.ratings = [self.ratings] if self.ratings is not None else []
-        self.ratings = [v if isinstance(v, str) else str(v) for v in self.ratings]
+        self._normalize_inlined_as_list(slot_name="ratings", slot_type=RatingRecord, key_name="rating_set_number", keyed=True)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class RatingRecord(YAMLRoot):
+    """
+    RATING record naming one rating set (1-12)
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["RatingRecord"]
+    class_class_curie: ClassVar[str] = "raw:RatingRecord"
+    class_name: ClassVar[str] = "RatingRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.RatingRecord
+
+    rating_set_number: Union[int, RatingRecordRatingSetNumber] = None
+    rating_name: str = None
+    rating_description: str = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.rating_set_number):
+            self.MissingRequiredField("rating_set_number")
+        if not isinstance(self.rating_set_number, RatingRecordRatingSetNumber):
+            self.rating_set_number = RatingRecordRatingSetNumber(self.rating_set_number)
+
+        if self._is_empty(self.rating_name):
+            self.MissingRequiredField("rating_name")
+        if not isinstance(self.rating_name, str):
+            self.rating_name = str(self.rating_name)
+
+        if self._is_empty(self.rating_description):
+            self.MissingRequiredField("rating_description")
+        if not isinstance(self.rating_description, str):
+            self.rating_description = str(self.rating_description)
 
         super().__post_init__(**kwargs)
 
@@ -333,10 +401,10 @@ class BusRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["BusRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["BusRecord"]
     class_class_curie: ClassVar[str] = "raw:BusRecord"
     class_name: ClassVar[str] = "BusRecord"
-    class_model_uri: ClassVar[URIRef] = raw.BusRecord
+    class_model_uri: ClassVar[URIRef] = RAW.BusRecord
 
     bus_number: Union[int, BusRecordBusNumber] = None
     name: Optional[str] = "            "
@@ -404,13 +472,13 @@ class LoadRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["LoadRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["LoadRecord"]
     class_class_curie: ClassVar[str] = "raw:LoadRecord"
     class_name: ClassVar[str] = "LoadRecord"
-    class_model_uri: ClassVar[URIRef] = raw.LoadRecord
+    class_model_uri: ClassVar[URIRef] = RAW.LoadRecord
 
     bus_number: int = None
-    load_id: str = "1 "
+    load_id: Optional[str] = "1 "
     status: Optional[int] = 1
     area: Optional[int] = 1
     zone: Optional[int] = 1
@@ -433,9 +501,7 @@ class LoadRecord(YAMLRoot):
         if not isinstance(self.bus_number, int):
             self.bus_number = int(self.bus_number)
 
-        if self._is_empty(self.load_id):
-            self.MissingRequiredField("load_id")
-        if not isinstance(self.load_id, str):
+        if self.load_id is not None and not isinstance(self.load_id, str):
             self.load_id = str(self.load_id)
 
         if self.status is not None and not isinstance(self.status, int):
@@ -493,13 +559,13 @@ class FixedShuntRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["FixedShuntRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["FixedShuntRecord"]
     class_class_curie: ClassVar[str] = "raw:FixedShuntRecord"
     class_name: ClassVar[str] = "FixedShuntRecord"
-    class_model_uri: ClassVar[URIRef] = raw.FixedShuntRecord
+    class_model_uri: ClassVar[URIRef] = RAW.FixedShuntRecord
 
     bus_number: int = None
-    shunt_id: str = "1 "
+    shunt_id: Optional[str] = "1 "
     status: Optional[int] = 1
     gl: Optional[float] = 0.0
     bl: Optional[float] = 0.0
@@ -510,9 +576,7 @@ class FixedShuntRecord(YAMLRoot):
         if not isinstance(self.bus_number, int):
             self.bus_number = int(self.bus_number)
 
-        if self._is_empty(self.shunt_id):
-            self.MissingRequiredField("shunt_id")
-        if not isinstance(self.shunt_id, str):
+        if self.shunt_id is not None and not isinstance(self.shunt_id, str):
             self.shunt_id = str(self.shunt_id)
 
         if self.status is not None and not isinstance(self.status, int):
@@ -534,13 +598,13 @@ class GeneratorRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["GeneratorRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["GeneratorRecord"]
     class_class_curie: ClassVar[str] = "raw:GeneratorRecord"
     class_name: ClassVar[str] = "GeneratorRecord"
-    class_model_uri: ClassVar[URIRef] = raw.GeneratorRecord
+    class_model_uri: ClassVar[URIRef] = RAW.GeneratorRecord
 
     bus_number: int = None
-    gen_id: str = "1 "
+    gen_id: Optional[str] = "1 "
     p_output: Optional[float] = 0.0
     q_output: Optional[float] = 0.0
     max_q_output: Optional[float] = 9999.0
@@ -575,9 +639,7 @@ class GeneratorRecord(YAMLRoot):
         if not isinstance(self.bus_number, int):
             self.bus_number = int(self.bus_number)
 
-        if self._is_empty(self.gen_id):
-            self.MissingRequiredField("gen_id")
-        if not isinstance(self.gen_id, str):
+        if self.gen_id is not None and not isinstance(self.gen_id, str):
             self.gen_id = str(self.gen_id)
 
         if self.p_output is not None and not isinstance(self.p_output, float):
@@ -671,16 +733,16 @@ class BranchRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["BranchRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["BranchRecord"]
     class_class_curie: ClassVar[str] = "raw:BranchRecord"
     class_name: ClassVar[str] = "BranchRecord"
-    class_model_uri: ClassVar[URIRef] = raw.BranchRecord
+    class_model_uri: ClassVar[URIRef] = RAW.BranchRecord
 
     from_bus_number: int = None
     to_bus_number: int = None
     r: float = None
     x: float = None
-    circuit: str = "1 "
+    circuit: Optional[str] = "1 "
     b: Optional[float] = 0.0
     name: Optional[str] = "                                        "
     ratings: Optional[Union[float, list[float]]] = empty_list()
@@ -711,11 +773,6 @@ class BranchRecord(YAMLRoot):
         if not isinstance(self.to_bus_number, int):
             self.to_bus_number = int(self.to_bus_number)
 
-        if self._is_empty(self.circuit):
-            self.MissingRequiredField("circuit")
-        if not isinstance(self.circuit, str):
-            self.circuit = str(self.circuit)
-
         if self._is_empty(self.r):
             self.MissingRequiredField("r")
         if not isinstance(self.r, float):
@@ -725,6 +782,9 @@ class BranchRecord(YAMLRoot):
             self.MissingRequiredField("x")
         if not isinstance(self.x, float):
             self.x = float(self.x)
+
+        if self.circuit is not None and not isinstance(self.circuit, str):
+            self.circuit = str(self.circuit)
 
         if self.b is not None and not isinstance(self.b, float):
             self.b = float(self.b)
@@ -791,14 +851,14 @@ class SwitchRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["SwitchRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["SwitchRecord"]
     class_class_curie: ClassVar[str] = "raw:SwitchRecord"
     class_name: ClassVar[str] = "SwitchRecord"
-    class_model_uri: ClassVar[URIRef] = raw.SwitchRecord
+    class_model_uri: ClassVar[URIRef] = RAW.SwitchRecord
 
     from_bus_number: int = None
     to_bus_number: int = None
-    circuit: str = "1 "
+    circuit: Optional[str] = "1 "
     x: Optional[float] = 0.0001
     ratings: Optional[Union[float, list[float]]] = empty_list()
     status: Optional[int] = 1
@@ -818,9 +878,7 @@ class SwitchRecord(YAMLRoot):
         if not isinstance(self.to_bus_number, int):
             self.to_bus_number = int(self.to_bus_number)
 
-        if self._is_empty(self.circuit):
-            self.MissingRequiredField("circuit")
-        if not isinstance(self.circuit, str):
+        if self.circuit is not None and not isinstance(self.circuit, str):
             self.circuit = str(self.circuit)
 
         if self.x is not None and not isinstance(self.x, float):
@@ -864,15 +922,16 @@ class TransformerRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["TransformerRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["TransformerRecord"]
     class_class_curie: ClassVar[str] = "raw:TransformerRecord"
     class_name: ClassVar[str] = "TransformerRecord"
-    class_model_uri: ClassVar[URIRef] = raw.TransformerRecord
+    class_model_uri: ClassVar[URIRef] = RAW.TransformerRecord
 
     i: int = None
     j: int = None
-    circuit: str = "1 "
+    x1_2: float = 0.0
     k: Optional[int] = 0
+    circuit: Optional[str] = "1 "
     cw: Optional[int] = 1
     cz: Optional[int] = 1
     cm: Optional[int] = 1
@@ -892,7 +951,6 @@ class TransformerRecord(YAMLRoot):
     vecgrp: Optional[str] = "            "
     zcod: Optional[int] = 0
     r1_2: Optional[float] = 0.0
-    x1_2: Optional[float] = 0.0
     sbase1_2: Optional[float] = 100.0
     r2_3: Optional[float] = 0.0
     x2_3: Optional[float] = 0.0
@@ -995,13 +1053,16 @@ class TransformerRecord(YAMLRoot):
         if not isinstance(self.j, int):
             self.j = int(self.j)
 
-        if self._is_empty(self.circuit):
-            self.MissingRequiredField("circuit")
-        if not isinstance(self.circuit, str):
-            self.circuit = str(self.circuit)
+        if self._is_empty(self.x1_2):
+            self.MissingRequiredField("x1_2")
+        if not isinstance(self.x1_2, float):
+            self.x1_2 = float(self.x1_2)
 
         if self.k is not None and not isinstance(self.k, int):
             self.k = int(self.k)
+
+        if self.circuit is not None and not isinstance(self.circuit, str):
+            self.circuit = str(self.circuit)
 
         if self.cw is not None and not isinstance(self.cw, int):
             self.cw = int(self.cw)
@@ -1059,9 +1120,6 @@ class TransformerRecord(YAMLRoot):
 
         if self.r1_2 is not None and not isinstance(self.r1_2, float):
             self.r1_2 = float(self.r1_2)
-
-        if self.x1_2 is not None and not isinstance(self.x1_2, float):
-            self.x1_2 = float(self.x1_2)
 
         if self.sbase1_2 is not None and not isinstance(self.sbase1_2, float):
             self.sbase1_2 = float(self.sbase1_2)
@@ -1343,10 +1401,10 @@ class AreaInterchangeRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["AreaInterchangeRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["AreaInterchangeRecord"]
     class_class_curie: ClassVar[str] = "raw:AreaInterchangeRecord"
     class_name: ClassVar[str] = "AreaInterchangeRecord"
-    class_model_uri: ClassVar[URIRef] = raw.AreaInterchangeRecord
+    class_model_uri: ClassVar[URIRef] = RAW.AreaInterchangeRecord
 
     area_number: Union[int, AreaInterchangeRecordAreaNumber] = None
     bus_number: Optional[int] = 0
@@ -1389,18 +1447,30 @@ class TwoTerminalDCRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["TwoTerminalDCRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["TwoTerminalDCRecord"]
     class_class_curie: ClassVar[str] = "raw:TwoTerminalDCRecord"
     class_name: ClassVar[str] = "TwoTerminalDCRecord"
-    class_model_uri: ClassVar[URIRef] = raw.TwoTerminalDCRecord
+    class_model_uri: ClassVar[URIRef] = RAW.TwoTerminalDCRecord
 
     name: Union[str, TwoTerminalDCRecordName] = None
     ipr: int = None
     ipi: int = None
+    rdc: float = 0.0
+    setvl: float = 0.0
+    vschd: float = 0.0
+    nbr: int = 0
+    anmxr: float = 90.0
+    anmnr: float = 0.0
+    rcr: float = 0.0
+    xcr: float = 0.0
+    ebasr: float = 0.0
+    nbi: int = 0
+    anmxi: float = 90.0
+    anmni: float = 0.0
+    rci: float = 0.0
+    xci: float = 0.0
+    ebasi: float = 0.0
     mdc: Optional[int] = 0
-    rdc: Optional[float] = 0.0
-    setvl: Optional[float] = 0.0
-    vschd: Optional[float] = 0.0
     vcmod: Optional[float] = 0.0
     rcomp: Optional[float] = 0.0
     delti: Optional[float] = 0.0
@@ -1408,12 +1478,6 @@ class TwoTerminalDCRecord(YAMLRoot):
     dcvmin: Optional[float] = 0.0
     cccitmx: Optional[int] = 20
     cccacc: Optional[float] = 1.0
-    nbr: Optional[int] = 0
-    anmxr: Optional[float] = 90.0
-    anmnr: Optional[float] = 0.0
-    rcr: Optional[float] = 0.0
-    xcr: Optional[float] = 0.0
-    ebasr: Optional[float] = 0.0
     trr: Optional[float] = 1.0
     tapr: Optional[float] = 1.0
     tmxr: Optional[float] = 1.5
@@ -1425,12 +1489,6 @@ class TwoTerminalDCRecord(YAMLRoot):
     idr: Optional[str] = "1"
     xcapr: Optional[float] = 0.0
     ndr: Optional[int] = 0
-    nbi: Optional[int] = 0
-    anmxi: Optional[float] = 90.0
-    anmni: Optional[float] = 0.0
-    rci: Optional[float] = 0.0
-    xci: Optional[float] = 0.0
-    ebasi: Optional[float] = 0.0
     tri: Optional[float] = 1.0
     tapi: Optional[float] = 1.0
     tmxi: Optional[float] = 1.5
@@ -1449,27 +1507,93 @@ class TwoTerminalDCRecord(YAMLRoot):
         if not isinstance(self.name, TwoTerminalDCRecordName):
             self.name = TwoTerminalDCRecordName(self.name)
 
+        if self._is_empty(self.rdc):
+            self.MissingRequiredField("rdc")
+        if not isinstance(self.rdc, float):
+            self.rdc = float(self.rdc)
+
+        if self._is_empty(self.setvl):
+            self.MissingRequiredField("setvl")
+        if not isinstance(self.setvl, float):
+            self.setvl = float(self.setvl)
+
+        if self._is_empty(self.vschd):
+            self.MissingRequiredField("vschd")
+        if not isinstance(self.vschd, float):
+            self.vschd = float(self.vschd)
+
         if self._is_empty(self.ipr):
             self.MissingRequiredField("ipr")
         if not isinstance(self.ipr, int):
             self.ipr = int(self.ipr)
+
+        if self._is_empty(self.nbr):
+            self.MissingRequiredField("nbr")
+        if not isinstance(self.nbr, int):
+            self.nbr = int(self.nbr)
+
+        if self._is_empty(self.anmxr):
+            self.MissingRequiredField("anmxr")
+        if not isinstance(self.anmxr, float):
+            self.anmxr = float(self.anmxr)
+
+        if self._is_empty(self.anmnr):
+            self.MissingRequiredField("anmnr")
+        if not isinstance(self.anmnr, float):
+            self.anmnr = float(self.anmnr)
+
+        if self._is_empty(self.rcr):
+            self.MissingRequiredField("rcr")
+        if not isinstance(self.rcr, float):
+            self.rcr = float(self.rcr)
+
+        if self._is_empty(self.xcr):
+            self.MissingRequiredField("xcr")
+        if not isinstance(self.xcr, float):
+            self.xcr = float(self.xcr)
+
+        if self._is_empty(self.ebasr):
+            self.MissingRequiredField("ebasr")
+        if not isinstance(self.ebasr, float):
+            self.ebasr = float(self.ebasr)
 
         if self._is_empty(self.ipi):
             self.MissingRequiredField("ipi")
         if not isinstance(self.ipi, int):
             self.ipi = int(self.ipi)
 
+        if self._is_empty(self.nbi):
+            self.MissingRequiredField("nbi")
+        if not isinstance(self.nbi, int):
+            self.nbi = int(self.nbi)
+
+        if self._is_empty(self.anmxi):
+            self.MissingRequiredField("anmxi")
+        if not isinstance(self.anmxi, float):
+            self.anmxi = float(self.anmxi)
+
+        if self._is_empty(self.anmni):
+            self.MissingRequiredField("anmni")
+        if not isinstance(self.anmni, float):
+            self.anmni = float(self.anmni)
+
+        if self._is_empty(self.rci):
+            self.MissingRequiredField("rci")
+        if not isinstance(self.rci, float):
+            self.rci = float(self.rci)
+
+        if self._is_empty(self.xci):
+            self.MissingRequiredField("xci")
+        if not isinstance(self.xci, float):
+            self.xci = float(self.xci)
+
+        if self._is_empty(self.ebasi):
+            self.MissingRequiredField("ebasi")
+        if not isinstance(self.ebasi, float):
+            self.ebasi = float(self.ebasi)
+
         if self.mdc is not None and not isinstance(self.mdc, int):
             self.mdc = int(self.mdc)
-
-        if self.rdc is not None and not isinstance(self.rdc, float):
-            self.rdc = float(self.rdc)
-
-        if self.setvl is not None and not isinstance(self.setvl, float):
-            self.setvl = float(self.setvl)
-
-        if self.vschd is not None and not isinstance(self.vschd, float):
-            self.vschd = float(self.vschd)
 
         if self.vcmod is not None and not isinstance(self.vcmod, float):
             self.vcmod = float(self.vcmod)
@@ -1491,24 +1615,6 @@ class TwoTerminalDCRecord(YAMLRoot):
 
         if self.cccacc is not None and not isinstance(self.cccacc, float):
             self.cccacc = float(self.cccacc)
-
-        if self.nbr is not None and not isinstance(self.nbr, int):
-            self.nbr = int(self.nbr)
-
-        if self.anmxr is not None and not isinstance(self.anmxr, float):
-            self.anmxr = float(self.anmxr)
-
-        if self.anmnr is not None and not isinstance(self.anmnr, float):
-            self.anmnr = float(self.anmnr)
-
-        if self.rcr is not None and not isinstance(self.rcr, float):
-            self.rcr = float(self.rcr)
-
-        if self.xcr is not None and not isinstance(self.xcr, float):
-            self.xcr = float(self.xcr)
-
-        if self.ebasr is not None and not isinstance(self.ebasr, float):
-            self.ebasr = float(self.ebasr)
 
         if self.trr is not None and not isinstance(self.trr, float):
             self.trr = float(self.trr)
@@ -1542,24 +1648,6 @@ class TwoTerminalDCRecord(YAMLRoot):
 
         if self.ndr is not None and not isinstance(self.ndr, int):
             self.ndr = int(self.ndr)
-
-        if self.nbi is not None and not isinstance(self.nbi, int):
-            self.nbi = int(self.nbi)
-
-        if self.anmxi is not None and not isinstance(self.anmxi, float):
-            self.anmxi = float(self.anmxi)
-
-        if self.anmni is not None and not isinstance(self.anmni, float):
-            self.anmni = float(self.anmni)
-
-        if self.rci is not None and not isinstance(self.rci, float):
-            self.rci = float(self.rci)
-
-        if self.xci is not None and not isinstance(self.xci, float):
-            self.xci = float(self.xci)
-
-        if self.ebasi is not None and not isinstance(self.ebasi, float):
-            self.ebasi = float(self.ebasi)
 
         if self.tri is not None and not isinstance(self.tri, float):
             self.tri = float(self.tri)
@@ -1610,15 +1698,17 @@ class VscDcRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["VscDcRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["VscDcRecord"]
     class_class_curie: ClassVar[str] = "raw:VscDcRecord"
     class_name: ClassVar[str] = "VscDcRecord"
-    class_model_uri: ClassVar[URIRef] = raw.VscDcRecord
+    class_model_uri: ClassVar[URIRef] = RAW.VscDcRecord
 
     name: str = None
     ibus: int = None
+    rdc: float = 0.0
+    converter_type: int = 1
+    dcset: float = 0.0
     mdc: Optional[int] = 1
-    rdc: Optional[float] = 0.0
     o1: Optional[int] = 1
     f1: Optional[float] = 1.0
     o2: Optional[int] = 0
@@ -1627,9 +1717,7 @@ class VscDcRecord(YAMLRoot):
     f3: Optional[float] = 0.0
     o4: Optional[int] = 0
     f4: Optional[float] = 0.0
-    converter_type: Optional[int] = 1
     mode: Optional[int] = 1
-    dcset: Optional[float] = 0.0
     acset: Optional[float] = 1.0
     aloss: Optional[float] = 0.0
     bloss: Optional[float] = 0.0
@@ -1649,16 +1737,28 @@ class VscDcRecord(YAMLRoot):
         if not isinstance(self.name, str):
             self.name = str(self.name)
 
+        if self._is_empty(self.rdc):
+            self.MissingRequiredField("rdc")
+        if not isinstance(self.rdc, float):
+            self.rdc = float(self.rdc)
+
         if self._is_empty(self.ibus):
             self.MissingRequiredField("ibus")
         if not isinstance(self.ibus, int):
             self.ibus = int(self.ibus)
 
+        if self._is_empty(self.converter_type):
+            self.MissingRequiredField("converter_type")
+        if not isinstance(self.converter_type, int):
+            self.converter_type = int(self.converter_type)
+
+        if self._is_empty(self.dcset):
+            self.MissingRequiredField("dcset")
+        if not isinstance(self.dcset, float):
+            self.dcset = float(self.dcset)
+
         if self.mdc is not None and not isinstance(self.mdc, int):
             self.mdc = int(self.mdc)
-
-        if self.rdc is not None and not isinstance(self.rdc, float):
-            self.rdc = float(self.rdc)
 
         if self.o1 is not None and not isinstance(self.o1, int):
             self.o1 = int(self.o1)
@@ -1684,14 +1784,8 @@ class VscDcRecord(YAMLRoot):
         if self.f4 is not None and not isinstance(self.f4, float):
             self.f4 = float(self.f4)
 
-        if self.converter_type is not None and not isinstance(self.converter_type, int):
-            self.converter_type = int(self.converter_type)
-
         if self.mode is not None and not isinstance(self.mode, int):
             self.mode = int(self.mode)
-
-        if self.dcset is not None and not isinstance(self.dcset, float):
-            self.dcset = float(self.dcset)
 
         if self.acset is not None and not isinstance(self.acset, float):
             self.acset = float(self.acset)
@@ -1739,10 +1833,10 @@ class ImpedanceCorrectionRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["ImpedanceCorrectionRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["ImpedanceCorrectionRecord"]
     class_class_curie: ClassVar[str] = "raw:ImpedanceCorrectionRecord"
     class_name: ClassVar[str] = "ImpedanceCorrectionRecord"
-    class_model_uri: ClassVar[URIRef] = raw.ImpedanceCorrectionRecord
+    class_model_uri: ClassVar[URIRef] = RAW.ImpedanceCorrectionRecord
 
     table_number: Union[int, ImpedanceCorrectionRecordTableNumber] = None
     t1: Optional[float] = None
@@ -1890,23 +1984,25 @@ class ImpedanceCorrectionRecord(YAMLRoot):
 @dataclass(repr=False)
 class MultiTerminalDCRecord(YAMLRoot):
     """
-    Multi-terminal DC transmission line data record
+    Multi-terminal DC transmission line system definition record (one per line).
+    Followed by NCONV MultiTerminalConverterRecord, NDCBS MultiTerminalDCBusRecord
+    and NDCLN MultiTerminalDCLinkRecord records, in that order.
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["MultiTerminalDCRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["MultiTerminalDCRecord"]
     class_class_curie: ClassVar[str] = "raw:MultiTerminalDCRecord"
     class_name: ClassVar[str] = "MultiTerminalDCRecord"
-    class_model_uri: ClassVar[URIRef] = raw.MultiTerminalDCRecord
+    class_model_uri: ClassVar[URIRef] = RAW.MultiTerminalDCRecord
 
     name: str = None
     nconv: int = None
     ndcbs: int = None
     ndcln: int = None
+    vconv: int = None
     mdc: Optional[int] = None
-    vconv: Optional[float] = None
     vcmod: Optional[float] = None
-    vconvn: Optional[float] = None
+    vconvn: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.name):
@@ -1929,17 +2025,214 @@ class MultiTerminalDCRecord(YAMLRoot):
         if not isinstance(self.ndcln, int):
             self.ndcln = int(self.ndcln)
 
+        if self._is_empty(self.vconv):
+            self.MissingRequiredField("vconv")
+        if not isinstance(self.vconv, int):
+            self.vconv = int(self.vconv)
+
         if self.mdc is not None and not isinstance(self.mdc, int):
             self.mdc = int(self.mdc)
-
-        if self.vconv is not None and not isinstance(self.vconv, float):
-            self.vconv = float(self.vconv)
 
         if self.vcmod is not None and not isinstance(self.vcmod, float):
             self.vcmod = float(self.vcmod)
 
-        if self.vconvn is not None and not isinstance(self.vconvn, float):
-            self.vconvn = float(self.vconvn)
+        if self.vconvn is not None and not isinstance(self.vconvn, int):
+            self.vconvn = int(self.vconvn)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class MultiTerminalConverterRecord(YAMLRoot):
+    """
+    Converter station record of a multi-terminal DC line (NCONV per line).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["MultiTerminalConverterRecord"]
+    class_class_curie: ClassVar[str] = "raw:MultiTerminalConverterRecord"
+    class_name: ClassVar[str] = "MultiTerminalConverterRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.MultiTerminalConverterRecord
+
+    ib: int = None
+    n: int = None
+    angmx: float = None
+    angmn: float = None
+    rc: float = None
+    xc: float = None
+    ebas: float = None
+    setvl: float = None
+    tr: Optional[float] = None
+    tap: Optional[float] = None
+    tpmx: Optional[float] = None
+    tpmn: Optional[float] = None
+    tstp: Optional[float] = None
+    dcpf: Optional[float] = None
+    marg: Optional[float] = None
+    cnvcod: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.ib):
+            self.MissingRequiredField("ib")
+        if not isinstance(self.ib, int):
+            self.ib = int(self.ib)
+
+        if self._is_empty(self.n):
+            self.MissingRequiredField("n")
+        if not isinstance(self.n, int):
+            self.n = int(self.n)
+
+        if self._is_empty(self.angmx):
+            self.MissingRequiredField("angmx")
+        if not isinstance(self.angmx, float):
+            self.angmx = float(self.angmx)
+
+        if self._is_empty(self.angmn):
+            self.MissingRequiredField("angmn")
+        if not isinstance(self.angmn, float):
+            self.angmn = float(self.angmn)
+
+        if self._is_empty(self.rc):
+            self.MissingRequiredField("rc")
+        if not isinstance(self.rc, float):
+            self.rc = float(self.rc)
+
+        if self._is_empty(self.xc):
+            self.MissingRequiredField("xc")
+        if not isinstance(self.xc, float):
+            self.xc = float(self.xc)
+
+        if self._is_empty(self.ebas):
+            self.MissingRequiredField("ebas")
+        if not isinstance(self.ebas, float):
+            self.ebas = float(self.ebas)
+
+        if self._is_empty(self.setvl):
+            self.MissingRequiredField("setvl")
+        if not isinstance(self.setvl, float):
+            self.setvl = float(self.setvl)
+
+        if self.tr is not None and not isinstance(self.tr, float):
+            self.tr = float(self.tr)
+
+        if self.tap is not None and not isinstance(self.tap, float):
+            self.tap = float(self.tap)
+
+        if self.tpmx is not None and not isinstance(self.tpmx, float):
+            self.tpmx = float(self.tpmx)
+
+        if self.tpmn is not None and not isinstance(self.tpmn, float):
+            self.tpmn = float(self.tpmn)
+
+        if self.tstp is not None and not isinstance(self.tstp, float):
+            self.tstp = float(self.tstp)
+
+        if self.dcpf is not None and not isinstance(self.dcpf, float):
+            self.dcpf = float(self.dcpf)
+
+        if self.marg is not None and not isinstance(self.marg, float):
+            self.marg = float(self.marg)
+
+        if self.cnvcod is not None and not isinstance(self.cnvcod, int):
+            self.cnvcod = int(self.cnvcod)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class MultiTerminalDCBusRecord(YAMLRoot):
+    """
+    DC bus record of a multi-terminal DC line (NDCBS per line).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["MultiTerminalDCBusRecord"]
+    class_class_curie: ClassVar[str] = "raw:MultiTerminalDCBusRecord"
+    class_name: ClassVar[str] = "MultiTerminalDCBusRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.MultiTerminalDCBusRecord
+
+    idc: int = None
+    ib: Optional[int] = None
+    area: Optional[int] = None
+    zone: Optional[int] = None
+    dcname: Optional[str] = None
+    idc2: Optional[int] = None
+    rgrnd: Optional[float] = None
+    owner: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.idc):
+            self.MissingRequiredField("idc")
+        if not isinstance(self.idc, int):
+            self.idc = int(self.idc)
+
+        if self.ib is not None and not isinstance(self.ib, int):
+            self.ib = int(self.ib)
+
+        if self.area is not None and not isinstance(self.area, int):
+            self.area = int(self.area)
+
+        if self.zone is not None and not isinstance(self.zone, int):
+            self.zone = int(self.zone)
+
+        if self.dcname is not None and not isinstance(self.dcname, str):
+            self.dcname = str(self.dcname)
+
+        if self.idc2 is not None and not isinstance(self.idc2, int):
+            self.idc2 = int(self.idc2)
+
+        if self.rgrnd is not None and not isinstance(self.rgrnd, float):
+            self.rgrnd = float(self.rgrnd)
+
+        if self.owner is not None and not isinstance(self.owner, int):
+            self.owner = int(self.owner)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class MultiTerminalDCLinkRecord(YAMLRoot):
+    """
+    DC link record of a multi-terminal DC line (NDCLN per line).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["MultiTerminalDCLinkRecord"]
+    class_class_curie: ClassVar[str] = "raw:MultiTerminalDCLinkRecord"
+    class_name: ClassVar[str] = "MultiTerminalDCLinkRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.MultiTerminalDCLinkRecord
+
+    idc: int = None
+    jdc: int = None
+    rdc: float = None
+    ckt: Optional[str] = None
+    met: Optional[int] = None
+    ldc: Optional[float] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.idc):
+            self.MissingRequiredField("idc")
+        if not isinstance(self.idc, int):
+            self.idc = int(self.idc)
+
+        if self._is_empty(self.jdc):
+            self.MissingRequiredField("jdc")
+        if not isinstance(self.jdc, int):
+            self.jdc = int(self.jdc)
+
+        if self._is_empty(self.rdc):
+            self.MissingRequiredField("rdc")
+        if not isinstance(self.rdc, float):
+            self.rdc = float(self.rdc)
+
+        if self.ckt is not None and not isinstance(self.ckt, str):
+            self.ckt = str(self.ckt)
+
+        if self.met is not None and not isinstance(self.met, int):
+            self.met = int(self.met)
+
+        if self.ldc is not None and not isinstance(self.ldc, float):
+            self.ldc = float(self.ldc)
 
         super().__post_init__(**kwargs)
 
@@ -1962,16 +2255,16 @@ class MultiSectionLineRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["MultiSectionLineRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["MultiSectionLineRecord"]
     class_class_curie: ClassVar[str] = "raw:MultiSectionLineRecord"
     class_name: ClassVar[str] = "MultiSectionLineRecord"
-    class_model_uri: ClassVar[URIRef] = raw.MultiSectionLineRecord
+    class_model_uri: ClassVar[URIRef] = RAW.MultiSectionLineRecord
 
     line_id: Union[str, MultiSectionLineRecordLineId] = None
     i: int = None
     j: int = None
+    dum1: int = 0
     met: Optional[int] = 1
-    dum1: Optional[int] = 0
     dum2: Optional[int] = 0
     dum3: Optional[int] = 0
     dum4: Optional[int] = 0
@@ -1997,11 +2290,13 @@ class MultiSectionLineRecord(YAMLRoot):
         if not isinstance(self.j, int):
             self.j = int(self.j)
 
+        if self._is_empty(self.dum1):
+            self.MissingRequiredField("dum1")
+        if not isinstance(self.dum1, int):
+            self.dum1 = int(self.dum1)
+
         if self.met is not None and not isinstance(self.met, int):
             self.met = int(self.met)
-
-        if self.dum1 is not None and not isinstance(self.dum1, int):
-            self.dum1 = int(self.dum1)
 
         if self.dum2 is not None and not isinstance(self.dum2, int):
             self.dum2 = int(self.dum2)
@@ -2037,10 +2332,10 @@ class ZoneRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["ZoneRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["ZoneRecord"]
     class_class_curie: ClassVar[str] = "raw:ZoneRecord"
     class_name: ClassVar[str] = "ZoneRecord"
-    class_model_uri: ClassVar[URIRef] = raw.ZoneRecord
+    class_model_uri: ClassVar[URIRef] = RAW.ZoneRecord
 
     zone_number: Union[int, ZoneRecordZoneNumber] = None
     zone_name: Optional[str] = "            "
@@ -2064,14 +2359,14 @@ class InterareaTransferRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["InterareaTransferRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["InterareaTransferRecord"]
     class_class_curie: ClassVar[str] = "raw:InterareaTransferRecord"
     class_name: ClassVar[str] = "InterareaTransferRecord"
-    class_model_uri: ClassVar[URIRef] = raw.InterareaTransferRecord
+    class_model_uri: ClassVar[URIRef] = RAW.InterareaTransferRecord
 
     from_area: int = None
     to_area: int = None
-    transfer_id: str = "1"
+    transfer_id: Optional[str] = "1"
     power_transfer: Optional[float] = 0.0
 
     def __post_init__(self, *_: str, **kwargs: Any):
@@ -2085,9 +2380,7 @@ class InterareaTransferRecord(YAMLRoot):
         if not isinstance(self.to_area, int):
             self.to_area = int(self.to_area)
 
-        if self._is_empty(self.transfer_id):
-            self.MissingRequiredField("transfer_id")
-        if not isinstance(self.transfer_id, str):
+        if self.transfer_id is not None and not isinstance(self.transfer_id, str):
             self.transfer_id = str(self.transfer_id)
 
         if self.power_transfer is not None and not isinstance(self.power_transfer, float):
@@ -2103,10 +2396,10 @@ class OwnerRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["OwnerRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["OwnerRecord"]
     class_class_curie: ClassVar[str] = "raw:OwnerRecord"
     class_name: ClassVar[str] = "OwnerRecord"
-    class_model_uri: ClassVar[URIRef] = raw.OwnerRecord
+    class_model_uri: ClassVar[URIRef] = RAW.OwnerRecord
 
     owner_number: Union[int, OwnerRecordOwnerNumber] = None
     owner_name: Optional[str] = "            "
@@ -2130,10 +2423,10 @@ class FactsDeviceRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["FactsDeviceRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["FactsDeviceRecord"]
     class_class_curie: ClassVar[str] = "raw:FactsDeviceRecord"
     class_name: ClassVar[str] = "FactsDeviceRecord"
-    class_model_uri: ClassVar[URIRef] = raw.FactsDeviceRecord
+    class_model_uri: ClassVar[URIRef] = RAW.FactsDeviceRecord
 
     name: str = None
     ibus: int = None
@@ -2236,20 +2529,18 @@ class FactsDeviceRecord(YAMLRoot):
 class SwitchedShuntRecord(YAMLRoot):
     """
     Switched shunt compensator data record.
-
     Variable-length format:
     - Fixed fields: I, MODSW, ADJM, STAT, VSWHI, VSWLO, SWREG, RMPCT, RMIDNT, BINIT
     - Variable blocks: Up to 8 N/B pairs (only non-zero blocks are serialized)
     - Final field: NREG (only if remote regulation is used)
-
     Maps to CIM: cim.ShuntCompensator, cim.LinearShuntCompensator
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["SwitchedShuntRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["SwitchedShuntRecord"]
     class_class_curie: ClassVar[str] = "raw:SwitchedShuntRecord"
     class_name: ClassVar[str] = "SwitchedShuntRecord"
-    class_model_uri: ClassVar[URIRef] = raw.SwitchedShuntRecord
+    class_model_uri: ClassVar[URIRef] = RAW.SwitchedShuntRecord
 
     bus_number: int = None
     modsw: Optional[int] = 1
@@ -2277,6 +2568,7 @@ class SwitchedShuntRecord(YAMLRoot):
     b7: Optional[float] = 0.0
     n8: Optional[int] = 0
     b8: Optional[float] = 0.0
+    nreg: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_number):
@@ -2359,6 +2651,9 @@ class SwitchedShuntRecord(YAMLRoot):
         if self.b8 is not None and not isinstance(self.b8, float):
             self.b8 = float(self.b8)
 
+        if self.nreg is not None and not isinstance(self.nreg, int):
+            self.nreg = int(self.nreg)
+
         super().__post_init__(**kwargs)
 
 
@@ -2369,10 +2664,10 @@ class GneDeviceRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["GneDeviceRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["GneDeviceRecord"]
     class_class_curie: ClassVar[str] = "raw:GneDeviceRecord"
     class_name: ClassVar[str] = "GneDeviceRecord"
-    class_model_uri: ClassVar[URIRef] = raw.GneDeviceRecord
+    class_model_uri: ClassVar[URIRef] = RAW.GneDeviceRecord
 
     name: str = None
     model: str = None
@@ -2448,13 +2743,13 @@ class InductionMachineRecord(YAMLRoot):
     """
     _inherited_slots: ClassVar[list[str]] = []
 
-    class_class_uri: ClassVar[URIRef] = raw["InductionMachineRecord"]
+    class_class_uri: ClassVar[URIRef] = RAW["InductionMachineRecord"]
     class_class_curie: ClassVar[str] = "raw:InductionMachineRecord"
     class_name: ClassVar[str] = "InductionMachineRecord"
-    class_model_uri: ClassVar[URIRef] = raw.InductionMachineRecord
+    class_model_uri: ClassVar[URIRef] = RAW.InductionMachineRecord
 
     bus_id: int = None
-    name: str = "1 "
+    name: Optional[str] = "1 "
     status: Optional[int] = 1
     scode: Optional[int] = 1
     dcode: Optional[int] = 1
@@ -2494,9 +2789,7 @@ class InductionMachineRecord(YAMLRoot):
         if not isinstance(self.bus_id, int):
             self.bus_id = int(self.bus_id)
 
-        if self._is_empty(self.name):
-            self.MissingRequiredField("name")
-        if not isinstance(self.name, str):
+        if self.name is not None and not isinstance(self.name, str):
             self.name = str(self.name)
 
         if self.status is not None and not isinstance(self.status, int):
@@ -2598,6 +2891,218 @@ class InductionMachineRecord(YAMLRoot):
         super().__post_init__(**kwargs)
 
 
+@dataclass(repr=False)
+class SubstationRecord(YAMLRoot):
+    """
+    Substation data record; the first record of each substation block
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["SubstationRecord"]
+    class_class_curie: ClassVar[str] = "raw:SubstationRecord"
+    class_name: ClassVar[str] = "SubstationRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.SubstationRecord
+
+    substation_number: Union[int, SubstationRecordSubstationNumber] = None
+    name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    grounding_resistance: Optional[float] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.substation_number):
+            self.MissingRequiredField("substation_number")
+        if not isinstance(self.substation_number, SubstationRecordSubstationNumber):
+            self.substation_number = SubstationRecordSubstationNumber(self.substation_number)
+
+        if self.name is not None and not isinstance(self.name, str):
+            self.name = str(self.name)
+
+        if self.latitude is not None and not isinstance(self.latitude, float):
+            self.latitude = float(self.latitude)
+
+        if self.longitude is not None and not isinstance(self.longitude, float):
+            self.longitude = float(self.longitude)
+
+        if self.grounding_resistance is not None and not isinstance(self.grounding_resistance, float):
+            self.grounding_resistance = float(self.grounding_resistance)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class SubstationNodeRecord(YAMLRoot):
+    """
+    Substation node data record; each node is a connection point inside a substation
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["SubstationNodeRecord"]
+    class_class_curie: ClassVar[str] = "raw:SubstationNodeRecord"
+    class_name: ClassVar[str] = "SubstationNodeRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.SubstationNodeRecord
+
+    node_number: int = None
+    bus_number: int = None
+    name: Optional[str] = None
+    status: Optional[int] = None
+    vm: Optional[float] = None
+    va: Optional[float] = None
+    substation_number: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.node_number):
+            self.MissingRequiredField("node_number")
+        if not isinstance(self.node_number, int):
+            self.node_number = int(self.node_number)
+
+        if self._is_empty(self.bus_number):
+            self.MissingRequiredField("bus_number")
+        if not isinstance(self.bus_number, int):
+            self.bus_number = int(self.bus_number)
+
+        if self.name is not None and not isinstance(self.name, str):
+            self.name = str(self.name)
+
+        if self.status is not None and not isinstance(self.status, int):
+            self.status = int(self.status)
+
+        if self.vm is not None and not isinstance(self.vm, float):
+            self.vm = float(self.vm)
+
+        if self.va is not None and not isinstance(self.va, float):
+            self.va = float(self.va)
+
+        if self.substation_number is not None and not isinstance(self.substation_number, int):
+            self.substation_number = int(self.substation_number)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class StationSwitchingDeviceRecord(YAMLRoot):
+    """
+    Station switching device record; a breaker, disconnect or generic connector between two nodes of a substation
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["StationSwitchingDeviceRecord"]
+    class_class_curie: ClassVar[str] = "raw:StationSwitchingDeviceRecord"
+    class_name: ClassVar[str] = "StationSwitchingDeviceRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.StationSwitchingDeviceRecord
+
+    from_node: int = None
+    to_node: int = None
+    device_type: int = None
+    circuit: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[int] = None
+    normal_status: Optional[int] = None
+    reactance: Optional[float] = None
+    rate1: Optional[float] = None
+    rate2: Optional[float] = None
+    rate3: Optional[float] = None
+    substation_number: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.from_node):
+            self.MissingRequiredField("from_node")
+        if not isinstance(self.from_node, int):
+            self.from_node = int(self.from_node)
+
+        if self._is_empty(self.to_node):
+            self.MissingRequiredField("to_node")
+        if not isinstance(self.to_node, int):
+            self.to_node = int(self.to_node)
+
+        if self._is_empty(self.device_type):
+            self.MissingRequiredField("device_type")
+        if not isinstance(self.device_type, int):
+            self.device_type = int(self.device_type)
+
+        if self.circuit is not None and not isinstance(self.circuit, str):
+            self.circuit = str(self.circuit)
+
+        if self.name is not None and not isinstance(self.name, str):
+            self.name = str(self.name)
+
+        if self.status is not None and not isinstance(self.status, int):
+            self.status = int(self.status)
+
+        if self.normal_status is not None and not isinstance(self.normal_status, int):
+            self.normal_status = int(self.normal_status)
+
+        if self.reactance is not None and not isinstance(self.reactance, float):
+            self.reactance = float(self.reactance)
+
+        if self.rate1 is not None and not isinstance(self.rate1, float):
+            self.rate1 = float(self.rate1)
+
+        if self.rate2 is not None and not isinstance(self.rate2, float):
+            self.rate2 = float(self.rate2)
+
+        if self.rate3 is not None and not isinstance(self.rate3, float):
+            self.rate3 = float(self.rate3)
+
+        if self.substation_number is not None and not isinstance(self.substation_number, int):
+            self.substation_number = int(self.substation_number)
+
+        super().__post_init__(**kwargs)
+
+
+@dataclass(repr=False)
+class EquipmentTerminalRecord(YAMLRoot):
+    """
+    Equipment terminal record connecting a piece of equipment to a substation node. One record shape covers every
+    equipment form; TYP selects the form and tells which optional fields are used (J/K for branches and transformers,
+    identifier for the equipment ID, CKT or NAME).
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = RAW["EquipmentTerminalRecord"]
+    class_class_curie: ClassVar[str] = "raw:EquipmentTerminalRecord"
+    class_name: ClassVar[str] = "EquipmentTerminalRecord"
+    class_model_uri: ClassVar[URIRef] = RAW.EquipmentTerminalRecord
+
+    bus_number: int = None
+    node_number: int = None
+    terminal_type: str = None
+    j_bus: Optional[int] = None
+    k_bus: Optional[int] = None
+    identifier: Optional[str] = None
+    substation_number: Optional[int] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.bus_number):
+            self.MissingRequiredField("bus_number")
+        if not isinstance(self.bus_number, int):
+            self.bus_number = int(self.bus_number)
+
+        if self._is_empty(self.node_number):
+            self.MissingRequiredField("node_number")
+        if not isinstance(self.node_number, int):
+            self.node_number = int(self.node_number)
+
+        if self._is_empty(self.terminal_type):
+            self.MissingRequiredField("terminal_type")
+        if not isinstance(self.terminal_type, str):
+            self.terminal_type = str(self.terminal_type)
+
+        if self.j_bus is not None and not isinstance(self.j_bus, int):
+            self.j_bus = int(self.j_bus)
+
+        if self.k_bus is not None and not isinstance(self.k_bus, int):
+            self.k_bus = int(self.k_bus)
+
+        if self.identifier is not None and not isinstance(self.identifier, str):
+            self.identifier = str(self.identifier)
+
+        if self.substation_number is not None and not isinstance(self.substation_number, int):
+            self.substation_number = int(self.substation_number)
+
+        super().__post_init__(**kwargs)
+
+
 # Enumerations
 
 
@@ -2605,1455 +3110,1671 @@ class InductionMachineRecord(YAMLRoot):
 class slots:
     pass
 
-slots.RawModel__case_record = Slot(uri=raw.case_record, name="RawModel__case_record", curie=raw.curie('case_record'),
-                   model_uri=raw.RawModel__case_record, domain=None, range=Union[dict, CaseIdentificationRecord])
+slots.rawModel__case_record = Slot(uri=RAW.case_record, name="rawModel__case_record", curie=RAW.curie('case_record'),
+                   model_uri=RAW.rawModel__case_record, domain=None, range=Union[dict, CaseIdentificationRecord])
 
-slots.RawModel__bus_records = Slot(uri=raw.bus_records, name="RawModel__bus_records", curie=raw.curie('bus_records'),
-                   model_uri=raw.RawModel__bus_records, domain=None, range=Optional[Union[dict[Union[int, BusRecordBusNumber], Union[dict, BusRecord]], list[Union[dict, BusRecord]]]])
+slots.rawModel__bus_records = Slot(uri=RAW.bus_records, name="rawModel__bus_records", curie=RAW.curie('bus_records'),
+                   model_uri=RAW.rawModel__bus_records, domain=None, range=Optional[Union[dict[Union[int, BusRecordBusNumber], Union[dict, BusRecord]], list[Union[dict, BusRecord]]]])
 
-slots.RawModel__load_records = Slot(uri=raw.load_records, name="RawModel__load_records", curie=raw.curie('load_records'),
-                   model_uri=raw.RawModel__load_records, domain=None, range=Optional[Union[Union[dict, LoadRecord], list[Union[dict, LoadRecord]]]])
+slots.rawModel__load_records = Slot(uri=RAW.load_records, name="rawModel__load_records", curie=RAW.curie('load_records'),
+                   model_uri=RAW.rawModel__load_records, domain=None, range=Optional[Union[Union[dict, LoadRecord], list[Union[dict, LoadRecord]]]])
 
-slots.RawModel__fixed_shunt_records = Slot(uri=raw.fixed_shunt_records, name="RawModel__fixed_shunt_records", curie=raw.curie('fixed_shunt_records'),
-                   model_uri=raw.RawModel__fixed_shunt_records, domain=None, range=Optional[Union[Union[dict, FixedShuntRecord], list[Union[dict, FixedShuntRecord]]]])
+slots.rawModel__fixed_shunt_records = Slot(uri=RAW.fixed_shunt_records, name="rawModel__fixed_shunt_records", curie=RAW.curie('fixed_shunt_records'),
+                   model_uri=RAW.rawModel__fixed_shunt_records, domain=None, range=Optional[Union[Union[dict, FixedShuntRecord], list[Union[dict, FixedShuntRecord]]]])
 
-slots.RawModel__generator_records = Slot(uri=raw.generator_records, name="RawModel__generator_records", curie=raw.curie('generator_records'),
-                   model_uri=raw.RawModel__generator_records, domain=None, range=Optional[Union[Union[dict, GeneratorRecord], list[Union[dict, GeneratorRecord]]]])
+slots.rawModel__generator_records = Slot(uri=RAW.generator_records, name="rawModel__generator_records", curie=RAW.curie('generator_records'),
+                   model_uri=RAW.rawModel__generator_records, domain=None, range=Optional[Union[Union[dict, GeneratorRecord], list[Union[dict, GeneratorRecord]]]])
 
-slots.RawModel__branch_records = Slot(uri=raw.branch_records, name="RawModel__branch_records", curie=raw.curie('branch_records'),
-                   model_uri=raw.RawModel__branch_records, domain=None, range=Optional[Union[Union[dict, BranchRecord], list[Union[dict, BranchRecord]]]])
+slots.rawModel__branch_records = Slot(uri=RAW.branch_records, name="rawModel__branch_records", curie=RAW.curie('branch_records'),
+                   model_uri=RAW.rawModel__branch_records, domain=None, range=Optional[Union[Union[dict, BranchRecord], list[Union[dict, BranchRecord]]]])
 
-slots.RawModel__switch_records = Slot(uri=raw.switch_records, name="RawModel__switch_records", curie=raw.curie('switch_records'),
-                   model_uri=raw.RawModel__switch_records, domain=None, range=Optional[Union[Union[dict, SwitchRecord], list[Union[dict, SwitchRecord]]]])
+slots.rawModel__switch_records = Slot(uri=RAW.switch_records, name="rawModel__switch_records", curie=RAW.curie('switch_records'),
+                   model_uri=RAW.rawModel__switch_records, domain=None, range=Optional[Union[Union[dict, SwitchRecord], list[Union[dict, SwitchRecord]]]])
 
-slots.RawModel__transformer_records = Slot(uri=raw.transformer_records, name="RawModel__transformer_records", curie=raw.curie('transformer_records'),
-                   model_uri=raw.RawModel__transformer_records, domain=None, range=Optional[Union[Union[dict, TransformerRecord], list[Union[dict, TransformerRecord]]]])
+slots.rawModel__transformer_records = Slot(uri=RAW.transformer_records, name="rawModel__transformer_records", curie=RAW.curie('transformer_records'),
+                   model_uri=RAW.rawModel__transformer_records, domain=None, range=Optional[Union[Union[dict, TransformerRecord], list[Union[dict, TransformerRecord]]]])
 
-slots.RawModel__area_interchange_records = Slot(uri=raw.area_interchange_records, name="RawModel__area_interchange_records", curie=raw.curie('area_interchange_records'),
-                   model_uri=raw.RawModel__area_interchange_records, domain=None, range=Optional[Union[dict[Union[int, AreaInterchangeRecordAreaNumber], Union[dict, AreaInterchangeRecord]], list[Union[dict, AreaInterchangeRecord]]]])
+slots.rawModel__area_interchange_records = Slot(uri=RAW.area_interchange_records, name="rawModel__area_interchange_records", curie=RAW.curie('area_interchange_records'),
+                   model_uri=RAW.rawModel__area_interchange_records, domain=None, range=Optional[Union[dict[Union[int, AreaInterchangeRecordAreaNumber], Union[dict, AreaInterchangeRecord]], list[Union[dict, AreaInterchangeRecord]]]])
 
-slots.RawModel__two_terminal_dc_records = Slot(uri=raw.two_terminal_dc_records, name="RawModel__two_terminal_dc_records", curie=raw.curie('two_terminal_dc_records'),
-                   model_uri=raw.RawModel__two_terminal_dc_records, domain=None, range=Optional[Union[dict[Union[str, TwoTerminalDCRecordName], Union[dict, TwoTerminalDCRecord]], list[Union[dict, TwoTerminalDCRecord]]]])
+slots.rawModel__two_terminal_dc_records = Slot(uri=RAW.two_terminal_dc_records, name="rawModel__two_terminal_dc_records", curie=RAW.curie('two_terminal_dc_records'),
+                   model_uri=RAW.rawModel__two_terminal_dc_records, domain=None, range=Optional[Union[dict[Union[str, TwoTerminalDCRecordName], Union[dict, TwoTerminalDCRecord]], list[Union[dict, TwoTerminalDCRecord]]]])
 
-slots.RawModel__vsc_dc_records = Slot(uri=raw.vsc_dc_records, name="RawModel__vsc_dc_records", curie=raw.curie('vsc_dc_records'),
-                   model_uri=raw.RawModel__vsc_dc_records, domain=None, range=Optional[Union[Union[dict, VscDcRecord], list[Union[dict, VscDcRecord]]]])
+slots.rawModel__vsc_dc_records = Slot(uri=RAW.vsc_dc_records, name="rawModel__vsc_dc_records", curie=RAW.curie('vsc_dc_records'),
+                   model_uri=RAW.rawModel__vsc_dc_records, domain=None, range=Optional[Union[Union[dict, VscDcRecord], list[Union[dict, VscDcRecord]]]])
 
-slots.RawModel__impedance_correction_records = Slot(uri=raw.impedance_correction_records, name="RawModel__impedance_correction_records", curie=raw.curie('impedance_correction_records'),
-                   model_uri=raw.RawModel__impedance_correction_records, domain=None, range=Optional[Union[dict[Union[int, ImpedanceCorrectionRecordTableNumber], Union[dict, ImpedanceCorrectionRecord]], list[Union[dict, ImpedanceCorrectionRecord]]]])
+slots.rawModel__impedance_correction_records = Slot(uri=RAW.impedance_correction_records, name="rawModel__impedance_correction_records", curie=RAW.curie('impedance_correction_records'),
+                   model_uri=RAW.rawModel__impedance_correction_records, domain=None, range=Optional[Union[dict[Union[int, ImpedanceCorrectionRecordTableNumber], Union[dict, ImpedanceCorrectionRecord]], list[Union[dict, ImpedanceCorrectionRecord]]]])
 
-slots.RawModel__multi_terminal_dc_records = Slot(uri=raw.multi_terminal_dc_records, name="RawModel__multi_terminal_dc_records", curie=raw.curie('multi_terminal_dc_records'),
-                   model_uri=raw.RawModel__multi_terminal_dc_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalDCRecord], list[Union[dict, MultiTerminalDCRecord]]]])
+slots.rawModel__multi_terminal_dc_records = Slot(uri=RAW.multi_terminal_dc_records, name="rawModel__multi_terminal_dc_records", curie=RAW.curie('multi_terminal_dc_records'),
+                   model_uri=RAW.rawModel__multi_terminal_dc_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalDCRecord], list[Union[dict, MultiTerminalDCRecord]]]])
 
-slots.RawModel__multi_section_line_records = Slot(uri=raw.multi_section_line_records, name="RawModel__multi_section_line_records", curie=raw.curie('multi_section_line_records'),
-                   model_uri=raw.RawModel__multi_section_line_records, domain=None, range=Optional[Union[dict[Union[str, MultiSectionLineRecordLineId], Union[dict, MultiSectionLineRecord]], list[Union[dict, MultiSectionLineRecord]]]])
+slots.rawModel__multi_section_line_records = Slot(uri=RAW.multi_section_line_records, name="rawModel__multi_section_line_records", curie=RAW.curie('multi_section_line_records'),
+                   model_uri=RAW.rawModel__multi_section_line_records, domain=None, range=Optional[Union[dict[Union[str, MultiSectionLineRecordLineId], Union[dict, MultiSectionLineRecord]], list[Union[dict, MultiSectionLineRecord]]]])
 
-slots.RawModel__zone_records = Slot(uri=raw.zone_records, name="RawModel__zone_records", curie=raw.curie('zone_records'),
-                   model_uri=raw.RawModel__zone_records, domain=None, range=Optional[Union[dict[Union[int, ZoneRecordZoneNumber], Union[dict, ZoneRecord]], list[Union[dict, ZoneRecord]]]])
+slots.rawModel__zone_records = Slot(uri=RAW.zone_records, name="rawModel__zone_records", curie=RAW.curie('zone_records'),
+                   model_uri=RAW.rawModel__zone_records, domain=None, range=Optional[Union[dict[Union[int, ZoneRecordZoneNumber], Union[dict, ZoneRecord]], list[Union[dict, ZoneRecord]]]])
 
-slots.RawModel__interarea_transfer_records = Slot(uri=raw.interarea_transfer_records, name="RawModel__interarea_transfer_records", curie=raw.curie('interarea_transfer_records'),
-                   model_uri=raw.RawModel__interarea_transfer_records, domain=None, range=Optional[Union[Union[dict, InterareaTransferRecord], list[Union[dict, InterareaTransferRecord]]]])
+slots.rawModel__interarea_transfer_records = Slot(uri=RAW.interarea_transfer_records, name="rawModel__interarea_transfer_records", curie=RAW.curie('interarea_transfer_records'),
+                   model_uri=RAW.rawModel__interarea_transfer_records, domain=None, range=Optional[Union[Union[dict, InterareaTransferRecord], list[Union[dict, InterareaTransferRecord]]]])
 
-slots.RawModel__owner_records = Slot(uri=raw.owner_records, name="RawModel__owner_records", curie=raw.curie('owner_records'),
-                   model_uri=raw.RawModel__owner_records, domain=None, range=Optional[Union[dict[Union[int, OwnerRecordOwnerNumber], Union[dict, OwnerRecord]], list[Union[dict, OwnerRecord]]]])
+slots.rawModel__owner_records = Slot(uri=RAW.owner_records, name="rawModel__owner_records", curie=RAW.curie('owner_records'),
+                   model_uri=RAW.rawModel__owner_records, domain=None, range=Optional[Union[dict[Union[int, OwnerRecordOwnerNumber], Union[dict, OwnerRecord]], list[Union[dict, OwnerRecord]]]])
 
-slots.RawModel__facts_device_records = Slot(uri=raw.facts_device_records, name="RawModel__facts_device_records", curie=raw.curie('facts_device_records'),
-                   model_uri=raw.RawModel__facts_device_records, domain=None, range=Optional[Union[Union[dict, FactsDeviceRecord], list[Union[dict, FactsDeviceRecord]]]])
+slots.rawModel__facts_device_records = Slot(uri=RAW.facts_device_records, name="rawModel__facts_device_records", curie=RAW.curie('facts_device_records'),
+                   model_uri=RAW.rawModel__facts_device_records, domain=None, range=Optional[Union[Union[dict, FactsDeviceRecord], list[Union[dict, FactsDeviceRecord]]]])
 
-slots.RawModel__switched_shunt_records = Slot(uri=raw.switched_shunt_records, name="RawModel__switched_shunt_records", curie=raw.curie('switched_shunt_records'),
-                   model_uri=raw.RawModel__switched_shunt_records, domain=None, range=Optional[Union[Union[dict, SwitchedShuntRecord], list[Union[dict, SwitchedShuntRecord]]]])
+slots.rawModel__switched_shunt_records = Slot(uri=RAW.switched_shunt_records, name="rawModel__switched_shunt_records", curie=RAW.curie('switched_shunt_records'),
+                   model_uri=RAW.rawModel__switched_shunt_records, domain=None, range=Optional[Union[Union[dict, SwitchedShuntRecord], list[Union[dict, SwitchedShuntRecord]]]])
 
-slots.RawModel__gne_device_records = Slot(uri=raw.gne_device_records, name="RawModel__gne_device_records", curie=raw.curie('gne_device_records'),
-                   model_uri=raw.RawModel__gne_device_records, domain=None, range=Optional[Union[Union[dict, GneDeviceRecord], list[Union[dict, GneDeviceRecord]]]])
+slots.rawModel__gne_device_records = Slot(uri=RAW.gne_device_records, name="rawModel__gne_device_records", curie=RAW.curie('gne_device_records'),
+                   model_uri=RAW.rawModel__gne_device_records, domain=None, range=Optional[Union[Union[dict, GneDeviceRecord], list[Union[dict, GneDeviceRecord]]]])
 
-slots.RawModel__induction_machine_records = Slot(uri=raw.induction_machine_records, name="RawModel__induction_machine_records", curie=raw.curie('induction_machine_records'),
-                   model_uri=raw.RawModel__induction_machine_records, domain=None, range=Optional[Union[Union[dict, InductionMachineRecord], list[Union[dict, InductionMachineRecord]]]])
+slots.rawModel__induction_machine_records = Slot(uri=RAW.induction_machine_records, name="rawModel__induction_machine_records", curie=RAW.curie('induction_machine_records'),
+                   model_uri=RAW.rawModel__induction_machine_records, domain=None, range=Optional[Union[Union[dict, InductionMachineRecord], list[Union[dict, InductionMachineRecord]]]])
 
-slots.caseIdentificationRecord__new_case_flag = Slot(uri=raw.new_case_flag, name="caseIdentificationRecord__new_case_flag", curie=raw.curie('new_case_flag'),
-                   model_uri=raw.caseIdentificationRecord__new_case_flag, domain=None, range=URIRef)
+slots.rawModel__substation_records = Slot(uri=RAW.substation_records, name="rawModel__substation_records", curie=RAW.curie('substation_records'),
+                   model_uri=RAW.rawModel__substation_records, domain=None, range=Optional[Union[dict[Union[int, SubstationRecordSubstationNumber], Union[dict, SubstationRecord]], list[Union[dict, SubstationRecord]]]])
 
-slots.caseIdentificationRecord__system_base_mva = Slot(uri=raw.system_base_mva, name="caseIdentificationRecord__system_base_mva", curie=raw.curie('system_base_mva'),
-                   model_uri=raw.caseIdentificationRecord__system_base_mva, domain=None, range=float)
+slots.rawModel__substation_node_records = Slot(uri=RAW.substation_node_records, name="rawModel__substation_node_records", curie=RAW.curie('substation_node_records'),
+                   model_uri=RAW.rawModel__substation_node_records, domain=None, range=Optional[Union[Union[dict, SubstationNodeRecord], list[Union[dict, SubstationNodeRecord]]]])
 
-slots.caseIdentificationRecord__revision = Slot(uri=raw.revision, name="caseIdentificationRecord__revision", curie=raw.curie('revision'),
-                   model_uri=raw.caseIdentificationRecord__revision, domain=None, range=float)
+slots.rawModel__station_switching_device_records = Slot(uri=RAW.station_switching_device_records, name="rawModel__station_switching_device_records", curie=RAW.curie('station_switching_device_records'),
+                   model_uri=RAW.rawModel__station_switching_device_records, domain=None, range=Optional[Union[Union[dict, StationSwitchingDeviceRecord], list[Union[dict, StationSwitchingDeviceRecord]]]])
 
-slots.caseIdentificationRecord__transformer_ratings_units = Slot(uri=raw.transformer_ratings_units, name="caseIdentificationRecord__transformer_ratings_units", curie=raw.curie('transformer_ratings_units'),
-                   model_uri=raw.caseIdentificationRecord__transformer_ratings_units, domain=None, range=Optional[int])
+slots.rawModel__equipment_terminal_records = Slot(uri=RAW.equipment_terminal_records, name="rawModel__equipment_terminal_records", curie=RAW.curie('equipment_terminal_records'),
+                   model_uri=RAW.rawModel__equipment_terminal_records, domain=None, range=Optional[Union[Union[dict, EquipmentTerminalRecord], list[Union[dict, EquipmentTerminalRecord]]]])
 
-slots.caseIdentificationRecord__branch_ratings_units = Slot(uri=raw.branch_ratings_units, name="caseIdentificationRecord__branch_ratings_units", curie=raw.curie('branch_ratings_units'),
-                   model_uri=raw.caseIdentificationRecord__branch_ratings_units, domain=None, range=Optional[int])
+slots.rawModel__multi_terminal_converter_records = Slot(uri=RAW.multi_terminal_converter_records, name="rawModel__multi_terminal_converter_records", curie=RAW.curie('multi_terminal_converter_records'),
+                   model_uri=RAW.rawModel__multi_terminal_converter_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalConverterRecord], list[Union[dict, MultiTerminalConverterRecord]]]])
 
-slots.caseIdentificationRecord__system_base_frequency = Slot(uri=raw.system_base_frequency, name="caseIdentificationRecord__system_base_frequency", curie=raw.curie('system_base_frequency'),
-                   model_uri=raw.caseIdentificationRecord__system_base_frequency, domain=None, range=float)
+slots.rawModel__multi_terminal_dc_bus_records = Slot(uri=RAW.multi_terminal_dc_bus_records, name="rawModel__multi_terminal_dc_bus_records", curie=RAW.curie('multi_terminal_dc_bus_records'),
+                   model_uri=RAW.rawModel__multi_terminal_dc_bus_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalDCBusRecord], list[Union[dict, MultiTerminalDCBusRecord]]]])
 
-slots.caseIdentificationRecord__titles = Slot(uri=raw.titles, name="caseIdentificationRecord__titles", curie=raw.curie('titles'),
-                   model_uri=raw.caseIdentificationRecord__titles, domain=None, range=Optional[Union[str, list[str]]])
+slots.rawModel__multi_terminal_dc_link_records = Slot(uri=RAW.multi_terminal_dc_link_records, name="rawModel__multi_terminal_dc_link_records", curie=RAW.curie('multi_terminal_dc_link_records'),
+                   model_uri=RAW.rawModel__multi_terminal_dc_link_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalDCLinkRecord], list[Union[dict, MultiTerminalDCLinkRecord]]]])
 
-slots.caseIdentificationRecord__general = Slot(uri=raw.general, name="caseIdentificationRecord__general", curie=raw.curie('general'),
-                   model_uri=raw.caseIdentificationRecord__general, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__new_case_flag = Slot(uri=RAW.new_case_flag, name="caseIdentificationRecord__new_case_flag", curie=RAW.curie('new_case_flag'),
+                   model_uri=RAW.caseIdentificationRecord__new_case_flag, domain=None, range=URIRef)
 
-slots.caseIdentificationRecord__gauss = Slot(uri=raw.gauss, name="caseIdentificationRecord__gauss", curie=raw.curie('gauss'),
-                   model_uri=raw.caseIdentificationRecord__gauss, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__system_base_mva = Slot(uri=RAW.system_base_mva, name="caseIdentificationRecord__system_base_mva", curie=RAW.curie('system_base_mva'),
+                   model_uri=RAW.caseIdentificationRecord__system_base_mva, domain=None, range=Optional[float])
 
-slots.caseIdentificationRecord__newton = Slot(uri=raw.newton, name="caseIdentificationRecord__newton", curie=raw.curie('newton'),
-                   model_uri=raw.caseIdentificationRecord__newton, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__revision = Slot(uri=RAW.revision, name="caseIdentificationRecord__revision", curie=RAW.curie('revision'),
+                   model_uri=RAW.caseIdentificationRecord__revision, domain=None, range=Optional[float])
 
-slots.caseIdentificationRecord__adjust = Slot(uri=raw.adjust, name="caseIdentificationRecord__adjust", curie=raw.curie('adjust'),
-                   model_uri=raw.caseIdentificationRecord__adjust, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__transformer_ratings_units = Slot(uri=RAW.transformer_ratings_units, name="caseIdentificationRecord__transformer_ratings_units", curie=RAW.curie('transformer_ratings_units'),
+                   model_uri=RAW.caseIdentificationRecord__transformer_ratings_units, domain=None, range=Optional[int])
 
-slots.caseIdentificationRecord__tysl = Slot(uri=raw.tysl, name="caseIdentificationRecord__tysl", curie=raw.curie('tysl'),
-                   model_uri=raw.caseIdentificationRecord__tysl, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__branch_ratings_units = Slot(uri=RAW.branch_ratings_units, name="caseIdentificationRecord__branch_ratings_units", curie=RAW.curie('branch_ratings_units'),
+                   model_uri=RAW.caseIdentificationRecord__branch_ratings_units, domain=None, range=Optional[int])
 
-slots.caseIdentificationRecord__solver = Slot(uri=raw.solver, name="caseIdentificationRecord__solver", curie=raw.curie('solver'),
-                   model_uri=raw.caseIdentificationRecord__solver, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__system_base_frequency = Slot(uri=RAW.system_base_frequency, name="caseIdentificationRecord__system_base_frequency", curie=RAW.curie('system_base_frequency'),
+                   model_uri=RAW.caseIdentificationRecord__system_base_frequency, domain=None, range=Optional[float])
 
-slots.caseIdentificationRecord__ratings = Slot(uri=raw.ratings, name="caseIdentificationRecord__ratings", curie=raw.curie('ratings'),
-                   model_uri=raw.caseIdentificationRecord__ratings, domain=None, range=Optional[Union[str, list[str]]])
+slots.caseIdentificationRecord__titles = Slot(uri=RAW.titles, name="caseIdentificationRecord__titles", curie=RAW.curie('titles'),
+                   model_uri=RAW.caseIdentificationRecord__titles, domain=None, range=Optional[Union[str, list[str]]])
 
-slots.busRecord__bus_number = Slot(uri=raw.bus_number, name="busRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.busRecord__bus_number, domain=None, range=URIRef)
+slots.caseIdentificationRecord__general = Slot(uri=RAW.general, name="caseIdentificationRecord__general", curie=RAW.curie('general'),
+                   model_uri=RAW.caseIdentificationRecord__general, domain=None, range=Optional[str])
 
-slots.busRecord__name = Slot(uri=raw.name, name="busRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.busRecord__name, domain=None, range=Optional[str])
+slots.caseIdentificationRecord__gauss = Slot(uri=RAW.gauss, name="caseIdentificationRecord__gauss", curie=RAW.curie('gauss'),
+                   model_uri=RAW.caseIdentificationRecord__gauss, domain=None, range=Optional[str])
 
-slots.busRecord__base_voltage = Slot(uri=raw.base_voltage, name="busRecord__base_voltage", curie=raw.curie('base_voltage'),
-                   model_uri=raw.busRecord__base_voltage, domain=None, range=Optional[float])
+slots.caseIdentificationRecord__newton = Slot(uri=RAW.newton, name="caseIdentificationRecord__newton", curie=RAW.curie('newton'),
+                   model_uri=RAW.caseIdentificationRecord__newton, domain=None, range=Optional[str])
 
-slots.busRecord__bus_type = Slot(uri=raw.bus_type, name="busRecord__bus_type", curie=raw.curie('bus_type'),
-                   model_uri=raw.busRecord__bus_type, domain=None, range=Optional[int])
+slots.caseIdentificationRecord__adjust = Slot(uri=RAW.adjust, name="caseIdentificationRecord__adjust", curie=RAW.curie('adjust'),
+                   model_uri=RAW.caseIdentificationRecord__adjust, domain=None, range=Optional[str])
 
-slots.busRecord__area = Slot(uri=raw.area, name="busRecord__area", curie=raw.curie('area'),
-                   model_uri=raw.busRecord__area, domain=None, range=Optional[int])
+slots.caseIdentificationRecord__tysl = Slot(uri=RAW.tysl, name="caseIdentificationRecord__tysl", curie=RAW.curie('tysl'),
+                   model_uri=RAW.caseIdentificationRecord__tysl, domain=None, range=Optional[str])
 
-slots.busRecord__zone = Slot(uri=raw.zone, name="busRecord__zone", curie=raw.curie('zone'),
-                   model_uri=raw.busRecord__zone, domain=None, range=Optional[int])
+slots.caseIdentificationRecord__solver = Slot(uri=RAW.solver, name="caseIdentificationRecord__solver", curie=RAW.curie('solver'),
+                   model_uri=RAW.caseIdentificationRecord__solver, domain=None, range=Optional[str])
 
-slots.busRecord__owner = Slot(uri=raw.owner, name="busRecord__owner", curie=raw.curie('owner'),
-                   model_uri=raw.busRecord__owner, domain=None, range=Optional[int])
+slots.caseIdentificationRecord__ratings = Slot(uri=RAW.ratings, name="caseIdentificationRecord__ratings", curie=RAW.curie('ratings'),
+                   model_uri=RAW.caseIdentificationRecord__ratings, domain=None, range=Optional[Union[dict[Union[int, RatingRecordRatingSetNumber], Union[dict, RatingRecord]], list[Union[dict, RatingRecord]]]])
 
-slots.busRecord__voltage_magnitude = Slot(uri=raw.voltage_magnitude, name="busRecord__voltage_magnitude", curie=raw.curie('voltage_magnitude'),
-                   model_uri=raw.busRecord__voltage_magnitude, domain=None, range=Optional[float])
+slots.ratingRecord__rating_set_number = Slot(uri=RAW.rating_set_number, name="ratingRecord__rating_set_number", curie=RAW.curie('rating_set_number'),
+                   model_uri=RAW.ratingRecord__rating_set_number, domain=None, range=URIRef)
 
-slots.busRecord__voltage_angle = Slot(uri=raw.voltage_angle, name="busRecord__voltage_angle", curie=raw.curie('voltage_angle'),
-                   model_uri=raw.busRecord__voltage_angle, domain=None, range=Optional[float])
+slots.ratingRecord__rating_name = Slot(uri=RAW.rating_name, name="ratingRecord__rating_name", curie=RAW.curie('rating_name'),
+                   model_uri=RAW.ratingRecord__rating_name, domain=None, range=str)
 
-slots.busRecord__normal_voltage_magnitude_high_limit = Slot(uri=raw.normal_voltage_magnitude_high_limit, name="busRecord__normal_voltage_magnitude_high_limit", curie=raw.curie('normal_voltage_magnitude_high_limit'),
-                   model_uri=raw.busRecord__normal_voltage_magnitude_high_limit, domain=None, range=Optional[float])
+slots.ratingRecord__rating_description = Slot(uri=RAW.rating_description, name="ratingRecord__rating_description", curie=RAW.curie('rating_description'),
+                   model_uri=RAW.ratingRecord__rating_description, domain=None, range=str)
 
-slots.busRecord__normal_voltage_magnitude_low_limit = Slot(uri=raw.normal_voltage_magnitude_low_limit, name="busRecord__normal_voltage_magnitude_low_limit", curie=raw.curie('normal_voltage_magnitude_low_limit'),
-                   model_uri=raw.busRecord__normal_voltage_magnitude_low_limit, domain=None, range=Optional[float])
+slots.busRecord__bus_number = Slot(uri=RAW.bus_number, name="busRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.busRecord__bus_number, domain=None, range=URIRef)
 
-slots.busRecord__emergency_voltage_magnitude_high_limit = Slot(uri=raw.emergency_voltage_magnitude_high_limit, name="busRecord__emergency_voltage_magnitude_high_limit", curie=raw.curie('emergency_voltage_magnitude_high_limit'),
-                   model_uri=raw.busRecord__emergency_voltage_magnitude_high_limit, domain=None, range=Optional[float])
+slots.busRecord__name = Slot(uri=RAW.name, name="busRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.busRecord__name, domain=None, range=Optional[str])
 
-slots.busRecord__emergency_voltage_magnitude_low_limit = Slot(uri=raw.emergency_voltage_magnitude_low_limit, name="busRecord__emergency_voltage_magnitude_low_limit", curie=raw.curie('emergency_voltage_magnitude_low_limit'),
-                   model_uri=raw.busRecord__emergency_voltage_magnitude_low_limit, domain=None, range=Optional[float])
+slots.busRecord__base_voltage = Slot(uri=RAW.base_voltage, name="busRecord__base_voltage", curie=RAW.curie('base_voltage'),
+                   model_uri=RAW.busRecord__base_voltage, domain=None, range=Optional[float])
 
-slots.loadRecord__bus_number = Slot(uri=raw.bus_number, name="loadRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.loadRecord__bus_number, domain=None, range=int)
+slots.busRecord__bus_type = Slot(uri=RAW.bus_type, name="busRecord__bus_type", curie=RAW.curie('bus_type'),
+                   model_uri=RAW.busRecord__bus_type, domain=None, range=Optional[int])
 
-slots.loadRecord__load_id = Slot(uri=raw.load_id, name="loadRecord__load_id", curie=raw.curie('load_id'),
-                   model_uri=raw.loadRecord__load_id, domain=None, range=str)
+slots.busRecord__area = Slot(uri=RAW.area, name="busRecord__area", curie=RAW.curie('area'),
+                   model_uri=RAW.busRecord__area, domain=None, range=Optional[int])
 
-slots.loadRecord__status = Slot(uri=raw.status, name="loadRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.loadRecord__status, domain=None, range=Optional[int])
+slots.busRecord__zone = Slot(uri=RAW.zone, name="busRecord__zone", curie=RAW.curie('zone'),
+                   model_uri=RAW.busRecord__zone, domain=None, range=Optional[int])
 
-slots.loadRecord__area = Slot(uri=raw.area, name="loadRecord__area", curie=raw.curie('area'),
-                   model_uri=raw.loadRecord__area, domain=None, range=Optional[int])
+slots.busRecord__owner = Slot(uri=RAW.owner, name="busRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.busRecord__owner, domain=None, range=Optional[int])
 
-slots.loadRecord__zone = Slot(uri=raw.zone, name="loadRecord__zone", curie=raw.curie('zone'),
-                   model_uri=raw.loadRecord__zone, domain=None, range=Optional[int])
+slots.busRecord__voltage_magnitude = Slot(uri=RAW.voltage_magnitude, name="busRecord__voltage_magnitude", curie=RAW.curie('voltage_magnitude'),
+                   model_uri=RAW.busRecord__voltage_magnitude, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_real_power = Slot(uri=raw.constant_real_power, name="loadRecord__constant_real_power", curie=raw.curie('constant_real_power'),
-                   model_uri=raw.loadRecord__constant_real_power, domain=None, range=Optional[float])
+slots.busRecord__voltage_angle = Slot(uri=RAW.voltage_angle, name="busRecord__voltage_angle", curie=RAW.curie('voltage_angle'),
+                   model_uri=RAW.busRecord__voltage_angle, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_imag_power = Slot(uri=raw.constant_imag_power, name="loadRecord__constant_imag_power", curie=raw.curie('constant_imag_power'),
-                   model_uri=raw.loadRecord__constant_imag_power, domain=None, range=Optional[float])
+slots.busRecord__normal_voltage_magnitude_high_limit = Slot(uri=RAW.normal_voltage_magnitude_high_limit, name="busRecord__normal_voltage_magnitude_high_limit", curie=RAW.curie('normal_voltage_magnitude_high_limit'),
+                   model_uri=RAW.busRecord__normal_voltage_magnitude_high_limit, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_current_real_power = Slot(uri=raw.constant_current_real_power, name="loadRecord__constant_current_real_power", curie=raw.curie('constant_current_real_power'),
-                   model_uri=raw.loadRecord__constant_current_real_power, domain=None, range=Optional[float])
+slots.busRecord__normal_voltage_magnitude_low_limit = Slot(uri=RAW.normal_voltage_magnitude_low_limit, name="busRecord__normal_voltage_magnitude_low_limit", curie=RAW.curie('normal_voltage_magnitude_low_limit'),
+                   model_uri=RAW.busRecord__normal_voltage_magnitude_low_limit, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_current_imag_power = Slot(uri=raw.constant_current_imag_power, name="loadRecord__constant_current_imag_power", curie=raw.curie('constant_current_imag_power'),
-                   model_uri=raw.loadRecord__constant_current_imag_power, domain=None, range=Optional[float])
+slots.busRecord__emergency_voltage_magnitude_high_limit = Slot(uri=RAW.emergency_voltage_magnitude_high_limit, name="busRecord__emergency_voltage_magnitude_high_limit", curie=RAW.curie('emergency_voltage_magnitude_high_limit'),
+                   model_uri=RAW.busRecord__emergency_voltage_magnitude_high_limit, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_admittance_real_power = Slot(uri=raw.constant_admittance_real_power, name="loadRecord__constant_admittance_real_power", curie=raw.curie('constant_admittance_real_power'),
-                   model_uri=raw.loadRecord__constant_admittance_real_power, domain=None, range=Optional[float])
+slots.busRecord__emergency_voltage_magnitude_low_limit = Slot(uri=RAW.emergency_voltage_magnitude_low_limit, name="busRecord__emergency_voltage_magnitude_low_limit", curie=RAW.curie('emergency_voltage_magnitude_low_limit'),
+                   model_uri=RAW.busRecord__emergency_voltage_magnitude_low_limit, domain=None, range=Optional[float])
 
-slots.loadRecord__constant_admittance_imag_power = Slot(uri=raw.constant_admittance_imag_power, name="loadRecord__constant_admittance_imag_power", curie=raw.curie('constant_admittance_imag_power'),
-                   model_uri=raw.loadRecord__constant_admittance_imag_power, domain=None, range=Optional[float])
+slots.loadRecord__bus_number = Slot(uri=RAW.bus_number, name="loadRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.loadRecord__bus_number, domain=None, range=int)
 
-slots.loadRecord__owner = Slot(uri=raw.owner, name="loadRecord__owner", curie=raw.curie('owner'),
-                   model_uri=raw.loadRecord__owner, domain=None, range=Optional[int])
+slots.loadRecord__load_id = Slot(uri=RAW.load_id, name="loadRecord__load_id", curie=RAW.curie('load_id'),
+                   model_uri=RAW.loadRecord__load_id, domain=None, range=Optional[str])
 
-slots.loadRecord__scale = Slot(uri=raw.scale, name="loadRecord__scale", curie=raw.curie('scale'),
-                   model_uri=raw.loadRecord__scale, domain=None, range=Optional[int])
+slots.loadRecord__status = Slot(uri=RAW.status, name="loadRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.loadRecord__status, domain=None, range=Optional[int])
 
-slots.loadRecord__interruptible = Slot(uri=raw.interruptible, name="loadRecord__interruptible", curie=raw.curie('interruptible'),
-                   model_uri=raw.loadRecord__interruptible, domain=None, range=Optional[int])
+slots.loadRecord__area = Slot(uri=RAW.area, name="loadRecord__area", curie=RAW.curie('area'),
+                   model_uri=RAW.loadRecord__area, domain=None, range=Optional[int])
 
-slots.loadRecord__dgenp = Slot(uri=raw.dgenp, name="loadRecord__dgenp", curie=raw.curie('dgenp'),
-                   model_uri=raw.loadRecord__dgenp, domain=None, range=Optional[float])
+slots.loadRecord__zone = Slot(uri=RAW.zone, name="loadRecord__zone", curie=RAW.curie('zone'),
+                   model_uri=RAW.loadRecord__zone, domain=None, range=Optional[int])
 
-slots.loadRecord__dgenq = Slot(uri=raw.dgenq, name="loadRecord__dgenq", curie=raw.curie('dgenq'),
-                   model_uri=raw.loadRecord__dgenq, domain=None, range=Optional[float])
+slots.loadRecord__constant_real_power = Slot(uri=RAW.constant_real_power, name="loadRecord__constant_real_power", curie=RAW.curie('constant_real_power'),
+                   model_uri=RAW.loadRecord__constant_real_power, domain=None, range=Optional[float])
 
-slots.loadRecord__dgenf = Slot(uri=raw.dgenf, name="loadRecord__dgenf", curie=raw.curie('dgenf'),
-                   model_uri=raw.loadRecord__dgenf, domain=None, range=Optional[int])
+slots.loadRecord__constant_imag_power = Slot(uri=RAW.constant_imag_power, name="loadRecord__constant_imag_power", curie=RAW.curie('constant_imag_power'),
+                   model_uri=RAW.loadRecord__constant_imag_power, domain=None, range=Optional[float])
 
-slots.fixedShuntRecord__bus_number = Slot(uri=raw.bus_number, name="fixedShuntRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.fixedShuntRecord__bus_number, domain=None, range=int)
+slots.loadRecord__constant_current_real_power = Slot(uri=RAW.constant_current_real_power, name="loadRecord__constant_current_real_power", curie=RAW.curie('constant_current_real_power'),
+                   model_uri=RAW.loadRecord__constant_current_real_power, domain=None, range=Optional[float])
 
-slots.fixedShuntRecord__shunt_id = Slot(uri=raw.shunt_id, name="fixedShuntRecord__shunt_id", curie=raw.curie('shunt_id'),
-                   model_uri=raw.fixedShuntRecord__shunt_id, domain=None, range=str)
+slots.loadRecord__constant_current_imag_power = Slot(uri=RAW.constant_current_imag_power, name="loadRecord__constant_current_imag_power", curie=RAW.curie('constant_current_imag_power'),
+                   model_uri=RAW.loadRecord__constant_current_imag_power, domain=None, range=Optional[float])
 
-slots.fixedShuntRecord__status = Slot(uri=raw.status, name="fixedShuntRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.fixedShuntRecord__status, domain=None, range=Optional[int])
+slots.loadRecord__constant_admittance_real_power = Slot(uri=RAW.constant_admittance_real_power, name="loadRecord__constant_admittance_real_power", curie=RAW.curie('constant_admittance_real_power'),
+                   model_uri=RAW.loadRecord__constant_admittance_real_power, domain=None, range=Optional[float])
 
-slots.fixedShuntRecord__gl = Slot(uri=raw.gl, name="fixedShuntRecord__gl", curie=raw.curie('gl'),
-                   model_uri=raw.fixedShuntRecord__gl, domain=None, range=Optional[float])
+slots.loadRecord__constant_admittance_imag_power = Slot(uri=RAW.constant_admittance_imag_power, name="loadRecord__constant_admittance_imag_power", curie=RAW.curie('constant_admittance_imag_power'),
+                   model_uri=RAW.loadRecord__constant_admittance_imag_power, domain=None, range=Optional[float])
 
-slots.fixedShuntRecord__bl = Slot(uri=raw.bl, name="fixedShuntRecord__bl", curie=raw.curie('bl'),
-                   model_uri=raw.fixedShuntRecord__bl, domain=None, range=Optional[float])
+slots.loadRecord__owner = Slot(uri=RAW.owner, name="loadRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.loadRecord__owner, domain=None, range=Optional[int])
 
-slots.generatorRecord__bus_number = Slot(uri=raw.bus_number, name="generatorRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.generatorRecord__bus_number, domain=None, range=int)
+slots.loadRecord__scale = Slot(uri=RAW.scale, name="loadRecord__scale", curie=RAW.curie('scale'),
+                   model_uri=RAW.loadRecord__scale, domain=None, range=Optional[int])
 
-slots.generatorRecord__gen_id = Slot(uri=raw.gen_id, name="generatorRecord__gen_id", curie=raw.curie('gen_id'),
-                   model_uri=raw.generatorRecord__gen_id, domain=None, range=str)
+slots.loadRecord__interruptible = Slot(uri=RAW.interruptible, name="loadRecord__interruptible", curie=RAW.curie('interruptible'),
+                   model_uri=RAW.loadRecord__interruptible, domain=None, range=Optional[int])
 
-slots.generatorRecord__p_output = Slot(uri=raw.p_output, name="generatorRecord__p_output", curie=raw.curie('p_output'),
-                   model_uri=raw.generatorRecord__p_output, domain=None, range=Optional[float])
+slots.loadRecord__dgenp = Slot(uri=RAW.dgenp, name="loadRecord__dgenp", curie=RAW.curie('dgenp'),
+                   model_uri=RAW.loadRecord__dgenp, domain=None, range=Optional[float])
 
-slots.generatorRecord__q_output = Slot(uri=raw.q_output, name="generatorRecord__q_output", curie=raw.curie('q_output'),
-                   model_uri=raw.generatorRecord__q_output, domain=None, range=Optional[float])
+slots.loadRecord__dgenq = Slot(uri=RAW.dgenq, name="loadRecord__dgenq", curie=RAW.curie('dgenq'),
+                   model_uri=RAW.loadRecord__dgenq, domain=None, range=Optional[float])
 
-slots.generatorRecord__max_q_output = Slot(uri=raw.max_q_output, name="generatorRecord__max_q_output", curie=raw.curie('max_q_output'),
-                   model_uri=raw.generatorRecord__max_q_output, domain=None, range=Optional[float])
+slots.loadRecord__dgenf = Slot(uri=RAW.dgenf, name="loadRecord__dgenf", curie=RAW.curie('dgenf'),
+                   model_uri=RAW.loadRecord__dgenf, domain=None, range=Optional[int])
 
-slots.generatorRecord__min_q_output = Slot(uri=raw.min_q_output, name="generatorRecord__min_q_output", curie=raw.curie('min_q_output'),
-                   model_uri=raw.generatorRecord__min_q_output, domain=None, range=Optional[float])
+slots.fixedShuntRecord__bus_number = Slot(uri=RAW.bus_number, name="fixedShuntRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.fixedShuntRecord__bus_number, domain=None, range=int)
 
-slots.generatorRecord__regulated_voltage_setpoint = Slot(uri=raw.regulated_voltage_setpoint, name="generatorRecord__regulated_voltage_setpoint", curie=raw.curie('regulated_voltage_setpoint'),
-                   model_uri=raw.generatorRecord__regulated_voltage_setpoint, domain=None, range=Optional[float])
+slots.fixedShuntRecord__shunt_id = Slot(uri=RAW.shunt_id, name="fixedShuntRecord__shunt_id", curie=RAW.curie('shunt_id'),
+                   model_uri=RAW.fixedShuntRecord__shunt_id, domain=None, range=Optional[str])
 
-slots.generatorRecord__regulated_bus_number = Slot(uri=raw.regulated_bus_number, name="generatorRecord__regulated_bus_number", curie=raw.curie('regulated_bus_number'),
-                   model_uri=raw.generatorRecord__regulated_bus_number, domain=None, range=Optional[int])
+slots.fixedShuntRecord__status = Slot(uri=RAW.status, name="fixedShuntRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.fixedShuntRecord__status, domain=None, range=Optional[int])
 
-slots.generatorRecord__rated_mva = Slot(uri=raw.rated_mva, name="generatorRecord__rated_mva", curie=raw.curie('rated_mva'),
-                   model_uri=raw.generatorRecord__rated_mva, domain=None, range=Optional[float])
+slots.fixedShuntRecord__gl = Slot(uri=RAW.gl, name="fixedShuntRecord__gl", curie=RAW.curie('gl'),
+                   model_uri=RAW.fixedShuntRecord__gl, domain=None, range=Optional[float])
 
-slots.generatorRecord__zr = Slot(uri=raw.zr, name="generatorRecord__zr", curie=raw.curie('zr'),
-                   model_uri=raw.generatorRecord__zr, domain=None, range=Optional[float])
+slots.fixedShuntRecord__bl = Slot(uri=RAW.bl, name="fixedShuntRecord__bl", curie=RAW.curie('bl'),
+                   model_uri=RAW.fixedShuntRecord__bl, domain=None, range=Optional[float])
 
-slots.generatorRecord__zx = Slot(uri=raw.zx, name="generatorRecord__zx", curie=raw.curie('zx'),
-                   model_uri=raw.generatorRecord__zx, domain=None, range=Optional[float])
+slots.generatorRecord__bus_number = Slot(uri=RAW.bus_number, name="generatorRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.generatorRecord__bus_number, domain=None, range=int)
 
-slots.generatorRecord__rt = Slot(uri=raw.rt, name="generatorRecord__rt", curie=raw.curie('rt'),
-                   model_uri=raw.generatorRecord__rt, domain=None, range=Optional[float])
+slots.generatorRecord__gen_id = Slot(uri=RAW.gen_id, name="generatorRecord__gen_id", curie=RAW.curie('gen_id'),
+                   model_uri=RAW.generatorRecord__gen_id, domain=None, range=Optional[str])
 
-slots.generatorRecord__xt = Slot(uri=raw.xt, name="generatorRecord__xt", curie=raw.curie('xt'),
-                   model_uri=raw.generatorRecord__xt, domain=None, range=Optional[float])
+slots.generatorRecord__p_output = Slot(uri=RAW.p_output, name="generatorRecord__p_output", curie=RAW.curie('p_output'),
+                   model_uri=RAW.generatorRecord__p_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__gtap = Slot(uri=raw.gtap, name="generatorRecord__gtap", curie=raw.curie('gtap'),
-                   model_uri=raw.generatorRecord__gtap, domain=None, range=Optional[float])
+slots.generatorRecord__q_output = Slot(uri=RAW.q_output, name="generatorRecord__q_output", curie=RAW.curie('q_output'),
+                   model_uri=RAW.generatorRecord__q_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__status = Slot(uri=raw.status, name="generatorRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.generatorRecord__status, domain=None, range=Optional[int])
+slots.generatorRecord__max_q_output = Slot(uri=RAW.max_q_output, name="generatorRecord__max_q_output", curie=RAW.curie('max_q_output'),
+                   model_uri=RAW.generatorRecord__max_q_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__rmpct = Slot(uri=raw.rmpct, name="generatorRecord__rmpct", curie=raw.curie('rmpct'),
-                   model_uri=raw.generatorRecord__rmpct, domain=None, range=Optional[float])
+slots.generatorRecord__min_q_output = Slot(uri=RAW.min_q_output, name="generatorRecord__min_q_output", curie=RAW.curie('min_q_output'),
+                   model_uri=RAW.generatorRecord__min_q_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__max_p_output = Slot(uri=raw.max_p_output, name="generatorRecord__max_p_output", curie=raw.curie('max_p_output'),
-                   model_uri=raw.generatorRecord__max_p_output, domain=None, range=Optional[float])
+slots.generatorRecord__regulated_voltage_setpoint = Slot(uri=RAW.regulated_voltage_setpoint, name="generatorRecord__regulated_voltage_setpoint", curie=RAW.curie('regulated_voltage_setpoint'),
+                   model_uri=RAW.generatorRecord__regulated_voltage_setpoint, domain=None, range=Optional[float])
 
-slots.generatorRecord__min_p_output = Slot(uri=raw.min_p_output, name="generatorRecord__min_p_output", curie=raw.curie('min_p_output'),
-                   model_uri=raw.generatorRecord__min_p_output, domain=None, range=Optional[float])
+slots.generatorRecord__regulated_bus_number = Slot(uri=RAW.regulated_bus_number, name="generatorRecord__regulated_bus_number", curie=RAW.curie('regulated_bus_number'),
+                   model_uri=RAW.generatorRecord__regulated_bus_number, domain=None, range=Optional[int])
 
-slots.generatorRecord__o1 = Slot(uri=raw.o1, name="generatorRecord__o1", curie=raw.curie('o1'),
-                   model_uri=raw.generatorRecord__o1, domain=None, range=Optional[int])
+slots.generatorRecord__rated_mva = Slot(uri=RAW.rated_mva, name="generatorRecord__rated_mva", curie=RAW.curie('rated_mva'),
+                   model_uri=RAW.generatorRecord__rated_mva, domain=None, range=Optional[float])
 
-slots.generatorRecord__f1 = Slot(uri=raw.f1, name="generatorRecord__f1", curie=raw.curie('f1'),
-                   model_uri=raw.generatorRecord__f1, domain=None, range=Optional[float])
+slots.generatorRecord__zr = Slot(uri=RAW.zr, name="generatorRecord__zr", curie=RAW.curie('zr'),
+                   model_uri=RAW.generatorRecord__zr, domain=None, range=Optional[float])
 
-slots.generatorRecord__o2 = Slot(uri=raw.o2, name="generatorRecord__o2", curie=raw.curie('o2'),
-                   model_uri=raw.generatorRecord__o2, domain=None, range=Optional[int])
+slots.generatorRecord__zx = Slot(uri=RAW.zx, name="generatorRecord__zx", curie=RAW.curie('zx'),
+                   model_uri=RAW.generatorRecord__zx, domain=None, range=Optional[float])
 
-slots.generatorRecord__f2 = Slot(uri=raw.f2, name="generatorRecord__f2", curie=raw.curie('f2'),
-                   model_uri=raw.generatorRecord__f2, domain=None, range=Optional[float])
+slots.generatorRecord__rt = Slot(uri=RAW.rt, name="generatorRecord__rt", curie=RAW.curie('rt'),
+                   model_uri=RAW.generatorRecord__rt, domain=None, range=Optional[float])
 
-slots.generatorRecord__o3 = Slot(uri=raw.o3, name="generatorRecord__o3", curie=raw.curie('o3'),
-                   model_uri=raw.generatorRecord__o3, domain=None, range=Optional[int])
+slots.generatorRecord__xt = Slot(uri=RAW.xt, name="generatorRecord__xt", curie=RAW.curie('xt'),
+                   model_uri=RAW.generatorRecord__xt, domain=None, range=Optional[float])
 
-slots.generatorRecord__f3 = Slot(uri=raw.f3, name="generatorRecord__f3", curie=raw.curie('f3'),
-                   model_uri=raw.generatorRecord__f3, domain=None, range=Optional[float])
+slots.generatorRecord__gtap = Slot(uri=RAW.gtap, name="generatorRecord__gtap", curie=RAW.curie('gtap'),
+                   model_uri=RAW.generatorRecord__gtap, domain=None, range=Optional[float])
 
-slots.generatorRecord__o4 = Slot(uri=raw.o4, name="generatorRecord__o4", curie=raw.curie('o4'),
-                   model_uri=raw.generatorRecord__o4, domain=None, range=Optional[int])
+slots.generatorRecord__status = Slot(uri=RAW.status, name="generatorRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.generatorRecord__status, domain=None, range=Optional[int])
 
-slots.generatorRecord__f4 = Slot(uri=raw.f4, name="generatorRecord__f4", curie=raw.curie('f4'),
-                   model_uri=raw.generatorRecord__f4, domain=None, range=Optional[float])
+slots.generatorRecord__rmpct = Slot(uri=RAW.rmpct, name="generatorRecord__rmpct", curie=RAW.curie('rmpct'),
+                   model_uri=RAW.generatorRecord__rmpct, domain=None, range=Optional[float])
 
-slots.generatorRecord__wmod = Slot(uri=raw.wmod, name="generatorRecord__wmod", curie=raw.curie('wmod'),
-                   model_uri=raw.generatorRecord__wmod, domain=None, range=Optional[int])
+slots.generatorRecord__max_p_output = Slot(uri=RAW.max_p_output, name="generatorRecord__max_p_output", curie=RAW.curie('max_p_output'),
+                   model_uri=RAW.generatorRecord__max_p_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__wpf = Slot(uri=raw.wpf, name="generatorRecord__wpf", curie=raw.curie('wpf'),
-                   model_uri=raw.generatorRecord__wpf, domain=None, range=Optional[float])
+slots.generatorRecord__min_p_output = Slot(uri=RAW.min_p_output, name="generatorRecord__min_p_output", curie=RAW.curie('min_p_output'),
+                   model_uri=RAW.generatorRecord__min_p_output, domain=None, range=Optional[float])
 
-slots.generatorRecord__nreg = Slot(uri=raw.nreg, name="generatorRecord__nreg", curie=raw.curie('nreg'),
-                   model_uri=raw.generatorRecord__nreg, domain=None, range=Optional[int])
+slots.generatorRecord__o1 = Slot(uri=RAW.o1, name="generatorRecord__o1", curie=RAW.curie('o1'),
+                   model_uri=RAW.generatorRecord__o1, domain=None, range=Optional[int])
 
-slots.branchRecord__from_bus_number = Slot(uri=raw.from_bus_number, name="branchRecord__from_bus_number", curie=raw.curie('from_bus_number'),
-                   model_uri=raw.branchRecord__from_bus_number, domain=None, range=int)
+slots.generatorRecord__f1 = Slot(uri=RAW.f1, name="generatorRecord__f1", curie=RAW.curie('f1'),
+                   model_uri=RAW.generatorRecord__f1, domain=None, range=Optional[float])
 
-slots.branchRecord__to_bus_number = Slot(uri=raw.to_bus_number, name="branchRecord__to_bus_number", curie=raw.curie('to_bus_number'),
-                   model_uri=raw.branchRecord__to_bus_number, domain=None, range=int)
+slots.generatorRecord__o2 = Slot(uri=RAW.o2, name="generatorRecord__o2", curie=RAW.curie('o2'),
+                   model_uri=RAW.generatorRecord__o2, domain=None, range=Optional[int])
 
-slots.branchRecord__circuit = Slot(uri=raw.circuit, name="branchRecord__circuit", curie=raw.curie('circuit'),
-                   model_uri=raw.branchRecord__circuit, domain=None, range=str)
+slots.generatorRecord__f2 = Slot(uri=RAW.f2, name="generatorRecord__f2", curie=RAW.curie('f2'),
+                   model_uri=RAW.generatorRecord__f2, domain=None, range=Optional[float])
 
-slots.branchRecord__r = Slot(uri=raw.r, name="branchRecord__r", curie=raw.curie('r'),
-                   model_uri=raw.branchRecord__r, domain=None, range=float)
+slots.generatorRecord__o3 = Slot(uri=RAW.o3, name="generatorRecord__o3", curie=RAW.curie('o3'),
+                   model_uri=RAW.generatorRecord__o3, domain=None, range=Optional[int])
 
-slots.branchRecord__x = Slot(uri=raw.x, name="branchRecord__x", curie=raw.curie('x'),
-                   model_uri=raw.branchRecord__x, domain=None, range=float)
+slots.generatorRecord__f3 = Slot(uri=RAW.f3, name="generatorRecord__f3", curie=RAW.curie('f3'),
+                   model_uri=RAW.generatorRecord__f3, domain=None, range=Optional[float])
 
-slots.branchRecord__b = Slot(uri=raw.b, name="branchRecord__b", curie=raw.curie('b'),
-                   model_uri=raw.branchRecord__b, domain=None, range=Optional[float])
+slots.generatorRecord__o4 = Slot(uri=RAW.o4, name="generatorRecord__o4", curie=RAW.curie('o4'),
+                   model_uri=RAW.generatorRecord__o4, domain=None, range=Optional[int])
 
-slots.branchRecord__name = Slot(uri=raw.name, name="branchRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.branchRecord__name, domain=None, range=Optional[str])
+slots.generatorRecord__f4 = Slot(uri=RAW.f4, name="generatorRecord__f4", curie=RAW.curie('f4'),
+                   model_uri=RAW.generatorRecord__f4, domain=None, range=Optional[float])
 
-slots.branchRecord__ratings = Slot(uri=raw.ratings, name="branchRecord__ratings", curie=raw.curie('ratings'),
-                   model_uri=raw.branchRecord__ratings, domain=None, range=Optional[Union[float, list[float]]])
+slots.generatorRecord__wmod = Slot(uri=RAW.wmod, name="generatorRecord__wmod", curie=RAW.curie('wmod'),
+                   model_uri=RAW.generatorRecord__wmod, domain=None, range=Optional[int])
 
-slots.branchRecord__g_from = Slot(uri=raw.g_from, name="branchRecord__g_from", curie=raw.curie('g_from'),
-                   model_uri=raw.branchRecord__g_from, domain=None, range=Optional[float])
+slots.generatorRecord__wpf = Slot(uri=RAW.wpf, name="generatorRecord__wpf", curie=RAW.curie('wpf'),
+                   model_uri=RAW.generatorRecord__wpf, domain=None, range=Optional[float])
 
-slots.branchRecord__b_from = Slot(uri=raw.b_from, name="branchRecord__b_from", curie=raw.curie('b_from'),
-                   model_uri=raw.branchRecord__b_from, domain=None, range=Optional[float])
+slots.generatorRecord__nreg = Slot(uri=RAW.nreg, name="generatorRecord__nreg", curie=RAW.curie('nreg'),
+                   model_uri=RAW.generatorRecord__nreg, domain=None, range=Optional[int])
 
-slots.branchRecord__g_to = Slot(uri=raw.g_to, name="branchRecord__g_to", curie=raw.curie('g_to'),
-                   model_uri=raw.branchRecord__g_to, domain=None, range=Optional[float])
+slots.branchRecord__from_bus_number = Slot(uri=RAW.from_bus_number, name="branchRecord__from_bus_number", curie=RAW.curie('from_bus_number'),
+                   model_uri=RAW.branchRecord__from_bus_number, domain=None, range=int)
 
-slots.branchRecord__b_to = Slot(uri=raw.b_to, name="branchRecord__b_to", curie=raw.curie('b_to'),
-                   model_uri=raw.branchRecord__b_to, domain=None, range=Optional[float])
+slots.branchRecord__to_bus_number = Slot(uri=RAW.to_bus_number, name="branchRecord__to_bus_number", curie=RAW.curie('to_bus_number'),
+                   model_uri=RAW.branchRecord__to_bus_number, domain=None, range=int)
 
-slots.branchRecord__status = Slot(uri=raw.status, name="branchRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.branchRecord__status, domain=None, range=Optional[int])
+slots.branchRecord__circuit = Slot(uri=RAW.circuit, name="branchRecord__circuit", curie=RAW.curie('circuit'),
+                   model_uri=RAW.branchRecord__circuit, domain=None, range=Optional[str])
 
-slots.branchRecord__metered_end = Slot(uri=raw.metered_end, name="branchRecord__metered_end", curie=raw.curie('metered_end'),
-                   model_uri=raw.branchRecord__metered_end, domain=None, range=Optional[int])
+slots.branchRecord__r = Slot(uri=RAW.r, name="branchRecord__r", curie=RAW.curie('r'),
+                   model_uri=RAW.branchRecord__r, domain=None, range=float)
 
-slots.branchRecord__length = Slot(uri=raw.length, name="branchRecord__length", curie=raw.curie('length'),
-                   model_uri=raw.branchRecord__length, domain=None, range=Optional[float])
+slots.branchRecord__x = Slot(uri=RAW.x, name="branchRecord__x", curie=RAW.curie('x'),
+                   model_uri=RAW.branchRecord__x, domain=None, range=float)
 
-slots.branchRecord__o1 = Slot(uri=raw.o1, name="branchRecord__o1", curie=raw.curie('o1'),
-                   model_uri=raw.branchRecord__o1, domain=None, range=Optional[int])
+slots.branchRecord__b = Slot(uri=RAW.b, name="branchRecord__b", curie=RAW.curie('b'),
+                   model_uri=RAW.branchRecord__b, domain=None, range=Optional[float])
 
-slots.branchRecord__f1 = Slot(uri=raw.f1, name="branchRecord__f1", curie=raw.curie('f1'),
-                   model_uri=raw.branchRecord__f1, domain=None, range=Optional[float])
+slots.branchRecord__name = Slot(uri=RAW.name, name="branchRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.branchRecord__name, domain=None, range=Optional[str])
 
-slots.branchRecord__o2 = Slot(uri=raw.o2, name="branchRecord__o2", curie=raw.curie('o2'),
-                   model_uri=raw.branchRecord__o2, domain=None, range=Optional[int])
+slots.branchRecord__ratings = Slot(uri=RAW.ratings, name="branchRecord__ratings", curie=RAW.curie('ratings'),
+                   model_uri=RAW.branchRecord__ratings, domain=None, range=Optional[Union[float, list[float]]])
 
-slots.branchRecord__f2 = Slot(uri=raw.f2, name="branchRecord__f2", curie=raw.curie('f2'),
-                   model_uri=raw.branchRecord__f2, domain=None, range=Optional[float])
+slots.branchRecord__g_from = Slot(uri=RAW.g_from, name="branchRecord__g_from", curie=RAW.curie('g_from'),
+                   model_uri=RAW.branchRecord__g_from, domain=None, range=Optional[float])
 
-slots.branchRecord__o3 = Slot(uri=raw.o3, name="branchRecord__o3", curie=raw.curie('o3'),
-                   model_uri=raw.branchRecord__o3, domain=None, range=Optional[int])
+slots.branchRecord__b_from = Slot(uri=RAW.b_from, name="branchRecord__b_from", curie=RAW.curie('b_from'),
+                   model_uri=RAW.branchRecord__b_from, domain=None, range=Optional[float])
 
-slots.branchRecord__f3 = Slot(uri=raw.f3, name="branchRecord__f3", curie=raw.curie('f3'),
-                   model_uri=raw.branchRecord__f3, domain=None, range=Optional[float])
+slots.branchRecord__g_to = Slot(uri=RAW.g_to, name="branchRecord__g_to", curie=RAW.curie('g_to'),
+                   model_uri=RAW.branchRecord__g_to, domain=None, range=Optional[float])
 
-slots.branchRecord__o4 = Slot(uri=raw.o4, name="branchRecord__o4", curie=raw.curie('o4'),
-                   model_uri=raw.branchRecord__o4, domain=None, range=Optional[int])
+slots.branchRecord__b_to = Slot(uri=RAW.b_to, name="branchRecord__b_to", curie=RAW.curie('b_to'),
+                   model_uri=RAW.branchRecord__b_to, domain=None, range=Optional[float])
 
-slots.branchRecord__f4 = Slot(uri=raw.f4, name="branchRecord__f4", curie=raw.curie('f4'),
-                   model_uri=raw.branchRecord__f4, domain=None, range=Optional[float])
+slots.branchRecord__status = Slot(uri=RAW.status, name="branchRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.branchRecord__status, domain=None, range=Optional[int])
 
-slots.switchRecord__from_bus_number = Slot(uri=raw.from_bus_number, name="switchRecord__from_bus_number", curie=raw.curie('from_bus_number'),
-                   model_uri=raw.switchRecord__from_bus_number, domain=None, range=int)
+slots.branchRecord__metered_end = Slot(uri=RAW.metered_end, name="branchRecord__metered_end", curie=RAW.curie('metered_end'),
+                   model_uri=RAW.branchRecord__metered_end, domain=None, range=Optional[int])
 
-slots.switchRecord__to_bus_number = Slot(uri=raw.to_bus_number, name="switchRecord__to_bus_number", curie=raw.curie('to_bus_number'),
-                   model_uri=raw.switchRecord__to_bus_number, domain=None, range=int)
+slots.branchRecord__length = Slot(uri=RAW.length, name="branchRecord__length", curie=RAW.curie('length'),
+                   model_uri=RAW.branchRecord__length, domain=None, range=Optional[float])
 
-slots.switchRecord__circuit = Slot(uri=raw.circuit, name="switchRecord__circuit", curie=raw.curie('circuit'),
-                   model_uri=raw.switchRecord__circuit, domain=None, range=str)
+slots.branchRecord__o1 = Slot(uri=RAW.o1, name="branchRecord__o1", curie=RAW.curie('o1'),
+                   model_uri=RAW.branchRecord__o1, domain=None, range=Optional[int])
 
-slots.switchRecord__x = Slot(uri=raw.x, name="switchRecord__x", curie=raw.curie('x'),
-                   model_uri=raw.switchRecord__x, domain=None, range=Optional[float])
+slots.branchRecord__f1 = Slot(uri=RAW.f1, name="branchRecord__f1", curie=RAW.curie('f1'),
+                   model_uri=RAW.branchRecord__f1, domain=None, range=Optional[float])
 
-slots.switchRecord__ratings = Slot(uri=raw.ratings, name="switchRecord__ratings", curie=raw.curie('ratings'),
-                   model_uri=raw.switchRecord__ratings, domain=None, range=Optional[Union[float, list[float]]])
+slots.branchRecord__o2 = Slot(uri=RAW.o2, name="branchRecord__o2", curie=RAW.curie('o2'),
+                   model_uri=RAW.branchRecord__o2, domain=None, range=Optional[int])
 
-slots.switchRecord__status = Slot(uri=raw.status, name="switchRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.switchRecord__status, domain=None, range=Optional[int])
+slots.branchRecord__f2 = Slot(uri=RAW.f2, name="branchRecord__f2", curie=RAW.curie('f2'),
+                   model_uri=RAW.branchRecord__f2, domain=None, range=Optional[float])
 
-slots.switchRecord__nstat = Slot(uri=raw.nstat, name="switchRecord__nstat", curie=raw.curie('nstat'),
-                   model_uri=raw.switchRecord__nstat, domain=None, range=Optional[int])
+slots.branchRecord__o3 = Slot(uri=RAW.o3, name="branchRecord__o3", curie=RAW.curie('o3'),
+                   model_uri=RAW.branchRecord__o3, domain=None, range=Optional[int])
 
-slots.switchRecord__metered_end = Slot(uri=raw.metered_end, name="switchRecord__metered_end", curie=raw.curie('metered_end'),
-                   model_uri=raw.switchRecord__metered_end, domain=None, range=Optional[int])
+slots.branchRecord__f3 = Slot(uri=RAW.f3, name="branchRecord__f3", curie=RAW.curie('f3'),
+                   model_uri=RAW.branchRecord__f3, domain=None, range=Optional[float])
 
-slots.switchRecord__stype = Slot(uri=raw.stype, name="switchRecord__stype", curie=raw.curie('stype'),
-                   model_uri=raw.switchRecord__stype, domain=None, range=Optional[int])
+slots.branchRecord__o4 = Slot(uri=RAW.o4, name="branchRecord__o4", curie=RAW.curie('o4'),
+                   model_uri=RAW.branchRecord__o4, domain=None, range=Optional[int])
 
-slots.switchRecord__name = Slot(uri=raw.name, name="switchRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.switchRecord__name, domain=None, range=Optional[str])
+slots.branchRecord__f4 = Slot(uri=RAW.f4, name="branchRecord__f4", curie=RAW.curie('f4'),
+                   model_uri=RAW.branchRecord__f4, domain=None, range=Optional[float])
 
-slots.transformerRecord__i = Slot(uri=raw.i, name="transformerRecord__i", curie=raw.curie('i'),
-                   model_uri=raw.transformerRecord__i, domain=None, range=int)
+slots.switchRecord__from_bus_number = Slot(uri=RAW.from_bus_number, name="switchRecord__from_bus_number", curie=RAW.curie('from_bus_number'),
+                   model_uri=RAW.switchRecord__from_bus_number, domain=None, range=int)
 
-slots.transformerRecord__j = Slot(uri=raw.j, name="transformerRecord__j", curie=raw.curie('j'),
-                   model_uri=raw.transformerRecord__j, domain=None, range=int)
+slots.switchRecord__to_bus_number = Slot(uri=RAW.to_bus_number, name="switchRecord__to_bus_number", curie=RAW.curie('to_bus_number'),
+                   model_uri=RAW.switchRecord__to_bus_number, domain=None, range=int)
 
-slots.transformerRecord__k = Slot(uri=raw.k, name="transformerRecord__k", curie=raw.curie('k'),
-                   model_uri=raw.transformerRecord__k, domain=None, range=Optional[int])
+slots.switchRecord__circuit = Slot(uri=RAW.circuit, name="switchRecord__circuit", curie=RAW.curie('circuit'),
+                   model_uri=RAW.switchRecord__circuit, domain=None, range=Optional[str])
 
-slots.transformerRecord__circuit = Slot(uri=raw.circuit, name="transformerRecord__circuit", curie=raw.curie('circuit'),
-                   model_uri=raw.transformerRecord__circuit, domain=None, range=str)
+slots.switchRecord__x = Slot(uri=RAW.x, name="switchRecord__x", curie=RAW.curie('x'),
+                   model_uri=RAW.switchRecord__x, domain=None, range=Optional[float])
 
-slots.transformerRecord__cw = Slot(uri=raw.cw, name="transformerRecord__cw", curie=raw.curie('cw'),
-                   model_uri=raw.transformerRecord__cw, domain=None, range=Optional[int])
+slots.switchRecord__ratings = Slot(uri=RAW.ratings, name="switchRecord__ratings", curie=RAW.curie('ratings'),
+                   model_uri=RAW.switchRecord__ratings, domain=None, range=Optional[Union[float, list[float]]])
 
-slots.transformerRecord__cz = Slot(uri=raw.cz, name="transformerRecord__cz", curie=raw.curie('cz'),
-                   model_uri=raw.transformerRecord__cz, domain=None, range=Optional[int])
+slots.switchRecord__status = Slot(uri=RAW.status, name="switchRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.switchRecord__status, domain=None, range=Optional[int])
 
-slots.transformerRecord__cm = Slot(uri=raw.cm, name="transformerRecord__cm", curie=raw.curie('cm'),
-                   model_uri=raw.transformerRecord__cm, domain=None, range=Optional[int])
+slots.switchRecord__nstat = Slot(uri=RAW.nstat, name="switchRecord__nstat", curie=RAW.curie('nstat'),
+                   model_uri=RAW.switchRecord__nstat, domain=None, range=Optional[int])
 
-slots.transformerRecord__mag1 = Slot(uri=raw.mag1, name="transformerRecord__mag1", curie=raw.curie('mag1'),
-                   model_uri=raw.transformerRecord__mag1, domain=None, range=Optional[float])
+slots.switchRecord__metered_end = Slot(uri=RAW.metered_end, name="switchRecord__metered_end", curie=RAW.curie('metered_end'),
+                   model_uri=RAW.switchRecord__metered_end, domain=None, range=Optional[int])
 
-slots.transformerRecord__mag2 = Slot(uri=raw.mag2, name="transformerRecord__mag2", curie=raw.curie('mag2'),
-                   model_uri=raw.transformerRecord__mag2, domain=None, range=Optional[float])
+slots.switchRecord__stype = Slot(uri=RAW.stype, name="switchRecord__stype", curie=RAW.curie('stype'),
+                   model_uri=RAW.switchRecord__stype, domain=None, range=Optional[int])
 
-slots.transformerRecord__nmetr = Slot(uri=raw.nmetr, name="transformerRecord__nmetr", curie=raw.curie('nmetr'),
-                   model_uri=raw.transformerRecord__nmetr, domain=None, range=Optional[int])
+slots.switchRecord__name = Slot(uri=RAW.name, name="switchRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.switchRecord__name, domain=None, range=Optional[str])
 
-slots.transformerRecord__name = Slot(uri=raw.name, name="transformerRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.transformerRecord__name, domain=None, range=Optional[str])
+slots.transformerRecord__i = Slot(uri=RAW.i, name="transformerRecord__i", curie=RAW.curie('i'),
+                   model_uri=RAW.transformerRecord__i, domain=None, range=int)
 
-slots.transformerRecord__status = Slot(uri=raw.status, name="transformerRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.transformerRecord__status, domain=None, range=Optional[int])
+slots.transformerRecord__j = Slot(uri=RAW.j, name="transformerRecord__j", curie=RAW.curie('j'),
+                   model_uri=RAW.transformerRecord__j, domain=None, range=int)
 
-slots.transformerRecord__o1 = Slot(uri=raw.o1, name="transformerRecord__o1", curie=raw.curie('o1'),
-                   model_uri=raw.transformerRecord__o1, domain=None, range=Optional[int])
+slots.transformerRecord__k = Slot(uri=RAW.k, name="transformerRecord__k", curie=RAW.curie('k'),
+                   model_uri=RAW.transformerRecord__k, domain=None, range=Optional[int])
 
-slots.transformerRecord__f1 = Slot(uri=raw.f1, name="transformerRecord__f1", curie=raw.curie('f1'),
-                   model_uri=raw.transformerRecord__f1, domain=None, range=Optional[float])
+slots.transformerRecord__circuit = Slot(uri=RAW.circuit, name="transformerRecord__circuit", curie=RAW.curie('circuit'),
+                   model_uri=RAW.transformerRecord__circuit, domain=None, range=Optional[str])
 
-slots.transformerRecord__o2 = Slot(uri=raw.o2, name="transformerRecord__o2", curie=raw.curie('o2'),
-                   model_uri=raw.transformerRecord__o2, domain=None, range=Optional[int])
+slots.transformerRecord__cw = Slot(uri=RAW.cw, name="transformerRecord__cw", curie=RAW.curie('cw'),
+                   model_uri=RAW.transformerRecord__cw, domain=None, range=Optional[int])
 
-slots.transformerRecord__f2 = Slot(uri=raw.f2, name="transformerRecord__f2", curie=raw.curie('f2'),
-                   model_uri=raw.transformerRecord__f2, domain=None, range=Optional[float])
+slots.transformerRecord__cz = Slot(uri=RAW.cz, name="transformerRecord__cz", curie=RAW.curie('cz'),
+                   model_uri=RAW.transformerRecord__cz, domain=None, range=Optional[int])
 
-slots.transformerRecord__o3 = Slot(uri=raw.o3, name="transformerRecord__o3", curie=raw.curie('o3'),
-                   model_uri=raw.transformerRecord__o3, domain=None, range=Optional[int])
+slots.transformerRecord__cm = Slot(uri=RAW.cm, name="transformerRecord__cm", curie=RAW.curie('cm'),
+                   model_uri=RAW.transformerRecord__cm, domain=None, range=Optional[int])
 
-slots.transformerRecord__f3 = Slot(uri=raw.f3, name="transformerRecord__f3", curie=raw.curie('f3'),
-                   model_uri=raw.transformerRecord__f3, domain=None, range=Optional[float])
+slots.transformerRecord__mag1 = Slot(uri=RAW.mag1, name="transformerRecord__mag1", curie=RAW.curie('mag1'),
+                   model_uri=RAW.transformerRecord__mag1, domain=None, range=Optional[float])
 
-slots.transformerRecord__o4 = Slot(uri=raw.o4, name="transformerRecord__o4", curie=raw.curie('o4'),
-                   model_uri=raw.transformerRecord__o4, domain=None, range=Optional[int])
+slots.transformerRecord__mag2 = Slot(uri=RAW.mag2, name="transformerRecord__mag2", curie=RAW.curie('mag2'),
+                   model_uri=RAW.transformerRecord__mag2, domain=None, range=Optional[float])
 
-slots.transformerRecord__f4 = Slot(uri=raw.f4, name="transformerRecord__f4", curie=raw.curie('f4'),
-                   model_uri=raw.transformerRecord__f4, domain=None, range=Optional[float])
+slots.transformerRecord__nmetr = Slot(uri=RAW.nmetr, name="transformerRecord__nmetr", curie=RAW.curie('nmetr'),
+                   model_uri=RAW.transformerRecord__nmetr, domain=None, range=Optional[int])
 
-slots.transformerRecord__vecgrp = Slot(uri=raw.vecgrp, name="transformerRecord__vecgrp", curie=raw.curie('vecgrp'),
-                   model_uri=raw.transformerRecord__vecgrp, domain=None, range=Optional[str])
+slots.transformerRecord__name = Slot(uri=RAW.name, name="transformerRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.transformerRecord__name, domain=None, range=Optional[str])
 
-slots.transformerRecord__zcod = Slot(uri=raw.zcod, name="transformerRecord__zcod", curie=raw.curie('zcod'),
-                   model_uri=raw.transformerRecord__zcod, domain=None, range=Optional[int])
+slots.transformerRecord__status = Slot(uri=RAW.status, name="transformerRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.transformerRecord__status, domain=None, range=Optional[int])
 
-slots.transformerRecord__r1_2 = Slot(uri=raw.r1_2, name="transformerRecord__r1_2", curie=raw.curie('r1_2'),
-                   model_uri=raw.transformerRecord__r1_2, domain=None, range=Optional[float])
+slots.transformerRecord__o1 = Slot(uri=RAW.o1, name="transformerRecord__o1", curie=RAW.curie('o1'),
+                   model_uri=RAW.transformerRecord__o1, domain=None, range=Optional[int])
 
-slots.transformerRecord__x1_2 = Slot(uri=raw.x1_2, name="transformerRecord__x1_2", curie=raw.curie('x1_2'),
-                   model_uri=raw.transformerRecord__x1_2, domain=None, range=Optional[float])
+slots.transformerRecord__f1 = Slot(uri=RAW.f1, name="transformerRecord__f1", curie=RAW.curie('f1'),
+                   model_uri=RAW.transformerRecord__f1, domain=None, range=Optional[float])
 
-slots.transformerRecord__sbase1_2 = Slot(uri=raw.sbase1_2, name="transformerRecord__sbase1_2", curie=raw.curie('sbase1_2'),
-                   model_uri=raw.transformerRecord__sbase1_2, domain=None, range=Optional[float])
+slots.transformerRecord__o2 = Slot(uri=RAW.o2, name="transformerRecord__o2", curie=RAW.curie('o2'),
+                   model_uri=RAW.transformerRecord__o2, domain=None, range=Optional[int])
 
-slots.transformerRecord__r2_3 = Slot(uri=raw.r2_3, name="transformerRecord__r2_3", curie=raw.curie('r2_3'),
-                   model_uri=raw.transformerRecord__r2_3, domain=None, range=Optional[float])
+slots.transformerRecord__f2 = Slot(uri=RAW.f2, name="transformerRecord__f2", curie=RAW.curie('f2'),
+                   model_uri=RAW.transformerRecord__f2, domain=None, range=Optional[float])
 
-slots.transformerRecord__x2_3 = Slot(uri=raw.x2_3, name="transformerRecord__x2_3", curie=raw.curie('x2_3'),
-                   model_uri=raw.transformerRecord__x2_3, domain=None, range=Optional[float])
+slots.transformerRecord__o3 = Slot(uri=RAW.o3, name="transformerRecord__o3", curie=RAW.curie('o3'),
+                   model_uri=RAW.transformerRecord__o3, domain=None, range=Optional[int])
 
-slots.transformerRecord__sbase2_3 = Slot(uri=raw.sbase2_3, name="transformerRecord__sbase2_3", curie=raw.curie('sbase2_3'),
-                   model_uri=raw.transformerRecord__sbase2_3, domain=None, range=Optional[float])
+slots.transformerRecord__f3 = Slot(uri=RAW.f3, name="transformerRecord__f3", curie=RAW.curie('f3'),
+                   model_uri=RAW.transformerRecord__f3, domain=None, range=Optional[float])
 
-slots.transformerRecord__r3_1 = Slot(uri=raw.r3_1, name="transformerRecord__r3_1", curie=raw.curie('r3_1'),
-                   model_uri=raw.transformerRecord__r3_1, domain=None, range=Optional[float])
+slots.transformerRecord__o4 = Slot(uri=RAW.o4, name="transformerRecord__o4", curie=RAW.curie('o4'),
+                   model_uri=RAW.transformerRecord__o4, domain=None, range=Optional[int])
 
-slots.transformerRecord__x3_1 = Slot(uri=raw.x3_1, name="transformerRecord__x3_1", curie=raw.curie('x3_1'),
-                   model_uri=raw.transformerRecord__x3_1, domain=None, range=Optional[float])
+slots.transformerRecord__f4 = Slot(uri=RAW.f4, name="transformerRecord__f4", curie=RAW.curie('f4'),
+                   model_uri=RAW.transformerRecord__f4, domain=None, range=Optional[float])
 
-slots.transformerRecord__sbase3_1 = Slot(uri=raw.sbase3_1, name="transformerRecord__sbase3_1", curie=raw.curie('sbase3_1'),
-                   model_uri=raw.transformerRecord__sbase3_1, domain=None, range=Optional[float])
+slots.transformerRecord__vecgrp = Slot(uri=RAW.vecgrp, name="transformerRecord__vecgrp", curie=RAW.curie('vecgrp'),
+                   model_uri=RAW.transformerRecord__vecgrp, domain=None, range=Optional[str])
 
-slots.transformerRecord__vmstar = Slot(uri=raw.vmstar, name="transformerRecord__vmstar", curie=raw.curie('vmstar'),
-                   model_uri=raw.transformerRecord__vmstar, domain=None, range=Optional[float])
+slots.transformerRecord__zcod = Slot(uri=RAW.zcod, name="transformerRecord__zcod", curie=RAW.curie('zcod'),
+                   model_uri=RAW.transformerRecord__zcod, domain=None, range=Optional[int])
 
-slots.transformerRecord__anstar = Slot(uri=raw.anstar, name="transformerRecord__anstar", curie=raw.curie('anstar'),
-                   model_uri=raw.transformerRecord__anstar, domain=None, range=Optional[float])
+slots.transformerRecord__r1_2 = Slot(uri=RAW.r1_2, name="transformerRecord__r1_2", curie=RAW.curie('r1_2'),
+                   model_uri=RAW.transformerRecord__r1_2, domain=None, range=Optional[float])
 
-slots.transformerRecord__windv1 = Slot(uri=raw.windv1, name="transformerRecord__windv1", curie=raw.curie('windv1'),
-                   model_uri=raw.transformerRecord__windv1, domain=None, range=Optional[float])
+slots.transformerRecord__x1_2 = Slot(uri=RAW.x1_2, name="transformerRecord__x1_2", curie=RAW.curie('x1_2'),
+                   model_uri=RAW.transformerRecord__x1_2, domain=None, range=float)
 
-slots.transformerRecord__nomv1 = Slot(uri=raw.nomv1, name="transformerRecord__nomv1", curie=raw.curie('nomv1'),
-                   model_uri=raw.transformerRecord__nomv1, domain=None, range=Optional[float])
+slots.transformerRecord__sbase1_2 = Slot(uri=RAW.sbase1_2, name="transformerRecord__sbase1_2", curie=RAW.curie('sbase1_2'),
+                   model_uri=RAW.transformerRecord__sbase1_2, domain=None, range=Optional[float])
 
-slots.transformerRecord__ang1 = Slot(uri=raw.ang1, name="transformerRecord__ang1", curie=raw.curie('ang1'),
-                   model_uri=raw.transformerRecord__ang1, domain=None, range=Optional[float])
+slots.transformerRecord__r2_3 = Slot(uri=RAW.r2_3, name="transformerRecord__r2_3", curie=RAW.curie('r2_3'),
+                   model_uri=RAW.transformerRecord__r2_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_1 = Slot(uri=raw.rate1_1, name="transformerRecord__rate1_1", curie=raw.curie('rate1_1'),
-                   model_uri=raw.transformerRecord__rate1_1, domain=None, range=Optional[float])
+slots.transformerRecord__x2_3 = Slot(uri=RAW.x2_3, name="transformerRecord__x2_3", curie=RAW.curie('x2_3'),
+                   model_uri=RAW.transformerRecord__x2_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_2 = Slot(uri=raw.rate1_2, name="transformerRecord__rate1_2", curie=raw.curie('rate1_2'),
-                   model_uri=raw.transformerRecord__rate1_2, domain=None, range=Optional[float])
+slots.transformerRecord__sbase2_3 = Slot(uri=RAW.sbase2_3, name="transformerRecord__sbase2_3", curie=RAW.curie('sbase2_3'),
+                   model_uri=RAW.transformerRecord__sbase2_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_3 = Slot(uri=raw.rate1_3, name="transformerRecord__rate1_3", curie=raw.curie('rate1_3'),
-                   model_uri=raw.transformerRecord__rate1_3, domain=None, range=Optional[float])
+slots.transformerRecord__r3_1 = Slot(uri=RAW.r3_1, name="transformerRecord__r3_1", curie=RAW.curie('r3_1'),
+                   model_uri=RAW.transformerRecord__r3_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_4 = Slot(uri=raw.rate1_4, name="transformerRecord__rate1_4", curie=raw.curie('rate1_4'),
-                   model_uri=raw.transformerRecord__rate1_4, domain=None, range=Optional[float])
+slots.transformerRecord__x3_1 = Slot(uri=RAW.x3_1, name="transformerRecord__x3_1", curie=RAW.curie('x3_1'),
+                   model_uri=RAW.transformerRecord__x3_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_5 = Slot(uri=raw.rate1_5, name="transformerRecord__rate1_5", curie=raw.curie('rate1_5'),
-                   model_uri=raw.transformerRecord__rate1_5, domain=None, range=Optional[float])
+slots.transformerRecord__sbase3_1 = Slot(uri=RAW.sbase3_1, name="transformerRecord__sbase3_1", curie=RAW.curie('sbase3_1'),
+                   model_uri=RAW.transformerRecord__sbase3_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_6 = Slot(uri=raw.rate1_6, name="transformerRecord__rate1_6", curie=raw.curie('rate1_6'),
-                   model_uri=raw.transformerRecord__rate1_6, domain=None, range=Optional[float])
+slots.transformerRecord__vmstar = Slot(uri=RAW.vmstar, name="transformerRecord__vmstar", curie=RAW.curie('vmstar'),
+                   model_uri=RAW.transformerRecord__vmstar, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_7 = Slot(uri=raw.rate1_7, name="transformerRecord__rate1_7", curie=raw.curie('rate1_7'),
-                   model_uri=raw.transformerRecord__rate1_7, domain=None, range=Optional[float])
+slots.transformerRecord__anstar = Slot(uri=RAW.anstar, name="transformerRecord__anstar", curie=RAW.curie('anstar'),
+                   model_uri=RAW.transformerRecord__anstar, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_8 = Slot(uri=raw.rate1_8, name="transformerRecord__rate1_8", curie=raw.curie('rate1_8'),
-                   model_uri=raw.transformerRecord__rate1_8, domain=None, range=Optional[float])
+slots.transformerRecord__windv1 = Slot(uri=RAW.windv1, name="transformerRecord__windv1", curie=RAW.curie('windv1'),
+                   model_uri=RAW.transformerRecord__windv1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_9 = Slot(uri=raw.rate1_9, name="transformerRecord__rate1_9", curie=raw.curie('rate1_9'),
-                   model_uri=raw.transformerRecord__rate1_9, domain=None, range=Optional[float])
+slots.transformerRecord__nomv1 = Slot(uri=RAW.nomv1, name="transformerRecord__nomv1", curie=RAW.curie('nomv1'),
+                   model_uri=RAW.transformerRecord__nomv1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_10 = Slot(uri=raw.rate1_10, name="transformerRecord__rate1_10", curie=raw.curie('rate1_10'),
-                   model_uri=raw.transformerRecord__rate1_10, domain=None, range=Optional[float])
+slots.transformerRecord__ang1 = Slot(uri=RAW.ang1, name="transformerRecord__ang1", curie=RAW.curie('ang1'),
+                   model_uri=RAW.transformerRecord__ang1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_11 = Slot(uri=raw.rate1_11, name="transformerRecord__rate1_11", curie=raw.curie('rate1_11'),
-                   model_uri=raw.transformerRecord__rate1_11, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_1 = Slot(uri=RAW.rate1_1, name="transformerRecord__rate1_1", curie=RAW.curie('rate1_1'),
+                   model_uri=RAW.transformerRecord__rate1_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate1_12 = Slot(uri=raw.rate1_12, name="transformerRecord__rate1_12", curie=raw.curie('rate1_12'),
-                   model_uri=raw.transformerRecord__rate1_12, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_2 = Slot(uri=RAW.rate1_2, name="transformerRecord__rate1_2", curie=RAW.curie('rate1_2'),
+                   model_uri=RAW.transformerRecord__rate1_2, domain=None, range=Optional[float])
 
-slots.transformerRecord__cod1 = Slot(uri=raw.cod1, name="transformerRecord__cod1", curie=raw.curie('cod1'),
-                   model_uri=raw.transformerRecord__cod1, domain=None, range=Optional[int])
+slots.transformerRecord__rate1_3 = Slot(uri=RAW.rate1_3, name="transformerRecord__rate1_3", curie=RAW.curie('rate1_3'),
+                   model_uri=RAW.transformerRecord__rate1_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__cont1 = Slot(uri=raw.cont1, name="transformerRecord__cont1", curie=raw.curie('cont1'),
-                   model_uri=raw.transformerRecord__cont1, domain=None, range=Optional[int])
+slots.transformerRecord__rate1_4 = Slot(uri=RAW.rate1_4, name="transformerRecord__rate1_4", curie=RAW.curie('rate1_4'),
+                   model_uri=RAW.transformerRecord__rate1_4, domain=None, range=Optional[float])
 
-slots.transformerRecord__rma1 = Slot(uri=raw.rma1, name="transformerRecord__rma1", curie=raw.curie('rma1'),
-                   model_uri=raw.transformerRecord__rma1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_5 = Slot(uri=RAW.rate1_5, name="transformerRecord__rate1_5", curie=RAW.curie('rate1_5'),
+                   model_uri=RAW.transformerRecord__rate1_5, domain=None, range=Optional[float])
 
-slots.transformerRecord__rmi1 = Slot(uri=raw.rmi1, name="transformerRecord__rmi1", curie=raw.curie('rmi1'),
-                   model_uri=raw.transformerRecord__rmi1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_6 = Slot(uri=RAW.rate1_6, name="transformerRecord__rate1_6", curie=RAW.curie('rate1_6'),
+                   model_uri=RAW.transformerRecord__rate1_6, domain=None, range=Optional[float])
 
-slots.transformerRecord__vma1 = Slot(uri=raw.vma1, name="transformerRecord__vma1", curie=raw.curie('vma1'),
-                   model_uri=raw.transformerRecord__vma1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_7 = Slot(uri=RAW.rate1_7, name="transformerRecord__rate1_7", curie=RAW.curie('rate1_7'),
+                   model_uri=RAW.transformerRecord__rate1_7, domain=None, range=Optional[float])
 
-slots.transformerRecord__vmi1 = Slot(uri=raw.vmi1, name="transformerRecord__vmi1", curie=raw.curie('vmi1'),
-                   model_uri=raw.transformerRecord__vmi1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_8 = Slot(uri=RAW.rate1_8, name="transformerRecord__rate1_8", curie=RAW.curie('rate1_8'),
+                   model_uri=RAW.transformerRecord__rate1_8, domain=None, range=Optional[float])
 
-slots.transformerRecord__ntp1 = Slot(uri=raw.ntp1, name="transformerRecord__ntp1", curie=raw.curie('ntp1'),
-                   model_uri=raw.transformerRecord__ntp1, domain=None, range=Optional[int])
+slots.transformerRecord__rate1_9 = Slot(uri=RAW.rate1_9, name="transformerRecord__rate1_9", curie=RAW.curie('rate1_9'),
+                   model_uri=RAW.transformerRecord__rate1_9, domain=None, range=Optional[float])
 
-slots.transformerRecord__tab1 = Slot(uri=raw.tab1, name="transformerRecord__tab1", curie=raw.curie('tab1'),
-                   model_uri=raw.transformerRecord__tab1, domain=None, range=Optional[int])
+slots.transformerRecord__rate1_10 = Slot(uri=RAW.rate1_10, name="transformerRecord__rate1_10", curie=RAW.curie('rate1_10'),
+                   model_uri=RAW.transformerRecord__rate1_10, domain=None, range=Optional[float])
 
-slots.transformerRecord__cr1 = Slot(uri=raw.cr1, name="transformerRecord__cr1", curie=raw.curie('cr1'),
-                   model_uri=raw.transformerRecord__cr1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_11 = Slot(uri=RAW.rate1_11, name="transformerRecord__rate1_11", curie=RAW.curie('rate1_11'),
+                   model_uri=RAW.transformerRecord__rate1_11, domain=None, range=Optional[float])
 
-slots.transformerRecord__cx1 = Slot(uri=raw.cx1, name="transformerRecord__cx1", curie=raw.curie('cx1'),
-                   model_uri=raw.transformerRecord__cx1, domain=None, range=Optional[float])
+slots.transformerRecord__rate1_12 = Slot(uri=RAW.rate1_12, name="transformerRecord__rate1_12", curie=RAW.curie('rate1_12'),
+                   model_uri=RAW.transformerRecord__rate1_12, domain=None, range=Optional[float])
 
-slots.transformerRecord__cnxa1 = Slot(uri=raw.cnxa1, name="transformerRecord__cnxa1", curie=raw.curie('cnxa1'),
-                   model_uri=raw.transformerRecord__cnxa1, domain=None, range=Optional[float])
+slots.transformerRecord__cod1 = Slot(uri=RAW.cod1, name="transformerRecord__cod1", curie=RAW.curie('cod1'),
+                   model_uri=RAW.transformerRecord__cod1, domain=None, range=Optional[int])
 
-slots.transformerRecord__nod1 = Slot(uri=raw.nod1, name="transformerRecord__nod1", curie=raw.curie('nod1'),
-                   model_uri=raw.transformerRecord__nod1, domain=None, range=Optional[int])
+slots.transformerRecord__cont1 = Slot(uri=RAW.cont1, name="transformerRecord__cont1", curie=RAW.curie('cont1'),
+                   model_uri=RAW.transformerRecord__cont1, domain=None, range=Optional[int])
 
-slots.transformerRecord__windv2 = Slot(uri=raw.windv2, name="transformerRecord__windv2", curie=raw.curie('windv2'),
-                   model_uri=raw.transformerRecord__windv2, domain=None, range=Optional[float])
+slots.transformerRecord__rma1 = Slot(uri=RAW.rma1, name="transformerRecord__rma1", curie=RAW.curie('rma1'),
+                   model_uri=RAW.transformerRecord__rma1, domain=None, range=Optional[float])
 
-slots.transformerRecord__nomv2 = Slot(uri=raw.nomv2, name="transformerRecord__nomv2", curie=raw.curie('nomv2'),
-                   model_uri=raw.transformerRecord__nomv2, domain=None, range=Optional[float])
+slots.transformerRecord__rmi1 = Slot(uri=RAW.rmi1, name="transformerRecord__rmi1", curie=RAW.curie('rmi1'),
+                   model_uri=RAW.transformerRecord__rmi1, domain=None, range=Optional[float])
 
-slots.transformerRecord__ang2 = Slot(uri=raw.ang2, name="transformerRecord__ang2", curie=raw.curie('ang2'),
-                   model_uri=raw.transformerRecord__ang2, domain=None, range=Optional[float])
+slots.transformerRecord__vma1 = Slot(uri=RAW.vma1, name="transformerRecord__vma1", curie=RAW.curie('vma1'),
+                   model_uri=RAW.transformerRecord__vma1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_1 = Slot(uri=raw.rate2_1, name="transformerRecord__rate2_1", curie=raw.curie('rate2_1'),
-                   model_uri=raw.transformerRecord__rate2_1, domain=None, range=Optional[float])
+slots.transformerRecord__vmi1 = Slot(uri=RAW.vmi1, name="transformerRecord__vmi1", curie=RAW.curie('vmi1'),
+                   model_uri=RAW.transformerRecord__vmi1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_2 = Slot(uri=raw.rate2_2, name="transformerRecord__rate2_2", curie=raw.curie('rate2_2'),
-                   model_uri=raw.transformerRecord__rate2_2, domain=None, range=Optional[float])
+slots.transformerRecord__ntp1 = Slot(uri=RAW.ntp1, name="transformerRecord__ntp1", curie=RAW.curie('ntp1'),
+                   model_uri=RAW.transformerRecord__ntp1, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate2_3 = Slot(uri=raw.rate2_3, name="transformerRecord__rate2_3", curie=raw.curie('rate2_3'),
-                   model_uri=raw.transformerRecord__rate2_3, domain=None, range=Optional[float])
+slots.transformerRecord__tab1 = Slot(uri=RAW.tab1, name="transformerRecord__tab1", curie=RAW.curie('tab1'),
+                   model_uri=RAW.transformerRecord__tab1, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate2_4 = Slot(uri=raw.rate2_4, name="transformerRecord__rate2_4", curie=raw.curie('rate2_4'),
-                   model_uri=raw.transformerRecord__rate2_4, domain=None, range=Optional[float])
+slots.transformerRecord__cr1 = Slot(uri=RAW.cr1, name="transformerRecord__cr1", curie=RAW.curie('cr1'),
+                   model_uri=RAW.transformerRecord__cr1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_5 = Slot(uri=raw.rate2_5, name="transformerRecord__rate2_5", curie=raw.curie('rate2_5'),
-                   model_uri=raw.transformerRecord__rate2_5, domain=None, range=Optional[float])
+slots.transformerRecord__cx1 = Slot(uri=RAW.cx1, name="transformerRecord__cx1", curie=RAW.curie('cx1'),
+                   model_uri=RAW.transformerRecord__cx1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_6 = Slot(uri=raw.rate2_6, name="transformerRecord__rate2_6", curie=raw.curie('rate2_6'),
-                   model_uri=raw.transformerRecord__rate2_6, domain=None, range=Optional[float])
+slots.transformerRecord__cnxa1 = Slot(uri=RAW.cnxa1, name="transformerRecord__cnxa1", curie=RAW.curie('cnxa1'),
+                   model_uri=RAW.transformerRecord__cnxa1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_7 = Slot(uri=raw.rate2_7, name="transformerRecord__rate2_7", curie=raw.curie('rate2_7'),
-                   model_uri=raw.transformerRecord__rate2_7, domain=None, range=Optional[float])
+slots.transformerRecord__nod1 = Slot(uri=RAW.nod1, name="transformerRecord__nod1", curie=RAW.curie('nod1'),
+                   model_uri=RAW.transformerRecord__nod1, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate2_8 = Slot(uri=raw.rate2_8, name="transformerRecord__rate2_8", curie=raw.curie('rate2_8'),
-                   model_uri=raw.transformerRecord__rate2_8, domain=None, range=Optional[float])
+slots.transformerRecord__windv2 = Slot(uri=RAW.windv2, name="transformerRecord__windv2", curie=RAW.curie('windv2'),
+                   model_uri=RAW.transformerRecord__windv2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_9 = Slot(uri=raw.rate2_9, name="transformerRecord__rate2_9", curie=raw.curie('rate2_9'),
-                   model_uri=raw.transformerRecord__rate2_9, domain=None, range=Optional[float])
+slots.transformerRecord__nomv2 = Slot(uri=RAW.nomv2, name="transformerRecord__nomv2", curie=RAW.curie('nomv2'),
+                   model_uri=RAW.transformerRecord__nomv2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_10 = Slot(uri=raw.rate2_10, name="transformerRecord__rate2_10", curie=raw.curie('rate2_10'),
-                   model_uri=raw.transformerRecord__rate2_10, domain=None, range=Optional[float])
+slots.transformerRecord__ang2 = Slot(uri=RAW.ang2, name="transformerRecord__ang2", curie=RAW.curie('ang2'),
+                   model_uri=RAW.transformerRecord__ang2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_11 = Slot(uri=raw.rate2_11, name="transformerRecord__rate2_11", curie=raw.curie('rate2_11'),
-                   model_uri=raw.transformerRecord__rate2_11, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_1 = Slot(uri=RAW.rate2_1, name="transformerRecord__rate2_1", curie=RAW.curie('rate2_1'),
+                   model_uri=RAW.transformerRecord__rate2_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate2_12 = Slot(uri=raw.rate2_12, name="transformerRecord__rate2_12", curie=raw.curie('rate2_12'),
-                   model_uri=raw.transformerRecord__rate2_12, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_2 = Slot(uri=RAW.rate2_2, name="transformerRecord__rate2_2", curie=RAW.curie('rate2_2'),
+                   model_uri=RAW.transformerRecord__rate2_2, domain=None, range=Optional[float])
 
-slots.transformerRecord__cod2 = Slot(uri=raw.cod2, name="transformerRecord__cod2", curie=raw.curie('cod2'),
-                   model_uri=raw.transformerRecord__cod2, domain=None, range=Optional[int])
+slots.transformerRecord__rate2_3 = Slot(uri=RAW.rate2_3, name="transformerRecord__rate2_3", curie=RAW.curie('rate2_3'),
+                   model_uri=RAW.transformerRecord__rate2_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__cont2 = Slot(uri=raw.cont2, name="transformerRecord__cont2", curie=raw.curie('cont2'),
-                   model_uri=raw.transformerRecord__cont2, domain=None, range=Optional[int])
+slots.transformerRecord__rate2_4 = Slot(uri=RAW.rate2_4, name="transformerRecord__rate2_4", curie=RAW.curie('rate2_4'),
+                   model_uri=RAW.transformerRecord__rate2_4, domain=None, range=Optional[float])
 
-slots.transformerRecord__rma2 = Slot(uri=raw.rma2, name="transformerRecord__rma2", curie=raw.curie('rma2'),
-                   model_uri=raw.transformerRecord__rma2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_5 = Slot(uri=RAW.rate2_5, name="transformerRecord__rate2_5", curie=RAW.curie('rate2_5'),
+                   model_uri=RAW.transformerRecord__rate2_5, domain=None, range=Optional[float])
 
-slots.transformerRecord__rmi2 = Slot(uri=raw.rmi2, name="transformerRecord__rmi2", curie=raw.curie('rmi2'),
-                   model_uri=raw.transformerRecord__rmi2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_6 = Slot(uri=RAW.rate2_6, name="transformerRecord__rate2_6", curie=RAW.curie('rate2_6'),
+                   model_uri=RAW.transformerRecord__rate2_6, domain=None, range=Optional[float])
 
-slots.transformerRecord__vma2 = Slot(uri=raw.vma2, name="transformerRecord__vma2", curie=raw.curie('vma2'),
-                   model_uri=raw.transformerRecord__vma2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_7 = Slot(uri=RAW.rate2_7, name="transformerRecord__rate2_7", curie=RAW.curie('rate2_7'),
+                   model_uri=RAW.transformerRecord__rate2_7, domain=None, range=Optional[float])
 
-slots.transformerRecord__vmi2 = Slot(uri=raw.vmi2, name="transformerRecord__vmi2", curie=raw.curie('vmi2'),
-                   model_uri=raw.transformerRecord__vmi2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_8 = Slot(uri=RAW.rate2_8, name="transformerRecord__rate2_8", curie=RAW.curie('rate2_8'),
+                   model_uri=RAW.transformerRecord__rate2_8, domain=None, range=Optional[float])
 
-slots.transformerRecord__ntp2 = Slot(uri=raw.ntp2, name="transformerRecord__ntp2", curie=raw.curie('ntp2'),
-                   model_uri=raw.transformerRecord__ntp2, domain=None, range=Optional[int])
+slots.transformerRecord__rate2_9 = Slot(uri=RAW.rate2_9, name="transformerRecord__rate2_9", curie=RAW.curie('rate2_9'),
+                   model_uri=RAW.transformerRecord__rate2_9, domain=None, range=Optional[float])
 
-slots.transformerRecord__tab2 = Slot(uri=raw.tab2, name="transformerRecord__tab2", curie=raw.curie('tab2'),
-                   model_uri=raw.transformerRecord__tab2, domain=None, range=Optional[int])
+slots.transformerRecord__rate2_10 = Slot(uri=RAW.rate2_10, name="transformerRecord__rate2_10", curie=RAW.curie('rate2_10'),
+                   model_uri=RAW.transformerRecord__rate2_10, domain=None, range=Optional[float])
 
-slots.transformerRecord__cr2 = Slot(uri=raw.cr2, name="transformerRecord__cr2", curie=raw.curie('cr2'),
-                   model_uri=raw.transformerRecord__cr2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_11 = Slot(uri=RAW.rate2_11, name="transformerRecord__rate2_11", curie=RAW.curie('rate2_11'),
+                   model_uri=RAW.transformerRecord__rate2_11, domain=None, range=Optional[float])
 
-slots.transformerRecord__cx2 = Slot(uri=raw.cx2, name="transformerRecord__cx2", curie=raw.curie('cx2'),
-                   model_uri=raw.transformerRecord__cx2, domain=None, range=Optional[float])
+slots.transformerRecord__rate2_12 = Slot(uri=RAW.rate2_12, name="transformerRecord__rate2_12", curie=RAW.curie('rate2_12'),
+                   model_uri=RAW.transformerRecord__rate2_12, domain=None, range=Optional[float])
 
-slots.transformerRecord__cnxa2 = Slot(uri=raw.cnxa2, name="transformerRecord__cnxa2", curie=raw.curie('cnxa2'),
-                   model_uri=raw.transformerRecord__cnxa2, domain=None, range=Optional[float])
+slots.transformerRecord__cod2 = Slot(uri=RAW.cod2, name="transformerRecord__cod2", curie=RAW.curie('cod2'),
+                   model_uri=RAW.transformerRecord__cod2, domain=None, range=Optional[int])
 
-slots.transformerRecord__nod2 = Slot(uri=raw.nod2, name="transformerRecord__nod2", curie=raw.curie('nod2'),
-                   model_uri=raw.transformerRecord__nod2, domain=None, range=Optional[int])
+slots.transformerRecord__cont2 = Slot(uri=RAW.cont2, name="transformerRecord__cont2", curie=RAW.curie('cont2'),
+                   model_uri=RAW.transformerRecord__cont2, domain=None, range=Optional[int])
 
-slots.transformerRecord__windv3 = Slot(uri=raw.windv3, name="transformerRecord__windv3", curie=raw.curie('windv3'),
-                   model_uri=raw.transformerRecord__windv3, domain=None, range=Optional[float])
+slots.transformerRecord__rma2 = Slot(uri=RAW.rma2, name="transformerRecord__rma2", curie=RAW.curie('rma2'),
+                   model_uri=RAW.transformerRecord__rma2, domain=None, range=Optional[float])
 
-slots.transformerRecord__nomv3 = Slot(uri=raw.nomv3, name="transformerRecord__nomv3", curie=raw.curie('nomv3'),
-                   model_uri=raw.transformerRecord__nomv3, domain=None, range=Optional[float])
+slots.transformerRecord__rmi2 = Slot(uri=RAW.rmi2, name="transformerRecord__rmi2", curie=RAW.curie('rmi2'),
+                   model_uri=RAW.transformerRecord__rmi2, domain=None, range=Optional[float])
 
-slots.transformerRecord__ang3 = Slot(uri=raw.ang3, name="transformerRecord__ang3", curie=raw.curie('ang3'),
-                   model_uri=raw.transformerRecord__ang3, domain=None, range=Optional[float])
+slots.transformerRecord__vma2 = Slot(uri=RAW.vma2, name="transformerRecord__vma2", curie=RAW.curie('vma2'),
+                   model_uri=RAW.transformerRecord__vma2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_1 = Slot(uri=raw.rate3_1, name="transformerRecord__rate3_1", curie=raw.curie('rate3_1'),
-                   model_uri=raw.transformerRecord__rate3_1, domain=None, range=Optional[float])
+slots.transformerRecord__vmi2 = Slot(uri=RAW.vmi2, name="transformerRecord__vmi2", curie=RAW.curie('vmi2'),
+                   model_uri=RAW.transformerRecord__vmi2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_2 = Slot(uri=raw.rate3_2, name="transformerRecord__rate3_2", curie=raw.curie('rate3_2'),
-                   model_uri=raw.transformerRecord__rate3_2, domain=None, range=Optional[float])
+slots.transformerRecord__ntp2 = Slot(uri=RAW.ntp2, name="transformerRecord__ntp2", curie=RAW.curie('ntp2'),
+                   model_uri=RAW.transformerRecord__ntp2, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate3_3 = Slot(uri=raw.rate3_3, name="transformerRecord__rate3_3", curie=raw.curie('rate3_3'),
-                   model_uri=raw.transformerRecord__rate3_3, domain=None, range=Optional[float])
+slots.transformerRecord__tab2 = Slot(uri=RAW.tab2, name="transformerRecord__tab2", curie=RAW.curie('tab2'),
+                   model_uri=RAW.transformerRecord__tab2, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate3_4 = Slot(uri=raw.rate3_4, name="transformerRecord__rate3_4", curie=raw.curie('rate3_4'),
-                   model_uri=raw.transformerRecord__rate3_4, domain=None, range=Optional[float])
+slots.transformerRecord__cr2 = Slot(uri=RAW.cr2, name="transformerRecord__cr2", curie=RAW.curie('cr2'),
+                   model_uri=RAW.transformerRecord__cr2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_5 = Slot(uri=raw.rate3_5, name="transformerRecord__rate3_5", curie=raw.curie('rate3_5'),
-                   model_uri=raw.transformerRecord__rate3_5, domain=None, range=Optional[float])
+slots.transformerRecord__cx2 = Slot(uri=RAW.cx2, name="transformerRecord__cx2", curie=RAW.curie('cx2'),
+                   model_uri=RAW.transformerRecord__cx2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_6 = Slot(uri=raw.rate3_6, name="transformerRecord__rate3_6", curie=raw.curie('rate3_6'),
-                   model_uri=raw.transformerRecord__rate3_6, domain=None, range=Optional[float])
+slots.transformerRecord__cnxa2 = Slot(uri=RAW.cnxa2, name="transformerRecord__cnxa2", curie=RAW.curie('cnxa2'),
+                   model_uri=RAW.transformerRecord__cnxa2, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_7 = Slot(uri=raw.rate3_7, name="transformerRecord__rate3_7", curie=raw.curie('rate3_7'),
-                   model_uri=raw.transformerRecord__rate3_7, domain=None, range=Optional[float])
+slots.transformerRecord__nod2 = Slot(uri=RAW.nod2, name="transformerRecord__nod2", curie=RAW.curie('nod2'),
+                   model_uri=RAW.transformerRecord__nod2, domain=None, range=Optional[int])
 
-slots.transformerRecord__rate3_8 = Slot(uri=raw.rate3_8, name="transformerRecord__rate3_8", curie=raw.curie('rate3_8'),
-                   model_uri=raw.transformerRecord__rate3_8, domain=None, range=Optional[float])
+slots.transformerRecord__windv3 = Slot(uri=RAW.windv3, name="transformerRecord__windv3", curie=RAW.curie('windv3'),
+                   model_uri=RAW.transformerRecord__windv3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_9 = Slot(uri=raw.rate3_9, name="transformerRecord__rate3_9", curie=raw.curie('rate3_9'),
-                   model_uri=raw.transformerRecord__rate3_9, domain=None, range=Optional[float])
+slots.transformerRecord__nomv3 = Slot(uri=RAW.nomv3, name="transformerRecord__nomv3", curie=RAW.curie('nomv3'),
+                   model_uri=RAW.transformerRecord__nomv3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_10 = Slot(uri=raw.rate3_10, name="transformerRecord__rate3_10", curie=raw.curie('rate3_10'),
-                   model_uri=raw.transformerRecord__rate3_10, domain=None, range=Optional[float])
+slots.transformerRecord__ang3 = Slot(uri=RAW.ang3, name="transformerRecord__ang3", curie=RAW.curie('ang3'),
+                   model_uri=RAW.transformerRecord__ang3, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_11 = Slot(uri=raw.rate3_11, name="transformerRecord__rate3_11", curie=raw.curie('rate3_11'),
-                   model_uri=raw.transformerRecord__rate3_11, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_1 = Slot(uri=RAW.rate3_1, name="transformerRecord__rate3_1", curie=RAW.curie('rate3_1'),
+                   model_uri=RAW.transformerRecord__rate3_1, domain=None, range=Optional[float])
 
-slots.transformerRecord__rate3_12 = Slot(uri=raw.rate3_12, name="transformerRecord__rate3_12", curie=raw.curie('rate3_12'),
-                   model_uri=raw.transformerRecord__rate3_12, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_2 = Slot(uri=RAW.rate3_2, name="transformerRecord__rate3_2", curie=RAW.curie('rate3_2'),
+                   model_uri=RAW.transformerRecord__rate3_2, domain=None, range=Optional[float])
 
-slots.transformerRecord__cod3 = Slot(uri=raw.cod3, name="transformerRecord__cod3", curie=raw.curie('cod3'),
-                   model_uri=raw.transformerRecord__cod3, domain=None, range=Optional[int])
+slots.transformerRecord__rate3_3 = Slot(uri=RAW.rate3_3, name="transformerRecord__rate3_3", curie=RAW.curie('rate3_3'),
+                   model_uri=RAW.transformerRecord__rate3_3, domain=None, range=Optional[float])
 
-slots.transformerRecord__cont3 = Slot(uri=raw.cont3, name="transformerRecord__cont3", curie=raw.curie('cont3'),
-                   model_uri=raw.transformerRecord__cont3, domain=None, range=Optional[int])
+slots.transformerRecord__rate3_4 = Slot(uri=RAW.rate3_4, name="transformerRecord__rate3_4", curie=RAW.curie('rate3_4'),
+                   model_uri=RAW.transformerRecord__rate3_4, domain=None, range=Optional[float])
 
-slots.transformerRecord__rma3 = Slot(uri=raw.rma3, name="transformerRecord__rma3", curie=raw.curie('rma3'),
-                   model_uri=raw.transformerRecord__rma3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_5 = Slot(uri=RAW.rate3_5, name="transformerRecord__rate3_5", curie=RAW.curie('rate3_5'),
+                   model_uri=RAW.transformerRecord__rate3_5, domain=None, range=Optional[float])
 
-slots.transformerRecord__rmi3 = Slot(uri=raw.rmi3, name="transformerRecord__rmi3", curie=raw.curie('rmi3'),
-                   model_uri=raw.transformerRecord__rmi3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_6 = Slot(uri=RAW.rate3_6, name="transformerRecord__rate3_6", curie=RAW.curie('rate3_6'),
+                   model_uri=RAW.transformerRecord__rate3_6, domain=None, range=Optional[float])
 
-slots.transformerRecord__vma3 = Slot(uri=raw.vma3, name="transformerRecord__vma3", curie=raw.curie('vma3'),
-                   model_uri=raw.transformerRecord__vma3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_7 = Slot(uri=RAW.rate3_7, name="transformerRecord__rate3_7", curie=RAW.curie('rate3_7'),
+                   model_uri=RAW.transformerRecord__rate3_7, domain=None, range=Optional[float])
 
-slots.transformerRecord__vmi3 = Slot(uri=raw.vmi3, name="transformerRecord__vmi3", curie=raw.curie('vmi3'),
-                   model_uri=raw.transformerRecord__vmi3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_8 = Slot(uri=RAW.rate3_8, name="transformerRecord__rate3_8", curie=RAW.curie('rate3_8'),
+                   model_uri=RAW.transformerRecord__rate3_8, domain=None, range=Optional[float])
 
-slots.transformerRecord__ntp3 = Slot(uri=raw.ntp3, name="transformerRecord__ntp3", curie=raw.curie('ntp3'),
-                   model_uri=raw.transformerRecord__ntp3, domain=None, range=Optional[int])
+slots.transformerRecord__rate3_9 = Slot(uri=RAW.rate3_9, name="transformerRecord__rate3_9", curie=RAW.curie('rate3_9'),
+                   model_uri=RAW.transformerRecord__rate3_9, domain=None, range=Optional[float])
 
-slots.transformerRecord__tab3 = Slot(uri=raw.tab3, name="transformerRecord__tab3", curie=raw.curie('tab3'),
-                   model_uri=raw.transformerRecord__tab3, domain=None, range=Optional[int])
+slots.transformerRecord__rate3_10 = Slot(uri=RAW.rate3_10, name="transformerRecord__rate3_10", curie=RAW.curie('rate3_10'),
+                   model_uri=RAW.transformerRecord__rate3_10, domain=None, range=Optional[float])
 
-slots.transformerRecord__cr3 = Slot(uri=raw.cr3, name="transformerRecord__cr3", curie=raw.curie('cr3'),
-                   model_uri=raw.transformerRecord__cr3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_11 = Slot(uri=RAW.rate3_11, name="transformerRecord__rate3_11", curie=RAW.curie('rate3_11'),
+                   model_uri=RAW.transformerRecord__rate3_11, domain=None, range=Optional[float])
 
-slots.transformerRecord__cx3 = Slot(uri=raw.cx3, name="transformerRecord__cx3", curie=raw.curie('cx3'),
-                   model_uri=raw.transformerRecord__cx3, domain=None, range=Optional[float])
+slots.transformerRecord__rate3_12 = Slot(uri=RAW.rate3_12, name="transformerRecord__rate3_12", curie=RAW.curie('rate3_12'),
+                   model_uri=RAW.transformerRecord__rate3_12, domain=None, range=Optional[float])
 
-slots.transformerRecord__cnxa3 = Slot(uri=raw.cnxa3, name="transformerRecord__cnxa3", curie=raw.curie('cnxa3'),
-                   model_uri=raw.transformerRecord__cnxa3, domain=None, range=Optional[float])
+slots.transformerRecord__cod3 = Slot(uri=RAW.cod3, name="transformerRecord__cod3", curie=RAW.curie('cod3'),
+                   model_uri=RAW.transformerRecord__cod3, domain=None, range=Optional[int])
 
-slots.transformerRecord__nod3 = Slot(uri=raw.nod3, name="transformerRecord__nod3", curie=raw.curie('nod3'),
-                   model_uri=raw.transformerRecord__nod3, domain=None, range=Optional[int])
+slots.transformerRecord__cont3 = Slot(uri=RAW.cont3, name="transformerRecord__cont3", curie=RAW.curie('cont3'),
+                   model_uri=RAW.transformerRecord__cont3, domain=None, range=Optional[int])
 
-slots.areaInterchangeRecord__area_number = Slot(uri=raw.area_number, name="areaInterchangeRecord__area_number", curie=raw.curie('area_number'),
-                   model_uri=raw.areaInterchangeRecord__area_number, domain=None, range=URIRef)
+slots.transformerRecord__rma3 = Slot(uri=RAW.rma3, name="transformerRecord__rma3", curie=RAW.curie('rma3'),
+                   model_uri=RAW.transformerRecord__rma3, domain=None, range=Optional[float])
 
-slots.areaInterchangeRecord__bus_number = Slot(uri=raw.bus_number, name="areaInterchangeRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.areaInterchangeRecord__bus_number, domain=None, range=Optional[int])
+slots.transformerRecord__rmi3 = Slot(uri=RAW.rmi3, name="transformerRecord__rmi3", curie=RAW.curie('rmi3'),
+                   model_uri=RAW.transformerRecord__rmi3, domain=None, range=Optional[float])
 
-slots.areaInterchangeRecord__pdes = Slot(uri=raw.pdes, name="areaInterchangeRecord__pdes", curie=raw.curie('pdes'),
-                   model_uri=raw.areaInterchangeRecord__pdes, domain=None, range=Optional[float])
+slots.transformerRecord__vma3 = Slot(uri=RAW.vma3, name="transformerRecord__vma3", curie=RAW.curie('vma3'),
+                   model_uri=RAW.transformerRecord__vma3, domain=None, range=Optional[float])
 
-slots.areaInterchangeRecord__ptol = Slot(uri=raw.ptol, name="areaInterchangeRecord__ptol", curie=raw.curie('ptol'),
-                   model_uri=raw.areaInterchangeRecord__ptol, domain=None, range=Optional[float])
+slots.transformerRecord__vmi3 = Slot(uri=RAW.vmi3, name="transformerRecord__vmi3", curie=RAW.curie('vmi3'),
+                   model_uri=RAW.transformerRecord__vmi3, domain=None, range=Optional[float])
 
-slots.areaInterchangeRecord__name = Slot(uri=raw.name, name="areaInterchangeRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.areaInterchangeRecord__name, domain=None, range=Optional[str])
+slots.transformerRecord__ntp3 = Slot(uri=RAW.ntp3, name="transformerRecord__ntp3", curie=RAW.curie('ntp3'),
+                   model_uri=RAW.transformerRecord__ntp3, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__name = Slot(uri=raw.name, name="twoTerminalDCRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.twoTerminalDCRecord__name, domain=None, range=URIRef)
+slots.transformerRecord__tab3 = Slot(uri=RAW.tab3, name="transformerRecord__tab3", curie=RAW.curie('tab3'),
+                   model_uri=RAW.transformerRecord__tab3, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__mdc = Slot(uri=raw.mdc, name="twoTerminalDCRecord__mdc", curie=raw.curie('mdc'),
-                   model_uri=raw.twoTerminalDCRecord__mdc, domain=None, range=Optional[int])
+slots.transformerRecord__cr3 = Slot(uri=RAW.cr3, name="transformerRecord__cr3", curie=RAW.curie('cr3'),
+                   model_uri=RAW.transformerRecord__cr3, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__rdc = Slot(uri=raw.rdc, name="twoTerminalDCRecord__rdc", curie=raw.curie('rdc'),
-                   model_uri=raw.twoTerminalDCRecord__rdc, domain=None, range=Optional[float])
+slots.transformerRecord__cx3 = Slot(uri=RAW.cx3, name="transformerRecord__cx3", curie=RAW.curie('cx3'),
+                   model_uri=RAW.transformerRecord__cx3, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__setvl = Slot(uri=raw.setvl, name="twoTerminalDCRecord__setvl", curie=raw.curie('setvl'),
-                   model_uri=raw.twoTerminalDCRecord__setvl, domain=None, range=Optional[float])
+slots.transformerRecord__cnxa3 = Slot(uri=RAW.cnxa3, name="transformerRecord__cnxa3", curie=RAW.curie('cnxa3'),
+                   model_uri=RAW.transformerRecord__cnxa3, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__vschd = Slot(uri=raw.vschd, name="twoTerminalDCRecord__vschd", curie=raw.curie('vschd'),
-                   model_uri=raw.twoTerminalDCRecord__vschd, domain=None, range=Optional[float])
+slots.transformerRecord__nod3 = Slot(uri=RAW.nod3, name="transformerRecord__nod3", curie=RAW.curie('nod3'),
+                   model_uri=RAW.transformerRecord__nod3, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__vcmod = Slot(uri=raw.vcmod, name="twoTerminalDCRecord__vcmod", curie=raw.curie('vcmod'),
-                   model_uri=raw.twoTerminalDCRecord__vcmod, domain=None, range=Optional[float])
+slots.areaInterchangeRecord__area_number = Slot(uri=RAW.area_number, name="areaInterchangeRecord__area_number", curie=RAW.curie('area_number'),
+                   model_uri=RAW.areaInterchangeRecord__area_number, domain=None, range=URIRef)
 
-slots.twoTerminalDCRecord__rcomp = Slot(uri=raw.rcomp, name="twoTerminalDCRecord__rcomp", curie=raw.curie('rcomp'),
-                   model_uri=raw.twoTerminalDCRecord__rcomp, domain=None, range=Optional[float])
+slots.areaInterchangeRecord__bus_number = Slot(uri=RAW.bus_number, name="areaInterchangeRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.areaInterchangeRecord__bus_number, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__delti = Slot(uri=raw.delti, name="twoTerminalDCRecord__delti", curie=raw.curie('delti'),
-                   model_uri=raw.twoTerminalDCRecord__delti, domain=None, range=Optional[float])
+slots.areaInterchangeRecord__pdes = Slot(uri=RAW.pdes, name="areaInterchangeRecord__pdes", curie=RAW.curie('pdes'),
+                   model_uri=RAW.areaInterchangeRecord__pdes, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__meter = Slot(uri=raw.meter, name="twoTerminalDCRecord__meter", curie=raw.curie('meter'),
-                   model_uri=raw.twoTerminalDCRecord__meter, domain=None, range=Optional[str])
+slots.areaInterchangeRecord__ptol = Slot(uri=RAW.ptol, name="areaInterchangeRecord__ptol", curie=RAW.curie('ptol'),
+                   model_uri=RAW.areaInterchangeRecord__ptol, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__dcvmin = Slot(uri=raw.dcvmin, name="twoTerminalDCRecord__dcvmin", curie=raw.curie('dcvmin'),
-                   model_uri=raw.twoTerminalDCRecord__dcvmin, domain=None, range=Optional[float])
+slots.areaInterchangeRecord__name = Slot(uri=RAW.name, name="areaInterchangeRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.areaInterchangeRecord__name, domain=None, range=Optional[str])
 
-slots.twoTerminalDCRecord__cccitmx = Slot(uri=raw.cccitmx, name="twoTerminalDCRecord__cccitmx", curie=raw.curie('cccitmx'),
-                   model_uri=raw.twoTerminalDCRecord__cccitmx, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__name = Slot(uri=RAW.name, name="twoTerminalDCRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.twoTerminalDCRecord__name, domain=None, range=URIRef)
 
-slots.twoTerminalDCRecord__cccacc = Slot(uri=raw.cccacc, name="twoTerminalDCRecord__cccacc", curie=raw.curie('cccacc'),
-                   model_uri=raw.twoTerminalDCRecord__cccacc, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__mdc = Slot(uri=RAW.mdc, name="twoTerminalDCRecord__mdc", curie=RAW.curie('mdc'),
+                   model_uri=RAW.twoTerminalDCRecord__mdc, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__ipr = Slot(uri=raw.ipr, name="twoTerminalDCRecord__ipr", curie=raw.curie('ipr'),
-                   model_uri=raw.twoTerminalDCRecord__ipr, domain=None, range=int)
+slots.twoTerminalDCRecord__rdc = Slot(uri=RAW.rdc, name="twoTerminalDCRecord__rdc", curie=RAW.curie('rdc'),
+                   model_uri=RAW.twoTerminalDCRecord__rdc, domain=None, range=float)
 
-slots.twoTerminalDCRecord__nbr = Slot(uri=raw.nbr, name="twoTerminalDCRecord__nbr", curie=raw.curie('nbr'),
-                   model_uri=raw.twoTerminalDCRecord__nbr, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__setvl = Slot(uri=RAW.setvl, name="twoTerminalDCRecord__setvl", curie=RAW.curie('setvl'),
+                   model_uri=RAW.twoTerminalDCRecord__setvl, domain=None, range=float)
 
-slots.twoTerminalDCRecord__anmxr = Slot(uri=raw.anmxr, name="twoTerminalDCRecord__anmxr", curie=raw.curie('anmxr'),
-                   model_uri=raw.twoTerminalDCRecord__anmxr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__vschd = Slot(uri=RAW.vschd, name="twoTerminalDCRecord__vschd", curie=RAW.curie('vschd'),
+                   model_uri=RAW.twoTerminalDCRecord__vschd, domain=None, range=float)
 
-slots.twoTerminalDCRecord__anmnr = Slot(uri=raw.anmnr, name="twoTerminalDCRecord__anmnr", curie=raw.curie('anmnr'),
-                   model_uri=raw.twoTerminalDCRecord__anmnr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__vcmod = Slot(uri=RAW.vcmod, name="twoTerminalDCRecord__vcmod", curie=RAW.curie('vcmod'),
+                   model_uri=RAW.twoTerminalDCRecord__vcmod, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__rcr = Slot(uri=raw.rcr, name="twoTerminalDCRecord__rcr", curie=raw.curie('rcr'),
-                   model_uri=raw.twoTerminalDCRecord__rcr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__rcomp = Slot(uri=RAW.rcomp, name="twoTerminalDCRecord__rcomp", curie=RAW.curie('rcomp'),
+                   model_uri=RAW.twoTerminalDCRecord__rcomp, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__xcr = Slot(uri=raw.xcr, name="twoTerminalDCRecord__xcr", curie=raw.curie('xcr'),
-                   model_uri=raw.twoTerminalDCRecord__xcr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__delti = Slot(uri=RAW.delti, name="twoTerminalDCRecord__delti", curie=RAW.curie('delti'),
+                   model_uri=RAW.twoTerminalDCRecord__delti, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__ebasr = Slot(uri=raw.ebasr, name="twoTerminalDCRecord__ebasr", curie=raw.curie('ebasr'),
-                   model_uri=raw.twoTerminalDCRecord__ebasr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__meter = Slot(uri=RAW.meter, name="twoTerminalDCRecord__meter", curie=RAW.curie('meter'),
+                   model_uri=RAW.twoTerminalDCRecord__meter, domain=None, range=Optional[str])
 
-slots.twoTerminalDCRecord__trr = Slot(uri=raw.trr, name="twoTerminalDCRecord__trr", curie=raw.curie('trr'),
-                   model_uri=raw.twoTerminalDCRecord__trr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__dcvmin = Slot(uri=RAW.dcvmin, name="twoTerminalDCRecord__dcvmin", curie=RAW.curie('dcvmin'),
+                   model_uri=RAW.twoTerminalDCRecord__dcvmin, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__tapr = Slot(uri=raw.tapr, name="twoTerminalDCRecord__tapr", curie=raw.curie('tapr'),
-                   model_uri=raw.twoTerminalDCRecord__tapr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__cccitmx = Slot(uri=RAW.cccitmx, name="twoTerminalDCRecord__cccitmx", curie=RAW.curie('cccitmx'),
+                   model_uri=RAW.twoTerminalDCRecord__cccitmx, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__tmxr = Slot(uri=raw.tmxr, name="twoTerminalDCRecord__tmxr", curie=raw.curie('tmxr'),
-                   model_uri=raw.twoTerminalDCRecord__tmxr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__cccacc = Slot(uri=RAW.cccacc, name="twoTerminalDCRecord__cccacc", curie=RAW.curie('cccacc'),
+                   model_uri=RAW.twoTerminalDCRecord__cccacc, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__tmnr = Slot(uri=raw.tmnr, name="twoTerminalDCRecord__tmnr", curie=raw.curie('tmnr'),
-                   model_uri=raw.twoTerminalDCRecord__tmnr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ipr = Slot(uri=RAW.ipr, name="twoTerminalDCRecord__ipr", curie=RAW.curie('ipr'),
+                   model_uri=RAW.twoTerminalDCRecord__ipr, domain=None, range=int)
 
-slots.twoTerminalDCRecord__stpr = Slot(uri=raw.stpr, name="twoTerminalDCRecord__stpr", curie=raw.curie('stpr'),
-                   model_uri=raw.twoTerminalDCRecord__stpr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__nbr = Slot(uri=RAW.nbr, name="twoTerminalDCRecord__nbr", curie=RAW.curie('nbr'),
+                   model_uri=RAW.twoTerminalDCRecord__nbr, domain=None, range=int)
 
-slots.twoTerminalDCRecord__icr = Slot(uri=raw.icr, name="twoTerminalDCRecord__icr", curie=raw.curie('icr'),
-                   model_uri=raw.twoTerminalDCRecord__icr, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__anmxr = Slot(uri=RAW.anmxr, name="twoTerminalDCRecord__anmxr", curie=RAW.curie('anmxr'),
+                   model_uri=RAW.twoTerminalDCRecord__anmxr, domain=None, range=float)
 
-slots.twoTerminalDCRecord__ifr = Slot(uri=raw.ifr, name="twoTerminalDCRecord__ifr", curie=raw.curie('ifr'),
-                   model_uri=raw.twoTerminalDCRecord__ifr, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__anmnr = Slot(uri=RAW.anmnr, name="twoTerminalDCRecord__anmnr", curie=RAW.curie('anmnr'),
+                   model_uri=RAW.twoTerminalDCRecord__anmnr, domain=None, range=float)
 
-slots.twoTerminalDCRecord__itr = Slot(uri=raw.itr, name="twoTerminalDCRecord__itr", curie=raw.curie('itr'),
-                   model_uri=raw.twoTerminalDCRecord__itr, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__rcr = Slot(uri=RAW.rcr, name="twoTerminalDCRecord__rcr", curie=RAW.curie('rcr'),
+                   model_uri=RAW.twoTerminalDCRecord__rcr, domain=None, range=float)
 
-slots.twoTerminalDCRecord__idr = Slot(uri=raw.idr, name="twoTerminalDCRecord__idr", curie=raw.curie('idr'),
-                   model_uri=raw.twoTerminalDCRecord__idr, domain=None, range=Optional[str])
+slots.twoTerminalDCRecord__xcr = Slot(uri=RAW.xcr, name="twoTerminalDCRecord__xcr", curie=RAW.curie('xcr'),
+                   model_uri=RAW.twoTerminalDCRecord__xcr, domain=None, range=float)
 
-slots.twoTerminalDCRecord__xcapr = Slot(uri=raw.xcapr, name="twoTerminalDCRecord__xcapr", curie=raw.curie('xcapr'),
-                   model_uri=raw.twoTerminalDCRecord__xcapr, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ebasr = Slot(uri=RAW.ebasr, name="twoTerminalDCRecord__ebasr", curie=RAW.curie('ebasr'),
+                   model_uri=RAW.twoTerminalDCRecord__ebasr, domain=None, range=float)
 
-slots.twoTerminalDCRecord__ndr = Slot(uri=raw.ndr, name="twoTerminalDCRecord__ndr", curie=raw.curie('ndr'),
-                   model_uri=raw.twoTerminalDCRecord__ndr, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__trr = Slot(uri=RAW.trr, name="twoTerminalDCRecord__trr", curie=RAW.curie('trr'),
+                   model_uri=RAW.twoTerminalDCRecord__trr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__ipi = Slot(uri=raw.ipi, name="twoTerminalDCRecord__ipi", curie=raw.curie('ipi'),
-                   model_uri=raw.twoTerminalDCRecord__ipi, domain=None, range=int)
+slots.twoTerminalDCRecord__tapr = Slot(uri=RAW.tapr, name="twoTerminalDCRecord__tapr", curie=RAW.curie('tapr'),
+                   model_uri=RAW.twoTerminalDCRecord__tapr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__nbi = Slot(uri=raw.nbi, name="twoTerminalDCRecord__nbi", curie=raw.curie('nbi'),
-                   model_uri=raw.twoTerminalDCRecord__nbi, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__tmxr = Slot(uri=RAW.tmxr, name="twoTerminalDCRecord__tmxr", curie=RAW.curie('tmxr'),
+                   model_uri=RAW.twoTerminalDCRecord__tmxr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__anmxi = Slot(uri=raw.anmxi, name="twoTerminalDCRecord__anmxi", curie=raw.curie('anmxi'),
-                   model_uri=raw.twoTerminalDCRecord__anmxi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__tmnr = Slot(uri=RAW.tmnr, name="twoTerminalDCRecord__tmnr", curie=RAW.curie('tmnr'),
+                   model_uri=RAW.twoTerminalDCRecord__tmnr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__anmni = Slot(uri=raw.anmni, name="twoTerminalDCRecord__anmni", curie=raw.curie('anmni'),
-                   model_uri=raw.twoTerminalDCRecord__anmni, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__stpr = Slot(uri=RAW.stpr, name="twoTerminalDCRecord__stpr", curie=RAW.curie('stpr'),
+                   model_uri=RAW.twoTerminalDCRecord__stpr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__rci = Slot(uri=raw.rci, name="twoTerminalDCRecord__rci", curie=raw.curie('rci'),
-                   model_uri=raw.twoTerminalDCRecord__rci, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__icr = Slot(uri=RAW.icr, name="twoTerminalDCRecord__icr", curie=RAW.curie('icr'),
+                   model_uri=RAW.twoTerminalDCRecord__icr, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__xci = Slot(uri=raw.xci, name="twoTerminalDCRecord__xci", curie=raw.curie('xci'),
-                   model_uri=raw.twoTerminalDCRecord__xci, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ifr = Slot(uri=RAW.ifr, name="twoTerminalDCRecord__ifr", curie=RAW.curie('ifr'),
+                   model_uri=RAW.twoTerminalDCRecord__ifr, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__ebasi = Slot(uri=raw.ebasi, name="twoTerminalDCRecord__ebasi", curie=raw.curie('ebasi'),
-                   model_uri=raw.twoTerminalDCRecord__ebasi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__itr = Slot(uri=RAW.itr, name="twoTerminalDCRecord__itr", curie=RAW.curie('itr'),
+                   model_uri=RAW.twoTerminalDCRecord__itr, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__tri = Slot(uri=raw.tri, name="twoTerminalDCRecord__tri", curie=raw.curie('tri'),
-                   model_uri=raw.twoTerminalDCRecord__tri, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__idr = Slot(uri=RAW.idr, name="twoTerminalDCRecord__idr", curie=RAW.curie('idr'),
+                   model_uri=RAW.twoTerminalDCRecord__idr, domain=None, range=Optional[str])
 
-slots.twoTerminalDCRecord__tapi = Slot(uri=raw.tapi, name="twoTerminalDCRecord__tapi", curie=raw.curie('tapi'),
-                   model_uri=raw.twoTerminalDCRecord__tapi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__xcapr = Slot(uri=RAW.xcapr, name="twoTerminalDCRecord__xcapr", curie=RAW.curie('xcapr'),
+                   model_uri=RAW.twoTerminalDCRecord__xcapr, domain=None, range=Optional[float])
 
-slots.twoTerminalDCRecord__tmxi = Slot(uri=raw.tmxi, name="twoTerminalDCRecord__tmxi", curie=raw.curie('tmxi'),
-                   model_uri=raw.twoTerminalDCRecord__tmxi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ndr = Slot(uri=RAW.ndr, name="twoTerminalDCRecord__ndr", curie=RAW.curie('ndr'),
+                   model_uri=RAW.twoTerminalDCRecord__ndr, domain=None, range=Optional[int])
 
-slots.twoTerminalDCRecord__tmni = Slot(uri=raw.tmni, name="twoTerminalDCRecord__tmni", curie=raw.curie('tmni'),
-                   model_uri=raw.twoTerminalDCRecord__tmni, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ipi = Slot(uri=RAW.ipi, name="twoTerminalDCRecord__ipi", curie=RAW.curie('ipi'),
+                   model_uri=RAW.twoTerminalDCRecord__ipi, domain=None, range=int)
 
-slots.twoTerminalDCRecord__stpi = Slot(uri=raw.stpi, name="twoTerminalDCRecord__stpi", curie=raw.curie('stpi'),
-                   model_uri=raw.twoTerminalDCRecord__stpi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__nbi = Slot(uri=RAW.nbi, name="twoTerminalDCRecord__nbi", curie=RAW.curie('nbi'),
+                   model_uri=RAW.twoTerminalDCRecord__nbi, domain=None, range=int)
 
-slots.twoTerminalDCRecord__ici = Slot(uri=raw.ici, name="twoTerminalDCRecord__ici", curie=raw.curie('ici'),
-                   model_uri=raw.twoTerminalDCRecord__ici, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__anmxi = Slot(uri=RAW.anmxi, name="twoTerminalDCRecord__anmxi", curie=RAW.curie('anmxi'),
+                   model_uri=RAW.twoTerminalDCRecord__anmxi, domain=None, range=float)
 
-slots.twoTerminalDCRecord__ifi = Slot(uri=raw.ifi, name="twoTerminalDCRecord__ifi", curie=raw.curie('ifi'),
-                   model_uri=raw.twoTerminalDCRecord__ifi, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__anmni = Slot(uri=RAW.anmni, name="twoTerminalDCRecord__anmni", curie=RAW.curie('anmni'),
+                   model_uri=RAW.twoTerminalDCRecord__anmni, domain=None, range=float)
 
-slots.twoTerminalDCRecord__iti = Slot(uri=raw.iti, name="twoTerminalDCRecord__iti", curie=raw.curie('iti'),
-                   model_uri=raw.twoTerminalDCRecord__iti, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__rci = Slot(uri=RAW.rci, name="twoTerminalDCRecord__rci", curie=RAW.curie('rci'),
+                   model_uri=RAW.twoTerminalDCRecord__rci, domain=None, range=float)
 
-slots.twoTerminalDCRecord__idi = Slot(uri=raw.idi, name="twoTerminalDCRecord__idi", curie=raw.curie('idi'),
-                   model_uri=raw.twoTerminalDCRecord__idi, domain=None, range=Optional[str])
+slots.twoTerminalDCRecord__xci = Slot(uri=RAW.xci, name="twoTerminalDCRecord__xci", curie=RAW.curie('xci'),
+                   model_uri=RAW.twoTerminalDCRecord__xci, domain=None, range=float)
 
-slots.twoTerminalDCRecord__xcapi = Slot(uri=raw.xcapi, name="twoTerminalDCRecord__xcapi", curie=raw.curie('xcapi'),
-                   model_uri=raw.twoTerminalDCRecord__xcapi, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ebasi = Slot(uri=RAW.ebasi, name="twoTerminalDCRecord__ebasi", curie=RAW.curie('ebasi'),
+                   model_uri=RAW.twoTerminalDCRecord__ebasi, domain=None, range=float)
 
-slots.twoTerminalDCRecord__ndi = Slot(uri=raw.ndi, name="twoTerminalDCRecord__ndi", curie=raw.curie('ndi'),
-                   model_uri=raw.twoTerminalDCRecord__ndi, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__tri = Slot(uri=RAW.tri, name="twoTerminalDCRecord__tri", curie=RAW.curie('tri'),
+                   model_uri=RAW.twoTerminalDCRecord__tri, domain=None, range=Optional[float])
 
-slots.vscDcRecord__name = Slot(uri=raw.name, name="vscDcRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.vscDcRecord__name, domain=None, range=str)
+slots.twoTerminalDCRecord__tapi = Slot(uri=RAW.tapi, name="twoTerminalDCRecord__tapi", curie=RAW.curie('tapi'),
+                   model_uri=RAW.twoTerminalDCRecord__tapi, domain=None, range=Optional[float])
 
-slots.vscDcRecord__mdc = Slot(uri=raw.mdc, name="vscDcRecord__mdc", curie=raw.curie('mdc'),
-                   model_uri=raw.vscDcRecord__mdc, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__tmxi = Slot(uri=RAW.tmxi, name="twoTerminalDCRecord__tmxi", curie=RAW.curie('tmxi'),
+                   model_uri=RAW.twoTerminalDCRecord__tmxi, domain=None, range=Optional[float])
 
-slots.vscDcRecord__rdc = Slot(uri=raw.rdc, name="vscDcRecord__rdc", curie=raw.curie('rdc'),
-                   model_uri=raw.vscDcRecord__rdc, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__tmni = Slot(uri=RAW.tmni, name="twoTerminalDCRecord__tmni", curie=RAW.curie('tmni'),
+                   model_uri=RAW.twoTerminalDCRecord__tmni, domain=None, range=Optional[float])
 
-slots.vscDcRecord__o1 = Slot(uri=raw.o1, name="vscDcRecord__o1", curie=raw.curie('o1'),
-                   model_uri=raw.vscDcRecord__o1, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__stpi = Slot(uri=RAW.stpi, name="twoTerminalDCRecord__stpi", curie=RAW.curie('stpi'),
+                   model_uri=RAW.twoTerminalDCRecord__stpi, domain=None, range=Optional[float])
 
-slots.vscDcRecord__f1 = Slot(uri=raw.f1, name="vscDcRecord__f1", curie=raw.curie('f1'),
-                   model_uri=raw.vscDcRecord__f1, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__ici = Slot(uri=RAW.ici, name="twoTerminalDCRecord__ici", curie=RAW.curie('ici'),
+                   model_uri=RAW.twoTerminalDCRecord__ici, domain=None, range=Optional[int])
 
-slots.vscDcRecord__o2 = Slot(uri=raw.o2, name="vscDcRecord__o2", curie=raw.curie('o2'),
-                   model_uri=raw.vscDcRecord__o2, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__ifi = Slot(uri=RAW.ifi, name="twoTerminalDCRecord__ifi", curie=RAW.curie('ifi'),
+                   model_uri=RAW.twoTerminalDCRecord__ifi, domain=None, range=Optional[int])
 
-slots.vscDcRecord__f2 = Slot(uri=raw.f2, name="vscDcRecord__f2", curie=raw.curie('f2'),
-                   model_uri=raw.vscDcRecord__f2, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__iti = Slot(uri=RAW.iti, name="twoTerminalDCRecord__iti", curie=RAW.curie('iti'),
+                   model_uri=RAW.twoTerminalDCRecord__iti, domain=None, range=Optional[int])
 
-slots.vscDcRecord__o3 = Slot(uri=raw.o3, name="vscDcRecord__o3", curie=raw.curie('o3'),
-                   model_uri=raw.vscDcRecord__o3, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__idi = Slot(uri=RAW.idi, name="twoTerminalDCRecord__idi", curie=RAW.curie('idi'),
+                   model_uri=RAW.twoTerminalDCRecord__idi, domain=None, range=Optional[str])
 
-slots.vscDcRecord__f3 = Slot(uri=raw.f3, name="vscDcRecord__f3", curie=raw.curie('f3'),
-                   model_uri=raw.vscDcRecord__f3, domain=None, range=Optional[float])
+slots.twoTerminalDCRecord__xcapi = Slot(uri=RAW.xcapi, name="twoTerminalDCRecord__xcapi", curie=RAW.curie('xcapi'),
+                   model_uri=RAW.twoTerminalDCRecord__xcapi, domain=None, range=Optional[float])
 
-slots.vscDcRecord__o4 = Slot(uri=raw.o4, name="vscDcRecord__o4", curie=raw.curie('o4'),
-                   model_uri=raw.vscDcRecord__o4, domain=None, range=Optional[int])
+slots.twoTerminalDCRecord__ndi = Slot(uri=RAW.ndi, name="twoTerminalDCRecord__ndi", curie=RAW.curie('ndi'),
+                   model_uri=RAW.twoTerminalDCRecord__ndi, domain=None, range=Optional[int])
 
-slots.vscDcRecord__f4 = Slot(uri=raw.f4, name="vscDcRecord__f4", curie=raw.curie('f4'),
-                   model_uri=raw.vscDcRecord__f4, domain=None, range=Optional[float])
+slots.vscDcRecord__name = Slot(uri=RAW.name, name="vscDcRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.vscDcRecord__name, domain=None, range=str)
 
-slots.vscDcRecord__ibus = Slot(uri=raw.ibus, name="vscDcRecord__ibus", curie=raw.curie('ibus'),
-                   model_uri=raw.vscDcRecord__ibus, domain=None, range=int)
+slots.vscDcRecord__mdc = Slot(uri=RAW.mdc, name="vscDcRecord__mdc", curie=RAW.curie('mdc'),
+                   model_uri=RAW.vscDcRecord__mdc, domain=None, range=Optional[int])
 
-slots.vscDcRecord__converter_type = Slot(uri=raw.converter_type, name="vscDcRecord__converter_type", curie=raw.curie('converter_type'),
-                   model_uri=raw.vscDcRecord__converter_type, domain=None, range=Optional[int])
+slots.vscDcRecord__rdc = Slot(uri=RAW.rdc, name="vscDcRecord__rdc", curie=RAW.curie('rdc'),
+                   model_uri=RAW.vscDcRecord__rdc, domain=None, range=float)
 
-slots.vscDcRecord__mode = Slot(uri=raw.mode, name="vscDcRecord__mode", curie=raw.curie('mode'),
-                   model_uri=raw.vscDcRecord__mode, domain=None, range=Optional[int])
+slots.vscDcRecord__o1 = Slot(uri=RAW.o1, name="vscDcRecord__o1", curie=RAW.curie('o1'),
+                   model_uri=RAW.vscDcRecord__o1, domain=None, range=Optional[int])
 
-slots.vscDcRecord__dcset = Slot(uri=raw.dcset, name="vscDcRecord__dcset", curie=raw.curie('dcset'),
-                   model_uri=raw.vscDcRecord__dcset, domain=None, range=Optional[float])
+slots.vscDcRecord__f1 = Slot(uri=RAW.f1, name="vscDcRecord__f1", curie=RAW.curie('f1'),
+                   model_uri=RAW.vscDcRecord__f1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__acset = Slot(uri=raw.acset, name="vscDcRecord__acset", curie=raw.curie('acset'),
-                   model_uri=raw.vscDcRecord__acset, domain=None, range=Optional[float])
+slots.vscDcRecord__o2 = Slot(uri=RAW.o2, name="vscDcRecord__o2", curie=RAW.curie('o2'),
+                   model_uri=RAW.vscDcRecord__o2, domain=None, range=Optional[int])
 
-slots.vscDcRecord__aloss = Slot(uri=raw.aloss, name="vscDcRecord__aloss", curie=raw.curie('aloss'),
-                   model_uri=raw.vscDcRecord__aloss, domain=None, range=Optional[float])
+slots.vscDcRecord__f2 = Slot(uri=RAW.f2, name="vscDcRecord__f2", curie=RAW.curie('f2'),
+                   model_uri=RAW.vscDcRecord__f2, domain=None, range=Optional[float])
 
-slots.vscDcRecord__bloss = Slot(uri=raw.bloss, name="vscDcRecord__bloss", curie=raw.curie('bloss'),
-                   model_uri=raw.vscDcRecord__bloss, domain=None, range=Optional[float])
+slots.vscDcRecord__o3 = Slot(uri=RAW.o3, name="vscDcRecord__o3", curie=RAW.curie('o3'),
+                   model_uri=RAW.vscDcRecord__o3, domain=None, range=Optional[int])
 
-slots.vscDcRecord__minloss = Slot(uri=raw.minloss, name="vscDcRecord__minloss", curie=raw.curie('minloss'),
-                   model_uri=raw.vscDcRecord__minloss, domain=None, range=Optional[float])
+slots.vscDcRecord__f3 = Slot(uri=RAW.f3, name="vscDcRecord__f3", curie=RAW.curie('f3'),
+                   model_uri=RAW.vscDcRecord__f3, domain=None, range=Optional[float])
 
-slots.vscDcRecord__smax = Slot(uri=raw.smax, name="vscDcRecord__smax", curie=raw.curie('smax'),
-                   model_uri=raw.vscDcRecord__smax, domain=None, range=Optional[float])
+slots.vscDcRecord__o4 = Slot(uri=RAW.o4, name="vscDcRecord__o4", curie=RAW.curie('o4'),
+                   model_uri=RAW.vscDcRecord__o4, domain=None, range=Optional[int])
 
-slots.vscDcRecord__imax = Slot(uri=raw.imax, name="vscDcRecord__imax", curie=raw.curie('imax'),
-                   model_uri=raw.vscDcRecord__imax, domain=None, range=Optional[float])
+slots.vscDcRecord__f4 = Slot(uri=RAW.f4, name="vscDcRecord__f4", curie=RAW.curie('f4'),
+                   model_uri=RAW.vscDcRecord__f4, domain=None, range=Optional[float])
 
-slots.vscDcRecord__pwf = Slot(uri=raw.pwf, name="vscDcRecord__pwf", curie=raw.curie('pwf'),
-                   model_uri=raw.vscDcRecord__pwf, domain=None, range=Optional[float])
+slots.vscDcRecord__ibus = Slot(uri=RAW.ibus, name="vscDcRecord__ibus", curie=RAW.curie('ibus'),
+                   model_uri=RAW.vscDcRecord__ibus, domain=None, range=int)
 
-slots.vscDcRecord__maxq = Slot(uri=raw.maxq, name="vscDcRecord__maxq", curie=raw.curie('maxq'),
-                   model_uri=raw.vscDcRecord__maxq, domain=None, range=Optional[float])
+slots.vscDcRecord__converter_type = Slot(uri=RAW.converter_type, name="vscDcRecord__converter_type", curie=RAW.curie('converter_type'),
+                   model_uri=RAW.vscDcRecord__converter_type, domain=None, range=int)
 
-slots.vscDcRecord__minq = Slot(uri=raw.minq, name="vscDcRecord__minq", curie=raw.curie('minq'),
-                   model_uri=raw.vscDcRecord__minq, domain=None, range=Optional[float])
+slots.vscDcRecord__mode = Slot(uri=RAW.mode, name="vscDcRecord__mode", curie=RAW.curie('mode'),
+                   model_uri=RAW.vscDcRecord__mode, domain=None, range=Optional[int])
 
-slots.vscDcRecord__vsreg = Slot(uri=raw.vsreg, name="vscDcRecord__vsreg", curie=raw.curie('vsreg'),
-                   model_uri=raw.vscDcRecord__vsreg, domain=None, range=Optional[int])
+slots.vscDcRecord__dcset = Slot(uri=RAW.dcset, name="vscDcRecord__dcset", curie=RAW.curie('dcset'),
+                   model_uri=RAW.vscDcRecord__dcset, domain=None, range=float)
 
-slots.vscDcRecord__rmpct = Slot(uri=raw.rmpct, name="vscDcRecord__rmpct", curie=raw.curie('rmpct'),
-                   model_uri=raw.vscDcRecord__rmpct, domain=None, range=Optional[float])
+slots.vscDcRecord__acset = Slot(uri=RAW.acset, name="vscDcRecord__acset", curie=RAW.curie('acset'),
+                   model_uri=RAW.vscDcRecord__acset, domain=None, range=Optional[float])
 
-slots.vscDcRecord__nreg = Slot(uri=raw.nreg, name="vscDcRecord__nreg", curie=raw.curie('nreg'),
-                   model_uri=raw.vscDcRecord__nreg, domain=None, range=Optional[int])
+slots.vscDcRecord__aloss = Slot(uri=RAW.aloss, name="vscDcRecord__aloss", curie=RAW.curie('aloss'),
+                   model_uri=RAW.vscDcRecord__aloss, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__table_number = Slot(uri=raw.table_number, name="impedanceCorrectionRecord__table_number", curie=raw.curie('table_number'),
-                   model_uri=raw.impedanceCorrectionRecord__table_number, domain=None, range=URIRef)
+slots.vscDcRecord__bloss = Slot(uri=RAW.bloss, name="vscDcRecord__bloss", curie=RAW.curie('bloss'),
+                   model_uri=RAW.vscDcRecord__bloss, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t1 = Slot(uri=raw.t1, name="impedanceCorrectionRecord__t1", curie=raw.curie('t1'),
-                   model_uri=raw.impedanceCorrectionRecord__t1, domain=None, range=Optional[float])
+slots.vscDcRecord__minloss = Slot(uri=RAW.minloss, name="vscDcRecord__minloss", curie=RAW.curie('minloss'),
+                   model_uri=RAW.vscDcRecord__minloss, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f1_real = Slot(uri=raw.f1_real, name="impedanceCorrectionRecord__f1_real", curie=raw.curie('f1_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f1_real, domain=None, range=Optional[float])
+slots.vscDcRecord__smax = Slot(uri=RAW.smax, name="vscDcRecord__smax", curie=RAW.curie('smax'),
+                   model_uri=RAW.vscDcRecord__smax, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f1_imag = Slot(uri=raw.f1_imag, name="impedanceCorrectionRecord__f1_imag", curie=raw.curie('f1_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f1_imag, domain=None, range=Optional[float])
+slots.vscDcRecord__imax = Slot(uri=RAW.imax, name="vscDcRecord__imax", curie=RAW.curie('imax'),
+                   model_uri=RAW.vscDcRecord__imax, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t2 = Slot(uri=raw.t2, name="impedanceCorrectionRecord__t2", curie=raw.curie('t2'),
-                   model_uri=raw.impedanceCorrectionRecord__t2, domain=None, range=Optional[float])
+slots.vscDcRecord__pwf = Slot(uri=RAW.pwf, name="vscDcRecord__pwf", curie=RAW.curie('pwf'),
+                   model_uri=RAW.vscDcRecord__pwf, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f2_real = Slot(uri=raw.f2_real, name="impedanceCorrectionRecord__f2_real", curie=raw.curie('f2_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f2_real, domain=None, range=Optional[float])
+slots.vscDcRecord__maxq = Slot(uri=RAW.maxq, name="vscDcRecord__maxq", curie=RAW.curie('maxq'),
+                   model_uri=RAW.vscDcRecord__maxq, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f2_imag = Slot(uri=raw.f2_imag, name="impedanceCorrectionRecord__f2_imag", curie=raw.curie('f2_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f2_imag, domain=None, range=Optional[float])
+slots.vscDcRecord__minq = Slot(uri=RAW.minq, name="vscDcRecord__minq", curie=RAW.curie('minq'),
+                   model_uri=RAW.vscDcRecord__minq, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t3 = Slot(uri=raw.t3, name="impedanceCorrectionRecord__t3", curie=raw.curie('t3'),
-                   model_uri=raw.impedanceCorrectionRecord__t3, domain=None, range=Optional[float])
+slots.vscDcRecord__vsreg = Slot(uri=RAW.vsreg, name="vscDcRecord__vsreg", curie=RAW.curie('vsreg'),
+                   model_uri=RAW.vscDcRecord__vsreg, domain=None, range=Optional[int])
 
-slots.impedanceCorrectionRecord__f3_real = Slot(uri=raw.f3_real, name="impedanceCorrectionRecord__f3_real", curie=raw.curie('f3_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f3_real, domain=None, range=Optional[float])
+slots.vscDcRecord__rmpct = Slot(uri=RAW.rmpct, name="vscDcRecord__rmpct", curie=RAW.curie('rmpct'),
+                   model_uri=RAW.vscDcRecord__rmpct, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f3_imag = Slot(uri=raw.f3_imag, name="impedanceCorrectionRecord__f3_imag", curie=raw.curie('f3_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f3_imag, domain=None, range=Optional[float])
+slots.vscDcRecord__nreg = Slot(uri=RAW.nreg, name="vscDcRecord__nreg", curie=RAW.curie('nreg'),
+                   model_uri=RAW.vscDcRecord__nreg, domain=None, range=Optional[int])
 
-slots.impedanceCorrectionRecord__t4 = Slot(uri=raw.t4, name="impedanceCorrectionRecord__t4", curie=raw.curie('t4'),
-                   model_uri=raw.impedanceCorrectionRecord__t4, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__table_number = Slot(uri=RAW.table_number, name="impedanceCorrectionRecord__table_number", curie=RAW.curie('table_number'),
+                   model_uri=RAW.impedanceCorrectionRecord__table_number, domain=None, range=URIRef)
 
-slots.impedanceCorrectionRecord__f4_real = Slot(uri=raw.f4_real, name="impedanceCorrectionRecord__f4_real", curie=raw.curie('f4_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f4_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t1 = Slot(uri=RAW.t1, name="impedanceCorrectionRecord__t1", curie=RAW.curie('t1'),
+                   model_uri=RAW.impedanceCorrectionRecord__t1, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f4_imag = Slot(uri=raw.f4_imag, name="impedanceCorrectionRecord__f4_imag", curie=raw.curie('f4_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f4_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f1_real = Slot(uri=RAW.f1_real, name="impedanceCorrectionRecord__f1_real", curie=RAW.curie('f1_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f1_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t5 = Slot(uri=raw.t5, name="impedanceCorrectionRecord__t5", curie=raw.curie('t5'),
-                   model_uri=raw.impedanceCorrectionRecord__t5, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f1_imag = Slot(uri=RAW.f1_imag, name="impedanceCorrectionRecord__f1_imag", curie=RAW.curie('f1_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f1_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f5_real = Slot(uri=raw.f5_real, name="impedanceCorrectionRecord__f5_real", curie=raw.curie('f5_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f5_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t2 = Slot(uri=RAW.t2, name="impedanceCorrectionRecord__t2", curie=RAW.curie('t2'),
+                   model_uri=RAW.impedanceCorrectionRecord__t2, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f5_imag = Slot(uri=raw.f5_imag, name="impedanceCorrectionRecord__f5_imag", curie=raw.curie('f5_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f5_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f2_real = Slot(uri=RAW.f2_real, name="impedanceCorrectionRecord__f2_real", curie=RAW.curie('f2_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f2_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t6 = Slot(uri=raw.t6, name="impedanceCorrectionRecord__t6", curie=raw.curie('t6'),
-                   model_uri=raw.impedanceCorrectionRecord__t6, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f2_imag = Slot(uri=RAW.f2_imag, name="impedanceCorrectionRecord__f2_imag", curie=RAW.curie('f2_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f2_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f6_real = Slot(uri=raw.f6_real, name="impedanceCorrectionRecord__f6_real", curie=raw.curie('f6_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f6_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t3 = Slot(uri=RAW.t3, name="impedanceCorrectionRecord__t3", curie=RAW.curie('t3'),
+                   model_uri=RAW.impedanceCorrectionRecord__t3, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f6_imag = Slot(uri=raw.f6_imag, name="impedanceCorrectionRecord__f6_imag", curie=raw.curie('f6_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f6_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f3_real = Slot(uri=RAW.f3_real, name="impedanceCorrectionRecord__f3_real", curie=RAW.curie('f3_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f3_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t7 = Slot(uri=raw.t7, name="impedanceCorrectionRecord__t7", curie=raw.curie('t7'),
-                   model_uri=raw.impedanceCorrectionRecord__t7, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f3_imag = Slot(uri=RAW.f3_imag, name="impedanceCorrectionRecord__f3_imag", curie=RAW.curie('f3_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f3_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f7_real = Slot(uri=raw.f7_real, name="impedanceCorrectionRecord__f7_real", curie=raw.curie('f7_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f7_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t4 = Slot(uri=RAW.t4, name="impedanceCorrectionRecord__t4", curie=RAW.curie('t4'),
+                   model_uri=RAW.impedanceCorrectionRecord__t4, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f7_imag = Slot(uri=raw.f7_imag, name="impedanceCorrectionRecord__f7_imag", curie=raw.curie('f7_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f7_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f4_real = Slot(uri=RAW.f4_real, name="impedanceCorrectionRecord__f4_real", curie=RAW.curie('f4_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f4_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t8 = Slot(uri=raw.t8, name="impedanceCorrectionRecord__t8", curie=raw.curie('t8'),
-                   model_uri=raw.impedanceCorrectionRecord__t8, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f4_imag = Slot(uri=RAW.f4_imag, name="impedanceCorrectionRecord__f4_imag", curie=RAW.curie('f4_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f4_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f8_real = Slot(uri=raw.f8_real, name="impedanceCorrectionRecord__f8_real", curie=raw.curie('f8_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f8_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t5 = Slot(uri=RAW.t5, name="impedanceCorrectionRecord__t5", curie=RAW.curie('t5'),
+                   model_uri=RAW.impedanceCorrectionRecord__t5, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f8_imag = Slot(uri=raw.f8_imag, name="impedanceCorrectionRecord__f8_imag", curie=raw.curie('f8_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f8_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f5_real = Slot(uri=RAW.f5_real, name="impedanceCorrectionRecord__f5_real", curie=RAW.curie('f5_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f5_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t9 = Slot(uri=raw.t9, name="impedanceCorrectionRecord__t9", curie=raw.curie('t9'),
-                   model_uri=raw.impedanceCorrectionRecord__t9, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f5_imag = Slot(uri=RAW.f5_imag, name="impedanceCorrectionRecord__f5_imag", curie=RAW.curie('f5_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f5_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f9_real = Slot(uri=raw.f9_real, name="impedanceCorrectionRecord__f9_real", curie=raw.curie('f9_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f9_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t6 = Slot(uri=RAW.t6, name="impedanceCorrectionRecord__t6", curie=RAW.curie('t6'),
+                   model_uri=RAW.impedanceCorrectionRecord__t6, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f9_imag = Slot(uri=raw.f9_imag, name="impedanceCorrectionRecord__f9_imag", curie=raw.curie('f9_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f9_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f6_real = Slot(uri=RAW.f6_real, name="impedanceCorrectionRecord__f6_real", curie=RAW.curie('f6_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f6_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t10 = Slot(uri=raw.t10, name="impedanceCorrectionRecord__t10", curie=raw.curie('t10'),
-                   model_uri=raw.impedanceCorrectionRecord__t10, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f6_imag = Slot(uri=RAW.f6_imag, name="impedanceCorrectionRecord__f6_imag", curie=RAW.curie('f6_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f6_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f10_real = Slot(uri=raw.f10_real, name="impedanceCorrectionRecord__f10_real", curie=raw.curie('f10_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f10_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t7 = Slot(uri=RAW.t7, name="impedanceCorrectionRecord__t7", curie=RAW.curie('t7'),
+                   model_uri=RAW.impedanceCorrectionRecord__t7, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f10_imag = Slot(uri=raw.f10_imag, name="impedanceCorrectionRecord__f10_imag", curie=raw.curie('f10_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f10_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f7_real = Slot(uri=RAW.f7_real, name="impedanceCorrectionRecord__f7_real", curie=RAW.curie('f7_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f7_real, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__t11 = Slot(uri=raw.t11, name="impedanceCorrectionRecord__t11", curie=raw.curie('t11'),
-                   model_uri=raw.impedanceCorrectionRecord__t11, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f7_imag = Slot(uri=RAW.f7_imag, name="impedanceCorrectionRecord__f7_imag", curie=RAW.curie('f7_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f7_imag, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f11_real = Slot(uri=raw.f11_real, name="impedanceCorrectionRecord__f11_real", curie=raw.curie('f11_real'),
-                   model_uri=raw.impedanceCorrectionRecord__f11_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t8 = Slot(uri=RAW.t8, name="impedanceCorrectionRecord__t8", curie=RAW.curie('t8'),
+                   model_uri=RAW.impedanceCorrectionRecord__t8, domain=None, range=Optional[float])
 
-slots.impedanceCorrectionRecord__f11_imag = Slot(uri=raw.f11_imag, name="impedanceCorrectionRecord__f11_imag", curie=raw.curie('f11_imag'),
-                   model_uri=raw.impedanceCorrectionRecord__f11_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f8_real = Slot(uri=RAW.f8_real, name="impedanceCorrectionRecord__f8_real", curie=RAW.curie('f8_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f8_real, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__name = Slot(uri=raw.name, name="multiTerminalDCRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.multiTerminalDCRecord__name, domain=None, range=str)
+slots.impedanceCorrectionRecord__f8_imag = Slot(uri=RAW.f8_imag, name="impedanceCorrectionRecord__f8_imag", curie=RAW.curie('f8_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f8_imag, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__nconv = Slot(uri=raw.nconv, name="multiTerminalDCRecord__nconv", curie=raw.curie('nconv'),
-                   model_uri=raw.multiTerminalDCRecord__nconv, domain=None, range=int)
+slots.impedanceCorrectionRecord__t9 = Slot(uri=RAW.t9, name="impedanceCorrectionRecord__t9", curie=RAW.curie('t9'),
+                   model_uri=RAW.impedanceCorrectionRecord__t9, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__ndcbs = Slot(uri=raw.ndcbs, name="multiTerminalDCRecord__ndcbs", curie=raw.curie('ndcbs'),
-                   model_uri=raw.multiTerminalDCRecord__ndcbs, domain=None, range=int)
+slots.impedanceCorrectionRecord__f9_real = Slot(uri=RAW.f9_real, name="impedanceCorrectionRecord__f9_real", curie=RAW.curie('f9_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f9_real, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__ndcln = Slot(uri=raw.ndcln, name="multiTerminalDCRecord__ndcln", curie=raw.curie('ndcln'),
-                   model_uri=raw.multiTerminalDCRecord__ndcln, domain=None, range=int)
+slots.impedanceCorrectionRecord__f9_imag = Slot(uri=RAW.f9_imag, name="impedanceCorrectionRecord__f9_imag", curie=RAW.curie('f9_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f9_imag, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__mdc = Slot(uri=raw.mdc, name="multiTerminalDCRecord__mdc", curie=raw.curie('mdc'),
-                   model_uri=raw.multiTerminalDCRecord__mdc, domain=None, range=Optional[int])
+slots.impedanceCorrectionRecord__t10 = Slot(uri=RAW.t10, name="impedanceCorrectionRecord__t10", curie=RAW.curie('t10'),
+                   model_uri=RAW.impedanceCorrectionRecord__t10, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__vconv = Slot(uri=raw.vconv, name="multiTerminalDCRecord__vconv", curie=raw.curie('vconv'),
-                   model_uri=raw.multiTerminalDCRecord__vconv, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f10_real = Slot(uri=RAW.f10_real, name="impedanceCorrectionRecord__f10_real", curie=RAW.curie('f10_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f10_real, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__vcmod = Slot(uri=raw.vcmod, name="multiTerminalDCRecord__vcmod", curie=raw.curie('vcmod'),
-                   model_uri=raw.multiTerminalDCRecord__vcmod, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__f10_imag = Slot(uri=RAW.f10_imag, name="impedanceCorrectionRecord__f10_imag", curie=RAW.curie('f10_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f10_imag, domain=None, range=Optional[float])
 
-slots.multiTerminalDCRecord__vconvn = Slot(uri=raw.vconvn, name="multiTerminalDCRecord__vconvn", curie=raw.curie('vconvn'),
-                   model_uri=raw.multiTerminalDCRecord__vconvn, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__t11 = Slot(uri=RAW.t11, name="impedanceCorrectionRecord__t11", curie=RAW.curie('t11'),
+                   model_uri=RAW.impedanceCorrectionRecord__t11, domain=None, range=Optional[float])
 
-slots.multiSectionLineRecord__i = Slot(uri=raw.i, name="multiSectionLineRecord__i", curie=raw.curie('i'),
-                   model_uri=raw.multiSectionLineRecord__i, domain=None, range=int)
+slots.impedanceCorrectionRecord__f11_real = Slot(uri=RAW.f11_real, name="impedanceCorrectionRecord__f11_real", curie=RAW.curie('f11_real'),
+                   model_uri=RAW.impedanceCorrectionRecord__f11_real, domain=None, range=Optional[float])
 
-slots.multiSectionLineRecord__j = Slot(uri=raw.j, name="multiSectionLineRecord__j", curie=raw.curie('j'),
-                   model_uri=raw.multiSectionLineRecord__j, domain=None, range=int)
+slots.impedanceCorrectionRecord__f11_imag = Slot(uri=RAW.f11_imag, name="impedanceCorrectionRecord__f11_imag", curie=RAW.curie('f11_imag'),
+                   model_uri=RAW.impedanceCorrectionRecord__f11_imag, domain=None, range=Optional[float])
 
-slots.multiSectionLineRecord__line_id = Slot(uri=raw.line_id, name="multiSectionLineRecord__line_id", curie=raw.curie('line_id'),
-                   model_uri=raw.multiSectionLineRecord__line_id, domain=None, range=URIRef)
+slots.multiTerminalDCRecord__name = Slot(uri=RAW.name, name="multiTerminalDCRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.multiTerminalDCRecord__name, domain=None, range=str)
 
-slots.multiSectionLineRecord__met = Slot(uri=raw.met, name="multiSectionLineRecord__met", curie=raw.curie('met'),
-                   model_uri=raw.multiSectionLineRecord__met, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__nconv = Slot(uri=RAW.nconv, name="multiTerminalDCRecord__nconv", curie=RAW.curie('nconv'),
+                   model_uri=RAW.multiTerminalDCRecord__nconv, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum1 = Slot(uri=raw.dum1, name="multiSectionLineRecord__dum1", curie=raw.curie('dum1'),
-                   model_uri=raw.multiSectionLineRecord__dum1, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__ndcbs = Slot(uri=RAW.ndcbs, name="multiTerminalDCRecord__ndcbs", curie=RAW.curie('ndcbs'),
+                   model_uri=RAW.multiTerminalDCRecord__ndcbs, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum2 = Slot(uri=raw.dum2, name="multiSectionLineRecord__dum2", curie=raw.curie('dum2'),
-                   model_uri=raw.multiSectionLineRecord__dum2, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__ndcln = Slot(uri=RAW.ndcln, name="multiTerminalDCRecord__ndcln", curie=RAW.curie('ndcln'),
+                   model_uri=RAW.multiTerminalDCRecord__ndcln, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum3 = Slot(uri=raw.dum3, name="multiSectionLineRecord__dum3", curie=raw.curie('dum3'),
-                   model_uri=raw.multiSectionLineRecord__dum3, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__mdc = Slot(uri=RAW.mdc, name="multiTerminalDCRecord__mdc", curie=RAW.curie('mdc'),
+                   model_uri=RAW.multiTerminalDCRecord__mdc, domain=None, range=Optional[int])
 
-slots.multiSectionLineRecord__dum4 = Slot(uri=raw.dum4, name="multiSectionLineRecord__dum4", curie=raw.curie('dum4'),
-                   model_uri=raw.multiSectionLineRecord__dum4, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__vconv = Slot(uri=RAW.vconv, name="multiTerminalDCRecord__vconv", curie=RAW.curie('vconv'),
+                   model_uri=RAW.multiTerminalDCRecord__vconv, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum5 = Slot(uri=raw.dum5, name="multiSectionLineRecord__dum5", curie=raw.curie('dum5'),
-                   model_uri=raw.multiSectionLineRecord__dum5, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__vcmod = Slot(uri=RAW.vcmod, name="multiTerminalDCRecord__vcmod", curie=RAW.curie('vcmod'),
+                   model_uri=RAW.multiTerminalDCRecord__vcmod, domain=None, range=Optional[float])
 
-slots.multiSectionLineRecord__dum6 = Slot(uri=raw.dum6, name="multiSectionLineRecord__dum6", curie=raw.curie('dum6'),
-                   model_uri=raw.multiSectionLineRecord__dum6, domain=None, range=Optional[int])
+slots.multiTerminalDCRecord__vconvn = Slot(uri=RAW.vconvn, name="multiTerminalDCRecord__vconvn", curie=RAW.curie('vconvn'),
+                   model_uri=RAW.multiTerminalDCRecord__vconvn, domain=None, range=Optional[int])
 
-slots.multiSectionLineRecord__dum7 = Slot(uri=raw.dum7, name="multiSectionLineRecord__dum7", curie=raw.curie('dum7'),
-                   model_uri=raw.multiSectionLineRecord__dum7, domain=None, range=Optional[int])
+slots.multiTerminalConverterRecord__ib = Slot(uri=RAW.ib, name="multiTerminalConverterRecord__ib", curie=RAW.curie('ib'),
+                   model_uri=RAW.multiTerminalConverterRecord__ib, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum8 = Slot(uri=raw.dum8, name="multiSectionLineRecord__dum8", curie=raw.curie('dum8'),
-                   model_uri=raw.multiSectionLineRecord__dum8, domain=None, range=Optional[int])
+slots.multiTerminalConverterRecord__n = Slot(uri=RAW.n, name="multiTerminalConverterRecord__n", curie=RAW.curie('n'),
+                   model_uri=RAW.multiTerminalConverterRecord__n, domain=None, range=int)
 
-slots.multiSectionLineRecord__dum9 = Slot(uri=raw.dum9, name="multiSectionLineRecord__dum9", curie=raw.curie('dum9'),
-                   model_uri=raw.multiSectionLineRecord__dum9, domain=None, range=Optional[int])
+slots.multiTerminalConverterRecord__angmx = Slot(uri=RAW.angmx, name="multiTerminalConverterRecord__angmx", curie=RAW.curie('angmx'),
+                   model_uri=RAW.multiTerminalConverterRecord__angmx, domain=None, range=float)
 
-slots.zoneRecord__zone_number = Slot(uri=raw.zone_number, name="zoneRecord__zone_number", curie=raw.curie('zone_number'),
-                   model_uri=raw.zoneRecord__zone_number, domain=None, range=URIRef)
+slots.multiTerminalConverterRecord__angmn = Slot(uri=RAW.angmn, name="multiTerminalConverterRecord__angmn", curie=RAW.curie('angmn'),
+                   model_uri=RAW.multiTerminalConverterRecord__angmn, domain=None, range=float)
 
-slots.zoneRecord__zone_name = Slot(uri=raw.zone_name, name="zoneRecord__zone_name", curie=raw.curie('zone_name'),
-                   model_uri=raw.zoneRecord__zone_name, domain=None, range=Optional[str])
+slots.multiTerminalConverterRecord__rc = Slot(uri=RAW.rc, name="multiTerminalConverterRecord__rc", curie=RAW.curie('rc'),
+                   model_uri=RAW.multiTerminalConverterRecord__rc, domain=None, range=float)
 
-slots.interareaTransferRecord__from_area = Slot(uri=raw.from_area, name="interareaTransferRecord__from_area", curie=raw.curie('from_area'),
-                   model_uri=raw.interareaTransferRecord__from_area, domain=None, range=int)
+slots.multiTerminalConverterRecord__xc = Slot(uri=RAW.xc, name="multiTerminalConverterRecord__xc", curie=RAW.curie('xc'),
+                   model_uri=RAW.multiTerminalConverterRecord__xc, domain=None, range=float)
 
-slots.interareaTransferRecord__to_area = Slot(uri=raw.to_area, name="interareaTransferRecord__to_area", curie=raw.curie('to_area'),
-                   model_uri=raw.interareaTransferRecord__to_area, domain=None, range=int)
+slots.multiTerminalConverterRecord__ebas = Slot(uri=RAW.ebas, name="multiTerminalConverterRecord__ebas", curie=RAW.curie('ebas'),
+                   model_uri=RAW.multiTerminalConverterRecord__ebas, domain=None, range=float)
 
-slots.interareaTransferRecord__transfer_id = Slot(uri=raw.transfer_id, name="interareaTransferRecord__transfer_id", curie=raw.curie('transfer_id'),
-                   model_uri=raw.interareaTransferRecord__transfer_id, domain=None, range=str)
+slots.multiTerminalConverterRecord__tr = Slot(uri=RAW.tr, name="multiTerminalConverterRecord__tr", curie=RAW.curie('tr'),
+                   model_uri=RAW.multiTerminalConverterRecord__tr, domain=None, range=Optional[float])
 
-slots.interareaTransferRecord__power_transfer = Slot(uri=raw.power_transfer, name="interareaTransferRecord__power_transfer", curie=raw.curie('power_transfer'),
-                   model_uri=raw.interareaTransferRecord__power_transfer, domain=None, range=Optional[float])
+slots.multiTerminalConverterRecord__tap = Slot(uri=RAW.tap, name="multiTerminalConverterRecord__tap", curie=RAW.curie('tap'),
+                   model_uri=RAW.multiTerminalConverterRecord__tap, domain=None, range=Optional[float])
 
-slots.ownerRecord__owner_number = Slot(uri=raw.owner_number, name="ownerRecord__owner_number", curie=raw.curie('owner_number'),
-                   model_uri=raw.ownerRecord__owner_number, domain=None, range=URIRef)
+slots.multiTerminalConverterRecord__tpmx = Slot(uri=RAW.tpmx, name="multiTerminalConverterRecord__tpmx", curie=RAW.curie('tpmx'),
+                   model_uri=RAW.multiTerminalConverterRecord__tpmx, domain=None, range=Optional[float])
 
-slots.ownerRecord__owner_name = Slot(uri=raw.owner_name, name="ownerRecord__owner_name", curie=raw.curie('owner_name'),
-                   model_uri=raw.ownerRecord__owner_name, domain=None, range=Optional[str])
+slots.multiTerminalConverterRecord__tpmn = Slot(uri=RAW.tpmn, name="multiTerminalConverterRecord__tpmn", curie=RAW.curie('tpmn'),
+                   model_uri=RAW.multiTerminalConverterRecord__tpmn, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__name = Slot(uri=raw.name, name="factsDeviceRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.factsDeviceRecord__name, domain=None, range=str)
+slots.multiTerminalConverterRecord__tstp = Slot(uri=RAW.tstp, name="multiTerminalConverterRecord__tstp", curie=RAW.curie('tstp'),
+                   model_uri=RAW.multiTerminalConverterRecord__tstp, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__ibus = Slot(uri=raw.ibus, name="factsDeviceRecord__ibus", curie=raw.curie('ibus'),
-                   model_uri=raw.factsDeviceRecord__ibus, domain=None, range=int)
+slots.multiTerminalConverterRecord__setvl = Slot(uri=RAW.setvl, name="multiTerminalConverterRecord__setvl", curie=RAW.curie('setvl'),
+                   model_uri=RAW.multiTerminalConverterRecord__setvl, domain=None, range=float)
 
-slots.factsDeviceRecord__jbus = Slot(uri=raw.jbus, name="factsDeviceRecord__jbus", curie=raw.curie('jbus'),
-                   model_uri=raw.factsDeviceRecord__jbus, domain=None, range=Optional[int])
+slots.multiTerminalConverterRecord__dcpf = Slot(uri=RAW.dcpf, name="multiTerminalConverterRecord__dcpf", curie=RAW.curie('dcpf'),
+                   model_uri=RAW.multiTerminalConverterRecord__dcpf, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__mode = Slot(uri=raw.mode, name="factsDeviceRecord__mode", curie=raw.curie('mode'),
-                   model_uri=raw.factsDeviceRecord__mode, domain=None, range=Optional[int])
+slots.multiTerminalConverterRecord__marg = Slot(uri=RAW.marg, name="multiTerminalConverterRecord__marg", curie=RAW.curie('marg'),
+                   model_uri=RAW.multiTerminalConverterRecord__marg, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__pdes = Slot(uri=raw.pdes, name="factsDeviceRecord__pdes", curie=raw.curie('pdes'),
-                   model_uri=raw.factsDeviceRecord__pdes, domain=None, range=Optional[float])
+slots.multiTerminalConverterRecord__cnvcod = Slot(uri=RAW.cnvcod, name="multiTerminalConverterRecord__cnvcod", curie=RAW.curie('cnvcod'),
+                   model_uri=RAW.multiTerminalConverterRecord__cnvcod, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__qdes = Slot(uri=raw.qdes, name="factsDeviceRecord__qdes", curie=raw.curie('qdes'),
-                   model_uri=raw.factsDeviceRecord__qdes, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__idc = Slot(uri=RAW.idc, name="multiTerminalDCBusRecord__idc", curie=RAW.curie('idc'),
+                   model_uri=RAW.multiTerminalDCBusRecord__idc, domain=None, range=int)
 
-slots.factsDeviceRecord__vset = Slot(uri=raw.vset, name="factsDeviceRecord__vset", curie=raw.curie('vset'),
-                   model_uri=raw.factsDeviceRecord__vset, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__ib = Slot(uri=RAW.ib, name="multiTerminalDCBusRecord__ib", curie=RAW.curie('ib'),
+                   model_uri=RAW.multiTerminalDCBusRecord__ib, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__shmx = Slot(uri=raw.shmx, name="factsDeviceRecord__shmx", curie=raw.curie('shmx'),
-                   model_uri=raw.factsDeviceRecord__shmx, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__area = Slot(uri=RAW.area, name="multiTerminalDCBusRecord__area", curie=RAW.curie('area'),
+                   model_uri=RAW.multiTerminalDCBusRecord__area, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__trmx = Slot(uri=raw.trmx, name="factsDeviceRecord__trmx", curie=raw.curie('trmx'),
-                   model_uri=raw.factsDeviceRecord__trmx, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__zone = Slot(uri=RAW.zone, name="multiTerminalDCBusRecord__zone", curie=RAW.curie('zone'),
+                   model_uri=RAW.multiTerminalDCBusRecord__zone, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__vtmn = Slot(uri=raw.vtmn, name="factsDeviceRecord__vtmn", curie=raw.curie('vtmn'),
-                   model_uri=raw.factsDeviceRecord__vtmn, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__dcname = Slot(uri=RAW.dcname, name="multiTerminalDCBusRecord__dcname", curie=RAW.curie('dcname'),
+                   model_uri=RAW.multiTerminalDCBusRecord__dcname, domain=None, range=Optional[str])
 
-slots.factsDeviceRecord__vtmx = Slot(uri=raw.vtmx, name="factsDeviceRecord__vtmx", curie=raw.curie('vtmx'),
-                   model_uri=raw.factsDeviceRecord__vtmx, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__idc2 = Slot(uri=RAW.idc2, name="multiTerminalDCBusRecord__idc2", curie=RAW.curie('idc2'),
+                   model_uri=RAW.multiTerminalDCBusRecord__idc2, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__vsmx = Slot(uri=raw.vsmx, name="factsDeviceRecord__vsmx", curie=raw.curie('vsmx'),
-                   model_uri=raw.factsDeviceRecord__vsmx, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__rgrnd = Slot(uri=RAW.rgrnd, name="multiTerminalDCBusRecord__rgrnd", curie=RAW.curie('rgrnd'),
+                   model_uri=RAW.multiTerminalDCBusRecord__rgrnd, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__imx = Slot(uri=raw.imx, name="factsDeviceRecord__imx", curie=raw.curie('imx'),
-                   model_uri=raw.factsDeviceRecord__imx, domain=None, range=Optional[float])
+slots.multiTerminalDCBusRecord__owner = Slot(uri=RAW.owner, name="multiTerminalDCBusRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.multiTerminalDCBusRecord__owner, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__linx = Slot(uri=raw.linx, name="factsDeviceRecord__linx", curie=raw.curie('linx'),
-                   model_uri=raw.factsDeviceRecord__linx, domain=None, range=Optional[float])
+slots.multiTerminalDCLinkRecord__idc = Slot(uri=RAW.idc, name="multiTerminalDCLinkRecord__idc", curie=RAW.curie('idc'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__idc, domain=None, range=int)
 
-slots.factsDeviceRecord__rmpct = Slot(uri=raw.rmpct, name="factsDeviceRecord__rmpct", curie=raw.curie('rmpct'),
-                   model_uri=raw.factsDeviceRecord__rmpct, domain=None, range=Optional[float])
+slots.multiTerminalDCLinkRecord__jdc = Slot(uri=RAW.jdc, name="multiTerminalDCLinkRecord__jdc", curie=RAW.curie('jdc'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__jdc, domain=None, range=int)
 
-slots.factsDeviceRecord__owner = Slot(uri=raw.owner, name="factsDeviceRecord__owner", curie=raw.curie('owner'),
-                   model_uri=raw.factsDeviceRecord__owner, domain=None, range=Optional[int])
+slots.multiTerminalDCLinkRecord__ckt = Slot(uri=RAW.ckt, name="multiTerminalDCLinkRecord__ckt", curie=RAW.curie('ckt'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__ckt, domain=None, range=Optional[str])
 
-slots.factsDeviceRecord__set1 = Slot(uri=raw.set1, name="factsDeviceRecord__set1", curie=raw.curie('set1'),
-                   model_uri=raw.factsDeviceRecord__set1, domain=None, range=Optional[float])
+slots.multiTerminalDCLinkRecord__met = Slot(uri=RAW.met, name="multiTerminalDCLinkRecord__met", curie=RAW.curie('met'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__met, domain=None, range=Optional[int])
 
-slots.factsDeviceRecord__set2 = Slot(uri=raw.set2, name="factsDeviceRecord__set2", curie=raw.curie('set2'),
-                   model_uri=raw.factsDeviceRecord__set2, domain=None, range=Optional[float])
+slots.multiTerminalDCLinkRecord__rdc = Slot(uri=RAW.rdc, name="multiTerminalDCLinkRecord__rdc", curie=RAW.curie('rdc'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__rdc, domain=None, range=float)
 
-slots.factsDeviceRecord__vsref = Slot(uri=raw.vsref, name="factsDeviceRecord__vsref", curie=raw.curie('vsref'),
-                   model_uri=raw.factsDeviceRecord__vsref, domain=None, range=Optional[int])
+slots.multiTerminalDCLinkRecord__ldc = Slot(uri=RAW.ldc, name="multiTerminalDCLinkRecord__ldc", curie=RAW.curie('ldc'),
+                   model_uri=RAW.multiTerminalDCLinkRecord__ldc, domain=None, range=Optional[float])
 
-slots.factsDeviceRecord__remot = Slot(uri=raw.remot, name="factsDeviceRecord__remot", curie=raw.curie('remot'),
-                   model_uri=raw.factsDeviceRecord__remot, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__i = Slot(uri=RAW.i, name="multiSectionLineRecord__i", curie=RAW.curie('i'),
+                   model_uri=RAW.multiSectionLineRecord__i, domain=None, range=int)
 
-slots.factsDeviceRecord__mname = Slot(uri=raw.mname, name="factsDeviceRecord__mname", curie=raw.curie('mname'),
-                   model_uri=raw.factsDeviceRecord__mname, domain=None, range=Optional[str])
+slots.multiSectionLineRecord__j = Slot(uri=RAW.j, name="multiSectionLineRecord__j", curie=RAW.curie('j'),
+                   model_uri=RAW.multiSectionLineRecord__j, domain=None, range=int)
 
-slots.factsDeviceRecord__nreg = Slot(uri=raw.nreg, name="factsDeviceRecord__nreg", curie=raw.curie('nreg'),
-                   model_uri=raw.factsDeviceRecord__nreg, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__line_id = Slot(uri=RAW.line_id, name="multiSectionLineRecord__line_id", curie=RAW.curie('line_id'),
+                   model_uri=RAW.multiSectionLineRecord__line_id, domain=None, range=URIRef)
 
-slots.switchedShuntRecord__bus_number = Slot(uri=raw.bus_number, name="switchedShuntRecord__bus_number", curie=raw.curie('bus_number'),
-                   model_uri=raw.switchedShuntRecord__bus_number, domain=None, range=int)
+slots.multiSectionLineRecord__met = Slot(uri=RAW.met, name="multiSectionLineRecord__met", curie=RAW.curie('met'),
+                   model_uri=RAW.multiSectionLineRecord__met, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__modsw = Slot(uri=raw.modsw, name="switchedShuntRecord__modsw", curie=raw.curie('modsw'),
-                   model_uri=raw.switchedShuntRecord__modsw, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__dum1 = Slot(uri=RAW.dum1, name="multiSectionLineRecord__dum1", curie=RAW.curie('dum1'),
+                   model_uri=RAW.multiSectionLineRecord__dum1, domain=None, range=int)
 
-slots.switchedShuntRecord__adjm = Slot(uri=raw.adjm, name="switchedShuntRecord__adjm", curie=raw.curie('adjm'),
-                   model_uri=raw.switchedShuntRecord__adjm, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__dum2 = Slot(uri=RAW.dum2, name="multiSectionLineRecord__dum2", curie=RAW.curie('dum2'),
+                   model_uri=RAW.multiSectionLineRecord__dum2, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__status = Slot(uri=raw.status, name="switchedShuntRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.switchedShuntRecord__status, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__dum3 = Slot(uri=RAW.dum3, name="multiSectionLineRecord__dum3", curie=RAW.curie('dum3'),
+                   model_uri=RAW.multiSectionLineRecord__dum3, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__vswhi = Slot(uri=raw.vswhi, name="switchedShuntRecord__vswhi", curie=raw.curie('vswhi'),
-                   model_uri=raw.switchedShuntRecord__vswhi, domain=None, range=Optional[float])
+slots.multiSectionLineRecord__dum4 = Slot(uri=RAW.dum4, name="multiSectionLineRecord__dum4", curie=RAW.curie('dum4'),
+                   model_uri=RAW.multiSectionLineRecord__dum4, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__vswlo = Slot(uri=raw.vswlo, name="switchedShuntRecord__vswlo", curie=raw.curie('vswlo'),
-                   model_uri=raw.switchedShuntRecord__vswlo, domain=None, range=Optional[float])
+slots.multiSectionLineRecord__dum5 = Slot(uri=RAW.dum5, name="multiSectionLineRecord__dum5", curie=RAW.curie('dum5'),
+                   model_uri=RAW.multiSectionLineRecord__dum5, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__swreg = Slot(uri=raw.swreg, name="switchedShuntRecord__swreg", curie=raw.curie('swreg'),
-                   model_uri=raw.switchedShuntRecord__swreg, domain=None, range=Optional[int])
+slots.multiSectionLineRecord__dum6 = Slot(uri=RAW.dum6, name="multiSectionLineRecord__dum6", curie=RAW.curie('dum6'),
+                   model_uri=RAW.multiSectionLineRecord__dum6, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__rmpct = Slot(uri=raw.rmpct, name="switchedShuntRecord__rmpct", curie=raw.curie('rmpct'),
-                   model_uri=raw.switchedShuntRecord__rmpct, domain=None, range=Optional[float])
+slots.multiSectionLineRecord__dum7 = Slot(uri=RAW.dum7, name="multiSectionLineRecord__dum7", curie=RAW.curie('dum7'),
+                   model_uri=RAW.multiSectionLineRecord__dum7, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__rmidnt = Slot(uri=raw.rmidnt, name="switchedShuntRecord__rmidnt", curie=raw.curie('rmidnt'),
-                   model_uri=raw.switchedShuntRecord__rmidnt, domain=None, range=Optional[str])
+slots.multiSectionLineRecord__dum8 = Slot(uri=RAW.dum8, name="multiSectionLineRecord__dum8", curie=RAW.curie('dum8'),
+                   model_uri=RAW.multiSectionLineRecord__dum8, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__binit = Slot(uri=raw.binit, name="switchedShuntRecord__binit", curie=raw.curie('binit'),
-                   model_uri=raw.switchedShuntRecord__binit, domain=None, range=Optional[float])
+slots.multiSectionLineRecord__dum9 = Slot(uri=RAW.dum9, name="multiSectionLineRecord__dum9", curie=RAW.curie('dum9'),
+                   model_uri=RAW.multiSectionLineRecord__dum9, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__n1 = Slot(uri=raw.n1, name="switchedShuntRecord__n1", curie=raw.curie('n1'),
-                   model_uri=raw.switchedShuntRecord__n1, domain=None, range=Optional[int])
+slots.zoneRecord__zone_number = Slot(uri=RAW.zone_number, name="zoneRecord__zone_number", curie=RAW.curie('zone_number'),
+                   model_uri=RAW.zoneRecord__zone_number, domain=None, range=URIRef)
 
-slots.switchedShuntRecord__b1 = Slot(uri=raw.b1, name="switchedShuntRecord__b1", curie=raw.curie('b1'),
-                   model_uri=raw.switchedShuntRecord__b1, domain=None, range=Optional[float])
+slots.zoneRecord__zone_name = Slot(uri=RAW.zone_name, name="zoneRecord__zone_name", curie=RAW.curie('zone_name'),
+                   model_uri=RAW.zoneRecord__zone_name, domain=None, range=Optional[str])
 
-slots.switchedShuntRecord__n2 = Slot(uri=raw.n2, name="switchedShuntRecord__n2", curie=raw.curie('n2'),
-                   model_uri=raw.switchedShuntRecord__n2, domain=None, range=Optional[int])
+slots.interareaTransferRecord__from_area = Slot(uri=RAW.from_area, name="interareaTransferRecord__from_area", curie=RAW.curie('from_area'),
+                   model_uri=RAW.interareaTransferRecord__from_area, domain=None, range=int)
 
-slots.switchedShuntRecord__b2 = Slot(uri=raw.b2, name="switchedShuntRecord__b2", curie=raw.curie('b2'),
-                   model_uri=raw.switchedShuntRecord__b2, domain=None, range=Optional[float])
+slots.interareaTransferRecord__to_area = Slot(uri=RAW.to_area, name="interareaTransferRecord__to_area", curie=RAW.curie('to_area'),
+                   model_uri=RAW.interareaTransferRecord__to_area, domain=None, range=int)
 
-slots.switchedShuntRecord__n3 = Slot(uri=raw.n3, name="switchedShuntRecord__n3", curie=raw.curie('n3'),
-                   model_uri=raw.switchedShuntRecord__n3, domain=None, range=Optional[int])
+slots.interareaTransferRecord__transfer_id = Slot(uri=RAW.transfer_id, name="interareaTransferRecord__transfer_id", curie=RAW.curie('transfer_id'),
+                   model_uri=RAW.interareaTransferRecord__transfer_id, domain=None, range=Optional[str])
 
-slots.switchedShuntRecord__b3 = Slot(uri=raw.b3, name="switchedShuntRecord__b3", curie=raw.curie('b3'),
-                   model_uri=raw.switchedShuntRecord__b3, domain=None, range=Optional[float])
+slots.interareaTransferRecord__power_transfer = Slot(uri=RAW.power_transfer, name="interareaTransferRecord__power_transfer", curie=RAW.curie('power_transfer'),
+                   model_uri=RAW.interareaTransferRecord__power_transfer, domain=None, range=Optional[float])
 
-slots.switchedShuntRecord__n4 = Slot(uri=raw.n4, name="switchedShuntRecord__n4", curie=raw.curie('n4'),
-                   model_uri=raw.switchedShuntRecord__n4, domain=None, range=Optional[int])
+slots.ownerRecord__owner_number = Slot(uri=RAW.owner_number, name="ownerRecord__owner_number", curie=RAW.curie('owner_number'),
+                   model_uri=RAW.ownerRecord__owner_number, domain=None, range=URIRef)
 
-slots.switchedShuntRecord__b4 = Slot(uri=raw.b4, name="switchedShuntRecord__b4", curie=raw.curie('b4'),
-                   model_uri=raw.switchedShuntRecord__b4, domain=None, range=Optional[float])
+slots.ownerRecord__owner_name = Slot(uri=RAW.owner_name, name="ownerRecord__owner_name", curie=RAW.curie('owner_name'),
+                   model_uri=RAW.ownerRecord__owner_name, domain=None, range=Optional[str])
 
-slots.switchedShuntRecord__n5 = Slot(uri=raw.n5, name="switchedShuntRecord__n5", curie=raw.curie('n5'),
-                   model_uri=raw.switchedShuntRecord__n5, domain=None, range=Optional[int])
+slots.factsDeviceRecord__name = Slot(uri=RAW.name, name="factsDeviceRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.factsDeviceRecord__name, domain=None, range=str)
 
-slots.switchedShuntRecord__b5 = Slot(uri=raw.b5, name="switchedShuntRecord__b5", curie=raw.curie('b5'),
-                   model_uri=raw.switchedShuntRecord__b5, domain=None, range=Optional[float])
+slots.factsDeviceRecord__ibus = Slot(uri=RAW.ibus, name="factsDeviceRecord__ibus", curie=RAW.curie('ibus'),
+                   model_uri=RAW.factsDeviceRecord__ibus, domain=None, range=int)
 
-slots.switchedShuntRecord__n6 = Slot(uri=raw.n6, name="switchedShuntRecord__n6", curie=raw.curie('n6'),
-                   model_uri=raw.switchedShuntRecord__n6, domain=None, range=Optional[int])
+slots.factsDeviceRecord__jbus = Slot(uri=RAW.jbus, name="factsDeviceRecord__jbus", curie=RAW.curie('jbus'),
+                   model_uri=RAW.factsDeviceRecord__jbus, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__b6 = Slot(uri=raw.b6, name="switchedShuntRecord__b6", curie=raw.curie('b6'),
-                   model_uri=raw.switchedShuntRecord__b6, domain=None, range=Optional[float])
+slots.factsDeviceRecord__mode = Slot(uri=RAW.mode, name="factsDeviceRecord__mode", curie=RAW.curie('mode'),
+                   model_uri=RAW.factsDeviceRecord__mode, domain=None, range=Optional[int])
 
-slots.switchedShuntRecord__n7 = Slot(uri=raw.n7, name="switchedShuntRecord__n7", curie=raw.curie('n7'),
-                   model_uri=raw.switchedShuntRecord__n7, domain=None, range=Optional[int])
+slots.factsDeviceRecord__pdes = Slot(uri=RAW.pdes, name="factsDeviceRecord__pdes", curie=RAW.curie('pdes'),
+                   model_uri=RAW.factsDeviceRecord__pdes, domain=None, range=Optional[float])
 
-slots.switchedShuntRecord__b7 = Slot(uri=raw.b7, name="switchedShuntRecord__b7", curie=raw.curie('b7'),
-                   model_uri=raw.switchedShuntRecord__b7, domain=None, range=Optional[float])
+slots.factsDeviceRecord__qdes = Slot(uri=RAW.qdes, name="factsDeviceRecord__qdes", curie=RAW.curie('qdes'),
+                   model_uri=RAW.factsDeviceRecord__qdes, domain=None, range=Optional[float])
 
-slots.switchedShuntRecord__n8 = Slot(uri=raw.n8, name="switchedShuntRecord__n8", curie=raw.curie('n8'),
-                   model_uri=raw.switchedShuntRecord__n8, domain=None, range=Optional[int])
+slots.factsDeviceRecord__vset = Slot(uri=RAW.vset, name="factsDeviceRecord__vset", curie=RAW.curie('vset'),
+                   model_uri=RAW.factsDeviceRecord__vset, domain=None, range=Optional[float])
 
-slots.switchedShuntRecord__b8 = Slot(uri=raw.b8, name="switchedShuntRecord__b8", curie=raw.curie('b8'),
-                   model_uri=raw.switchedShuntRecord__b8, domain=None, range=Optional[float])
+slots.factsDeviceRecord__shmx = Slot(uri=RAW.shmx, name="factsDeviceRecord__shmx", curie=RAW.curie('shmx'),
+                   model_uri=RAW.factsDeviceRecord__shmx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__name = Slot(uri=raw.name, name="gneDeviceRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.gneDeviceRecord__name, domain=None, range=str)
+slots.factsDeviceRecord__trmx = Slot(uri=RAW.trmx, name="factsDeviceRecord__trmx", curie=RAW.curie('trmx'),
+                   model_uri=RAW.factsDeviceRecord__trmx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__model = Slot(uri=raw.model, name="gneDeviceRecord__model", curie=raw.curie('model'),
-                   model_uri=raw.gneDeviceRecord__model, domain=None, range=str)
+slots.factsDeviceRecord__vtmn = Slot(uri=RAW.vtmn, name="factsDeviceRecord__vtmn", curie=RAW.curie('vtmn'),
+                   model_uri=RAW.factsDeviceRecord__vtmn, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__nterm = Slot(uri=raw.nterm, name="gneDeviceRecord__nterm", curie=raw.curie('nterm'),
-                   model_uri=raw.gneDeviceRecord__nterm, domain=None, range=int)
+slots.factsDeviceRecord__vtmx = Slot(uri=RAW.vtmx, name="factsDeviceRecord__vtmx", curie=RAW.curie('vtmx'),
+                   model_uri=RAW.factsDeviceRecord__vtmx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__bus_numbers = Slot(uri=raw.bus_numbers, name="gneDeviceRecord__bus_numbers", curie=raw.curie('bus_numbers'),
-                   model_uri=raw.gneDeviceRecord__bus_numbers, domain=None, range=Optional[Union[int, list[int]]])
+slots.factsDeviceRecord__vsmx = Slot(uri=RAW.vsmx, name="factsDeviceRecord__vsmx", curie=RAW.curie('vsmx'),
+                   model_uri=RAW.factsDeviceRecord__vsmx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__nreal = Slot(uri=raw.nreal, name="gneDeviceRecord__nreal", curie=raw.curie('nreal'),
-                   model_uri=raw.gneDeviceRecord__nreal, domain=None, range=Optional[int])
+slots.factsDeviceRecord__imx = Slot(uri=RAW.imx, name="factsDeviceRecord__imx", curie=RAW.curie('imx'),
+                   model_uri=RAW.factsDeviceRecord__imx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__nintg = Slot(uri=raw.nintg, name="gneDeviceRecord__nintg", curie=raw.curie('nintg'),
-                   model_uri=raw.gneDeviceRecord__nintg, domain=None, range=Optional[int])
+slots.factsDeviceRecord__linx = Slot(uri=RAW.linx, name="factsDeviceRecord__linx", curie=RAW.curie('linx'),
+                   model_uri=RAW.factsDeviceRecord__linx, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__nchar = Slot(uri=raw.nchar, name="gneDeviceRecord__nchar", curie=raw.curie('nchar'),
-                   model_uri=raw.gneDeviceRecord__nchar, domain=None, range=Optional[int])
+slots.factsDeviceRecord__rmpct = Slot(uri=RAW.rmpct, name="factsDeviceRecord__rmpct", curie=RAW.curie('rmpct'),
+                   model_uri=RAW.factsDeviceRecord__rmpct, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__status = Slot(uri=raw.status, name="gneDeviceRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.gneDeviceRecord__status, domain=None, range=Optional[int])
+slots.factsDeviceRecord__owner = Slot(uri=RAW.owner, name="factsDeviceRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.factsDeviceRecord__owner, domain=None, range=Optional[int])
 
-slots.gneDeviceRecord__owner = Slot(uri=raw.owner, name="gneDeviceRecord__owner", curie=raw.curie('owner'),
-                   model_uri=raw.gneDeviceRecord__owner, domain=None, range=Optional[int])
+slots.factsDeviceRecord__set1 = Slot(uri=RAW.set1, name="factsDeviceRecord__set1", curie=RAW.curie('set1'),
+                   model_uri=RAW.factsDeviceRecord__set1, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__nmetr = Slot(uri=raw.nmetr, name="gneDeviceRecord__nmetr", curie=raw.curie('nmetr'),
-                   model_uri=raw.gneDeviceRecord__nmetr, domain=None, range=Optional[int])
+slots.factsDeviceRecord__set2 = Slot(uri=RAW.set2, name="factsDeviceRecord__set2", curie=RAW.curie('set2'),
+                   model_uri=RAW.factsDeviceRecord__set2, domain=None, range=Optional[float])
 
-slots.gneDeviceRecord__real_data = Slot(uri=raw.real_data, name="gneDeviceRecord__real_data", curie=raw.curie('real_data'),
-                   model_uri=raw.gneDeviceRecord__real_data, domain=None, range=Optional[Union[float, list[float]]])
+slots.factsDeviceRecord__vsref = Slot(uri=RAW.vsref, name="factsDeviceRecord__vsref", curie=RAW.curie('vsref'),
+                   model_uri=RAW.factsDeviceRecord__vsref, domain=None, range=Optional[int])
 
-slots.gneDeviceRecord__integer_data = Slot(uri=raw.integer_data, name="gneDeviceRecord__integer_data", curie=raw.curie('integer_data'),
-                   model_uri=raw.gneDeviceRecord__integer_data, domain=None, range=Optional[Union[int, list[int]]])
+slots.factsDeviceRecord__remot = Slot(uri=RAW.remot, name="factsDeviceRecord__remot", curie=RAW.curie('remot'),
+                   model_uri=RAW.factsDeviceRecord__remot, domain=None, range=Optional[int])
 
-slots.gneDeviceRecord__character_data = Slot(uri=raw.character_data, name="gneDeviceRecord__character_data", curie=raw.curie('character_data'),
-                   model_uri=raw.gneDeviceRecord__character_data, domain=None, range=Optional[Union[str, list[str]]])
+slots.factsDeviceRecord__mname = Slot(uri=RAW.mname, name="factsDeviceRecord__mname", curie=RAW.curie('mname'),
+                   model_uri=RAW.factsDeviceRecord__mname, domain=None, range=Optional[str])
 
-slots.inductionMachineRecord__bus_id = Slot(uri=raw.bus_id, name="inductionMachineRecord__bus_id", curie=raw.curie('bus_id'),
-                   model_uri=raw.inductionMachineRecord__bus_id, domain=None, range=int)
+slots.factsDeviceRecord__nreg = Slot(uri=RAW.nreg, name="factsDeviceRecord__nreg", curie=RAW.curie('nreg'),
+                   model_uri=RAW.factsDeviceRecord__nreg, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__name = Slot(uri=raw.name, name="inductionMachineRecord__name", curie=raw.curie('name'),
-                   model_uri=raw.inductionMachineRecord__name, domain=None, range=str)
+slots.switchedShuntRecord__bus_number = Slot(uri=RAW.bus_number, name="switchedShuntRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.switchedShuntRecord__bus_number, domain=None, range=int)
 
-slots.inductionMachineRecord__status = Slot(uri=raw.status, name="inductionMachineRecord__status", curie=raw.curie('status'),
-                   model_uri=raw.inductionMachineRecord__status, domain=None, range=Optional[int])
+slots.switchedShuntRecord__modsw = Slot(uri=RAW.modsw, name="switchedShuntRecord__modsw", curie=RAW.curie('modsw'),
+                   model_uri=RAW.switchedShuntRecord__modsw, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__scode = Slot(uri=raw.scode, name="inductionMachineRecord__scode", curie=raw.curie('scode'),
-                   model_uri=raw.inductionMachineRecord__scode, domain=None, range=Optional[int])
+slots.switchedShuntRecord__adjm = Slot(uri=RAW.adjm, name="switchedShuntRecord__adjm", curie=RAW.curie('adjm'),
+                   model_uri=RAW.switchedShuntRecord__adjm, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__dcode = Slot(uri=raw.dcode, name="inductionMachineRecord__dcode", curie=raw.curie('dcode'),
-                   model_uri=raw.inductionMachineRecord__dcode, domain=None, range=Optional[int])
+slots.switchedShuntRecord__status = Slot(uri=RAW.status, name="switchedShuntRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.switchedShuntRecord__status, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__area = Slot(uri=raw.area, name="inductionMachineRecord__area", curie=raw.curie('area'),
-                   model_uri=raw.inductionMachineRecord__area, domain=None, range=Optional[int])
+slots.switchedShuntRecord__vswhi = Slot(uri=RAW.vswhi, name="switchedShuntRecord__vswhi", curie=RAW.curie('vswhi'),
+                   model_uri=RAW.switchedShuntRecord__vswhi, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__zone = Slot(uri=raw.zone, name="inductionMachineRecord__zone", curie=raw.curie('zone'),
-                   model_uri=raw.inductionMachineRecord__zone, domain=None, range=Optional[int])
+slots.switchedShuntRecord__vswlo = Slot(uri=RAW.vswlo, name="switchedShuntRecord__vswlo", curie=RAW.curie('vswlo'),
+                   model_uri=RAW.switchedShuntRecord__vswlo, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__owner = Slot(uri=raw.owner, name="inductionMachineRecord__owner", curie=raw.curie('owner'),
-                   model_uri=raw.inductionMachineRecord__owner, domain=None, range=Optional[int])
+slots.switchedShuntRecord__swreg = Slot(uri=RAW.swreg, name="switchedShuntRecord__swreg", curie=RAW.curie('swreg'),
+                   model_uri=RAW.switchedShuntRecord__swreg, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__tcode = Slot(uri=raw.tcode, name="inductionMachineRecord__tcode", curie=raw.curie('tcode'),
-                   model_uri=raw.inductionMachineRecord__tcode, domain=None, range=Optional[int])
+slots.switchedShuntRecord__rmpct = Slot(uri=RAW.rmpct, name="switchedShuntRecord__rmpct", curie=RAW.curie('rmpct'),
+                   model_uri=RAW.switchedShuntRecord__rmpct, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__bcode = Slot(uri=raw.bcode, name="inductionMachineRecord__bcode", curie=raw.curie('bcode'),
-                   model_uri=raw.inductionMachineRecord__bcode, domain=None, range=Optional[int])
+slots.switchedShuntRecord__rmidnt = Slot(uri=RAW.rmidnt, name="switchedShuntRecord__rmidnt", curie=RAW.curie('rmidnt'),
+                   model_uri=RAW.switchedShuntRecord__rmidnt, domain=None, range=Optional[str])
 
-slots.inductionMachineRecord__mbase = Slot(uri=raw.mbase, name="inductionMachineRecord__mbase", curie=raw.curie('mbase'),
-                   model_uri=raw.inductionMachineRecord__mbase, domain=None, range=Optional[float])
+slots.switchedShuntRecord__binit = Slot(uri=RAW.binit, name="switchedShuntRecord__binit", curie=RAW.curie('binit'),
+                   model_uri=RAW.switchedShuntRecord__binit, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__ratekv = Slot(uri=raw.ratekv, name="inductionMachineRecord__ratekv", curie=raw.curie('ratekv'),
-                   model_uri=raw.inductionMachineRecord__ratekv, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n1 = Slot(uri=RAW.n1, name="switchedShuntRecord__n1", curie=RAW.curie('n1'),
+                   model_uri=RAW.switchedShuntRecord__n1, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__pcode = Slot(uri=raw.pcode, name="inductionMachineRecord__pcode", curie=raw.curie('pcode'),
-                   model_uri=raw.inductionMachineRecord__pcode, domain=None, range=Optional[int])
+slots.switchedShuntRecord__b1 = Slot(uri=RAW.b1, name="switchedShuntRecord__b1", curie=RAW.curie('b1'),
+                   model_uri=RAW.switchedShuntRecord__b1, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__pset = Slot(uri=raw.pset, name="inductionMachineRecord__pset", curie=raw.curie('pset'),
-                   model_uri=raw.inductionMachineRecord__pset, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n2 = Slot(uri=RAW.n2, name="switchedShuntRecord__n2", curie=RAW.curie('n2'),
+                   model_uri=RAW.switchedShuntRecord__n2, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__h = Slot(uri=raw.h, name="inductionMachineRecord__h", curie=raw.curie('h'),
-                   model_uri=raw.inductionMachineRecord__h, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b2 = Slot(uri=RAW.b2, name="switchedShuntRecord__b2", curie=RAW.curie('b2'),
+                   model_uri=RAW.switchedShuntRecord__b2, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__a = Slot(uri=raw.a, name="inductionMachineRecord__a", curie=raw.curie('a'),
-                   model_uri=raw.inductionMachineRecord__a, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n3 = Slot(uri=RAW.n3, name="switchedShuntRecord__n3", curie=RAW.curie('n3'),
+                   model_uri=RAW.switchedShuntRecord__n3, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__b = Slot(uri=raw.b, name="inductionMachineRecord__b", curie=raw.curie('b'),
-                   model_uri=raw.inductionMachineRecord__b, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b3 = Slot(uri=RAW.b3, name="switchedShuntRecord__b3", curie=RAW.curie('b3'),
+                   model_uri=RAW.switchedShuntRecord__b3, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__d = Slot(uri=raw.d, name="inductionMachineRecord__d", curie=raw.curie('d'),
-                   model_uri=raw.inductionMachineRecord__d, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n4 = Slot(uri=RAW.n4, name="switchedShuntRecord__n4", curie=RAW.curie('n4'),
+                   model_uri=RAW.switchedShuntRecord__n4, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__e = Slot(uri=raw.e, name="inductionMachineRecord__e", curie=raw.curie('e'),
-                   model_uri=raw.inductionMachineRecord__e, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b4 = Slot(uri=RAW.b4, name="switchedShuntRecord__b4", curie=RAW.curie('b4'),
+                   model_uri=RAW.switchedShuntRecord__b4, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__ra = Slot(uri=raw.ra, name="inductionMachineRecord__ra", curie=raw.curie('ra'),
-                   model_uri=raw.inductionMachineRecord__ra, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n5 = Slot(uri=RAW.n5, name="switchedShuntRecord__n5", curie=RAW.curie('n5'),
+                   model_uri=RAW.switchedShuntRecord__n5, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__xa = Slot(uri=raw.xa, name="inductionMachineRecord__xa", curie=raw.curie('xa'),
-                   model_uri=raw.inductionMachineRecord__xa, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b5 = Slot(uri=RAW.b5, name="switchedShuntRecord__b5", curie=RAW.curie('b5'),
+                   model_uri=RAW.switchedShuntRecord__b5, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__xm = Slot(uri=raw.xm, name="inductionMachineRecord__xm", curie=raw.curie('xm'),
-                   model_uri=raw.inductionMachineRecord__xm, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n6 = Slot(uri=RAW.n6, name="switchedShuntRecord__n6", curie=RAW.curie('n6'),
+                   model_uri=RAW.switchedShuntRecord__n6, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__r1 = Slot(uri=raw.r1, name="inductionMachineRecord__r1", curie=raw.curie('r1'),
-                   model_uri=raw.inductionMachineRecord__r1, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b6 = Slot(uri=RAW.b6, name="switchedShuntRecord__b6", curie=RAW.curie('b6'),
+                   model_uri=RAW.switchedShuntRecord__b6, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__x1 = Slot(uri=raw.x1, name="inductionMachineRecord__x1", curie=raw.curie('x1'),
-                   model_uri=raw.inductionMachineRecord__x1, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n7 = Slot(uri=RAW.n7, name="switchedShuntRecord__n7", curie=RAW.curie('n7'),
+                   model_uri=RAW.switchedShuntRecord__n7, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__r2 = Slot(uri=raw.r2, name="inductionMachineRecord__r2", curie=raw.curie('r2'),
-                   model_uri=raw.inductionMachineRecord__r2, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b7 = Slot(uri=RAW.b7, name="switchedShuntRecord__b7", curie=RAW.curie('b7'),
+                   model_uri=RAW.switchedShuntRecord__b7, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__x2 = Slot(uri=raw.x2, name="inductionMachineRecord__x2", curie=raw.curie('x2'),
-                   model_uri=raw.inductionMachineRecord__x2, domain=None, range=Optional[float])
+slots.switchedShuntRecord__n8 = Slot(uri=RAW.n8, name="switchedShuntRecord__n8", curie=RAW.curie('n8'),
+                   model_uri=RAW.switchedShuntRecord__n8, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__x3 = Slot(uri=raw.x3, name="inductionMachineRecord__x3", curie=raw.curie('x3'),
-                   model_uri=raw.inductionMachineRecord__x3, domain=None, range=Optional[float])
+slots.switchedShuntRecord__b8 = Slot(uri=RAW.b8, name="switchedShuntRecord__b8", curie=RAW.curie('b8'),
+                   model_uri=RAW.switchedShuntRecord__b8, domain=None, range=Optional[float])
 
-slots.inductionMachineRecord__e1 = Slot(uri=raw.e1, name="inductionMachineRecord__e1", curie=raw.curie('e1'),
-                   model_uri=raw.inductionMachineRecord__e1, domain=None, range=Optional[float])
+slots.switchedShuntRecord__nreg = Slot(uri=RAW.nreg, name="switchedShuntRecord__nreg", curie=RAW.curie('nreg'),
+                   model_uri=RAW.switchedShuntRecord__nreg, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__se1 = Slot(uri=raw.se1, name="inductionMachineRecord__se1", curie=raw.curie('se1'),
-                   model_uri=raw.inductionMachineRecord__se1, domain=None, range=Optional[float])
+slots.gneDeviceRecord__name = Slot(uri=RAW.name, name="gneDeviceRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.gneDeviceRecord__name, domain=None, range=str)
 
-slots.inductionMachineRecord__e2 = Slot(uri=raw.e2, name="inductionMachineRecord__e2", curie=raw.curie('e2'),
-                   model_uri=raw.inductionMachineRecord__e2, domain=None, range=Optional[float])
+slots.gneDeviceRecord__model = Slot(uri=RAW.model, name="gneDeviceRecord__model", curie=RAW.curie('model'),
+                   model_uri=RAW.gneDeviceRecord__model, domain=None, range=str)
 
-slots.inductionMachineRecord__se2 = Slot(uri=raw.se2, name="inductionMachineRecord__se2", curie=raw.curie('se2'),
-                   model_uri=raw.inductionMachineRecord__se2, domain=None, range=Optional[float])
+slots.gneDeviceRecord__nterm = Slot(uri=RAW.nterm, name="gneDeviceRecord__nterm", curie=RAW.curie('nterm'),
+                   model_uri=RAW.gneDeviceRecord__nterm, domain=None, range=int)
 
-slots.inductionMachineRecord__ia1 = Slot(uri=raw.ia1, name="inductionMachineRecord__ia1", curie=raw.curie('ia1'),
-                   model_uri=raw.inductionMachineRecord__ia1, domain=None, range=Optional[float])
+slots.gneDeviceRecord__bus_numbers = Slot(uri=RAW.bus_numbers, name="gneDeviceRecord__bus_numbers", curie=RAW.curie('bus_numbers'),
+                   model_uri=RAW.gneDeviceRecord__bus_numbers, domain=None, range=Optional[Union[int, list[int]]])
 
-slots.inductionMachineRecord__ia2 = Slot(uri=raw.ia2, name="inductionMachineRecord__ia2", curie=raw.curie('ia2'),
-                   model_uri=raw.inductionMachineRecord__ia2, domain=None, range=Optional[float])
+slots.gneDeviceRecord__nreal = Slot(uri=RAW.nreal, name="gneDeviceRecord__nreal", curie=RAW.curie('nreal'),
+                   model_uri=RAW.gneDeviceRecord__nreal, domain=None, range=Optional[int])
 
-slots.inductionMachineRecord__xamult = Slot(uri=raw.xamult, name="inductionMachineRecord__xamult", curie=raw.curie('xamult'),
-                   model_uri=raw.inductionMachineRecord__xamult, domain=None, range=Optional[float])
+slots.gneDeviceRecord__nintg = Slot(uri=RAW.nintg, name="gneDeviceRecord__nintg", curie=RAW.curie('nintg'),
+                   model_uri=RAW.gneDeviceRecord__nintg, domain=None, range=Optional[int])
+
+slots.gneDeviceRecord__nchar = Slot(uri=RAW.nchar, name="gneDeviceRecord__nchar", curie=RAW.curie('nchar'),
+                   model_uri=RAW.gneDeviceRecord__nchar, domain=None, range=Optional[int])
+
+slots.gneDeviceRecord__status = Slot(uri=RAW.status, name="gneDeviceRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.gneDeviceRecord__status, domain=None, range=Optional[int])
+
+slots.gneDeviceRecord__owner = Slot(uri=RAW.owner, name="gneDeviceRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.gneDeviceRecord__owner, domain=None, range=Optional[int])
+
+slots.gneDeviceRecord__nmetr = Slot(uri=RAW.nmetr, name="gneDeviceRecord__nmetr", curie=RAW.curie('nmetr'),
+                   model_uri=RAW.gneDeviceRecord__nmetr, domain=None, range=Optional[int])
+
+slots.gneDeviceRecord__real_data = Slot(uri=RAW.real_data, name="gneDeviceRecord__real_data", curie=RAW.curie('real_data'),
+                   model_uri=RAW.gneDeviceRecord__real_data, domain=None, range=Optional[Union[float, list[float]]])
+
+slots.gneDeviceRecord__integer_data = Slot(uri=RAW.integer_data, name="gneDeviceRecord__integer_data", curie=RAW.curie('integer_data'),
+                   model_uri=RAW.gneDeviceRecord__integer_data, domain=None, range=Optional[Union[int, list[int]]])
+
+slots.gneDeviceRecord__character_data = Slot(uri=RAW.character_data, name="gneDeviceRecord__character_data", curie=RAW.curie('character_data'),
+                   model_uri=RAW.gneDeviceRecord__character_data, domain=None, range=Optional[Union[str, list[str]]])
+
+slots.inductionMachineRecord__bus_id = Slot(uri=RAW.bus_id, name="inductionMachineRecord__bus_id", curie=RAW.curie('bus_id'),
+                   model_uri=RAW.inductionMachineRecord__bus_id, domain=None, range=int)
+
+slots.inductionMachineRecord__name = Slot(uri=RAW.name, name="inductionMachineRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.inductionMachineRecord__name, domain=None, range=Optional[str])
+
+slots.inductionMachineRecord__status = Slot(uri=RAW.status, name="inductionMachineRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.inductionMachineRecord__status, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__scode = Slot(uri=RAW.scode, name="inductionMachineRecord__scode", curie=RAW.curie('scode'),
+                   model_uri=RAW.inductionMachineRecord__scode, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__dcode = Slot(uri=RAW.dcode, name="inductionMachineRecord__dcode", curie=RAW.curie('dcode'),
+                   model_uri=RAW.inductionMachineRecord__dcode, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__area = Slot(uri=RAW.area, name="inductionMachineRecord__area", curie=RAW.curie('area'),
+                   model_uri=RAW.inductionMachineRecord__area, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__zone = Slot(uri=RAW.zone, name="inductionMachineRecord__zone", curie=RAW.curie('zone'),
+                   model_uri=RAW.inductionMachineRecord__zone, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__owner = Slot(uri=RAW.owner, name="inductionMachineRecord__owner", curie=RAW.curie('owner'),
+                   model_uri=RAW.inductionMachineRecord__owner, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__tcode = Slot(uri=RAW.tcode, name="inductionMachineRecord__tcode", curie=RAW.curie('tcode'),
+                   model_uri=RAW.inductionMachineRecord__tcode, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__bcode = Slot(uri=RAW.bcode, name="inductionMachineRecord__bcode", curie=RAW.curie('bcode'),
+                   model_uri=RAW.inductionMachineRecord__bcode, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__mbase = Slot(uri=RAW.mbase, name="inductionMachineRecord__mbase", curie=RAW.curie('mbase'),
+                   model_uri=RAW.inductionMachineRecord__mbase, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__ratekv = Slot(uri=RAW.ratekv, name="inductionMachineRecord__ratekv", curie=RAW.curie('ratekv'),
+                   model_uri=RAW.inductionMachineRecord__ratekv, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__pcode = Slot(uri=RAW.pcode, name="inductionMachineRecord__pcode", curie=RAW.curie('pcode'),
+                   model_uri=RAW.inductionMachineRecord__pcode, domain=None, range=Optional[int])
+
+slots.inductionMachineRecord__pset = Slot(uri=RAW.pset, name="inductionMachineRecord__pset", curie=RAW.curie('pset'),
+                   model_uri=RAW.inductionMachineRecord__pset, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__h = Slot(uri=RAW.h, name="inductionMachineRecord__h", curie=RAW.curie('h'),
+                   model_uri=RAW.inductionMachineRecord__h, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__a = Slot(uri=RAW.a, name="inductionMachineRecord__a", curie=RAW.curie('a'),
+                   model_uri=RAW.inductionMachineRecord__a, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__b = Slot(uri=RAW.b, name="inductionMachineRecord__b", curie=RAW.curie('b'),
+                   model_uri=RAW.inductionMachineRecord__b, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__d = Slot(uri=RAW.d, name="inductionMachineRecord__d", curie=RAW.curie('d'),
+                   model_uri=RAW.inductionMachineRecord__d, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__e = Slot(uri=RAW.e, name="inductionMachineRecord__e", curie=RAW.curie('e'),
+                   model_uri=RAW.inductionMachineRecord__e, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__ra = Slot(uri=RAW.ra, name="inductionMachineRecord__ra", curie=RAW.curie('ra'),
+                   model_uri=RAW.inductionMachineRecord__ra, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__xa = Slot(uri=RAW.xa, name="inductionMachineRecord__xa", curie=RAW.curie('xa'),
+                   model_uri=RAW.inductionMachineRecord__xa, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__xm = Slot(uri=RAW.xm, name="inductionMachineRecord__xm", curie=RAW.curie('xm'),
+                   model_uri=RAW.inductionMachineRecord__xm, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__r1 = Slot(uri=RAW.r1, name="inductionMachineRecord__r1", curie=RAW.curie('r1'),
+                   model_uri=RAW.inductionMachineRecord__r1, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__x1 = Slot(uri=RAW.x1, name="inductionMachineRecord__x1", curie=RAW.curie('x1'),
+                   model_uri=RAW.inductionMachineRecord__x1, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__r2 = Slot(uri=RAW.r2, name="inductionMachineRecord__r2", curie=RAW.curie('r2'),
+                   model_uri=RAW.inductionMachineRecord__r2, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__x2 = Slot(uri=RAW.x2, name="inductionMachineRecord__x2", curie=RAW.curie('x2'),
+                   model_uri=RAW.inductionMachineRecord__x2, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__x3 = Slot(uri=RAW.x3, name="inductionMachineRecord__x3", curie=RAW.curie('x3'),
+                   model_uri=RAW.inductionMachineRecord__x3, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__e1 = Slot(uri=RAW.e1, name="inductionMachineRecord__e1", curie=RAW.curie('e1'),
+                   model_uri=RAW.inductionMachineRecord__e1, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__se1 = Slot(uri=RAW.se1, name="inductionMachineRecord__se1", curie=RAW.curie('se1'),
+                   model_uri=RAW.inductionMachineRecord__se1, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__e2 = Slot(uri=RAW.e2, name="inductionMachineRecord__e2", curie=RAW.curie('e2'),
+                   model_uri=RAW.inductionMachineRecord__e2, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__se2 = Slot(uri=RAW.se2, name="inductionMachineRecord__se2", curie=RAW.curie('se2'),
+                   model_uri=RAW.inductionMachineRecord__se2, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__ia1 = Slot(uri=RAW.ia1, name="inductionMachineRecord__ia1", curie=RAW.curie('ia1'),
+                   model_uri=RAW.inductionMachineRecord__ia1, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__ia2 = Slot(uri=RAW.ia2, name="inductionMachineRecord__ia2", curie=RAW.curie('ia2'),
+                   model_uri=RAW.inductionMachineRecord__ia2, domain=None, range=Optional[float])
+
+slots.inductionMachineRecord__xamult = Slot(uri=RAW.xamult, name="inductionMachineRecord__xamult", curie=RAW.curie('xamult'),
+                   model_uri=RAW.inductionMachineRecord__xamult, domain=None, range=Optional[float])
+
+slots.substationRecord__substation_number = Slot(uri=RAW.substation_number, name="substationRecord__substation_number", curie=RAW.curie('substation_number'),
+                   model_uri=RAW.substationRecord__substation_number, domain=None, range=URIRef)
+
+slots.substationRecord__name = Slot(uri=RAW.name, name="substationRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.substationRecord__name, domain=None, range=Optional[str])
+
+slots.substationRecord__latitude = Slot(uri=RAW.latitude, name="substationRecord__latitude", curie=RAW.curie('latitude'),
+                   model_uri=RAW.substationRecord__latitude, domain=None, range=Optional[float])
+
+slots.substationRecord__longitude = Slot(uri=RAW.longitude, name="substationRecord__longitude", curie=RAW.curie('longitude'),
+                   model_uri=RAW.substationRecord__longitude, domain=None, range=Optional[float])
+
+slots.substationRecord__grounding_resistance = Slot(uri=RAW.grounding_resistance, name="substationRecord__grounding_resistance", curie=RAW.curie('grounding_resistance'),
+                   model_uri=RAW.substationRecord__grounding_resistance, domain=None, range=Optional[float])
+
+slots.substationNodeRecord__node_number = Slot(uri=RAW.node_number, name="substationNodeRecord__node_number", curie=RAW.curie('node_number'),
+                   model_uri=RAW.substationNodeRecord__node_number, domain=None, range=int)
+
+slots.substationNodeRecord__name = Slot(uri=RAW.name, name="substationNodeRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.substationNodeRecord__name, domain=None, range=Optional[str])
+
+slots.substationNodeRecord__bus_number = Slot(uri=RAW.bus_number, name="substationNodeRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.substationNodeRecord__bus_number, domain=None, range=int)
+
+slots.substationNodeRecord__status = Slot(uri=RAW.status, name="substationNodeRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.substationNodeRecord__status, domain=None, range=Optional[int])
+
+slots.substationNodeRecord__vm = Slot(uri=RAW.vm, name="substationNodeRecord__vm", curie=RAW.curie('vm'),
+                   model_uri=RAW.substationNodeRecord__vm, domain=None, range=Optional[float])
+
+slots.substationNodeRecord__va = Slot(uri=RAW.va, name="substationNodeRecord__va", curie=RAW.curie('va'),
+                   model_uri=RAW.substationNodeRecord__va, domain=None, range=Optional[float])
+
+slots.substationNodeRecord__substation_number = Slot(uri=RAW.substation_number, name="substationNodeRecord__substation_number", curie=RAW.curie('substation_number'),
+                   model_uri=RAW.substationNodeRecord__substation_number, domain=None, range=Optional[int])
+
+slots.stationSwitchingDeviceRecord__from_node = Slot(uri=RAW.from_node, name="stationSwitchingDeviceRecord__from_node", curie=RAW.curie('from_node'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__from_node, domain=None, range=int)
+
+slots.stationSwitchingDeviceRecord__to_node = Slot(uri=RAW.to_node, name="stationSwitchingDeviceRecord__to_node", curie=RAW.curie('to_node'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__to_node, domain=None, range=int)
+
+slots.stationSwitchingDeviceRecord__circuit = Slot(uri=RAW.circuit, name="stationSwitchingDeviceRecord__circuit", curie=RAW.curie('circuit'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__circuit, domain=None, range=Optional[str])
+
+slots.stationSwitchingDeviceRecord__name = Slot(uri=RAW.name, name="stationSwitchingDeviceRecord__name", curie=RAW.curie('name'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__name, domain=None, range=Optional[str])
+
+slots.stationSwitchingDeviceRecord__device_type = Slot(uri=RAW.device_type, name="stationSwitchingDeviceRecord__device_type", curie=RAW.curie('device_type'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__device_type, domain=None, range=int)
+
+slots.stationSwitchingDeviceRecord__status = Slot(uri=RAW.status, name="stationSwitchingDeviceRecord__status", curie=RAW.curie('status'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__status, domain=None, range=Optional[int])
+
+slots.stationSwitchingDeviceRecord__normal_status = Slot(uri=RAW.normal_status, name="stationSwitchingDeviceRecord__normal_status", curie=RAW.curie('normal_status'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__normal_status, domain=None, range=Optional[int])
+
+slots.stationSwitchingDeviceRecord__reactance = Slot(uri=RAW.reactance, name="stationSwitchingDeviceRecord__reactance", curie=RAW.curie('reactance'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__reactance, domain=None, range=Optional[float])
+
+slots.stationSwitchingDeviceRecord__rate1 = Slot(uri=RAW.rate1, name="stationSwitchingDeviceRecord__rate1", curie=RAW.curie('rate1'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__rate1, domain=None, range=Optional[float])
+
+slots.stationSwitchingDeviceRecord__rate2 = Slot(uri=RAW.rate2, name="stationSwitchingDeviceRecord__rate2", curie=RAW.curie('rate2'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__rate2, domain=None, range=Optional[float])
+
+slots.stationSwitchingDeviceRecord__rate3 = Slot(uri=RAW.rate3, name="stationSwitchingDeviceRecord__rate3", curie=RAW.curie('rate3'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__rate3, domain=None, range=Optional[float])
+
+slots.stationSwitchingDeviceRecord__substation_number = Slot(uri=RAW.substation_number, name="stationSwitchingDeviceRecord__substation_number", curie=RAW.curie('substation_number'),
+                   model_uri=RAW.stationSwitchingDeviceRecord__substation_number, domain=None, range=Optional[int])
+
+slots.equipmentTerminalRecord__bus_number = Slot(uri=RAW.bus_number, name="equipmentTerminalRecord__bus_number", curie=RAW.curie('bus_number'),
+                   model_uri=RAW.equipmentTerminalRecord__bus_number, domain=None, range=int)
+
+slots.equipmentTerminalRecord__node_number = Slot(uri=RAW.node_number, name="equipmentTerminalRecord__node_number", curie=RAW.curie('node_number'),
+                   model_uri=RAW.equipmentTerminalRecord__node_number, domain=None, range=int)
+
+slots.equipmentTerminalRecord__terminal_type = Slot(uri=RAW.terminal_type, name="equipmentTerminalRecord__terminal_type", curie=RAW.curie('terminal_type'),
+                   model_uri=RAW.equipmentTerminalRecord__terminal_type, domain=None, range=str)
+
+slots.equipmentTerminalRecord__j_bus = Slot(uri=RAW.j_bus, name="equipmentTerminalRecord__j_bus", curie=RAW.curie('j_bus'),
+                   model_uri=RAW.equipmentTerminalRecord__j_bus, domain=None, range=Optional[int])
+
+slots.equipmentTerminalRecord__k_bus = Slot(uri=RAW.k_bus, name="equipmentTerminalRecord__k_bus", curie=RAW.curie('k_bus'),
+                   model_uri=RAW.equipmentTerminalRecord__k_bus, domain=None, range=Optional[int])
+
+slots.equipmentTerminalRecord__identifier = Slot(uri=RAW.identifier, name="equipmentTerminalRecord__identifier", curie=RAW.curie('identifier'),
+                   model_uri=RAW.equipmentTerminalRecord__identifier, domain=None, range=Optional[str])
+
+slots.equipmentTerminalRecord__substation_number = Slot(uri=RAW.substation_number, name="equipmentTerminalRecord__substation_number", curie=RAW.curie('substation_number'),
+                   model_uri=RAW.equipmentTerminalRecord__substation_number, domain=None, range=Optional[int])
 

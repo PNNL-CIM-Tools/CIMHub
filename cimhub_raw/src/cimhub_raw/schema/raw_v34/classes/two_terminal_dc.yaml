@@ -51,11 +51,12 @@ classes:
           order: 2
           value_type: int
           separator: ","
+          raw_default: 0
 
       rdc:
         description: RDC - DC line resistance in ohms
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -69,7 +70,7 @@ classes:
       setvl:
         description: SETVL - Current (A) or power (MW) demand
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         annotations:
           line_number: 1
@@ -81,7 +82,7 @@ classes:
       vschd:
         description: VSCHD - Scheduled compounded DC voltage in kV
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
@@ -105,6 +106,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       rcomp:
         description: RCOMP - Compounding resistance in ohms
@@ -119,9 +121,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       delti:
-        description: DELTI - Delay in minutes for tap changer
+        description: DELTI - Margin as per-unit fraction of desired DC power or current
         range: float
         required: false
         ifabsent: float(0.0)
@@ -131,6 +134,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       meter:
         description: METER - Metered end (R=rectifier, I=inverter)
@@ -145,6 +149,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "I"
 
       dcvmin:
         description: DCVMIN - Minimum compounded DC voltage in kV
@@ -159,9 +164,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       cccitmx:
-        description: CCCITMX - Iteration limit for current or power dispatch
+        description: CCCITMX - Iteration limit for capacitor commutated line Newton solution
         range: integer
         required: false
         ifabsent: int(20)
@@ -170,9 +176,10 @@ classes:
           order: 11
           value_type: int
           separator: ","
+          raw_default: 20
 
       cccacc:
-        description: CCCACC - Acceleration factor for current or power dispatch
+        description: CCCACC - Acceleration factor for capacitor commutated line Newton solution
         range: float
         required: false
         ifabsent: float(1.0)
@@ -182,6 +189,7 @@ classes:
           value_type: float
           precision: 4
           separator: ""
+          raw_default: 1.0
 
       # ==== LINE 2: Rectifier (Converter) Data ====
       ipr:
@@ -195,9 +203,9 @@ classes:
           separator: ","
 
       nbr:
-        description: NBR - Number of bridges in rectifier
+        description: NBR - Number of bridges in series (rectifier)
         range: integer
-        required: false
+        required: true
         ifabsent: int(0)
         annotations:
           line_number: 2
@@ -206,9 +214,9 @@ classes:
           separator: ","
 
       anmxr:
-        description: ANMXR - Rectifier nominal maximum alpha or gamma angle in degrees
+        description: ANMXR - Rectifier nominal maximum firing angle in degrees
         range: float
-        required: false
+        required: true
         ifabsent: float(90.0)
         unit:
           ucum_code: "deg"
@@ -220,9 +228,9 @@ classes:
           separator: ","
 
       anmnr:
-        description: ANMNR - Rectifier nominal minimum alpha or gamma angle in degrees
+        description: ANMNR - Rectifier minimum steady-state firing angle in degrees
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
@@ -234,9 +242,9 @@ classes:
           separator: ","
 
       rcr:
-        description: RCR - Rectifier commutating resistance in ohms
+        description: RCR - Rectifier commutating transformer resistance per bridge in ohms
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -248,9 +256,9 @@ classes:
           separator: ","
 
       xcr:
-        description: XCR - Rectifier commutating reactance in ohms
+        description: XCR - Rectifier commutating transformer reactance per bridge in ohms
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -262,9 +270,9 @@ classes:
           separator: ","
 
       ebasr:
-        description: EBASR - Rectifier AC base voltage in kV
+        description: EBASR - Rectifier primary base AC voltage in kV
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
@@ -286,6 +294,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       tapr:
         description: TAPR - Rectifier tap setting
@@ -298,6 +307,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       tmxr:
         description: TMXR - Rectifier maximum tap setting
@@ -310,6 +320,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.5
 
       tmnr:
         description: TMNR - Rectifier minimum tap setting
@@ -322,9 +333,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.51
 
       stpr:
-        description: STPR - Rectifier tap step size
+        description: STPR - Rectifier tap step (must be positive)
         range: float
         required: false
         ifabsent: float(0.00625)
@@ -334,9 +346,10 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.00625
 
       icr:
-        description: ICR - Rectifier reactive power (Mvar) or AC current (MW) rating
+        description: ICR - Rectifier commutating bus number (firing angle reference bus, 0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -345,9 +358,10 @@ classes:
           order: 13
           value_type: int
           separator: ","
+          raw_default: 0
 
       ifr:
-        description: IFR - Rectifier power factor flag
+        description: IFR - Rectifier transformer winding 1 side bus number (0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -356,9 +370,10 @@ classes:
           order: 14
           value_type: int
           separator: ","
+          raw_default: 0
 
       itr:
-        description: ITR - Rectifier tap adjustment flag
+        description: ITR - Rectifier transformer winding 2 side bus number (0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -367,9 +382,10 @@ classes:
           order: 15
           value_type: int
           separator: ","
+          raw_default: 0
 
       idr:
-        description: IDR - Rectifier owner identifier (1 or 2 characters)
+        description: IDR - Rectifier transformer circuit identifier
         range: string
         required: false
         ifabsent: string("1")
@@ -381,9 +397,10 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       xcapr:
-        description: XCAPR - Rectifier commutating capacitive reactance in ohms
+        description: XCAPR - Rectifier commutating capacitor reactance per bridge in ohms
         range: float
         required: false
         ifabsent: float(0.0)
@@ -395,9 +412,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       ndr:
-        description: NDR - Rectifier node number
+        description: NDR - Node number of bus ICR (0 if ICR is not in a substation)
         range: integer
         required: false
         ifabsent: int(0)
@@ -406,6 +424,7 @@ classes:
           order: 18
           value_type: int
           separator: ""
+          raw_default: 0
 
       # ==== LINE 3: Inverter (Converter) Data ====
       ipi:
@@ -419,9 +438,9 @@ classes:
           separator: ","
 
       nbi:
-        description: NBI - Number of bridges in inverter
+        description: NBI - Number of bridges in series (inverter)
         range: integer
-        required: false
+        required: true
         ifabsent: int(0)
         annotations:
           line_number: 3
@@ -430,9 +449,9 @@ classes:
           separator: ","
 
       anmxi:
-        description: ANMXI - Inverter nominal maximum alpha or gamma angle in degrees
+        description: ANMXI - Inverter nominal maximum gamma angle in degrees
         range: float
-        required: false
+        required: true
         ifabsent: float(90.0)
         unit:
           ucum_code: "deg"
@@ -444,9 +463,9 @@ classes:
           separator: ","
 
       anmni:
-        description: ANMNI - Inverter nominal minimum alpha or gamma angle in degrees
+        description: ANMNI - Inverter minimum steady-state gamma angle in degrees
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
@@ -458,9 +477,9 @@ classes:
           separator: ","
 
       rci:
-        description: RCI - Inverter commutating resistance in ohms
+        description: RCI - Inverter commutating transformer resistance per bridge in ohms
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -472,9 +491,9 @@ classes:
           separator: ","
 
       xci:
-        description: XCI - Inverter commutating reactance in ohms
+        description: XCI - Inverter commutating transformer reactance per bridge in ohms
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
@@ -486,9 +505,9 @@ classes:
           separator: ","
 
       ebasi:
-        description: EBASI - Inverter AC base voltage in kV
+        description: EBASI - Inverter primary base AC voltage in kV
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
@@ -510,6 +529,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       tapi:
         description: TAPI - Inverter tap setting
@@ -522,6 +542,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       tmxi:
         description: TMXI - Inverter maximum tap setting
@@ -534,6 +555,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.5
 
       tmni:
         description: TMNI - Inverter minimum tap setting
@@ -546,9 +568,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.51
 
       stpi:
-        description: STPI - Inverter tap step size
+        description: STPI - Inverter tap step (must be positive)
         range: float
         required: false
         ifabsent: float(0.00625)
@@ -558,9 +581,10 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.00625
 
       ici:
-        description: ICI - Inverter reactive power (Mvar) or AC current (MW) rating
+        description: ICI - Inverter commutating bus number (firing angle reference bus, 0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -569,9 +593,10 @@ classes:
           order: 13
           value_type: int
           separator: ","
+          raw_default: 0
 
       ifi:
-        description: IFI - Inverter power factor flag
+        description: IFI - Inverter transformer winding 1 side bus number (0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -580,9 +605,10 @@ classes:
           order: 14
           value_type: int
           separator: ","
+          raw_default: 0
 
       iti:
-        description: ITI - Inverter tap adjustment flag
+        description: ITI - Inverter transformer winding 2 side bus number (0=none)
         range: integer
         required: false
         ifabsent: int(0)
@@ -591,9 +617,10 @@ classes:
           order: 15
           value_type: int
           separator: ","
+          raw_default: 0
 
       idi:
-        description: IDI - Inverter owner identifier (1 or 2 characters)
+        description: IDI - Inverter transformer circuit identifier
         range: string
         required: false
         ifabsent: string("1")
@@ -605,9 +632,10 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       xcapi:
-        description: XCAPI - Inverter commutating capacitive reactance in ohms
+        description: XCAPI - Inverter commutating capacitor reactance per bridge in ohms
         range: float
         required: false
         ifabsent: float(0.0)
@@ -619,9 +647,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       ndi:
-        description: NDI - Inverter node number
+        description: NDI - Node number of bus ICI (0 if ICI is not in a substation)
         range: integer
         required: false
         ifabsent: int(0)
@@ -630,3 +659,4 @@ classes:
           order: 18
           value_type: int
           separator: ""
+          raw_default: 0

@@ -196,6 +196,39 @@ The seed reader works on the public cases but breaks I8 in these places:
 | a `.raw` extension mismatch is a warning | kept (harmless) |
 | **writer:** fixed-point `precision: 5` writes `1.00000E-7` as `0.00000`. WECC240 read → write → read loses 17 branch `R`, 1 branch `X` and 79 transformer `R1-2` (checked 2026-11-08). IEEE14 round-trips exactly | floats are written so they read back to the same value (`repr`, or E-format when fixed point would lose digits); a round-trip test on both cases |
 
+**Schema audit against the v34.9 Data Formats Reference (2026-11-08)** found these, all now in the uncommitted
+diff on top of `7bff112`. Four agents compared every power-flow record in chapter 1 with the YAML; every file was
+reviewed after, and a sample of defaults was checked against the spec text.
+- **Defaults:** 378 `raw_default` annotations plus 17 distinct `raw_default_rule`s for defaults that depend on
+  another field (WINDV on CW; RMA/RMI on CW and COD; SBASE1-2 = SBASE; O1, AREA, ZONE, OWNER = the bus's).
+  String defaults are normalized: an ID is `"1"`, a blank name is `""`.
+- **`ifabsent` that disagree with the spec,** left for R0 to delete:
+  - branch, generator and transformer F2/F3/F4: 0.0, but the spec says 1.0;
+  - induction machine DCODE 1 vs 2; A/B/D/E 0.0 vs 1.0; XM 0.0 vs 2.5; R1/X1/R2/X2 0.0 vs 999.0; E2 1.0 vs 1.2;
+  - FACTS IMX: 9999.0, but the spec says 0.0;
+  - several "no default allowed" fields that carry a default (X1-2, the two-terminal DC RDC/SETVL/VSCHD, ...).
+- **New schema:**
+  - `substation.yaml`: `SubstationRecord`, `SubstationNodeRecord`, `StationSwitchingDeviceRecord`, and one union
+    `EquipmentTerminalRecord` (I, NI, TYP, J, K, ID; the node-breaker atom writes exactly this layout);
+  - the multi-terminal DC sub-records: `MultiTerminalConverterRecord`, `MultiTerminalDCBusRecord`,
+    `MultiTerminalDCLinkRecord`;
+  - `RatingRecord` for the system-wide RATING lines;
+  - switched shunt NREG; generator NREG is now serialized (the IEEE14 header lists it).
+- **Facts fixed:** 3-winding-only transformer fields got `serialize_if: k != 0`, so a 2-winding line 4 is
+  `WINDV2, NOMV2`, as both public cases write it. The branch and switch `order` values no longer collide after the
+  12-wide RATE block. VSC units (ALOSS in kW, IMAX in A) and DC descriptions were corrected. Optional IDs now have
+  `required: false`, except the identifier slots, which `gen-python` requires.
+- **Bus references stay `integer`.** The reader resolves extended names (§3.3), so no slot holds one.
+
+R0 reader and writer work that the audit added:
+
+| is | proposed |
+|---|---|
+| the reader stores each RATING line as a string; the schema now types it `RatingRecord` | parse into `RatingRecord`s (set number, name, description) |
+| the reader builds no multi-terminal DC sub-records and no substation records | build them, driven by the header counts (NCONV, NDCBS, NDCLN) and the nested `0` terminators |
+| the writer drops a blank second title line (IEEE14 has one) and strips the leading blank of title line 1 | the two title lines are written verbatim, always two |
+| `VscDcRecord` repeats the header per converter; impedance correction is flat T1..F11, while v34 allows up to 99 points | P2 (their stubs raise until then): split into a VSC line + converter pair, and an `ImpedanceCorrectionPoint` per point |
+
 ### 4.2 Phase-2 stubs (R0)
 
 `importer/cimtbl/<table>.py` for each phase-2 table holds `NATIVE_CLASS`, a docstring that names the target CIM

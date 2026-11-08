@@ -38,7 +38,7 @@ classes:
       circuit:
         description: CKT - Circuit identifier
         range: string
-        required: true
+        required: false
         ifabsent: string("1 ")
         annotations:
           order: 3
@@ -47,6 +47,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       r:
         description: R - Branch resistance in pu
@@ -78,6 +79,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       name:
         description: NAME - Branch name (40 characters)
@@ -91,6 +93,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: ""
         comments:
           - Branch name field, typically blank/spaces in most files
 
@@ -104,6 +107,7 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
           multivalued: true
           count: 12
         comments:
@@ -115,10 +119,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 8
+          order: 20
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       b_from:
         description: BI - Complex admittance of line shunt at from bus, susceptance component in pu
@@ -126,10 +131,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 9
+          order: 21
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       g_to:
         description: GJ - Complex admittance of line shunt at to bus, conductance component in pu
@@ -137,10 +143,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 10
+          order: 22
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       b_to:
         description: BJ - Complex admittance of line shunt at to bus, susceptance component in pu
@@ -148,10 +155,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 11
+          order: 23
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       status:
         description: STAT - Branch status (0=out of service, 1=in service)
@@ -159,9 +167,10 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 12
+          order: 24
           value_type: int
           separator: ","
+          raw_default: 1
 
       metered_end:
         description: MET - Metered end flag
@@ -169,9 +178,10 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 13
+          order: 25
           value_type: int
           separator: ","
+          raw_default: 1
 
       length:
         description: LEN - Line length
@@ -179,10 +189,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 14
+          order: 26
           value_type: float
           precision: 1
           separator: ","
+          raw_default: 0.0
 
       o1:
         description: O1 - Owner 1 number
@@ -190,7 +201,7 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 15
+          order: 27
           value_type: int
           separator: ","
 
@@ -200,10 +211,11 @@ classes:
         required: false
         ifabsent: float(1.0)
         annotations:
-          order: 16
+          order: 28
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o2:
         description: O2 - Owner 2 number
@@ -211,9 +223,10 @@ classes:
         required: false
         ifabsent: int(0)
         annotations:
-          order: 17
+          order: 29
           value_type: int
           separator: ","
+          raw_default: 0
 
       f2:
         description: F2 - Fraction of ownership for owner 2
@@ -221,10 +234,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 18
+          order: 30
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o3:
         description: O3 - Owner 3 number
@@ -232,9 +246,10 @@ classes:
         required: false
         ifabsent: int(0)
         annotations:
-          order: 19
+          order: 31
           value_type: int
           separator: ","
+          raw_default: 0
 
       f3:
         description: F3 - Fraction of ownership for owner 3
@@ -242,10 +257,11 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 20
+          order: 32
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o4:
         description: O4 - Owner 4 number
@@ -253,9 +269,10 @@ classes:
         required: false
         ifabsent: int(0)
         annotations:
-          order: 21
+          order: 33
           value_type: int
           separator: ","
+          raw_default: 0
 
       f4:
         description: F4 - Fraction of ownership for owner 4
@@ -263,7 +280,8 @@ classes:
         required: false
         ifabsent: float(0.0)
         annotations:
-          order: 22
+          order: 34
           value_type: float
           precision: 4
           separator: ""  # No separator after last field
+          raw_default: 1.0

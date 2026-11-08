@@ -38,7 +38,7 @@ classes:
       circuit:
         description: CKT - Circuit identifier
         range: string
-        required: true
+        required: false
         ifabsent: string("1 ")
         annotations:
           order: 3
@@ -47,6 +47,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       x:
         description: X - Switch reactance in pu
@@ -69,6 +70,7 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
           multivalued: true
           count: 12
         comments:
@@ -80,9 +82,10 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 6
+          order: 17
           value_type: int
           separator: ","
+          raw_default: 1
 
       nstat:
         description: NSTAT - Normal switch status
@@ -90,17 +93,18 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 7
+          order: 18
           value_type: int
           separator: ","
+          raw_default: 1
 
       metered_end:
-        description: MET - Metered end flag
+        description: METERED - Metered end flag
         range: integer
         required: false
         ifabsent: int(1)
         annotations:
-          order: 8
+          order: 19
           value_type: int
           separator: ","
 
@@ -110,7 +114,7 @@ classes:
         required: false
         ifabsent: int(1)
         annotations:
-          order: 9
+          order: 20
           value_type: int
           separator: ","
 
@@ -120,7 +124,7 @@ classes:
         required: false
         ifabsent: string("                                        ")
         annotations:
-          order: 10
+          order: 21
           value_type: string
           width: 40
           quote: true

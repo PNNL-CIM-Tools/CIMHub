@@ -30,7 +30,7 @@ classes:
           separator: ","
 
       ibus:
-        description: I - Sending end bus number
+        description: I - Sending end bus number or extended bus name
         range: integer
         required: true
         annotations:
@@ -39,7 +39,7 @@ classes:
           separator: ","
 
       jbus:
-        description: J - Terminal end bus number
+        description: J - Terminal end bus number or extended bus name (0 for a STATCON)
         range: integer
         required: false
         ifabsent: int(0)
@@ -47,6 +47,7 @@ classes:
           order: 3
           value_type: int
           separator: ","
+          raw_default: 0
 
       mode:
         description: MODE - Control mode
@@ -57,6 +58,7 @@ classes:
           order: 4
           value_type: int
           separator: ","
+          raw_default: 1
 
       pdes:
         description: PDES - Desired active power flow in MW
@@ -70,6 +72,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       qdes:
         description: QDES - Desired reactive power flow in MVAr
@@ -83,6 +86,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       vset:
         description: VSET - Voltage setpoint in pu
@@ -94,6 +98,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       shmx:
         description: SHMX - Maximum shunt current in MVA at unity voltage
@@ -107,6 +112,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 9999.0
 
       trmx:
         description: TRMX - Maximum bridge active power transfer in MW
@@ -120,9 +126,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 9999.0
 
       vtmn:
-        description: VTMN - Minimum voltage limit in pu
+        description: VTMN - Minimum voltage limit at the terminal end bus in pu
         range: float
         required: false
         ifabsent: float(0.9)
@@ -131,9 +138,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.9
 
       vtmx:
-        description: VTMX - Maximum voltage limit in pu
+        description: VTMX - Maximum voltage limit at the terminal end bus in pu
         range: float
         required: false
         ifabsent: float(1.1)
@@ -142,6 +150,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.1
 
       vsmx:
         description: VSMX - Maximum series voltage in pu
@@ -153,9 +162,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       imx:
-        description: IMX - Maximum series current in MVA at unity voltage
+        description: IMX - Maximum series current in MVA at unity voltage (0 for no limit)
         range: float
         required: false
         ifabsent: float(9999.0)
@@ -166,6 +176,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       linx:
         description: LINX - Reactance of dummy series element in pu
@@ -177,9 +188,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.05
 
       rmpct:
-        description: RMPCT - Percent of required vars to be supplied from shunt element
+        description: RMPCT - Percent of required Mvar supplied by the shunt element (must be positive)
         range: float
         required: false
         ifabsent: float(100.0)
@@ -188,6 +200,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 100.0
 
       owner:
         description: OWNER - Owner number
@@ -198,9 +211,10 @@ classes:
           order: 16
           value_type: int
           separator: ","
+          raw_default: 1
 
       set1:
-        description: SET1 - Series voltage or reactance setpoint 1
+        description: SET1 - Series setpoint 1 (R for MODE 3; magnitude or Vd for MODE 4, 7, 8)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -209,9 +223,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       set2:
-        description: SET2 - Series voltage or reactance setpoint 2
+        description: SET2 - Series setpoint 2 (X for MODE 3; angle or Vq for MODE 4, 7, 8)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -220,9 +235,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       vsref:
-        description: VSREF - Reference voltage for mode 3 control
+        description: VSREF - Series voltage reference code (0 sending end voltage, 1 series current)
         range: integer
         required: false
         ifabsent: int(0)
@@ -230,9 +246,10 @@ classes:
           order: 19
           value_type: int
           separator: ","
+          raw_default: 0
 
       remot:
-        description: FCREG - Controlled bus number
+        description: FCREG - Bus number or extended bus name of the bus whose voltage the shunt regulates (0 for sending end)
         range: integer
         required: false
         ifabsent: int(0)
@@ -240,9 +257,10 @@ classes:
           order: 20
           value_type: int
           separator: ","
+          raw_default: 0
 
       mname:
-        description: MNAME - Monitored element name
+        description: MNAME - Name of the master FACTS device when this device is an IPFC slave (MODE 6 or 8)
         range: string
         required: false
         ifabsent: string("            ")
@@ -253,9 +271,10 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: ""
 
       nreg:
-        description: NREG - Number of remote buses to regulate
+        description: NREG - Node number of bus FCREG (0 if FCREG is not in a substation)
         range: integer
         required: false
         ifabsent: int(0)
@@ -263,3 +282,4 @@ classes:
           order: 22
           value_type: int
           separator: ""  # No separator after last field
+          raw_default: 0

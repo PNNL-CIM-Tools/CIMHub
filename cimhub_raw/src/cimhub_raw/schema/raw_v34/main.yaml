@@ -35,6 +35,7 @@ imports:
   - classes/switched_shunt
   - classes/gne_device
   - classes/induction_machine
+  - classes/substation
 
 classes:
   RawModel:
@@ -186,6 +187,55 @@ classes:
       induction_machine_records:
         description: Induction machine data records
         range: InductionMachineRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      substation_records:
+        description: Substation data records (node-breaker blocks)
+        range: SubstationRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      substation_node_records:
+        description: Substation node records
+        range: SubstationNodeRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      station_switching_device_records:
+        description: Station switching device records
+        range: StationSwitchingDeviceRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      equipment_terminal_records:
+        description: Equipment terminal records (equipment ends placed on nodes)
+        range: EquipmentTerminalRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      multi_terminal_converter_records:
+        description: Multi-terminal DC converter records
+        range: MultiTerminalConverterRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      multi_terminal_dc_bus_records:
+        description: Multi-terminal DC bus records
+        range: MultiTerminalDCBusRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      multi_terminal_dc_link_records:
+        description: Multi-terminal DC link records
+        range: MultiTerminalDCLinkRecord
         multivalued: true
         required: false
         inlined_as_list: true

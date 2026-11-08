@@ -28,7 +28,7 @@ classes:
           separator: ","
 
       owner_name:
-        description: OWNAME - Owner name
+        description: OWNAME - Owner name (12 characters)
         range: string
         required: false
         ifabsent: string("            ")
@@ -39,3 +39,4 @@ classes:
           quote: true
           quote_char: "'"
           separator: ""  # No separator after last field
+          raw_default: ""

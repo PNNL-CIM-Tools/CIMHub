@@ -50,7 +50,7 @@ classes:
           separator: ","
 
       line_id:
-        description: ID - Multi-section line identifier (2 characters)
+        description: ID - Multi-section line grouping identifier (2 characters, first must be '&')
         range: string
         required: true
         identifier: true
@@ -61,6 +61,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       met:
         description: MET - Metered end flag (1=bus I, 2=bus J)
@@ -74,9 +75,9 @@ classes:
 
       # ==== VARIABLE SECTION IDENTIFIERS ====
       dum1:
-        description: DUM1 - Section 1 intermediate bus number
+        description: DUM1 - Dummy bus number 1 (between sections 1 and 2); at least one dummy bus is needed
         range: integer
-        required: false
+        required: true
         ifabsent: int(0)
         annotations:
           order: 5
@@ -85,7 +86,7 @@ classes:
           serialize_if: "custom:dum1 != 0"
 
       dum2:
-        description: DUM2 - Section 2 intermediate bus number
+        description: DUM2 - Dummy bus number 2 (between sections 2 and 3)
         range: integer
         required: false
         ifabsent: int(0)
@@ -96,7 +97,7 @@ classes:
           serialize_if: "custom:dum2 != 0"
 
       dum3:
-        description: DUM3 - Section 3 intermediate bus number
+        description: DUM3 - Dummy bus number 3 (between sections 3 and 4)
         range: integer
         required: false
         ifabsent: int(0)
@@ -107,7 +108,7 @@ classes:
           serialize_if: "custom:dum3 != 0"
 
       dum4:
-        description: DUM4 - Section 4 intermediate bus number
+        description: DUM4 - Dummy bus number 4 (between sections 4 and 5)
         range: integer
         required: false
         ifabsent: int(0)
@@ -118,7 +119,7 @@ classes:
           serialize_if: "custom:dum4 != 0"
 
       dum5:
-        description: DUM5 - Section 5 intermediate bus number
+        description: DUM5 - Dummy bus number 5 (between sections 5 and 6)
         range: integer
         required: false
         ifabsent: int(0)
@@ -129,7 +130,7 @@ classes:
           serialize_if: "custom:dum5 != 0"
 
       dum6:
-        description: DUM6 - Section 6 intermediate bus number
+        description: DUM6 - Dummy bus number 6 (between sections 6 and 7)
         range: integer
         required: false
         ifabsent: int(0)
@@ -140,7 +141,7 @@ classes:
           serialize_if: "custom:dum6 != 0"
 
       dum7:
-        description: DUM7 - Section 7 intermediate bus number
+        description: DUM7 - Dummy bus number 7 (between sections 7 and 8)
         range: integer
         required: false
         ifabsent: int(0)
@@ -151,7 +152,7 @@ classes:
           serialize_if: "custom:dum7 != 0"
 
       dum8:
-        description: DUM8 - Section 8 intermediate bus number
+        description: DUM8 - Dummy bus number 8 (between sections 8 and 9)
         range: integer
         required: false
         ifabsent: int(0)
@@ -162,7 +163,7 @@ classes:
           serialize_if: "custom:dum8 != 0"
 
       dum9:
-        description: DUM9 - Section 9 intermediate bus number
+        description: DUM9 - Dummy bus number 9 (between sections 9 and 10)
         range: integer
         required: false
         ifabsent: int(0)

@@ -29,7 +29,7 @@ classes:
       load_id:
         description: ID - Load identifier (1 or 2 characters)
         range: string
-        required: true
+        required: false
         ifabsent: string("1 ")
         annotations:
           order: 2
@@ -38,6 +38,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       status:
         description: STAT - Load status (0=out of service, 1=in service)
@@ -48,6 +49,7 @@ classes:
           order: 3
           value_type: int
           separator: ","
+          raw_default: 1
 
       area:
         description: AREA - Area number
@@ -81,6 +83,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       constant_imag_power:
         description: QL - Reactive power component of constant MVA load in MVAr
@@ -94,6 +97,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       constant_current_real_power:
         description: IP - Active power component of constant current load in MW
@@ -107,6 +111,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       constant_current_imag_power:
         description: IQ - Reactive power component of constant current load in MVAr
@@ -120,6 +125,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       constant_admittance_real_power:
         description: YP - Active power component of constant admittance load in MW
@@ -133,6 +139,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       constant_admittance_imag_power:
         description: YQ - Reactive power component of constant admittance load in MVAr
@@ -146,6 +153,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       owner:
         description: OWNER - Owner number
@@ -166,6 +174,7 @@ classes:
           order: 13
           value_type: int
           separator: ","
+          raw_default: 1
 
       interruptible:
         description: INTRPT - Interruptible load flag
@@ -176,6 +185,7 @@ classes:
           order: 14
           value_type: int
           separator: ","
+          raw_default: 0
 
       dgenp:
         description: DGENP - Distributed generation active power in MW
@@ -189,6 +199,7 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       dgenq:
         description: DGENQ - Distributed generation reactive power in MVAr
@@ -202,9 +213,10 @@ classes:
           value_type: float
           precision: 3
           separator: ","
+          raw_default: 0.0
 
       dgenf:
-        description: DGENF - Distributed generation flag
+        description: DGENM - Distributed generation operation mode (0=off, 1=on)
         range: integer
         required: false
         ifabsent: int(0)
@@ -212,3 +224,4 @@ classes:
           order: 17
           value_type: int
           separator: ""  # No separator after last field
+          raw_default: 0

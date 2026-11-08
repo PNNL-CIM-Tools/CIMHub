@@ -2,34 +2,29 @@ id: https://gridappsd.org/cimhub/raw_v34/classes/induction_machine
 name: induction_machine
 title: Induction Machine Record
 description: raw RAW Induction Machine Record
-
 imports:
   - linkml:types
   - ../types/common_types
-
 prefixes:
   linkml: https://w3id.org/linkml/
   raw: https://gridappsd.org/cimhub/raw_v34
-
 default_prefix: raw
-
 classes:
   InductionMachineRecord:
     description: Induction machine data record
     attributes:
       bus_id:
-        description: I - Bus number
+        description: I - Bus number or extended bus name
         range: integer
         required: true
         annotations:
           order: 1
           value_type: int
           separator: ","
-
       name:
-        description: ID - Machine identifier
+        description: ID - Machine identifier (one or two characters)
         range: string
-        required: true
+        required: false
         ifabsent: string("1 ")
         annotations:
           order: 2
@@ -38,9 +33,9 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
-
+          raw_default: "1"
       status:
-        description: ST - Machine status
+        description: ST - Machine status (1 in-service, 0 out-of-service)
         range: integer
         required: false
         ifabsent: int(1)
@@ -48,9 +43,9 @@ classes:
           order: 3
           value_type: int
           separator: ","
-
+          raw_default: 1
       scode:
-        description: SC - Machine MVA base code
+        description: SC - Machine standard code (1 NEMA, 2 IEC)
         range: integer
         required: false
         ifabsent: int(1)
@@ -58,9 +53,9 @@ classes:
           order: 4
           value_type: int
           separator: ","
-
+          raw_default: 1
       dcode:
-        description: DC - Code for type of mechanical load torque
+        description: DC - Machine design code (0 custom, 1-5 NEMA or IEC design)
         range: integer
         required: false
         ifabsent: int(1)
@@ -68,9 +63,9 @@ classes:
           order: 5
           value_type: int
           separator: ","
-
+          raw_default: 2
       area:
-        description: AREA - Area number
+        description: AREA - Area number (1 through 9999)
         range: integer
         required: false
         ifabsent: int(1)
@@ -78,9 +73,9 @@ classes:
           order: 6
           value_type: int
           separator: ","
-
+          raw_default_rule: "area of bus I"
       zone:
-        description: ZONE - Zone number
+        description: ZONE - Zone number (1 through 9999)
         range: integer
         required: false
         ifabsent: int(1)
@@ -88,9 +83,9 @@ classes:
           order: 7
           value_type: int
           separator: ","
-
+          raw_default_rule: "zone of bus I"
       owner:
-        description: OWNER - Owner number
+        description: OWNER - Owner number (1 through 9999)
         range: integer
         required: false
         ifabsent: int(1)
@@ -98,9 +93,9 @@ classes:
           order: 8
           value_type: int
           separator: ","
-
+          raw_default_rule: "owner of bus I"
       tcode:
-        description: TC - Code for mechanical load model
+        description: TC - Mechanical load torque model (1 power law, 2 WECC)
         range: integer
         required: false
         ifabsent: int(1)
@@ -108,9 +103,9 @@ classes:
           order: 9
           value_type: int
           separator: ","
-
+          raw_default: 1
       bcode:
-        description: BC - Code for power or current model
+        description: BC - Machine base power code (1 mechanical MW, 2 electrical MVA)
         range: integer
         required: false
         ifabsent: int(1)
@@ -118,9 +113,9 @@ classes:
           order: 10
           value_type: int
           separator: ","
-
+          raw_default: 1
       mbase:
-        description: MBASE - Machine MVA base
+        description: MBASE - Machine base power in MW or MVA (unit per BCODE)
         range: float
         required: false
         ifabsent: float(100.0)
@@ -129,9 +124,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default_rule: "system base MVA"
       ratekv:
-        description: RATEKV - Machine rated voltage in kV
+        description: RATEKV - Machine rated voltage in kV line-to-line (0 uses the base voltage of bus I)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -142,9 +137,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       pcode:
-        description: PC - Active power demand of load in MW
+        description: PC - Scheduled power code (1 mechanical MW output, 2 electrical MW drawn)
         range: integer
         required: false
         ifabsent: int(1)
@@ -152,9 +147,9 @@ classes:
           order: 13
           value_type: int
           separator: ","
-
+          raw_default: 1
       pset:
-        description: PSET - Active power of load in MW
+        description: PSET - Scheduled active power in MW at 1.0 pu terminal voltage (positive means motoring)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -165,9 +160,8 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
       h:
-        description: H - Inertia constant in MW-sec/MVA
+        description: H - Machine inertia in pu on MBASE
         range: float
         required: false
         ifabsent: float(1.0)
@@ -176,9 +170,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       a:
-        description: A - Torque parameter
+        description: A - Load torque coefficient A (WECC model only)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -187,9 +181,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       b:
-        description: B - Torque parameter
+        description: B - Load torque coefficient B (WECC model only)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -198,9 +192,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       d:
-        description: D - Torque parameter
+        description: D - Load torque coefficient D (power law exponent term, or WECC)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -209,9 +203,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       e:
-        description: E - Torque parameter
+        description: E - Load torque coefficient E (WECC model only)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -220,9 +214,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       ra:
-        description: RA - Stator resistance in pu
+        description: RA - Armature resistance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -231,9 +225,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       xa:
-        description: XA - Stator reactance in pu
+        description: XA - Armature leakage reactance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -242,9 +236,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       xm:
-        description: XM - Magnetizing reactance in pu
+        description: XM - Unsaturated magnetizing reactance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -253,9 +247,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 2.5
       r1:
-        description: R1 - First rotor resistance in pu
+        description: R1 - First rotor cage resistance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -264,9 +258,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 999.0
       x1:
-        description: X1 - First rotor reactance in pu
+        description: X1 - First rotor cage reactance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -275,9 +269,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 999.0
       r2:
-        description: R2 - Second rotor resistance in pu
+        description: R2 - Second rotor cage resistance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -286,9 +280,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 999.0
       x2:
-        description: X2 - Second rotor reactance in pu
+        description: X2 - Second rotor cage reactance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -297,9 +291,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 999.0
       x3:
-        description: X3 - Third rotor reactance in pu
+        description: X3 - Third rotor reactance in pu on MBASE and RATEKV
         range: float
         required: false
         ifabsent: float(0.0)
@@ -308,9 +302,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       e1:
-        description: E1 - First saturation factor
+        description: E1 - First terminal voltage point on the saturation curve in pu on RATEKV
         range: float
         required: false
         ifabsent: float(1.0)
@@ -319,9 +313,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.0
       se1:
-        description: SE1 - Saturation at E1
+        description: SE1 - Saturation factor at terminal voltage E1
         range: float
         required: false
         ifabsent: float(0.0)
@@ -330,9 +324,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       e2:
-        description: E2 - Second saturation factor
+        description: E2 - Second terminal voltage point on the saturation curve in pu on RATEKV
         range: float
         required: false
         ifabsent: float(1.0)
@@ -341,9 +335,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 1.2
       se2:
-        description: SE2 - Saturation at E2
+        description: SE2 - Saturation factor at terminal voltage E2
         range: float
         required: false
         ifabsent: float(0.0)
@@ -352,9 +346,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       ia1:
-        description: IA1 - First load torque breakpoint
+        description: IA1 - First stator current in pu for stator leakage saturation
         range: float
         required: false
         ifabsent: float(0.0)
@@ -363,9 +357,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       ia2:
-        description: IA2 - Second load torque breakpoint
+        description: IA2 - Second stator current in pu for stator leakage saturation
         range: float
         required: false
         ifabsent: float(0.0)
@@ -374,9 +368,9 @@ classes:
           value_type: float
           precision: 4
           separator: ","
-
+          raw_default: 0.0
       xamult:
-        description: XAMULT - Multiplier for XA
+        description: XAMULT - Multiplier for the saturated XA (0 to 1.0)
         range: float
         required: false
         ifabsent: float(1.0)
@@ -385,3 +379,4 @@ classes:
           value_type: float
           precision: 4
           separator: ""  # No separator after last field
+          raw_default: 1.0

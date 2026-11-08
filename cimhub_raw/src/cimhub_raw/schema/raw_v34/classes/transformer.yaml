@@ -59,11 +59,12 @@ classes:
           order: 3
           value_type: int
           separator: ","
+          raw_default: 0
 
       circuit:
         description: CKT - Circuit identifier (1 or 2 characters)
         range: string
-        required: true
+        required: false
         ifabsent: string("1 ")
         annotations:
           line_number: 1
@@ -73,6 +74,7 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: "1"
 
       cw:
         description: CW - Winding data I/O code
@@ -84,6 +86,7 @@ classes:
           order: 5
           value_type: int
           separator: ","
+          raw_default: 1
 
       cz:
         description: CZ - Impedance data I/O code
@@ -95,6 +98,7 @@ classes:
           order: 6
           value_type: int
           separator: ","
+          raw_default: 1
 
       cm:
         description: CM - Magnetizing admittance I/O code
@@ -106,9 +110,10 @@ classes:
           order: 7
           value_type: int
           separator: ","
+          raw_default: 1
 
       mag1:
-        description: MAG1 - Magnetizing conductance in pu
+        description: MAG1 - Magnetizing conductance in pu (CM 1, system MVA base) or no-load loss in W (CM 2)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -118,9 +123,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       mag2:
-        description: MAG2 - Magnetizing susceptance in pu
+        description: MAG2 - Magnetizing susceptance in pu (CM 1, system MVA base) or exciting current in pu (CM 2)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -130,6 +136,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       nmetr:
         description: NMETR - Metered end flag (1, 2, or 3)
@@ -141,6 +148,7 @@ classes:
           order: 10
           value_type: int
           separator: ","
+          raw_default: 2
 
       name:
         description: NAME - Transformer name (40 characters)
@@ -155,9 +163,10 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: ""
 
       status:
-        description: STAT - Transformer status (0=out of service, 1=in service)
+        description: STAT - Transformer status (0 out of service, 1 in service; 3-winding also 2, 3, 4 = one winding out)
         range: integer
         required: false
         ifabsent: int(1)
@@ -166,6 +175,7 @@ classes:
           order: 12
           value_type: int
           separator: ","
+          raw_default: 1
 
       o1:
         description: O1 - Owner 1 number
@@ -177,6 +187,7 @@ classes:
           order: 13
           value_type: int
           separator: ","
+          raw_default_rule: "owner assigned to bus I"
 
       f1:
         description: F1 - Fraction of ownership for owner 1
@@ -189,6 +200,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o2:
         description: O2 - Owner 2 number
@@ -200,6 +212,7 @@ classes:
           order: 15
           value_type: int
           separator: ","
+          raw_default: 0
 
       f2:
         description: F2 - Fraction of ownership for owner 2
@@ -212,6 +225,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o3:
         description: O3 - Owner 3 number
@@ -223,6 +237,7 @@ classes:
           order: 17
           value_type: int
           separator: ","
+          raw_default: 0
 
       f3:
         description: F3 - Fraction of ownership for owner 3
@@ -235,6 +250,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       o4:
         description: O4 - Owner 4 number
@@ -246,6 +262,7 @@ classes:
           order: 19
           value_type: int
           separator: ","
+          raw_default: 0
 
       f4:
         description: F4 - Fraction of ownership for owner 4
@@ -258,6 +275,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 1.0
 
       vecgrp:
         description: VECGRP - Vector group (12 characters)
@@ -272,9 +290,10 @@ classes:
           quote: true
           quote_char: "'"
           separator: ","
+          raw_default: ""
 
       zcod:
-        description: ZCOD - Impedance correction table number
+        description: ZCOD - Impedance correction method (0 winding impedances, 1 bus-to-bus impedances); 3-winding only
         range: integer
         required: false
         ifabsent: int(0)
@@ -283,10 +302,12 @@ classes:
           order: 22
           value_type: int
           separator: ""
+          serialize_if: "custom:k != 0"
+          raw_default: 0
 
       # ==== LINE 2: Impedance Data ====
       r1_2:
-        description: R1-2 - Winding 1-2 resistance in pu
+        description: R1-2 - Winding 1-2 resistance in pu (CZ 1 system base, CZ 2 SBASE1-2) or load loss in W (CZ 3)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -296,11 +317,12 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       x1_2:
-        description: X1-2 - Winding 1-2 reactance in pu
+        description: X1-2 - Winding 1-2 reactance in pu (CZ 1 system base, CZ 2 SBASE1-2) or impedance magnitude in pu (CZ 3)
         range: float
-        required: false
+        required: true
         ifabsent: float(0.0)
         annotations:
           line_number: 2
@@ -322,9 +344,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default_rule: "SBASE (system base MVA)"
 
       r2_3:
-        description: R2-3 - Winding 2-3 resistance in pu (3-winding only)
+        description: R2-3 - Winding 2-3 resistance in pu (CZ 1 system base, CZ 2 SBASE2-3) or load loss in W (CZ 3); 3-winding only
         range: float
         required: false
         ifabsent: float(0.0)
@@ -334,9 +357,11 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       x2_3:
-        description: X2-3 - Winding 2-3 reactance in pu (3-winding only)
+        description: X2-3 - Winding 2-3 reactance in pu (CZ 1 system base, CZ 2 SBASE2-3) or impedance magnitude in pu (CZ 3); 3-winding only
         range: float
         required: false
         ifabsent: float(0.0)
@@ -346,6 +371,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
 
       sbase2_3:
         description: SBASE2-3 - Winding 2-3 base MVA (3-winding only)
@@ -360,9 +386,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "SBASE (system base MVA)"
 
       r3_1:
-        description: R3-1 - Winding 3-1 resistance in pu (3-winding only)
+        description: R3-1 - Winding 3-1 resistance in pu (CZ 1 system base, CZ 2 SBASE3-1) or load loss in W (CZ 3); 3-winding only
         range: float
         required: false
         ifabsent: float(0.0)
@@ -372,9 +400,11 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       x3_1:
-        description: X3-1 - Winding 3-1 reactance in pu (3-winding only)
+        description: X3-1 - Winding 3-1 reactance in pu (CZ 1 system base, CZ 2 SBASE3-1) or impedance magnitude in pu (CZ 3); 3-winding only
         range: float
         required: false
         ifabsent: float(0.0)
@@ -384,6 +414,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
 
       sbase3_1:
         description: SBASE3-1 - Winding 3-1 base MVA (3-winding only)
@@ -398,6 +429,8 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "SBASE (system base MVA)"
 
       vmstar:
         description: VMSTAR - Star point voltage magnitude in pu
@@ -410,6 +443,8 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 1.0
 
       anstar:
         description: ANSTAR - Star point voltage angle in degrees
@@ -424,10 +459,12 @@ classes:
           value_type: float
           precision: 5
           separator: ""
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       # ==== LINE 3: Winding 1 Data ====
       windv1:
-        description: WINDV1 - Winding 1 off-nominal turns ratio in pu
+        description: WINDV1 - Winding 1 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
         ifabsent: float(1.0)
@@ -437,6 +474,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "1.0 if CW is 1 or 3; bus I base voltage if CW is 2"
 
       nomv1:
         description: NOMV1 - Winding 1 nominal voltage in kV
@@ -451,6 +489,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       ang1:
         description: ANG1 - Winding 1 phase shift angle in degrees
@@ -465,9 +504,10 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       rate1_1:
-        description: RATE1-1 - Winding 1 rating 1 in MVA
+        description: RATE1-1 - Winding 1 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -479,9 +519,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_2:
-        description: RATE1-2 - Winding 1 rating 2 in MVA
+        description: RATE1-2 - Winding 1 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -493,9 +534,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_3:
-        description: RATE1-3 - Winding 1 rating 3 in MVA
+        description: RATE1-3 - Winding 1 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -507,9 +549,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_4:
-        description: RATE1-4 - Winding 1 rating 4 in MVA
+        description: RATE1-4 - Winding 1 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -521,9 +564,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_5:
-        description: RATE1-5 - Winding 1 rating 5 in MVA
+        description: RATE1-5 - Winding 1 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -535,9 +579,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_6:
-        description: RATE1-6 - Winding 1 rating 6 in MVA
+        description: RATE1-6 - Winding 1 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -549,9 +594,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_7:
-        description: RATE1-7 - Winding 1 rating 7 in MVA
+        description: RATE1-7 - Winding 1 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -563,9 +609,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_8:
-        description: RATE1-8 - Winding 1 rating 8 in MVA
+        description: RATE1-8 - Winding 1 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -577,9 +624,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_9:
-        description: RATE1-9 - Winding 1 rating 9 in MVA
+        description: RATE1-9 - Winding 1 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -591,9 +639,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_10:
-        description: RATE1-10 - Winding 1 rating 10 in MVA
+        description: RATE1-10 - Winding 1 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -605,9 +654,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_11:
-        description: RATE1-11 - Winding 1 rating 11 in MVA
+        description: RATE1-11 - Winding 1 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -619,9 +669,10 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       rate1_12:
-        description: RATE1-12 - Winding 1 rating 12 in MVA
+        description: RATE1-12 - Winding 1 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -633,6 +684,7 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 0.0
 
       cod1:
         description: COD1 - Winding 1 control mode
@@ -644,6 +696,7 @@ classes:
           order: 16
           value_type: int
           separator: ","
+          raw_default: 0
 
       cont1:
         description: CONT1 - Winding 1 controlled bus number
@@ -655,9 +708,10 @@ classes:
           order: 17
           value_type: int
           separator: ","
+          raw_default: 0
 
       rma1:
-        description: RMA1 - Winding 1 upper limit
+        description: RMA1 - Winding 1 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -667,9 +721,10 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       rmi1:
-        description: RMI1 - Winding 1 lower limit
+        description: RMI1 - Winding 1 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -679,9 +734,10 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       vma1:
-        description: VMA1 - Winding 1 voltage upper limit in pu
+        description: VMA1 - Winding 1 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -691,9 +747,10 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       vmi1:
-        description: VMI1 - Winding 1 voltage lower limit in pu
+        description: VMI1 - Winding 1 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -703,6 +760,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       ntp1:
         description: NTP1 - Winding 1 number of tap positions
@@ -714,6 +772,7 @@ classes:
           order: 22
           value_type: int
           separator: ","
+          raw_default: 33
 
       tab1:
         description: TAB1 - Winding 1 tap position table number
@@ -725,6 +784,7 @@ classes:
           order: 23
           value_type: int
           separator: ","
+          raw_default: 0
 
       cr1:
         description: CR1 - Winding 1 load drop compensation resistance in pu
@@ -737,6 +797,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       cx1:
         description: CX1 - Winding 1 load drop compensation reactance in pu
@@ -749,6 +810,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       cnxa1:
         description: CNXA1 - Winding 1 connection angle in degrees
@@ -763,6 +825,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default: 0.0
 
       nod1:
         description: NOD1 - Winding 1 node number
@@ -774,10 +837,11 @@ classes:
           order: 27
           value_type: int
           separator: ""
+          raw_default: 0
 
       # ==== LINE 4: Winding 2 Data ====
       windv2:
-        description: WINDV2 - Winding 2 off-nominal turns ratio in pu
+        description: WINDV2 - Winding 2 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
         ifabsent: float(1.0)
@@ -787,6 +851,7 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          raw_default_rule: "1.0 if CW is 1 or 3; bus J base voltage if CW is 2"
 
       nomv2:
         description: NOMV2 - Winding 2 nominal voltage in kV
@@ -801,6 +866,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       ang2:
         description: ANG2 - Winding 2 phase shift angle in degrees
@@ -815,9 +881,11 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_1:
-        description: RATE2-1 - Winding 2 rating 1 in MVA
+        description: RATE2-1 - Winding 2 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -829,9 +897,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_2:
-        description: RATE2-2 - Winding 2 rating 2 in MVA
+        description: RATE2-2 - Winding 2 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -843,9 +913,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_3:
-        description: RATE2-3 - Winding 2 rating 3 in MVA
+        description: RATE2-3 - Winding 2 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -857,9 +929,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_4:
-        description: RATE2-4 - Winding 2 rating 4 in MVA
+        description: RATE2-4 - Winding 2 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -871,9 +945,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_5:
-        description: RATE2-5 - Winding 2 rating 5 in MVA
+        description: RATE2-5 - Winding 2 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -885,9 +961,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_6:
-        description: RATE2-6 - Winding 2 rating 6 in MVA
+        description: RATE2-6 - Winding 2 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -899,9 +977,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_7:
-        description: RATE2-7 - Winding 2 rating 7 in MVA
+        description: RATE2-7 - Winding 2 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -913,9 +993,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_8:
-        description: RATE2-8 - Winding 2 rating 8 in MVA
+        description: RATE2-8 - Winding 2 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -927,9 +1009,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_9:
-        description: RATE2-9 - Winding 2 rating 9 in MVA
+        description: RATE2-9 - Winding 2 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -941,9 +1025,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_10:
-        description: RATE2-10 - Winding 2 rating 10 in MVA
+        description: RATE2-10 - Winding 2 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -955,9 +1041,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_11:
-        description: RATE2-11 - Winding 2 rating 11 in MVA
+        description: RATE2-11 - Winding 2 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -969,9 +1057,11 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate2_12:
-        description: RATE2-12 - Winding 2 rating 12 in MVA
+        description: RATE2-12 - Winding 2 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -983,6 +1073,8 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cod2:
         description: COD2 - Winding 2 control mode
@@ -994,6 +1086,8 @@ classes:
           order: 16
           value_type: int
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0
 
       cont2:
         description: CONT2 - Winding 2 controlled bus number
@@ -1005,9 +1099,11 @@ classes:
           order: 17
           value_type: int
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0
 
       rma2:
-        description: RMA2 - Winding 2 upper limit
+        description: RMA2 - Winding 2 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -1017,9 +1113,11 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       rmi2:
-        description: RMI2 - Winding 2 lower limit
+        description: RMI2 - Winding 2 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -1029,9 +1127,11 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       vma2:
-        description: VMA2 - Winding 2 voltage upper limit in pu
+        description: VMA2 - Winding 2 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -1041,9 +1141,11 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       vmi2:
-        description: VMI2 - Winding 2 voltage lower limit in pu
+        description: VMI2 - Winding 2 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -1053,6 +1155,8 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       ntp2:
         description: NTP2 - Winding 2 number of tap positions
@@ -1064,6 +1168,8 @@ classes:
           order: 22
           value_type: int
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 33
 
       tab2:
         description: TAB2 - Winding 2 tap position table number
@@ -1075,6 +1181,8 @@ classes:
           order: 23
           value_type: int
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0
 
       cr2:
         description: CR2 - Winding 2 load drop compensation resistance in pu
@@ -1087,6 +1195,8 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cx2:
         description: CX2 - Winding 2 load drop compensation reactance in pu
@@ -1099,6 +1209,8 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cnxa2:
         description: CNXA2 - Winding 2 connection angle in degrees
@@ -1113,6 +1225,8 @@ classes:
           value_type: float
           precision: 5
           separator: ","
+          serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       nod2:
         description: NOD2 - Winding 2 node number
@@ -1124,10 +1238,12 @@ classes:
           order: 27
           value_type: int
           separator: ""
+          serialize_if: "custom:k != 0"
+          raw_default: 0
 
       # ==== LINE 5: Winding 3 Data (only if K != 0) ====
       windv3:
-        description: WINDV3 - Winding 3 off-nominal turns ratio in pu
+        description: WINDV3 - Winding 3 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
         ifabsent: float(1.0)
@@ -1138,6 +1254,7 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default_rule: "1.0 if CW is 1 or 3; bus K base voltage if CW is 2"
 
       nomv3:
         description: NOMV3 - Winding 3 nominal voltage in kV
@@ -1153,6 +1270,7 @@ classes:
           precision: 4
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       ang3:
         description: ANG3 - Winding 3 phase shift angle in degrees
@@ -1168,9 +1286,10 @@ classes:
           precision: 4
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_1:
-        description: RATE3-1 - Winding 3 rating 1 in MVA
+        description: RATE3-1 - Winding 3 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1183,9 +1302,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_2:
-        description: RATE3-2 - Winding 3 rating 2 in MVA
+        description: RATE3-2 - Winding 3 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1198,9 +1318,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_3:
-        description: RATE3-3 - Winding 3 rating 3 in MVA
+        description: RATE3-3 - Winding 3 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1213,9 +1334,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_4:
-        description: RATE3-4 - Winding 3 rating 4 in MVA
+        description: RATE3-4 - Winding 3 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1228,9 +1350,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_5:
-        description: RATE3-5 - Winding 3 rating 5 in MVA
+        description: RATE3-5 - Winding 3 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1243,9 +1366,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_6:
-        description: RATE3-6 - Winding 3 rating 6 in MVA
+        description: RATE3-6 - Winding 3 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1258,9 +1382,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_7:
-        description: RATE3-7 - Winding 3 rating 7 in MVA
+        description: RATE3-7 - Winding 3 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1273,9 +1398,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_8:
-        description: RATE3-8 - Winding 3 rating 8 in MVA
+        description: RATE3-8 - Winding 3 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1288,9 +1414,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_9:
-        description: RATE3-9 - Winding 3 rating 9 in MVA
+        description: RATE3-9 - Winding 3 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1303,9 +1430,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_10:
-        description: RATE3-10 - Winding 3 rating 10 in MVA
+        description: RATE3-10 - Winding 3 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1318,9 +1446,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_11:
-        description: RATE3-11 - Winding 3 rating 11 in MVA
+        description: RATE3-11 - Winding 3 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1333,9 +1462,10 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       rate3_12:
-        description: RATE3-12 - Winding 3 rating 12 in MVA
+        description: RATE3-12 - Winding 3 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
         ifabsent: float(0.0)
@@ -1348,6 +1478,7 @@ classes:
           precision: 2
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cod3:
         description: COD3 - Winding 3 control mode
@@ -1360,6 +1491,7 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0
 
       cont3:
         description: CONT3 - Winding 3 controlled bus number
@@ -1372,9 +1504,10 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0
 
       rma3:
-        description: RMA3 - Winding 3 upper limit
+        description: RMA3 - Winding 3 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -1385,9 +1518,10 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       rmi3:
-        description: RMI3 - Winding 3 lower limit
+        description: RMI3 - Winding 3 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -1398,9 +1532,10 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       vma3:
-        description: VMA3 - Winding 3 voltage upper limit in pu
+        description: VMA3 - Winding 3 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(1.1)
@@ -1411,9 +1546,10 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       vmi3:
-        description: VMI3 - Winding 3 voltage lower limit in pu
+        description: VMI3 - Winding 3 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
         ifabsent: float(0.9)
@@ -1424,6 +1560,7 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       ntp3:
         description: NTP3 - Winding 3 number of tap positions
@@ -1436,6 +1573,7 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 33
 
       tab3:
         description: TAB3 - Winding 3 tap position table number
@@ -1448,6 +1586,7 @@ classes:
           value_type: int
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0
 
       cr3:
         description: CR3 - Winding 3 load drop compensation resistance in pu
@@ -1461,6 +1600,7 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cx3:
         description: CX3 - Winding 3 load drop compensation reactance in pu
@@ -1474,6 +1614,7 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       cnxa3:
         description: CNXA3 - Winding 3 connection angle in degrees
@@ -1489,6 +1630,7 @@ classes:
           precision: 5
           separator: ","
           serialize_if: "custom:k != 0"
+          raw_default: 0.0
 
       nod3:
         description: NOD3 - Winding 3 node number
@@ -1501,3 +1643,4 @@ classes:
           value_type: int
           separator: ""
           serialize_if: "custom:k != 0"
+          raw_default: 0

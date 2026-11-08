@@ -36,6 +36,7 @@ classes:
           order: 2
           value_type: int
           separator: ","
+          raw_default: 0
 
       pdes:
         description: PDES - Desired net interchange (export) in MW
@@ -49,6 +50,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 0.0
 
       ptol:
         description: PTOL - Interchange tolerance in MW
@@ -62,6 +64,7 @@ classes:
           value_type: float
           precision: 4
           separator: ","
+          raw_default: 10.0
 
       name:
         description: ARNAME - Area name
@@ -75,3 +78,4 @@ classes:
           quote: true
           quote_char: "'"
           separator: ""  # No separator after last field
+          raw_default: ""

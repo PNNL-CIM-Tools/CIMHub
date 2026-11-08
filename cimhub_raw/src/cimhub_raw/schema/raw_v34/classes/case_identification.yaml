@@ -26,11 +26,12 @@ classes:
           order: 1
           value_type: int
           separator: ","
+          raw_default: 0
 
       system_base_mva:
         description: SBASE - System base MVA
         range: float
-        required: true
+        required: false
         ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
@@ -39,11 +40,12 @@ classes:
           value_type: float
           precision: 2
           separator: ","
+          raw_default: 100.0
 
       revision:
         description: REV - raw revision number (34 for v34)
         range: float
-        required: true
+        required: false
         ifabsent: float(34.0)
         annotations:
           order: 3
@@ -62,7 +64,7 @@ classes:
           separator: ","
 
       branch_ratings_units:
-        description: NXFRAT - Number of branch ratings
+        description: NXFRAT - Non-transformer branch ratings units flag (<=0 MVA, >0 current as MVA)
         range: integer
         required: false
         ifabsent: int(0)
@@ -74,7 +76,7 @@ classes:
       system_base_frequency:
         description: BASFRQ - System base frequency in Hz
         range: float
-        required: true
+        required: false
         ifabsent: float(60.0)
         unit:
           ucum_code: "Hz"
@@ -136,8 +138,50 @@ classes:
 
       ratings:
         description: RATING records (up to 12)
-        range: string
+        range: RatingRecord
+        inlined: true
+        inlined_as_list: true
         multivalued: true
         required: false
         comments:
           - Optional records, each serialized on separate line
+
+  RatingRecord:
+    description: RATING record naming one rating set (1-12)
+    comments:
+      - Written as RATING, <set number>, "<name>", "<description>"
+      - If no RATING record is given for set n, its name is RATEn and its description is RATING SET n
+    attributes:
+      rating_set_number:
+        description: RATING set number (1-12)
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      rating_name:
+        description: RATING set name (6 characters, used as a report column heading)
+        range: string
+        required: true
+        annotations:
+          order: 2
+          value_type: string
+          width: 6
+          quote: true
+          quote_char: '"'
+          separator: ","
+
+      rating_description:
+        description: RATING set description (32 characters)
+        range: string
+        required: true
+        annotations:
+          order: 3
+          value_type: string
+          width: 32
+          quote: true
+          quote_char: '"'
+          separator: ""  # No separator after last field
