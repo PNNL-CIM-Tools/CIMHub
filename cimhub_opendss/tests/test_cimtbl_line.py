@@ -132,7 +132,8 @@ def _engine_line_differences(network) -> list[str]:
     cim = network.cim
     dss.Solution.Solve()
     limits = {(limit.OperationalLimitSet.Equipment.mRID, limit.OperationalLimitType.mRID): float(limit.normalValue.to("A"))
-              for limit in network.graph.get(cim.CurrentLimit, {}).values()}
+              for limit in network.graph.get(cim.CurrentLimit, {}).values()
+              if limit.OperationalLimitSet.Equipment is not None}  # a wire's set is on its AssetInfo
     differences = []
     for segment in network.graph[cim.ACLineSegment].values():
         dss.Lines.Name(segment.name)

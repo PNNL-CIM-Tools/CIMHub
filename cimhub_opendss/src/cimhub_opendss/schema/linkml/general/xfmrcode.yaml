@@ -16,6 +16,7 @@ default_range: string
 
 imports:
   - linkml:types
+  - ../common_enums
 
 classes:
   Xfmrcode:
@@ -90,7 +91,7 @@ classes:
       conn:
         description: >-
           Connection of this winding. Default is wye.
-        range: string
+        range: ConnectionType
         required: false
         annotations:
           order: 4
@@ -196,7 +197,7 @@ classes:
       conns:
         description: >-
           Use this to specify all the Winding connections at once using an array.
-        range: string
+        range: ConnectionType
         multivalued: true
         required: false
         annotations:

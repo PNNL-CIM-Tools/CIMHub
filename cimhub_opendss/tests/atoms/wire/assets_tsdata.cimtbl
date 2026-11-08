@@ -4,7 +4,15 @@
 
 Profile = cim18v17
 
+Table OperationalLimitSet: mRID
+    ts_ts_1/0_limits
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ts_ts_1/0_norm,  165.0, olt_normal,    ts_ts_1/0_limits
+    # defaulted: emergamps = 1.5 x normamps
+    ts_ts_1/0_emerg, 247.5, olt_emergency, ts_ts_1/0_limits
+
 # derived: radius = diam / 2 (radius_from_diameter); diameterOverScreen = DiaShield - 2 TapeLayer (screen_diameter)
-Table TapeShieldCableInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A), insulationThickness (in), diameterOverInsulation (in), diameterOverJacket (in), tapeThickness (in), tapeLap (percent), diameterOverScreen (in)
+Table TapeShieldCableInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A), insulationThickness (in), diameterOverInsulation (in), diameterOverJacket (in), tapeThickness (in), tapeLap (percent), OperationalLimitSet, diameterOverScreen (in)
     # untranscribed: EpsR=2.3
-    ts_ts_1/0, TS_1/0, , 0.97, 0.1332, 0.184, 165.0, 0.22, 0.82, 1.06, 0.005, 20.0, 0.87
+    ts_ts_1/0, TS_1/0, , 0.97, 0.1332, 0.184, 165.0, 0.22, 0.82, 1.06, 0.005, 20.0, ts_ts_1/0_limits, 0.87

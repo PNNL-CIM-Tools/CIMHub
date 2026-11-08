@@ -183,16 +183,23 @@ def with_code(xf, codes: Mapping[str, object]):
     code = codes.get(str(xf.XfmrCode).lower())
     if code is None:
         raise ValueError(f"Transformer {xf.name}: XfmrCode={xf.XfmrCode} is not defined")
-    own = {field.lower(): field for field in xf.__dataclass_fields__}
+    own = {field.name.lower(): field.name for field in dataclasses.fields(xf)}
     filled = {}
-    for field in code.__dataclass_fields__:
+    for field in (f.name for f in dataclasses.fields(code)):
         if field in ("name", "like"):
             continue
         value, target = getattr(code, field), own.get(field.lower())
         if target is None:
             raise ValueError(f"XfmrCode {code.name}: {field} has no Transformer slot")
-        if value not in (None, []) and getattr(xf, target) in (None, []):
-            filled[target] = value
+        if value in (None, []):
+            continue
+        if getattr(xf, target) not in (None, []):
+            if FIELDS[target].kind != "untranscribed":
+                raise ValueError(f"Transformer {xf.name}: sets {target}, which its XfmrCode {code.name} also sets; "
+                                 "the template is the one source (DSS keeps the last, which the reader does not "
+                                 "record)")
+            continue
+        filled[target] = value
     return dataclasses.replace(xf, **filled), f"values from XfmrCode {code.name}"
 
 
@@ -208,11 +215,9 @@ def regulated_transformers(native) -> dict[str, object]:
     return regulated
 
 
-def waiting_for_template(native) -> int:
-    """How many instances by XfmrCode no RegControl names: they wait for the template (S3b)."""
-    regulated = regulated_transformers(native)
-    return sum(1 for xf in native.list_by_class(NATIVE_CLASS)
-               if xf.XfmrCode and str(xf.name).lower() not in regulated)
+def is_center_tap(phases: int, windings: list[Winding], ends: list[End]) -> bool:
+    """A 1-phase, 3-winding transformer whose windings 2 and 3 are a split-phase secondary (its template has lugs)."""
+    return phases == 1 and len(windings) == 3 and ends[-1].split_phase
 
 
 def is_regulator(windings: list[Winding]) -> bool:
@@ -338,6 +343,8 @@ class _Tables:
         self.phase_ends: list[Row] = []
         self.coils: list[Row] = []
         self.coil_mesh: list[Row] = []
+        self.template_tanks: list[Row] = []
+        self.template_phase_ends: list[Row] = []
         self.regulators: list[Row] = []
         self.auto_ends: list[Row] = []
         self.auto_mesh: list[Row] = []
@@ -367,7 +374,7 @@ def _map_three_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
                                        cell(_x_percent(xf, (i, j), notes))]))
 
 
-def _coil_rated_u(winding: Winding, phase_from: str, phase_to: str, system: BusSystem) -> float:
+def coil_rated_u(winding: Winding, phase_from: str, phase_to: str, system: BusSystem) -> float:
     """Phase-to-phase rating of one coil: a split-phase half is half of s1-s2, a phase-to-neutral
     coil on a 3-phase system is x sqrt(3), a phase-to-phase coil is its own voltage."""
     phases = {phase_from, phase_to}
@@ -376,6 +383,30 @@ def _coil_rated_u(winding: Winding, phase_from: str, phase_to: str, system: BusS
     if "N" in phases and system.three_phase:
         return _SQRT3 * winding.kv
     return winding.kv
+
+
+def phase_end_numbers(ends: list[End]) -> dict[tuple[int, int], tuple[int, str]]:
+    """``{(end number, node): (sequenceNumber, phase)}``: one TransformerPhaseEnd per phase of each end's terminal,
+    numbered across the transformer, end 1 first, in terminal phase order (neutral last)."""
+    numbers, sequence = {}, 0
+    for end in ends:
+        node_of_phase = {phase: node for node, phase in end.phase_of_node.items()}
+        for phase in end.phases:
+            sequence += 1
+            numbers[(end.number, node_of_phase[phase])] = (sequence, phase)
+    return numbers
+
+
+def end_kind(end: End, phases: int, xf=None, winding_count: int = 0) -> tuple[str, bool]:
+    """``(connectionKind, grounded)`` of a PowerTransformerEnd: 1-phase I (split-phase), Y (a coil on node 0) or D;
+    3-phase Yn/Y/D, a wye grounded through node 0 or Rneut (``_neutral``)."""
+    coil = end.windings[0]
+    if phases == 1:
+        return ("I" if end.split_phase else ("Y" if 0 in coil.nodes else "D")), 0 in end.phase_of_node
+    if not coil.wye:
+        return "D", False
+    grounded = _neutral(xf, coil, winding_count)[0]
+    return ("Yn" if grounded else "Y"), grounded
 
 
 def _map_single_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
@@ -388,26 +419,20 @@ def _map_single_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
     no_load_kw = float(xf.pct_noloadloss) / 100 * base_kva if xf.pct_noloadloss is not None else None
     rows.tanks.append(Row([tank, xf_id, cell(xf.pct_imag), cell(no_load_kw)]))
 
-    phase_end_id: dict[tuple[int, int], str] = {}  # (end number, node) -> TransformerPhaseEnd mRID
-    sequence = 0
     for end in ends:
-        node_of_phase = {phase: node for node, phase in end.phase_of_node.items()}
-        coil = end.windings[0]
-        kind = "I" if end.split_phase else ("Y" if 0 in coil.nodes else "D")
+        kind, grounded = end_kind(end, 1)
         rows.phase_end_ends.append(Row([f"{xf_id}_{end.number}", xf_id, end.bus, "".join(end.phases),
-                                        str(end.number), kind, cell(0 in end.phase_of_node),
-                                        buses[end.bus].base_voltage]))
-        for phase in end.phases:
-            sequence += 1
-            phase_end = f"{xf_id}_{end.number}_{phase}"
-            phase_end_id[(end.number, node_of_phase[phase])] = phase_end
-            rows.phase_ends.append(Row([phase_end, str(end.number), str(sequence), phase]))
+                                        str(end.number), kind, cell(grounded), buses[end.bus].base_voltage]))
+    phase_end_id: dict[tuple[int, int], str] = {}  # (end number, node) -> TransformerPhaseEnd mRID
+    for (number, node), (sequence, phase) in phase_end_numbers(ends).items():
+        phase_end_id[(number, node)] = f"{xf_id}_{number}_{phase}"
+        rows.phase_ends.append(Row([phase_end_id[(number, node)], str(number), str(sequence), phase]))
 
     end_of_winding = {winding.number: end for end in ends for winding in end.windings}
     for winding in windings:
         end = end_of_winding[winding.number]
         from_node, to_node = winding.nodes
-        rated_u = _coil_rated_u(winding, end.phase_of_node[from_node], end.phase_of_node[to_node], buses[end.bus])
+        rated_u = coil_rated_u(winding, end.phase_of_node[from_node], end.phase_of_node[to_node], buses[end.bus])
         rated_s = winding.kva / 2 if end.split_phase else winding.kva
         rows.coils.append(Row([
             f"{xf_id}_wdg_{winding.number}", tank, cell(rated_u), cell(winding.kv), cell(rated_s), cell(base_kva),
@@ -455,6 +480,21 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
                                cell(_x_percent(xf, (1, 2), notes))]))
 
 
+def _map_by_template(xf, xf_id: str, windings: list[Winding], ends: list[End], phases: int,
+                     buses: Mapping[str, BusSystem], rows: _Tables) -> None:
+    """An instance by XfmrCode: a tank on the code's template and one PowerTransformerEnd per bus; by a lug
+    template also one TransformerPhaseEnd per phase of each terminal, on the end's Terminal (S3b)."""
+    rows.template_tanks.append(Row([f"{xf_id}_tank", xf_id, mrid("xc_", xf.XfmrCode, lowercase=True)]))
+    for end in ends:
+        kind, grounded = end_kind(end, phases, xf, len(windings))
+        rows.phase_end_ends.append(Row([f"{xf_id}_{end.number}", xf_id, end.bus, "".join(end.phases),
+                                        str(end.number), kind, cell(grounded), buses[end.bus].base_voltage]))
+    if is_center_tap(phases, windings, ends):
+        for (number, _), (sequence, phase) in phase_end_numbers(ends).items():
+            rows.template_phase_ends.append(Row([f"{xf_id}_{number}_{phase}", str(number), str(sequence), phase,
+                                                 f"{xf_id}_T{number}"]))
+
+
 def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> Document:
     """Every inline ``Transformer`` of a DSS model as one ``transformer`` document.
 
@@ -468,10 +508,11 @@ def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> D
     for xf in transformers:
         is_regulated = str(xf.name).lower() in regulated
         source = None
+        by_template = bool(xf.XfmrCode) and not is_regulated
         if xf.XfmrCode:
-            if not is_regulated:
-                continue  # waits for the XfmrCode template (S3b); counted on the master
             xf, source = with_code(xf, codes)
+            if by_template:
+                source = f"by XfmrCode {xf.XfmrCode} (xfmrcode.cimtbl)"
         phases = xf.phases if xf.phases is not None else 3
         if phases not in (1, 3):
             raise ValueError(f"Transformer {xf.name}: phases={phases}; only 1 and 3 are mapped")
@@ -487,7 +528,10 @@ def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> D
         ends = ends_of(windings, phases, name=xf.name)
         first_row = len(rows.transformers)
         rows.transformers.append(Row([xf_id, str(xf.name), container, cell(xf.enabled)]))
-        if phases == 3:
+        if by_template:
+            _map_by_template(xf, xf_id, windings, ends, phases, buses, rows)
+            notes = []  # the template's defaults are listed on the template
+        elif phases == 3:
             _map_three_phase(xf, xf_id, windings, ends, buses, rows, notes)
         else:
             _map_single_phase(xf, xf_id, windings, ends, buses, rows, notes)
@@ -509,7 +553,14 @@ def _statements(rows: _Tables) -> list[Table]:
         ("TransformerMeshImpedance", ["mRID", "FromTransformerEnd", "ToTransformerEnd", ("x", "percent")],
          rows.balanced_mesh, "x in percent on winding 1's kVA at the From end's voltage"),
         ("PowerTransformerEnd", ["mRID", "PowerTransformer", "node", "phases", "endNumber", "connectionKind",
-                                 "grounded", "BaseVoltage"], rows.phase_end_ends, "1-phase: by phase ends"),
+                                 "grounded", "BaseVoltage"], rows.phase_end_ends,
+         "1-phase by phase ends, and every instance by template (end n is the template's end n)"),
+        ("TransformerTank", ["mRID", "PowerTransformer", "TankConfiguration"], rows.template_tanks,
+         "by template: the XfmrCode's TransformerTankConfiguration (xfmrcode.cimtbl)"),
+        ("TransformerPhaseEnd", ["mRID", "endNumber", "sequenceNumber", "phase", "Terminal"],
+         rows.template_phase_ends,
+         "by a lug template: one per phase of each terminal; a template lug's sequenceNumber names the one it "
+         "lands on"),
         ("TransformerTank", ["mRID", "PowerTransformer", ("percentMagnetizingCurrent", "percent"),
                              ("noLoadLoss", "kW")], rows.tanks,
          "derived: noLoadLoss = pct_noloadloss / 100 x winding 1 kVA"),

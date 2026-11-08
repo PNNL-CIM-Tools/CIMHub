@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. XfmrCode is deferred to S3b. **S3a done 2026-11-08** (lines, switches, transformers, regulators, RegControl). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -23,6 +23,7 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
+| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (TankEnd), `transformer_template_1ph` (center tap, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 
@@ -277,22 +278,39 @@ IEEE9500 wires give one (km/cm/cm). An unset selector raises; every wire in the 
   diameter is the shield's inside.
 - `EpsR` is untranscribed: CableInfo has no permittivity. Every cable in the sweep uses the DSS default, 2.3.
 
+**Ratings (approved 2026-11-08).** A rated wire's `normamps` is `ratedCurrent`, as before. It also becomes an
+`OperationalLimitSet` `<mRID>_limits` on the new GridAPPS-D `AssetInfo.OperationalLimitSet` (the serialized side,
+so the wire row names its set and the set is written first). The set has two `CurrentLimit`s:
+- `<mRID>_norm` = normamps on `olt_normal`;
+- `<mRID>_emerg` = emergamps on `olt_emergency`. An unset emergamps is 1.5 × normamps, the engine's rule
+  (`wire_ratings`, `# defaulted: emergamps = 1.5 x normamps`).
+
+The two limit types are the master's. An unrated wire gets no set (DSS's 400/600 A defaults are not written).
+`Seasons`/`Ratings` raise when set, as on a Line. The line mapper uses the same `wire_ratings` for a geometry
+line's first conductor.
+
 Example (`wiredata.cimtbl`, IEEE13_Assets):
 
 ```
-Table OverheadWireInfo: mRID, name, rDC20 (ohm/kft), rAC25 (ohm/kft), gmr (in), radius (in), ratedCurrent (A)
-    # defaulted: Rac = 1.02 x Rdc
-    wire_acsr_1/0,   ACSR_1/0,   0.212121212, 0.21636363624000002, 0.05352, 0.199,  230.0
+Table OperationalLimitSet: mRID
+    wire_acsr_1/0_limits
     ...
-Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A)
-    wire_cu_1/0, CU_1/0, , 0.607, 0.13356, 0.184, 100.0
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    wire_acsr_1/0_norm,    230.0,  olt_normal,    wire_acsr_1/0_limits
+    # defaulted: emergamps = 1.5 x normamps
+    wire_acsr_1/0_emerg,   345.0,  olt_emergency, wire_acsr_1/0_limits
+    ...
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/kft), rAC25 (ohm/kft), gmr (in), radius (in), ratedCurrent (A), OperationalLimitSet
+    # defaulted: Rac = 1.02 x Rdc
+    wire_acsr_1/0,   ACSR_1/0,   0.212121212, 0.21636363624000002, 0.05352, 0.199,  230.0, wire_acsr_1/0_limits
+    ...
 ```
 
-**Fail fast:** a unit selector unset; radius and diam both set or neither; GMRac unset; `Capradius` or
-`SemiconLayer` set (no deck sets them).
+**Fail fast:** a unit selector unset; radius and diam both set or neither; GMRac unset; `Capradius`,
+`SemiconLayer`, `Seasons` or `Ratings` set (no deck sets them).
 
 **Oracle:** every written value equals the engine's property in the engine's units (`opendssdirect` WireData /
-CNData / TSData), including the filled Rac, on the vendored IEEE13_Assets and IEEE4 decks
+CNData / TSData), including the filled Rac and the normal and emergency ratings, on the vendored IEEE13_Assets and IEEE4 decks
 (`test_values_match_the_engine`).
 
 | Wiredata field | type | samples | kind | target |
@@ -305,11 +323,11 @@ CNData / TSData), including the filled Rac, on the vendored IEEE13_Assets and IE
 | `GMRunits` | `Optional[str]` | `in`, `cm`, `ft` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` | `0.40132`, `0.39624`, `0.37084` | copied | `OverheadWireInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `230.0`, `340.0`, `730.0` | copied | `OverheadWireInfo.ratedCurrent` (A) |
-| `emergamps` | `Optional[float]` | `200.0`, `239.0`, `172.0` | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `normamps` | `Optional[float]` | `230.0`, `340.0`, `730.0` | copied | `OverheadWireInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `emergamps` | `Optional[float]` | `200.0`, `239.0`, `172.0` | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.398`, `0.563`, `0.927` | derived | radius = diam / 2 (radius_from_diameter) |
-| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
-| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
 | `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
@@ -332,11 +350,11 @@ CNData / TSData), including the filled Rac, on the vendored IEEE13_Assets and IE
 | `GMRunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of GMRac, GmrStrand in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` |  | copied | `ConcentricNeutralCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `260.0` | copied | `ConcentricNeutralCableInfo.ratedCurrent` (A) |
-| `emergamps` | `Optional[float]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `normamps` | `Optional[float]` | `260.0` | copied | `ConcentricNeutralCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `emergamps` | `Optional[float]` |  | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.567`, `0.935` | derived | radius = diam / 2 (radius_from_diameter) |
-| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
-| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
 | `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
@@ -357,11 +375,11 @@ CNData / TSData), including the filled Rac, on the vendored IEEE13_Assets and IE
 | `GMRunits` | `Optional[str]` | `in` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` |  | copied | `TapeShieldCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `165.0` | copied | `TapeShieldCableInfo.ratedCurrent` (A) |
-| `emergamps` | `Optional[float]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `normamps` | `Optional[float]` | `165.0` | copied | `TapeShieldCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `emergamps` | `Optional[float]` |  | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.368` | derived | radius = diam / 2 (radius_from_diameter) |
-| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
-| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
 | `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
@@ -462,17 +480,147 @@ IEEE13_Assets and IEEE4 decks). Checked by hand 2026-11-07, all match: IEEE9500 
 | `conductors` | `Union[str, list[str], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `like` | `Optional[str]` | `603` | untranscribed | the reader resolves like= before mapping |
 
-## XfmrCode (deferred to S3b, approved 2026-11-07; split approved 2026-11-08)
+## XfmrCode (S3b, approved and done 2026-11-08)
 
-XfmrCode maps to `TransformerTankConfiguration` (`transformer_template`, `transformer_template_1ph`), but three
-things block it:
-- **U2:** both template shapes fail to bind in CIM-Tables today (a `TransformerTankEnd` on a configuration has no
-  node).
-- **D10:** the 3-phase tank configuration convention is still open.
-- **Lugs:** the instance-by-template link (`TransformerLug.sequenceNumber`, now in cim18v17) has no shape yet.
+Mapper: `cimhub_opendss/importer/cimtbl/xfmrcode.py` (`map_xfmrcode(native, buses)`). Artifact `xfmrcode.cimtbl`,
+after the line codes; the instances stay in `transformer.cimtbl`. Atom `tests/atoms/xfmrcode/codes.dss`:
+- `ct25`: a center tap with two instances on a 3-phase system;
+- `sub`: 3-phase delta-wye;
+- `yyd`: 1-phase Y-Y-D, three cans;
+- `unused`: no instance uses it.
 
-It moves to S3b, next to the Transformer instances that use it, once U2 is fixed. A regulated instance by code
-already maps in S3a (it takes its code's values; CIM has no AutoTransformer template).
+Goldens `codes.cimtbl` and `codes_transformer.cimtbl`, tested by `tests/test_cimtbl_xfmrcode.py`. U2 is closed
+(2026-11-08).
+
+**Result.** 25 of 31 sweep decks bind with every S3 part (the S3a stops only). The center-tap templates are 9 in
+IEEE8500 (1,177 instances), 9 in each IEEE9500 copy, 3 in IEEE123_PV and 1 in IEEE13_CDPSM (`Tpoletop`).
+IEEE13_Assets has 2 TankEnd templates, IEEE4 YYD has 1. Every template's winding kV, kVA, %R and mesh x equal the
+engine's for each instance, on the atom and the engine decks (IEEE13_CDPSM, IEEE13_Assets, IEEE8500, IEEE9500).
+Multi-can tank templating and lug sequencing across a bank wait until CYME's form is seen; the CIM template class
+is then updated to match (user, 2026-11-08).
+
+**Template forms (the user's model, 2026-11-08; settles D10 and amends DSS-2's "lug to lug" for every code).**
+
+**Census** (the instances that wait for S3b, counting duplicate deck copies):
+
+| code kind | instances | form |
+|---|---:|---|
+| center tap: 1-phase, 3 windings, secondary halves equal (7.2/0.12/0.12, 2.4/0.12/0.12, ...) | 8,828 (IEEE8500, IEEE9500, IEEE123_PV, IEEE13_OCHRE, IEEE13_CDPSM `CT5`) | lugs |
+| 1-phase, 3 windings Y-Y-D (IEEE4 YYD, 39.83/7.62/2.4 kV) | 3 | TankEnd |
+| 3-phase, 2 windings | 3 | TankEnd |
+| 1-phase, 2 windings | none outside the regulators (mapped in S3a) | TankEnd |
+
+Every center-tap instance has the split-phase secondary `bus2.1.0` + `bus2.0.2` and a line-to-neutral primary on
+one node. No instance overrides its code's values, except `ppm_antifloat` (untranscribed).
+
+- **TankEnd template** (3-phase and every code that is not a center tap): `TransformerTankConfiguration`
+  `xc_<code>`. Each DSS winding gives:
+  - a `TransformerTankEnd` `xc_<code>_end_<n>` (`endNumber`, `connectionKind`, `rground`/`xground` from
+    `Rneut`/`Xneut`; no phases);
+  - a `TransformerWinding` `xc_<code>_wdg_<n>` (`FromTransformerEnd` = its tank end), with `ratedU` (LL), `baseU`
+    (the coil), `ratedS`, `baseS` (per phase on a 3-phase code) and `r`.
+
+  The mesh between windings carries `x`. The instance's `PowerTransformerEnd` n is template end n
+  (`endNumber`); it carries the node, phases and `grounded`. Shapes: `transformer_template`,
+  `transformer_by_template` (`xf_t1`).
+- **Lug template** (center tap). A 3-winding tank, as CIMTBL-Models
+  `distribution/templates/polemount_1ph_50kva_7200_12470y.cimtbl`:
+  - `TransformerLug`s H1, H2, X1, X3, X2 (`sequenceNumber` 1-5: the instance phase end each lands on, below);
+  - windings lug to lug from the polarity end: H1→H2, X1→X2 (DSS winding 2, `bus2.1.0`: s1→N) and X2→X3 (winding
+    3, `bus2.0.2`: N→s2);
+  - `designation` per IEEE C57.12.70 (the profile's text). X1 is the low-side terminal in phase with H1 under
+    either polarity, so s1 (in phase with the primary) is X1 and s2 (at 180°) is X3. Additive polarity (X3, X2,
+    X1: 1-phase, 200 kVA or less, 8,660 V or less) against subtractive (X1, X2, X3) only says where X1 sits on
+    the tank, so the model is the same for both (confirmed by the user, 2026-11-08). Y/Z designations belong to
+    a true 3-winding unit, which here is a TankEnd template (no lugs).
+
+  The instance has a `PowerTransformerEnd` per bus (end 1: the primary node and phases; end 2: `s1s2N`) and, as the
+  inline 1-phase mapper already does, a `TransformerPhaseEnd` per phase of each end's terminal, not per lug:
+  `sequenceNumber` unique in the transformer, end 1 first, in terminal phase order, neutral last. A lug's
+  `sequenceNumber` names the phase end it lands on, so several lugs may share one: three bussed center-tap cans
+  on `bus2.1.2.3.0` are 4 phase ends for 12 lugs. Each DSS Transformer is its own PowerTransformer with one tank
+  (DSS-2), so here the numbers line up one to one:
+  - end 1 `BN` (line to neutral, DSS's default node 0) or `AB` (line to line) is 1, 2, which H1 and H2 land on;
+  - end 2 `s1s2N` is s1 = 3, s2 = 4, N = 5, which X1, X3, X2 land on.
+
+  The template's lug numbers are therefore those of a one-tank instance. A bank of tanks on one PowerTransformer
+  needs a configuration per tank position (CIMTBL-Models `bank_oyod_50_50_7200_12470y.cimtbl`), which no DSS deck
+  produces. An instance whose secondary is not `bus2.1.0` + `bus2.0.2` raises. Shapes:
+  `transformer_template_1ph` and `transformer_by_template` (`xf_t2`), rewritten from today's phase-end template to
+  this lug pattern.
+
+**Values.**
+- **`ratedU`** is the nameplate: phase to phase. A coil's voltage alone does not fix it, because 7.2 kV is
+  7200/12470Y on a 3-phase system and 7200 on a single-phase one. So it comes from the bus system its instances
+  sit on (the S3a rule: × √3 for a phase-to-neutral coil on a 3-phase system, × 2 for a split-phase half), and
+  instances that disagree raise.
+- **The rest:** `baseU` = the code's kV, the coil. `baseS` = winding 1's kVA on every coil. A split-phase half has
+  `ratedS` = kVA / 2. `r` = `%Rs` per winding (or `%loadloss` / 2 on windings 1 and 2). The mesh 1-2, 1-3, 2-3
+  `x` = Xhl, Xht, Xlt in percent on the From winding's baseU and baseS. `%imag` and `%noloadloss` go on the
+  configuration.
+- **Defaults** (DSS-6, `dss_default` on XfmrCode): `conns` wye, `%Rs` 0.2, Xhl/Xht/Xlt 7/35/30.
+
+**Instances** (`transformer.cimtbl`): `PowerTransformer` `xf_<name>`, plus `TransformerTank` `xf_<name>_tank` with
+`TankConfiguration` = `xc_<code>`, plus the ends above. A lug template's instance phase ends reference their end's
+generated Terminal (`xf_<name>_T<n>`), which is their link to the PowerTransformer, since the instance has no
+windings. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
+(the template must be the one source), except the untranscribed ones. A regulated instance keeps S3a's rule: it
+takes its code's values, because CIM has no AutoTransformer template.
+
+**Fail fast:** windings other than 2 or 3; a mesh From winding rated other than winding 1; a tap other than 1 on an
+unregulated code; a center-tap code with an
+instance that is not a split-phase secondary; instances of one code on different bus systems; `RdcOhms`,
+`Seasons`, `Ratings` set.
+
+**Engine checks:** each template's ratings, r and x against the engine's transformer of each instance.
+
+**Decisions (approved 2026-11-08):**
+- **S3b-1:** AutoTrans stays unmapped until a deck has one; the master's not-mapped count is the signal.
+- **S3b-2:** the Y-Y-D 1-phase 3-winding code (IEEE4 YYD) is a TankEnd template (3 tank ends, D on the third).
+
+| Xfmrcode field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, XfmrcodeName]` | `CT5`, `FdrXfmr`, `RegLeg` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name, lowercased |
+| `phases` | `Optional[int]` | `1`, `3` | structural | 3: TankEnd template; 1 with 3 windings whose instances are center taps: lug template; other 1-phase codes: TankEnd template |
+| `windings` | `Optional[int]` | `3`, `2` | structural | one TransformerWinding each; 2 or 3 |
+| `wdg` | `Optional[int]` |  | structural | the winding Rneut/Xneut belong to (the reader's tag); none = the last |
+| `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `kV` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `kVA` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `tap` | `Optional[str]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a lug template raises |
+| `Xneut` | `Optional[float]` |  | structural | TankEnd xground (ohm) of its winding, with Rneut >= 0 |
+| `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='wye', descripti...`, `[ConnectionType(text='delta', descrip...` | structural | TankEnd connectionKind (D, Y; grounding is the instance's); a center tap's secondary halves are I; default wye |
+| `kVs` | `Union[float, list[float], NoneType]` | `[2.4, 0.12, 0.12]`, `[4.16, 0.48]`, `[2.4, 2.4]` | structural | winding baseU (the coil); ratedU phase-to-phase from the instances' common bus system (x sqrt 3 on a 3-phase system, x 2 for a split-phase half), and instances that disagree raise |
+| `kVAs` | `Union[float, list[float], NoneType]` | `[5.0, 5.0, 5.0]`, `[500.0, 500.0]`, `[1666.0, 1666.0]` | structural | winding ratedS (a split-phase half: kVA / 2); baseS = winding 1's kVA on every coil (per phase on a 3-phase code) |
+| `taps` | `Union[float, list[float], NoneType]` |  | structural | a tap other than 1 raises (a fixed tap is not mapped yet) |
+| `Xhl` | `Optional[float]` | `2.04`, `2.0`, `0.01` | structural | mesh 1-2 x (percent on the From winding's baseU and baseS); default 7 |
+| `Xht` | `Optional[float]` | `2.04`, `1.632`, `36.0` | structural | mesh 1-3 x; default 35 |
+| `Xlt` | `Optional[float]` | `1.36`, `1.088`, `28.0` | structural | mesh 2-3 x; default 30 |
+| `Xscarray` | `Union[float, list[float], NoneType]` |  | untranscribed | for more than 3 windings, which raise |
+| `thermal` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `n` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `m` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `flrise` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `hsrise` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `pct_loadloss` | `Optional[float]` | `0.01`, `1.1` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
+| `pct_noloadloss` | `Optional[float]` | `0.2`, `0.6` | derived | TransformerTankConfiguration.noLoadLoss (kW) = % x winding 1 kVA |
+| `normhkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed (plan D9) |
+| `emerghkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed (plan D9) |
+| `MaxTap` | `Optional[str]` | `1.1` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
+| `MinTap` | `Optional[str]` | `0.9` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
+| `NumTaps` | `Optional[int]` |  | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
+| `pct_imag` | `Optional[float]` | `0.5`, `1.1` | copied | `TransformerTankConfiguration.percentMagnetizingCurrent` (percent) |
+| `ppm_antifloat` | `Optional[float]` |  | untranscribed | numerical aid of the DSS solver |
+| `pct_Rs` | `Union[float, list[float], NoneType]` | `[0.6, 1.2, 1.2]`, `[0.55, 0.55]`, `[0.0005, 0.0005]` | structural | winding r (percent on its own baseS); default 0.2 |
+| `X12` | `Optional[float]` |  | structural | alias of Xhl |
+| `X13` | `Optional[float]` |  | structural | alias of Xht |
+| `X23` | `Optional[float]` |  | structural | alias of Xlt |
+| `RdcOhms` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (home TransformerWinding.rDC) |
+| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
 ## Transformer
 
@@ -606,11 +754,11 @@ RegControls. Census of the 31 sweep decks, 2026-11-07:
 1,177, IEEE9500 1,275, IEEE123_PV 82, IEEE13_OCHRE 16, IEEE13_CDPSM 1 (`Tpoletop`). So S3 splits:
 - **S3a** (done): lines, switches, transformers in `MAPPING_ORDER`, VoltageRegulators and LTCs (a regulator by
   XfmrCode included), RegControl.
-- **S3b**: XfmrCode templates and their instances (once U2 and D10 are settled), and AutoTrans (an atom only; no
-  deck has one).
+- **S3b** (done 2026-11-08): XfmrCode templates and their instances (section XfmrCode). AutoTrans stays unmapped
+  until a deck has one (S3b-1).
 
-Until S3b, a Transformer by XfmrCode that no RegControl names is counted on the master's `# not mapped:` line
-(`Transformer by XfmrCode 1177`), so its deck still binds.
+Until S3b a Transformer by XfmrCode that no RegControl names was counted on the master's `# not mapped:` line;
+S3b maps it by template.
 
 **Result (2026-11-08).** The S3a exit is met:
 - IEEE13_CDPSM, IEEE123 and IEEE8500 bind with every line, switch, transformer and regulator. Their XfmrCode

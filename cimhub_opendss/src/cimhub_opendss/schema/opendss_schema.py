@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T13:57:22
+# Generation date: 2026-11-08T15:05:14
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -5917,14 +5917,14 @@ class Xfmrcode(YAMLRoot):
     phases: Optional[int] = None
     windings: Optional[int] = None
     wdg: Optional[int] = None
-    conn: Optional[str] = None
+    conn: Optional[Union[str, "ConnectionType"]] = None
     kV: Optional[float] = None
     kVA: Optional[float] = None
     tap: Optional[str] = None
     pct_R: Optional[float] = None
     Rneut: Optional[float] = None
     Xneut: Optional[float] = None
-    conns: Optional[Union[str, list[str]]] = empty_list()
+    conns: Optional[Union[Union[str, "ConnectionType"], list[Union[str, "ConnectionType"]]]] = empty_list()
     kVs: Optional[Union[float, list[float]]] = empty_list()
     kVAs: Optional[Union[float, list[float]]] = empty_list()
     taps: Optional[Union[float, list[float]]] = empty_list()
@@ -5970,8 +5970,8 @@ class Xfmrcode(YAMLRoot):
         if self.wdg is not None and not isinstance(self.wdg, int):
             self.wdg = int(self.wdg)
 
-        if self.conn is not None and not isinstance(self.conn, str):
-            self.conn = str(self.conn)
+        if self.conn is not None and not isinstance(self.conn, ConnectionType):
+            self.conn = ConnectionType(self.conn)
 
         if self.kV is not None and not isinstance(self.kV, float):
             self.kV = float(self.kV)
@@ -5993,7 +5993,7 @@ class Xfmrcode(YAMLRoot):
 
         if not isinstance(self.conns, list):
             self.conns = [self.conns] if self.conns is not None else []
-        self.conns = [v if isinstance(v, str) else str(v) for v in self.conns]
+        self.conns = [v if isinstance(v, ConnectionType) else ConnectionType(v) for v in self.conns]
 
         if not isinstance(self.kVs, list):
             self.kVs = [self.kVs] if self.kVs is not None else []
@@ -10929,7 +10929,7 @@ slots.xfmrcode__wdg = Slot(uri=DSS.wdg, name="xfmrcode__wdg", curie=DSS.curie('w
                    model_uri=DSS.xfmrcode__wdg, domain=None, range=Optional[int])
 
 slots.xfmrcode__conn = Slot(uri=DSS.conn, name="xfmrcode__conn", curie=DSS.curie('conn'),
-                   model_uri=DSS.xfmrcode__conn, domain=None, range=Optional[str])
+                   model_uri=DSS.xfmrcode__conn, domain=None, range=Optional[Union[str, "ConnectionType"]])
 
 slots.xfmrcode__kV = Slot(uri=DSS.kV, name="xfmrcode__kV", curie=DSS.curie('kV'),
                    model_uri=DSS.xfmrcode__kV, domain=None, range=Optional[float])
@@ -10950,7 +10950,7 @@ slots.xfmrcode__Xneut = Slot(uri=DSS.Xneut, name="xfmrcode__Xneut", curie=DSS.cu
                    model_uri=DSS.xfmrcode__Xneut, domain=None, range=Optional[float])
 
 slots.xfmrcode__conns = Slot(uri=DSS.conns, name="xfmrcode__conns", curie=DSS.curie('conns'),
-                   model_uri=DSS.xfmrcode__conns, domain=None, range=Optional[Union[str, list[str]]])
+                   model_uri=DSS.xfmrcode__conns, domain=None, range=Optional[Union[Union[str, "ConnectionType"], list[Union[str, "ConnectionType"]]]])
 
 slots.xfmrcode__kVs = Slot(uri=DSS.kVs, name="xfmrcode__kVs", curie=DSS.curie('kVs'),
                    model_uri=DSS.xfmrcode__kVs, domain=None, range=Optional[Union[float, list[float]]])

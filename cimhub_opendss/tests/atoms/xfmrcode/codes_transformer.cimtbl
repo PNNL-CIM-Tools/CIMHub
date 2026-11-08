@@ -1,0 +1,62 @@
+# OpenDSS Transformer -> PowerTransformer + PowerTransformerEnd per bus;
+# 1-phase: TransformerTank + TransformerPhaseEnd + TransformerWinding; 3-phase: balanced ends.
+# Source table: Transformer (records: 6)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#transformer
+
+Profile = cim18v17
+
+# untranscribed: Xscarray, thermal, n, m, flrise, hsrise, normhkVA, emerghkVA, Seasons, Ratings, normamps, emergamps,
+# sub, subname, ppm_antifloat, bank, XRConst, LeadLag, Core, RdcOhms, faultrate, pct_perm, repair, basefreq, like
+Table PowerTransformer: mRID, name, EquipmentContainer, normallyInService
+    # by XfmrCode sub (xfmrcode.cimtbl)
+    xf_sub,  sub,  fdr_atom,
+    # by XfmrCode ct25 (xfmrcode.cimtbl)
+    xf_t1,   t1,   fdr_atom,
+    # by XfmrCode ct25 (xfmrcode.cimtbl)
+    xf_t2,   t2,   fdr_atom,
+    # by XfmrCode yyd (xfmrcode.cimtbl)
+    xf_yyda, yyda, fdr_atom,
+    # by XfmrCode yyd (xfmrcode.cimtbl)
+    xf_yydb, yydb, fdr_atom,
+    # by XfmrCode yyd (xfmrcode.cimtbl)
+    xf_yydc, yydc, fdr_atom,
+
+# 1-phase by phase ends, and every instance by template (end n is the template's end n)
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_sub_1,  xf_sub,  sourcebus, ABC,   1, D,  false, bv_115kv
+    xf_sub_2,  xf_sub,  feeder,    ABCN,  2, Yn, true,  bv_12p47kv
+    xf_t1_1,   xf_t1,   feeder,    AN,    1, Y,  true,  bv_12p47kv
+    xf_t1_2,   xf_t1,   house1,    s1s2N, 2, I,  true,  bv_240v
+    xf_t2_1,   xf_t2,   feeder,    BN,    1, Y,  true,  bv_12p47kv
+    xf_t2_2,   xf_t2,   house2,    s1s2N, 2, I,  true,  bv_240v
+    xf_yyda_1, xf_yyda, feeder,    AN,    1, Y,  true,  bv_12p47kv
+    xf_yyda_2, xf_yyda, low,       AN,    2, Y,  true,  bv_4p16kv
+    xf_yyda_3, xf_yyda, tert,      AB,    3, D,  false, bv_2p4kv
+    xf_yydb_1, xf_yydb, feeder,    BN,    1, Y,  true,  bv_12p47kv
+    xf_yydb_2, xf_yydb, low,       BN,    2, Y,  true,  bv_4p16kv
+    xf_yydb_3, xf_yydb, tert,      BC,    3, D,  false, bv_2p4kv
+    xf_yydc_1, xf_yydc, feeder,    CN,    1, Y,  true,  bv_12p47kv
+    xf_yydc_2, xf_yydc, low,       CN,    2, Y,  true,  bv_4p16kv
+    xf_yydc_3, xf_yydc, tert,      AC,    3, D,  false, bv_2p4kv
+
+# by template: the XfmrCode's TransformerTankConfiguration (xfmrcode.cimtbl)
+Table TransformerTank: mRID, PowerTransformer, TankConfiguration
+    xf_sub_tank,  xf_sub,  xc_sub
+    xf_t1_tank,   xf_t1,   xc_ct25
+    xf_t2_tank,   xf_t2,   xc_ct25
+    xf_yyda_tank, xf_yyda, xc_yyd
+    xf_yydb_tank, xf_yydb, xc_yyd
+    xf_yydc_tank, xf_yydc, xc_yyd
+
+# by a lug template: one per phase of each terminal; a template lug's sequenceNumber names the one it lands on
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_t1_1_A,  1, 1, A,  xf_t1_T1
+    xf_t1_1_N,  1, 2, N,  xf_t1_T1
+    xf_t1_2_s1, 2, 3, s1, xf_t1_T2
+    xf_t1_2_s2, 2, 4, s2, xf_t1_T2
+    xf_t1_2_N,  2, 5, N,  xf_t1_T2
+    xf_t2_1_B,  1, 1, B,  xf_t2_T1
+    xf_t2_1_N,  1, 2, N,  xf_t2_T1
+    xf_t2_2_s1, 2, 3, s1, xf_t2_T2
+    xf_t2_2_s2, 2, 4, s2, xf_t2_T2
+    xf_t2_2_N,  2, 5, N,  xf_t2_T2

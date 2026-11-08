@@ -1,7 +1,8 @@
 """OpenDSS ``WireData``, ``CNData``, ``TSData`` -> ``wiredata.cimtbl``, ``cndata.cimtbl``, ``tsdata.cimtbl``.
 
 One ``OverheadWireInfo``, ``ConcentricNeutralCableInfo`` or ``TapeShieldCableInfo`` per DSS object, values as the
-deck writes them. A conductor's three unit selectors (``Runits``, ``GMRunits``, ``radunits``) become header
+deck writes them. A rated wire's ``normamps``/``emergamps`` also become an ``OperationalLimitSet`` with a normal
+and an emergency ``CurrentLimit``, on ``AssetInfo.OperationalLimitSet`` (GridAPPS-D extension). A conductor's three unit selectors (``Runits``, ``GMRunits``, ``radunits``) become header
 units, so the mapper writes one table per unit combination, as the LineCode mapper writes one per length unit.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#wire-catalogs``.
@@ -19,7 +20,8 @@ _OVERHEAD = "OverheadWireInfo"
 _CN = "ConcentricNeutralCableInfo"
 _TS = "TapeShieldCableInfo"
 
-_RATING = "no home on WireInfo, which has one ratedCurrent (plan D9)"
+_LIMITS = ("{kind} CurrentLimit of the wire's OperationalLimitSet <mRID>_limits "
+           "(AssetInfo.OperationalLimitSet)")
 _UNITS = "the unit of {slots} in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it)"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
 
@@ -41,10 +43,12 @@ def _conductor(info: str) -> dict[str, Field]:
                         "which), neither raises"),
         "radunits": Field("mapped", note=_UNITS.format(slots="radius, diam and every cable dimension")),
         "diam": Field("derived", note="radius = diam / 2 (radius_from_diameter)"),
-        "normamps": Field("copied", ((info, "ratedCurrent", "A"),)),
-        "emergamps": Field("untranscribed", note=_RATING),
-        "Seasons": Field("untranscribed", note=_RATING),
-        "Ratings": Field("untranscribed", note=_RATING),
+        "normamps": Field("copied", ((info, "ratedCurrent", "A"),), "also the " + _LIMITS.format(kind="normal")),
+        "emergamps": Field("structural", note="the " + _LIMITS.format(kind="emergency") + "; unset: 1.5 x normamps "
+                                              "(wire_ratings, the engine's rule), defaulted"),
+        "Seasons": Field("structural", note=_NOT_MAPPED + " (an indexed rating array that names no calendar season; "
+                                                          "home OperationalLimitType.season)"),
+        "Ratings": Field("structural", note=_NOT_MAPPED + " (with Seasons)"),
         "Capradius": Field("structural", note=_NOT_MAPPED + " (the radius for capacitance; not WireInfo.coreRadius)"),
         "like": Field("untranscribed", note="the reader resolves like= before mapping"),
     }
@@ -112,6 +116,21 @@ Source table: {native} (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#wire-catalogs"""
 
 
+#: The engine's emergency rating of a wire that gives only normamps (``ConductorData``).
+EMERGENCY_FACTOR = 1.5
+
+
+def wire_ratings(wire) -> dict[str, tuple[float, str | None]]:
+    """``{"normamps": (amps, None), "emergamps": (amps, note)}`` of a rated wire, ``{}`` of an unrated one. An
+    unset emergamps is 1.5 x normamps, as the engine rates the wire; ``note`` then says so."""
+    if wire.normamps is None:
+        return {}
+    if wire.emergamps is not None:
+        return {"normamps": (float(wire.normamps), None), "emergamps": (float(wire.emergamps), None)}
+    return {"normamps": (float(wire.normamps), None),
+            "emergamps": (EMERGENCY_FACTOR * float(wire.normamps), "defaulted: emergamps = 1.5 x normamps")}
+
+
 def ac_from_dc(rdc: float) -> float:
     """The engine's AC resistance when a wire gives only ``Rdc``: Rac = 1.02 x Rdc (``ConductorData.pas``)."""
     return 1.02 * rdc
@@ -135,7 +154,7 @@ def _unit(wire, slot: str) -> str:
 
 def _check(wire, fields: dict[str, Field]) -> None:
     unmapped = [slot for slot, field in fields.items()
-                if field.kind == "structural" and getattr(wire, slot) not in (None, [])]
+                if field.note.startswith(_NOT_MAPPED) and getattr(wire, slot) not in (None, [])]
     if unmapped:
         raise ValueError(f"{type(wire).__name__} {wire.name}: {', '.join(unmapped)} not mapped yet "
                          "(no deck in the sweep sets them)")
@@ -164,6 +183,9 @@ def _wire_row(wire, prefix: str, fields: dict[str, Field]) -> tuple[tuple[Column
         values["radius"] = radius_from_diameter(wire.diam)
     columns = [column for _, column in pairs]
     texts = [cell(values[slot]) for slot, _ in pairs]
+    ratings = wire_ratings(wire)
+    columns.append(Column("OperationalLimitSet"))
+    texts.append(f"{mrid(prefix, wire.name, lowercase=True)}_limits" if ratings else None)
     if info in _DERIVED_COLUMN:
         column, source = _DERIVED_COLUMN[info]
         columns.append(Column(column, radius_unit))
@@ -194,10 +216,25 @@ def map_wires(native, native_class: type, prefix: str, fields: dict[str, Field])
         return Document(name=name, statements=[], profile=CIM_PROFILE)
     info = _INFO_CLASS[native_class]
     by_columns: dict[tuple[Column, ...], list[Row]] = {}
+    limit_sets, limits = [], []
     for wire in wires:
         columns, row = _wire_row(wire, prefix, fields)
         by_columns.setdefault(columns, []).append(row)
-    tables = [Table(info, [Column("mRID"), *columns], rows, comment=f"derived: {_DERIVED_NOTE[info]}")
-              for columns, rows in by_columns.items()]
-    return Document(name=name, statements=tables, profile=CIM_PROFILE,
+        ratings = wire_ratings(wire)
+        if ratings:
+            limit_set = f"{mrid(prefix, wire.name, lowercase=True)}_limits"
+            limit_sets.append(Row([limit_set]))
+            for slot, (suffix, limit_type) in (("normamps", ("norm", "olt_normal")),
+                                               ("emergamps", ("emerg", "olt_emergency"))):
+                amps, note = ratings[slot]
+                limits.append(Row([f"{limit_set[:-len('_limits')]}_{suffix}", cell(amps), limit_type, limit_set],
+                                  comment=note))
+    statements = []
+    if limit_sets:  # before the wires, which name them (AssetInfo.OperationalLimitSet)
+        statements += [Table("OperationalLimitSet", [Column("mRID")], limit_sets),
+                       Table("CurrentLimit", [Column("mRID"), Column("normalValue", "A"), Column("OperationalLimitType"),
+                                              Column("OperationalLimitSet")], limits)]
+    statements += [Table(info, [Column("mRID"), *columns], rows, comment=f"derived: {_DERIVED_NOTE[info]}")
+                   for columns, rows in by_columns.items()]
+    return Document(name=name, statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(native=native_class.__name__, info=info, count=len(wires)))

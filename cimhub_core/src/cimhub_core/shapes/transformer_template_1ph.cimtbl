@@ -1,23 +1,30 @@
-# Shape: transformer template, single-phase / center-tapped (catalog). TransformerPhaseEnds name the
-# tank's phase terminals; each half winding is a TransformerWinding. Source: OpenDSS XfmrCode (IEEE 13 ct5);
-# the curated original is CIMTBL-Models distribution/templates/padmount_1ph_250kva.cimtbl (with lugs).
+# Shape: transformer template, single-phase center-tapped (catalog). A 3-winding tank: TransformerLugs with
+# their IEEE C57.12.70 designations, windings lug to lug from the polarity end (H1->H2, X1->X2, X2->X3). X1 is
+# in phase with H1 under either polarity, so s1 = X1 and s2 = X3; additive vs subtractive only places X1 on the
+# tank. A lug's sequenceNumber names the instance phase end it lands on (one per phase of each terminal, end 1
+# first, neutral last), so a one-tank instance with terminals BN and s1s2N numbers them 1-5.
+# Source: OpenDSS XfmrCode (IEEE 13 ct5); the curated pattern is CIMTBL-Models
+# distribution/templates/polemount_1ph_50kva_7200_12470y.cimtbl.
 
 Profile = cim18v17
 
-Object TransformerTankConfiguration: mRID=xc_ct5, name=ct5, percentImpedance=2.08, percentMagnetizingCurrent=0.5, noLoadLoss (W)=10, loadLoss (W)=60
+Object TransformerTankConfiguration: mRID=xc_ct5, name=ct5, percentMagnetizingCurrent=0.5, noLoadLoss (W)=10
 
-Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, phaseNeutralU (V), TankConfiguration=xc_ct5
-    xc_ct5_h1, 1, 1, X,  2400
-    xc_ct5_x1, 2, 2, s1, 120
-    xc_ct5_x3, 2, 3, s2, 120
-    xc_ct5_n,  2, 4, N,  0
+Table TransformerLug: mRID, designation, sequenceNumber, TankConfiguration=xc_ct5
+    xc_ct5_lug_h1, H1, 1
+    xc_ct5_lug_h2, H2, 2
+    xc_ct5_lug_x1, X1, 3
+    xc_ct5_lug_x3, X3, 4
+    xc_ct5_lug_x2, X2, 5
 
-Table TransformerWinding: mRID, ratedS (kVA), baseS (kVA), ratedU (V), baseU (V), r (percent), FromTransformerEnd, ToTransformerEnd, TankConfiguration=xc_ct5
-    xc_ct5_wdg1, 5,   5, 4160, 2400, 0.6, xc_ct5_h1, xc_ct5_n
-    xc_ct5_wdg2, 2.5, 5, 240,  120,  1.2, xc_ct5_x1, xc_ct5_n
-    xc_ct5_wdg3, 2.5, 5, 240,  120,  1.2, xc_ct5_n,  xc_ct5_x3
+# ratedU phase-to-phase (2400 V coil phase to neutral on a 3-phase system: 4160; halves: s1-s2 = 240), baseU the
+# coil, ratedS of a half = kVA / 2, baseS = winding 1's kVA on every coil.
+Table TransformerWinding: mRID, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), r (percent), FromTransformerLug, ToTransformerLug, TankConfiguration=xc_ct5
+    xc_ct5_wdg_1, 4160, 2400, 5,   5, 0.6, xc_ct5_lug_h1, xc_ct5_lug_h2
+    xc_ct5_wdg_2, 240,  120,  2.5, 5, 1.2, xc_ct5_lug_x1, xc_ct5_lug_x2
+    xc_ct5_wdg_3, 240,  120,  2.5, 5, 1.2, xc_ct5_lug_x2, xc_ct5_lug_x3
 
 Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
-    xc_ct5_mesh_12, xc_ct5_wdg1, xc_ct5_wdg2, 2.04
-    xc_ct5_mesh_13, xc_ct5_wdg1, xc_ct5_wdg3, 2.04
-    xc_ct5_mesh_23, xc_ct5_wdg2, xc_ct5_wdg3, 1.36
+    xc_ct5_mesh_12, xc_ct5_wdg_1, xc_ct5_wdg_2, 2.04
+    xc_ct5_mesh_13, xc_ct5_wdg_1, xc_ct5_wdg_3, 2.04
+    xc_ct5_mesh_23, xc_ct5_wdg_2, xc_ct5_wdg_3, 1.36

@@ -61,8 +61,8 @@ def test_bus_matches_golden(documents):
 
 
 def test_parts_follow_the_mapping_order(documents):
-    assert [part.name for part in documents.parts] == ["bus", "linecode", "vsource", "line", "transformer",
-                                                       "regcontrol"]
+    assert [part.name for part in documents.parts] == ["bus", "linecode", "xfmrcode", "vsource", "line",
+                                                       "transformer", "regcontrol"]
     assert len(MAPPING_ORDER) == len({native_class for native_class, _ in MAPPING_ORDER})
 
 
@@ -92,13 +92,13 @@ def test_ieee13_binds_under_cim18v17(ieee13, tmp_path):
     network = dss_to_cim(ieee13, name="IEEE13_CDPSM", artifact_dir=tmp_path)
     assert sorted(path.name for path in tmp_path.iterdir()) == [
         "IEEE13_CDPSM.cimtbl", "bus.cimtbl", "line.cimtbl", "linecode.cimtbl", "regcontrol.cimtbl",
-        "transformer.cimtbl", "vsource.cimtbl"]
+        "transformer.cimtbl", "vsource.cimtbl", "xfmrcode.cimtbl"]
     assert_base_voltages_agree(network)
     cim = network.cim
     counts = {cls: len(network.graph.get(getattr(cim, cls), {})) for cls in (
         "ACLineSegment", "LoadBreakSwitch", "Fuse", "Recloser", "PowerTransformer", "VoltageRegulator",
         "TapChangerControl")}
-    assert counts == {"ACLineSegment": 11, "LoadBreakSwitch": 3, "Fuse": 1, "Recloser": 1, "PowerTransformer": 2,
+    assert counts == {"ACLineSegment": 11, "LoadBreakSwitch": 3, "Fuse": 1, "Recloser": 1, "PowerTransformer": 3,
                       "VoltageRegulator": 3, "TapChangerControl": 3}
     nodes = network.graph[network.cim.ConnectivityNode].values()
     assert len(nodes) == 22 and all(node.ConnectivityNodeContainer.mRID == "fdr_ieee13nodeckt" for node in nodes)
@@ -112,10 +112,18 @@ def test_ieee13_binds_under_cim18v17(ieee13, tmp_path):
     assert float(data[(3, 3)].x.to("ohm/mi")) == pytest.approx(1.0348)
 
 
-def test_master_counts_what_waits_for_a_later_slice(ieee13):
-    # Tpoletop is by XfmrCode and no RegControl names it: it waits for the template (S3b)
-    comment = " ".join(DssImporter("IEEE13_CDPSM").to_cimtbl(ieee13).master.comment.split())
-    assert "Transformer by XfmrCode 1" in comment and "Xfmrcode 1" in comment
+def test_tpoletop_is_by_its_center_tap_template(ieee13):
+    # Tpoletop (XfmrCode CT5, a center tap) is a tank on the lug template, its phase ends on its terminals
+    network = dss_to_cim(ieee13, name="IEEE13_CDPSM")
+    cim = network.cim
+    [tank] = [tank for tank in network.graph[cim.TransformerTank].values() if tank.PowerTransformer.name == "Tpoletop"]
+    assert tank.TankConfiguration.mRID == "xc_ct5"
+    lugs = {lug.designation: lug.sequenceNumber for lug in network.graph[cim.TransformerLug].values()}
+    assert lugs == {"H1": 1, "H2": 2, "X1": 3, "X3": 4, "X2": 5}
+    phase_ends = {end.sequenceNumber: (end.phase.value, end.Terminal.mRID)
+                  for end in network.graph[cim.TransformerPhaseEnd].values() if end.mRID.startswith("xf_tpoletop")}
+    assert phase_ends == {1: ("B", "xf_tpoletop_T1"), 2: ("N", "xf_tpoletop_T1"), 3: ("s1", "xf_tpoletop_T2"),
+                          4: ("s2", "xf_tpoletop_T2"), 5: ("N", "xf_tpoletop_T2")}
 
 
 def test_dss_defaults_are_typed_as_deck_text():
@@ -131,7 +139,7 @@ def test_ieee13_assets_catalogs_bind(tmp_path):
     assert sorted(path.name for path in tmp_path.iterdir()) == [
         "IEEE13_Assets.cimtbl", "bus.cimtbl", "cndata.cimtbl", "line.cimtbl", "linegeometry.cimtbl",
         "linespacing.cimtbl", "regcontrol.cimtbl", "transformer.cimtbl", "tsdata.cimtbl", "vsource.cimtbl",
-        "wiredata.cimtbl"]
+        "wiredata.cimtbl", "xfmrcode.cimtbl"]
     cim = network.cim
     # 7 geometries and the synthesized configuration of 684652 (spacing 510 + wires)
     assert len(network.graph[cim.WireConfiguration]) == 8 and len(network.graph[cim.XYSpacing]) == 5

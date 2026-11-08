@@ -14,7 +14,7 @@ from cimhub_opendss.importer.cimtbl.wire import (CATALOGS, ac_from_dc, map_wires
                                                 screen_diameter)
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import CATALOG_DECKS, ENGINE_UNIT, compile_deck, deck
+from conftest import CATALOG_DECKS, limits, ENGINE_UNIT, compile_deck, deck
 
 ATOMS = Path(__file__).parent / "atoms" / "wire"
 
@@ -26,7 +26,7 @@ def _cim_scope():
 
 
 def documents(native):
-    return [map_wires(native, *catalog) for catalog in CATALOGS]
+    return [limits(), *(map_wires(native, *catalog) for catalog in CATALOGS)]
 
 
 def _native(**by_class):
@@ -42,7 +42,7 @@ def test_derived_values():
 @pytest.mark.parametrize("case", ["assets", "metric"])
 def test_matches_golden(case):
     native = DssReader(ATOMS / f"{case}.dss").read_all()
-    for document in documents(native):
+    for document in documents(native)[1:]:
         if document.statements:
             assert_matches_golden(document, ATOMS / f"{case}_{document.name}.cimtbl")
 
@@ -55,6 +55,8 @@ def test_binds_under_cim18v17():
     [wire] = [w for w in acsr.values() if w.mRID == "wire_acsr_556_5"]
     assert float(wire.rAC25.to("ohm/kft")) == pytest.approx(1.02 * 0.035227273)  # defaulted from Rdc
     assert float(wire.radius.to("in")) == pytest.approx(0.4635)
+    limits = {limit.mRID: float(limit.normalValue.to("A")) for limit in wire.OperationalLimitSet.OperationalLimitValue}
+    assert limits == {"wire_acsr_556_5_norm": 730, "wire_acsr_556_5_emerg": pytest.approx(1095)}  # 1.5 x normamps
     [tape] = network.graph[cim.TapeShieldCableInfo].values()
     assert float(tape.diameterOverScreen.to("in")) == pytest.approx(0.87) and float(tape.tapeLap) == 20.0
 
@@ -122,5 +124,9 @@ def test_values_match_the_engine(relative):
             if cim_class is network.cim.TapeShieldCableInfo:
                 inside = float(info.diameterOverScreen.to(ENGINE_UNIT[interface.RadiusUnits()]))
                 assert inside + 2 * interface.TapeLayer() == pytest.approx(interface.DiaShield())
+            limits = {limit.OperationalLimitType.mRID: float(limit.normalValue.to("A"))
+                      for limit in info.OperationalLimitSet.OperationalLimitValue} if info.OperationalLimitSet else {}
+            assert (limits.get("olt_normal", 400.0), limits.get("olt_emergency", 600.0)) == pytest.approx(
+                (interface.NormAmps(), interface.EmergAmps())), (info.name, "ratings")
             checked += 1
     assert checked

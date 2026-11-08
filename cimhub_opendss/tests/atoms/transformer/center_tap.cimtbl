@@ -11,7 +11,7 @@ Table PowerTransformer: mRID, name, EquipmentContainer, normallyInService
     # defaulted: conns=wye
     xf_ct_ab, ct_ab, fdr_atom,
 
-# 1-phase: by phase ends
+# 1-phase by phase ends, and every instance by template (end n is the template's end n)
 Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
     xf_ct_ab_1, xf_ct_ab, n1,    AB,    1, D, false, bv_4p16kv
     xf_ct_ab_2, xf_ct_ab, house, s1s2N, 2, I, true,  bv_240v

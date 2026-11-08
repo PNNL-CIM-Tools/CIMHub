@@ -1,0 +1,58 @@
+# OpenDSS XfmrCode -> TransformerTankConfiguration (catalog). A center-tap code is a tank with lugs and
+# windings lug to lug; any other a TransformerTankEnd per winding. Built from the instances that use it.
+# Source table: XfmrCode (records: 4)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#xfmrcode
+# not written (no unregulated Transformer uses them; a regulator takes its code's values): unused
+
+Profile = cim18v17
+
+# derived: noLoadLoss = pct_noloadloss / 100 x winding 1 kVA
+Table TransformerTankConfiguration: mRID, name, percentMagnetizingCurrent (percent), noLoadLoss (kW)
+    # defaulted: conns=wye
+    # built from 2 instances (t1, ...)
+    xc_ct25, ct25, 0.5, 0.05
+    # built from 1 instance (sub, ...)
+    xc_sub,  sub,  0.4, 20.0
+    # defaulted: pct_Rs=0.2
+    # built from 3 instances (yyda, ...)
+    xc_yyd,  yyd,  ,
+
+# a TankEnd per winding; no phases (the instance's PowerTransformerEnd n carries them)
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind, rground (ohm), xground (ohm)
+    xc_sub_end_1, xc_sub, 1, D, ,
+    xc_sub_end_2, xc_sub, 2, Y, ,
+    xc_yyd_end_1, xc_yyd, 1, Y, ,
+    xc_yyd_end_2, xc_yyd, 2, Y, ,
+    xc_yyd_end_3, xc_yyd, 3, D, ,
+
+# IEEE C57.12.70 designations; sequenceNumber = the instance phase end the lug lands on
+Table TransformerLug: mRID, TankConfiguration, designation, sequenceNumber
+    xc_ct25_lug_h1, xc_ct25, H1, 1
+    xc_ct25_lug_h2, xc_ct25, H2, 2
+    xc_ct25_lug_x1, xc_ct25, X1, 3
+    xc_ct25_lug_x2, xc_ct25, X2, 5
+    xc_ct25_lug_x3, xc_ct25, X3, 4
+
+# baseU = the coil kV; ratedU phase-to-phase (derived from the instances' bus system); baseS = the winding's kVA (r is on it), per phase on a 3-phase code
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd
+    xc_sub_wdg_1, xc_sub, 115.0,              115.0,             20000.0, 6666.666666666667, 0.5, xc_sub_end_1
+    xc_sub_wdg_2, xc_sub, 12.47,              7.199557856794634, 20000.0, 6666.666666666667, 0.5, xc_sub_end_2
+    xc_yyd_wdg_1, xc_yyd, 12.470765814495916, 7.2,               1000.0,  1000.0,            0.2, xc_yyd_end_1
+    xc_yyd_wdg_2, xc_yyd, 4.156921938165305,  2.4,               1000.0,  1000.0,            0.2, xc_yyd_end_2
+    xc_yyd_wdg_3, xc_yyd, 2.4,                2.4,               333.0,   333.0,             0.2, xc_yyd_end_3
+
+# from the polarity end: H1->H2, X1->X2 (s1->N), X2->X3 (N->s2); a half's ratedS = kVA / 2
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerLug, ToTransformerLug
+    xc_ct25_wdg_1, xc_ct25, 12.470765814495916, 7.2,  25.0, 25.0, 0.6, xc_ct25_lug_h1, xc_ct25_lug_h2
+    xc_ct25_wdg_2, xc_ct25, 0.24,               0.12, 12.5, 25.0, 1.2, xc_ct25_lug_x1, xc_ct25_lug_x2
+    xc_ct25_wdg_3, xc_ct25, 0.24,               0.12, 12.5, 25.0, 1.2, xc_ct25_lug_x2, xc_ct25_lug_x3
+
+# x in percent on the From winding's baseU and baseS
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_ct25_mesh_12, xc_ct25_wdg_1, xc_ct25_wdg_2, 2.04
+    xc_ct25_mesh_13, xc_ct25_wdg_1, xc_ct25_wdg_3, 2.04
+    xc_ct25_mesh_23, xc_ct25_wdg_2, xc_ct25_wdg_3, 1.36
+    xc_sub_mesh_12,  xc_sub_wdg_1,  xc_sub_wdg_2,  8.0
+    xc_yyd_mesh_12,  xc_yyd_wdg_1,  xc_yyd_wdg_2,  6.0
+    xc_yyd_mesh_13,  xc_yyd_wdg_1,  xc_yyd_wdg_3,  4.0
+    xc_yyd_mesh_23,  xc_yyd_wdg_2,  xc_yyd_wdg_3,  3.0

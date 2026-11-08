@@ -327,10 +327,6 @@ class _Document:
         self.switches: dict[str, list[Row]] = {}
 
 
-#: The engine's emergency rating of a wire that gives only normamps (``ConductorData``).
-WIRE_EMERGENCY_FACTOR = 1.5
-
-
 def code_ratings(code) -> dict[str, tuple[float, str]]:
     """``{slot: (amps, source)}`` a line copies from its LineCode."""
     return {slot: (float(getattr(code, slot)), f"LineCode {code.name}")
@@ -338,18 +334,13 @@ def code_ratings(code) -> dict[str, tuple[float, str]]:
 
 
 def conductor_ratings(record, wires: Mapping[str, object]) -> dict[str, tuple[float, str]]:
-    """``{slot: (amps, source)}`` of the first conductor of a LineGeometry (or a Line with ``spacing=``); a wire
-    with normamps and no emergamps is rated 1.5 x normamps (the engine's rule)."""
+    """``{slot: (amps, source)}`` of the first conductor of a LineGeometry (or a Line with ``spacing=``), as the
+    engine rates the wire (wire_ratings: an unset emergamps is 1.5 x normamps)."""
     names = next(getattr(record, slot) for slot in _GEOMETRY_ARRAYS if getattr(record, slot))
     first = wires[str(names[0]).lower()]
     label = f"{type(first).__name__} {first.name}"
-    if first.normamps is None:
-        return {}
-    if first.emergamps is not None:
-        emergency = (float(first.emergamps), label)
-    else:
-        emergency = (WIRE_EMERGENCY_FACTOR * float(first.normamps), f"1.5 x normamps of {label}")
-    return {"normamps": (float(first.normamps), label), "emergamps": emergency}
+    return {slot: (amps, f"1.5 x normamps of {label}" if note else label)
+            for slot, (amps, note) in wire_mapper.wire_ratings(first).items()}
 
 
 def geometry_ratings(geometry, wires: Mapping[str, object]) -> dict[str, tuple[float, str]]:

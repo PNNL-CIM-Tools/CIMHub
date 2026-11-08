@@ -15,7 +15,7 @@ from cimhub_opendss.importer.cimtbl import wire
 from cimhub_opendss.importer.cimtbl.geometry import map_linegeometry, map_linespacing
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import CATALOG_DECKS, ENGINE_UNIT, compile_deck, deck
+from conftest import CATALOG_DECKS, limits, ENGINE_UNIT, compile_deck, deck
 
 ATOMS = Path(__file__).parent / "atoms" / "geometry"
 
@@ -27,7 +27,7 @@ def _cim_scope():
 
 
 def documents(native):
-    return [*(wire.map_wires(native, *catalog) for catalog in wire.CATALOGS), map_linespacing(native),
+    return [limits(), *(wire.map_wires(native, *catalog) for catalog in wire.CATALOGS), map_linespacing(native),
             map_linegeometry(native)]
 
 

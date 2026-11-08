@@ -5,9 +5,9 @@ Profile = cim18v17
 
 Object TransformerTankConfiguration: mRID=xc_xfm1, name=XFM1, percentImpedance=2.2825, percentMagnetizingCurrent=0, noLoadLoss (kW)=0
 
-Table TransformerTankEnd: mRID, endNumber, phases, connectionKind, grounded, rground (ohm), xground (ohm), TankConfiguration=xc_xfm1
-    xc_xfm1_end_1, 1, ABCN, Yn, true, 0, 0
-    xc_xfm1_end_2, 2, ABCN, Yn, true, 0, 0
+Table TransformerTankEnd: mRID, endNumber, connectionKind, grounded, rground (ohm), xground (ohm), TankConfiguration=xc_xfm1
+    xc_xfm1_end_1, 1, Yn, true, 0, 0
+    xc_xfm1_end_2, 2, Yn, true, 0, 0
 
 # Nameplate 4160GY/2400 - 480Y/277, 500 kVA: ratedU/ratedS as printed; baseU the coil (phase-to-neutral on wye),
 # baseS the per-phase kVA (500 / 3), the percent -> ohm basis.
