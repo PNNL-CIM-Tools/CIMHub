@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-07T18:32:09
+# Generation date: 2026-11-07T19:07:33
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -6873,6 +6873,7 @@ class Options(YAMLRoot):
 
     name: Union[str, OptionsName] = None
     circuit: Optional[str] = None
+    open_terminals: Optional[Union[str, list[str]]] = empty_list()
     voltagebases: Optional[Union[float, list[float]]] = empty_list()
     defaultbasefreq: Optional[float] = None
     earthmodel: Optional[Union[str, "EarthModelType"]] = None
@@ -6885,6 +6886,10 @@ class Options(YAMLRoot):
 
         if self.circuit is not None and not isinstance(self.circuit, str):
             self.circuit = str(self.circuit)
+
+        if not isinstance(self.open_terminals, list):
+            self.open_terminals = [self.open_terminals] if self.open_terminals is not None else []
+        self.open_terminals = [v if isinstance(v, str) else str(v) for v in self.open_terminals]
 
         if not isinstance(self.voltagebases, list):
             self.voltagebases = [self.voltagebases] if self.voltagebases is not None else []
@@ -11495,6 +11500,9 @@ slots.options__name = Slot(uri=DSS.name, name="options__name", curie=DSS.curie('
 
 slots.options__circuit = Slot(uri=DSS.circuit, name="options__circuit", curie=DSS.curie('circuit'),
                    model_uri=DSS.options__circuit, domain=None, range=Optional[str])
+
+slots.options__open_terminals = Slot(uri=DSS.open_terminals, name="options__open_terminals", curie=DSS.curie('open_terminals'),
+                   model_uri=DSS.options__open_terminals, domain=None, range=Optional[Union[str, list[str]]])
 
 slots.options__voltagebases = Slot(uri=DSS.voltagebases, name="options__voltagebases", curie=DSS.curie('voltagebases'),
                    model_uri=DSS.options__voltagebases, domain=None, range=Optional[Union[float, list[float]]])

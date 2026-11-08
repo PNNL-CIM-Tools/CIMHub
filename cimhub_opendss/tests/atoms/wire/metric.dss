@@ -1,0 +1,2 @@
+// One metric wire of IEEE9500 (GridAPPS-D Powergrid-Models, WireData.dss): km, cm, cm.
+New WireData.14_CU            Rac=8.463073 Runits=km GMRac=0.129885 GMRUnits=cm Radius=0.08128   Radunits=cm Normamps=15   Emergamps=15

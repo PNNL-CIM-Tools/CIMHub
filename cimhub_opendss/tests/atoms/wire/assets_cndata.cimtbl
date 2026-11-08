@@ -1,0 +1,10 @@
+# OpenDSS Cndata -> ConcentricNeutralCableInfo (catalog).
+# Source table: Cndata (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#wire-catalogs
+
+Profile = cim18v17
+
+# derived: radius = diam / 2 and neutralStrandRadius = DiaStrand / 2 (radius_from_diameter)
+Table ConcentricNeutralCableInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A), insulationThickness (in), diameterOverInsulation (in), diameterOverJacket (in), diameterOverNeutral (in), neutralStrandCount, neutralStrandGmr (in), neutralStrandRDC20 (ohm/mi), neutralStrandRadius (in)
+    # untranscribed: EpsR=2.3
+    cn_cn_250, CN_250, , 0.41, 0.2052, 0.2835, 260.0, 0.22, 1.06, 1.29, 1.29, 13, 0.02496, 14.8722, 0.03205

@@ -5,12 +5,13 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import opendssdirect as dss
 import pytest
 
 from cimhub_core.cimtbl import check_fields, cimtbl_to_cim
 from cimhub_core.cimtbl_testing import assert_matches_golden, atom_documents, cim_scope
-from cimhub_opendss.importer.cimtbl.linecode import (FIELDS, NATIVE_CLASS, b_from_c, lower_triangle, map_linecode,
-                                                    susceptance)
+from cimhub_opendss.importer.cimtbl.linecode import (FIELDS, NATIVE_CLASS, b_from_c, gated_unit, lower_triangle,
+                                                    map_linecode, susceptance, templates)
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -26,16 +27,21 @@ def _cim_scope():
 
 @pytest.fixture(scope="module")
 def mtx601():
-    return map_linecode(DssReader(ATOMS / "mtx601.dss").read_all())
+    return _map(DssReader(ATOMS / "mtx601.dss").read_all())
 
 
 @pytest.fixture(scope="module")
 def sequence():
-    return map_linecode(DssReader(ATOMS / "seq_3_1_0c.dss").read_all())
+    return _map(DssReader(ATOMS / "seq_3_1_0c.dss").read_all())
 
 
-def _native(*codes):
-    return type("Native", (), {"list_by_class": staticmethod(lambda cls: list(codes))})()
+def _native(*codes, lines=()):
+    by_class = {NATIVE_CLASS: list(codes), schema.Line: list(lines)}
+    return type("Native", (), {"list_by_class": staticmethod(lambda cls: by_class.get(cls, []))})()
+
+
+def _map(native):
+    return map_linecode(native, base_frequency=60.0)
 
 
 def test_classification_is_complete():
@@ -82,14 +88,14 @@ def test_binds_under_cim18v17(mtx601):
 
 def test_mrid_is_lowercased():
     code = schema.Linecode(name="MTX601", nphases=1, units="ft", rmatrix=[0.1], xmatrix=[0.2])
-    [table, _] = map_linecode(_native(code)).statements
+    [table, _] = _map(_native(code)).statements
     assert table.rows[0].cells[:2] == ["lc_mtx601", "MTX601"]
 
 
 def test_unmapped_units_fail_fast():
-    code = schema.Linecode(name="x", nphases=1, units="none", rmatrix=[0.1], xmatrix=[0.2])
-    with pytest.raises(ValueError, match="x: units='none' has no mapping"):
-        map_linecode(_native(code))
+    code = schema.Linecode(name="x", nphases=1, units="furlong", rmatrix=[0.1], xmatrix=[0.2])
+    with pytest.raises(ValueError, match="x: units='furlong' has no mapping"):
+        _map(_native(code))
 
 
 def test_sequence_matches_golden(sequence):
@@ -108,7 +114,7 @@ def test_sequence_binds_under_cim18v17(sequence):
 
 def test_sequence_b_is_copied_in_microsiemens():
     code = schema.Linecode(name="b", nphases=3, units="mi", r1=0.1, x1=0.3, B1="5.1", C0="0", baseFreq="60")
-    [table] = map_linecode(_native(code)).statements
+    [table] = _map(_native(code)).statements
     assert [(column.name, column.unit) for column in table.columns][-2:] == [("bch", "uS/mi"), ("b0ch", "nS/mi")]
     assert table.rows[0].cells[-2:] == ["5.1", "0.0"]
 
@@ -117,12 +123,12 @@ def test_sequence_codes_group_by_header():
     with_c = schema.Linecode(name="c", nphases=3, units="km", r1=0.1, C1="10", baseFreq="60")
     with_b = schema.Linecode(name="b", nphases=3, units="km", r1=0.1, B1="3.7")
     other_unit = schema.Linecode(name="m", nphases=3, units="mi", r1=0.1, C1="10", baseFreq="60")
-    tables = map_linecode(_native(with_c, with_b, other_unit, with_c)).statements
+    tables = _map(_native(with_c, with_b, other_unit, with_c)).statements
     assert [len(table.rows) for table in tables] == [2, 1, 1]
 
 
 @pytest.mark.parametrize(("code", "message"), [
-    (schema.Linecode(name="seq1", nphases=1, units="km", r1=0.1, x1=0.3), "seq1: nphases=1 sequence codes"),
+    (schema.Linecode(name="seq1", nphases=1, units="km", r1=0.1, x1=0.3, B1="2"), "seq1: B1/B0 on a 1-phase"),
     (schema.Linecode(name="cb", nphases=3, units="km", C1="10", B1="3.7"), "cb: sets both C1 and B1"),
     (schema.Linecode(name="both", nphases=1, units="ft", r1=0.1, rmatrix=[0.1], xmatrix=[0.2]),
      "both: sets both matrix and sequence"),
@@ -130,4 +136,83 @@ def test_sequence_codes_group_by_header():
 ])
 def test_ambiguous_or_unmapped_codes_fail_fast(code, message):
     with pytest.raises(ValueError, match=message):
-        map_linecode(_native(code))
+        _map(_native(code))
+
+
+# --- S2: units (DSS-3), base frequency (DSS-3b), 1- and 2-phase sequence codes (DSS-4) ---
+
+def _sequence_code(name, **slots):
+    return schema.Linecode(name=name, **{"nphases": 3, "r1": 0.1, "x1": 0.3, "r0": 0.3, "x0": 0.9, **slots})
+
+
+def test_unitless_codes_take_their_lines_units_else_the_gate():
+    by_code = templates(DssReader(ATOMS / "unitless.dss").read_all())
+    assert [(t.mrid, t.unit) for t in by_code["single"]] == [("lc_single", "kft")]
+    assert [(t.mrid, t.unit) for t in by_code["split"]] == [("lc_split_kft", "kft"), ("lc_split_mi", "mi")]
+    [spare] = by_code["spare"]
+    assert (spare.mrid, spare.unit) == ("lc_spare", "km") and spare.note.startswith("units inferred: km")
+
+
+def test_unitless_matches_golden():
+    assert_matches_golden(_map(DssReader(ATOMS / "unitless.dss").read_all()), ATOMS / "unitless.cimtbl")
+
+
+@pytest.mark.parametrize("r1, unit", [(0.006, "km"), (9.9, "km"), (0.0002, "m"), (1e-5, "m")])
+def test_the_magnitude_gate(r1, unit):
+    assert gated_unit([_sequence_code("g", r1=r1)])[0] == unit
+
+
+@pytest.mark.parametrize("r1", [10.0, 5e-6])
+def test_a_median_outside_the_gate_raises(r1):
+    with pytest.raises(ValueError, match="fits no length unit"):
+        gated_unit([_sequence_code("g", r1=r1)])
+
+
+def test_length_unit_overrides_the_gate():
+    [template] = templates(_native(_sequence_code("g", r1=50.0)), length_unit="kft")["g"]
+    assert template.unit == "kft" and template.note.startswith("units given: kft")
+
+
+def test_lines_with_and_without_units_on_one_code_raise():
+    lines = [schema.Line(name="a", bus1="x", linecode="g", units="kft"), schema.Line(name="b", bus1="x", linecode="G")]
+    with pytest.raises(ValueError, match="its lines give units on some lines only"):
+        templates(_native(_sequence_code("g"), lines=lines))
+
+
+@pytest.mark.parametrize("frequency", [60.0, 50.0])
+def test_a_code_with_c_and_no_basefreq_takes_the_decks(frequency):
+    code = _sequence_code("c", units="km", C1="10", C0="5")
+    [table] = map_linecode(_native(code), base_frequency=frequency).statements
+    columns = [column.name for column in table.columns]
+    row = table.rows[0]
+    assert row.cells[columns.index("calculatedFrequency")] == repr(frequency)
+    assert row.comment == f"defaulted: baseFreq={frequency!r}"
+    assert float(row.cells[columns.index("bch")]) == pytest.approx(b_from_c(10, frequency))
+
+
+def test_a_code_with_no_c_needs_no_frequency():
+    [table] = _map(_native(_sequence_code("n", units="km"))).statements
+    assert table.rows[0].comment is None
+
+
+def test_short_sequence_matches_golden():
+    assert_matches_golden(_map(DssReader(ATOMS / "short_sequence.dss").read_all()), ATOMS / "short_sequence.cimtbl")
+
+
+def test_short_sequence_matrices_match_the_engine():
+    """The engine's line matrices (per km, the lines' unit) equal the derived PhaseImpedanceData."""
+    network = cimtbl_to_cim(atom_documents(_map(DssReader(ATOMS / "short_sequence.dss").read_all())))
+    data = {}
+    for d in network.graph[network.cim.PhaseImpedanceData].values():
+        data.setdefault(d.PhaseImpedance.name.lower(), {})[(d.row, d.column)] = d
+    dss.Text.Command("Clear")
+    dss.Text.Command(f"Redirect [{(ATOMS / 'short_sequence.dss').resolve()}]")
+    for line, code in (("one", "oh-1x_4cu_4cun"), ("two", "oh-2x_4cu_4cun")):
+        dss.Lines.Name(line)
+        order = dss.Lines.Phases()
+        r, x, c = dss.Lines.RMatrix(), dss.Lines.XMatrix(), dss.Lines.CMatrix()
+        for (row, column), d in data[code].items():
+            k = (row - 1) * order + column - 1
+            assert float(d.r.to("ohm/km")) == pytest.approx(r[k], rel=1e-9)
+            assert float(d.x.to("ohm/km")) == pytest.approx(x[k], rel=1e-9)
+            assert float(d.b.to("nS/km")) == pytest.approx(b_from_c(c[k], 60.0), rel=1e-9)

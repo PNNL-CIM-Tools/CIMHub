@@ -1,0 +1,10 @@
+# OpenDSS Wiredata -> OverheadWireInfo (catalog).
+# Source table: Wiredata (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#wire-catalogs
+
+Profile = cim18v17
+
+# derived: radius = diam / 2 (radius_from_diameter) where the deck gives diam
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/km), rAC25 (ohm/km), gmr (cm), radius (cm), ratedCurrent (A)
+    # untranscribed: emergamps=15.0
+    wire_14_cu, 14_CU, , 8.463073, 0.129885, 0.08128, 15.0

@@ -11,11 +11,15 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode``.
 
 from __future__ import annotations
 
+import dataclasses
 import math
+import statistics
+from typing import NamedTuple
 
 from cimtables.document import Column, Document, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, copied_columns, lookup, mrid, untranscribed_values
+from cimhub_core.derived.sequence import phase_matrix
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Linecode
@@ -32,21 +36,23 @@ _PHASE = "PerLengthPhaseImpedance"
 FIELDS = {
     "name": Field("copied", ((_PHASE, "name", None), (_SEQ, "name", None)), "mRID = lc_ + name, lowercased"),
     "nphases": Field("copied", ((_PHASE, "conductorCount", None),),
-                     "the matrix order of rmatrix/xmatrix/cmatrix; a sequence code must be 3-phase "
-                     "(a 1-phase DSS line uses Z1 as its self impedance, a 2-phase one Zs = (2 Z1 + Z0)/3 and "
-                     "Zm = (Z0 - Z1)/3; neither is the CIM sequence convention)"),
+                     "the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a "
+                     "phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase "
+                     "Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4)"),
     "r1": Field("copied", ((_SEQ, "r", "ohm/{length}"),)),
     "x1": Field("copied", ((_SEQ, "x", "ohm/{length}"),)),
     "r0": Field("copied", ((_SEQ, "r0", "ohm/{length}"),)),
     "x0": Field("copied", ((_SEQ, "x0", "ohm/{length}"),)),
     "C1": Field("derived", note="PerLengthSequenceImpedance bch = 2 pi baseFreq C1 (b_from_c): nF -> nS"),
     "C0": Field("derived", note="PerLengthSequenceImpedance b0ch = 2 pi baseFreq C0 (b_from_c): nF -> nS"),
-    "units": Field("mapped", note="the length unit of every per-length header via LENGTH_UNIT"),
+    "units": Field("mapped", note="the length unit of every per-length header via LENGTH_UNIT; unset: the unit "
+                                  "of the lines that use the code, else the deck's magnitude gate (DSS-3)"),
     "rmatrix": Field("structural", note="PhaseImpedanceData r, one row per lower-triangle element"),
     "xmatrix": Field("structural", note="PhaseImpedanceData x, one row per lower-triangle element"),
     "cmatrix": Field("derived", note="PhaseImpedanceData b = 2 pi baseFreq C (b_from_c): nF -> nS"),
     "baseFreq": Field("copied", ((_PHASE, "calculatedFrequency", "Hz"), (_SEQ, "calculatedFrequency", "Hz")),
-                      "also the frequency of the derived b"),
+                      "also the frequency of the derived b; unset with a nonzero C: the deck's base frequency, "
+                      "defaulted (DSS-3b)"),
     "normamps": Field("untranscribed", note=_RATING),
     "emergamps": Field("untranscribed", note=_RATING),
     "faultrate": Field("untranscribed", note=_RELIABILITY),
@@ -122,34 +128,167 @@ def is_sequence(code) -> bool:
     return sequence
 
 
-def _phase_rows(code) -> tuple[Row, str, list[Row]]:
-    """The ``PerLengthPhaseImpedance`` row, the length unit and the ``PhaseImpedanceData`` rows of a matrix code."""
-    lc = mrid(PREFIX, code.name, lowercase=True)
+#: The magnitude gate for codes with no units on code or line (DSS-3): median positive r per unit -> length unit.
+#: Real conductors run about 0.01 to 3.5 ohm/km, so the per-m/ft and per-km/kft/mile bands do not overlap.
+UNITS_GATE = ((0.006, 10.0, "km"), (1e-5, 0.006, "m"))
+
+
+class Template(NamedTuple):
+    """One impedance template a code becomes: its mRID, length unit and how the unit was found (``None``: the
+    code's own ``units``)."""
+    mrid: str
+    unit: str
+    note: str | None
+
+
+def _units_text(value) -> str | None:
+    """A ``units`` value as lowercase text; unset and ``none`` are ``None``."""
+    text = cell(value)
+    return None if text is None or text.lower() == "none" else text.lower()
+
+
+def _resistances(code) -> list[float]:
+    """The positive per-unit resistances the magnitude gate looks at: r1, or the rmatrix diagonal."""
+    if code.rmatrix:
+        diagonal = lower_triangle(code.rmatrix, code.nphases, name=code.name, slot="rmatrix")
+        values = [value for (row, column), value in diagonal.items() if row == column]
+    else:
+        values = [code.r1] if code.r1 is not None else []
+    return [float(value) for value in values if float(value) > 0]
+
+
+def gated_unit(codes) -> tuple[str, float]:
+    """``(unit, median r)`` for codes with no units on code or line: the median positive r per unit through
+    ``UNITS_GATE``; a median in no band raises."""
+    values = [value for code in codes for value in _resistances(code)]
+    if not values:
+        raise ValueError(f"LineCodes {', '.join(str(code.name) for code in codes)}: no units and no positive r to "
+                         "infer them from; pass length_unit=")
+    median = statistics.median(values)
+    for low, high, unit in UNITS_GATE:
+        if low <= median < high:
+            return unit, median
+    raise ValueError(f"LineCodes with no units: median r {median:g} per unit fits no length unit "
+                     f"({UNITS_GATE}); pass length_unit=")
+
+
+def templates(native, length_unit: str | None = None) -> dict[str, list[Template]]:
+    """``{lowered code name: [Template, ...]}`` (DSS-3).
+
+    A code with ``units`` is one template in them. A unitless code takes the units of the lines that use it, as
+    DSS reads it per unit of the line's length; lines in several units give one template per unit,
+    ``lc_<name>_<unit>``. A unitless code whose lines give none either (or that no line uses) takes
+    ``length_unit``, else the deck-level magnitude gate. A code used by lines with and without units raises.
+    """
+    codes = native.list_by_class(NATIVE_CLASS)
+    line_units: dict[str, set] = {}
+    for line in native.list_by_class(schema.Line):
+        if line.linecode:
+            line_units.setdefault(str(line.linecode).lower(), set()).add(_units_text(line.units))
+    result: dict[str, list[Template]] = {}
+    gated = []
+    for code in codes:
+        key = str(code.name).lower()
+        lc = mrid(PREFIX, code.name, lowercase=True)
+        own = _units_text(code.units)
+        if own is not None:
+            result[key] = [Template(lc, lookup(LENGTH_UNIT, own, slot="units", record_id=code.name), None)]
+            continue
+        used = line_units.get(key, set())
+        if None in used and len(used) > 1:
+            raise ValueError(f"LineCode {code.name}: no units, and its lines give units on some lines only "
+                             f"({', '.join(sorted(str(unit) for unit in used))})")
+        given = sorted(unit for unit in used if unit is not None)
+        if given:
+            note = "units from its lines: {unit} (no units on the code; DSS reads it per unit of line length)"
+            result[key] = [Template(lc if len(given) == 1 else f"{lc}_{unit}",
+                                    lookup(LENGTH_UNIT, unit, slot="Line units", record_id=code.name),
+                                    note.format(unit=unit)) for unit in given]
+        else:
+            gated.append(code)
+    if gated:
+        if length_unit is not None:
+            unit = lookup(LENGTH_UNIT, length_unit, slot="length_unit", record_id="the importer")
+            note = f"units given: {unit} (length_unit=; no units on code or line)"
+        else:
+            unit, median = gated_unit(gated)
+            count = f"{len(gated)} code" + ("s" if len(gated) > 1 else "")
+            note = f"units inferred: {unit} (median r {median:.3g} per unit over {count}; no units on code or line)"
+        for code in gated:
+            result[str(code.name).lower()] = [Template(mrid(PREFIX, code.name, lowercase=True), unit, note)]
+    return result
+
+
+def _has_capacitance(code) -> bool:
+    values = list(code.cmatrix or []) + [code.C1, code.C0]
+    return any(value is not None and float(value) != 0 for value in values)
+
+
+def with_frequency(code, base_frequency: float):
+    """``(code, comment)``: a code with a nonzero C and no ``baseFreq`` takes the deck's base frequency (DSS-3b)."""
+    if code.baseFreq is not None or not _has_capacitance(code):
+        return code, None
+    return dataclasses.replace(code, baseFreq=cell(float(base_frequency))), \
+        f"defaulted: baseFreq={cell(float(base_frequency))}"
+
+
+def _comment(*parts) -> str | None:
+    return "\n".join(part for part in parts if part) or None
+
+
+def _phase_rows(code, template: Template, matrices, note: str | None) -> tuple[Row, list[Row]]:
+    """The ``PerLengthPhaseImpedance`` row and its ``PhaseImpedanceData`` rows; ``matrices`` is ``(r, x, c)``,
+    each ``{(row, column): value}`` (``c`` may be empty)."""
+    lc = template.mrid
     impedance = Row([lc, *(cell(getattr(code, slot)) for slot, _ in copied_columns(FIELDS, _PHASE))],
-                    comment=untranscribed_values(FIELDS, code))
-    unit = lookup(LENGTH_UNIT, code.units, slot="units", record_id=code.name)
-    r = lower_triangle(code.rmatrix, code.nphases, name=code.name, slot="rmatrix")
-    x = lower_triangle(code.xmatrix, code.nphases, name=code.name, slot="xmatrix")
-    c = lower_triangle(code.cmatrix, code.nphases, name=code.name, slot="cmatrix") if code.cmatrix else {}
+                    comment=_comment(note, untranscribed_values(FIELDS, code)))
+    r, x, c = matrices
     data = []
     for row, column in r:
         b = susceptance(c[(row, column)], code.baseFreq, name=code.name, slot="cmatrix") if c else None
         data.append(Row([f"{lc}_{row}{column}", lc, str(row), str(column),
                          cell(r[(row, column)]), cell(x[(row, column)]), cell(b)]))
-    return impedance, unit, data
+    return impedance, data
 
 
-def _sequence_row(code) -> tuple[tuple[Column, ...], Row]:
-    """The ``PerLengthSequenceImpedance`` columns and row of a sequence code.
+def _matrices(code):
+    """``(r, x, c)`` of a matrix code."""
+    r = lower_triangle(code.rmatrix, code.nphases, name=code.name, slot="rmatrix")
+    x = lower_triangle(code.xmatrix, code.nphases, name=code.name, slot="xmatrix")
+    c = lower_triangle(code.cmatrix, code.nphases, name=code.name, slot="cmatrix") if code.cmatrix else {}
+    return r, x, c
+
+
+def _short_sequence_matrices(code):
+    """``(r, x, c, note)`` of a 1- or 2-phase sequence code, built as the engine builds its line (DSS-4)."""
+    if code.B1 is not None or code.B0 is not None:
+        raise ValueError(f"LineCode {code.name}: B1/B0 on a {code.nphases}-phase sequence code is not mapped yet "
+                         "(no deck in the sweep sets it)")
+    if None in (code.r1, code.x1):
+        raise ValueError(f"LineCode {code.name}: a {code.nphases}-phase sequence code needs r1 and x1")
+    c1 = float(code.C1) if code.C1 is not None else None
+    c0 = float(code.C0) if code.C0 is not None else None
+    r = phase_matrix(code.r1, code.r0, code.nphases)
+    x = phase_matrix(code.x1, code.x0, code.nphases)
+    c = phase_matrix(c1, c0, code.nphases) if c1 is not None else {}
+    if code.nphases == 1:
+        unused = [f"{slot}={cell(getattr(code, slot))}" for slot in ("r0", "x0", "C0") if getattr(code, slot) is not None]
+        note = "derived from a 1-phase sequence code: z = Z1 (phase_matrix)" + \
+            (f"; a 1-phase line does not use {', '.join(unused)}" if unused else "")
+    else:
+        note = "derived from a 2-phase sequence code: Zs = (2 Z1 + Z0)/3, Zm = (Z0 - Z1)/3 (phase_matrix)"
+    return r, x, c, note
+
+
+def _sequence_row(code, template: Template, note: str | None) -> tuple[tuple[Column, ...], Row]:
+    """The ``PerLengthSequenceImpedance`` columns and row of a 3-phase sequence code.
 
     ``bch``/``b0ch`` are copied from ``B1``/``B0`` (uS) or derived from ``C1``/``C0`` (nS),
     so the columns, and with them the table, depend on the code.
     """
     if code.nphases != 3:
-        raise ValueError(f"LineCode {code.name}: nphases={code.nphases} sequence codes are not mapped yet; "
-                         "a 1-phase DSS line uses Z1 as its self impedance, a 2-phase one (2 Z1 + Z0)/3, "
-                         "which is not the CIM convention")
-    unit = lookup(LENGTH_UNIT, code.units, slot="units", record_id=code.name)
+        raise ValueError(f"LineCode {code.name}: nphases={code.nphases}; a sequence code has 1, 2 or 3 phases")
+    unit = template.unit
     cells = {column.name: (column, cell(getattr(code, slot)))
              for slot, column in copied_columns(FIELDS, _SEQ, length=unit)}
     for c_slot, b_slot, name in _SHUNT:
@@ -162,41 +301,58 @@ def _sequence_row(code) -> tuple[tuple[Column, ...], Row]:
         cells[name] = (Column(name, f"nS/{unit}"),
                        cell(susceptance(c, code.baseFreq, name=code.name, slot=c_slot)))
     columns = tuple(column for column, _ in cells.values())
-    row = Row([mrid(PREFIX, code.name, lowercase=True), *(text for _, text in cells.values())],
-              comment=untranscribed_values(FIELDS, code))
+    row = Row([template.mrid, *(text for _, text in cells.values())],
+              comment=_comment(note, untranscribed_values(FIELDS, code)))
     return columns, row
 
 
-def map_linecode(native) -> Document:
-    """Every ``LineCode`` of a DSS model as one ``linecode`` document."""
+def map_linecode(native, *, base_frequency: float, length_unit: str | None = None) -> Document:
+    """Every ``LineCode`` of a DSS model as one ``linecode`` document.
+
+    ``base_frequency`` (Hz) is the deck's, for a code with C and no ``baseFreq``; ``length_unit`` overrides the
+    magnitude gate for codes with no units on code or line.
+    """
     codes = native.list_by_class(NATIVE_CLASS)
     if not codes:
         return Document(name="linecode", statements=[], profile=CIM_PROFILE)
 
+    by_code = templates(native, length_unit)
     impedances: list[Row] = []
     data_by_unit: dict[str, list[Row]] = {}
     sequences_by_columns: dict[tuple[Column, ...], list[Row]] = {}
-    for code in codes:
-        if is_sequence(code):
-            columns, row = _sequence_row(code)
-            sequences_by_columns.setdefault(columns, []).append(row)
-        else:
-            impedance, unit, data = _phase_rows(code)
+    derived_matrix = False
+    for original in codes:
+        sequence = is_sequence(original)
+        code, defaulted = with_frequency(original, base_frequency)
+        for template in by_code[str(code.name).lower()]:
+            note = _comment(template.note, defaulted)
+            if sequence and code.nphases == 3:
+                columns, row = _sequence_row(code, template, note)
+                sequences_by_columns.setdefault(columns, []).append(row)
+                continue
+            if sequence:
+                r, x, c, derivation = _short_sequence_matrices(code)
+                matrices, note, derived_matrix = (r, x, c), _comment(derivation, note), True
+            else:
+                matrices = _matrices(code)
+            impedance, data = _phase_rows(code, template, matrices, note)
             impedances.append(impedance)
-            data_by_unit.setdefault(unit, []).extend(data)
+            data_by_unit.setdefault(template.unit, []).extend(data)
 
     statements = []
     if impedances:
         statements.append(Table(_PHASE, [Column("mRID"), *(column for _, column in copied_columns(FIELDS, _PHASE))],
                                 impedances))
     for unit, rows in data_by_unit.items():
+        comment = (f"units={unit}. row/column are conductor indices of the lower triangle.\n"
+                   "derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS")
+        if derived_matrix:
+            comment += "; 1- and 2-phase sequence codes: r, x, C by phase_matrix (DSS-4)"
         statements.append(Table(
             "PhaseImpedanceData",
             [Column("identifier"), Column("PhaseImpedance"), Column("row"), Column("column"),
              Column("r", f"ohm/{unit}"), Column("x", f"ohm/{unit}"), Column("b", f"nS/{unit}")],
-            rows,
-            comment=f"units={unit}. row/column are conductor indices of the lower triangle.\n"
-                    "derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS",
+            rows, comment=comment,
         ))
     for columns, rows in sequences_by_columns.items():
         derived = any(column.unit and column.unit.startswith("nS/") for column in columns)

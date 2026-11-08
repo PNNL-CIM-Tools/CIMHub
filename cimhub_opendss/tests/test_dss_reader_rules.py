@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 
+import opendssdirect as dss
 import pytest
 
-from cimhub_opendss.dss_reader import DssParseError, DssReader
+from cimhub_opendss.dss_reader import DSS_COMMANDS, DssParseError, DssReader, dss_command
 from cimhub_opendss.schema import opendss_schema as schema
 
 
@@ -137,3 +138,95 @@ def test_clear_discards_everything_before_it(tmp_path):
     assert only(model, schema.Vsource).basekv == 12.47 and model.list_by_class(schema.Load) == []
     options = only(model, schema.Options)
     assert (options.circuit, options.voltagebases) == ("b", [])
+
+
+def test_dss_commands_match_the_engine():
+    engine = [dss.Executive.Command(i).lower() for i in range(1, dss.Executive.NumCommands() + 1)]
+    assert list(DSS_COMMANDS) == engine
+
+
+@pytest.mark.parametrize("word, command", [
+    ("CalcV", "calcvoltagebases"), ("o", "open"), ("M", "m"), ("mo", "more"), ("se", "select"), ("Set", "set"),
+    ("Reditect", None),
+])
+def test_a_command_word_is_the_first_command_it_abbreviates(word, command):
+    assert dss_command(word) == command
+
+
+@pytest.mark.parametrize("line, message", [
+    ("Reditect Switches.dss", "unknown DSS command 'Reditect'"),
+    ("Disable Load.x", "the disable command changes the model and is not read"),
+    ("Select Load.x", "the select command changes the model and is not read"),
+    ("   /* an indented block comment is a command, as in the engine", r"unknown DSS command '/\*'"),
+])
+def test_an_unread_command_raises(tmp_path, line, message):
+    with pytest.raises(DssParseError, match=message):
+        read(tmp_path, f"New Circuit.c\nNew Load.x bus1=b kW=1\n{line}\n")
+
+
+def test_skipped_commands_leave_the_model_alone(tmp_path):
+    model = read(tmp_path, "New Circuit.c\nCalcV\nsetkvbase b kVLL=0.48\nSolve mode=snap\nPlot daisy\n"
+                           "Show Voltage LN Nodes\nExport voltages\n")
+    assert only(model, schema.Vsource).name == "source"
+
+
+def test_more_and_m_continue_the_last_element(tmp_path):
+    model = read(tmp_path, "New Load.a bus1=b\nMore kW=10\nM kvar=2\n~ pf=0.9\n")
+    assert (only(model, schema.Load).kW, only(model, schema.Load).kvar, only(model, schema.Load).pf) == (10, 2, 0.9)
+
+
+def test_a_continuation_with_nothing_to_continue_raises(tmp_path):
+    with pytest.raises(DssParseError, match="a continuation with no New or Edit before it"):
+        read(tmp_path, "Set voltagebases=[12.47]\n~ pu=1.05\n")
+
+
+BLOCKS_AND_OPENS = """New Circuit.c basekv=12.47
+/* a block comment
+New Load.inblock bus1=sourcebus kW=1
+the end */ New Load.on_the_closing_line bus1=sourcebus kW=1
+/* one line */ New Load.on_a_one_line_block bus1=sourcebus kW=1
+New Load.after bus1=sourcebus kW=1
+New Line.sw1 bus1=sourcebus bus2=b2 switch=y
+New Line.sw2 bus1=sourcebus bus2=b3 switch=y
+New Line.sw3 bus1=sourcebus bus2=b4 switch=y
+Open Line.sw1
+Open Line.SW2 terminal=2
+o Line.sw3 2
+Close Line.sw3 2
+"""
+
+
+def test_block_comments_and_open_match_the_engine(tmp_path):
+    deck = tmp_path / "deck.dss"
+    deck.write_text(BLOCKS_AND_OPENS)
+    model = DssReader(deck).read_all()
+    dss.Text.Command("Clear")
+    dss.Text.Command(f"Redirect [{deck}]")
+    assert [load.name for load in model.list_by_class(schema.Load)] == dss.Loads.AllNames()
+    engine = []
+    for name in dss.Lines.AllNames():
+        dss.Circuit.SetActiveElement(f"Line.{name}")
+        engine += [f"line.{name} {terminal}" for terminal in (1, 2) if dss.CktElement.IsOpen(terminal, 0)]
+    assert [entry.lower() for entry in only(model, schema.Options).open_terminals] == engine
+
+
+def test_open_of_an_undefined_object_raises(tmp_path):
+    with pytest.raises(DssParseError, match="Open of an object no New defines"):
+        read(tmp_path, "New Circuit.c\nOpen Line.nope\n")
+
+
+def test_open_of_one_conductor_raises(tmp_path):
+    with pytest.raises(DssParseError, match="open of conductor 3 only is not read"):
+        read(tmp_path, "New Circuit.c\nNew Line.l bus1=sourcebus bus2=b\nOpen Line.l 2 3\n")
+
+
+@pytest.mark.parametrize("units", ["units=ft ~ cond=2 x=1 h=10 units=m", "~ cond=2 x=1 h=10 units=m"])
+def test_geometry_positions_in_different_units_raise(tmp_path, units):
+    with pytest.raises(DssParseError, match="the cond= blocks give positions in different units"):
+        read(tmp_path, f"New LineGeometry.g nconds=2 nphases=1 cond=1 x=0 h=10 {units}\n".replace(" ~ ", "\n~ "))
+
+
+def test_geometry_units_carry_to_the_next_cond_block(tmp_path):
+    model = read(tmp_path, "New LineGeometry.g nconds=2 nphases=1\n~ cond=1 x=0 h=10 units=m\n~ cond=2 x=1 h=9\n")
+    geometry = only(model, schema.Linegeometry)
+    assert (geometry.units, geometry.xs, geometry.hs) == ("m", [0.0, 1.0], [10.0, 9.0])

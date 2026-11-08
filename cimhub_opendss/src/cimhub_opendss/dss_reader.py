@@ -41,6 +41,52 @@ __all__ = ["DssReader", "DssParseError", "KEPT_OPTIONS", "dss_defaults"]
 #: ``Set`` options that describe the circuit, kept on the model as ``Options`` (DSS_REWRITE_PLAN.md section 3.4).
 KEPT_OPTIONS = frozenset({"voltagebases", "defaultbasefreq", "earthmodel"})
 
+#: Every OpenDSS executive command, lowercased, in the engine's order (``test_dss_commands_match_the_engine``).
+DSS_COMMANDS = (
+    "new", "edit", "more", "m", "~", "select", "save", "show", "solve", "enable", "disable", "plot", "reset",
+    "compile", "set", "dump", "open", "close", "//", "redirect", "help", "quit", "?", "next", "panel", "sample",
+    "clear", "about", "calcvoltagebases", "setkvbase", "buildy", "get", "init", "export", "fileedit", "voltages",
+    "currents", "powers", "seqvoltages", "seqcurrents", "seqpowers", "losses", "phaselosses", "cktlosses",
+    "allocateloads", "formedit", "totals", "capacity", "classes", "userclasses", "zsc", "zsc10", "zscrefresh",
+    "ysc", "puvoltages", "varvalues", "varnames", "buscoords", "makebuslist", "makeposseq", "reduce", "interpolate",
+    "alignfile", "top", "rotate", "vdiff", "summary", "distribute", "di_plot", "comparecases", "yearlycurves", "cd",
+    "visualize", "closedi", "doscmd", "estimate", "reconductor", "_initsnap", "_solvenocontrol", "_samplecontrols",
+    "_docontrolactions", "_showcontrolqueue", "_solvedirect", "_solvepflow", "addbusmarker", "uuids",
+    "setloadandgenkv", "cvrtloadshapes", "nodediff", "rephase", "setbusxy", "updatestorage", "obfuscate",
+    "latlongcoords", "batchedit", "pstcalc", "variable", "reprocessbuses", "clearbusmarkers", "relcalc", "var",
+    "cleanup", "finishtimestep", "nodelist", "connect", "disconnect", "remove", "calcincmatrix", "calcincmatrix_o",
+    "refine_buslevels", "calclaplacian", "exportoverloads", "exportvviolations", "zsc012", "allpceatbus",
+    "allpdeatbus", "totalpowers", "giscoords", "clearall", "comhelp", "newactor", "wait", "solveall", "abort",
+    "clone",
+)
+
+#: Commands that leave the model as it is (solve, report, plot, export, query, UI), which the reader skips.
+#: ``setkvbase`` only sets the engine's bus base for reports; BaseVoltage comes from the topology walk. A command
+#: in neither this set nor the ones the reader reads changes the model in a way the reader does not follow, so it
+#: raises (DSS_REWRITE_PLAN.md section 3.4).
+SKIPPED_COMMANDS = frozenset({
+    "save", "show", "solve", "plot", "reset", "dump", "help", "quit", "?", "next", "panel", "sample", "about",
+    "calcvoltagebases", "setkvbase", "buildy", "get", "init", "export", "fileedit", "voltages", "currents", "powers",
+    "seqvoltages", "seqcurrents", "seqpowers", "losses", "phaselosses", "cktlosses", "formedit", "totals",
+    "capacity", "classes", "userclasses", "zsc", "zsc10", "zscrefresh", "ysc", "puvoltages", "varvalues", "varnames",
+    "makebuslist", "top", "vdiff", "summary", "di_plot", "comparecases", "yearlycurves", "visualize", "closedi",
+    "estimate", "_initsnap", "_solvenocontrol", "_samplecontrols", "_docontrolactions", "_showcontrolqueue",
+    "_solvedirect", "_solvepflow", "addbusmarker", "clearbusmarkers", "uuids", "nodediff", "pstcalc", "variable",
+    "relcalc", "cleanup", "finishtimestep", "nodelist", "calcincmatrix", "calcincmatrix_o", "refine_buslevels",
+    "calclaplacian", "exportoverloads", "exportvviolations", "zsc012", "allpceatbus", "allpdeatbus", "totalpowers",
+    "comhelp", "wait", "solveall", "abort",
+})
+
+
+def dss_command(word: str) -> str | None:
+    """The DSS command ``word`` names, lowercased, or ``None``. As in the engine, an exact name wins; otherwise
+    the first command in ``DSS_COMMANDS`` that ``word`` abbreviates (``CalcV`` is ``calcvoltagebases``, ``o`` is
+    ``open``)."""
+    word = word.lower()
+    if word in DSS_COMMANDS:
+        return word
+    return next((command for command in DSS_COMMANDS if command.startswith(word)), None)
+
 
 # ---------------------------------------------------------------------------
 # Error type
@@ -73,7 +119,7 @@ class DssParseError(Exception):
 class DssCommand:
     """A single parsed DSS command."""
 
-    cmd: str  # "new", "edit", "batchedit", "set", "clear"
+    cmd: str  # "new", "edit", "batchedit", "set", "clear", "open", "close"
     element_type: str | None  # "Load", "Transformer" (original case)
     element_name: str | None  # "671", "sub3"
     params: dict[str, str]  # raw key=value (original-case keys)
@@ -202,6 +248,8 @@ class DssReader(FormatReader):
           matches (case-insensitive search, as DSS does); it must match at least one.
         - ``Set`` keeps the circuit options in ``KEPT_OPTIONS`` on one ``Options`` object. The other options
           are solution settings (``mode``, ``controlmode``, ...) and are not part of the model.
+        - ``Open Class.name [terminal]`` adds ``Class.name terminal`` to ``Options.open_terminals``; ``Close``
+          removes it. The object must already exist.
         - ``Clear`` discards everything defined before it, as in DSS (a deck may build, solve and rebuild).
         - ``New Circuit.<name>`` is ``New Vsource.source``, as in DSS; ``Options.circuit`` keeps the name.
           A second ``New Circuit`` raises: a deck is one circuit.
@@ -220,6 +268,9 @@ class DssReader(FormatReader):
             try:
                 if cmd.cmd == "set":
                     options.update(self._options(cmd))
+                    continue
+                if cmd.cmd in ("open", "close"):
+                    _open_or_close(options.setdefault("open_terminals", []), cmd, types, spelled)
                     continue
                 if cmd.element_type.lower() == "circuit":
                     cmd = self._circuit(cmd, options)
@@ -280,7 +331,8 @@ class DssReader(FormatReader):
     ) -> Iterator[tuple[str, Path, int]]:
         """Recursively read DSS files, following ``Redirect`` commands.
 
-        Yields ``(stripped_line, file_path, line_number)`` tuples.
+        Yields ``(stripped_line, file_path, line_number)`` tuples. A block comment starts on a line that begins
+        with ``/*`` and ends on the line that holds ``*/``; the engine skips both lines whole, and so does this.
         """
         base_dir = master_path.parent
 
@@ -290,13 +342,17 @@ class DssReader(FormatReader):
             try:
                 resolved_file = _resolve_file_case_insensitive(file_path)
                 with open(resolved_file, "r", encoding="utf-8") as fh:
+                    in_block_comment = False
                     for line_num, raw_line in enumerate(fh, start=1):
+                        if in_block_comment or raw_line.startswith("/*"):
+                            in_block_comment = "*/" not in raw_line
+                            continue
                         line = _strip_comment(raw_line).strip()
                         if not line:
                             continue
 
-                        lower = line.lower()
-                        if lower.startswith("redirect") or lower.startswith("compile"):
+                        command = dss_command(line.split(None, 1)[0])
+                        if command in ("redirect", "compile"):
                             # Extract target file name
                             rest = line.split(None, 1)
                             if len(rest) > 1:
@@ -310,12 +366,12 @@ class DssReader(FormatReader):
 
                         # BusCoords / LatLongCoords: CSV format bus,c1,c2.
                         # BusCoords: c1=x, c2=y. LatLongCoords: c1=lat, c2=long → swap to x=long, y=lat.
-                        if lower.startswith("buscoords") or lower.startswith("latlongcoords"):
+                        if command in ("buscoords", "latlongcoords"):
                             rest = line.split(None, 1)
                             if len(rest) > 1:
                                 csv_name = rest[1].strip().strip("\"'")
                                 csv_path = _resolve_file_case_insensitive(base_dir / csv_name)
-                                if lower.startswith("latlongcoords"):
+                                if command == "latlongcoords":
                                     self._latlongcoords_paths.append(csv_path)
                                 else:
                                     self._buscoords_paths.append(csv_path)
@@ -336,36 +392,36 @@ class DssReader(FormatReader):
     def _join_continuation_lines(
         raw_lines: list[tuple[str, Path, int]],
     ) -> list[tuple[str, Path, int]]:
-        """Merge ``~`` continuation lines with the element they extend.
+        """Merge ``~`` (and ``More``, ``M``) continuation lines with the element they extend.
 
         In OpenDSS a ``~`` continues the most recent ``New``/``Edit`` element
         command, even when ``set`` commands, comments, or blank lines appear in
         between (comments/blanks are already stripped upstream). Appending to the
         immediate predecessor would misattach ``~`` params to an intervening
         ``set`` command — e.g. a ``New Circuit`` whose ``~ pu=1.05`` line follows
-        a couple of ``set`` commands.
+        a couple of ``set`` commands. A continuation before any ``New`` or ``Edit`` raises.
         """
         result: list[tuple[str, Path, int]] = []
         last_element_idx: int | None = None
 
         for line, file_path, line_num in raw_lines:
+            first_word, rest = (line.split(None, 1) + [""])[:2]
             if line.startswith("~"):
-                if last_element_idx is not None:
-                    prev_line, prev_file, prev_num = result[last_element_idx]
-                    result[last_element_idx] = (
-                        prev_line + " " + line[1:].strip(),
-                        prev_file,
-                        prev_num,
-                    )
-                else:
-                    # Orphan continuation; treat as standalone
-                    result.append((line[1:].strip(), file_path, line_num))
-                    last_element_idx = len(result) - 1
+                continued = line[1:].strip()
+            elif dss_command(first_word) in ("more", "m"):
+                continued = rest.strip()
             else:
+                continued = None
+            if continued is None:
                 result.append((line, file_path, line_num))
-                first_word = line.split(None, 1)[0].lower() if line.split() else ""
-                if first_word in ("new", "edit"):
+                if dss_command(first_word) in ("new", "edit"):
                     last_element_idx = len(result) - 1
+            elif last_element_idx is not None:
+                prev_line, prev_file, prev_num = result[last_element_idx]
+                result[last_element_idx] = (prev_line + " " + continued, prev_file, prev_num)
+            else:
+                raise DssParseError(f"{first_word}: a continuation with no New or Edit before it",
+                                    str(file_path), line_num)
 
         return result
 
@@ -376,33 +432,42 @@ class DssReader(FormatReader):
     def _parse_command_line(
         self, line: str, file_path: str, line_number: int
     ) -> DssCommand | None:
-        """Route a command line to the appropriate parser."""
-        parts = line.split(None, 1)
-        if not parts:
-            return None
+        """Route a command line to its parser; ``None`` for a command in ``SKIPPED_COMMANDS``.
 
-        cmd_word = parts[0].lower()
-        rest = parts[1] if len(parts) > 1 else ""
-
-        if cmd_word == "new":
-            return self._parse_new_or_edit("new", rest, file_path, line_number)
-        elif cmd_word == "edit":
-            return self._parse_new_or_edit("edit", rest, file_path, line_number)
-        elif cmd_word == "set":
+        ``Class.name.property=value`` (no command word) is an edit. Any other line must start with a DSS command
+        the reader reads or skips; an unknown word (a typo such as ``Reditect``) or a command that changes the
+        model in a way the reader does not follow (``Disable``, ``Remove``, ``Select``, ...) raises.
+        """
+        word, rest = (line.split(None, 1) + [""])[:2]
+        command = dss_command(word)
+        if command is None and "=" in line and line.split("=", 1)[0].count(".") >= 2:
+            return self._parse_dotted_edit(line.strip(), file_path, line_number)
+        if command in ("new", "edit", "batchedit"):
+            return self._parse_new_or_edit(command, rest, file_path, line_number)
+        if command == "set":
             return self._parse_set_command(rest, file_path, line_number)
-        elif cmd_word == "batchedit":
-            return self._parse_new_or_edit("batchedit", rest, file_path, line_number)
-        elif cmd_word in ("clear", "clearall"):
+        if command in ("clear", "clearall"):
             return DssCommand("clear", None, None, {}, file_path, line_number)
-        else:
-            # Check for implicit edit: Type.Name.Property=Value (no keyword)
-            # e.g. "Transformer.Reg1.Taps=[1.0 1.0625]"
-            # Use original line (not lowercased cmd_word) to preserve case
-            dot_count = line.split("=", 1)[0].count(".")
-            if dot_count >= 2 and "=" in line:
-                return self._parse_dotted_edit(line.strip(), file_path, line_number)
-            # Skip simulation commands: solve, calcvoltagebases, etc.
+        if command in ("open", "close"):
+            return self._parse_open_or_close(command, rest, file_path, line_number)
+        if command in SKIPPED_COMMANDS:
             return None
+        if command is None:
+            raise ValueError(f"unknown DSS command {word!r}")
+        raise ValueError(f"the {command} command changes the model and is not read")
+
+    @staticmethod
+    def _parse_open_or_close(command: str, rest: str, file_path: str, line_number: int) -> DssCommand:
+        """``Open Class.name [terminal [conductor]]``; the engine reads the arguments by position, so
+        ``terminal=2`` and ``2`` are the same. The terminal defaults to 1; opening one conductor raises."""
+        values = [token.split("=", 1)[-1] for token in _join_equals(_tokenize_dss(rest))]
+        if not values or "." not in values[0]:
+            raise ValueError(f"{command} needs Class.name")
+        element_type, element_name = values[0].split(".", 1)
+        terminal = values[1] if len(values) > 1 else "1"
+        if len(values) > 2 and values[2] != "0":
+            raise ValueError(f"{command} of conductor {values[2]} only is not read (no deck in the sweep does it)")
+        return DssCommand(command, element_type, element_name, {"terminal": terminal}, file_path, line_number)
 
     def _parse_new_or_edit(
         self, cmd: str, rest: str, file_path: str, line_number: int
@@ -977,6 +1042,20 @@ def _inherit(obj: Any, source: Any) -> None:
             setattr(obj, field.name, getattr(source, field.name))
 
 
+def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
+                   spelled: dict[tuple[type, str], str]) -> None:
+    """Add (``Open``) or remove (``Close``) the terminal ``Class.name terminal`` on ``opened``."""
+    schema_class = types.get(cmd.element_type.lower())
+    key = (schema_class, cmd.element_name.lower())
+    if key not in spelled:
+        raise ValueError(f"{cmd.cmd.capitalize()} of an object no New defines")
+    terminal = f"{schema_class.__name__}.{spelled[key]} {int(cmd.params['terminal'])}"
+    if cmd.cmd == "open" and terminal not in opened:
+        opened.append(terminal)
+    if cmd.cmd == "close" and terminal in opened:
+        opened.remove(terminal)
+
+
 def _batch_edit(bucket: dict[str, Any], pattern: str, values: dict[str, Any]) -> None:
     """``BatchEdit``: set ``values`` on every object whose name ``pattern`` matches."""
     regex = re.compile(pattern, re.IGNORECASE)
@@ -1290,6 +1369,7 @@ def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
 
     cond_data: dict[int, dict[str, str]] = {}
     units_val = ''
+    block_units: list[str] = []  # each block's unit: its own, else the last given, else DSS's initial ft
     for block in blocks[1:]:
         parts = block.strip().split(None, 1)
         if not parts:
@@ -1339,9 +1419,13 @@ def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
         cond_data[cond_num] = cond_params
         if 'units' in cond_params:
             units_val = cond_params['units']
+        block_units.append((units_val or 'ft').lower())
 
     if not cond_data:
         return {}
+    if units_val and len(set(block_units)) > 1:
+        raise ValueError(f"the cond= blocks give positions in different units ({', '.join(block_units)}); "
+                         "one geometry has one length unit")
 
     sorted_conds = sorted(cond_data.keys())
     xs = [cond_data[c].get('x', '') for c in sorted_conds]

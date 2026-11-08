@@ -15,6 +15,8 @@ import pytest
 # OpenDSS ``Compile`` chdirs the whole process into the deck's directory; once a temp dir is gone the next
 # ``Compile`` segfaults. Keep the process cwd fixed.
 opendssdirect.Basic.AllowChangeDir(False)
+# ``Show`` and ``FileEdit`` in a deck open the result in an editor window and block until it closes.
+opendssdirect.Basic.AllowEditor(False)
 
 DECKS = Path(__file__).parent / "decks"
 
@@ -25,12 +27,29 @@ ENGINE_DECKS = [
     "IEEE/IEEE123/IEEE123Master.dss",
     "IEEE/IEEE37/ieee37.dss",
     "IEEE/IEEE4_xfmrs/4bus-OYOD-UnBal.dss",
-    pytest.param("IEEE/IEEE13_assets/IEEE13_Assets.dss", marks=pytest.mark.roundtrip),
+    "IEEE/IEEE13_assets/IEEE13_Assets.dss",
     pytest.param("IEEE/IEEE13_OCHRE/Master.dss", marks=pytest.mark.roundtrip),
     pytest.param("EPRI/J1/Master.dss", marks=pytest.mark.roundtrip),
     pytest.param("IEEE/IEEE8500/Master.dss", marks=pytest.mark.roundtrip),
     pytest.param("PNNL/IEEE9500/Master-unbal-initial-config.dss", marks=pytest.mark.roundtrip),
 ]
+
+
+#: The engine's ``LineUnits`` codes as length units.
+ENGINE_UNIT = {1: "mi", 2: "kft", 3: "km", 4: "m", 5: "ft", 6: "in", 7: "cm", 8: "mm"}
+
+#: Decks with wire catalogs and geometries the engine compiles here (not YYD-Master: its Export commands write
+#: files next to the deck).
+CATALOG_DECKS = [
+    "IEEE/IEEE13_assets/IEEE13_Assets.dss",
+    "IEEE/IEEE4_xfmrs/4Bus-YY-Bal.DSS",
+]
+
+
+def compile_deck(path: Path) -> None:
+    """Compile a deck in the engine, from a clean circuit."""
+    opendssdirect.Text.Command("Clear")
+    opendssdirect.Text.Command(f"Compile [{path.resolve()}]")
 
 
 def deck(relative: str) -> Path:

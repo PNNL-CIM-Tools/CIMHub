@@ -46,6 +46,15 @@ classes:
         range: string
         required: false
 
+      open_terminals:
+        description: >-
+          The terminals ``Open`` leaves open, each as ``Class.name terminal``
+          (``Open Line.Sw7 2`` gives ``Line.Sw7 2``; the terminal defaults to
+          1). ``Close`` removes the entry. Not a ``Set`` option.
+        range: string
+        multivalued: true
+        required: false
+
       voltagebases:
         description: >-
           Line-to-line voltages the engine snaps bus bases to (CalcVoltageBases).

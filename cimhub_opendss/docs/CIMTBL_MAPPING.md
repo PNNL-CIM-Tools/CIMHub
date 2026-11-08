@@ -1,13 +1,15 @@
 # OpenDSS → `.cimtbl` mapping spec
 
-**Status:** S1 done (2026-11-07). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+**Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
+LineSpacing/LineGeometry. XfmrCode is deferred to S3. `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
 
 The classification tables are generated from each mapper's `FIELDS` with
 `cimhub_core.cimtbl.fields_table(..., fields=FIELDS)`. The samples come from `tests/decks/IEEE/IEEE13_CDPSM/` and the
-IEEE8500 `LineCodes.dss`. `{length}` in a unit is the code's `units`.
+IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `{length}` in a unit is the code's
+`units`; `{r_length}`, `{gmr_length}`, `{radius_length}` are a wire's `Runits`, `GMRunits`, `radunits`.
 
 ## Artifact files and order
 
@@ -16,6 +18,9 @@ IEEE8500 `LineCodes.dss`. `{length}` in a unit is the code's `units`.
 | (the deck) | `<Model>.cimtbl` (master) | settings, `common` rows (Substation, Feeder, BaseFrequency, BaseVoltage), `Import`s | every part |
 | (the topology walk) | `bus.cimtbl` | one `ConnectivityNode` per bus, with its `BaseVoltage` | the master |
 | `Vsource` | `vsource.cimtbl` | `source` | the master, `bus.cimtbl` |
+| `WireData`, `CNData`, `TSData` | `wiredata.cimtbl`, `cndata.cimtbl`, `tsdata.cimtbl` | `wire_info` | nothing |
+| `LineSpacing` | `linespacing.cimtbl` | `line_by_wire_configuration` (`XYSpacing`) | nothing |
+| `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Transformer` (inline) | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 
@@ -157,18 +162,18 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 | Linecode field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`; mRID = lc_ + name, lowercased |
-| `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a sequence code must be 3-phase (a 1-phase DSS line uses Z1 as its self impedance, a 2-phase one Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3; neither is the CIM sequence convention) |
+| `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4) |
 | `r1` | `Optional[float]` | `0.769009`, `0.3489`, `0.535622` | copied | `PerLengthSequenceImpedance.r` (ohm/{length}) |
 | `x1` | `Optional[float]` | `0.312115`, `0.491691`, `0.560725` | copied | `PerLengthSequenceImpedance.x` (ohm/{length}) |
 | `r0` | `Optional[float]` | `1.294322`, `0.613107`, `0.608571` | copied | `PerLengthSequenceImpedance.r0` (ohm/{length}) |
 | `x0` | `Optional[float]` | `0.287695`, `1.241561`, `1.19452` | copied | `PerLengthSequenceImpedance.x0` (ohm/{length}) |
 | `C1` | `Optional[str]` | `154.240283543118`, `8.96939698228171`, `9.08509466816236` | derived | PerLengthSequenceImpedance bch = 2 pi baseFreq C1 (b_from_c): nF -> nS |
 | `C0` | `Optional[str]` | `154.240283543118`, `4.95311934077534`, `5.10821052765362` | derived | PerLengthSequenceImpedance b0ch = 2 pi baseFreq C0 (b_from_c): nF -> nS |
-| `units` | `Optional[str]` | `mi`, `km` | mapped | the length unit of every per-length header via LENGTH_UNIT |
+| `units` | `Optional[str]` | `mi`, `km` | mapped | the length unit of every per-length header via LENGTH_UNIT; unset: the unit of the lines that use the code, else the deck's magnitude gate (DSS-3) |
 | `rmatrix` | `Union[float, list[float], NoneType]` | `[0.3465, 0.1535, 0.3375, 0.158, 0.156...`, `[0.7526, 0.1535, 0.7475, 0.156, 0.158...`, `[1.3238, 0.2066, 1.3294]` | structural | PhaseImpedanceData r, one row per lower-triangle element |
 | `xmatrix` | `Union[float, list[float], NoneType]` | `[1.0179, 0.3849, 1.0478, 0.4236, 0.50...`, `[1.1814, 0.3849, 1.1983, 0.5017, 0.42...`, `[1.3569, 0.4591, 1.3471]` | structural | PhaseImpedanceData x, one row per lower-triangle element |
 | `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]`, `[0.0, 0.0, 0.0]` | derived | PhaseImpedanceData b = 2 pi baseFreq C (b_from_c): nF -> nS |
-| `baseFreq` | `Optional[str]` | `60` | copied | `PerLengthPhaseImpedance.calculatedFrequency` (Hz), `PerLengthSequenceImpedance.calculatedFrequency` (Hz); also the frequency of the derived b |
+| `baseFreq` | `Optional[str]` | `60` | copied | `PerLengthPhaseImpedance.calculatedFrequency` (Hz), `PerLengthSequenceImpedance.calculatedFrequency` (Hz); also the frequency of the derived b; unset with a nonzero C: the deck's base frequency, defaulted (DSS-3b) |
 | `normamps` | `Optional[float]` | `730.0`, `340.0`, `230.0` | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
 | `emergamps` | `Optional[float]` | `160.0`, `310.0`, `260.0` | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
 | `faultrate` | `Optional[int]` | `0` | untranscribed | reliability data; no home in the network profile parts |
@@ -189,8 +194,9 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 **Derived.** `b_from_c(c, f)` = 2πfC: C in nF and f in Hz give b in nS. `susceptance` applies it per value; C = 0
 gives b = 0 without a `baseFreq` (ACEP_PSIL `buswork` sets none).
 
-**Fail fast.** `units` unset or `none`; a 1- or 2-phase sequence code; both C1 and B1 (or C0 and B0); both forms or
-neither; a nonzero C without `baseFreq`; a matrix whose length does not fit `nphases`.
+**Fail fast.** A `units` value with no mapping; a unitless code whose lines give units on some lines only, or a gate
+median in no band; both C1 and B1 (or C0 and B0); both forms or neither; B1/B0 on a 1- or 2-phase code; a matrix
+whose length does not fit `nphases`.
 
 **Deck sweep (2026-11-06).** 9 of the 24 decks with line codes map and bind. The rest stop on:
 
@@ -207,6 +213,263 @@ typed `float` (DSS values are words such as `oh`); `C1`/`C0`/`B1`/`B0`/`baseFreq
 
 **Expected differences from the hand translation** (`CIMTBL-Models/.../IEEE13_CDPSM`): it carries the 2011 corrected
 off-diagonals; the import keeps the deck's values (`mtx601` r21 = 0.1535).
+
+### LineCode: units, base frequency, short sequence codes (S2, approved 2026-11-07)
+
+S2 lifts three of the fail-fast stops above (the sweep tables below are the pre-S2 record), as decided in [`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)
+§6. They are the stops for 16 of the 31 sweep decks.
+
+- **`units` unset (DSS-3).** DSS reads a unitless code per unit of the *line's* length, so:
+  - (a) a code used by lines that give `units` takes the line's unit (J1: 1,382 lines, all `kft`). Lines that
+    disagree give one template per unit, `lc_<name>_<unit>`.
+  - (b) code and lines both unitless (M1, IEEE123_deconfliction), or a unitless code no line uses (IEEE13_original):
+    a deck-level magnitude gate on the median positive `r1` (or `rmatrix` diagonal) of the deck's unitless codes.
+    0.006 to 10 per unit gives `km`; 1e-5 to 0.006 gives `m`; anything else raises. `length_unit=` on the importer
+    overrides the gate.
+
+  The row comment states the unit's source: `# units from its lines: kft (...)`, `# units inferred: km (median r
+  0.134 per unit over 17 codes; no units on code or line)` (M1), or `# units given: ...` for `length_unit=`.
+  Inferred in the sweep: km for M1, IEEE123, IEEE123_deconfliction, IEEE13_original, IEEE37 and J1's 2 unused
+  codes; J1's 4 used codes take kft from their lines.
+  Code and line share the unit, so z·length is exact for any label. A wrong label only scales the physical
+  length. The mapper reads the Lines (their `linecode` and `units`) for this; it maps none of them.
+- **A nonzero C without `baseFreq` (DSS-3b).** `b_from_c` takes the master's base frequency (`Set
+  defaultbasefreq`, else 60 Hz), and the row says `# defaulted: baseFreq=60`.
+- **1- and 2-phase sequence codes (DSS-4; J1, 17 codes).** These become a derived `PerLengthPhaseImpedance` +
+  `PhaseImpedanceData`, as the engine builds the line. 1-phase: z = Z1, b from C1. 2-phase: Zs = (2 Z1 + Z0)/3 and
+  Zm = (Z0 − Z1)/3, the same for C. The function is `cimhub_core.derived.sequence.phase_matrix` (closed form, not
+  Carson; a U4 candidate). Atom `short_sequence.dss` (two J1 codes, one line each): r, x and b equal the engine's
+  line matrices. A 1-phase row lists the r0/x0/C0 the line does not use; B1/B0 on a short code raises.
+- **D9:** `normamps`/`emergamps` stay untranscribed on a LineCode (no home on `PerLengthImpedance`).
+
+## Wire catalogs
+
+Mapper: `cimhub_opendss/importer/cimtbl/wire.py` (`map_wires(native, native_class, prefix, fields)`). Shape:
+`wire_info`. Atoms: `tests/atoms/wire/assets.dss` (IEEE13_Assets: Rdc-only ACSR, Rac-only CU, `CN_250`, `TS_1/0`)
+and `metric.dss` (one IEEE9500 wire, km/cm), tested by `tests/test_cimtbl_wire.py`. Approved 2026-11-07, with Rac
+filled from Rdc and the TS screen diameter = DiaShield − 2 TapeLayer.
+
+**Identity.** One file per DSS class (D4): `wiredata.cimtbl`, `cndata.cimtbl`, `tsdata.cimtbl`. mRID = `wire_`,
+`cn_` or `ts_` + name, lowercased. Each DSS class is its own namespace, so the prefixes keep a WireData and a
+CNData of one name apart.
+
+**Units.** `Runits` (resistance per length), `GMRunits` and `radunits` become header units, values as written. A
+cable's dimensions (`DiaIns`, `DiaCable`, `InsLayer`, `DiaStrand`, `DiaShield`, `TapeLayer`) are in `radunits`.
+`GmrStrand` is in `GMRunits` and `Rstrand` in `Runits`, as DSS states. The mapper writes one table per unit
+combination, as LineCode writes one per length unit. IEEE13_Assets gives two tables (kft/in/in and mi/in/in); the
+IEEE9500 wires give one (km/cm/cm). An unset selector raises; every wire in the sweep sets all three.
+
+**Values the engine fills** (DSS-6, in the row comment):
+- **`Rac` unset:** rAC25 = 1.02 × Rdc, the engine's rule (`ac_from_dc`; the 9 IEEE4/IEEE13_Assets ACSR wires).
+  `Rdc` unset is left unset: the engine only uses Rdc to fill Rac.
+- **`diam`:** radius = diam / 2 (`radius_from_diameter`). Setting both radius and diam raises (DSS keeps the
+  last, which the reader does not record); so does setting neither.
+- **`GMRac` unset:** raises. The engine would take 0.7788 × radius, but no deck in the sweep omits GMRac.
+
+**Cables** follow EPRI's ExportCIMXML wherever CIM has no exact twin:
+- `Rac` → `rAC25` (DSS gives no temperature) and `Rstrand` → `neutralStrandRDC20` (DSS calls it AC; CIM has only
+  the one strand resistance). Only `rAC25` is written, never the same value copied to rAC50/rAC75.
+- CN `DiaCable` → both `diameterOverJacket` and `diameterOverNeutral`: the strands are outermost. CN's
+  `diameterOverScreen` is not written; it is derivable and no consumer needs it.
+- TS `diameterOverScreen` = DiaShield − 2 TapeLayer (`screen_diameter`). DSS measures over the tape; CIM's screen
+  diameter is the shield's inside.
+- `EpsR` is untranscribed: CableInfo has no permittivity. Every cable in the sweep uses the DSS default, 2.3.
+
+Example (`wiredata.cimtbl`, IEEE13_Assets):
+
+```
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/kft), rAC25 (ohm/kft), gmr (in), radius (in), ratedCurrent (A)
+    # defaulted: Rac = 1.02 x Rdc
+    wire_acsr_1/0,   ACSR_1/0,   0.212121212, 0.21636363624000002, 0.05352, 0.199,  230.0
+    ...
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A)
+    wire_cu_1/0, CU_1/0, , 0.607, 0.13356, 0.184, 100.0
+```
+
+**Fail fast:** a unit selector unset; radius and diam both set or neither; GMRac unset; `Capradius` or
+`SemiconLayer` set (no deck sets them).
+
+**Oracle:** every written value equals the engine's property in the engine's units (`opendssdirect` WireData /
+CNData / TSData), including the filled Rac, on the vendored IEEE13_Assets and IEEE4 decks
+(`test_values_match_the_engine`).
+
+| Wiredata field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, WiredataName]` | `ACSR_1/0`, `ACSR_4/0`, `ACSR_556_5` | copied | `OverheadWireInfo.name`; mRID = prefix + name, lowercased |
+| `Rdc` | `Optional[float]` | `0.212121212`, `0.112121212`, `0.035227273` | copied | `OverheadWireInfo.rDC20` (ohm/{r_length}); DC resistance (DSS gives no temperature) |
+| `Rac` | `Optional[float]` | `0.607`, `1.010411`, `0.939016` | copied | `OverheadWireInfo.rAC25` (ohm/{r_length}); DSS: resistance at 60 Hz, temperature unstated; rAC25 as in EPRI's ExportCIMXML. Unset: 1.02 x Rdc, the engine's rule (ac_from_dc), with a defaulted comment |
+| `Runits` | `Optional[str]` | `kft`, `mi`, `km` | mapped | the unit of Rdc, Rac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `GMRac` | `Optional[float]` | `0.05352`, `0.09768`, `0.3732` | copied | `OverheadWireInfo.gmr` ({gmr_length}); unset raises (the engine's 0.7788 x radius default; no deck in the sweep omits it) |
+| `GMRunits` | `Optional[str]` | `in`, `cm`, `ft` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `radius` | `Optional[float]` | `0.40132`, `0.39624`, `0.37084` | copied | `OverheadWireInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
+| `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `normamps` | `Optional[float]` | `230.0`, `340.0`, `730.0` | copied | `OverheadWireInfo.ratedCurrent` (A) |
+| `emergamps` | `Optional[float]` | `200.0`, `239.0`, `172.0` | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `diam` | `Optional[float]` | `0.398`, `0.563`, `0.927` | derived | radius = diam / 2 (radius_from_diameter) |
+| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Cndata field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, CndataName]` | `CN_250`, `1/0_Al_15kV_1/3` | copied | `ConcentricNeutralCableInfo.name`; mRID = prefix + name, lowercased |
+| `k` | `Optional[int]` | `13`, `6` | copied | `ConcentricNeutralCableInfo.neutralStrandCount` |
+| `DiaStrand` | `Optional[float]` | `0.0641`, `0.064` | derived | neutralStrandRadius = DiaStrand / 2 (radius_from_diameter), radunits |
+| `GmrStrand` | `Optional[float]` | `0.02496` | copied | `ConcentricNeutralCableInfo.neutralStrandGmr` ({gmr_length}); in GMRunits, as DSS says |
+| `Rstrand` | `Optional[float]` | `14.8722`, `2.55` | copied | `ConcentricNeutralCableInfo.neutralStrandRDC20` (ohm/{r_length}); DSS calls it the strand's AC resistance; neutralStrandRDC20 as in ExportCIMXML, CIM's only strand resistance |
+| `SemiconLayer` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `EpsR` | `Optional[float]` | `2.3` | untranscribed | insulation relative permittivity; no home on CableInfo (InsulationInfo has a material, not a permittivity). DSS default 2.3, which every cable in the sweep uses |
+| `InsLayer` | `Optional[float]` | `0.22`, `0.445` | copied | `ConcentricNeutralCableInfo.insulationThickness` ({radius_length}) |
+| `DiaIns` | `Optional[float]` | `1.06`, `2.11` | copied | `ConcentricNeutralCableInfo.diameterOverInsulation` ({radius_length}) |
+| `DiaCable` | `Optional[float]` | `1.29`, `2.74` | copied | `ConcentricNeutralCableInfo.diameterOverJacket` ({radius_length}), `ConcentricNeutralCableInfo.diameterOverNeutral` ({radius_length}); the outer diameter; a CN cable has no jacket over its strands, so it is also the diameter over the neutral (ExportCIMXML) |
+| `Rdc` | `Optional[float]` |  | copied | `ConcentricNeutralCableInfo.rDC20` (ohm/{r_length}); DC resistance (DSS gives no temperature) |
+| `Rac` | `Optional[float]` | `0.41`, `0.603` | copied | `ConcentricNeutralCableInfo.rAC25` (ohm/{r_length}); DSS: resistance at 60 Hz, temperature unstated; rAC25 as in EPRI's ExportCIMXML. Unset: 1.02 x Rdc, the engine's rule (ac_from_dc), with a defaulted comment |
+| `Runits` | `Optional[str]` | `mi`, `km` | mapped | the unit of Rdc, Rac, Rstrand in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `GMRac` | `Optional[float]` | `0.2052`, `0.338` | copied | `ConcentricNeutralCableInfo.gmr` ({gmr_length}); unset raises (the engine's 0.7788 x radius default; no deck in the sweep omits it) |
+| `GMRunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of GMRac, GmrStrand in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `radius` | `Optional[float]` |  | copied | `ConcentricNeutralCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
+| `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `normamps` | `Optional[float]` | `260.0` | copied | `ConcentricNeutralCableInfo.ratedCurrent` (A) |
+| `emergamps` | `Optional[float]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `diam` | `Optional[float]` | `0.567`, `0.935` | derived | radius = diam / 2 (radius_from_diameter) |
+| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Tsdata field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, TsdataName]` | `TS_1/0` | copied | `TapeShieldCableInfo.name`; mRID = prefix + name, lowercased |
+| `DiaShield` | `Optional[float]` | `0.88` | derived | diameterOverScreen = DiaShield - 2 TapeLayer (screen_diameter): DSS measures over the tape, CIM's screen diameter is the shield's inside (ExportCIMXML) |
+| `TapeLayer` | `Optional[float]` | `0.005` | copied | `TapeShieldCableInfo.tapeThickness` ({radius_length}) |
+| `TapeLap` | `Optional[float]` | `20.0` | copied | `TapeShieldCableInfo.tapeLap` (percent) |
+| `EpsR` | `Optional[float]` | `2.3` | untranscribed | insulation relative permittivity; no home on CableInfo (InsulationInfo has a material, not a permittivity). DSS default 2.3, which every cable in the sweep uses |
+| `InsLayer` | `Optional[float]` | `0.22` | copied | `TapeShieldCableInfo.insulationThickness` ({radius_length}) |
+| `DiaIns` | `Optional[float]` | `0.82` | copied | `TapeShieldCableInfo.diameterOverInsulation` ({radius_length}) |
+| `DiaCable` | `Optional[float]` | `1.06` | copied | `TapeShieldCableInfo.diameterOverJacket` ({radius_length}); the outer diameter |
+| `Rdc` | `Optional[float]` |  | copied | `TapeShieldCableInfo.rDC20` (ohm/{r_length}); DC resistance (DSS gives no temperature) |
+| `Rac` | `Optional[float]` | `0.97` | copied | `TapeShieldCableInfo.rAC25` (ohm/{r_length}); DSS: resistance at 60 Hz, temperature unstated; rAC25 as in EPRI's ExportCIMXML. Unset: 1.02 x Rdc, the engine's rule (ac_from_dc), with a defaulted comment |
+| `Runits` | `Optional[str]` | `mi` | mapped | the unit of Rdc, Rac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `GMRac` | `Optional[float]` | `0.1332` | copied | `TapeShieldCableInfo.gmr` ({gmr_length}); unset raises (the engine's 0.7788 x radius default; no deck in the sweep omits it) |
+| `GMRunits` | `Optional[str]` | `in` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `radius` | `Optional[float]` |  | copied | `TapeShieldCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
+| `radunits` | `Optional[str]` | `in` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
+| `normamps` | `Optional[float]` | `165.0` | copied | `TapeShieldCableInfo.ratedCurrent` (A) |
+| `emergamps` | `Optional[float]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `diam` | `Optional[float]` | `0.368` | derived | radius = diam / 2 (radius_from_diameter) |
+| `Seasons` | `Optional[int]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on WireInfo, which has one ratedCurrent (plan D9) |
+| `Capradius` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the radius for capacitance; not WireInfo.coreRadius) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+## LineSpacing and LineGeometry
+
+Mapper: `cimhub_opendss/importer/cimtbl/geometry.py` (`map_linespacing`, `map_linegeometry`). Shape:
+`line_by_wire_configuration`. Geometry stays geometry: no impedance is computed (the `conductor-geometry` skill).
+Atom: `tests/atoms/geometry/assets.dss` from IEEE13_Assets: spacing `500` with geometry `601` (the `spacing=`
+form), `606` (inline CN positions) and `607` (inline: a TS phase and a bare CU neutral), tested by
+`tests/test_cimtbl_geometry.py`. Approved 2026-11-07.
+
+**LineSpacing → `linespacing.cimtbl`.** An `XYSpacing` `spc_<name>` (`isTemplate=true`) and one
+`XYConductorPosition` per conductor: `sequenceNumber` 1..nconds, `xCoord`/`yCoord` from `x`/`h` in the
+spacing's `units`, and `kind` `phase` for 1..nphases, `neutral` after (DSS's convention). The equivalent-distance
+form (`detailed`, `EqDistPhPh`, ...) has no positions and raises; no deck uses it.
+
+**LineGeometry → `linegeometry.cimtbl`.** A `WireConfiguration` `wc_<name>` (`numberOfPhases` = nphases) and one
+`WireSequenceConfiguration` per conductor, naming its `WireInfo`. Its `WireSpacing` is:
+- `spacing=` → `spc_<spacing>` from `linespacing.cimtbl`.
+- inline positions (`cond=1 x=.. h=..`) → a synthesized `XYSpacing` `wc_<name>_spc` in `linegeometry.cimtbl`, under
+  `# synthesized`, built like a LineSpacing.
+
+**Conductor names.** The reader gives them in cond order in one of `wires`, `cncables`, `tscables`. A mixed
+assembly (607) arrives whole in `wires`, so the array says nothing about the kind. Each name must therefore be in
+exactly one of WireData, CNData and TSData; a name in two raises.
+
+Example (`linegeometry.cimtbl`, 607):
+
+```
+# synthesized: the inline positions of LineGeometry 607
+Object XYSpacing: mRID=wc_607_spc, name=607, isTemplate=true
+Table XYConductorPosition: mRID, XYSpacing=wc_607_spc, sequenceNumber, xCoord (ft), yCoord (ft), kind
+    wc_607_spc_1, 1, 0.0,  -4.0, phase
+    wc_607_spc_2, 2, 0.25, -4.0, neutral
+
+# untranscribed: reduce=true
+Object WireConfiguration: mRID=wc_607, name=607, numberOfPhases=1, WireSpacing=wc_607_spc
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_607, sequenceNumber, WireInfo
+    wc_607_1, 1, ts_ts_1/0
+    wc_607_2, 2, wire_cu_1/0
+```
+
+**Untranscribed:** `reduce` (Kron reduction is the consumer's choice from the segment's phases; 242 of 243 set
+it), ratings (D9), `LineType`.
+
+**Reader fix:** the reader kept the last `units` of the cond= blocks, so conductors in different units were
+misread. It now raises when the blocks disagree; a block without `units` takes the last given, else DSS's initial
+`ft`. No deck mixes units (engine-checked).
+
+**Fail fast:** two name arrays; a name count or position count other than nconds; `spacing=` together with
+inline positions; inline positions without `units`; a name in no catalog or in two; the scalar `cond`/`wire`/`x`/`h`
+without the arrays.
+
+**Oracle:** for every geometry the conductor names, coordinates and phase count equal the engine's
+(`LineGeometries.Conductors/Xcoords/Ycoords/Phases`; `test_geometries_match_the_engine` on the vendored
+IEEE13_Assets and IEEE4 decks). Checked by hand 2026-11-07, all match: IEEE9500 balanced 70 (both copies), YYD 3.
+
+| Linespacing field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LinespacingName]` | `500`, `505`, `510` | copied | `XYSpacing.name`; mRID = spc_ + name, lowercased; isTemplate = true |
+| `nconds` | `Optional[int]` | `4`, `3`, `2` | structural | one XYConductorPosition per conductor, sequenceNumber 1..nconds; x and h must have nconds values |
+| `nphases` | `Optional[int]` | `3`, `2`, `1` | structural | kind: phase for conductors 1..nphases, neutral after |
+| `x` | `Union[float, list[float], NoneType]` | `[-4.0, -1.0, 3.0, 0.0]`, `[-4.0, 3.0, 0.0]`, `[0.5, 0.0]` | structural | XYConductorPosition.xCoord ({length}), one per conductor |
+| `h` | `Union[float, list[float], NoneType]` | `[28.0, 28.0, 28.0, 24.0]`, `[28.0, 28.0, 24.0]`, `[29.0, 24.0]` | structural | XYConductorPosition.yCoord ({length}), one per conductor |
+| `units` | `Optional[str]` | `ft` | mapped | the length unit of xCoord and yCoord (LENGTH_UNIT); unset raises |
+| `detailed` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `EqDistPhPh` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `EqDistPhN` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `AvgPhaseHeight` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `AvgNeutralHeight` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Linegeometry field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LinegeometryName]` | `601`, `602`, `603` | copied | `WireConfiguration.name`; mRID = wc_ + name, lowercased |
+| `nconds` | `Optional[int]` | `4`, `3`, `2` | structural | one WireSequenceConfiguration per conductor, sequenceNumber 1..nconds; the conductor names and (inline) positions must have nconds values |
+| `nphases` | `Optional[int]` | `3`, `2`, `1` | copied | `WireConfiguration.numberOfPhases`; also the kind of an inline position: phase for 1..nphases, neutral after |
+| `cond` | `Optional[int]` | `3`, `2`, `1` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `wire` | `Optional[str]` | `CU_1/0`, `2_ACSR`, `1/0_TPX` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `x` | `Optional[float]` | `0.5`, `0.25`, `0.1524` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `h` | `Optional[float]` | `-4.0`, `8.2296`, `-1.22` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `units` | `Optional[str]` | `ft`, `m` | mapped | the length unit of the inline positions (LENGTH_UNIT); unset raises. The reader raises when the cond= blocks give different units |
+| `normamps` | `Optional[float]` |  | untranscribed | no home on a WireConfiguration; instance limits or untranscribed (plan D9) |
+| `emergamps` | `Optional[float]` |  | untranscribed | no home on a WireConfiguration; instance limits or untranscribed (plan D9) |
+| `reduce` | `Union[bool, Bool, NoneType]` | `True` | untranscribed | Kron reduction of the neutrals; a solver choice the consumer makes from the segment's phases |
+| `spacing` | `Optional[str]` | `500`, `505`, `510` | structural | WireConfiguration.WireSpacing = spc_ + spacing; with inline positions it raises |
+| `wires` | `Union[str, list[str], NoneType]` | `['ACSR_556_5', 'ACSR_556_5', 'ACSR_55...`, `['ACSR_4/0', 'ACSR_4/0', 'ACSR_4/0', ...`, `['ACSR_1/0', 'ACSR_1/0', 'ACSR_1/0']` | structural | the conductor names in cond order; each resolves to exactly one of WireData, CNData, TSData (a name in two raises) and is the WireSequenceConfiguration.WireInfo. A mixed assembly (607: a TS phase, a bare neutral) arrives here whole, so the array carries no kind |
+| `cncable` | `Optional[str]` | `CN_250`, `1/0_Al_15kV_1/3` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `tscable` | `Optional[str]` | `TS_1/0` | structural | the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises |
+| `cncables` | `Union[str, list[str], NoneType]` | `['CN_250', 'CN_250', 'CN_250']`, `['1/0_Al_15kV_1/3']`, `['1/0_Al_15kV_1/3', '1/0_Al_15kV_1/3'...` | structural | as wires; only one of wires, cncables, tscables may be set |
+| `tscables` | `Union[str, list[str], NoneType]` |  | structural | as wires; only one of wires, cncables, tscables may be set |
+| `xs` | `Union[float, list[float], NoneType]` | `[-0.5, 0.0, 0.5]`, `[0.0, 0.25]`, `[-0.1524, 0.1524]` | structural | inline positions: a synthesized XYSpacing wc_<name>_spc, xCoord ({length}) |
+| `hs` | `Union[float, list[float], NoneType]` | `[-4.0, -4.0, -4.0]`, `[-4.0, -4.0]`, `[10.5156, 8.2296]` | structural | inline positions: the synthesized XYSpacing's yCoord ({length}) |
+| `Seasons` | `Optional[int]` |  | untranscribed | no home on a WireConfiguration; instance limits or untranscribed (plan D9) |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | no home on a WireConfiguration; instance limits or untranscribed (plan D9) |
+| `LineType` | `Optional[str]` |  | untranscribed | no home on a WireConfiguration |
+| `conductors` | `Union[str, list[str], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `like` | `Optional[str]` | `603` | untranscribed | the reader resolves like= before mapping |
+
+## XfmrCode (deferred to S3, approved 2026-11-07)
+
+XfmrCode maps to `TransformerTankConfiguration` (`transformer_template`, `transformer_template_1ph`), but three
+things block it:
+- **U2:** both template shapes fail to bind in CIM-Tables today (a `TransformerTankEnd` on a configuration has no
+  node).
+- **D10:** the 3-phase tank configuration convention is still open.
+- **Lugs:** the instance-by-template link (`TransformerLug.sequenceNumber`, now in cim18v17) has no shape yet.
+
+It moves to S3, next to the Transformer instances that use it (2,474 by code), once U2 is fixed.
 
 ## Transformer
 

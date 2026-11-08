@@ -107,3 +107,13 @@ def test_dss_defaults_are_typed_as_deck_text():
     assert defaults["model"].text == "ConstantPQ"  # int(1) on an enum slot is DSS code 1
     assert (defaults["pf"], defaults["CVRwatts"], defaults["CVRvars"]) == (0.88, 1.0, 2.0)
     assert dss_defaults(schema.Options)["defaultbasefreq"] == 60.0
+
+
+def test_ieee13_assets_catalogs_bind(tmp_path):
+    native = DssReader(DECKS / "IEEE" / "IEEE13_assets" / "IEEE13_Assets.dss").read_all()
+    network = dss_to_cim(native, name="IEEE13_Assets", artifact_dir=tmp_path)
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        "IEEE13_Assets.cimtbl", "bus.cimtbl", "cndata.cimtbl", "linegeometry.cimtbl", "linespacing.cimtbl",
+        "tsdata.cimtbl", "vsource.cimtbl", "wiredata.cimtbl"]
+    cim = network.cim
+    assert len(network.graph[cim.WireConfiguration]) == 7 and len(network.graph[cim.XYSpacing]) == 5
