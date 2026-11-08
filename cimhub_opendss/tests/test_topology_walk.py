@@ -13,24 +13,11 @@ from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import deck
+from conftest import ENGINE_DECKS, deck
 
 FEEDER = Path(__file__).parent / "atoms" / "topology" / "feeder.dss"
 THREE, SINGLE, SPLIT = System.THREE_PHASE, System.SINGLE_PHASE, System.SPLIT_PHASE
 
-#: Decks the engine compiles here (K1 and M1 redirect with the wrong file-name case for Linux).
-ENGINE_DECKS = [
-    "IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss",
-    "IEEE/IEEE13_original/IEEE13Nodeckt.dss",
-    "IEEE/IEEE123/IEEE123Master.dss",
-    "IEEE/IEEE37/ieee37.dss",
-    "IEEE/IEEE4_xfmrs/4bus-OYOD-UnBal.dss",
-    pytest.param("IEEE/IEEE13_assets/IEEE13_Assets.dss", marks=pytest.mark.roundtrip),
-    pytest.param("IEEE/IEEE13_OCHRE/Master.dss", marks=pytest.mark.roundtrip),
-    pytest.param("EPRI/J1/Master.dss", marks=pytest.mark.roundtrip),
-    pytest.param("IEEE/IEEE8500/Master.dss", marks=pytest.mark.roundtrip),
-    pytest.param("PNNL/IEEE9500/Master-unbal-initial-config.dss", marks=pytest.mark.roundtrip),
-]
 #: Decks the engine cannot compile here: they only have to walk.
 WALK_ONLY_DECKS = ["EPRI/K1/Master.dss", "EPRI/M1/Master.dss"]
 #: The engine's kVBase is phase-to-neutral; a split-phase bus's is s1 (or s2) to N.

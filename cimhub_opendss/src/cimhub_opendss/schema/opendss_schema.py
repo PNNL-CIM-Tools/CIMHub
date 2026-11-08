@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-07T17:32:55
+# Generation date: 2026-11-07T18:32:09
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -6861,8 +6861,8 @@ class Isource(YAMLRoot):
 @dataclass(repr=False)
 class Options(YAMLRoot):
     """
-    The kept ``Set`` options of one deck (``Set voltagebases=[...]``, ``Set defaultbasefreq=50``, ``Set
-    earthmodel=carson``).
+    The circuit name and the kept ``Set`` options of one deck (``Set voltagebases=[...]``, ``Set defaultbasefreq=50``,
+    ``Set earthmodel=carson``).
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6872,6 +6872,7 @@ class Options(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = DSS.Options
 
     name: Union[str, OptionsName] = None
+    circuit: Optional[str] = None
     voltagebases: Optional[Union[float, list[float]]] = empty_list()
     defaultbasefreq: Optional[float] = None
     earthmodel: Optional[Union[str, "EarthModelType"]] = None
@@ -6881,6 +6882,9 @@ class Options(YAMLRoot):
             self.MissingRequiredField("name")
         if not isinstance(self.name, OptionsName):
             self.name = OptionsName(self.name)
+
+        if self.circuit is not None and not isinstance(self.circuit, str):
+            self.circuit = str(self.circuit)
 
         if not isinstance(self.voltagebases, list):
             self.voltagebases = [self.voltagebases] if self.voltagebases is not None else []
@@ -6913,12 +6917,12 @@ class Vsource(YAMLRoot):
     basekv: Optional[float] = None
     pu: Optional[float] = None
     angle: Optional[float] = None
-    frequency: Optional[str] = None
+    frequency: Optional[float] = None
     phases: Optional[int] = None
     MVAsc3: Optional[float] = None
     MVAsc1: Optional[float] = None
-    x1r1: Optional[str] = None
-    x0r0: Optional[str] = None
+    x1r1: Optional[float] = None
+    x0r0: Optional[float] = None
     Isc3: Optional[float] = None
     Isc1: Optional[float] = None
     R1: Optional[float] = None
@@ -6931,9 +6935,9 @@ class Vsource(YAMLRoot):
     Z1: Optional[Union[float, list[float]]] = empty_list()
     Z0: Optional[Union[float, list[float]]] = empty_list()
     Z2: Optional[Union[float, list[float]]] = empty_list()
-    puZ1: Optional[float] = None
-    puZ0: Optional[float] = None
-    puZ2: Optional[float] = None
+    puZ1: Optional[Union[float, list[float]]] = empty_list()
+    puZ0: Optional[Union[float, list[float]]] = empty_list()
+    puZ2: Optional[Union[float, list[float]]] = empty_list()
     baseMVA: Optional[float] = None
     Yearly: Optional[str] = None
     Daily: Optional[str] = None
@@ -6963,8 +6967,8 @@ class Vsource(YAMLRoot):
         if self.angle is not None and not isinstance(self.angle, float):
             self.angle = float(self.angle)
 
-        if self.frequency is not None and not isinstance(self.frequency, str):
-            self.frequency = str(self.frequency)
+        if self.frequency is not None and not isinstance(self.frequency, float):
+            self.frequency = float(self.frequency)
 
         if self.phases is not None and not isinstance(self.phases, int):
             self.phases = int(self.phases)
@@ -6975,11 +6979,11 @@ class Vsource(YAMLRoot):
         if self.MVAsc1 is not None and not isinstance(self.MVAsc1, float):
             self.MVAsc1 = float(self.MVAsc1)
 
-        if self.x1r1 is not None and not isinstance(self.x1r1, str):
-            self.x1r1 = str(self.x1r1)
+        if self.x1r1 is not None and not isinstance(self.x1r1, float):
+            self.x1r1 = float(self.x1r1)
 
-        if self.x0r0 is not None and not isinstance(self.x0r0, str):
-            self.x0r0 = str(self.x0r0)
+        if self.x0r0 is not None and not isinstance(self.x0r0, float):
+            self.x0r0 = float(self.x0r0)
 
         if self.Isc3 is not None and not isinstance(self.Isc3, float):
             self.Isc3 = float(self.Isc3)
@@ -7020,14 +7024,17 @@ class Vsource(YAMLRoot):
             self.Z2 = [self.Z2] if self.Z2 is not None else []
         self.Z2 = [v if isinstance(v, float) else float(v) for v in self.Z2]
 
-        if self.puZ1 is not None and not isinstance(self.puZ1, float):
-            self.puZ1 = float(self.puZ1)
+        if not isinstance(self.puZ1, list):
+            self.puZ1 = [self.puZ1] if self.puZ1 is not None else []
+        self.puZ1 = [v if isinstance(v, float) else float(v) for v in self.puZ1]
 
-        if self.puZ0 is not None and not isinstance(self.puZ0, float):
-            self.puZ0 = float(self.puZ0)
+        if not isinstance(self.puZ0, list):
+            self.puZ0 = [self.puZ0] if self.puZ0 is not None else []
+        self.puZ0 = [v if isinstance(v, float) else float(v) for v in self.puZ0]
 
-        if self.puZ2 is not None and not isinstance(self.puZ2, float):
-            self.puZ2 = float(self.puZ2)
+        if not isinstance(self.puZ2, list):
+            self.puZ2 = [self.puZ2] if self.puZ2 is not None else []
+        self.puZ2 = [v if isinstance(v, float) else float(v) for v in self.puZ2]
 
         if self.baseMVA is not None and not isinstance(self.baseMVA, float):
             self.baseMVA = float(self.baseMVA)
@@ -11486,6 +11493,9 @@ slots.isource__like = Slot(uri=DSS.like, name="isource__like", curie=DSS.curie('
 slots.options__name = Slot(uri=DSS.name, name="options__name", curie=DSS.curie('name'),
                    model_uri=DSS.options__name, domain=None, range=URIRef)
 
+slots.options__circuit = Slot(uri=DSS.circuit, name="options__circuit", curie=DSS.curie('circuit'),
+                   model_uri=DSS.options__circuit, domain=None, range=Optional[str])
+
 slots.options__voltagebases = Slot(uri=DSS.voltagebases, name="options__voltagebases", curie=DSS.curie('voltagebases'),
                    model_uri=DSS.options__voltagebases, domain=None, range=Optional[Union[float, list[float]]])
 
@@ -11511,7 +11521,7 @@ slots.vsource__angle = Slot(uri=DSS.angle, name="vsource__angle", curie=DSS.curi
                    model_uri=DSS.vsource__angle, domain=None, range=Optional[float])
 
 slots.vsource__frequency = Slot(uri=DSS.frequency, name="vsource__frequency", curie=DSS.curie('frequency'),
-                   model_uri=DSS.vsource__frequency, domain=None, range=Optional[str])
+                   model_uri=DSS.vsource__frequency, domain=None, range=Optional[float])
 
 slots.vsource__phases = Slot(uri=DSS.phases, name="vsource__phases", curie=DSS.curie('phases'),
                    model_uri=DSS.vsource__phases, domain=None, range=Optional[int])
@@ -11523,10 +11533,10 @@ slots.vsource__MVAsc1 = Slot(uri=DSS.MVAsc1, name="vsource__MVAsc1", curie=DSS.c
                    model_uri=DSS.vsource__MVAsc1, domain=None, range=Optional[float])
 
 slots.vsource__x1r1 = Slot(uri=DSS.x1r1, name="vsource__x1r1", curie=DSS.curie('x1r1'),
-                   model_uri=DSS.vsource__x1r1, domain=None, range=Optional[str])
+                   model_uri=DSS.vsource__x1r1, domain=None, range=Optional[float])
 
 slots.vsource__x0r0 = Slot(uri=DSS.x0r0, name="vsource__x0r0", curie=DSS.curie('x0r0'),
-                   model_uri=DSS.vsource__x0r0, domain=None, range=Optional[str])
+                   model_uri=DSS.vsource__x0r0, domain=None, range=Optional[float])
 
 slots.vsource__Isc3 = Slot(uri=DSS.Isc3, name="vsource__Isc3", curie=DSS.curie('Isc3'),
                    model_uri=DSS.vsource__Isc3, domain=None, range=Optional[float])
@@ -11565,13 +11575,13 @@ slots.vsource__Z2 = Slot(uri=DSS.Z2, name="vsource__Z2", curie=DSS.curie('Z2'),
                    model_uri=DSS.vsource__Z2, domain=None, range=Optional[Union[float, list[float]]])
 
 slots.vsource__puZ1 = Slot(uri=DSS.puZ1, name="vsource__puZ1", curie=DSS.curie('puZ1'),
-                   model_uri=DSS.vsource__puZ1, domain=None, range=Optional[float])
+                   model_uri=DSS.vsource__puZ1, domain=None, range=Optional[Union[float, list[float]]])
 
 slots.vsource__puZ0 = Slot(uri=DSS.puZ0, name="vsource__puZ0", curie=DSS.curie('puZ0'),
-                   model_uri=DSS.vsource__puZ0, domain=None, range=Optional[float])
+                   model_uri=DSS.vsource__puZ0, domain=None, range=Optional[Union[float, list[float]]])
 
 slots.vsource__puZ2 = Slot(uri=DSS.puZ2, name="vsource__puZ2", curie=DSS.curie('puZ2'),
-                   model_uri=DSS.vsource__puZ2, domain=None, range=Optional[float])
+                   model_uri=DSS.vsource__puZ2, domain=None, range=Optional[Union[float, list[float]]])
 
 slots.vsource__baseMVA = Slot(uri=DSS.baseMVA, name="vsource__baseMVA", curie=DSS.curie('baseMVA'),
                    model_uri=DSS.vsource__baseMVA, domain=None, range=Optional[float])

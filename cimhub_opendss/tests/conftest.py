@@ -18,6 +18,20 @@ opendssdirect.Basic.AllowChangeDir(False)
 
 DECKS = Path(__file__).parent / "decks"
 
+#: Decks the engine compiles here (K1 and M1 redirect with the wrong file-name case for Linux).
+ENGINE_DECKS = [
+    "IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss",
+    "IEEE/IEEE13_original/IEEE13Nodeckt.dss",
+    "IEEE/IEEE123/IEEE123Master.dss",
+    "IEEE/IEEE37/ieee37.dss",
+    "IEEE/IEEE4_xfmrs/4bus-OYOD-UnBal.dss",
+    pytest.param("IEEE/IEEE13_assets/IEEE13_Assets.dss", marks=pytest.mark.roundtrip),
+    pytest.param("IEEE/IEEE13_OCHRE/Master.dss", marks=pytest.mark.roundtrip),
+    pytest.param("EPRI/J1/Master.dss", marks=pytest.mark.roundtrip),
+    pytest.param("IEEE/IEEE8500/Master.dss", marks=pytest.mark.roundtrip),
+    pytest.param("PNNL/IEEE9500/Master-unbal-initial-config.dss", marks=pytest.mark.roundtrip),
+]
+
 
 def deck(relative: str) -> Path:
     """The deck at ``relative`` (``IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss``): vendored, else under

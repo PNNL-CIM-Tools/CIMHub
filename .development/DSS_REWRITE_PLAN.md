@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0 done 2026-11-07** (§4); its master section of the mapping spec awaits approval.
+**S0 and S1 done 2026-11-07** (§4); S2 is next.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -52,14 +52,15 @@ One file per native class (D4). The master imports them in this order, which is 
 
 | # | artifact | native class | shape | references |
 |---|---|---|---|---|
-| 0 | `<model>.cimtbl` (master) | Circuit / Vsource `source`, `Set voltagebases` | `common` (Substation, Feeder, BaseVoltage) | |
+| 0 | `<model>.cimtbl` (master) | `New Circuit` name, `Set defaultbasefreq`, the walk's bus voltages | `common` (Substation, Feeder, BaseFrequency, BaseVoltage) | |
+| 0a | `bus.cimtbl` | none (the topology walk, section 3.1) | `ConnectivityNode` + `BaseVoltage` (cim18v17's new association) | 0 |
 | 0b | `zip_fractions.cimtbl` | none (fixed content, always written) | `common` (LoadResponseCharacteristic `zip_constant_pq`, `_z`, `_i`; DSS-7) | |
 | 1 | `wiredata.cimtbl`, `cndata.cimtbl`, `tsdata.cimtbl` | WireData, CNData, TSData | `wire_info` | |
 | 2 | `linespacing.cimtbl` | LineSpacing | `line_by_wire_configuration` (XYSpacing) | |
 | 3 | `linegeometry.cimtbl` | LineGeometry | `line_by_wire_configuration` (XYSpacing + WireConfiguration) | 1, 2 |
 | 4 | `linecode.cimtbl` | LineCode | `line_by_impedance` (catalog) | |
 | 5 | `xfmrcode.cimtbl` | XfmrCode | `transformer_template`, `transformer_template_1ph` | |
-| 6 | `vsource.cimtbl` | Vsource | `source` | 0 |
+| 6 | `vsource.cimtbl` | Vsource | `source` | 0, 0a |
 | 7 | `line.cimtbl` | Line (incl. `Switch=y`; the Fuse/Recloser that switches it sets the class, DSS-9) | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates under `# synthesized` | 0, 3, 4 |
 | 8 | `transformer.cimtbl` | Transformer (one a RegControl names → `VoltageRegulator`, DSS-13) | `transformer_by_template`, `transformer_by_ends`, new: `voltage_regulator`; synthesized tank configurations (DSS-2) | 0, 5 |
 | 8b | `autotrans.cimtbl` | AutoTrans | new: `auto_transformer` (DSS-11) | 0 |
@@ -115,6 +116,10 @@ An island's voltage:
   K1's 66 kV winding on a 69 kV source). Every coil must also be able to sit on the island's system. Otherwise the
   walk raises.
 
+The walk's result is written, not only passed to the mappers: `bus.cimtbl` gives every bus a `ConnectivityNode` with its
+`BaseVoltage` (cim18v17's new `ConnectivityNode.BaseVoltage`, used when there is no VoltageLevel; mapping spec
+`#buses`).
+
 There is no snapping to `voltagebases`. `nominal_kv` rounds a computed value (2 decimals in kV at 1 kV and above,
 whole volts below), so the rounding noise of 12.4708 against 12.47 gives one BaseVoltage, while a real mismatch
 (0.24 against 0.208) stays two.
@@ -168,11 +173,16 @@ The reader is the spoke's own code. It now applies the commands in deck order, a
 | `BatchEdit Class..<regex>` was misread as an edit | applied to every matching object; matching none raises |
 | `vreg=(122)`, `npts='1,'`, `mult=(file=shape.csv)` failed | RPN of one number; a trailing comma is a delimiter; `file=` arrays read from the deck directory |
 | ~~blanks around `=`, numeric bus names as floats, quoted arrays~~ | done in CIMHub_2_0 |
+| `New Circuit` dropped the circuit name and wrote `bus1=sourcebus` into the parameters (S1) | the name is kept on `Options.circuit`; the default comes from the schema; a second `New Circuit` raises |
+| `Clear` was skipped (S1) | discards everything defined before it, as DSS does |
+| **open (S2):** an unknown command verb is skipped silently | should raise: the balanced IEEE9500 masters `Reditect Switches.dss` (a typo), so no switch loads and only 2 buses are reached. Needs the list of DSS non-model commands to skip (`solve`, `open`, `setkvbase`, `plot`, ...); `open`/`close` also carry switch states for S3 |
 
 Schema fixes found by the strict reader (all 31 local decks now read): `Relay.type`, `RegControl.bus` → string;
 `LineCode.faultrate` → float; nine `{Yes/True | No/False}` slots → boolean; `LoadShape.action` → string; 55
 array slots (`LoadShape.mult`/`qmult`/`hour`, `EnergyMeter.peakcurrent`/`option`, `Vsource.Z1`, ...) marked
-`multivalued`. `opendss_schema.py` is regenerated with `gen-python` 1.10.
+`multivalued`. S1 added `Vsource` `dss_default`s (`bus1`, `angle`, `phases`, `MVAsc3`, `MVAsc1`, `x1r1`, `x0r0`), typed
+`x1r1`/`x0r0`/`frequency` as floats, made `puZ1`/`puZ0`/`puZ2` arrays, and added `Options.circuit`. `opendss_schema.py` is
+regenerated with `gen-python` 1.10.
 
 ## 4. Slices
 
@@ -183,7 +193,7 @@ Each slice delivers its mapper(s), atoms with goldens (`tests/atoms/<class>/`), 
 | slice | content | exit |
 |---|---|---|
 | S0 | reader fixes (§3.4); `importer/topology.py` (`dss_network` on `cimtopology.core`), bus/phase parsing, `dss_defaults` + core `fill_defaults`; orchestrator `dss_to_cimtbl.py` with `MAPPING_ORDER`, master document, `DssImporter(CimtblImporter)` | **done 2026-11-07:** the IEEE13_CDPSM master + `linecode.cimtbl` bind; bus kV equal to the engine's on every engine deck (5 vendored, 5 external), K1 and M1 walk |
-| S1 | Vsource (`source`); master `common` rows (Substation, Feeder, BaseVoltage from `voltagebases`) | IEEE13_CDPSM source binds |
+| S1 | master `common` rows (Substation, Feeder, BaseFrequency, BaseVoltage from the walk); `bus.cimtbl` (ConnectivityNode.BaseVoltage); Vsource (`source`, Thevenin impedance from the three DSS groups); reader keeps the circuit name | **done 2026-11-07:** IEEE13_CDPSM master, bus, vsource and linecode bind; source r/x/r0/x0 equal the engine's on all 10 engine decks; equipment BaseVoltage equals its nodes'; master + bus + vsource import and bind on all 31 sweep decks (16 stop in LineCode on the S2 open points: units, baseFreq, 1-phase sequence codes) |
 | S2 | catalogs: WireData, CNData, TSData, LineSpacing, LineGeometry, XfmrCode (3-phase and center tap); LineCode open points (DSS-3, DSS-4) | every catalog in the sweep decks maps and binds |
 | S3 | network: Line (impedance, geometry, switch, synthesized templates), Transformer, RegControl | IEEE13_CDPSM, IEEE123 and IEEE8500 bind with all lines, transformers and regulators |
 | S4 | injections: Load, Capacitor + CapControl, PVSystem, Storage, Generator, Reactor; the two new shapes (machine, reactor) added to the catalog first | full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |

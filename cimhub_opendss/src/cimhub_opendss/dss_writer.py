@@ -22,9 +22,9 @@ _MEANING_INT_RE = re.compile(r'\.(\d+)$')
 # Characters OpenDSS cannot carry inside an object name or a reference to one.
 # A space ends the token, so "Cable_2P_1C_2GA_CU BSD" is parsed as a name plus a
 # stray property and raises "Invalid inline math entry"; the bracket, quote, and
-# brace characters are array/expression delimiters.  Utility source data really
-# does contain these -- one Portland cable catalog entry is named
-# "3P_1C_500KCM_CU-<NULL>" in the CYME file -- so sanitizing is not optional.
+# brace characters are array/expression delimiters.  Names converted from other
+# formats do contain these (a cable catalog entry such as "3P_1C_500KCM_CU-<NULL>"),
+# so sanitizing is not optional.
 #
 # Applied in the writer rather than in the ~20 converter modules because a name
 # is written in three places (the "new Class.NAME" prefix, a nested-dataclass

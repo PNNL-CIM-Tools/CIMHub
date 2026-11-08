@@ -20,7 +20,7 @@ from __future__ import annotations
 import functools
 import logging
 import re
-from dataclasses import dataclass, fields as dc_fields, is_dataclass
+from dataclasses import dataclass, fields as dc_fields, is_dataclass, replace
 from pathlib import Path
 from typing import Any, Iterator, Union, get_args, get_origin
 
@@ -73,7 +73,7 @@ class DssParseError(Exception):
 class DssCommand:
     """A single parsed DSS command."""
 
-    cmd: str  # "new", "edit", "set"
+    cmd: str  # "new", "edit", "batchedit", "set", "clear"
     element_type: str | None  # "Load", "Transformer" (original case)
     element_name: str | None  # "671", "sub3"
     params: dict[str, str]  # raw key=value (original-case keys)
@@ -202,6 +202,9 @@ class DssReader(FormatReader):
           matches (case-insensitive search, as DSS does); it must match at least one.
         - ``Set`` keeps the circuit options in ``KEPT_OPTIONS`` on one ``Options`` object. The other options
           are solution settings (``mode``, ``controlmode``, ...) and are not part of the model.
+        - ``Clear`` discards everything defined before it, as in DSS (a deck may build, solve and rebuild).
+        - ``New Circuit.<name>`` is ``New Vsource.source``, as in DSS; ``Options.circuit`` keeps the name.
+          A second ``New Circuit`` raises: a deck is one circuit.
 
         Names are case-insensitive, as in DSS; an object keeps the spelling of its first ``New``.
         """
@@ -211,10 +214,15 @@ class DssReader(FormatReader):
         redefined: set[tuple[type, str]] = set()
         options: dict[str, Any] = {}
         for cmd in self._commands:
+            if cmd.cmd == "clear":
+                graph, spelled, redefined, options = {}, {}, set(), {}
+                continue
             try:
                 if cmd.cmd == "set":
                     options.update(self._options(cmd))
                     continue
+                if cmd.element_type.lower() == "circuit":
+                    cmd = self._circuit(cmd, options)
                 schema_class = types.get(cmd.element_type.lower())
                 if schema_class is None:
                     raise ValueError(f"unknown DSS class {cmd.element_type!r}")
@@ -249,6 +257,16 @@ class DssReader(FormatReader):
         for bc in self._read_buscoords():
             graph.setdefault(dss_schema.Buscoords, {})[str(bc.name)] = bc
         return GraphModel(graph=graph)
+
+    @staticmethod
+    def _circuit(cmd: DssCommand, options: dict[str, Any]) -> DssCommand:
+        """``New Circuit.<name>`` as ``New Vsource.source``; the name goes on ``options``."""
+        if cmd.cmd != "new":
+            raise ValueError(f"{cmd.cmd} Circuit: only New Circuit is read; edit the circuit as Vsource.source")
+        if "circuit" in options:
+            raise ValueError(f"a second New Circuit (the first is {options['circuit']!r}); a deck is one circuit")
+        options["circuit"] = cmd.element_name
+        return replace(cmd, element_type="Vsource", element_name="source")
 
     def _options(self, cmd: DssCommand) -> dict[str, Any]:
         """The kept circuit options a ``Set`` command gives, converted like any property."""
@@ -374,6 +392,8 @@ class DssReader(FormatReader):
             return self._parse_set_command(rest, file_path, line_number)
         elif cmd_word == "batchedit":
             return self._parse_new_or_edit("batchedit", rest, file_path, line_number)
+        elif cmd_word in ("clear", "clearall"):
+            return DssCommand("clear", None, None, {}, file_path, line_number)
         else:
             # Check for implicit edit: Type.Name.Property=Value (no keyword)
             # e.g. "Transformer.Reg1.Taps=[1.0 1.0625]"
@@ -381,7 +401,7 @@ class DssReader(FormatReader):
             dot_count = line.split("=", 1)[0].count(".")
             if dot_count >= 2 and "=" in line:
                 return self._parse_dotted_edit(line.strip(), file_path, line_number)
-            # Skip simulation commands: clear, solve, calcvoltagebases, etc.
+            # Skip simulation commands: solve, calcvoltagebases, etc.
             return None
 
     def _parse_new_or_edit(
@@ -420,21 +440,10 @@ class DssReader(FormatReader):
         elif element_type.lower().startswith("element="):
             element_type = element_type.split("=", 1)[1]
 
-        # Handle "New Circuit.ieee13" -> Vsource named "source"
-        if cmd == "new" and element_type.lower() == "circuit":
-            element_type = "Vsource"
-            # The circuit name is stored but DSS names the Vsource "source"
-            element_name = "source"
-            # Parse params first to check if bus1 is explicitly provided
-            params = self._parse_params(param_text)
-            # If bus1 not provided, default to "sourcebus" (OpenDSS default)
-            if not any(k.lower() == "bus1" for k in params):
-                params["bus1"] = "sourcebus"
-        else:
-            # Pre-process transformer wdg=N per-winding syntax before parsing
-            if element_type.lower() in ("transformer", "xfmrcode"):
-                param_text = self._preprocess_winding_text(param_text)
-            params = self._parse_params(param_text)
+        # Pre-process transformer wdg=N per-winding syntax before parsing
+        if element_type.lower() in ("transformer", "xfmrcode"):
+            param_text = self._preprocess_winding_text(param_text)
+        params = self._parse_params(param_text)
 
         return DssCommand(
             cmd=cmd,

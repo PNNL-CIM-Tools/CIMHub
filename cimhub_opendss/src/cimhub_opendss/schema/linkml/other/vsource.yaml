@@ -30,11 +30,9 @@ classes:
       - >-
         OpenDSS Vsource maps to CIM EnergySource. Voltage magnitude and angle
         are SSH-profile attributes; nominal voltage and sequence impedances
-        (r, x, r0, x0) are EQ-profile attributes. Only two import paths are
-        currently implemented: direct R1/X1/R0/X0, or MVAsc3/MVAsc1 (with
-        x1r1/x0r0) when R1/X1/R0/X0 are absent. Isc3/Isc1/Z1/Z0/Z2/puZ1/puZ0/
-        puZ2/puZideal are accepted by the OpenDSS parser but not currently
-        read by this converter.
+        (r, x, r0, x0) are EQ-profile attributes. The impedance comes from one of
+        R1/X1/R0/X0, MVAsc3/MVAsc1 or Isc3/Isc1 (cimhub_opendss mapping spec
+        #vsource); Z1/Z0/Z2/puZ1/puZ0/puZ2 are not mapped yet.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -54,6 +52,7 @@ classes:
         required: false
         annotations:
           order: 1
+          dss_default: sourcebus
         related_mappings:
           - cim:Terminal.ConnectivityNode
         comments:
@@ -103,6 +102,7 @@ classes:
         required: false
         annotations:
           order: 4
+          dss_default: float(0.0)
         exact_mappings:
           - cim:EnergySource.voltageAngle
         comments:
@@ -114,7 +114,9 @@ classes:
       frequency:
         description: >-
           Source frequency. Default = circuit base frequency.
-        range: string
+        range: float
+        unit:
+          ucum_code: Hz
         required: false
         annotations:
           order: 5
@@ -129,6 +131,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: int(3)
         comments:
           - >-
             Import: inferred from the bus1 node suffix via parse_bus_phases();
@@ -145,16 +148,14 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(2000.0)
         close_mappings:
           - cim:EnergySource.r
           - cim:EnergySource.x
         comments:
           - >-
-            Import fallback, used only when R1/X1/R0/X0 are not all given:
-            Z1 = basekv² / MVAsc3; r = Z1 / √(1 + x1r1²); x = r × x1r1
-            (x1r1 defaults to 4.0 if not specified). Not stored directly on
-            CIM; r and x are the canonical fields and are always written back
-            on export via R1/X1 — MVAsc3 itself is not exported.
+            Import: with MVAsc1, x1r1 and x0r0, derives EnergySource r/x/r0/x0 as
+            VSource.pas RecalcElementData does (mapping spec #vsource).
 
       # (8) MVAsc1
       MVAsc1:
@@ -164,71 +165,62 @@ classes:
         required: false
         annotations:
           order: 8
+          dss_default: float(2100.0)
         close_mappings:
           - cim:EnergySource.r0
           - cim:EnergySource.x0
         comments:
-          - >-
-            Import fallback, used only when R1/X1/R0/X0 are not all given and
-            MVAsc3 > 0: Zs = basekv² / MVAsc1; Z0 = 3×Zs − 2×Z1; r0 = Z0 / √(1
-            + x0r0²); x0 = r0 × x0r0 (x0r0 defaults to 3.0 if not specified).
-            If MVAsc1 is absent, r0/x0 default to r/x instead. Not stored
-            directly on CIM; r0/x0 are the canonical fields and are always
-            written back on export via R0/X0 — MVAsc1 itself is not exported.
+          - "Import: see MVAsc3."
 
       # (9) x1r1
       x1r1:
         description: >-
           Positive-sequence X/R ratio. Used with MVAsc3 to derive R1, X1.
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
+          dss_default: float(4.0)
         comments:
-          - >-
-            OpenDSS-only (N/A): used in the MVAsc3 fallback to split Z1 into
-            r and x (see MVAsc3 comments); defaults to 4.0 if not specified.
-            Not stored on CIM EnergySource.
+          - "Import: see MVAsc3. Not stored on CIM EnergySource."
 
       # (10) x0r0
       x0r0:
         description: >-
           Zero-sequence X/R ratio. Used with MVAsc1 to derive R0, X0.
-        range: string
+        range: float
         required: false
         annotations:
           order: 10
+          dss_default: float(3.0)
         comments:
-          - >-
-            OpenDSS-only (N/A): used in the MVAsc1 fallback to split Z0 into
-            r0 and x0 (see MVAsc1 comments); defaults to 3.0 if not specified.
-            Not stored on CIM EnergySource.
+          - "Import: see MVAsc3. Not stored on CIM EnergySource."
 
       # (11) Isc3
       Isc3:
         description: >-
-          Alternate method of defining source impedance via 3-phase fault current (kA).
+          Alternate method of defining source impedance via 3-phase fault current, amps.
         range: float
         required: false
+        unit:
+          ucum_code: A
         annotations:
           order: 11
         comments:
-          - "OpenDSS-only (N/A): alternate way to specify source impedance via 3-phase fault current; the current converter does not read Isc3 (only R1/X1/R0/X0 and MVAsc3/MVAsc1 are consumed)."
-        todos:
-          - "Converter does not currently consume Isc3 as an r/x source; would need to be added to the import fallback chain to roundtrip models that only set Isc3."
+          - "Import: converted to MVAsc3, then as MVAsc3 (mapping spec #vsource)."
 
       # (12) Isc1
       Isc1:
         description: >-
-          Alternate method of defining source impedance via single-phase fault current (kA).
+          Alternate method of defining source impedance via single-phase fault current, amps.
         range: float
         required: false
+        unit:
+          ucum_code: A
         annotations:
           order: 12
         comments:
-          - "OpenDSS-only (N/A): alternate way to specify zero-sequence impedance via single-phase fault current; the current converter does not read Isc1."
-        todos:
-          - "Converter does not currently consume Isc1 as an r0/x0 source; would need to be added to the import fallback chain to roundtrip models that only set Isc1."
+          - "Import: converted to MVAsc1, then as MVAsc3 (mapping spec #vsource)."
 
       # (13) R1
       R1:
@@ -363,8 +355,10 @@ classes:
       # (23) puZ1
       puZ1:
         description: >-
-          Positive-sequence impedance in per-unit on source kVA base.
+          Positive-sequence impedance in per-unit on the baseMVA base, as a 2-element
+          complex array [R, X].
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 23
@@ -378,6 +372,7 @@ classes:
         description: >-
           Zero-sequence impedance in per-unit.
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 24
@@ -391,6 +386,7 @@ classes:
         description: >-
           Negative-sequence impedance in per-unit.
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 25

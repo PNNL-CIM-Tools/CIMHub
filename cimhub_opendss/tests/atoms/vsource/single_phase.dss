@@ -1,0 +1,2 @@
+! A 1-phase source on phase B.
+New Circuit.lateral basekv=7.2 phases=1 bus1=tap.2 pu=1.02 MVAsc3=100 MVAsc1=90

@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
-**Status:** S0 (2026-11-07). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
-their atoms; the master is S0's. The other DSS classes follow slice by slice
+**Status:** S1 done (2026-11-07). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
 
@@ -13,15 +13,17 @@ IEEE8500 `LineCodes.dss`. `{length}` in a unit is the code's `units`.
 
 | native class | artifact | shape | depends on |
 |---|---|---|---|
-| (the deck) | `<Model>.cimtbl` (master) | settings + `Import`s; `common` rows from S1 | every part |
+| (the deck) | `<Model>.cimtbl` (master) | settings, `common` rows (Substation, Feeder, BaseFrequency, BaseVoltage), `Import`s | every part |
+| (the topology walk) | `bus.cimtbl` | one `ConnectivityNode` per bus, with its `BaseVoltage` | the master |
+| `Vsource` | `vsource.cimtbl` | `source` | the master, `bus.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Transformer` (inline) | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 
 ## Master
 
 Orchestrator: `cimhub_opendss/importer/dss_to_cimtbl.py` (`DssImporter`, `map_master`, `dss_to_cim`). Golden:
-`tests/goldens/IEEE13_CDPSM/IEEE13_CDPSM.cimtbl`, tested by `tests/test_dss_to_cimtbl.py`. **Needs approval
-(DSS-12).**
+`tests/goldens/IEEE13_CDPSM/IEEE13_CDPSM.cimtbl`, tested by `tests/test_dss_to_cimtbl.py`. Approved 2026-11-07 (D7 as
+written); the `common` rows approved with S1.
 
 - **File and settings (plan D7):** the caller names the model (`DssImporter("IEEE13_CDPSM")`); it is the master's
   file stem and `Model`. `Authority` is `https://github.com/PNNL-CIM-Tools/CIMHub` unless the caller passes another.
@@ -30,8 +32,110 @@ Orchestrator: `cimhub_opendss/importer/dss_to_cimtbl.py` (`DssImporter`, `map_ma
   with no records writes no part and no `Import`.
 - **Comment:** the deck name, this anchor, and `not mapped:` with the record count of every DSS class no mapper
   reads yet (DSS-11), so a class never disappears silently. The list shrinks as slices land.
-- **Not yet (S1):** Substation, Feeder, BaseVoltages (from the topology walk) and the Vsource. Until then the master
-  has no rows, so only catalog parts (`linecode`) can bind; the transformer mapper is tested on its own atoms.
+- **`common` rows (S1).** The containers come from `New Circuit.<circuit>`, which the reader keeps
+  as `Options.circuit`. A deck with no `New Circuit`, or with a second one, raises.
+
+  ```
+  Object Substation: mRID=sub_<circuit>, name=<circuit>
+  Object Feeder: mRID=fdr_<circuit>, name=<circuit>, NormalEnergizingSubstation=sub_<circuit>
+  Object BaseFrequency: mRID=bf_60hz, frequency (Hz)=60          # defaulted: defaultbasefreq=60.0
+  # voltagebases: 115, 4.16, 13.2, 0.48, 0.208; on no bus: 0.208; not in voltagebases: 0.24
+  Table BaseVoltage: mRID, nominalVoltage (kV)
+      bv_115kv,  115
+      bv_4p16kv, 4.16
+      ...
+  ```
+  - `mRID`s are lowercased, like every DSS mRID.
+  - `BaseFrequency` is `Set defaultbasefreq`, else the DSS default of 60 Hz (DSS-3b).
+  - The BaseVoltages are the distinct bus voltages of the topology walk (DSS-1), highest first, never
+    `voltagebases`. The comment lists the deck's `voltagebases` and flags any that is on no bus. A walk voltage
+    missing from `voltagebases` (a bus the engine would snap, plan section 3.1) is flagged as `not in voltagebases`.
+  - The Substation holds the EnergySources. The Feeder holds every other piece of equipment and every
+    ConnectivityNode, so it is the `container` that mappers receive.
+
+## Buses
+
+Orchestrator: `importer/dss_to_cimtbl.py` (`map_buses`). Golden: `tests/goldens/IEEE13_CDPSM/bus.cimtbl`.
+Approved 2026-11-07: equipment keeps its own `BaseVoltage` (mandatory).
+
+cim18v17 adds `ConnectivityNode.BaseVoltage`. The CIM text: it "is used only if the ConnectivityNode is not
+contained in a VoltageLevel", and "it is not required that the BaseVoltage of connected equipment is the same".
+There are no VoltageLevels here, so the topology walk's result becomes an artifact: one row per bus it reaches.
+
+```
+# Bus voltages from the topology walk (cimtopology.core) from the source buses; 22 buses.
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_ieee13nodeckt
+    sourcebus, sourcebus, bv_115kv
+    650z,      650z,      bv_13p2kv
+    ...
+```
+
+- `mRID` and `name` are the bus name, lowercased: the walk's key, and the cell every `node` column writes. cimtables
+  binds a later `node=650` to this node instead of creating a new one.
+- Rows are sorted highest voltage first, then by bus name, so the file does not depend on the walk's internals.
+- A bus the walk does not reach has no row. Equipment on such a bus raises in its mapper (`no bus voltage`), as the
+  transformer mapper already does.
+
+What this solves:
+- **Every bus has a voltage, written once.** A DSS Line, switch or reactor has none of its own. A bus between two
+  transformers had a voltage only through the `TransformerEnd`s. An exporter that needs a per-bus base (DSS
+  `setkVBase`, a GridLAB-D node's `nominal_voltage`, the MATPOWER and RAW bus tables) reads the node instead of
+  inferring it from the equipment.
+- **The walk is visible.** Plan section 3.1's result sits in a diffable file, not only in the mappers' `buses`
+  argument.
+- **A check on every equipment row.** Equipment keeps its own `BaseVoltage` column, which cimtables needs as the
+  system base of a `(pu)` column and which consumers of `ConductingEquipment.BaseVoltage` read. The bind test
+  asserts it equals the BaseVoltage of each of the equipment's nodes. A transformer's ends already carry their own,
+  per end.
+
+## Vsource
+
+Mapper: `importer/cimtbl/vsource.py` (`map_vsource`). Atoms: `tests/atoms/vsource/`: `mvasc` (IEEE13_CDPSM),
+`ohms` (IEEE123), `isc` (IEEE4_xfmrs `B1`), `defaults` (`New Circuit.x basekv=12.47`) and `single_phase`, with
+`prereq.cimtbl`; tested by `tests/test_cimtbl_vsource.py`. Approved 2026-11-07.
+
+One `EnergySource` per `Vsource`, `New Circuit` included (`source` shape):
+
+```
+# OpenDSS Vsource -> EnergySource on its bus; 1 Vsource.
+Table EnergySource: mRID, name, node, phases, nominalVoltage (kV), voltageMagnitude (kV), voltageAngle (deg), r (ohm), x (ohm), r0 (ohm), x0 (ohm), normallyInService, BaseVoltage, EquipmentContainer=sub_ieee13nodeckt
+    src_source, source, sourcebus, ABC, 115, 115, 30, 0.160376682055275, 0.641506728221101, 0.179603583012336, 0.538810749037007, true, bv_115kv  # derived from MVAsc3=20000.0, MVAsc1=21000.0; defaulted: x1r1=4.0, x0r0=3.0
+```
+
+- **Identity:** `mRID` = `src_` + `name`, lowercased.
+- **Bus and phases:** `bus1` (default `sourcebus`) gives `node`. `phases` (default 3) gives `ABC` or, on a
+  1-phase source, the phase of the bus's single conductor. Any other phase count raises. A `bus2` raises, because
+  an ungrounded (series) source has no `source`-shape home.
+- **Voltage:** `nominalVoltage` = `basekv` (default 115), copied. `voltageMagnitude` = `basekv × pu` (default
+  `pu` 1), derived. `voltageAngle` = `angle` (default 0), copied, in degrees.
+- **Impedance.** DSS has three ways to give a source's Thevenin impedance, and keeps the one set last
+  ([Vsource properties](https://opendss.epri.com/Properties23.html), `VSource.pas` `PropertySideEffects`). The
+  reader does not record the order, so, as for LineCode, a Vsource that sets two groups raises:
+  1. **`R1 X1 R0 X0`** (ohms): copied. All four must be set; a partial set raises.
+  2. **`MVAsc3 MVAsc1`** (with `x1r1`, `x0r0`): derived by `vsource.thevenin_from_short_circuit`, which follows
+     `VSource.pas` `RecalcElementData`:
+     - X1 = kV² / MVAsc3 / √(1 + 1/x1r1²) and R1 = X1 / x1r1;
+     - R0 is the positive root of (1 + x0r0²)·R0² + 4(R1 + X1·x0r0)·R0 + 4(R1² + X1²) − (3·kV²/MVAsc1)² = 0, and
+       X0 = R0 · x0r0;
+     - a negative discriminant raises.
+     A slot left unset takes its DSS default (`MVAsc3` 2000, `MVAsc1` 2100, `x1r1` 4, `x0r0` 3) under
+     `# defaulted`. A Vsource that sets no group takes all four defaults, as the engine does. LineCode raises in
+     that case instead, but a bare `New Circuit.x basekv=12.47` is the documented minimal deck.
+  3. **`Isc3 Isc1`** (amps): converted to group 2 (MVAsc3 = √3·kV·Isc3 / 1000, MVAsc1 = f·kV·Isc1 / 1000, with
+     f = √3 on 3 phases and 1 on 1 phase), then as group 2.
+  - Checked against the engine (`opendssdirect`, 9 digits): IEEE13's MVAsc, all defaults, `MVAsc3` alone, `Isc`, and
+    a 1-phase source.
+  - `Z1 Z0 Z2 puZ1 puZ0 puZ2 baseMVA` raise when set: no deck in the sweep uses them, so a mapping waits for one.
+  - Group 2 and 3 values are derived numbers, so the row comment names their inputs. The test oracle is the engine:
+    `r x r0 x0` must equal `? Vsource.<name>.R1` etc. after compile, on every engine deck.
+- **`enabled`** → `normallyInService`, copied.
+- **Untranscribed:** `frequency` and `basefreq` (the master's BaseFrequency is the deck's), `ScanType`,
+  `Sequence`, `spectrum` (harmonics), `Yearly`, `Daily`, `Duty` (time series), `Model`, `puZideal`.
+- **Reader and schema changes of this slice:** the reader keeps the circuit name on `Options.circuit` and no longer
+  writes `bus1=sourcebus` into a `New Circuit`'s parameters; the schema's `dss_default`s on `Vsource` carry the
+  defaults, which `importer/topology.py` takes through `vsource.with_defaults`. `Clear` discards everything before
+  it (the IEEE4 balanced decks build, solve and rebuild). `x1r1`, `x0r0` and `frequency` are floats, and
+  `puZ1`/`puZ0`/`puZ2` are `[R, X]` arrays like `Z1`.
 
 ## LineCode
 

@@ -1,8 +1,7 @@
 """The DSS model as a ``cimtopology.core.Network``, for the topology walk (DSS-1).
 
-- **Sources:** every ``Vsource`` (``New Circuit`` included); ``basekv`` is phase-to-phase on a 3-phase
-  source and the source voltage on a 1-phase one. Unset, the DSS defaults apply: ``bus1=sourcebus``,
-  ``basekv=115``, ``phases=3``.
+- **Sources:** every ``Vsource`` (``New Circuit`` included), with its DSS defaults (``vsource.with_defaults``);
+  ``basekv`` is phase-to-phase on a 3-phase source and the source voltage on a 1-phase one.
 - **Branches:** every ``Line`` (switches too: an open switch keeps its voltage), and every ``Reactor`` or
   ``Capacitor`` with a ``bus2`` on another bus (a series element). Whether a switch is normally open comes
   from its ``SwtControl`` in S3; until then every branch is closed, which the walk does not depend on.
@@ -21,14 +20,13 @@ from typing import NamedTuple
 
 from cimtopology.core import Branch, Coil, Connection, Network, Source, System, Transformer
 
+from cimhub_opendss.importer.cimtbl import vsource as vsource_mapper
 from cimhub_opendss.importer.cimtbl.transformer import is_split_phase, parse_bus, winding_nodes
 from cimhub_opendss.schema import opendss_schema as schema
 
 _PHASE_NODES = {1, 2, 3}
 _SOURCE_SYSTEM = {3: System.THREE_PHASE, 1: System.SINGLE_PHASE}
 _DSS_DEFAULT_PHASES = 3
-_DSS_DEFAULT_SOURCE_BUS = "sourcebus"
-_DSS_DEFAULT_SOURCE_KV = 115.0
 
 
 class _Winding(NamedTuple):
@@ -49,12 +47,10 @@ def dss_network(native) -> Network:
 
 
 def _source(vsource) -> Source:
-    phases = vsource.phases if vsource.phases is not None else _DSS_DEFAULT_PHASES
-    if phases not in _SOURCE_SYSTEM:
-        raise ValueError(f"Vsource {vsource.name}: phases={phases}; only 1- and 3-phase sources are walked")
-    bus = parse_bus(vsource.bus1)[0] if vsource.bus1 is not None else _DSS_DEFAULT_SOURCE_BUS
-    kv = float(vsource.basekv) if vsource.basekv is not None else _DSS_DEFAULT_SOURCE_KV
-    return Source(bus, kv, _SOURCE_SYSTEM[phases])
+    vsource, _, _ = vsource_mapper.with_defaults(vsource)
+    if vsource.phases not in _SOURCE_SYSTEM:
+        raise ValueError(f"Vsource {vsource.name}: phases={vsource.phases}; only 1- and 3-phase sources are walked")
+    return Source(parse_bus(vsource.bus1)[0], float(vsource.basekv), _SOURCE_SYSTEM[vsource.phases])
 
 
 def _branches(native):

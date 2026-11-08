@@ -93,8 +93,8 @@ def test_cell_enum_text():
 # --- mrid / lookup ------------------------------------------------------------
 
 def test_mrid_keeps_source_case():
-    assert mrid("xc_", "XFM1_XFO") == "xc_XFM1_XFO"
-    assert mrid("xc_", "DEFAULT (DC)") == "xc_DEFAULT (DC)"
+    assert mrid("xc_", "T1") == "xc_T1"
+    assert mrid("xc_", "Spare (DC)") == "xc_Spare (DC)"
 
 
 def test_mrid_lowercase_for_opendss():
@@ -109,19 +109,19 @@ def test_mrid_rejects_missing_id(native_id):
 
 def test_lookup():
     table = {"Yg": "Yn", "D": "D"}
-    assert lookup(table, "Yg", slot="TransformerConnection", record_id="XFM1") == "Yn"
-    with pytest.raises(ValueError, match=r"XFM1: TransformerConnection='Zg' has no mapping \(known: D, Yg\)"):
-        lookup(table, "Zg", slot="TransformerConnection", record_id="XFM1")
+    assert lookup(table, "Yg", slot="conn", record_id="T1") == "Yn"
+    with pytest.raises(ValueError, match=r"T1: conn='Zg' has no mapping \(known: D, Yg\)"):
+        lookup(table, "Zg", slot="conn", record_id="T1")
 
 
 # --- Field / classification ---------------------------------------------------
 
 @dataclasses.dataclass
 class NativeRecord:
-    EquipmentID: str = None
-    NominalRatingKVA: Optional[float] = None
-    PrimaryVoltage: Optional[float] = None
-    InsulationType: Optional[str] = None
+    code: str = None
+    rated_kva: Optional[float] = None
+    primary_kv: Optional[float] = None
+    insulation: Optional[str] = None
 
 
 class PydanticRecord(BaseModel):
@@ -130,11 +130,11 @@ class PydanticRecord(BaseModel):
 
 
 FIELDS = {
-    "EquipmentID": Field("copied", (("TransformerTankConfiguration", "name", None),)),
-    "NominalRatingKVA": Field("copied", (("TransformerWinding", "ratedS", "kVA"),
+    "code": Field("copied", (("TransformerTankConfiguration", "name", None),)),
+    "rated_kva": Field("copied", (("TransformerWinding", "ratedS", "kVA"),
                                          ("TransformerWinding", "baseS", "kVA"))),
-    "PrimaryVoltage": Field("structural", note="end 1 winding ratedU (kV)"),
-    "InsulationType": Field("untranscribed"),
+    "primary_kv": Field("structural", note="end 1 winding ratedU (kV)"),
+    "insulation": Field("untranscribed"),
 }
 
 
@@ -150,8 +150,8 @@ def test_copied_field_needs_targets():
 
 def test_copied_columns():
     assert copied_columns(FIELDS, "TransformerWinding") == [
-        ("NominalRatingKVA", Column("ratedS", "kVA")),
-        ("NominalRatingKVA", Column("baseS", "kVA")),
+        ("rated_kva", Column("ratedS", "kVA")),
+        ("rated_kva", Column("baseS", "kVA")),
     ]
     assert copied_columns(FIELDS, "TransformerCore") == []
 
@@ -165,15 +165,15 @@ def test_copied_columns_fills_unit_words():
 
 def test_copied_columns_rejects_per_row_values():
     fields = {
-        "PrimaryVoltage": Field("copied", (("TransformerWinding", "ratedU", "kV"),)),
-        "SecondaryVoltage": Field("copied", (("TransformerWinding", "ratedU", "kV"),)),
+        "primary_kv": Field("copied", (("TransformerWinding", "ratedU", "kV"),)),
+        "secondary_kv": Field("copied", (("TransformerWinding", "ratedU", "kV"),)),
     }
     with pytest.raises(ValueError, match=r"copied from more than one slot: \['ratedU'\]"):
         copied_columns(fields, "TransformerWinding")
 
 
 def test_field_names_dataclass_and_pydantic():
-    assert field_names(NativeRecord) == ["EquipmentID", "NominalRatingKVA", "PrimaryVoltage", "InsulationType"]
+    assert field_names(NativeRecord) == ["code", "rated_kva", "primary_kv", "insulation"]
     assert field_names(PydanticRecord) == ["name", "rated_power"]
 
 
@@ -182,25 +182,25 @@ def test_check_fields_complete():
 
 
 def test_check_fields_reports_missing_and_stale():
-    fields = {key: value for key, value in FIELDS.items() if key != "InsulationType"}
+    fields = {key: value for key, value in FIELDS.items() if key != "insulation"}
     fields["Gone"] = Field("untranscribed")
-    with pytest.raises(AssertionError, match=r"missing \['InsulationType'\], stale \['Gone'\]"):
+    with pytest.raises(AssertionError, match=r"missing \['insulation'\], stale \['Gone'\]"):
         check_fields(fields, NativeRecord)
 
 
 def test_fields_table_and_stub():
-    records = [NativeRecord("XFM1_XFO", 500.00102, 4.16), NativeRecord("DEFAULT", 1000.0, 24.9)]
+    records = [NativeRecord("T1", 500.00102, 4.16), NativeRecord("T2", 1000.0, 24.9)]
     table = fields_table(NativeRecord, records)
-    assert "| `EquipmentID` | `str` | `XFM1_XFO`, `DEFAULT` |  |  |" in table
-    assert "| `InsulationType` | `Optional[str]` |  |  |  |" in table
+    assert "| `code` | `str` | `T1`, `T2` |  |  |" in table
+    assert "| `insulation` | `Optional[str]` |  |  |  |" in table
     assert "| `rated_power` | `float` |" in fields_table(PydanticRecord)
     filled = fields_table(NativeRecord, records, fields=FIELDS)
-    assert ("| `NominalRatingKVA` | `Optional[float]` | `500.00102`, `1000.0` | copied | "
+    assert ("| `rated_kva` | `Optional[float]` | `500.00102`, `1000.0` | copied | "
             "`TransformerWinding.ratedS` (kVA), `TransformerWinding.baseS` (kVA) |") in filled
-    assert "| `PrimaryVoltage` | `Optional[float]` | `4.16`, `24.9` | structural | end 1 winding ratedU (kV) |" in filled
+    assert "| `primary_kv` | `Optional[float]` | `4.16`, `24.9` | structural | end 1 winding ratedU (kV) |" in filled
 
     stub = fields_stub(NativeRecord, records)
-    assert "'PrimaryVoltage': Field('TODO', note='4.16, 24.9')," in stub
+    assert "'primary_kv': Field('TODO', note='4.16, 24.9')," in stub
     namespace = {"Field": Field}
     with pytest.raises(ValueError, match="'TODO' is not one of"):
         exec(stub, namespace)
@@ -263,10 +263,10 @@ def test_cimtbl_importer(cim18_scope, tmp_path):
 # --- untranscribed (D5) -------------------------------------------------------
 
 def test_untranscribed_values_lists_non_empty_values():
-    record = NativeRecord("XFM1_XFO", 500.00102, 4.16, "Liquid")
-    assert untranscribed_values(FIELDS, record) == "untranscribed: InsulationType=Liquid"
-    assert untranscribed_values(FIELDS, NativeRecord("XFM1_XFO")) is None
-    assert untranscribed_names(FIELDS) == "untranscribed: InsulationType"
+    record = NativeRecord("T1", 500.00102, 4.16, "Liquid")
+    assert untranscribed_values(FIELDS, record) == "untranscribed: insulation=Liquid"
+    assert untranscribed_values(FIELDS, NativeRecord("T1")) is None
+    assert untranscribed_names(FIELDS) == "untranscribed: insulation"
 
 
 def test_untranscribed_values_wrap():
@@ -292,17 +292,17 @@ def test_parse_default(expression, value):
 
 
 def test_fill_defaults_fills_unset_read_slots_only():
-    record = NativeRecord("XFM1_XFO", None, 4.16, None)
-    defaults = {"NominalRatingKVA": 500.0, "PrimaryVoltage": 12.47, "InsulationType": "Liquid"}
+    record = NativeRecord("T1", None, 4.16, None)
+    defaults = {"rated_kva": 500.0, "primary_kv": 12.47, "insulation": "Liquid"}
     filled, comment = fill_defaults(FIELDS, record, defaults)
-    assert (filled.NominalRatingKVA, filled.PrimaryVoltage, filled.InsulationType) == (500.0, 4.16, None)
-    assert comment == "defaulted: NominalRatingKVA=500.0"
-    assert record.NominalRatingKVA is None  # the original is not changed
+    assert (filled.rated_kva, filled.primary_kv, filled.insulation) == (500.0, 4.16, None)
+    assert comment == "defaulted: rated_kva=500.0"
+    assert record.rated_kva is None  # the original is not changed
 
 
 def test_fill_defaults_with_nothing_to_fill():
-    record = NativeRecord("XFM1_XFO", 500.0)
-    assert fill_defaults(FIELDS, record, {"NominalRatingKVA": 1.0}) == (record, None)
+    record = NativeRecord("T1", 500.0)
+    assert fill_defaults(FIELDS, record, {"rated_kva": 1.0}) == (record, None)
 
 
 # --- atom harness -------------------------------------------------------------

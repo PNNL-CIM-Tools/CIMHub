@@ -1,0 +1,2 @@
+! The minimal deck: every other Vsource slot takes its DSS default.
+New Circuit.bare basekv=12.47

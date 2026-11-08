@@ -112,3 +112,28 @@ def test_file_array_is_read_from_the_deck_directory(tmp_path):
 
 def test_out_of_range_values_are_kept(tmp_path):
     assert only(read(tmp_path, "New Linecode.lc nphases=4 r1=0.1\n"), schema.Linecode).nphases == 4
+
+
+def test_new_circuit_is_vsource_source_and_keeps_its_name(tmp_path):
+    model = read(tmp_path, "New Circuit.IEEE13Nodeckt basekv=115\nEdit Vsource.source pu=1.05\n")
+    source = only(model, schema.Vsource)
+    assert (source.name, source.pu, source.bus1) == ("source", 1.05, None)  # bus1 is the mapper's default
+    assert only(model, schema.Options).circuit == "IEEE13Nodeckt"
+
+
+def test_a_second_new_circuit_raises(tmp_path):
+    with pytest.raises(DssParseError, match=r"a second New Circuit \(the first is 'a'\)"):
+        read(tmp_path, "New Circuit.a\nNew Circuit.b\n")
+
+
+def test_edit_circuit_raises(tmp_path):
+    with pytest.raises(DssParseError, match="only New Circuit is read"):
+        read(tmp_path, "New Circuit.a\nEdit Circuit.a basekv=12.47\n")
+
+
+def test_clear_discards_everything_before_it(tmp_path):
+    model = read(tmp_path, "New Circuit.a basekv=69\nNew Load.x bus1=b kW=1\nSet voltagebases=[69]\nClear\n"
+                           "New Circuit.b basekv=12.47\n")
+    assert only(model, schema.Vsource).basekv == 12.47 and model.list_by_class(schema.Load) == []
+    options = only(model, schema.Options)
+    assert (options.circuit, options.voltagebases) == ("b", [])

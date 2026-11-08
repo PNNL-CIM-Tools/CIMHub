@@ -23,8 +23,9 @@ imports:
 classes:
   Options:
     description: >-
-      The kept ``Set`` options of one deck (``Set voltagebases=[...]``,
-      ``Set defaultbasefreq=50``, ``Set earthmodel=carson``).
+      The circuit name and the kept ``Set`` options of one deck
+      (``Set voltagebases=[...]``, ``Set defaultbasefreq=50``,
+      ``Set earthmodel=carson``).
     class_uri: dss:Options
     comments:
       - >-
@@ -36,6 +37,14 @@ classes:
         range: string
         required: true
         identifier: true
+
+      circuit:
+        description: >-
+          The name of the ``New Circuit`` (``New Circuit.IEEE13Nodeckt``). DSS
+          names that command's Vsource ``source``; the circuit name names the
+          Feeder and Substation.
+        range: string
+        required: false
 
       voltagebases:
         description: >-
