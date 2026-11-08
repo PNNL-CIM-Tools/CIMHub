@@ -11,6 +11,7 @@ members = [
     "cimhub",
     "cimhub-core",
     "cimhub-opendss",
+    "cimhub-raw",
 ]
 
 [[package]]
@@ -227,6 +228,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "cimhub-core" },
     { name = "cimhub-opendss" },
+    { name = "cimhub-raw" },
 ]
 
 [package.dev-dependencies]
@@ -242,6 +244,7 @@ dev = [
 requires-dist = [
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cimhub-opendss", editable = "cimhub_opendss" },
+    { name = "cimhub-raw", editable = "cimhub_raw" },
 ]
 
 [package.metadata.requires-dev]
@@ -295,6 +298,21 @@ requires-dist = [
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cimtables", editable = "../CIM-Tables" },
     { name = "pyyaml" },
+]
+
+[[package]]
+name = "cimhub-raw"
+version = "3.0.0a0"
+source = { editable = "cimhub_raw" }
+dependencies = [
+    { name = "cimhub-core" },
+    { name = "cimtables" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cimtables", editable = "../CIM-Tables" },
 ]
 
 [[package]]

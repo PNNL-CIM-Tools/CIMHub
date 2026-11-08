@@ -1,0 +1,265 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/facts_device
+name: facts_device
+title: FACTS Device Record
+description: raw RAW FACTS Device Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  FactsDeviceRecord:
+    description: FACTS control device data record
+    attributes:
+      name:
+        description: NAME - FACTS device name
+        range: string
+        required: true
+        annotations:
+          order: 1
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      ibus:
+        description: I - Sending end bus number
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      jbus:
+        description: J - Terminal end bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      mode:
+        description: MODE - Control mode
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      pdes:
+        description: PDES - Desired active power flow in MW
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+
+      qdes:
+        description: QDES - Desired reactive power flow in MVAr
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vset:
+        description: VSET - Voltage setpoint in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 7
+          value_type: float
+          precision: 4
+          separator: ","
+
+      shmx:
+        description: SHMX - Maximum shunt current in MVA at unity voltage
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+
+      trmx:
+        description: TRMX - Maximum bridge active power transfer in MW
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 9
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vtmn:
+        description: VTMN - Minimum voltage limit in pu
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          order: 10
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vtmx:
+        description: VTMX - Maximum voltage limit in pu
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vsmx:
+        description: VSMX - Maximum series voltage in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 12
+          value_type: float
+          precision: 4
+          separator: ","
+
+      imx:
+        description: IMX - Maximum series current in MVA at unity voltage
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 13
+          value_type: float
+          precision: 4
+          separator: ","
+
+      linx:
+        description: LINX - Reactance of dummy series element in pu
+        range: float
+        required: false
+        ifabsent: float(0.05)
+        annotations:
+          order: 14
+          value_type: float
+          precision: 4
+          separator: ","
+
+      rmpct:
+        description: RMPCT - Percent of required vars to be supplied from shunt element
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        annotations:
+          order: 15
+          value_type: float
+          precision: 4
+          separator: ","
+
+      owner:
+        description: OWNER - Owner number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 16
+          value_type: int
+          separator: ","
+
+      set1:
+        description: SET1 - Series voltage or reactance setpoint 1
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 17
+          value_type: float
+          precision: 4
+          separator: ","
+
+      set2:
+        description: SET2 - Series voltage or reactance setpoint 2
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 18
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vsref:
+        description: VSREF - Reference voltage for mode 3 control
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 19
+          value_type: int
+          separator: ","
+
+      remot:
+        description: FCREG - Controlled bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 20
+          value_type: int
+          separator: ","
+
+      mname:
+        description: MNAME - Monitored element name
+        range: string
+        required: false
+        ifabsent: string("            ")
+        annotations:
+          order: 21
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      nreg:
+        description: NREG - Number of remote buses to regulate
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 22
+          value_type: int
+          separator: ""  # No separator after last field

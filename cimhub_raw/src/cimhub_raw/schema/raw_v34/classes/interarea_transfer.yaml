@@ -1,0 +1,61 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/interarea_transfer
+name: interarea_transfer
+title: Interarea Transfer Record
+description: raw RAW Interarea Transfer Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  InterareaTransferRecord:
+    description: Interarea transfer data record
+    attributes:
+      from_area:
+        description: ARFROM - From area number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      to_area:
+        description: ARTO - To area number
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      transfer_id:
+        description: TRID - Transfer identifier
+        range: string
+        required: true
+        ifabsent: string("1")
+        annotations:
+          order: 3
+          value_type: string
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      power_transfer:
+        description: PTRAN - MW comprising this transfer
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 4
+          separator: ""  # No separator after last field

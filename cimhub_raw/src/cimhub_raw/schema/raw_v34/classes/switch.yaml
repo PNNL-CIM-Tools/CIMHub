@@ -1,0 +1,128 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/switch
+name: switch
+title: Switch Record
+description: raw RAW System Switching Device Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  SwitchRecord:
+    description: System switching device data record
+    attributes:
+      from_bus_number:
+        description: I - From bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      to_bus_number:
+        description: J - To bus number
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      circuit:
+        description: CKT - Circuit identifier
+        range: string
+        required: true
+        ifabsent: string("1 ")
+        annotations:
+          order: 3
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      x:
+        description: X - Switch reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0001)
+        annotations:
+          order: 4
+          value_type: float
+          precision: 5
+          separator: ","
+
+      ratings:
+        description: RATE1-RATE12 - Switch ratings (12 values)
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 5
+          value_type: float
+          precision: 2
+          separator: ","
+          multivalued: true
+          count: 12
+        comments:
+          - This is a multivalued field that expands to 12 rating values in the output
+
+      status:
+        description: STAT - Switch status (0=open, 1=closed)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+
+      nstat:
+        description: NSTAT - Normal switch status
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+
+      metered_end:
+        description: MET - Metered end flag
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 8
+          value_type: int
+          separator: ","
+
+      stype:
+        description: STYPE - Switch type
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 9
+          value_type: int
+          separator: ","
+
+      name:
+        description: NAME - Switch name
+        range: string
+        required: false
+        ifabsent: string("                                        ")
+        annotations:
+          order: 10
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ""  # No separator after last field

@@ -1,0 +1,76 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/fixed_shunt
+name: fixed_shunt
+title: Fixed Shunt Record
+description: raw RAW Fixed Shunt Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  FixedShuntRecord:
+    description: Fixed bus shunt data record
+    attributes:
+      bus_number:
+        description: I - Bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      shunt_id:
+        description: ID - Shunt identifier (1 or 2 characters)
+        range: string
+        required: true
+        ifabsent: string("1 ")
+        annotations:
+          order: 2
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      status:
+        description: STATUS - Shunt status (0=out of service, 1=in service)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      gl:
+        description: GL - Active component of shunt admittance in MW at 1.0 pu voltage
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 3
+          separator: ","
+
+      bl:
+        description: BL - Reactive component of shunt admittance in MVAr at 1.0 pu voltage
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 3
+          separator: ""  # No separator after last field

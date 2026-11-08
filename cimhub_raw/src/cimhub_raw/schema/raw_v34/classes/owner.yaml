@@ -1,0 +1,41 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/owner
+name: owner
+title: Owner Record
+description: raw RAW Owner Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  OwnerRecord:
+    description: Owner data record
+    attributes:
+      owner_number:
+        description: I - Owner number
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      owner_name:
+        description: OWNAME - Owner name
+        range: string
+        required: false
+        ifabsent: string("            ")
+        annotations:
+          order: 2
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ""  # No separator after last field

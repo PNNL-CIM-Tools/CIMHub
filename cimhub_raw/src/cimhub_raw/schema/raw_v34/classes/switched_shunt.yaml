@@ -1,0 +1,319 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/switched_shunt
+name: switched_shunt
+title: Switched Shunt Record
+description: raw RAW Switched Shunt Record (variable-length single line)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  SwitchedShuntRecord:
+    description: |
+      Switched shunt compensator data record.
+
+      Variable-length format:
+      - Fixed fields: I, MODSW, ADJM, STAT, VSWHI, VSWLO, SWREG, RMPCT, RMIDNT, BINIT
+      - Variable blocks: Up to 8 N/B pairs (only non-zero blocks are serialized)
+      - Final field: NREG (only if remote regulation is used)
+
+      Maps to CIM: cim.ShuntCompensator, cim.LinearShuntCompensator
+
+    attributes:
+      # ==== FIXED FIELDS ====
+      bus_number:
+        description: I - Bus number where switched shunt is connected
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      modsw:
+        description: MODSW - Control mode (0=fixed, 1=discrete, 2=continuous)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      adjm:
+        description: ADJM - Adjustment method (0=steps, 1=blocks)
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      status:
+        description: STAT - Switched shunt status (0=out of service, 1=in service)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      vswhi:
+        description: VSWHI - Voltage upper limit for switching in per-unit
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 5
+          value_type: float
+          precision: 5
+          separator: ","
+
+      vswlo:
+        description: VSWLO - Voltage lower limit for switching in per-unit
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 6
+          value_type: float
+          precision: 5
+          separator: ","
+
+      swreg:
+        description: SWREG - Controlled bus number (0 or bus_number=local control)
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+
+      rmpct:
+        description: RMPCT - Percent of required Mvar contribution (0.0 to 100.0)
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        annotations:
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+
+      rmidnt:
+        description: RMIDNT - Remote identifier for grouping (alphanumeric, 3 characters)
+        range: string
+        required: false
+        ifabsent: string("")
+        annotations:
+          order: 9
+          value_type: string
+          width: 3
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      binit:
+        description: BINIT - Initial switched shunt admittance in per-unit
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 10
+          value_type: float
+          precision: 5
+          separator: ","
+
+      # ==== VARIABLE BLOCKS (N/B pairs) ====
+      n1:
+        description: N1 - Number of steps for block 1
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 11
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n1 != 0"
+
+      b1:
+        description: B1 - Admittance increment for each step in block 1 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 12
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n1 != 0"
+
+      n2:
+        description: N2 - Number of steps for block 2
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 13
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n2 != 0"
+
+      b2:
+        description: B2 - Admittance increment for each step in block 2 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 14
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n2 != 0"
+
+      n3:
+        description: N3 - Number of steps for block 3
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 15
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n3 != 0"
+
+      b3:
+        description: B3 - Admittance increment for each step in block 3 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 16
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n3 != 0"
+
+      n4:
+        description: N4 - Number of steps for block 4
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 17
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n4 != 0"
+
+      b4:
+        description: B4 - Admittance increment for each step in block 4 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 18
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n4 != 0"
+
+      n5:
+        description: N5 - Number of steps for block 5
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 19
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n5 != 0"
+
+      b5:
+        description: B5 - Admittance increment for each step in block 5 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 20
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n5 != 0"
+
+      n6:
+        description: N6 - Number of steps for block 6
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 21
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n6 != 0"
+
+      b6:
+        description: B6 - Admittance increment for each step in block 6 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 22
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n6 != 0"
+
+      n7:
+        description: N7 - Number of steps for block 7
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 23
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n7 != 0"
+
+      b7:
+        description: B7 - Admittance increment for each step in block 7 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 24
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:n7 != 0"
+
+      n8:
+        description: N8 - Number of steps for block 8
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 25
+          value_type: int
+          separator: ","
+          serialize_if: "custom:n8 != 0"
+
+      b8:
+        description: B8 - Admittance increment for each step in block 8 (per-unit)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 26
+          value_type: float
+          precision: 5
+          separator: ""
+          serialize_if: "custom:n8 != 0"

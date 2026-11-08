@@ -1,0 +1,143 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/case_identification
+name: case_identification
+title: Case Identification Record
+description: raw RAW Case Identification Record (IC)
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  CaseIdentificationRecord:
+    description: Case identification and system-wide data record
+    attributes:
+      new_case_flag:
+        description: IC - Change code (0=base case, other=adding/changing data)
+        range: integer
+        required: true
+        ifabsent: int(0)
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      system_base_mva:
+        description: SBASE - System base MVA
+        range: float
+        required: true
+        ifabsent: float(100.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 2
+          value_type: float
+          precision: 2
+          separator: ","
+
+      revision:
+        description: REV - raw revision number (34 for v34)
+        range: float
+        required: true
+        ifabsent: float(34.0)
+        annotations:
+          order: 3
+          value_type: float
+          precision: 0
+          separator: ","
+
+      transformer_ratings_units:
+        description: XFRRAT - Transformer ratings units flag
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      branch_ratings_units:
+        description: NXFRAT - Number of branch ratings
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+
+      system_base_frequency:
+        description: BASFRQ - System base frequency in Hz
+        range: float
+        required: true
+        ifabsent: float(60.0)
+        unit:
+          ucum_code: "Hz"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 2
+          separator: ""
+
+      titles:
+        description: Title lines (up to 2 lines)
+        range: string
+        multivalued: true
+        required: false
+        comments:
+          - Serialized on separate lines after first data line
+
+      general:
+        description: GENERAL record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      gauss:
+        description: GAUSS record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      newton:
+        description: NEWTON record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      adjust:
+        description: ADJUST record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      tysl:
+        description: TYSL record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      solver:
+        description: SOLVER record
+        range: string
+        required: false
+        comments:
+          - Optional record, serialized as complete line
+
+      ratings:
+        description: RATING records (up to 12)
+        range: string
+        multivalued: true
+        required: false
+        comments:
+          - Optional records, each serialized on separate line

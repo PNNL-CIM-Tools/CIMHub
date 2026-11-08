@@ -1,0 +1,1503 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/transformer
+name: transformer
+title: Transformer Record
+description: raw RAW Transformer Record (2 or 3 winding, 4 lines per record)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  TransformerRecord:
+    description: |
+      Transformer data record (2 or 3 winding).
+
+      Multi-line format:
+      - Line 1: Basic identification and ownership
+      - Line 2: Impedance data
+      - Line 3: Winding 1 data
+      - Line 4: Winding 2 data
+      - Line 5: Winding 3 data (only if K != 0)
+
+      Maps to CIM: cim.PowerTransformer, cim.PowerTransformerEnd
+
+    attributes:
+      # ==== LINE 1: Basic Data ====
+      i:
+        description: I - Winding 1 bus number
+        range: integer
+        required: true
+        annotations:
+          line_number: 1
+          order: 1
+          value_type: int
+          separator: ","
+
+      j:
+        description: J - Winding 2 bus number
+        range: integer
+        required: true
+        annotations:
+          line_number: 1
+          order: 2
+          value_type: int
+          separator: ","
+
+      k:
+        description: K - Winding 3 bus number (0 for 2-winding)
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 3
+          value_type: int
+          separator: ","
+
+      circuit:
+        description: CKT - Circuit identifier (1 or 2 characters)
+        range: string
+        required: true
+        ifabsent: string("1 ")
+        annotations:
+          line_number: 1
+          order: 4
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      cw:
+        description: CW - Winding data I/O code
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 5
+          value_type: int
+          separator: ","
+
+      cz:
+        description: CZ - Impedance data I/O code
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 6
+          value_type: int
+          separator: ","
+
+      cm:
+        description: CM - Magnetizing admittance I/O code
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 7
+          value_type: int
+          separator: ","
+
+      mag1:
+        description: MAG1 - Magnetizing conductance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+
+      mag2:
+        description: MAG2 - Magnetizing susceptance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 9
+          value_type: float
+          precision: 4
+          separator: ","
+
+      nmetr:
+        description: NMETR - Metered end flag (1, 2, or 3)
+        range: integer
+        required: false
+        ifabsent: int(2)
+        annotations:
+          line_number: 1
+          order: 10
+          value_type: int
+          separator: ","
+
+      name:
+        description: NAME - Transformer name (40 characters)
+        range: string
+        required: false
+        ifabsent: string("                                        ")
+        annotations:
+          line_number: 1
+          order: 11
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      status:
+        description: STAT - Transformer status (0=out of service, 1=in service)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 12
+          value_type: int
+          separator: ","
+
+      o1:
+        description: O1 - Owner 1 number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 13
+          value_type: int
+          separator: ","
+
+      f1:
+        description: F1 - Fraction of ownership for owner 1
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 1
+          order: 14
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o2:
+        description: O2 - Owner 2 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 15
+          value_type: int
+          separator: ","
+
+      f2:
+        description: F2 - Fraction of ownership for owner 2
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 16
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o3:
+        description: O3 - Owner 3 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 17
+          value_type: int
+          separator: ","
+
+      f3:
+        description: F3 - Fraction of ownership for owner 3
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 18
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o4:
+        description: O4 - Owner 4 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 19
+          value_type: int
+          separator: ","
+
+      f4:
+        description: F4 - Fraction of ownership for owner 4
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 20
+          value_type: float
+          precision: 4
+          separator: ","
+
+      vecgrp:
+        description: VECGRP - Vector group (12 characters)
+        range: string
+        required: false
+        ifabsent: string("            ")
+        annotations:
+          line_number: 1
+          order: 21
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      zcod:
+        description: ZCOD - Impedance correction table number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 22
+          value_type: int
+          separator: ""
+
+      # ==== LINE 2: Impedance Data ====
+      r1_2:
+        description: R1-2 - Winding 1-2 resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 1
+          value_type: float
+          precision: 5
+          separator: ","
+
+      x1_2:
+        description: X1-2 - Winding 1-2 reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 2
+          value_type: float
+          precision: 5
+          separator: ","
+
+      sbase1_2:
+        description: SBASE1-2 - Winding 1-2 base MVA
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 2
+          order: 3
+          value_type: float
+          precision: 2
+          separator: ","
+
+      r2_3:
+        description: R2-3 - Winding 2-3 resistance in pu (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 4
+          value_type: float
+          precision: 5
+          separator: ","
+
+      x2_3:
+        description: X2-3 - Winding 2-3 reactance in pu (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 5
+          value_type: float
+          precision: 5
+          separator: ","
+
+      sbase2_3:
+        description: SBASE2-3 - Winding 2-3 base MVA (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 2
+          order: 6
+          value_type: float
+          precision: 2
+          separator: ","
+
+      r3_1:
+        description: R3-1 - Winding 3-1 resistance in pu (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 7
+          value_type: float
+          precision: 5
+          separator: ","
+
+      x3_1:
+        description: X3-1 - Winding 3-1 reactance in pu (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 8
+          value_type: float
+          precision: 5
+          separator: ","
+
+      sbase3_1:
+        description: SBASE3-1 - Winding 3-1 base MVA (3-winding only)
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 2
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+
+      vmstar:
+        description: VMSTAR - Star point voltage magnitude in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 2
+          order: 10
+          value_type: float
+          precision: 5
+          separator: ","
+
+      anstar:
+        description: ANSTAR - Star point voltage angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 2
+          order: 11
+          value_type: float
+          precision: 5
+          separator: ""
+
+      # ==== LINE 3: Winding 1 Data ====
+      windv1:
+        description: WINDV1 - Winding 1 off-nominal turns ratio in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 3
+          order: 1
+          value_type: float
+          precision: 5
+          separator: ","
+
+      nomv1:
+        description: NOMV1 - Winding 1 nominal voltage in kV
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "kV"
+        annotations:
+          line_number: 3
+          order: 2
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ang1:
+        description: ANG1 - Winding 1 phase shift angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 3
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+
+      rate1_1:
+        description: RATE1-1 - Winding 1 rating 1 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 4
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_2:
+        description: RATE1-2 - Winding 1 rating 2 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 5
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_3:
+        description: RATE1-3 - Winding 1 rating 3 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 6
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_4:
+        description: RATE1-4 - Winding 1 rating 4 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 7
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_5:
+        description: RATE1-5 - Winding 1 rating 5 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 8
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_6:
+        description: RATE1-6 - Winding 1 rating 6 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_7:
+        description: RATE1-7 - Winding 1 rating 7 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_8:
+        description: RATE1-8 - Winding 1 rating 8 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 11
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_9:
+        description: RATE1-9 - Winding 1 rating 9 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 12
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_10:
+        description: RATE1-10 - Winding 1 rating 10 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 13
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_11:
+        description: RATE1-11 - Winding 1 rating 11 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 14
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate1_12:
+        description: RATE1-12 - Winding 1 rating 12 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 15
+          value_type: float
+          precision: 2
+          separator: ","
+
+      cod1:
+        description: COD1 - Winding 1 control mode
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 3
+          order: 16
+          value_type: int
+          separator: ","
+
+      cont1:
+        description: CONT1 - Winding 1 controlled bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 3
+          order: 17
+          value_type: int
+          separator: ","
+
+      rma1:
+        description: RMA1 - Winding 1 upper limit
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 3
+          order: 18
+          value_type: float
+          precision: 5
+          separator: ","
+
+      rmi1:
+        description: RMI1 - Winding 1 lower limit
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 3
+          order: 19
+          value_type: float
+          precision: 5
+          separator: ","
+
+      vma1:
+        description: VMA1 - Winding 1 voltage upper limit in pu
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 3
+          order: 20
+          value_type: float
+          precision: 5
+          separator: ","
+
+      vmi1:
+        description: VMI1 - Winding 1 voltage lower limit in pu
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 3
+          order: 21
+          value_type: float
+          precision: 5
+          separator: ","
+
+      ntp1:
+        description: NTP1 - Winding 1 number of tap positions
+        range: integer
+        required: false
+        ifabsent: int(33)
+        annotations:
+          line_number: 3
+          order: 22
+          value_type: int
+          separator: ","
+
+      tab1:
+        description: TAB1 - Winding 1 tap position table number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 3
+          order: 23
+          value_type: int
+          separator: ","
+
+      cr1:
+        description: CR1 - Winding 1 load drop compensation resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 3
+          order: 24
+          value_type: float
+          precision: 5
+          separator: ","
+
+      cx1:
+        description: CX1 - Winding 1 load drop compensation reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 3
+          order: 25
+          value_type: float
+          precision: 5
+          separator: ","
+
+      cnxa1:
+        description: CNXA1 - Winding 1 connection angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 3
+          order: 26
+          value_type: float
+          precision: 5
+          separator: ","
+
+      nod1:
+        description: NOD1 - Winding 1 node number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 3
+          order: 27
+          value_type: int
+          separator: ""
+
+      # ==== LINE 4: Winding 2 Data ====
+      windv2:
+        description: WINDV2 - Winding 2 off-nominal turns ratio in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 4
+          order: 1
+          value_type: float
+          precision: 5
+          separator: ","
+
+      nomv2:
+        description: NOMV2 - Winding 2 nominal voltage in kV
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "kV"
+        annotations:
+          line_number: 4
+          order: 2
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ang2:
+        description: ANG2 - Winding 2 phase shift angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 4
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+
+      rate2_1:
+        description: RATE2-1 - Winding 2 rating 1 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 4
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_2:
+        description: RATE2-2 - Winding 2 rating 2 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 5
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_3:
+        description: RATE2-3 - Winding 2 rating 3 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 6
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_4:
+        description: RATE2-4 - Winding 2 rating 4 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 7
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_5:
+        description: RATE2-5 - Winding 2 rating 5 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 8
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_6:
+        description: RATE2-6 - Winding 2 rating 6 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_7:
+        description: RATE2-7 - Winding 2 rating 7 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_8:
+        description: RATE2-8 - Winding 2 rating 8 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 11
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_9:
+        description: RATE2-9 - Winding 2 rating 9 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 12
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_10:
+        description: RATE2-10 - Winding 2 rating 10 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 13
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_11:
+        description: RATE2-11 - Winding 2 rating 11 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 14
+          value_type: float
+          precision: 2
+          separator: ","
+
+      rate2_12:
+        description: RATE2-12 - Winding 2 rating 12 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 4
+          order: 15
+          value_type: float
+          precision: 2
+          separator: ","
+
+      cod2:
+        description: COD2 - Winding 2 control mode
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 4
+          order: 16
+          value_type: int
+          separator: ","
+
+      cont2:
+        description: CONT2 - Winding 2 controlled bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 4
+          order: 17
+          value_type: int
+          separator: ","
+
+      rma2:
+        description: RMA2 - Winding 2 upper limit
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 4
+          order: 18
+          value_type: float
+          precision: 5
+          separator: ","
+
+      rmi2:
+        description: RMI2 - Winding 2 lower limit
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 4
+          order: 19
+          value_type: float
+          precision: 5
+          separator: ","
+
+      vma2:
+        description: VMA2 - Winding 2 voltage upper limit in pu
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 4
+          order: 20
+          value_type: float
+          precision: 5
+          separator: ","
+
+      vmi2:
+        description: VMI2 - Winding 2 voltage lower limit in pu
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 4
+          order: 21
+          value_type: float
+          precision: 5
+          separator: ","
+
+      ntp2:
+        description: NTP2 - Winding 2 number of tap positions
+        range: integer
+        required: false
+        ifabsent: int(33)
+        annotations:
+          line_number: 4
+          order: 22
+          value_type: int
+          separator: ","
+
+      tab2:
+        description: TAB2 - Winding 2 tap position table number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 4
+          order: 23
+          value_type: int
+          separator: ","
+
+      cr2:
+        description: CR2 - Winding 2 load drop compensation resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 4
+          order: 24
+          value_type: float
+          precision: 5
+          separator: ","
+
+      cx2:
+        description: CX2 - Winding 2 load drop compensation reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 4
+          order: 25
+          value_type: float
+          precision: 5
+          separator: ","
+
+      cnxa2:
+        description: CNXA2 - Winding 2 connection angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 4
+          order: 26
+          value_type: float
+          precision: 5
+          separator: ","
+
+      nod2:
+        description: NOD2 - Winding 2 node number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 4
+          order: 27
+          value_type: int
+          separator: ""
+
+      # ==== LINE 5: Winding 3 Data (only if K != 0) ====
+      windv3:
+        description: WINDV3 - Winding 3 off-nominal turns ratio in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 5
+          order: 1
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      nomv3:
+        description: NOMV3 - Winding 3 nominal voltage in kV
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "kV"
+        annotations:
+          line_number: 5
+          order: 2
+          value_type: float
+          precision: 4
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      ang3:
+        description: ANG3 - Winding 3 phase shift angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 5
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_1:
+        description: RATE3-1 - Winding 3 rating 1 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 4
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_2:
+        description: RATE3-2 - Winding 3 rating 2 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 5
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_3:
+        description: RATE3-3 - Winding 3 rating 3 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 6
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_4:
+        description: RATE3-4 - Winding 3 rating 4 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 7
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_5:
+        description: RATE3-5 - Winding 3 rating 5 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 8
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_6:
+        description: RATE3-6 - Winding 3 rating 6 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_7:
+        description: RATE3-7 - Winding 3 rating 7 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_8:
+        description: RATE3-8 - Winding 3 rating 8 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 11
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_9:
+        description: RATE3-9 - Winding 3 rating 9 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 12
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_10:
+        description: RATE3-10 - Winding 3 rating 10 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 13
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_11:
+        description: RATE3-11 - Winding 3 rating 11 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 14
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rate3_12:
+        description: RATE3-12 - Winding 3 rating 12 in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 5
+          order: 15
+          value_type: float
+          precision: 2
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      cod3:
+        description: COD3 - Winding 3 control mode
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 5
+          order: 16
+          value_type: int
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      cont3:
+        description: CONT3 - Winding 3 controlled bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 5
+          order: 17
+          value_type: int
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rma3:
+        description: RMA3 - Winding 3 upper limit
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 5
+          order: 18
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      rmi3:
+        description: RMI3 - Winding 3 lower limit
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 5
+          order: 19
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      vma3:
+        description: VMA3 - Winding 3 voltage upper limit in pu
+        range: float
+        required: false
+        ifabsent: float(1.1)
+        annotations:
+          line_number: 5
+          order: 20
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      vmi3:
+        description: VMI3 - Winding 3 voltage lower limit in pu
+        range: float
+        required: false
+        ifabsent: float(0.9)
+        annotations:
+          line_number: 5
+          order: 21
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      ntp3:
+        description: NTP3 - Winding 3 number of tap positions
+        range: integer
+        required: false
+        ifabsent: int(33)
+        annotations:
+          line_number: 5
+          order: 22
+          value_type: int
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      tab3:
+        description: TAB3 - Winding 3 tap position table number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 5
+          order: 23
+          value_type: int
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      cr3:
+        description: CR3 - Winding 3 load drop compensation resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 5
+          order: 24
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      cx3:
+        description: CX3 - Winding 3 load drop compensation reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 5
+          order: 25
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      cnxa3:
+        description: CNXA3 - Winding 3 connection angle in degrees
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        annotations:
+          line_number: 5
+          order: 26
+          value_type: float
+          precision: 5
+          separator: ","
+          serialize_if: "custom:k != 0"
+
+      nod3:
+        description: NOD3 - Winding 3 node number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 5
+          order: 27
+          value_type: int
+          separator: ""
+          serialize_if: "custom:k != 0"

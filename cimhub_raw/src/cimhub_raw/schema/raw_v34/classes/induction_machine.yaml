@@ -1,0 +1,387 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/induction_machine
+name: induction_machine
+title: Induction Machine Record
+description: raw RAW Induction Machine Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  InductionMachineRecord:
+    description: Induction machine data record
+    attributes:
+      bus_id:
+        description: I - Bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: ID - Machine identifier
+        range: string
+        required: true
+        ifabsent: string("1 ")
+        annotations:
+          order: 2
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      status:
+        description: ST - Machine status
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      scode:
+        description: SC - Machine MVA base code
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      dcode:
+        description: DC - Code for type of mechanical load torque
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+
+      area:
+        description: AREA - Area number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+
+      zone:
+        description: ZONE - Zone number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+
+      owner:
+        description: OWNER - Owner number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 8
+          value_type: int
+          separator: ","
+
+      tcode:
+        description: TC - Code for mechanical load model
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 9
+          value_type: int
+          separator: ","
+
+      bcode:
+        description: BC - Code for power or current model
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 10
+          value_type: int
+          separator: ","
+
+      mbase:
+        description: MBASE - Machine MVA base
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        annotations:
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ratekv:
+        description: RATEKV - Machine rated voltage in kV
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "kV"
+        annotations:
+          order: 12
+          value_type: float
+          precision: 4
+          separator: ","
+
+      pcode:
+        description: PC - Active power demand of load in MW
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 13
+          value_type: int
+          separator: ","
+
+      pset:
+        description: PSET - Active power of load in MW
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 14
+          value_type: float
+          precision: 4
+          separator: ","
+
+      h:
+        description: H - Inertia constant in MW-sec/MVA
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 15
+          value_type: float
+          precision: 4
+          separator: ","
+
+      a:
+        description: A - Torque parameter
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 16
+          value_type: float
+          precision: 4
+          separator: ","
+
+      b:
+        description: B - Torque parameter
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 17
+          value_type: float
+          precision: 4
+          separator: ","
+
+      d:
+        description: D - Torque parameter
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 18
+          value_type: float
+          precision: 4
+          separator: ","
+
+      e:
+        description: E - Torque parameter
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 19
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ra:
+        description: RA - Stator resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 20
+          value_type: float
+          precision: 4
+          separator: ","
+
+      xa:
+        description: XA - Stator reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 21
+          value_type: float
+          precision: 4
+          separator: ","
+
+      xm:
+        description: XM - Magnetizing reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 22
+          value_type: float
+          precision: 4
+          separator: ","
+
+      r1:
+        description: R1 - First rotor resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 23
+          value_type: float
+          precision: 4
+          separator: ","
+
+      x1:
+        description: X1 - First rotor reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 24
+          value_type: float
+          precision: 4
+          separator: ","
+
+      r2:
+        description: R2 - Second rotor resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 25
+          value_type: float
+          precision: 4
+          separator: ","
+
+      x2:
+        description: X2 - Second rotor reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 26
+          value_type: float
+          precision: 4
+          separator: ","
+
+      x3:
+        description: X3 - Third rotor reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 27
+          value_type: float
+          precision: 4
+          separator: ","
+
+      e1:
+        description: E1 - First saturation factor
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 28
+          value_type: float
+          precision: 4
+          separator: ","
+
+      se1:
+        description: SE1 - Saturation at E1
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 29
+          value_type: float
+          precision: 4
+          separator: ","
+
+      e2:
+        description: E2 - Second saturation factor
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 30
+          value_type: float
+          precision: 4
+          separator: ","
+
+      se2:
+        description: SE2 - Saturation at E2
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 31
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ia1:
+        description: IA1 - First load torque breakpoint
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 32
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ia2:
+        description: IA2 - Second load torque breakpoint
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 33
+          value_type: float
+          precision: 4
+          separator: ","
+
+      xamult:
+        description: XAMULT - Multiplier for XA
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 34
+          value_type: float
+          precision: 4
+          separator: ""  # No separator after last field

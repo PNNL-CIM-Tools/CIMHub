@@ -1,0 +1,341 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/generator
+name: generator
+title: Generator Record
+description: raw RAW Generator Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  GeneratorRecord:
+    description: Generator data record
+    attributes:
+      bus_number:
+        description: I - Bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      gen_id:
+        description: ID - Generator identifier (1 or 2 characters)
+        range: string
+        required: true
+        ifabsent: string("1 ")
+        annotations:
+          order: 2
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      p_output:
+        description: PG - Generator active power output in MW
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 3
+          value_type: float
+          precision: 3
+          separator: ","
+
+      q_output:
+        description: QG - Generator reactive power output in MVAr
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 3
+          separator: ","
+
+      max_q_output:
+        description: QT - Maximum generator reactive power output in MVAr
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 3
+          separator: ","
+
+      min_q_output:
+        description: QB - Minimum generator reactive power output in MVAr
+        range: float
+        required: false
+        ifabsent: float(-9999.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 3
+          separator: ","
+
+      regulated_voltage_setpoint:
+        description: VS - Regulated voltage setpoint in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 7
+          value_type: float
+          precision: 5
+          separator: ","
+
+      regulated_bus_number:
+        description: IREG - Regulated bus number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 8
+          value_type: int
+          separator: ","
+
+      rated_mva:
+        description: MBASE - Generator MVA base
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          order: 9
+          value_type: float
+          precision: 3
+          separator: ","
+
+      zr:
+        description: ZR - Complex machine impedance ZSORCE, resistance component in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 10
+          value_type: float
+          precision: 5
+          separator: ","
+
+      zx:
+        description: ZX - Complex machine impedance ZSORCE, reactance component in pu
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 11
+          value_type: float
+          precision: 5
+          separator: ","
+
+      rt:
+        description: RT - Step-up transformer resistance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 12
+          value_type: float
+          precision: 5
+          separator: ","
+
+      xt:
+        description: XT - Step-up transformer reactance in pu
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 13
+          value_type: float
+          precision: 5
+          separator: ","
+
+      gtap:
+        description: GTAP - Step-up transformer off-nominal turns ratio
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 14
+          value_type: float
+          precision: 5
+          separator: ","
+
+      status:
+        description: STAT - Generator status (0=out of service, 1=in service)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 15
+          value_type: int
+          separator: ","
+
+      rmpct:
+        description: RMPCT - Percent of Mvar required to hold voltage at IREG
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        annotations:
+          order: 16
+          value_type: float
+          precision: 1
+          separator: ","
+
+      max_p_output:
+        description: PT - Maximum generator active power output in MW
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 17
+          value_type: float
+          precision: 3
+          separator: ","
+
+      min_p_output:
+        description: PB - Minimum generator active power output in MW
+        range: float
+        required: false
+        ifabsent: float(-9999.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 18
+          value_type: float
+          precision: 3
+          separator: ","
+
+      o1:
+        description: O1 - Owner 1 number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          order: 19
+          value_type: int
+          separator: ","
+
+      f1:
+        description: F1 - Fraction of ownership for owner 1
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 20
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o2:
+        description: O2 - Owner 2 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 21
+          value_type: int
+          separator: ","
+
+      f2:
+        description: F2 - Fraction of ownership for owner 2
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 22
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o3:
+        description: O3 - Owner 3 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 23
+          value_type: int
+          separator: ","
+
+      f3:
+        description: F3 - Fraction of ownership for owner 3
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 24
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o4:
+        description: O4 - Owner 4 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 25
+          value_type: int
+          separator: ","
+
+      f4:
+        description: F4 - Fraction of ownership for owner 4
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 26
+          value_type: float
+          precision: 4
+          separator: ","
+
+      wmod:
+        description: WMOD - Wind machine control mode
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          order: 27
+          value_type: int
+          separator: ","
+
+      wpf:
+        description: WPF - Wind machine power factor
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          order: 28
+          value_type: float
+          precision: 4
+          separator: ""  # No separator after last field
+
+      nreg:
+        description: NREG - Number of remote buses to regulate (not serialized in RAW format)
+        range: integer
+        required: false
+        ifabsent: int(0)
+        comments:
+          - This field is not included in the RAW file output format

@@ -6,6 +6,7 @@ requires-python = ">=3.11,<3.14"
 dependencies = [
     "cimhub-core",
     "cimhub-opendss",
+    "cimhub-raw",
 ]
 
 [dependency-groups]
@@ -25,11 +26,13 @@ package = false
 members = [
     "cimhub_core",
     "cimhub_opendss",
+    "cimhub_raw",
 ]
 
 [tool.uv.sources]
 cimhub-core = { workspace = true }
 cimhub-opendss = { workspace = true }
+cimhub-raw = { workspace = true }
 # Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }

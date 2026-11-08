@@ -1,0 +1,58 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/multi_terminal_dc
+name: multi_terminal_dc
+title: Multi-Terminal DC Transmission Line Record
+description: raw RAW Multi-Terminal DC Transmission Line Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  MultiTerminalDCRecord:
+    description: Multi-terminal DC transmission line data record
+    attributes:
+      name:
+        description: NAME - Multi-terminal DC line name
+        range: string
+        required: true
+
+      nconv:
+        description: NCONV - Number of AC converter station buses
+        range: integer
+        required: true
+
+      ndcbs:
+        description: NDCBS - Number of DC buses
+        range: integer
+        required: true
+
+      ndcln:
+        description: NDCLN - Number of DC links
+        range: integer
+        required: true
+
+      mdc:
+        description: MDC - Control mode (0=blocked, 1=power, 2=current)
+        range: integer
+        required: false
+
+      vconv:
+        description: VCONV - Scheduled converter DC voltage
+        range: float
+        required: false
+
+      vcmod:
+        description: VCMOD - Mode switch DC voltage
+        range: float
+        required: false
+
+      vconvn:
+        description: VCONVN - Nominal converter DC voltage
+        range: float
+        required: false

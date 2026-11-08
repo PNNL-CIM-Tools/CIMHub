@@ -1,0 +1,360 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/vsc_dc
+name: vsc_dc
+title: Voltage Source Converter DC Transmission Line Record
+description: raw RAW VSC DC Transmission Line Record (2 lines per record)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  VscDcRecord:
+    description: |
+      Voltage source converter (VSC) DC transmission line data record.
+
+      Multi-line format:
+      - Line 1: VSC DC line identification, resistance, and ownership
+      - Line 2: Converter data and control parameters
+
+      Maps to CIM: cim.DCLineSegment, cim.VsConverter
+
+    attributes:
+      # ==== LINE 1: VSC DC Line Data ====
+      name:
+        # NOT an identifier: two VscDcRecords (rectifier + inverter) share the
+        # same NAME per DC line. Marking it identifier: true would make
+        # GraphModel silently drop the second converter. Uniqueness comes from a
+        # composite runtime .ID (name + ibus) assigned by the reader/exporter.
+        description: NAME - VSC DC line name (12 characters)
+        range: string
+        required: true
+        annotations:
+          line_number: 1
+          order: 1
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      mdc:
+        description: MDC - Control mode (0=out of service, 1=in service)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 2
+          value_type: int
+          separator: ","
+
+      rdc:
+        description: RDC - DC line resistance in ohms
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "ohm"
+        annotations:
+          line_number: 1
+          order: 3
+          value_type: float
+          precision: 5
+          separator: ","
+
+      o1:
+        description: O1 - Owner 1 number
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 1
+          order: 4
+          value_type: int
+          separator: ","
+
+      f1:
+        description: F1 - Fraction of ownership for owner 1 (0.0 to 1.0)
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 1
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o2:
+        description: O2 - Owner 2 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 6
+          value_type: int
+          separator: ","
+
+      f2:
+        description: F2 - Fraction of ownership for owner 2 (0.0 to 1.0)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 7
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o3:
+        description: O3 - Owner 3 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 8
+          value_type: int
+          separator: ","
+
+      f3:
+        description: F3 - Fraction of ownership for owner 3 (0.0 to 1.0)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 9
+          value_type: float
+          precision: 4
+          separator: ","
+
+      o4:
+        description: O4 - Owner 4 number
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 1
+          order: 10
+          value_type: int
+          separator: ","
+
+      f4:
+        description: F4 - Fraction of ownership for owner 4 (0.0 to 1.0)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 1
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ""
+
+      # ==== LINE 2: Converter Data ====
+      ibus:
+        description: IBUS - Converter bus number
+        range: integer
+        required: true
+        annotations:
+          line_number: 2
+          order: 1
+          value_type: int
+          separator: ","
+
+      converter_type:
+        description: TYPE - Converter type (0=rectifier, 1=inverter)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 2
+          order: 2
+          value_type: int
+          separator: ","
+
+      mode:
+        description: MODE - Converter control mode (1=power, 2=current, 3=voltage)
+        range: integer
+        required: false
+        ifabsent: int(1)
+        annotations:
+          line_number: 2
+          order: 3
+          value_type: int
+          separator: ","
+
+      dcset:
+        description: DCSET - DC voltage (kV) or power (MW) setpoint depending on mode
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 4
+          value_type: float
+          precision: 4
+          separator: ","
+          note: "Unit depends on mode - kV for voltage control, MW for power control"
+
+      acset:
+        description: ACSET - AC voltage (pu) or reactive power (MVAr) setpoint
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 2
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+          comments: "Unit depends on mode - pu for voltage, MVAr for reactive power"
+
+      aloss:
+        description: ALOSS - Constant loss coefficient in MW
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          line_number: 2
+          order: 6
+          value_type: float
+          precision: 4
+          separator: ","
+
+      bloss:
+        description: BLOSS - Linear loss coefficient (MW per unit current)
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 7
+          value_type: float
+          precision: 5
+          separator: ","
+
+      minloss:
+        description: MINLOSS - Minimum loss in MW
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MW"
+        annotations:
+          line_number: 2
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+
+      smax:
+        description: SMAX - Maximum apparent power rating in MVA
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 2
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+
+      imax:
+        description: IMAX - Maximum DC current in amperes
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          line_number: 2
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+
+      pwf:
+        description: PWF - Power weighting factor for multi-terminal operation
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        annotations:
+          line_number: 2
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+
+      maxq:
+        description: MAXQ - Maximum reactive power limit in MVAr
+        range: float
+        required: false
+        ifabsent: float(9999.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          line_number: 2
+          order: 12
+          value_type: float
+          precision: 2
+          separator: ","
+
+      minq:
+        description: MINQ - Minimum reactive power limit in MVAr
+        range: float
+        required: false
+        ifabsent: float(-9999.0)
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          line_number: 2
+          order: 13
+          value_type: float
+          precision: 2
+          separator: ","
+
+      vsreg:
+        description: VSREG - Remote bus number for voltage regulation (0=local)
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 2
+          order: 14
+          value_type: int
+          separator: ","
+
+      rmpct:
+        description: RMPCT - Percent of required vars to be supplied by converter
+        range: float
+        required: false
+        ifabsent: float(100.0)
+        annotations:
+          line_number: 2
+          order: 15
+          value_type: float
+          precision: 2
+          separator: ","
+
+      nreg:
+        description: NREG - Number of remote buses participating in regulation
+        range: integer
+        required: false
+        ifabsent: int(0)
+        annotations:
+          line_number: 2
+          order: 16
+          value_type: int
+          separator: ""

@@ -1,0 +1,191 @@
+id: https://gridappsd.org/cimhub/raw_v34
+name: raw-raw-v34-schema
+title: raw RAW File Format v34 Schema
+description: LinkML schema for PSS/E RAW file format version 34 data
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+default_range: string
+
+imports:
+  - linkml:types
+  - types/common_types
+  - classes/case_identification
+  - classes/bus
+  - classes/load
+  - classes/fixed_shunt
+  - classes/generator
+  - classes/branch
+  - classes/switch
+  - classes/transformer
+  - classes/area_interchange
+  - classes/two_terminal_dc
+  - classes/vsc_dc
+  - classes/impedance_correction
+  - classes/multi_terminal_dc
+  - classes/multi_section_line
+  - classes/zone
+  - classes/interarea_transfer
+  - classes/owner
+  - classes/facts_device
+  - classes/switched_shunt
+  - classes/gne_device
+  - classes/induction_machine
+
+classes:
+  RawModel:
+    description: Complete raw RAW file model containing all record types
+    attributes:
+      case_record:
+        description: Case identification record
+        range: CaseIdentificationRecord
+        required: true
+        inlined: true
+
+      bus_records:
+        description: Bus data records
+        range: BusRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      load_records:
+        description: Load data records
+        range: LoadRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      fixed_shunt_records:
+        description: Fixed shunt data records
+        range: FixedShuntRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      generator_records:
+        description: Generator data records
+        range: GeneratorRecord
+        multivalued: true
+        required: false
+        inlined: true
+        inlined_as_list: true
+
+      branch_records:
+        description: Branch (line) data records
+        range: BranchRecord
+        multivalued: true
+        required: false
+        inlined: true
+        inlined_as_list: true
+
+      switch_records:
+        description: Switch data records
+        range: SwitchRecord
+        multivalued: true
+        required: false
+        inlined: true
+        inlined_as_list: true
+
+      transformer_records:
+        description: Transformer data records
+        range: TransformerRecord
+        multivalued: true
+        required: false
+        inlined: true
+        inlined_as_list: true
+
+      area_interchange_records:
+        description: Area interchange data records
+        range: AreaInterchangeRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      two_terminal_dc_records:
+        description: Two-terminal DC transmission line data records
+        range: TwoTerminalDCRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      vsc_dc_records:
+        description: VSC DC transmission line data records
+        range: VscDcRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      impedance_correction_records:
+        description: Transformer impedance correction table data records
+        range: ImpedanceCorrectionRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      multi_terminal_dc_records:
+        description: Multi-terminal DC transmission line data records
+        range: MultiTerminalDCRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      multi_section_line_records:
+        description: Multi-section line grouping data records
+        range: MultiSectionLineRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      zone_records:
+        description: Zone data records
+        range: ZoneRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      interarea_transfer_records:
+        description: Interarea transfer data records
+        range: InterareaTransferRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      owner_records:
+        description: Owner data records
+        range: OwnerRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      facts_device_records:
+        description: FACTS device data records
+        range: FactsDeviceRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      switched_shunt_records:
+        description: Switched shunt data records
+        range: SwitchedShuntRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      gne_device_records:
+        description: General network element device data records
+        range: GneDeviceRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      induction_machine_records:
+        description: Induction machine data records
+        range: InductionMachineRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true

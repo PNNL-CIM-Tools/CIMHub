@@ -1,0 +1,87 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/gne_device
+name: gne_device
+title: GNE Device Record
+description: raw RAW General Network Element (GNE) Device Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  GneDeviceRecord:
+    description: General network element device data record
+    attributes:
+      name:
+        description: NAME - GNE device name
+        range: string
+        required: true
+
+      model:
+        description: MODEL - GNE model name
+        range: string
+        required: true
+
+      nterm:
+        description: NTERM - Number of terminals
+        range: integer
+        required: true
+
+      bus_numbers:
+        description: BUS1...BUSNTERM - Terminal bus numbers
+        range: integer
+        multivalued: true
+        required: false
+
+      nreal:
+        description: NREAL - Number of real data values
+        range: integer
+        required: false
+
+      nintg:
+        description: NINTG - Number of integer data values
+        range: integer
+        required: false
+
+      nchar:
+        description: NCHAR - Number of character data values
+        range: integer
+        required: false
+
+      status:
+        description: ST - GNE status
+        range: integer
+        required: false
+
+      owner:
+        description: OWNER - Owner number
+        range: integer
+        required: false
+
+      nmetr:
+        description: NMETR - Metered terminal
+        range: integer
+        required: false
+
+      real_data:
+        description: REAL1...REAL(NREAL) - Real data values
+        range: float
+        multivalued: true
+        required: false
+
+      integer_data:
+        description: INTG1...INTG(NINTG) - Integer data values
+        range: integer
+        multivalued: true
+        required: false
+
+      character_data:
+        description: CHAR1...CHAR(NCHAR) - Character data values
+        range: string
+        multivalued: true
+        required: false
