@@ -1,0 +1,399 @@
+id: https://gridappsd.github.io/dss-graph/controls/storagecontroller
+name: storagecontroller
+title: OpenDSS Storagecontroller Component Schema
+description: >-
+  LinkML schema for OpenDSS Storagecontroller objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-40).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Storagecontroller:
+    description: >-
+      A Storagecontroller object in OpenDSS.
+    class_uri: dss:Storagecontroller
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) Element
+      Element:
+        description: >-
+          Full object name of the circuit element, typically a line or transformer, which the control is monitoring
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Terminal
+      Terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the StorageController control is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) MonPhase
+      MonPhase:
+        description: >-
+          Number of the phase being monitored or one of {AVG | MAX | MIN} for all phases
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kWTarget
+      kWTarget:
+        description: >-
+          kW/kamps target for Discharging
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kWTargetLow
+      kWTargetLow:
+        description: >-
+          kW/kamps target for Charging
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) %kWBand
+      pct_kWBand:
+        description: >-
+          Bandwidth (% of Target kW/kamps) of the dead band around the kW/kamps target value
+        range: float
+        required: false
+        annotations:
+          order: 6
+          dss_name: "%kWBand"
+
+      # (7) kWBand
+      kWBand:
+        description: >-
+          Alternative way of specifying the bandwidth
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) %kWBandLow
+      pct_kWBandLow:
+        description: >-
+          Bandwidth (% of kWTargetLow) of the dead band around the kW/kamps low target value
+        range: float
+        required: false
+        annotations:
+          order: 8
+          dss_name: "%kWBandLow"
+
+      # (9) kWBandLow
+      kWBandLow:
+        description: >-
+          Alternative way of specifying the bandwidth
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) ElementList
+      ElementList:
+        description: >-
+          Array list of Storage elements to be controlled
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Weights
+      Weights:
+        description: >-
+          Array of proportional weights corresponding to each Storage element in the ElementList
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+
+      # (12) ModeDischarge
+      ModeDischarge:
+        description: >-
+          {PeakShave* | Follow | Support | Loadshape | Time | Schedule | I-PeakShave } Mode of operation for the DISCHARGE FUNCTION of this controller
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) ModeCharge
+      ModeCharge:
+        description: >-
+          {Loadshape | Time* | PeakShaveLow | I-PeakShaveLow} Mode of operation for the CHARGE FUNCTION of this controller
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) TimeDischargeTrigger
+      TimeDischargeTrigger:
+        description: >-
+          Default time of day (hr) for initiating Discharging of the fleet
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) TimeChargeTrigger
+      TimeChargeTrigger:
+        description: >-
+          Default time of day (hr) for initiating charging in Time control mode
+        range: string
+        required: false
+        annotations:
+          order: 15
+
+      # (16) %RatekW
+      pct_RatekW:
+        description: >-
+          Sets the kW discharge rate in % of rated capacity for each element of the fleet
+        range: float
+        required: false
+        annotations:
+          order: 16
+          dss_name: "%RatekW"
+
+      # (17) %RateCharge
+      pct_RateCharge:
+        description: >-
+          Sets the kW charging rate in % of rated capacity for each element of the fleet
+        range: float
+        required: false
+        annotations:
+          order: 17
+          dss_name: "%RateCharge"
+
+      # (18) %Reserve
+      pct_Reserve:
+        description: >-
+          Use this property to change the % reserve for each Storage element under control of this controller
+        range: string
+        required: false
+        annotations:
+          order: 18
+          dss_name: "%Reserve"
+
+      # (19) kWhTotal
+      kWhTotal:
+        description: >-
+          (Read only)
+        range: float
+        required: false
+        annotations:
+          order: 19
+
+      # (20) kWTotal
+      kWTotal:
+        description: >-
+          (Read only)
+        range: float
+        required: false
+        annotations:
+          order: 20
+
+      # (21) kWhActual
+      kWhActual:
+        description: >-
+          (Read only)
+        range: float
+        required: false
+        annotations:
+          order: 21
+
+      # (22) kWActual
+      kWActual:
+        description: >-
+          (Read only)
+        range: float
+        required: false
+        annotations:
+          order: 22
+
+      # (23) kWneed
+      kWneed:
+        description: >-
+          (Read only)
+        range: float
+        required: false
+        annotations:
+          order: 23
+
+      # (24) Yearly
+      Yearly:
+        description: >-
+          Dispatch loadshape object, If any, for Yearly solution Mode
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) Daily
+      Daily:
+        description: >-
+          Dispatch loadshape object, If any, for Daily solution mode
+        range: string
+        required: false
+        annotations:
+          order: 25
+
+      # (26) Duty
+      Duty:
+        description: >-
+          Dispatch loadshape object, If any, for Dutycycle solution mode
+        range: string
+        required: false
+        annotations:
+          order: 26
+
+      # (27) EventLog
+      EventLog:
+        description: >-
+          {Yes/True | No/False} Default is No
+        range: boolean
+        required: false
+        annotations:
+          order: 27
+
+      # (28) InhibitTime
+      InhibitTime:
+        description: >-
+          Hours (integer) to inhibit Discharging after going into Charge mode
+        range: integer
+        required: false
+        annotations:
+          order: 28
+
+      # (29) Tup
+      Tup:
+        description: >-
+          Duration, hrs, of upramp part for SCHEDULE mode
+        range: string
+        required: false
+        annotations:
+          order: 29
+
+      # (30) TFlat
+      TFlat:
+        description: >-
+          Duration, hrs, of flat part for SCHEDULE mode
+        range: string
+        required: false
+        annotations:
+          order: 30
+
+      # (31) Tdn
+      Tdn:
+        description: >-
+          Duration, hrs, of downramp part for SCHEDULE mode
+        range: string
+        required: false
+        annotations:
+          order: 31
+
+      # (32) kWThreshold
+      kWThreshold:
+        description: >-
+          Threshold, kW, for Follow mode
+        range: float
+        required: false
+        annotations:
+          order: 32
+
+      # (33) DispFactor
+      DispFactor:
+        description: >-
+          Defaults to 1 (disabled)
+        range: float
+        required: false
+        annotations:
+          order: 33
+
+      # (34) ResetLevel
+      ResetLevel:
+        description: >-
+          The level of charge required for allowing the storage to discharge again after reaching the reserve storage level
+        range: string
+        required: false
+        annotations:
+          order: 34
+
+      # (35) Seasons
+      Seasons:
+        description: >-
+          With this property the user can specify the number of targets to be used by the controller using the list given at "SeasonTargets"/"SeasonTargetsLow", which can be used to dynamically adjust the st...
+        range: integer
+        required: false
+        annotations:
+          order: 35
+
+      # (36) SeasonTargets
+      SeasonTargets:
+        description: >-
+          An array of doubles specifying the targets to be used during a QSTS simulation
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 36
+
+      # (37) SeasonTargetsLow
+      SeasonTargetsLow:
+        description: >-
+          An array of doubles specifying the targets to be used during a QSTS simulation
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 37
+
+      # (38) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 38
+
+      # (39) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 39
+
+      # (40) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 40

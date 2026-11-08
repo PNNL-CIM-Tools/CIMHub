@@ -1,0 +1,274 @@
+id: https://gridappsd.github.io/dss-graph/controls/recloser
+name: recloser
+title: OpenDSS Recloser Component Schema
+description: >-
+  LinkML schema for OpenDSS Recloser objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-27).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Recloser:
+    description: >-
+      A Recloser object in OpenDSS.
+    class_uri: dss:Recloser
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) MonitoredObj
+      MonitoredObj:
+        description: >-
+          Full object name of the circuit element, typically a line, transformer, load, or generator, to which the Recloser's PT and/or CT are connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) MonitoredTerm
+      MonitoredTerm:
+        description: >-
+          Number of the terminal of the circuit element to which the Recloser is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) SwitchedObj
+      SwitchedObj:
+        description: >-
+          Name of circuit element switch that the Recloser controls
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) SwitchedTerm
+      SwitchedTerm:
+        description: >-
+          Number of the terminal of the controlled element in which the switch is controlled by the Recloser
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) NumFast
+      NumFast:
+        description: >-
+          Number of Fast (fuse saving) operations
+        range: integer
+        required: false
+        annotations:
+          order: 5
+
+      # (6) PhaseFast
+      PhaseFast:
+        description: >-
+          Name of the TCC Curve object that determines the Phase Fast trip
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) PhaseDelayed
+      PhaseDelayed:
+        description: >-
+          Name of the TCC Curve object that determines the Phase Delayed trip
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) GroundFast
+      GroundFast:
+        description: >-
+          Name of the TCC Curve object that determines the Ground Fast trip
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) GroundDelayed
+      GroundDelayed:
+        description: >-
+          Name of the TCC Curve object that determines the Ground Delayed trip
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) PhaseTrip
+      PhaseTrip:
+        description: >-
+          Multiplier or actual phase amps for the phase TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) GroundTrip
+      GroundTrip:
+        description: >-
+          Multiplier or actual ground amps (3I0) for the ground TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) PhaseInst
+      PhaseInst:
+        description: >-
+          Actual amps for instantaneous phase trip which is assumed to happen in 0
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) GroundInst
+      GroundInst:
+        description: >-
+          Actual amps for instantaneous ground trip which is assumed to happen in 0
+        range: string
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Reset
+      Reset:
+        description: >-
+          Reset time in sec for Recloser
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) Shots
+      Shots:
+        description: >-
+          Total Number of fast and delayed shots to lockout
+        range: integer
+        required: false
+        annotations:
+          order: 15
+
+      # (16) RecloseIntervals
+      RecloseIntervals:
+        description: >-
+          Array of reclose intervals
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 16
+
+      # (17) Delay
+      Delay:
+        description: >-
+          Fixed delay time (sec) added to Recloser trip time
+        range: string
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Action
+      Action:
+        description: >-
+          DEPRECATED
+        range: string
+        required: false
+        annotations:
+          order: 18
+
+      # (19) TDPhFast
+      TDPhFast:
+        description: >-
+          Time dial for Phase Fast trip curve
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) TDGrFast
+      TDGrFast:
+        description: >-
+          Time dial for Ground Fast trip curve
+        range: string
+        required: false
+        annotations:
+          order: 20
+
+      # (21) TDPhDelayed
+      TDPhDelayed:
+        description: >-
+          Time dial for Phase Delayed trip curve
+        range: string
+        required: false
+        annotations:
+          order: 21
+
+      # (22) TDGrDelayed
+      TDGrDelayed:
+        description: >-
+          Time dial for Ground Delayed trip curve
+        range: string
+        required: false
+        annotations:
+          order: 22
+
+      # (23) Normal
+      Normal:
+        description: >-
+          {Open | Closed} Normal state of the recloser
+        range: string
+        required: false
+        annotations:
+          order: 23
+
+      # (24) State
+      State:
+        description: >-
+          {Open | Closed} Actual state of the recloser
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 25
+
+      # (26) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 26
+
+      # (27) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 27

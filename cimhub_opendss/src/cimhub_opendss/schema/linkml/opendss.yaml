@@ -1,0 +1,79 @@
+id: https://gridappsd.github.io/dss-graph/opendss
+name: opendss
+title: OpenDSS Complete Schema
+description: >-
+  Complete LinkML schema for all OpenDSS component types.
+  This schema imports all individual component schemas from their respective categories.
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  # PC Elements (Power Conversion Elements)
+  - pce/load
+  - pce/generator
+  - pce/generic5
+  - pce/gicline
+  - pce/indmach012
+  - pce/pvsystem
+  - pce/storage
+  - pce/upfc
+  - pce/vccs
+  - pce/vsconverter
+  - pce/windgen
+  # PD Elements (Power Delivery Elements)
+  - pde/autotrans
+  - pde/capacitor
+  - pde/gictransformer
+  - pde/line
+  - pde/reactor
+  - pde/transformer
+  # Control Elements
+  - controls/capcontrol
+  - controls/espvlcontrol
+  - controls/expcontrol
+  - controls/fuse
+  - controls/gendispatcher
+  - controls/invcontrol
+  - controls/pycontrol
+  - controls/recloser
+  - controls/regcontrol
+  - controls/relay
+  - controls/storagecontroller
+  - controls/swtcontrol
+  - controls/upfccontrol
+  # General Elements (supporting data structures)
+  - general/buscoords
+  - general/cndata
+  - general/dynamicexp
+  - general/growthshape
+  - general/linecode
+  - general/linegeometry
+  - general/linespacing
+  - general/loadshape
+  - general/priceshape
+  - general/spectrum
+  - general/tcc_curve
+  - general/tsdata
+  - general/tshape
+  - general/wiredata
+  - general/xfmrcode
+  - general/xycurve
+  # Meters
+  - meters/energymeter
+  - meters/fmonitor
+  - meters/monitor
+  - meters/sensor
+  # Other Elements
+  - other/fault
+  - other/gicsource
+  - other/isource
+  - other/options
+  - other/vsource

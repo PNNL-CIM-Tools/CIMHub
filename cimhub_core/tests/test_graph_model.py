@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-import pytest
 
 from cimhub_core import GraphModel
 

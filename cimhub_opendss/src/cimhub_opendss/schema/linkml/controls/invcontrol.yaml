@@ -1,0 +1,365 @@
+id: https://gridappsd.github.io/dss-graph/controls/invcontrol
+name: invcontrol
+title: OpenDSS Invcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Invcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-37).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Invcontrol:
+    description: >-
+      A Invcontrol object in OpenDSS.
+    class_uri: dss:Invcontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) DERList
+      DERList:
+        description: >-
+          Array list of PVSystem and/or Storage elements to be controlled
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Mode
+      Mode:
+        description: >-
+          Smart inverter function in which the InvControl will control the PC elements specified in DERList, according to the options below:Must be one of: {VOLTVAR* | VOLTWATT | DYNAMICREACCURR | WATTPF |...
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) CombiMode
+      CombiMode:
+        description: >-
+          Combination of smart inverter functions in which the InvControl will control the PC elements in DERList, according to the options below: Must be a combination of the following: {VV_VW | VV_DRC}
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) vvc_curve1
+      vvc_curve1:
+        description: >-
+          Required for VOLTVAR mode
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) hysteresis_offset
+      hysteresis_offset:
+        description: >-
+          Required for VOLTVAR mode, and defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) voltage_curvex_ref
+      voltage_curvex_ref:
+        description: >-
+          Required for VOLTVAR and VOLTWATT modes, and defaults to rated
+        range: integer
+        required: false
+        annotations:
+          order: 6
+
+      # (7) avgwindowlen
+      avgwindowlen:
+        description: >-
+          Required for VOLTVAR mode and VOLTWATT mode, and defaults to 0 seconds (0s)
+        range: integer
+        required: false
+        annotations:
+          order: 7
+
+      # (8) voltwatt_curve
+      voltwatt_curve:
+        description: >-
+          Required for VOLTWATT mode
+        range: integer
+        required: false
+        annotations:
+          order: 8
+
+      # (9) DbVMin
+      DbVMin:
+        description: >-
+          Required for the dynamic reactive current mode (DYNAMICREACCURR), and defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) DbVMax
+      DbVMax:
+        description: >-
+          Required for the dynamic reactive current mode (DYNAMICREACCURR), and defaults to 1
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) ArGraLowV
+      ArGraLowV:
+        description: >-
+          Required for the dynamic reactive current mode (DYNAMICREACCURR), and defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) ArGraHiV
+      ArGraHiV:
+        description: >-
+          Required for the dynamic reactive current mode (DYNAMICREACCURR), and defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) DynReacavgwindowlen
+      DynReacavgwindowlen:
+        description: >-
+          Required for the dynamic reactive current mode (DYNAMICREACCURR), and defaults to 1 seconds (1s)
+        range: integer
+        required: false
+        annotations:
+          order: 13
+
+      # (14) deltaQ_Factor
+      deltaQ_Factor:
+        description: >-
+          Required for the VOLTVAR and DYNAMICREACCURR modes
+        range: integer
+        required: false
+        annotations:
+          order: 14
+
+      # (15) VoltageChangeTolerance
+      VoltageChangeTolerance:
+        description: >-
+          Defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) VarChangeTolerance
+      VarChangeTolerance:
+        description: >-
+          Required for VOLTVAR and DYNAMICREACCURR modes
+        range: float
+        required: false
+        annotations:
+          order: 16
+
+      # (17) VoltwattYAxis
+      VoltwattYAxis:
+        description: >-
+          Required for VOLTWATT mode
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) RateofChangeMode
+      RateofChangeMode:
+        description: >-
+          Required for VOLTWATT and VOLTVAR mode
+        range: float
+        required: false
+        annotations:
+          order: 18
+
+      # (19) LPFTau
+      LPFTau:
+        description: >-
+          Not required
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) RiseFallLimit
+      RiseFallLimit:
+        description: >-
+          Not required
+        range: float
+        required: false
+        annotations:
+          order: 20
+
+      # (21) deltaP_Factor
+      deltaP_Factor:
+        description: >-
+          Required for the VOLTWATT mode
+        range: integer
+        required: false
+        annotations:
+          order: 21
+
+      # (22) EventLog
+      EventLog:
+        description: >-
+          {Yes/True* | No/False} Default is NO for InvControl
+        range: string
+        required: false
+        annotations:
+          order: 22
+
+      # (23) RefReactivePower
+      RefReactivePower:
+        description: >-
+          Required for any mode that has VOLTVAR, DYNAMICREACCURR and WATTVAR
+        range: float
+        required: false
+        annotations:
+          order: 23
+
+      # (24) ActivePChangeTolerance
+      ActivePChangeTolerance:
+        description: >-
+          Required for VOLTWATT
+        range: float
+        required: false
+        annotations:
+          order: 24
+
+      # (25) monVoltageCalc
+      monVoltageCalc:
+        description: >-
+          Number of the phase being monitored or one of {AVG | MAX | MIN} for all phases
+        range: integer
+        required: false
+        annotations:
+          order: 25
+
+      # (26) monBus
+      monBus:
+        description: >-
+          Name of monitored bus used by the voltage-dependente control modes
+        range: float
+        required: false
+        annotations:
+          order: 26
+
+      # (27) MonBusesVbase
+      MonBusesVbase:
+        description: >-
+          Array list of rated voltages of the buses and their nodes presented in the monBus property
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 27
+
+      # (28) voltwattCH_curve
+      voltwattCH_curve:
+        description: >-
+          Required for VOLTWATT mode for Storage element in CHARGING state
+        range: integer
+        required: false
+        annotations:
+          order: 28
+
+      # (29) wattpf_curve
+      wattpf_curve:
+        description: >-
+          Required for WATTPF mode
+        range: float
+        required: false
+        annotations:
+          order: 29
+
+      # (30) wattvar_curve
+      wattvar_curve:
+        description: >-
+          Required for WATTVAR mode
+        range: float
+        required: false
+        annotations:
+          order: 30
+
+      # (31) VV_RefReactivePower
+      VV_RefReactivePower:
+        description: >-
+          Deprecated, use RefReactivePower instead
+        range: float
+        required: false
+        annotations:
+          order: 31
+
+      # (32) PVSystemList
+      PVSystemList:
+        description: >-
+          Deprecated, use DERList instead
+        range: string
+        required: false
+        annotations:
+          order: 32
+
+      # (33) Vsetpoint
+      Vsetpoint:
+        description: >-
+          Required for Active Voltage Regulation (AVR)
+        range: float
+        required: false
+        annotations:
+          order: 33
+
+      # (34) ControlModel
+      ControlModel:
+        description: >-
+          Integer defining the method for moving across the control curve
+        range: integer
+        required: false
+        annotations:
+          order: 34
+
+      # (35) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 35
+
+      # (36) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 36
+
+      # (37) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 37

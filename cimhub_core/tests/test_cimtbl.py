@@ -20,10 +20,12 @@ from cimhub_core.cimtbl import (
     cimtbl_to_cim,
     copied_columns,
     field_names,
+    fill_defaults,
     fields_stub,
     fields_table,
     lookup,
     mrid,
+    parse_default,
     untranscribed_names,
     untranscribed_values,
 )
@@ -272,6 +274,35 @@ def test_untranscribed_values_wrap():
     record = type("Record", (), {f"Slot{n}": "value" for n in range(20)})()
     lines = untranscribed_values(fields, record).splitlines()
     assert len(lines) > 1 and all(len(line) <= 116 for line in lines)
+
+
+def test_cell_of_a_permissible_value():
+    from linkml_runtime.linkml_model.meta import PermissibleValue
+    assert cell(PermissibleValue(text="ConstantPQ")) == "ConstantPQ"
+
+
+# --- native defaults ----------------------------------------------------------
+
+@pytest.mark.parametrize("expression, value", [
+    ("float(1.0)", 1.0), ("int(3)", 3), ("integer(2)", 2), ('string("abc")', "abc"), ("true", True),
+    ('"false"', "\"false\""), ("False", False), ("Deri", "Deri"), (60.0, 60.0), (True, True),
+])
+def test_parse_default(expression, value):
+    assert parse_default(expression) == value
+
+
+def test_fill_defaults_fills_unset_read_slots_only():
+    record = NativeRecord("XFM1_XFO", None, 4.16, None)
+    defaults = {"NominalRatingKVA": 500.0, "PrimaryVoltage": 12.47, "InsulationType": "Liquid"}
+    filled, comment = fill_defaults(FIELDS, record, defaults)
+    assert (filled.NominalRatingKVA, filled.PrimaryVoltage, filled.InsulationType) == (500.0, 4.16, None)
+    assert comment == "defaulted: NominalRatingKVA=500.0"
+    assert record.NominalRatingKVA is None  # the original is not changed
+
+
+def test_fill_defaults_with_nothing_to_fill():
+    record = NativeRecord("XFM1_XFO", 500.0)
+    assert fill_defaults(FIELDS, record, {"NominalRatingKVA": 1.0}) == (record, None)
 
 
 # --- atom harness -------------------------------------------------------------

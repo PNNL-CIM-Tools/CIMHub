@@ -1,0 +1,129 @@
+id: https://gridappsd.github.io/dss-graph/controls/swtcontrol
+name: swtcontrol
+title: OpenDSS Swtcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Swtcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-11).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Swtcontrol:
+    description: >-
+      A Swtcontrol object in OpenDSS.
+    class_uri: dss:Swtcontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) SwitchedObj
+      SwitchedObj:
+        description: >-
+          Name of circuit element switch that the SwtControl operates
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) SwitchedTerm
+      SwitchedTerm:
+        description: >-
+          Terminal number of the controlled element switch
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) Action
+      Action:
+        description: >-
+          {Open | Close}  After specified delay time, and if not locked, causes the controlled switch to open or close
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) Lock
+      Lock:
+        description: >-
+          {Yes | No} Delayed action
+        range: boolean
+        required: false
+        annotations:
+          order: 4
+
+      # (5) Delay
+      Delay:
+        description: >-
+          Operating time delay (sec) of the switch
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) Normal
+      Normal:
+        description: >-
+          {Open | Closed] Normal state of the switch
+        range: string
+        required: false
+        annotations:
+          order: 6
+
+      # (7) State
+      State:
+        description: >-
+          {Open | Closed] Present state of the switch
+        range: string
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Reset
+      Reset:
+        description: >-
+          {Yes | No} If Yes, forces Reset of switch to Normal state and removes Lock independently of any internal reset command for mode change, etc
+        range: boolean
+        required: false
+        annotations:
+          order: 8
+
+      # (9) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 10
+
+      # (11) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 11

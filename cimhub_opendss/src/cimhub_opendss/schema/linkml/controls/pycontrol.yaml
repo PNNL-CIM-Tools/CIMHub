@@ -1,0 +1,66 @@
+id: https://gridappsd.github.io/dss-graph/controls/pycontrol
+name: pycontrol
+title: OpenDSS Pycontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Pycontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-4).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Pycontrol:
+    description: >-
+      A Pycontrol object in OpenDSS.
+    class_uri: dss:Pycontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) pyScript
+      pyScript:
+        description: >-
+          This is the path to the controller script, it is expected to be a python script (*
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 3
+
+      # (4) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 4

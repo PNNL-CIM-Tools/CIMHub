@@ -1,0 +1,2 @@
+// IEEE13_CDPSM.dss line 23: 1-phase regulator unit (phase-to-neutral coils on a 3-phase system), %R from %LoadLoss
+New Transformer.Reg1 phases=1 xhl=0.01 kvas=[1666 1666] kvs=[2.4 2.4] %LoadLoss=0.01 Bank=Reg Buses=[BRKR.1 RG60.1]

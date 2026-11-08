@@ -1,0 +1,201 @@
+id: https://gridappsd.github.io/dss-graph/pce/gicline
+name: gicline
+title: OpenDSS Gicline Component Schema
+description: >-
+  LinkML schema for OpenDSS Gicline objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-19).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Gicline:
+    description: >-
+      A Gicline object in OpenDSS.
+    class_uri: dss:Gicline
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of bus to which the main terminal (1) is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) bus2
+      bus2:
+        description: >-
+          Name of bus to which 2nd terminal is connected
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) Volts
+      Volts:
+        description: >-
+          Voltage magnitude, in volts, of the GIC voltage induced across this line
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) Angle
+      Angle:
+        description: >-
+          Phase angle in degrees of first phase
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) frequency
+      frequency:
+        description: >-
+          Source frequency
+        range: string
+        required: false
+        annotations:
+          order: 5
+
+      # (6) phases
+      phases:
+        description: >-
+          Number of phases
+        range: integer
+        required: false
+        annotations:
+          order: 6
+
+      # (7) R
+      R:
+        description: >-
+          Resistance of line, ohms of impedance in series with GIC voltage source
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) X
+      X:
+        description: >-
+          Reactance at base frequency, ohms
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) C
+      C:
+        description: >-
+          Value of line blocking capacitance in microfarads
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) EN
+      EN:
+        description: >-
+          Northward Electric field (V/km)
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) EE
+      EE:
+        description: >-
+          Eastward Electric field (V/km)
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) Lat1
+      Lat1:
+        description: >-
+          Latitude of Bus1 (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Lon1
+      Lon1:
+        description: >-
+          Longitude of Bus1 (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Lat2
+      Lat2:
+        description: >-
+          Latitude of Bus2 (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) Lon2
+      Lon2:
+        description: >-
+          Longitude of Bus2 (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 15
+
+      # (16) spectrum
+      spectrum:
+        description: >-
+          Inherited Property for all PCElements
+        range: string
+        required: false
+        annotations:
+          order: 16
+
+      # (17) basefreq
+      basefreq:
+        description: >-
+          Inherited Property for all PCElements
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 18
+
+      # (19) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 19

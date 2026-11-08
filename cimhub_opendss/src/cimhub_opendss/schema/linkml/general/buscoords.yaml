@@ -1,0 +1,107 @@
+id: https://gridappsd.github.io/dss-graph/general/buscoords
+name: buscoords
+title: OpenDSS Buscoords Component Schema
+description: >-
+  LinkML schema for OpenDSS bus coordinates. Unlike every other class in this
+  schema, Buscoords has no ``New Buscoords.x`` command: coordinates arrive as a
+  headerless CSV referenced by a ``BusCoords`` or ``LatLongCoords`` directive in
+  the DSS file tree. One row becomes one Buscoords instance.
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Buscoords:
+    description: >-
+      The geographic or projected position of a single bus, as one row of a
+      BusCoords / LatLongCoords CSV (``BusName, c1, c2``).
+    class_uri: dss:Buscoords
+    exact_mappings:
+      - cim:PositionPoint
+    comments:
+      - >-
+        OpenDSS Buscoords maps to CIM PositionPoint, which requires a parent
+        Location. The importer creates one Location per bus that has coordinates
+        and attaches a single PositionPoint (sequenceNumber=1) to it, then links
+        that Location to the bus's ConnectivityNode.
+      - >-
+        Coordinate ORDER differs by directive and is normalized on read, so x/y
+        here are always ``x=easting/longitude, y=northing/latitude``:
+        ``BusCoords`` files are ``name, x, y`` and used as-is;
+        ``LatLongCoords`` files are ``name, lat, long`` and are swapped.
+        The directive decides, not the filename — IEEE13_Assets uses a
+        ``BusCoords`` directive for a file named ``..._latlon.csv``.
+      - >-
+        There is no ``New Buscoords`` DSS command, so this class is never emitted
+        by the DSS writer as an object definition. The exporter writes a
+        ``BusCoords <file>`` directive plus the CSV instead.
+    attributes:
+      name:
+        description: >-
+          Bus name. Matched case-insensitively against ConnectivityNode names.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: matched (lowercased) to a ConnectivityNode; the created
+            Location is named ``Loc_<ConnectivityNode.name>``. DSS bus names are
+            case-insensitive, so the identifier is stored lowercased.
+
+      # (1) x
+      x:
+        description: >-
+          Horizontal coordinate — easting for projected files, longitude for
+          LatLongCoords files.
+        range: float
+        required: false
+        annotations:
+          order: 1
+        exact_mappings:
+          - cim:PositionPoint.xPosition
+        comments:
+          - >-
+            Import: PositionPoint.xPosition = str(x). Export: x = float(xPosition).
+            CIM stores position as a string, so the cast is explicit in both
+            directions.
+
+      # (2) y
+      y:
+        description: >-
+          Vertical coordinate — northing for projected files, latitude for
+          LatLongCoords files.
+        range: float
+        required: false
+        annotations:
+          order: 2
+        exact_mappings:
+          - cim:PositionPoint.yPosition
+        comments:
+          - "Import: PositionPoint.yPosition = str(y). Export: y = float(yPosition)."
+
+      # (3) geographic
+      geographic:
+        description: >-
+          True when the row came from a ``LatLongCoords`` directive (x/y are
+          longitude/latitude degrees) rather than a projected ``BusCoords`` file.
+        range: boolean
+        required: false
+        annotations:
+          order: 3
+        comments:
+          - >-
+            OpenDSS-only (N/A): records which directive supplied the row so a
+            round trip can write it back to the right one. CIM PositionPoint has
+            no CRS field — Location.CoordinateSystem carries that, and this
+            schema does not model it.

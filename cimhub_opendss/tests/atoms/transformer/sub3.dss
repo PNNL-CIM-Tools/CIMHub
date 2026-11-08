@@ -1,0 +1,5 @@
+// IEEE13_CDPSM.dss lines 15-18: 3-winding delta-wye-wye; winding 2's neutral on node 4 through Rneut + jXneut
+New Transformer.Sub3 Phases=3 Windings=3   XHL=0.01 XHT=0.025 XLT=0.025 LeadLag=Lag
+~ wdg=1 bus=SourceBus  conn=delta  kv=115  kva=5000   %r=(.5 1000 /)
+~ wdg=2 bus=650.1.2.3.4 Rneut=0 Xneut=0.4 conn=wye    kv=4.16 kva=5000   %r=(.5 1000 /)
+~ wdg=3 bus=650z       conn=wye    kv=13.2 kva=1000   %r=(.5 1000 /)

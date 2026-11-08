@@ -1,0 +1,88 @@
+id: https://gridappsd.github.io/dss-graph/general/spectrum
+name: spectrum
+title: OpenDSS Spectrum Component Schema
+description: >-
+  LinkML schema for OpenDSS Spectrum objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-6).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Spectrum:
+    description: >-
+      A Spectrum object in OpenDSS.
+    class_uri: dss:Spectrum
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) NumHarm
+      NumHarm:
+        description: >-
+          Number of frequencies in this spectrum
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) harmonic
+      harmonic:
+        description: >-
+          Array of harmonic values
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 2
+
+      # (3) %mag
+      pct_mag:
+        description: >-
+          Array of magnitude values, assumed to be in PERCENT
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+          dss_name: "%mag"
+
+      # (4) angle
+      angle:
+        description: >-
+          Array of phase angle values, degrees
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+
+      # (5) CSVFile
+      CSVFile:
+        description: >-
+          File of spectrum points with (harmonic, magnitude-percent, angle-degrees) values, one set of 3 per line, in CSV format
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 6

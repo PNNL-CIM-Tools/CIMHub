@@ -1,0 +1,596 @@
+id: https://gridappsd.github.io/dss-graph/controls/regcontrol
+name: regcontrol
+title: OpenDSS Regcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Regcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-38).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Regcontrol:
+    description: >-
+      A Regcontrol object in OpenDSS representing a voltage regulator control
+      that monitors a transformer winding and adjusts its tap to regulate
+      voltage.
+    class_uri: dss:Regcontrol
+    close_mappings:
+      - cim:TapChangerControl
+    comments:
+      - >-
+        Each DSS Regcontrol creates two CIM objects: TapChangerControl (the
+        regulation settings: target voltage, bandwidth, line drop compensation,
+        reverse settings) and RatioTapChanger (the physical tap changer on a
+        specific transformer end: tap range, step size, PT/CT ratios). The end
+        may be a PowerTransformerEnd or a TransformerTankEnd, depending on how
+        the monitored transformer was imported (tank-based models are typical
+        for regulators). The converter returns a tuple (TapChangerControl,
+        RatioTapChanger).
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Name applied to both RatioTapChanger and TapChangerControl."
+
+      # (1) transformer
+      transformer:
+        description: >-
+          Name of Transformer or AutoTrans element to which the RegControl
+          is connected.
+        range: string
+        required: false
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:RatioTapChanger.TransformerEnd
+        comments:
+          - >-
+            Import: resolved by name to a PowerTransformerEnd or (for
+            tank-based/regulator transformers) a TransformerTankEnd at the
+            specified winding; RatioTapChanger.TransformerEnd = that end.
+            Export: transformer = TransformerEnd.PowerTransformer.name, or
+            TransformerEnd.TransformerTank.name for tank-based ends.
+
+      # (2) winding
+      winding:
+        description: >-
+          Number of the winding of the transformer element that the RegControl
+          is monitoring. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:RatioTapChanger.TransformerEnd
+        comments:
+          - "Import: selects the 1-based winding index to identify the PowerTransformerEnd for the RatioTapChanger. Export: winding = End.endNumber."
+
+      # (3) vreg
+      vreg:
+        description: >-
+          Voltage regulator setting, in VOLTS, for the winding being controlled.
+          Default is 120 V.
+        range: float
+        required: false
+        annotations:
+          order: 3
+        exact_mappings:
+          - cim:TapChangerControl.targetValue
+        comments:
+          - "Import: TapChangerControl.targetValue = vreg. Export: vreg = targetValue."
+
+      # (4) band
+      band:
+        description: >-
+          Bandwidth in VOLTS for the controlled bus (full bandwidth). Default is 3 V.
+        range: string
+        required: false
+        annotations:
+          order: 4
+        exact_mappings:
+          - cim:TapChangerControl.targetDeadband
+        comments:
+          - "Import: TapChangerControl.targetDeadband = band. Export: band = targetDeadband."
+
+      # (5) ptratio
+      ptratio:
+        description: >-
+          Ratio of the PT that converts the controlled winding voltage to the
+          regulator control voltage. Default is 60.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 5
+        exact_mappings:
+          - cim:RatioTapChanger.ptRatio
+        comments:
+          - >-
+            Import: RatioTapChanger.ptRatio = ptratio, or 60.0 if not
+            specified. Export: ptratio = ptRatio.
+
+      # (6) CTprim
+      CTprim:
+        description: >-
+          Rating, in Amperes, of the primary CT rating for which the line amps
+          convert to control rated amps. Default is 300 A.
+        range: float
+        required: false
+        annotations:
+          order: 6
+        exact_mappings:
+          - cim:RatioTapChanger.ctRating
+        comments:
+          - >-
+            Import: RatioTapChanger.ctRating = CTprim, or 0.0 if not
+            specified; when ctRating > 0, RatioTapChanger.ctRatio is also
+            derived as ctRating / 0.2 (OpenDSS uses a fixed 0.2 A secondary).
+            Export: CTprim = ctRating.
+
+      # (7) R
+      R:
+        description: >-
+          R setting on the line drop compensator in the regulator, expressed in
+          VOLTS.
+        range: string
+        required: false
+        annotations:
+          order: 7
+        exact_mappings:
+          - cim:TapChangerControl.lineDropR
+        comments:
+          - >-
+            Import: TapChangerControl.lineDropR = R, or 0.0 if not specified;
+            TapChangerControl.lineDropCompensation is set True if R or X is
+            nonzero. Export: R = lineDropR.
+
+      # (8) X
+      X:
+        description: >-
+          X setting on the line drop compensator in the regulator, expressed in
+          VOLTS.
+        range: string
+        required: false
+        annotations:
+          order: 8
+        exact_mappings:
+          - cim:TapChangerControl.lineDropX
+        comments:
+          - >-
+            Import: TapChangerControl.lineDropX = X, or 0.0 if not specified
+            (see R comments for the lineDropCompensation flag). Export:
+            X = lineDropX.
+
+      # (9) bus
+      bus:
+        description: >-
+          Name of a bus (busname.nn.nn.nn) for remote voltage sensing. When set,
+          the regulator monitors this bus instead of the transformer winding.
+        range: string
+        required: false
+        annotations:
+          order: 9
+        comments:
+          - "OpenDSS-only (N/A): remote voltage sensing bus; no direct CIM equivalent on TapChangerControl."
+
+      # (10) delay
+      delay:
+        description: >-
+          Time delay, in seconds, from when the voltage goes out of band to when
+          tap changing begins. Default is 15 s.
+        range: float
+        required: false
+        annotations:
+          order: 10
+        exact_mappings:
+          - cim:RatioTapChanger.initialDelay
+        comments:
+          - >-
+            Import: RatioTapChanger.initialDelay = delay, or 15.0 if not
+            specified. Export: delay = initialDelay.
+
+      # (11) reversible
+      reversible:
+        description: >-
+          {Yes |No*} Indicates whether the regulator has a reverse operation mode.
+        range: boolean
+        required: false
+        annotations:
+          order: 11
+        exact_mappings:
+          - cim:TapChangerControl.reversible
+        comments:
+          - >-
+            Import: TapChangerControl.reversible = reversible. When False,
+            none of the reverse-direction fields below (revvreg, revband,
+            revR, revX, revDelay, revNeutral, revThreshold) are read — they
+            keep CIM defaults. Export: reversible = TapChangerControl.reversible;
+            the reverse-direction attributes below are only written when this
+            is True.
+
+      # (12) revvreg
+      revvreg:
+        description: >-
+          Voltage setting in volts for operation in the reverse direction.
+          Default is 120 V.
+        range: float
+        required: false
+        annotations:
+          order: 12
+        exact_mappings:
+          - cim:TapChangerControl.reverseTargetValue
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reverseTargetValue
+            = revvreg, or 120.0 if not specified. Export: revvreg = reverseTargetValue.
+
+      # (13) revband
+      revband:
+        description: >-
+          Bandwidth for operating in the reverse direction. Default is 3 V.
+        range: float
+        required: false
+        annotations:
+          order: 13
+        exact_mappings:
+          - cim:TapChangerControl.reverseTargetDeadband
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reverseTargetDeadband
+            = revband, or 3.0 if not specified. Export: revband = reverseTargetDeadband.
+
+      # (14) revR
+      revR:
+        description: >-
+          R line drop compensator setting for reverse direction.
+        range: string
+        required: false
+        annotations:
+          order: 14
+        exact_mappings:
+          - cim:TapChangerControl.reverseLineDropR
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reverseLineDropR
+            = revR, or 0.0 if not specified. Export: revR = reverseLineDropR.
+
+      # (15) revX
+      revX:
+        description: >-
+          X line drop compensator setting for reverse direction.
+        range: string
+        required: false
+        annotations:
+          order: 15
+        exact_mappings:
+          - cim:TapChangerControl.reverseLineDropX
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reverseLineDropX
+            = revX, or 0.0 if not specified. Export: revX = reverseLineDropX.
+
+      # (16) tapdelay
+      tapdelay:
+        description: >-
+          Delay in sec between tap changes. Default is 2 s.
+        range: string
+        required: false
+        annotations:
+          order: 16
+        exact_mappings:
+          - cim:RatioTapChanger.subsequentDelay
+        comments:
+          - >-
+            Import: RatioTapChanger.subsequentDelay = tapdelay, or 2.0 if not
+            specified. Export: tapdelay = subsequentDelay.
+
+      # (17) debugtrace
+      debugtrace:
+        description: >-
+          {Yes | No* }  Default is no. If true, writes debug trace to file.
+        range: boolean
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+
+      # (18) maxtapchange
+      maxtapchange:
+        description: >-
+          Maximum allowable tap change per control iteration in STATIC control
+          mode. Default is 16.
+        range: float
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - >-
+            OpenDSS-only (N/A): step limiter for static power-flow solution;
+            no direct CIM equivalent on RatioTapChanger. Not read on import.
+            Export writes maxtapchange=0 only as a side effect of a disabled
+            control (see enabled comments), to pin the tap at its current
+            position; otherwise it is not written.
+
+      # (19) inversetime
+      inversetime:
+        description: >-
+          {Yes | No* } Default is no. If yes, time delays decrease inversely
+          with magnitude of voltage excursion.
+        range: boolean
+        required: false
+        annotations:
+          order: 19
+        comments:
+          - "OpenDSS-only (N/A): inverse-time delay mode; no CIM equivalent in the standard profile."
+
+      # (20) tapwinding
+      tapwinding:
+        description: >-
+          Winding containing the actual taps, if different than the WINDING property.
+        range: string
+        required: false
+        annotations:
+          order: 20
+        comments:
+          - "OpenDSS-only (N/A): tap winding override; no direct CIM equivalent (the RatioTapChanger is attached to the winding that carries taps)."
+
+      # (21) vlimit
+      vlimit:
+        description: >-
+          Voltage Limit for bus to which regulated winding is connected. Default
+          is 0 (no limit).
+        range: float
+        required: false
+        annotations:
+          order: 21
+        related_mappings:
+          - cim:TapChangerControl.maxLimitVoltage
+        comments:
+          - >-
+            Intended target: TapChangerControl.maxLimitVoltage, set only when
+            vlimit > 0. Import/export currently read and write a dynamically
+            added ``limitVoltage`` attribute instead of the real
+            maxLimitVoltage field, so vlimit roundtrips within this converter
+            but is not visible to CIM-spec-compliant tools reading maxLimitVoltage.
+        todos:
+          - "Converter bug: uses tcc.limitVoltage (not a real TapChangerControl field) instead of tcc.maxLimitVoltage on both import and export."
+
+      # (22) PTphase
+      PTphase:
+        description: >-
+          For multi-phase transformers, the number of the phase being monitored
+          or one of {MAX | MIN} for all phases. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "OpenDSS-only (N/A): phase monitoring selector; no direct CIM equivalent on TapChangerControl."
+
+      # (23) revThreshold
+      revThreshold:
+        description: >-
+          kW reverse power threshold for reversing the direction of the regulator.
+          Default is 100 kW.
+        range: float
+        required: false
+        annotations:
+          order: 23
+        exact_mappings:
+          - cim:TapChangerControl.reversingPowerThreshold
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reversingPowerThreshold
+            = −revThreshold (sign flipped; 0.0 if reversible but revThreshold
+            not given). Export: revThreshold = −reversingPowerThreshold.
+
+      # (24) revDelay
+      revDelay:
+        description: >-
+          Time Delay in seconds for executing the reversing action once the
+          threshold for reversing has been exceeded. Default is 60 s.
+        range: string
+        required: false
+        annotations:
+          order: 24
+        exact_mappings:
+          - cim:TapChangerControl.reversingDelay
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reversingDelay
+            = revDelay, or 60.0 if not specified. Export: revDelay = reversingDelay.
+
+      # (25) revNeutral
+      revNeutral:
+        description: >-
+          {Yes | No*} Default is no. If yes, regulator goes to neutral tap in
+          reverse direction.
+        range: boolean
+        required: false
+        annotations:
+          order: 25
+        exact_mappings:
+          - cim:TapChangerControl.reverseToNeutral
+        comments:
+          - >-
+            Import (only when reversible=Yes): TapChangerControl.reverseToNeutral
+            = revNeutral, or True if not specified. Export: revNeutral = reverseToNeutral.
+
+      # (26) EventLog
+      EventLog:
+        description: >-
+          {Yes/True* | No/False} Default is YES for regulator control.
+        range: string
+        required: false
+        annotations:
+          order: 26
+        comments:
+          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+
+      # (27) RemotePTRatio
+      RemotePTRatio:
+        description: >-
+          PT ratio required to convert actual voltage at the remote bus to control
+          voltage when regulating a remote bus.
+        range: float
+        required: false
+        annotations:
+          order: 27
+        comments:
+          - "OpenDSS-only (N/A): remote PT ratio; no CIM equivalent for remote bus voltage sensing in the standard profile."
+
+      # (28) TapNum
+      TapNum:
+        description: >-
+          An integer number indicating the tap position that the controlled
+          transformer winding tap position is currently at.
+        range: integer
+        required: false
+        annotations:
+          order: 28
+        close_mappings:
+          - cim:RatioTapChanger.step
+        comments:
+          - >-
+            Import: RatioTapChanger.step = 1.0 + TapNum × 0.00625 (SSH state;
+            CIM step is a per-unit ratio around 1.0, DSS TapNum is an integer
+            step count from neutral at a fixed 0.625%/step). Export:
+            TapNum = round((step − 1.0) / (stepVoltageIncrement/100)) using the
+            RatioTapChanger's own stepVoltageIncrement if set, otherwise the
+            same 0.625%/step assumption.
+
+      # (29) Reset
+      Reset:
+        description: >-
+          {Yes | No} If Yes, forces Reset of this RegControl.
+        range: boolean
+        required: false
+        annotations:
+          order: 29
+        comments:
+          - "OpenDSS-only (N/A): operational reset flag; no CIM equivalent."
+
+      # (30) LDC_Z
+      LDC_Z:
+        description: >-
+          Z value for Beckwith LDC_Z control option. Complex impedance in ohms.
+        range: float
+        required: false
+        annotations:
+          order: 30
+        comments:
+          - "OpenDSS-only (N/A): Beckwith LDC_Z control mode parameter; no CIM equivalent in the standard profile."
+
+      # (31) rev_Z
+      rev_Z:
+        description: >-
+          Reverse Z value for Beckwith LDC_Z control option.
+        range: float
+        required: false
+        annotations:
+          order: 31
+        comments:
+          - "OpenDSS-only (N/A): Beckwith reverse LDC_Z parameter; no CIM equivalent."
+
+      # (32) Cogen
+      Cogen:
+        description: >-
+          {Yes|No*} Default is No. Cogen mode — sets direction of power flow
+          sensing for reverse operation.
+        range: boolean
+        required: false
+        annotations:
+          order: 32
+        comments:
+          - "OpenDSS-only (N/A): co-generation mode flag; no CIM equivalent."
+
+      # (33) idle
+      idle:
+        description: >-
+          {Yes|No*} Default is No. If Yes, disables tap changing.
+        range: boolean
+        required: false
+        annotations:
+          order: 33
+        comments:
+          - "OpenDSS-only (N/A): idle/disable tap changing mode; no CIM equivalent."
+
+      # (34) idleReverse
+      idleReverse:
+        description: >-
+          {Yes|No*} Default is No. If Yes, disables tap changing in reverse mode.
+        range: boolean
+        required: false
+        annotations:
+          order: 34
+        comments:
+          - "OpenDSS-only (N/A): reverse idle mode; no CIM equivalent."
+
+      # (35) idleForward
+      idleForward:
+        description: >-
+          {Yes|No*} Default is No. If Yes, disables tap changing in forward mode.
+        range: boolean
+        required: false
+        annotations:
+          order: 35
+        comments:
+          - "OpenDSS-only (N/A): forward idle mode; no CIM equivalent."
+
+      # (36) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 36
+        comments:
+          - "Not stored on CIM TapChangerControl or RatioTapChanger; base frequency is a circuit-level property."
+
+      # (37) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 37
+        exact_mappings:
+          - cim:TapChanger.controlEnabled
+        comments:
+          - >-
+            Import: if enabled=No, the whole Regcontrol is skipped and no CIM
+            objects are created; otherwise RatioTapChanger.controlEnabled =
+            enabled (SSH attribute; also RatioTapChanger.ltcFlag is always set
+            True, since OpenDSS regulators are load-tap-changing). Export:
+            enabled = controlEnabled; when controlEnabled is False, maxtapchange
+            is also written as 0 (see maxtapchange comments) so OpenDSS holds
+            the tap at its imported position instead of re-regulating.
+
+      # (38) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Regcontrol.RC2 like=RC1 ...
+        range: string
+        required: false
+        annotations:
+          order: 38
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

@@ -1,0 +1,68 @@
+id: https://gridappsd.github.io/dss-graph/other/options
+name: options
+title: OpenDSS circuit options
+description: >-
+  The circuit-wide ``Set`` options a model keeps. DSS has no ``New Options``
+  command: the reader collects these from ``Set`` commands, a later ``Set``
+  overriding an earlier one. Solution settings (mode, controlmode, maxiterations,
+  ...) are not part of the model and are not kept.
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Options:
+    description: >-
+      The kept ``Set`` options of one deck (``Set voltagebases=[...]``,
+      ``Set defaultbasefreq=50``, ``Set earthmodel=carson``).
+    class_uri: dss:Options
+    comments:
+      - >-
+        One object per deck, named ``options``. The writer emits each set slot
+        as a ``Set`` command.
+    attributes:
+      name:
+        description: Always ``options``.
+        range: string
+        required: true
+        identifier: true
+
+      voltagebases:
+        description: >-
+          Line-to-line voltages the engine snaps bus bases to (CalcVoltageBases).
+          Not used to assign BaseVoltage (DSS-1); kept for the round trip.
+        range: float
+        multivalued: true
+        required: false
+        unit:
+          ucum_code: kV
+        annotations:
+          dss_name: voltagebases
+
+      defaultbasefreq:
+        description: Default base frequency for the circuit, Hz.
+        range: float
+        required: false
+        unit:
+          ucum_code: Hz
+        annotations:
+          dss_name: defaultbasefreq
+          dss_default: float(60.0)
+
+      earthmodel:
+        description: Default earth model for line impedance calculations.
+        range: EarthModelType
+        required: false
+        annotations:
+          dss_name: earthmodel
+          dss_default: Deri

@@ -1,0 +1,407 @@
+id: https://gridappsd.github.io/dss-graph/pde/reactor
+name: reactor
+title: OpenDSS Reactor Component Schema
+description: >-
+  LinkML schema for OpenDSS Reactor objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-27).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Reactor:
+    description: >-
+      A Reactor object in OpenDSS representing a series or shunt impedance branch.
+      Two-terminal reactors (bus1 + bus2) are mapped to CIM SeriesCompensator.
+      Single-terminal (shunt) reactors are not currently supported and are skipped.
+    class_uri: dss:Reactor
+    exact_mappings:
+      - cim:SeriesCompensator
+    comments:
+      - >-
+        OpenDSS two-terminal Reactor maps to CIM SeriesCompensator ("a series capacitor
+        or reactor or an AC transmission line without charging susceptance"). Only the
+        two-terminal configuration is supported; single-terminal shunt reactors are
+        skipped on import (bus2 absent) and return no CIM object.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of first bus. Primary terminal connection.
+        range: string
+        required: false
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Terminal 1 structural mapping: equipment.Terminals[0].ConnectivityNode.name."
+
+      # (2) bus2
+      bus2:
+        description: >-
+          Name of 2nd bus. If absent, this is a single-terminal shunt reactor
+          (not currently supported by the converter).
+        range: string
+        required: false
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Terminal 2 structural mapping: equipment.Terminals[1].ConnectivityNode.name. If absent, converter returns None (shunt reactor not supported)."
+
+      # (3) phases
+      phases:
+        description: >-
+          Number of phases.
+        range: integer
+        required: false
+        annotations:
+          order: 3
+        comments:
+          - >-
+            Import: inferred from the bus1 node suffix via parse_bus_phases(); not stored
+            directly on CIM SeriesCompensator. Export: always written as 3 (the exporter
+            treats SeriesCompensator as a symmetric 3-phase element and does not recover
+            the original phase count).
+
+      # (4) kvar
+      kvar:
+        description: >-
+          Total kvar, all phases. Used to derive reactance when X is not specified.
+        range: float
+        required: false
+        annotations:
+          order: 4
+        close_mappings:
+          - cim:SeriesCompensator.x
+        comments:
+          - >-
+            Import fallback, only used when X is not given: X = kV² / kvar × 1000
+            (derived reactance in ohms). Export: not written back; x is the authoritative
+            CIM attribute and is always exported via the X property directly.
+
+      # (5) kv
+      kv:
+        description: >-
+          For 2, 3-phase, kV phase-phase. Used with kvar to derive reactance.
+        range: float
+        required: false
+        annotations:
+          order: 5
+        comments:
+          - "Used only when deriving X from kvar (see kvar comments). Not stored directly on CIM SeriesCompensator."
+
+      # (6) conn
+      conn:
+        description: >-
+          ={wye | delta |LN |LL}  Default is wye, which is equivalent to LN.
+        range: string
+        required: false
+        annotations:
+          order: 6
+        comments:
+          - "OpenDSS-only (N/A): CIM SeriesCompensator has no phaseConnection attribute; it is a two-terminal series element."
+
+      # (7) Rmatrix
+      Rmatrix:
+        description: >-
+          Resistance matrix, lower triangle, ohms at base frequency.
+        range: integer
+        required: false
+        annotations:
+          order: 7
+        comments:
+          - "OpenDSS-only (N/A): matrix form not supported in the current converter. Use R property for scalar resistance."
+        todos:
+          - "Phase-impedance matrix path not yet implemented for Reactor."
+
+      # (8) Xmatrix
+      Xmatrix:
+        description: >-
+          Reactance matrix, lower triangle, ohms at base frequency.
+        range: integer
+        required: false
+        annotations:
+          order: 8
+        comments:
+          - "OpenDSS-only (N/A): matrix form not supported in the current converter. Use X property for scalar reactance."
+        todos:
+          - "Phase-impedance matrix path not yet implemented for Reactor."
+
+      # (9) Parallel
+      Parallel:
+        description: >-
+          {Yes | No}  Default=No. If Yes, model as a parallel R-L combination
+          instead of series.
+        range: boolean
+        required: false
+        annotations:
+          order: 9
+        comments:
+          - "OpenDSS-only (N/A): circuit topology modifier; no CIM equivalent in the standard profile."
+
+      # (10) R
+      R:
+        description: >-
+          Resistance (in series with reactance), each phase, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 10
+        exact_mappings:
+          - cim:SeriesCompensator.r
+        comments:
+          - >-
+            Import: SeriesCompensator.r = Resistance(R, 'ohm'); the zero-sequence
+            resistance r0 is also set equal to r, since the DSS Reactor has no separate
+            zero-sequence input. Export: R = r.to('ohm'). CIM stores in ohm (SI base).
+
+      # (11) X
+      X:
+        description: >-
+          Reactance, each phase, ohms at base frequency.
+        range: float
+        required: false
+        annotations:
+          order: 11
+        exact_mappings:
+          - cim:SeriesCompensator.x
+        comments:
+          - >-
+            Import: SeriesCompensator.x = Reactance(X, 'ohm'); the zero-sequence
+            reactance x0 is also set equal to x, since the DSS Reactor has no separate
+            zero-sequence input. Export: X = x.to('ohm'). CIM stores in ohm (SI base).
+
+      # (12) Rp
+      Rp:
+        description: >-
+          Resistance in parallel with R and X (the entire branch). Represents
+          core loss equivalent.
+        range: float
+        required: false
+        annotations:
+          order: 12
+        comments:
+          - "OpenDSS-only (N/A): parallel loss resistance; no CIM equivalent on SeriesCompensator in the standard profile."
+
+      # (13) Z1
+      Z1:
+        description: >-
+          Positive-sequence impedance, ohms, as a 2-element array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 13
+        comments:
+          - "OpenDSS-only (N/A): alternate input form for R and X; the current converter reads R and X directly and does not fall back to Z1."
+        todos:
+          - "Converter does not currently consume Z1 as an R/X source; would need to be added to the import fallback chain to roundtrip models that only set Z1."
+
+      # (14) Z2
+      Z2:
+        description: >-
+          Negative-sequence impedance, ohms, as a 2-element array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 14
+        comments:
+          - "OpenDSS-only (N/A): negative-sequence impedance input; no CIM equivalent on SeriesCompensator (which is a symmetric series element)."
+
+      # (15) Z0
+      Z0:
+        description: >-
+          Zero-sequence impedance, ohms, as a 2-element array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 15
+        related_mappings:
+          - cim:SeriesCompensator.r0
+          - cim:SeriesCompensator.x0
+        comments:
+          - >-
+            OpenDSS-only input, not currently consumed by the converter: r0/x0 are
+            instead defaulted to r/x on import (see R/X comments), so a Z0 value
+            distinct from Z1 is silently dropped.
+        todos:
+          - "Converter does not read Z0; wiring it in would let r0/x0 reflect the DSS zero-sequence input instead of defaulting to r/x."
+
+      # (16) Z
+      Z:
+        description: >-
+          Alternative way of defining R and X properties as a complex array.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 16
+        comments:
+          - "OpenDSS-only (N/A): alternate input form for R and X; the current converter reads R and X directly and does not fall back to Z."
+        todos:
+          - "Converter does not currently consume Z as an R/X source; would need to be added to the import fallback chain to roundtrip models that only set Z."
+
+      # (17) RCurve
+      RCurve:
+        description: >-
+          Name of XYCurve object describing per-unit variation of phase
+          resistance, R, vs. frequency.
+        range: float
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "OpenDSS-only (N/A): frequency-dependent resistance curve; no CIM equivalent in the standard profile."
+
+      # (18) LCurve
+      LCurve:
+        description: >-
+          Name of XYCurve object describing per-unit variation of phase
+          inductance, L=X/w, vs. frequency.
+        range: float
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - "OpenDSS-only (N/A): frequency-dependent inductance curve; no CIM equivalent in the standard profile."
+
+      # (19) LmH
+      LmH:
+        description: >-
+          Inductance, mH. Alternate way to specify X at base frequency.
+        range: float
+        required: false
+        annotations:
+          order: 19
+        comments:
+          - >-
+            OpenDSS-only (N/A): alternate way to specify X (formula: X = 2π × f × LmH
+            × 1e-3, mH → ohm) via basefreq f, but the current converter reads R and X
+            directly and does not fall back to LmH.
+        todos:
+          - "Converter does not currently consume LmH as an X source; would need to be added to the import fallback chain to roundtrip models that only set LmH."
+
+      # (20) normamps
+      normamps:
+        description: >-
+          Normal rated current.
+        range: float
+        required: false
+        annotations:
+          order: 20
+        related_mappings:
+          - cim:CurrentLimit
+        todos:
+          - "Converter not yet implemented. Should map to a CurrentLimit (limitType=normalOperating) on an OperationalLimitSet for this equipment."
+
+      # (21) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current.
+        range: float
+        required: false
+        annotations:
+          order: 21
+        related_mappings:
+          - cim:CurrentLimit
+        todos:
+          - "Converter not yet implemented. Should map to a CurrentLimit (limitType=emergency) on the OperationalLimitSet."
+
+      # (22) faultrate
+      faultrate:
+        description: >-
+          Failure rate per year.
+        range: string
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (23) pctperm
+      pctperm:
+        description: >-
+          Percent of failures that become permanent.
+        range: float
+        required: false
+        annotations:
+          order: 23
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (24) repair
+      repair:
+        description: >-
+          Hours to repair.
+        range: string
+        required: false
+        annotations:
+          order: 24
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (25) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 25
+        comments:
+          - >-
+            OpenDSS-only (N/A): not stored on CIM SeriesCompensator; base frequency is
+            a circuit-level property in CIM. Only relevant to the LmH → X formula
+            (see LmH comments), which the converter does not currently run.
+
+      # (26) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 26
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created."
+
+      # (27) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Reactor.R2 like=R1 ...
+        range: string
+        required: false
+        annotations:
+          order: 27
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

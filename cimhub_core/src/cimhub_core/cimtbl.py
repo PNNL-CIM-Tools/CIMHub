@@ -12,6 +12,7 @@ Contract: the ``cimtbl-import-contract`` skill.
 from __future__ import annotations
 
 import dataclasses
+import functools
 import math
 import re
 import tempfile
@@ -21,7 +22,10 @@ from typing import Literal
 
 import cimtables
 from cimtables.document import Column, DocumentSet, write_documents
+from linkml_runtime.linkml_model.meta import PermissibleValue
 from linkml_runtime.utils.enumerations import EnumDefinitionImpl
+
+from cimhub_core.serialization import get_schema_annotations
 
 __all__ = [
     "CIM_PROFILE",
@@ -32,6 +36,9 @@ __all__ = [
     "copied_columns",
     "untranscribed_values",
     "untranscribed_names",
+    "parse_default",
+    "schema_defaults",
+    "fill_defaults",
     "field_names",
     "check_fields",
     "fields_table",
@@ -76,6 +83,8 @@ def cell(value) -> str | None:
         return str(value)  # drops LinkML's str subclasses (LinecodeName, ...)
     if isinstance(value, EnumDefinitionImpl):
         return value.code.text
+    if isinstance(value, PermissibleValue):  # how some generated enum slots hold their value
+        return value.text
     raise TypeError(f"no .cimtbl cell text for {type(value).__name__} {value!r}; map it in the mapper")
 
 
@@ -165,9 +174,13 @@ def _comment_text(value) -> str:
     return cell(value)
 
 
-def _wrapped(items: list[str]) -> str:
-    return textwrap.fill("untranscribed: " + ", ".join(items), width=_COMMENT_WIDTH,
+def _wrapped(items: list[str], label: str = "untranscribed") -> str:
+    return textwrap.fill(f"{label}: " + ", ".join(items), width=_COMMENT_WIDTH,
                          break_long_words=False, break_on_hyphens=False)
+
+
+def _is_unset(value) -> bool:
+    return value is None or value == "" or value == []
 
 
 def untranscribed_values(fields: dict[str, Field], record) -> str | None:
@@ -181,7 +194,7 @@ def untranscribed_values(fields: dict[str, Field], record) -> str | None:
         if field.kind != "untranscribed":
             continue
         value = getattr(record, slot)
-        if value is None or value == "" or value == []:
+        if _is_unset(value):
             continue
         items.append(f"{slot}={_comment_text(value)}")
     return _wrapped(items) if items else None
@@ -191,6 +204,57 @@ def untranscribed_names(fields: dict[str, Field]) -> str | None:
     """The D5 instance record: ``untranscribed: Slot, Slot, ...``, once above an instance table."""
     names = [slot for slot, field in fields.items() if field.kind == "untranscribed"]
     return _wrapped(names) if names else None
+
+
+# ---------------------------------------------------------------------------
+# Native defaults (keyword formats: the `linkml-native-schema` skill, rule 5)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_EXPRESSION = re.compile(r"^(float|int|integer|string|str)\((.*)\)$")
+
+
+def parse_default(expression):
+    """A LinkML default expression as a Python value.
+
+    ``float(1.0)`` -> 1.0, ``int(3)`` -> 3, ``string(abc)`` -> 'abc', ``"true"`` -> True; any other text
+    (an enum value such as ``Deri``) is returned as text.
+    """
+    if isinstance(expression, (bool, int, float)):
+        return expression
+    text = str(expression).strip()
+    match = _DEFAULT_EXPRESSION.match(text)
+    if match:
+        kind, inner = match.groups()
+        if kind == "float":
+            return float(inner)
+        if kind in ("int", "integer"):
+            return int(inner)
+        return inner.strip("\"'")
+    if text.lower() in ("true", "false"):
+        return text.lower() == "true"
+    return text
+
+
+@functools.cache
+def schema_defaults(native_cls: type, annotation: str) -> dict[str, object]:
+    """``{slot: default}`` from a native schema's ``<fmt>_default`` annotation (``dss_default``)."""
+    return {slot: parse_default(spec[annotation]) for slot, spec in get_schema_annotations(native_cls).items()
+            if annotation in spec}
+
+
+def fill_defaults(fields: dict[str, Field], record, defaults: dict[str, object]):
+    """``(record, comment)``: the record with every unset slot the mapper reads filled from ``defaults``.
+
+    Untranscribed slots are left alone. The record is a copy (``dataclasses.replace``, so the schema's
+    ``__post_init__`` types the defaults); the original is not changed. ``comment`` is
+    ``defaulted: slot=value, ...`` for the row comment, or ``None`` when nothing was filled.
+    """
+    filled = {slot: defaults[slot] for slot, field in fields.items()
+              if field.kind != "untranscribed" and slot in defaults and _is_unset(getattr(record, slot))}
+    if not filled:
+        return record, None
+    items = [f"{slot}={_comment_text(value)}" for slot, value in filled.items()]
+    return dataclasses.replace(record, **filled), _wrapped(items, "defaulted")
 
 
 def field_names(native_cls: type) -> list[str]:

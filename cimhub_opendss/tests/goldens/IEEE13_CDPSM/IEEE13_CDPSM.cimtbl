@@ -1,0 +1,10 @@
+# OpenDSS deck IEEE13_CDPSM
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master
+# not mapped: Buscoords 22, Capacitor 2, Fuse 1, Line 16, Load 16, Options 1, Pvsystem 2, Recloser 1, Regcontrol 3,
+# Relay 1, Storage 3, Transformer 6, Vsource 1, Xfmrcode 1
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = IEEE13_CDPSM
+
+Import linecode.cimtbl

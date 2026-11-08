@@ -1,0 +1,463 @@
+id: https://gridappsd.github.io/dss-graph/pce/windgen
+name: windgen
+title: OpenDSS Windgen Component Schema
+description: >-
+  LinkML schema for OpenDSS Windgen objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-48).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Windgen:
+    description: >-
+      A Windgen object in OpenDSS.
+    class_uri: dss:Windgen
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this WindGen
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the WindGen is connected
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) kv
+      kv:
+        description: >-
+          Nominal rated (1
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kW
+      kW:
+        description: >-
+          Total base kW for the WindGen
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) PF
+      PF:
+        description: >-
+          WindGen power factor
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) model
+      model:
+        description: >-
+          Integer code for the model to use for generation variation with voltage
+        range: integer
+        required: false
+        annotations:
+          order: 6
+
+      # (7) yearly
+      yearly:
+        description: >-
+          Wind speed shape to use for yearly-mode simulations
+        range: integer
+        required: false
+        annotations:
+          order: 7
+
+      # (8) daily
+      daily:
+        description: >-
+          Wind speed shape to use for daily-mode simulations
+        range: string
+        required: false
+        annotations:
+          order: 8
+
+      # (9) duty
+      duty:
+        description: >-
+          Load shape to use for duty cycle dispatch simulations such as for wind or solar generation
+        range: integer
+        required: false
+        annotations:
+          order: 9
+
+      # (10) conn
+      conn:
+        description: >-
+          ={wye|LN|delta|LL}
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) kvar
+      kvar:
+        description: >-
+          Specify the base kvar
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) class
+      class_class:
+        description: >-
+          An arbitrary integer number representing the class of WindGen so that WindGen values may be segregated by class
+        range: integer
+        required: false
+        annotations:
+          order: 12
+          dss_name: "class"
+
+      # (13) debugtrace
+      debugtrace:
+        description: >-
+          {Yes | No }  Default is no
+        range: boolean
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Vminpu
+      Vminpu:
+        description: >-
+          Default = 0
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) Vmaxpu
+      Vmaxpu:
+        description: >-
+          Default = 1
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) kVA
+      kVA:
+        description: >-
+          kVA rating of electrical machine
+        range: float
+        required: false
+        annotations:
+          order: 16
+
+      # (17) MVA
+      MVA:
+        description: >-
+          MVA rating of electrical machine
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) UserModel
+      UserModel:
+        description: >-
+          Name of DLL containing user-written model, which computes the terminal currents for Dynamics studies, overriding the default model
+        range: float
+        required: false
+        annotations:
+          order: 18
+
+      # (19) UserData
+      UserData:
+        description: >-
+          String (in quotes or parentheses) that gets passed to user-written model for defining the data required for that model
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) DutyStart
+      DutyStart:
+        description: >-
+          Starting time offset [hours] into the duty cycle shape for this WindGen, defaults to 0
+        range: string
+        required: false
+        annotations:
+          order: 20
+
+      # (21) DynamicEq
+      DynamicEq:
+        description: >-
+          The name of the dynamic equation (DinamicExp) that will be used for defining the dynamic behavior of the generator
+        range: string
+        required: false
+        annotations:
+          order: 21
+
+      # (22) DynOut
+      DynOut:
+        description: >-
+          The name of the variables within the Dynamic equation that will be used to govern the generator dynamics
+        range: float
+        required: false
+        annotations:
+          order: 22
+
+      # (23) Rthev
+      Rthev:
+        description: >-
+          per unit Thevenin equivalent R
+        range: string
+        required: false
+        annotations:
+          order: 23
+
+      # (24) Xthev
+      Xthev:
+        description: >-
+          per unit Thevenin equivalent X
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) Vss
+      Vss:
+        description: >-
+          Steady state voltage magnitude
+        range: float
+        required: false
+        annotations:
+          order: 25
+
+      # (26) Pss
+      Pss:
+        description: >-
+          Steady state output real power
+        range: float
+        required: false
+        annotations:
+          order: 26
+
+      # (27) Qss
+      Qss:
+        description: >-
+          Steady state output reactive power
+        range: float
+        required: false
+        annotations:
+          order: 27
+
+      # (28) vwind
+      vwind:
+        description: >-
+          Wind speed in m/s
+        range: string
+        required: false
+        annotations:
+          order: 28
+
+      # (29) QMode
+      QMode:
+        description: >-
+          Q control mode (0:Q, 1:PF, 2:VV)
+        range: string
+        required: false
+        annotations:
+          order: 29
+
+      # (30) SimMechFlg
+      SimMechFlg:
+        description: >-
+          1 to simulate mechanical system
+        range: float
+        required: false
+        annotations:
+          order: 30
+
+      # (31) APCFlg
+      APCFlg:
+        description: >-
+          1 to enable active power control
+        range: float
+        required: false
+        annotations:
+          order: 31
+
+      # (32) QFlg
+      QFlg:
+        description: >-
+          1 to enable reactive power and voltage control
+        range: float
+        required: false
+        annotations:
+          order: 32
+
+      # (33) delt0
+      delt0:
+        description: >-
+          User defined internal simulation step
+        range: string
+        required: false
+        annotations:
+          order: 33
+
+      # (34) N_WTG
+      N_WTG:
+        description: >-
+          Number of WTG in aggregation
+        range: integer
+        required: false
+        annotations:
+          order: 34
+
+      # (35) VV_Curve
+      VV_Curve:
+        description: >-
+          Name of the XY curve defining the control curve for implementing Vol-var control with this inverter
+        range: string
+        required: false
+        annotations:
+          order: 35
+
+      # (36) Ag
+      Ag:
+        description: >-
+          Gearbox ratio (Default 1/90)
+        range: string
+        required: false
+        annotations:
+          order: 36
+
+      # (37) Cp
+      Cp:
+        description: >-
+          Turbine performance coefficient (deafult 0
+        range: string
+        required: false
+        annotations:
+          order: 37
+
+      # (38) Lamda
+      Lamda:
+        description: >-
+          Tip speed ratio (Default 7
+        range: string
+        required: false
+        annotations:
+          order: 38
+
+      # (39) P
+      P:
+        description: >-
+          Number of pole pairs of the induction generator (Default 2)
+        range: integer
+        required: false
+        annotations:
+          order: 39
+
+      # (40) pd
+      pd:
+        description: >-
+          Air density in kg/m3 (Default 1
+        range: string
+        required: false
+        annotations:
+          order: 40
+
+      # (41) PLoss
+      PLoss:
+        description: >-
+          Name of the XYCurve object describing the active power losses in pct versus the wind speed
+        range: float
+        required: false
+        annotations:
+          order: 41
+
+      # (42) Rad
+      Rad:
+        description: >-
+          Rotor radius in meters (Default 40)
+        range: string
+        required: false
+        annotations:
+          order: 42
+
+      # (43) VCutIn
+      VCutIn:
+        description: >-
+          Cut-in speed for the wind generator (m/s - default 5)
+        range: string
+        required: false
+        annotations:
+          order: 43
+
+      # (44) VCutOut
+      VCutOut:
+        description: >-
+          Cut-out speed for the wind generator (m/s - default 23)
+        range: string
+        required: false
+        annotations:
+          order: 44
+
+      # (45) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic voltage or current spectrum for this WindGen
+        range: float
+        required: false
+        annotations:
+          order: 45
+
+      # (46) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 46
+
+      # (47) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 47
+
+      # (48) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 48

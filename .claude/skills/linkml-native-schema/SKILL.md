@@ -41,8 +41,13 @@ module's own directory), so keep the generated `.py` beside its YAML.
 4. **Physical quantities declare their unit** with LinkML's structured slot: `unit: {ucum_code: "kV"}`. The mapper's
    `Field` target writes the same unit in the `.cimtbl` header (spelled for pint: schema `Ohm/mile`, header
    `ohm/mile`). Never convert in the schema or reader.
-5. **Defaults match the native format** (`ifabsent: float(1.0)`, `int(1)`, `string("")`, `"true"`), so
-   write → read restores them. Note where a default comes from.
+5. **Defaults match the native format, and where they live depends on the format.** Note where each default
+   comes from.
+   - **Positional formats** (RAW, MATPOWER: every field is written): `ifabsent` (`float(1.0)`, `int(1)`,
+     `string("")`, `"true"`), so write → read restores them.
+   - **Keyword formats** (DSS, GLM: an unset property is left out): a `<fmt>_default` annotation
+     (`dss_default: float(1.0)`), never `ifabsent`. `ifabsent` makes the reader fill every slot, and the writer then
+     writes them all back. The mapper fills an unset slot from the annotation and lists it as `# defaulted`.
 6. **Python-friendly field names**, with the native spelling in `native_name` (`dss_name` / `raw_name` are also
    read) when they differ: `voltage_magnitude` with `native_name: "VM"`.
 7. **`annotations` is for serialization only.** CIM information goes in `exact_mappings` / `close_mappings` /
@@ -123,6 +128,6 @@ kvar:
 - [ ] One class file per record type, imported from `main.yaml`.
 - [ ] Each class has one `identifier: true` field and a class-level CIM mapping or comment.
 - [ ] Every serialized field has `order`, `value_type`, `separator`; the last has `separator: ""`.
-- [ ] Physical quantities have `unit: {ucum_code: ...}`; optional fields have native `ifabsent` defaults.
+- [ ] Physical quantities have `unit: {ucum_code: ...}`; optional fields carry their native default (rule 5).
 - [ ] Mapping slots name cim18v17 classes and attributes; every mapped field has a `comment`.
 - [ ] `gen-python` regenerated; reader/writer round trip and the mapper's `check_fields` test pass.

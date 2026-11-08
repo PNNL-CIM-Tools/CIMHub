@@ -63,7 +63,11 @@ Rules:
   Resolve native-only conveniences (DSS `like=`, redirects, continuation lines) here, in the reader.
 - **Fail fast with location.** Raise a format-specific parse error with file, line number and the line text. No
   `print` warnings, and never skip a line you can't parse.
-- **Missing optional fields** are left unset so the schema's `ifabsent` default applies. Don't invent values.
+- **Missing optional fields** are left unset. Positional formats get the schema's `ifabsent` default; keyword
+  formats (DSS, GLM) stay unset and the mapper fills them from the `<fmt>_default` annotation
+  (`linkml-native-schema` rule 5). Don't invent values, and never clamp or replace a value the file gave.
+- **Apply commands in file order** where the format has them (DSS `New`/`Edit`/`like=`/`BatchEdit`), with the
+  format's own semantics; an edit of an object not yet defined raises.
 
 ## Writer rules
 

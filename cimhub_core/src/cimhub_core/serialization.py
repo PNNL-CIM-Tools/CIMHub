@@ -9,7 +9,6 @@ and cache the annotation metadata.
 """
 from __future__ import annotations
 
-import re
 import sys
 from collections import defaultdict
 from dataclasses import fields, is_dataclass

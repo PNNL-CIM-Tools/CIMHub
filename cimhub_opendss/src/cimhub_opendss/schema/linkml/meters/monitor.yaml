@@ -1,0 +1,120 @@
+id: https://gridappsd.github.io/dss-graph/meters/monitor
+name: monitor
+title: OpenDSS Monitor Component Schema
+description: >-
+  LinkML schema for OpenDSS Monitor objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-10).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Monitor:
+    description: >-
+      A Monitor object in OpenDSS.
+    class_uri: dss:Monitor
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) element
+      element:
+        description: >-
+          Name (Full Object name) of element to which the monitor is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) terminal
+      terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the monitor is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) mode
+      mode:
+        description: >-
+          Bitmask integer designating the values the monitor is to capture: 0 = Voltages and currents at designated terminal1 = Powers at designated terminal2 = Tap Position (Transformer Device only)3 = ...
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) action
+      action:
+        description: >-
+          {Clear | Save | Take | Process}(C)lears or (S)aves current buffer
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) residual
+      residual:
+        description: >-
+          {Yes/True | No/False} Default = No
+        range: boolean
+        required: false
+        annotations:
+          order: 5
+
+      # (6) VIPolar
+      VIPolar:
+        description: >-
+          {Yes/True | No/False} Default = YES
+        range: boolean
+        required: false
+        annotations:
+          order: 6
+
+      # (7) PPolar
+      PPolar:
+        description: >-
+          {Yes/True | No/False} Default = YES
+        range: boolean
+        required: false
+        annotations:
+          order: 7
+
+      # (8) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 9
+
+      # (10) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 10

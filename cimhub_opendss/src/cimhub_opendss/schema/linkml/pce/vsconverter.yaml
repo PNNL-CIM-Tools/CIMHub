@@ -1,0 +1,237 @@
+id: https://gridappsd.github.io/dss-graph/pce/vsconverter
+name: vsconverter
+title: OpenDSS Vsconverter Component Schema
+description: >-
+  LinkML schema for OpenDSS Vsconverter objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-23).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Vsconverter:
+    description: >-
+      A Vsconverter object in OpenDSS.
+    class_uri: dss:Vsconverter
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of AC plus DC conductors
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Bus1
+      Bus1:
+        description: >-
+          Name of converter bus, containing both AC and DC conductors
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) kVac
+      kVac:
+        description: >-
+          Nominal AC line-neutral voltage in kV
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kVdc
+      kVdc:
+        description: >-
+          Nominal DC voltage in kV
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kW
+      kW:
+        description: >-
+          Nominal converter power in kW
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) Ndc
+      Ndc:
+        description: >-
+          Number of DC conductors
+        range: integer
+        required: false
+        annotations:
+          order: 6
+
+      # (7) Rac
+      Rac:
+        description: >-
+          AC resistance (ohms) for the converter transformer, plus any series reactors
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Xac
+      Xac:
+        description: >-
+          AC reactance (ohms) for the converter transformer, plus any series reactors
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) m0
+      m0:
+        description: >-
+          Fixed or initial value of the modulation index
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) d0
+      d0:
+        description: >-
+          Fixed or initial value of the power angle in degrees
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Mmin
+      Mmin:
+        description: >-
+          Minimum value of modulation index
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) Mmax
+      Mmax:
+        description: >-
+          Maximum value of modulation index
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Iacmax
+      Iacmax:
+        description: >-
+          Maximum value of AC line current, per-unit of nominal
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Idcmax
+      Idcmax:
+        description: >-
+          Maximum value of DC current, per-unit of nominal
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) Vacref
+      Vacref:
+        description: >-
+          Reference AC line-to-neutral voltage, RMS Volts
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) Pacref
+      Pacref:
+        description: >-
+          Reference total AC real power, Watts
+        range: float
+        required: false
+        annotations:
+          order: 16
+
+      # (17) Qacref
+      Qacref:
+        description: >-
+          Reference total AC reactive power, Vars
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Vdcref
+      Vdcref:
+        description: >-
+          Reference DC voltage, Volts
+        range: float
+        required: false
+        annotations:
+          order: 18
+
+      # (19) VscMode
+      VscMode:
+        description: >-
+          Control Mode (Fixed|PacVac|PacQac|VdcVac|VdcQac)
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic spectrum for this device
+        range: string
+        required: false
+        annotations:
+          order: 20
+
+      # (21) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 21
+
+      # (22) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+
+      # (23) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 23

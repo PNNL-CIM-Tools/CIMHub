@@ -1,0 +1,95 @@
+id: https://gridappsd.github.io/dss-graph/general/growthshape
+name: growthshape
+title: OpenDSS Growthshape Component Schema
+description: >-
+  LinkML schema for OpenDSS Growthshape objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-7).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Growthshape:
+    description: >-
+      A Growthshape object in OpenDSS.
+    class_uri: dss:Growthshape
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) npts
+      npts:
+        description: >-
+          Number of points to expect in subsequent vector
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) year
+      year:
+        description: >-
+          Array of year values, or a text file spec, corresponding to the multipliers
+        range: integer
+        multivalued: true
+        required: false
+        annotations:
+          order: 2
+
+      # (3) mult
+      mult:
+        description: >-
+          Array of growth multiplier values, or a text file spec, corresponding to the year values
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+
+      # (4) csvfile
+      csvfile:
+        description: >-
+          Switch input of growth curve data to a csv file containing (year, mult) points, one per line
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) sngfile
+      sngfile:
+        description: >-
+          Switch input of growth curve data to a binary file of singles containing (year, mult) points, packed one after another
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) dblfile
+      dblfile:
+        description: >-
+          Switch input of growth curve data to a binary file of doubles containing (year, mult) points, packed one after another
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 7

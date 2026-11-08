@@ -5,6 +5,7 @@ description = "CIMHub: CIM converters built on .cimtbl (development workspace)"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "cimhub-core",
+    "cimhub-opendss",
 ]
 
 [dependency-groups]
@@ -13,6 +14,7 @@ dev = [
     "pytest-cov",
     "pydantic",
     "ruff~=0.14.0",
+    "opendssdirect.py~=0.9.4",   # the engine is a test oracle only
 ]
 
 [tool.uv]
@@ -22,10 +24,12 @@ package = false
 # Add each spoke here when its wave starts (cleared packages only; see the split-readiness skill).
 members = [
     "cimhub_core",
+    "cimhub_opendss",
 ]
 
 [tool.uv.sources]
 cimhub-core = { workspace = true }
+cimhub-opendss = { workspace = true }
 # Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }

@@ -19,7 +19,6 @@ Usage::
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from textwrap import dedent
 
@@ -327,22 +326,22 @@ def _create_converter_stub(
 
     lines = [
         f'"""Convert CIM {class_name} to {fmt.upper()} format.',
-        f"",
+        "",
         f"CIM class:    cim.{class_name}",
         f"Schema class: {fmt}.{class_name}  (define in schema/classes/)",
-        f'"""',
-        f"from __future__ import annotations",
-        f"",
+        '"""',
+        "from __future__ import annotations",
+        "",
         _CIM_IMPORT,
         f"from {pkg}.{direction}.registry import {reg_name}",
-        f"",
+        "",
         f"# import {pkg}.schema.{fmt} as {fmt}  # uncomment after gen-python",
-        f"",
-        f"",
+        "",
+        "",
         f"@{reg_name}.register(cim.{class_name})",
         f"def {func_name}(cim_obj: cim.{class_name}, network):",
         f'    raise NotImplementedError("TODO: implement {class_name} conversion")',
-        f"",
+        "",
     ]
     _write(path, "\n".join(lines))
 
@@ -418,54 +417,54 @@ def _create_exporter_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str, reg_n
     writer_cls = f"{cls_base}Writer"
     lines = [
         f'"""CIM to {fmt.upper()} export orchestrator.',
-        f"",
-        f"Implements the unified converter API — see",
-        f"the reader-writer skill.",
-        f'"""',
-        f"from __future__ import annotations",
-        f"",
+        "",
+        "Implements the unified converter API — see",
+        "the reader-writer skill.",
+        '"""',
+        "from __future__ import annotations",
+        "",
         _CIM_IMPORT,
-        f"",
-        f"from cimhub_core import FormatExporter, GraphModel",
-        f"",
+        "",
+        "from cimhub_core import FormatExporter, GraphModel",
+        "",
         f"from {pkg}.{direction}.registry import {reg_name}",
         f"from {pkg}.{direction}.{fmt}_writer import {writer_cls}",
-        f"",
-        f"# Trigger @register() decorators",
+        "",
+        "# Trigger @register() decorators",
         *reg_lines,
-        f"",
+        "",
         f"__all__ = [\"cim_to_{fmt}\", \"{exporter_cls}\"]",
-        f"",
-        f"EXPORT_ORDER: list[type] = [",
-        f"    # TODO: populate with CIM classes in dependency order",
-        f"    # cim.Substation,",
-        f"    # cim.ConnectivityNode,",
-        f"    # cim.ACLineSegment,",
-        f"    # cim.EnergyConsumer,",
-        f"]",
-        f"",
-        f"",
+        "",
+        "EXPORT_ORDER: list[type] = [",
+        "    # TODO: populate with CIM classes in dependency order",
+        "    # cim.Substation,",
+        "    # cim.ConnectivityNode,",
+        "    # cim.ACLineSegment,",
+        "    # cim.EnergyConsumer,",
+        "]",
+        "",
+        "",
         f"class {exporter_cls}(FormatExporter):",
         f'    """CIM → {fmt.upper()} exporter (see CONVERTER_API.md)."""',
-        f"",
-        f"    def to_model(self, network, **opts) -> GraphModel:",
-        f"        model = GraphModel()",
-        f"",
-        f"        for cim_class in EXPORT_ORDER:",
+        "",
+        "    def to_model(self, network, **opts) -> GraphModel:",
+        "        model = GraphModel()",
+        "",
+        "        for cim_class in EXPORT_ORDER:",
         f"            converter = {reg_name}.get(cim_class)",
-        f"            for obj in network.list_by_class(cim_class):",
-        f"                result = converter(obj, network)",
-        f"                if result is not None:",
-        f"                    model.add_to_graph(result)",
-        f"",
-        f"        return model",
-        f"",
-        f"",
+        "            for obj in network.list_by_class(cim_class):",
+        "                result = converter(obj, network)",
+        "                if result is not None:",
+        "                    model.add_to_graph(result)",
+        "",
+        "        return model",
+        "",
+        "",
         f"def cim_to_{fmt}(network, output_dir, **opts) -> None:",
-        f'    """Convenience wrapper — build the native model and write it."""',
+        '    """Convenience wrapper — build the native model and write it."""',
         f"    model = {exporter_cls}().to_model(network, **opts)",
         f"    {writer_cls}().write(model, output_dir)",
-        f"",
+        "",
     ]
 
     _write(conv_dir / f"cim_to_{fmt}.py", "\n".join(lines))
@@ -526,7 +525,6 @@ def _create_cimtbl_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str) -> None
 # -----------------------------------------------------------------------
 
 def _create_service_stub(path: Path, fmt: str, direction: str) -> None:
-    pkg = f"cimhub_{fmt}"
     cls_name = f"{_to_pascal_case(fmt)}Service"
 
     _write(path, dedent(f"""\

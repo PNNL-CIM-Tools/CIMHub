@@ -1,0 +1,249 @@
+# OpenDSS rewrite on `.cimtbl`: wave 1 plan
+
+**Status:** moved from CIMHub_2_0 on 2026-11-07 and updated with the user's decisions of that day (§6). In
+CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
+(`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
+Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
+**S0 done 2026-11-07** (§4); its master section of the mapping spec awaits approval.
+**Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
+shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
+**Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
+
+The wave ends with `dss_to_cim` building cim18v17 only from the `.cimtbl` artifacts and `cim_to_dss` reading
+cim18v17, with the old importer (`importer/<class>/`, 9,300 lines), its cimhub_2026 imports and the Python atoms
+deleted.
+
+## 1. What the decks contain
+
+Census of 12 decks (IEEE13_CDPSM, IEEE13_assets, IEEE13_original, IEEE37, IEEE123, IEEE8500, ieee9500, EPRI J1/K1/M1,
+IEEE13_OCHRE, ACEP_PSIL) through today's `DssReader`, 2026-11-06 (throwaway scripts; S0's deck sweep test
+replaces them).
+
+| class | objects | decks | mapped by | notes |
+|---|---:|---:|---|---|
+| Buscoords | 14,465 | 11 | S5 | the largest table; G7 matters here |
+| Line | 14,184 | 14 | S3 | 2,850 linecode ft · 2,626 geometry · 2,473 linecode km · 1,995 linecode, **no units** · 1,866 linecode m · 1,500 linecode kft · 600 inline r1/x1 (159 of them switches) · 112 bare switches · 1 inline matrix · 1 spacing+wires |
+| Load | 7,206 | 14 | S4 | q from `pf` on 4,053, from `kvar` on 3,004; model 1 (3,824), 4 (2,862), 2 (28), 5 (19) |
+| Transformer | 3,945 | 14 | S3 | of the 3,853 in the 12 census decks: 2,474 by XfmrCode (2,468 single-phase 3-winding center tap) · 1,304 inline single-phase (1,278 in J1) · 28 inline in a `bank` (regulators) · 47 inline 3-phase, 10 of them with `phases` unset (default 3) |
+| LineCode | 290 | 13 | done (Phase 1) | open points DSS-3, DSS-4 |
+| PVSystem | 208 | 5 | S4 | |
+| WireData | 121 | 3 | S2 | |
+| LineGeometry | 82 | 4 | S2 | some reference a LineSpacing (`spacing=`), some CN/TS cables |
+| RegControl | 69 | 12 | S3 | |
+| Monitor | 52 | 3 | not mapped | DSS-11 |
+| Capacitor | 45 | 11 | S4 | |
+| XfmrCode | 32 | 6 | S2 | |
+| CapControl | 28 | 6 | S4 | all monitor a Line terminal, so R11 (own-terminal control) does not block DSS |
+| LoadShape | 16 | 4 | not mapped | DSS-11 |
+| Vsource | 14 | 14 | S1 | `New Circuit` is read as Vsource `source` |
+| Generator | 13 | 2 | S4 | needs a synchronous machine shape (not catalogued) |
+| Storage | 6 | 3 | S4 | |
+| EnergyMeter | 6 | 6 | not mapped | DSS-11 |
+| CNData, TSData | 3, 1 | 3, 1 | S2 | |
+| LineSpacing | 3 | 1 | S2 | |
+| Reactor | 3 | 3 | S4 | series (bus1 + bus2) or shunt; needs a shape |
+| Fuse, Recloser | 32, 53 | 1 (ieee9500 `Switches.dss`; IEEE13_CDPSM has one of each) | S3 (DSS-9) | recounted through the S0 reader (the old census saw 1 each). Every one switches a `_sw` line with `switch=True`, which also has a `SwtControl` (112) |
+| Relay | 0 | 0 | not mapped | DSS-11 |
+| AutoTrans | 0 | 0 | S3 (DSS-11) | `AutoTransformer` + `AutoTransformerEnd`; the old `autotrans.py` has no deck, so an atom is the only test |
+
+## 2. Artifacts and their order
+
+One file per native class (D4). The master imports them in this order, which is the reference order (G6):
+
+| # | artifact | native class | shape | references |
+|---|---|---|---|---|
+| 0 | `<model>.cimtbl` (master) | Circuit / Vsource `source`, `Set voltagebases` | `common` (Substation, Feeder, BaseVoltage) | |
+| 0b | `zip_fractions.cimtbl` | none (fixed content, always written) | `common` (LoadResponseCharacteristic `zip_constant_pq`, `_z`, `_i`; DSS-7) | |
+| 1 | `wiredata.cimtbl`, `cndata.cimtbl`, `tsdata.cimtbl` | WireData, CNData, TSData | `wire_info` | |
+| 2 | `linespacing.cimtbl` | LineSpacing | `line_by_wire_configuration` (XYSpacing) | |
+| 3 | `linegeometry.cimtbl` | LineGeometry | `line_by_wire_configuration` (XYSpacing + WireConfiguration) | 1, 2 |
+| 4 | `linecode.cimtbl` | LineCode | `line_by_impedance` (catalog) | |
+| 5 | `xfmrcode.cimtbl` | XfmrCode | `transformer_template`, `transformer_template_1ph` | |
+| 6 | `vsource.cimtbl` | Vsource | `source` | 0 |
+| 7 | `line.cimtbl` | Line (incl. `Switch=y`; the Fuse/Recloser that switches it sets the class, DSS-9) | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates under `# synthesized` | 0, 3, 4 |
+| 8 | `transformer.cimtbl` | Transformer (one a RegControl names → `VoltageRegulator`, DSS-13) | `transformer_by_template`, `transformer_by_ends`, new: `voltage_regulator`; synthesized tank configurations (DSS-2) | 0, 5 |
+| 8b | `autotrans.cimtbl` | AutoTrans | new: `auto_transformer` (DSS-11) | 0 |
+| 9 | `regcontrol.cimtbl` | RegControl | `regulator` (RatioTapChanger on an AutoTransformerEnd + TapChangerControl) | 8 |
+| 10 | `load.cimtbl` | Load | `load`; `exp_` LoadResponseCharacteristic rows (DSS-7) | 0, 0b |
+| 11 | `capcontrol.cimtbl` | CapControl | `shunt` (RegulatingControl) | 7 |
+| 12 | `capacitor.cimtbl` | Capacitor | `shunt` (compensator) | 0, 11 |
+| 13 | `pvsystem.cimtbl`, `storage.cimtbl` | PVSystem, Storage | `der` | 0 |
+| 14 | `generator.cimtbl` | Generator | new: synchronous machine | 0 |
+| 15 | `reactor.cimtbl` | Reactor | new: series reactor / shunt reactor | 0 |
+| 16 | `buscoords.cimtbl` | Buscoords | new: Location + PositionPoint | every equipment file |
+
+CapControl comes before Capacitor. In the `shunt` shape the compensator names its control
+(`RegulatingControl` column), and the control names the monitored Terminal, which here is always a line's
+(`ln_<line>_T<n>`). The orchestrator's `MAPPING_ORDER` holds this order, and a test loads the reference model
+through it.
+
+## 3. Native passes the mappers share
+
+These run on the reader's objects, before any mapper, and produce plain Python data. They construct no CIM (I5).
+
+### 3.1 Bus voltages (DSS-1)
+
+Every equipment row needs a `BaseVoltage`, but a DSS Line, switch or reactor has no voltage of its own. OpenDSS
+assigns one with `CalcVoltageBases`: it solves a no-load power flow and then snaps each bus's kV to the nearest value
+in `Set voltagebases`. ExportCIMXML (the EPRI reference exporter, `importer/ExportCIMXML.pas`) reads that solved
+`kVBase`. The old importer instead walks the CIM topology afterwards (`propagate_base_voltages`), which is ruled out
+because it changes CIM after the bind (I1).
+
+Decided (DSS-1, amended 2026-11-07): the format-agnostic `cimtopology.core` (CIM-Graph-Topology-Processor)
+replaces the old `cimhub_core.topology`. Each spoke builds a `cimtopology.core.Network` from its native objects; the
+DSS one is `importer/cimtbl/bus_graph.py`, rewritten on `Network` in F2:
+- **Sources:** every `Vsource` (`New Circuit` too). Unset slots take the DSS defaults: `bus1=sourcebus`, `basekv=115`.
+- **Branches:** every `Line` (open switches too) and every series `Reactor` or `Capacitor` (`bus2` on another bus).
+- **Transformers (coils):** every `Transformer` and `AutoTrans` winding, with `phases`/`windings`/`kVs`/`conns`
+  from the instance, else its `XfmrCode`. A coil is polyphase (kV phase-to-phase), phase-to-neutral,
+  phase-to-phase, or a split-phase half.
+
+`walk` gives every bus a `BusSystem(kv, system)`, where the system is 3-phase, single-phase or split-phase.
+`base_voltage` (the mRID) and `three_phase` are derived from these. Islands are buses joined by ties. An island's
+system is decided once, from every coil that lands on it:
+1. A polyphase coil, or the single-phase coils of two or more transformers on different conductors (a bank, a
+   regulator bank, an open-delta pair) make it 3-phase.
+2. Otherwise a split-phase half makes it split-phase.
+3. Otherwise a single-phase transformer with equal coil kV (a regulator) keeps the system it came from.
+4. Otherwise (a service or a step-down) it is single-phase.
+
+An island's voltage:
+- **A source island** takes the source `basekv`.
+- **Any other island** takes the most common rounded value its coils give, each coil in its own kV, never by ratio.
+  This is why J1's 13.09 kV substation secondary under 1,278 service primaries of 7.2 kV is 12.47.
+- **Tolerance:** every coil must be within 10 % of the island (a nameplate off the system voltage is normal:
+  K1's 66 kV winding on a 69 kV source). Every coil must also be able to sit on the island's system. Otherwise the
+  walk raises.
+
+There is no snapping to `voltagebases`. `nominal_kv` rounds a computed value (2 decimals in kV at 1 kV and above,
+whole volts below), so the rounding noise of 12.4708 against 12.47 gives one BaseVoltage, while a real mismatch
+(0.24 against 0.208) stays two.
+
+The engine is the test oracle (`opendssdirect`, tests only; `tests/test_topology_walk.py`), compared bus by bus.
+`CalcVoltageBases` snaps each bus to the nearest of the deck's `voltagebases`. So the engine must agree wherever the
+walk's voltage is one of those bases; where it is not, the engine squashes the bus, and the test lists it. The atom
+deck shows this: its 240 V 2-wire service is listed as squashed against bases of 0.208 and 0.48.
+
+Every bus of 11 decks agrees with the engine: IEEE13_CDPSM, IEEE13_assets, IEEE13_original, IEEE13_OCHRE,
+IEEE123, IEEE37, 4bus-OYOD, ACEP_PSIL, and with `--roundtrip` J1, IEEE8500 and ieee9500_2025. None of them squashes
+a bus. J1 lists 0.416 in `voltagebases`, so its 240 V services happen to agree. K1 and M1 walk, but the engine
+cannot compile them on Linux (their `Redirect` file-name case is wrong). The old ieee9500 copy does not compile on
+the current engine (`PVSystem` model 7).
+
+### 3.2 Bus, node and phases
+
+`bus1=650.1.2.3` gives `node` = `650` (lowercased) and `phases` from the conductor numbers (1→A, 2→B, 3→C; `.0` is
+ground, `.4` a neutral). Center-tap secondaries (`s1`, `s2`, `s12`, DSS-5) come from the walk: a bus whose
+system is `SPLIT_PHASE` reads nodes 1 and 2 as s1 and s2. ExportCIMXML uses `kVBase < 0.25` instead, which would
+misread 208/120 V three-phase secondaries.
+
+### 3.3 DSS defaults (DSS-6)
+
+A slot the deck does not set has the DSS default, e.g. `Transformer.windings` = 2 and `phases` = 3. The reader
+leaves these as `None`. A verbatim artifact cannot leave them out, because the CIM would then be incomplete. Decided:
+- The default lives in the LinkML schema as a `dss_default` annotation, never as `ifabsent`. `ifabsent` makes the
+  reader fill every slot, and the writer then writes them all back (why they were removed in March 2026).
+- A mapper fills a slot from `dss_default` only when the slot is unset.
+- It lists the filled slots in the row comment (`# defaulted: windings=2, XHL=7`), like D5's untranscribed record.
+
+This needs one core helper next to `untranscribed_values`, reading the annotation through the schema view. Each
+slice first fills the missing `dss_default` annotations for its classes: from the description text, then from the
+EPRI property pages (`opendss.epri.com/PropertiesNN.html`).
+
+### 3.4 Reader fixes (S0, done 2026-11-07)
+
+The reader is the spoke's own code. It now applies the commands in deck order, as DSS does, and raises
+`DssParseError` with file and line instead of logging and skipping:
+
+| was | now |
+|---|---|
+| a command that fails to parse is logged and skipped | raises |
+| a duplicate `New` is stored as `<name>_<n>` | applied as an edit, as DSS does; one warning per object |
+| an `Edit` on an unknown object, or an unknown `like=`, is a warning | raises; `like=` copies from an object defined earlier |
+| `Set` commands are dropped | `voltagebases`, `defaultbasefreq`, `earthmodel` kept on one `Options` object (new schema class); solution settings ignored |
+| an unknown DSS class or property is skipped | raises. Abbreviations resolve to the first property, in DSS order, that starts with the text (`Vmin` = `Vminpu`, `GMR` = `GMRac`, `ppm` = `ppm_antifloat`), as DSS does |
+| a value that fails to convert, or an unknown enum value, is dropped with a warning | raises |
+| a sanitizer clamped out-of-range values to the `dss_default` (`nphases=4` → 3, `pf=1.5` → 0.88) | removed: values are kept as written |
+| a missing `Redirect` target or `BusCoords` file is a warning | raises |
+| `BatchEdit Class..<regex>` was misread as an edit | applied to every matching object; matching none raises |
+| `vreg=(122)`, `npts='1,'`, `mult=(file=shape.csv)` failed | RPN of one number; a trailing comma is a delimiter; `file=` arrays read from the deck directory |
+| ~~blanks around `=`, numeric bus names as floats, quoted arrays~~ | done in CIMHub_2_0 |
+
+Schema fixes found by the strict reader (all 31 local decks now read): `Relay.type`, `RegControl.bus` → string;
+`LineCode.faultrate` → float; nine `{Yes/True | No/False}` slots → boolean; `LoadShape.action` → string; 55
+array slots (`LoadShape.mult`/`qmult`/`hour`, `EnergyMeter.peakcurrent`/`option`, `Vsource.Z1`, ...) marked
+`multivalued`. `opendss_schema.py` is regenerated with `gen-python` 1.10.
+
+## 4. Slices
+
+Each slice delivers its mapper(s), atoms with goldens (`tests/atoms/<class>/`), the classification table in
+`CIMTBL_MAPPING.md` (generated with `fields_table(..., fields=FIELDS)`), and an extended deck sweep (§5).
+`scaffold_mapper` writes the stubs. The spec section of a slice is approved before its code (DSS-12).
+
+| slice | content | exit |
+|---|---|---|
+| S0 | reader fixes (§3.4); `importer/topology.py` (`dss_network` on `cimtopology.core`), bus/phase parsing, `dss_defaults` + core `fill_defaults`; orchestrator `dss_to_cimtbl.py` with `MAPPING_ORDER`, master document, `DssImporter(CimtblImporter)` | **done 2026-11-07:** the IEEE13_CDPSM master + `linecode.cimtbl` bind; bus kV equal to the engine's on every engine deck (5 vendored, 5 external), K1 and M1 walk |
+| S1 | Vsource (`source`); master `common` rows (Substation, Feeder, BaseVoltage from `voltagebases`) | IEEE13_CDPSM source binds |
+| S2 | catalogs: WireData, CNData, TSData, LineSpacing, LineGeometry, XfmrCode (3-phase and center tap); LineCode open points (DSS-3, DSS-4) | every catalog in the sweep decks maps and binds |
+| S3 | network: Line (impedance, geometry, switch, synthesized templates), Transformer, RegControl | IEEE13_CDPSM, IEEE123 and IEEE8500 bind with all lines, transformers and regulators |
+| S4 | injections: Load, Capacitor + CapControl, PVSystem, Storage, Generator, Reactor; the two new shapes (machine, reactor) added to the catalog first | full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
+| S5 | Buscoords (Location shape added to the catalog first); deck sweep to green or listed stops; G7 numbers on ieee9500 | sweep table in `CIMTBL_MAPPING.md` |
+| S6 | exporter `cim_to_dss` ported to cim18v17 on the core getters (master plan §4 Phase 5 step 3, exporter assessment E0-E6), tested from the `.cimtbl` atoms | tier 2 per class; roundtrip and power flow parity (§5) |
+| S7 | delete the old importer, the Python atoms and every cimhub_2026 import in the spoke; update conformance tests and `README` | the spoke imports cim18v17 only |
+
+S0-S5 are the importer and S6 the exporter. The importer and the exporter must flip together (master plan §4 Phase
+5), so `dss_to_cim` keeps calling the old importer until S6 passes. Then S7 switches both and deletes the old code
+in one change.
+
+## 5. Tests
+
+- **Tier 1/1b per class:** a native atom gives the golden, and the golden plus prereqs binds (the `test_cimtbl_linecode.py`
+  pattern).
+- **Completeness:** `check_fields(FIELDS, NATIVE_CLASS)` per mapper.
+- **Decks:** small public decks are vendored in `cimhub_opendss/tests/decks/` (origins in its README); the large ones
+  (J1, IEEE8500, IEEE9500, ...) run when `CIMHUB_DSS_DECKS` points at a directory with the same layout.
+- **Deck sweep** (`tests/test_cimtbl_sweep.py`, marked slow): each of the 24 decks either maps and binds, or stops
+  with an error listed in the sweep table. A new stop fails the test, so the table stays true.
+- **Bus voltages vs the engine** (§3.1) on every sweep deck.
+- **Power flow parity:** run the original deck, then deck → artifacts → CIM → `cim_to_dss` → engine. Compare bus
+  voltages within 0.1 %, using the existing `tests/powerflow_harness.py`. This is the end-to-end check the per-class
+  goldens cannot give, and it replaces the old roundtrip tests in S7.
+- **Baseline today:** 11 failures in the old suite (5 `line_roundtrip`, 6 `linegeometry`). They are not fixed; S7 deletes
+  them with the code they test.
+
+## 6. Decisions
+
+Each item has a recommendation. They are needed by the slice in the last column.
+
+| # | question | recommendation | slice |
+|---|---|---|---|
+| DSS-1 | Where bus voltages come from | **Decided 2026-11-06, amended 2026-11-07:** a format-agnostic topology processor (`cimtopology.core`, CIM-Graph-Topology-Processor) walks a `Network` from the source bus, before any artifact. It does **not** snap to `voltagebases`, because CalcVoltageBases squashes mismatched bases (a 240 V service onto 208 V). Per bus it returns a `BusSystem`: the BaseVoltage, plus whether the bus's island is 3-phase. `nominalVoltage` is rounded to 2 decimals in kV at 1 kV and above and to whole volts below, so 12.4708 and 12.47 share one BaseVoltage. In CIMHub_2_0 the walk and the DSS bus graph agree with the engine on every bus of 11 decks; F2 rewrites `bus_graph.py` on `Network` and keeps the engine as the test oracle | S0 |
+| DSS-2 | Transformers | **Decided 2026-11-06 (the user's model):** every DSS Transformer that is not a regulator (DSS-13) is its own PowerTransformer (`bank` untranscribed), with one PowerTransformerEnd per bus and the phases on its terminal. 3-phase: balanced ends. 1-phase: a TransformerPhaseEnd per conductor (global `sequenceNumber`) and windings between phase ends. No TankEnd. XfmrCode becomes a template with windings lug to lug, once `TransformerLug.sequenceNumber` lands. Ratings are nameplate values (`ratedU` LL, `baseU` the coil). **Inline done:** `importer/cimtbl/transformer.py`, 24 tests, 1,365 of 1,378 inline transformers in 11 decks map | S3 (started early) |
+| DSS-3 | A LineCode without `units` | **Decided 2026-11-07.** (a) Code used by lines that have units (J1: 1,382 lines, all `kft`): the code takes the line's unit, as DSS does. Lines that disagree give one template per unit, `lc_<name>_<unit>`. (b) Code and line both unitless (M1: 1,960 lines; IEEE123_deconfliction: 118), or a unitless code no line uses (IEEE13_original: 29): a deck-level magnitude gate on the median positive r1 (or rmatrix diagonal) of the deck's unitless codes. 0.006 to 10 per unit → `km`; 1e-5 to 0.006 → `m`; anything else raises. `length_unit=` overrides the gate. Real conductors run about 0.01 to 3.5 Ω/km, so the per-m/ft and per-km/kft/mile bands don't overlap. The inferred unit goes in the header and the file says `# units inferred: km (median r1 0.134 per unit; no units on code or line)`. Because code and line share the unit, z·length is exact for any label; a wrong label (kft read as km) only scales the physical length. Census 2026-11-07: M1 median r1 0.134 (0.044 to 0.76), IEEE123 0.245 (0.055 to 0.53), so both read `km` (they are per kft by origin) | S2 |
+| DSS-3b | A LineCode with a nonzero C and no `baseFreq` | **Decided 2026-11-07:** the model's base frequency (`Set defaultbasefreq`, kept on the model by the §3.4 reader fix), else 60 Hz (the DSS default). Recorded as `# defaulted` (§3.3) | S2 |
+| DSS-4 | 1- and 2-phase sequence codes (J1, 17 codes) | **Decided 2026-11-07:** match the engine with a derived `PerLengthPhaseImpedance` + `PhaseImpedanceData` matrix (`row`, `column`, `r`, `x`, `b`). 1-phase is z = Z1 and b from C1; 2-phase is Zs = (2Z1+Z0)/3 and Zm = (Z0−Z1)/3, with the same for C. This is closed-form, not Carson; the function lives in `cimhub_core/derived/` (U4 candidate). Each is checked against the engine's line matrices (`oh_b13552`, `oh_b41869`) | S2 |
+| DSS-5 | Center-tap secondary phases | **Done locally in the transformer mapper:** windings 2 and 3 on one bus, both on node 0, with nodes 1 and 2, form `s1s2N`. Downstream, the walk marks every bus of the secondary's island `System.SPLIT_PHASE`, so line and load mappers read nodes 1 and 2 there as s1 and s2 (same rule, `transformer.is_split_phase`) | S0 |
+| DSS-6 | DSS defaults | **Decided 2026-11-07:** one source, the LinkML schema. The `ifabsent` defaults were removed in March 2026 (commit `792e8273`) because the reader filled every slot, so the roundtrip wrote them all back. What's left is a non-populating `dss_default` annotation on 93 of the 737 slots of the classes this wave maps; 111 more state their default only in the description text, and the rest have none (RegControl, Fuse, Recloser, XfmrCode, WireData: zero). Plan: (1) fill `dss_default` (annotation, never `ifabsent`) from the description text, then from the EPRI property pages (`opendss.epri.com/PropertiesNN.html`, e.g. RegControl `vreg` 120, `band` 3, `ptratio` 60), and extend `gen-dss-schema` to emit it; (2) a mapper fills an unset slot from `dss_default` and lists it in the row comment (`# defaulted: windings=2, XHL=7`). No hand-written `DEFAULTS` dicts. Each slice fills the annotations for its own classes | S0 + per slice |
+| DSS-7 | Load p, q and voltage response | **Decided 2026-11-07:** `EnergyConsumer` p (kW), q (kVAr) plus `LoadResponse`. A fixed `zip_fractions.cimtbl` is always written, with `zip_constant_pq` (1,0,0 / 1,0,0), `zip_constant_z` (0,0,1 / 0,0,1) and `zip_constant_i` (0,1,0 / 0,1,0) (`exponentModel` false). `model` 1/2/5 → pq/z/i. `kvar` is copied; `pf` gives a derived q = p·tan(acos pf) with the sign of pf; `kVA`/`xfkVA`/`allocationfactor` untranscribed until a deck needs them. Model 4 (exponential; about 2,860 loads in M1, J1, IEEE37, IEEE8500) → one `exp_<cvrwatts>_<cvrvars>` row per distinct pair in `load.cimtbl`: `exponentModel` true, `pVoltageExponent`/`qVoltageExponent` from `CVRwatts`/`CVRvars` (DSS defaults 1 and 2, §3.3). The decks hold only a few pairs: 0.8/3, 0.7/3 (M1's `CVRwatt=`, the prefix rule in §3.4), 1/2. Models 3, 6, 7, 8 are in no deck and raise. Core: `zip_fractions.cimtbl` is shared by every distribution spoke, so it belongs in `cimhub_core` (the core `common` shape lacks `zip_constant_i` today) | S4 |
+| DSS-8 | Lines with inline r1/x1 (600) or an inline matrix (1) | **Decided 2026-11-07:** a synthesized `PerLengthSequenceImpedance`/`PerLengthPhaseImpedance` `lc_<line>` in `line.cimtbl` (values stay verbatim per length), not `ACLineSegment.r/x` totals (those would be derived by length). Switch lines keep their impedance untranscribed | S3 |
+| DSS-9 | Switch class for `Switch=y` | **Decided 2026-11-07:** the line's class comes from the control object that switches it (`SwitchedObj=Line.<x>`): a Fuse → `Fuse`, a Recloser → `Recloser`, otherwise (a `SwtControl` or nothing) → `LoadBreakSwitch`. The line mapper takes an index of these controls as structural input. Fuse `ratedCurrent` → `Switch.ratedCurrent`. Recloser `phaseTrip`/`groundTrip`/`shots` and Fuse curves are untranscribed: see DSS-11. A Fuse/Recloser on a line with `switch=False` raises (none in the decks). If S3 runs long, the class split falls back to `LoadBreakSwitch` plus a TODO gap row | S3 |
+| DSS-10 | Line phases ≠ code `nphases` (census: J1 1,381, K1 743, M1 1,949) | **Deferred 2026-11-07.** This mismatch may be why J1 segfaults opendssdirect.py without explanation. Until it is understood, a mismatched line raises with the deck, line and code named, so the deck sweep lists it. Pin the engine's behaviour per case before writing a rule | after S3 |
+| DSS-11 | Classes with no mapping | **Decided 2026-11-07.** Mapped: Fuse and Recloser (DSS-9), and AutoTrans → `AutoTransformer` + `AutoTransformerEnd` (CIM18; new `auto_transformer` shape; tested with an atom, since no deck has one). Not mapped: Monitor, EnergyMeter, LoadShape, Relay. The master's comment lists their counts (`# not mapped: Monitor 52, LoadShape 16`), so nothing disappears silently. TODO (by hand, before any mapper): how `FuseCharacteristicCurve` and `RecloseSequence` express DSS fuse curves and recloser `shots`/trip settings. Both exist only in the cim18v17 `protection` sub-profile, not the main profile | S0 / S3 |
+| DSS-12 | Spec approval | **Decided 2026-11-07:** build and approve one slice at a time. One section of `CIMTBL_MAPPING.md` per slice, approved before that slice's code. Each section's classification table is generated from the mapper's `FIELDS`, so it is written together with the mapper stub | now |
+| DSS-13 | Voltage regulators and LTCs | **Decided 2026-11-07 (the user's model).** A DSS Transformer named by a RegControl is either a regulator or an LTC. Equal winding kV (a regulator): a `VoltageRegulator` (an `AutoTransformer` subclass in CIM18) whose two `~ wdg=` windings become two `AutoTransformerEnd`s. A 1-phase unit puts its phase on each end (`phase` is a `PhaseCode`). A 3-phase gang-operated unit (one DSS Transformer, `phases=3`; tap A = B = C) puts `ABCN` on both ends. Either way there is one `RatioTapChanger`, on the tap-side end. A step-down (J1 `SubXfmr` 68.8/13.09 kV, M1 `M1_XFMR` 67/12.47 kV) is an LTC: a `PowerTransformer` (DSS-2) with the `RatioTapChanger` on the controlled `PowerTransformerEnd` (`winding=`). The RegControl gives the `RatioTapChanger` + `TapChangerControl` in both cases | S3 |
+
+Master-plan decisions this wave needs: **D6** (goldens vendored in `cimhub_opendss/tests/`, recommended) by S4;
+**D7** (applied in S0 as recommended, pending approval: `Model` = the name the caller passes, `Authority` = the CIMHub repo URL unless the caller passes another); **D9** (catalog ratings: `normamps`/`emergamps`
+on a LineCode, untranscribed for now) by S2; **D10** (3-phase tank configuration convention) by S2's XfmrCode.
+
+## 7. Dependencies
+
+| owed by | item | blocks |
+|---|---|---|
+| cimtables | U2: `AutoTransformerEnd` connectivity (uncommitted CIM-Tables work, 2026-11-07) | DSS-11 AutoTrans and DSS-13 regulators in S3 |
+| cimtables | U3 (old R11): own-terminal control | nothing in DSS (all 28 CapControls monitor lines) |
+| core | `zip_fractions.cimtbl` + `zip_constant_i` in the `common` shape (DSS-7); `getters/` | S4; S6 |
+| user | `FuseCharacteristicCurve` / `RecloseSequence` mapping by hand (DSS-11 TODO) | protection settings only; Fuse/Recloser rows map without them |
+| user | D14 open-delta template | DSS open-delta banks; none were seen in the census, so they fail fast |
+
+Closed 2026-11-07 (see `UPSTREAM_REQUESTS.md`): R10 (`#` in an mRID), R12 (type-hint cache), R7 (`get_qty`).

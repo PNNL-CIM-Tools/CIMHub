@@ -1,0 +1,149 @@
+id: https://gridappsd.github.io/dss-graph/general/tshape
+name: tshape
+title: OpenDSS Tshape Component Schema
+description: >-
+  LinkML schema for OpenDSS Tshape objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-13).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Tshape:
+    description: >-
+      A Tshape object in OpenDSS.
+    class_uri: dss:Tshape
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) npts
+      npts:
+        description: >-
+          Max number of points to expect in temperature shape vectors
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) interval
+      interval:
+        description: >-
+          Time interval for fixed interval data, hrs
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) temp
+      temp:
+        description: >-
+          Array of temperature values
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+
+      # (4) hour
+      hour:
+        description: >-
+          Array of hour values
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+
+      # (5) mean
+      mean:
+        description: >-
+          Mean of the temperature curve values
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) stddev
+      stddev:
+        description: >-
+          Standard deviation of the temperatures
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) csvfile
+      csvfile:
+        description: >-
+          Switch input of  temperature curve data to a csv file containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, one per line
+        range: integer
+        required: false
+        annotations:
+          order: 7
+
+      # (8) sngfile
+      sngfile:
+        description: >-
+          Switch input of  temperature curve data to a binary file of singles containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 8
+
+      # (9) dblfile
+      dblfile:
+        description: >-
+          Switch input of  temperature curve data to a binary file of doubles containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 9
+
+      # (10) sinterval
+      sinterval:
+        description: >-
+          Specify fixed interval in SECONDS
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) minterval
+      minterval:
+        description: >-
+          Specify fixed interval in MINUTES
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) action
+      action:
+        description: >-
+          {DblSave | SngSave} After defining temperature curve data
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 13

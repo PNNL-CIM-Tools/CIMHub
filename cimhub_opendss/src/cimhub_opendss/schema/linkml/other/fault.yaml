@@ -1,0 +1,184 @@
+id: https://gridappsd.github.io/dss-graph/other/fault
+name: fault
+title: OpenDSS Fault Component Schema
+description: >-
+  LinkML schema for OpenDSS Fault objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-17).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Fault:
+    description: >-
+      A Fault object in OpenDSS.
+    class_uri: dss:Fault
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of first bus
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) bus2
+      bus2:
+        description: >-
+          Name of 2nd bus of the 2-terminal Fault object
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) phases
+      phases:
+        description: >-
+          Number of Phases
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) r
+      r:
+        description: >-
+          Resistance, each phase, ohms
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) %stddev
+      pct_stddev:
+        description: >-
+          Percent standard deviation in resistance to assume for Monte Carlo fault (MF) solution mode for GAUSSIAN distribution
+        range: float
+        required: false
+        annotations:
+          order: 5
+          dss_name: "%stddev"
+
+      # (6) Gmatrix
+      Gmatrix:
+        description: >-
+          Use this to specify a nodal conductance (G) matrix to represent some arbitrary resistance network
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) ONtime
+      ONtime:
+        description: >-
+          Time (sec) at which the fault is established for time varying simulations
+        range: string
+        required: false
+        annotations:
+          order: 7
+
+      # (8) temporary
+      temporary:
+        description: >-
+          {Yes | No} Default is No
+        range: boolean
+        required: false
+        annotations:
+          order: 8
+
+      # (9) MinAmps
+      MinAmps:
+        description: >-
+          Minimum amps that can sustain a temporary fault
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) normamps
+      normamps:
+        description: >-
+          Normal rated current
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) faultrate
+      faultrate:
+        description: >-
+          Failure rate per year
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) pctperm
+      pctperm:
+        description: >-
+          Percent of failures that become permanent
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) repair
+      repair:
+        description: >-
+          Hours to repair
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 16
+
+      # (17) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 17

@@ -1,0 +1,309 @@
+id: https://gridappsd.github.io/dss-graph/meters/fmonitor
+name: fmonitor
+title: OpenDSS Fmonitor Component Schema
+description: >-
+  LinkML schema for OpenDSS Fmonitor objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-31).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Fmonitor:
+    description: >-
+      A Fmonitor object in OpenDSS.
+    class_uri: dss:Fmonitor
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) element
+      element:
+        description: >-
+          Name (Full Object name) of element to which the monitor is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) terminal
+      terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the monitor is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) mode
+      mode:
+        description: >-
+          Bitmask integer designating the values the monitor is to capture: 0 = Voltages and currents1 = Powers2 = Tap Position (Transformers only)3 = State Variables (PCElements only)4 = Flicker level ...
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) action
+      action:
+        description: >-
+          {Clear | Save | Take | Process}(C)lears or (S)aves current buffer
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) residual
+      residual:
+        description: >-
+          {Yes/True | No/False} Default = No
+        range: boolean
+        required: false
+        annotations:
+          order: 5
+
+      # (6) VIPolar
+      VIPolar:
+        description: >-
+          {Yes/True | No/False} Default = YES
+        range: boolean
+        required: false
+        annotations:
+          order: 6
+
+      # (7) PPolar
+      PPolar:
+        description: >-
+          {Yes/True | No/False} Default = YES
+        range: boolean
+        required: false
+        annotations:
+          order: 7
+
+      # (8) P_trans_ref
+      P_trans_ref:
+        description: >-
+          P_trans_ref: P ref value for metered element(unit kW)
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) V_Sensor
+      V_Sensor:
+        description: >-
+          V_SensorEnable voltage sensor
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) P_Sensor
+      P_Sensor:
+        description: >-
+          P_SensorEnable power sensor
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Node_num
+      Node_num:
+        description: >-
+          Node_numAssign a node number within a cluster
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) Cluster_num
+      Cluster_num:
+        description: >-
+          Cluster_num
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Total_Clusters
+      Total_Clusters:
+        description: >-
+          Total_Clusters
+        range: integer
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Nodes
+      Nodes:
+        description: >-
+          Nodes connected to this FMonitor
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) CommVector
+      CommVector:
+        description: >-
+          CommVector of this FMonitor
+        range: integer
+        required: false
+        annotations:
+          order: 15
+
+      # (16) ElemTableLine
+      ElemTableLine:
+        description: >-
+          ElemTableLine of the each node within this cluster
+        range: integer
+        required: false
+        annotations:
+          order: 16
+
+      # (17) P_Mode
+      P_Mode:
+        description: >-
+          0 = real Power controlled by each p_ref on each DG1 = real Power on MeteredElem controlled by DGs according to P_trans_ref2 = Not defined3 = Not defined
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) CommDelayVector
+      CommDelayVector:
+        description: >-
+          CommDelayVector of this FMonitor
+        range: integer
+        required: false
+        annotations:
+          order: 18
+
+      # (19) T_intvl_smpl
+      T_intvl_smpl:
+        description: >-
+          T_intvl_smpl: The imformation of each agent will be sampled at each T_comm time
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) MaxLocalMem
+      MaxLocalMem:
+        description: >-
+          MaxLocalMem: the max number of local memory siza
+        range: integer
+        required: false
+        annotations:
+          order: 20
+
+      # (21) Volt_limits_pu
+      Volt_limits_pu:
+        description: >-
+          Volt_limits_pu: exmaple "Volt_limits_pu={a0,a1, a2}"a0: the phase number, 0 means pos
+        range: float
+        required: false
+        annotations:
+          order: 21
+
+      # (22) b_Curt_Ctrl
+      b_Curt_Ctrl:
+        description: >-
+          b_Curt_Ctrl:set P curtailment on/off;b_Curt_Ctrl=True: P curtailment will be implemented according to the system voltage (default);b_Curt_Ctrl=False: P curtailment will not be implemented
+        range: float
+        required: false
+        annotations:
+          order: 22
+
+      # (23) up_dly
+      up_dly:
+        description: >-
+          up_dly: delay time to upper level
+        range: string
+        required: false
+        annotations:
+          order: 23
+
+      # (24) virtual_ld_node:
+      virtual_ld_node:
+        description: >-
+          which node talks to upper level
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) EGen
+      EGen:
+        description: >-
+          EGen = {kVA_fm, M_fm, D_fm, Tau_fm, Ki_fm,init_time}where equations are:(1):delta''=omega(1):M_fm * omega''=puPm - puPe - D_fm*omega(1):Tau_fm*Pm ''=Ki_fm * omega puPm = Pm / kVA_fm, puPe = Pe...
+        range: float
+        required: false
+        annotations:
+          order: 25
+
+      # (26) attack_defense
+      attack_defense:
+        description: >-
+          Define attack and defense:  attack_defense = {atk , dfs , atk_time , atk_node_num  , d_atk0  , beta_dfs, D_beta, D_p }
+        range: string
+        required: false
+        annotations:
+          order: 26
+
+      # (27) Comm_hide
+      Comm_hide:
+        description: >-
+          Comm_hide={
+        range: string
+        required: false
+        annotations:
+          order: 27
+
+      # (28) Comm_node_hide
+      Comm_node_hide:
+        description: >-
+          Comm_node_hide={
+        range: string
+        required: false
+        annotations:
+          order: 28
+
+      # (29) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 29
+
+      # (30) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 30
+
+      # (31) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 31

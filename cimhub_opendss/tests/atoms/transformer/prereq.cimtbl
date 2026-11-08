@@ -1,0 +1,14 @@
+# Prerequisites of the transformer atoms: the container and the BaseVoltages the topology walk would give.
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_atom, name=atom
+Object Feeder: mRID=fdr_atom, name=atom, NormalEnergizingSubstation=sub_atom
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,   115
+    bv_13p2kv,  13.2
+    bv_12p47kv, 12.47
+    bv_4p16kv,  4.16
+    bv_480v,    0.48
+    bv_240v,    0.24

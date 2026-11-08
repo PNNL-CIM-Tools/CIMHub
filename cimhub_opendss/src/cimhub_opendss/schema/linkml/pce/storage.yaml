@@ -1,0 +1,890 @@
+id: https://gridappsd.github.io/dss-graph/pce/storage
+name: storage
+title: OpenDSS Storage Component Schema
+description: >-
+  LinkML schema for OpenDSS Storage objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-65).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Storage:
+    description: >-
+      A Storage object in OpenDSS representing a battery energy storage system
+      with inverter-based grid connection.
+    class_uri: dss:Storage
+    close_mappings:
+      - cim:BatteryUnit
+    comments:
+      - >-
+        Each DSS Storage creates two CIM objects: BatteryUnit (the battery;
+        holds ratedE, storedE, batteryState, maxP, minP) and
+        PowerElectronicsConnection (the inverter; holds ratedS, ratedU, p, q,
+        maxQ, minQ). The converter returns the PowerElectronicsConnection;
+        the BatteryUnit is linked via PowerElectronicsConnection.PowerElectronicsUnit.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Name applied to both BatteryUnit and PowerElectronicsConnection with suffix '_bat' / '_pec'."
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this Storage element
+        range: integer
+        required: false
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:PowerElectronicsConnectionPhase
+        comments:
+          - "Import: inferred from bus1 node suffix. Export: len(PowerElectronicsConnection.PowerElectronicsConnectionPhase)."
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the Storage element is connected
+        range: string
+        required: false
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Structural mapping via traversal: equipment.Terminals[0].ConnectivityNode.name. Phase suffix reconstructed from PowerElectronicsConnectionPhase objects."
+
+      # (3) kv
+      kv:
+        description: >-
+          Nominal rated (1.0 per unit) voltage, kV, for Storage element.
+          For 2- and 3-phase Storage, specify phase-phase kV. Otherwise,
+          specify actual kV across each branch.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 3
+        exact_mappings:
+          - cim:PowerElectronicsConnection.ratedU
+        comments:
+          - >-
+            Import: ratedU = Voltage(kv, 'kV') — always treated as L-L (Storage
+            converter does not apply sqrt(3) scaling unlike PVSystem).
+            Export: kv = ratedU.to('kV'). CIM stores in V (SI base).
+
+      # (4) conn
+      conn:
+        description: >-
+          ={wye|LN|delta|LL}
+        range: string
+        required: false
+        annotations:
+          order: 4
+        related_mappings:
+          - cim:PowerElectronicsConnection.description
+        comments:
+          - >-
+            This CIM profile's PowerElectronicsConnection has no dedicated
+            connection-kind field, so the winding connection is carried as a
+            literal text workaround: import sets description = 'conn=delta'
+            when conn is 'delta' (wye, the default, leaves description
+            unset); export reads ess.conn = 'delta' when description equals
+            that literal string, and otherwise leaves conn at its default
+            (wye).
+
+      # (5) kW
+      kW:
+        description: >-
+          Get/set the requested kW value. Positive = discharging (generating).
+        range: float
+        required: false
+        annotations:
+          order: 5
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: PEC.p = ActivePower(-kW, 'kW') — negated because DSS uses generator
+            convention (positive kW = power out), while CIM Terminal uses load convention
+            (positive p = power in). If kW is not given, PEC.p is instead derived from
+            State combined with %Discharge/%Charge and kWrated (see those attributes).
+            Export: kW = abs(PEC.p.to('kW')) — DSS Storage kW is always a positive
+            magnitude, with the State attribute carrying the charge/discharge direction.
+
+      # (6) kvar
+      kvar:
+        description: >-
+          Get/set the requested kvar value. Positive = capacitive (generator convention).
+        range: float
+        required: false
+        annotations:
+          order: 6
+        close_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import: PEC.q = ReactivePower(-kvar, 'kVAr') — negated for same CIM vs DSS
+            sign convention reason as kW. Export: kvar = -PEC.q.to('kVAr').
+
+      # (7) pf
+      pf:
+        description: >-
+          Get/set the requested PF value. Default is 1.0.
+        range: float
+        required: false
+        minimum_value: -1.0
+        maximum_value: 1.0
+        annotations:
+          order: 7
+          dss_default: float(1.0)
+        related_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import-only fallback: used to derive PowerElectronicsConnection.q
+            only when kvar is not explicitly given and kW is available —
+            kvar = kW * tan(acos(|pf|)), sign-flipped when pf is negative,
+            then negated into CIM's sign convention like kvar. Export always
+            writes an explicit kvar from PEC.q and never reconstructs pf, so
+            a round trip does not recover the original pf value.
+
+      # (8) kVA
+      kVA:
+        description: >-
+          Indicates the inverter nameplate capability (in kVA).
+        range: float
+        required: false
+        annotations:
+          order: 8
+        exact_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - "Import: PEC.ratedS = ApparentPower(kVA, 'kVA'). Export: kVA = ratedS.to('kVA'). CIM stores in VA (SI base)."
+
+      # (9) %Cutin
+      pct_Cutin:
+        description: >-
+          Cut-in power as a percentage of inverter kVA rating.
+        range: float
+        required: false
+        annotations:
+          order: 9
+          dss_name: "%Cutin"
+        comments:
+          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
+
+      # (10) %Cutout
+      pct_Cutout:
+        description: >-
+          Cut-out power as a percentage of inverter kVA rating.
+        range: float
+        required: false
+        annotations:
+          order: 10
+          dss_name: "%Cutout"
+        comments:
+          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent."
+
+      # (11) EffCurve
+      EffCurve:
+        description: >-
+          An XYCurve object, previously defined, that describes the PER UNIT
+          efficiency vs PER UNIT of rated kVA for the inverter.
+        range: float
+        required: false
+        annotations:
+          order: 11
+        todos:
+          - "No CIM equivalent. Inverter efficiency curve; requires CIM extension or mapping to a custom XYCurve linked to the PEC."
+
+      # (12) VarFollowInverter
+      VarFollowInverter:
+        description: >-
+          Boolean variable (Yes|No) or (True|False). When True, reactive power
+          follows the inverter dispatch.
+        range: boolean
+        required: false
+        annotations:
+          order: 12
+        comments:
+          - "OpenDSS-only (N/A): inverter control mode flag; no CIM equivalent in the standard profile."
+
+      # (13) kvarMax
+      kvarMax:
+        description: >-
+          Indicates the maximum reactive power GENERATION (un-signed, kvar)
+          for the inverter.
+        range: float
+        required: false
+        annotations:
+          order: 13
+        exact_mappings:
+          - cim:PowerElectronicsConnection.maxQ
+        comments:
+          - "Import: PEC.maxQ = ReactivePower(kvarMax, 'kVAr'). Export: kvarMax = maxQ.to('kVAr'). CIM stores in VAr (SI base)."
+
+      # (14) kvarMaxAbs
+      kvarMaxAbs:
+        description: >-
+          Indicates the maximum reactive power ABSORPTION (un-signed, kvar)
+          for the inverter.
+        range: float
+        required: false
+        annotations:
+          order: 14
+        close_mappings:
+          - cim:PowerElectronicsConnection.minQ
+        comments:
+          - >-
+            Import: PEC.minQ = ReactivePower(-kvarMaxAbs, 'kVAr') — negated because
+            absorption is negative Q in CIM convention.
+            Export: kvarMaxAbs = abs(minQ.to('kVAr')).
+
+      # (15) WattPriority
+      WattPriority:
+        description: >-
+          {Yes/No*/True/False} Set inverter to watt priority instead of the
+          default var priority.
+        range: string
+        required: false
+        annotations:
+          order: 15
+        comments:
+          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent."
+
+      # (16) PFPriority
+      PFPriority:
+        description: >-
+          If set to true, priority is given to power factor and WattPriority
+          is neglected.
+        range: float
+        required: false
+        annotations:
+          order: 16
+        comments:
+          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent."
+
+      # (17) %PminNoVars
+      pct_PminNoVars:
+        description: >-
+          Minimum active power as percentage of kWrated under which there is
+          no vars production/absorption.
+        range: float
+        required: false
+        annotations:
+          order: 17
+          dss_name: "%PminNoVars"
+        comments:
+          - "OpenDSS-only (N/A): inverter deadband parameter; no CIM equivalent."
+
+      # (18) %PminkvarMax
+      pct_PminkvarMax:
+        description: >-
+          Minimum active power as percentage of kWrated that allows the
+          inverter to produce/absorb reactive power up to its maximum reactive
+          power.
+        range: float
+        required: false
+        annotations:
+          order: 18
+          dss_name: "%PminkvarMax"
+        comments:
+          - "OpenDSS-only (N/A): inverter reactive capability threshold; no CIM equivalent."
+
+      # (19) kWrated
+      kWrated:
+        description: >-
+          kW rating of power output. Rated maximum active power.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 19
+        exact_mappings:
+          - cim:PowerElectronicsUnit.maxP
+        comments:
+          - "Import: BatteryUnit.maxP = ActivePower(kWrated, 'kW'). Export: kWrated = maxP.to('kW'). CIM stores in W (SI base)."
+
+      # (20) %kWrated
+      pct_kWrated:
+        description: >-
+          Upper limit on active power as a percentage of kWrated.
+        range: float
+        required: false
+        annotations:
+          order: 20
+          dss_name: "%kWrated"
+        comments:
+          - "OpenDSS-only (N/A): operational curtailment factor; no CIM equivalent."
+
+      # (21) kWhrated
+      kWhrated:
+        description: >-
+          Rated Storage capacity in kWh.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 21
+        exact_mappings:
+          - cim:BatteryUnit.ratedE
+        comments:
+          - "Import: BatteryUnit.ratedE = Energy(kWhrated, 'kWh'). Export: kWhrated = ratedE.to('kWh'). CIM stores in J (SI base)."
+
+      # (22) kWhstored
+      kWhstored:
+        description: >-
+          Present amount of energy stored, kWh.
+        range: float
+        required: false
+        annotations:
+          order: 22
+        exact_mappings:
+          - cim:BatteryUnit.storedE
+        comments:
+          - "Import: BatteryUnit.storedE = Energy(kWhstored, 'kWh'). Export: kWhstored = storedE.to('kWh'). CIM stores in J (SI base)."
+
+      # (23) %stored
+      pct_stored:
+        description: >-
+          Present amount of energy stored, % of rated kWh.
+        range: float
+        required: false
+        annotations:
+          order: 23
+          dss_name: "%stored"
+        comments:
+          - "OpenDSS-only (N/A): derived as kWhstored / kWhrated * 100; not stored on CIM separately."
+
+      # (24) %reserve
+      pct_reserve:
+        description: >-
+          Percentage of rated kWh Storage capacity to be held in reserve for
+          normal operation.
+        range: float
+        required: false
+        annotations:
+          order: 24
+          dss_name: "%reserve"
+        comments:
+          - "OpenDSS-only (N/A): operational reserve parameter; no CIM equivalent in the standard profile."
+
+      # (25) State
+      State:
+        description: >-
+          {idling | charging | discharging}  Get/Set present operational state.
+        range: string
+        required: false
+        annotations:
+          order: 25
+        exact_mappings:
+          - cim:BatteryUnit.batteryState
+        comments:
+          - >-
+            Import: 'discharging' → BatteryStateKind.discharging; 'charging' →
+            BatteryStateKind.charging; 'idling'/'waiting'/'idle' →
+            BatteryStateKind.waiting. Export: reverse enum lookup.
+
+      # (26) %Discharge
+      pct_Discharge:
+        description: >-
+          Discharge rate (output power) in percentage of rated kW.
+        range: float
+        required: false
+        annotations:
+          order: 26
+          dss_name: "%Discharge"
+        related_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import-only fallback: used only when kW is not explicitly given
+            and State is 'discharging' — PEC.p = -(kWrated * pct_Discharge /
+            100), negated into CIM's generator sign convention. Ignored
+            whenever kW is present, and never reconstructed on export
+            (export always writes an explicit kW from PEC.p).
+
+      # (27) %Charge
+      pct_Charge:
+        description: >-
+          Charging rate (input power) in percentage of rated kW.
+        range: float
+        required: false
+        annotations:
+          order: 27
+          dss_name: "%Charge"
+        related_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import-only fallback: used only when kW is not explicitly given
+            and State is 'charging' — PEC.p = kWrated * pct_Charge / 100.
+            Ignored whenever kW is present, and never reconstructed on
+            export (export always writes an explicit kW from PEC.p).
+
+      # (28) %EffCharge
+      pct_EffCharge:
+        description: >-
+          Percentage efficiency for CHARGING the Storage element.
+        range: float
+        required: false
+        annotations:
+          order: 28
+          dss_name: "%EffCharge"
+        comments:
+          - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent in the standard profile."
+
+      # (29) %EffDischarge
+      pct_EffDischarge:
+        description: >-
+          Percentage efficiency for DISCHARGING the Storage element.
+        range: float
+        required: false
+        annotations:
+          order: 29
+          dss_name: "%EffDischarge"
+        comments:
+          - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent."
+
+      # (30) %IdlingkW
+      pct_IdlingkW:
+        description: >-
+          Percentage of rated kW consumed by idling losses.
+        range: float
+        required: false
+        annotations:
+          order: 30
+          dss_name: "%IdlingkW"
+        comments:
+          - "OpenDSS-only (N/A): standby loss parameter; no CIM equivalent."
+
+      # (31) %Idlingkvar
+      pct_Idlingkvar:
+        description: >-
+          Deprecated.
+        range: string
+        required: false
+        annotations:
+          order: 31
+          dss_name: "%Idlingkvar"
+        comments:
+          - "Deprecated DSS attribute; not mapped."
+
+      # (32) %R
+      pct_R:
+        description: >-
+          Equivalent percentage internal resistance, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 32
+          dss_name: "%R"
+        comments:
+          - "OpenDSS-only (N/A): internal resistance used for short-circuit simulation; no standard CIM equivalent on PowerElectronicsConnection."
+
+      # (33) %X
+      pct_X:
+        description: >-
+          Equivalent percentage internal reactance, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 33
+          dss_name: "%X"
+        comments:
+          - "OpenDSS-only (N/A): internal reactance used for short-circuit simulation; no standard CIM equivalent."
+
+      # (34) model
+      model:
+        description: >-
+          Integer code (default=1) for the model to be used for power output
+          variation with voltage.
+        range: integer
+        required: false
+        annotations:
+          order: 34
+        comments:
+          - "OpenDSS-only (N/A): DSS V/Q model selector; no direct CIM equivalent."
+
+      # (35) Vminpu
+      Vminpu:
+        description: >-
+          Minimum per unit voltage. Default = 0.9.
+        range: float
+        required: false
+        annotations:
+          order: 35
+        close_mappings:
+          - cim:PowerElectronicsConnection.maxIFault
+        comments:
+          - >-
+            Import: PEC.maxIFault = 1.0 / Vminpu. Export: Vminpu = 1.0 / maxIFault.
+            Approximate mapping — maxIFault is the primary CIM field used by the
+            OpenDSS exporter for fault current limiting.
+
+      # (36) Vmaxpu
+      Vmaxpu:
+        description: >-
+          Maximum per unit voltage. Default = 1.1.
+        range: float
+        required: false
+        annotations:
+          order: 36
+        comments:
+          - "OpenDSS-only (N/A): overvoltage trip threshold; no direct CIM equivalent."
+
+      # (37) Balanced
+      Balanced:
+        description: >-
+          {Yes | No*} Default is No. If true, force balanced operation.
+        range: boolean
+        required: false
+        annotations:
+          order: 37
+        comments:
+          - "OpenDSS-only (N/A): simulation option; no CIM equivalent."
+
+      # (38) LimitCurrent
+      LimitCurrent:
+        description: >-
+          Limits current magnitude to Vminpu value for both 1-phase and
+          3-phase Storage similar to Generator Model 7.
+        range: float
+        required: false
+        annotations:
+          order: 38
+        comments:
+          - "OpenDSS-only (N/A): current-limiting simulation flag; no CIM equivalent."
+
+      # (39) yearly
+      yearly:
+        description: >-
+          Dispatch shape to use for yearly simulations. LoadShape name.
+        range: string
+        required: false
+        annotations:
+          order: 39
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (40) daily
+      daily:
+        description: >-
+          Dispatch shape to use for daily simulations. LoadShape name.
+        range: string
+        required: false
+        annotations:
+          order: 40
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (41) duty
+      duty:
+        description: >-
+          Load shape to use for duty cycle dispatch simulations.
+        range: integer
+        required: false
+        annotations:
+          order: 41
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (42) DispMode
+      DispMode:
+        description: >-
+          {DEFAULT | FOLLOW | EXTERNAL | LOADLEVEL | PRICE } Default = "DEFAULT".
+          Dispatch mode for the storage element.
+        range: float
+        required: false
+        annotations:
+          order: 42
+        comments:
+          - "OpenDSS-only (N/A): dispatch control mode flag; no CIM equivalent in the standard profile."
+
+      # (43) DischargeTrigger
+      DischargeTrigger:
+        description: >-
+          Dispatch trigger value for discharging the Storage.
+        range: string
+        required: false
+        annotations:
+          order: 43
+        comments:
+          - "OpenDSS-only (N/A): dispatch trigger; no CIM equivalent."
+
+      # (44) ChargeTrigger
+      ChargeTrigger:
+        description: >-
+          Dispatch trigger value for charging the Storage.
+        range: string
+        required: false
+        annotations:
+          order: 44
+        comments:
+          - "OpenDSS-only (N/A): dispatch trigger; no CIM equivalent."
+
+      # (45) TimeChargeTrig
+      TimeChargeTrig:
+        description: >-
+          Time of day in fractional hours (0230 = 2.5) at which storage
+          element will automatically go into charge state.
+        range: string
+        required: false
+        annotations:
+          order: 45
+        comments:
+          - "OpenDSS-only (N/A): time-based dispatch trigger; no CIM equivalent."
+
+      # (46) class
+      class_class:
+        description: >-
+          An arbitrary integer number representing the class of Storage element.
+        range: integer
+        required: false
+        annotations:
+          order: 46
+          dss_name: "class"
+        comments:
+          - "OpenDSS-only (N/A): internal classification integer; no CIM equivalent."
+
+      # (47) DynaDLL
+      DynaDLL:
+        description: >-
+          Name of DLL containing user-written dynamics model for Dynamics-mode
+          simulations.
+        range: float
+        required: false
+        annotations:
+          order: 47
+        comments:
+          - "OpenDSS-only (N/A): dynamics DLL hook; no CIM equivalent."
+
+      # (48) DynaData
+      DynaData:
+        description: >-
+          String that gets passed to the user-written dynamics model Edit function.
+        range: string
+        required: false
+        annotations:
+          order: 48
+        comments:
+          - "OpenDSS-only (N/A): dynamics DLL data; no CIM equivalent."
+
+      # (49) UserModel
+      UserModel:
+        description: >-
+          Name of DLL containing user-written model for both power flow and
+          dynamics.
+        range: float
+        required: false
+        annotations:
+          order: 49
+        comments:
+          - "OpenDSS-only (N/A): user model DLL; no CIM equivalent."
+
+      # (50) UserData
+      UserData:
+        description: >-
+          String that gets passed to user-written model for defining the data
+          required for that model.
+        range: string
+        required: false
+        annotations:
+          order: 50
+        comments:
+          - "OpenDSS-only (N/A): user model data; no CIM equivalent."
+
+      # (51) debugtrace
+      debugtrace:
+        description: >-
+          {Yes | No }  Default is no. If true, writes debug trace to a file.
+        range: boolean
+        required: false
+        annotations:
+          order: 51
+        comments:
+          - "OpenDSS-only (N/A): simulation debug flag; no CIM equivalent."
+
+      # (52) kVDC
+      kVDC:
+        description: >-
+          Indicates the rated voltage (kV) at the input of the inverter while
+          the storage is discharging.
+        range: float
+        required: false
+        annotations:
+          order: 52
+        comments:
+          - "OpenDSS-only (N/A): DC-side voltage rating; no CIM equivalent in the standard AC profile."
+
+      # (53) Kp
+      Kp:
+        description: >-
+          It is the proportional gain for the PI controller within the inverter.
+        range: string
+        required: false
+        annotations:
+          order: 53
+        comments:
+          - "OpenDSS-only (N/A): inverter PI controller tuning parameter; no CIM equivalent."
+
+      # (54) PITol
+      PITol:
+        description: >-
+          It is the tolerance (%) for the closed loop controller of the inverter.
+        range: string
+        required: false
+        annotations:
+          order: 54
+        comments:
+          - "OpenDSS-only (N/A): inverter PI controller tolerance; no CIM equivalent."
+
+      # (55) SafeVoltage
+      SafeVoltage:
+        description: >-
+          Indicates the voltage level (%) respect to the base voltage level
+          for which the Inverter will operate.
+        range: float
+        required: false
+        annotations:
+          order: 55
+        comments:
+          - "OpenDSS-only (N/A): grid-forming safe-voltage threshold; no CIM equivalent."
+
+      # (56) SafeMode
+      SafeMode:
+        description: >-
+          (Read only) Indicates whether the inverter entered (Yes) or not (No)
+          into Safe Mode.
+        range: string
+        required: false
+        annotations:
+          order: 56
+        comments:
+          - "OpenDSS-only (N/A): read-only operational state; no CIM equivalent."
+
+      # (57) DynamicEq
+      DynamicEq:
+        description: >-
+          The name of the dynamic equation (DinamicExp) that will be used for
+          defining the dynamic behavior of the generator.
+        range: string
+        required: false
+        annotations:
+          order: 57
+        comments:
+          - "OpenDSS-only (N/A): dynamics model reference; no CIM equivalent."
+
+      # (58) DynOut
+      DynOut:
+        description: >-
+          The name of the variables within the Dynamic equation that will be
+          used to govern the PVSystem dynamics.
+        range: float
+        required: false
+        annotations:
+          order: 58
+        comments:
+          - "OpenDSS-only (N/A): dynamics output variable mapping; no CIM equivalent."
+
+      # (59) ControlMode
+      ControlMode:
+        description: >-
+          Defines the control mode for the inverter. {GFM | GFL*}
+        range: string
+        required: false
+        annotations:
+          order: 59
+        comments:
+          - "OpenDSS-only (N/A): grid-forming vs. grid-following mode flag; no CIM equivalent."
+
+      # (60) AmpLimit
+      AmpLimit:
+        description: >-
+          Is the current limiter per phase for the IBR when operating in
+          GFM mode.
+        range: float
+        required: false
+        annotations:
+          order: 60
+        comments:
+          - "OpenDSS-only (N/A): GFM current limiter; no CIM equivalent."
+
+      # (61) AmpLimitGain
+      AmpLimitGain:
+        description: >-
+          Use it for fine tunning the current limiter when active, by default
+          is 0.
+        range: float
+        required: false
+        annotations:
+          order: 61
+        comments:
+          - "OpenDSS-only (N/A): GFM limiter gain; no CIM equivalent."
+
+      # (62) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic voltage or current spectrum for this Storage element.
+        range: float
+        required: false
+        annotations:
+          order: 62
+        comments:
+          - "OpenDSS-only (N/A): harmonic spectrum reference; no CIM equivalent."
+
+      # (63) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 63
+        comments:
+          - "Not stored on CIM PowerElectronicsConnection; base frequency is a circuit-level property in CIM."
+
+      # (64) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 64
+          dss_default: "true"
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None and no CIM objects are created."
+
+      # (65) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Storage.S2 like=S1 ...
+        range: string
+        required: false
+        annotations:
+          order: 65
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

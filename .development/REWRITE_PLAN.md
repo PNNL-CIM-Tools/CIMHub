@@ -122,7 +122,7 @@ were removed in favour of `cimtopology.core`, which carries ported copies of the
 - Upstream caveats to file, not to work around: about 15 cimbuilder modules still import cimhub_2023/cim18gad
   (`new_base_voltage` …). Spokes use only the cim18v17 builders.
 
-**F2. Wave 1: OpenDSS** (`DSS_REWRITE_PLAN.md`, decisions DSS-1..12 still open)
+**F2. Wave 1: OpenDSS** (`.development/DSS_REWRITE_PLAN.md`; most of DSS-1..13 decided 2026-11-07, the rest listed in its status line)
 - Seed: the LinkML schema, `DssReader`/writer (with the four reader fixes), `importer/cimtbl/` slices (LineCode,
   inline Transformer), and their atoms/goldens. `bus_graph.py` is rewritten to build a `cimtopology.core.Network`
   (DSS bus/node parsing stays in the spoke; the walk is `cimtopology.core.walk`).
