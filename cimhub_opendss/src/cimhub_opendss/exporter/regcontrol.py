@@ -13,6 +13,7 @@ from cimhub_core.derived.regulator import line_drop_volts, primary_to_secondary
 from cimhub_core.getters import describe
 from cimhub_core.getters.control import TapChangerSettings, get_tap_changer_control
 from cimhub_opendss.exporter import windings
+from cimhub_opendss.exporter.controls import control_enabled, pt_phase
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
@@ -88,11 +89,12 @@ def _regcontrol(control: cim.TapChangerControl, names: Names) -> schema.Regcontr
         reversible=settings.reversible,
         revvreg=_secondary(regulating.reverse_target, pt_ratio),
         revband=_secondary(regulating.reverse_deadband, pt_ratio),
-        PTphase=_pt_phase(control, regulating.monitored_phases, winding),
+        PTphase=pt_phase(control, regulating.monitored_phases,
+                         [phase for phase in winding.phases if phase is not windings.N]),
         revThreshold=settings.reversing_power_threshold,
         revDelay=settings.reversing_delay,
         revNeutral=settings.reverse_to_neutral,
-        enabled=_enabled(control, regulating.enabled, settings.control_enabled),
+        enabled=control_enabled(control, regulating.enabled, settings.control_enabled),
     )
 
 
@@ -135,20 +137,3 @@ def _line_drop(control, settings: TapChangerSettings, pt_ratio: float) -> dict:
         raise ValueError(f"{describe(control)}: a line drop {set_values} needs the tap's ctRating")
     return {name: None if value is None else line_drop_volts(value, pt_ratio, settings.ct_rating)
             for name, value in ohms.items()}
-
-
-def _pt_phase(control, monitored, winding) -> int | None:
-    if monitored is None:
-        return None
-    conductors = [phase for phase in winding.phases if phase is not windings.N]
-    if len(monitored) != 1 or monitored[0] not in conductors:
-        raise ValueError(f"{describe(control)}: monitoredPhase {[p.value for p in monitored]} is not one of its "
-                         f"winding's phases {[p.value for p in conductors]}")
-    return conductors.index(monitored[0]) + 1
-
-
-def _enabled(control, enabled: bool | None, control_enabled: bool | None) -> bool | None:
-    if enabled is not None and control_enabled is not None and enabled != control_enabled:
-        raise ValueError(f"{describe(control)}: enabled {enabled} and its tap's controlEnabled {control_enabled} "
-                         f"differ")
-    return control_enabled if enabled is None else enabled

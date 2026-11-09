@@ -83,8 +83,8 @@ def test_options_carry_circuit_frequency_and_voltage_bases():
 
 
 def test_unexported_equipment_raises():
-    with pytest.raises(ValueError, match=r"no DSS export yet for \{'EnergyConsumer': 9"):
-        DssExporter().to_model(_network("load/loads.dss"))
+    with pytest.raises(ValueError, match=r"no DSS export yet for \{'PowerElectronicsConnection': 20"):
+        DssExporter().to_model(_network("der/der.dss"))
 
 
 def test_several_sources_need_the_circuit_source_named():

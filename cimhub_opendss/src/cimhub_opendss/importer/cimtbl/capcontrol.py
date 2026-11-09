@@ -20,6 +20,7 @@ from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.derived.control_band import band_from_on_off
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import capacitor as capacitor_mapper
 from cimhub_opendss.importer.cimtbl import line as line_mapper
@@ -121,7 +122,7 @@ def on_off_target(on: float, off: float, mode: str, *, ptratio: float, ctratio: 
         on, off = (float(cim.ReactivePower(value, "kVAr")) for value in (on, off))
     else:
         on, off = on * scale[mode], off * scale[mode]
-    return Setting((on + off) / 2, abs(off - on))
+    return Setting(*band_from_on_off(on, off))
 
 
 def _line_phase_count(line, native) -> int:

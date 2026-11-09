@@ -429,7 +429,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | B1 | Deck units | Every length in metres (Line/LineCode `units=m`, geometry `units=m`, wire `Runits/GMRunits/radunits=m`); B6's lumped lines are the one exception |
 | B2 | Geometry form | Inline positions (cond blocks) per (WireConfiguration, offset); no LineSpacing is written. A bare-spacing line raises until a producer writes one |
 | B3 | Switch impedance (amended by the user) | A small invented impedance: 1 mOhm resistive, `r1=r0=1e-3 x1=x0=0 C1=C0=0 length=1 units=m` |
-| B4 | Line neutrals (rationale given to the user 2026-11-09; implemented as recommended, pending their word) | Geometry `reduce=y`, and the neutral is not written on the bus. Engine probe (2026-11-09, geometry 601 under an unbalanced load): `reduce=y` gives the same voltages, to 1e-9 V, as `reduce=n` with the neutral on node 0 at both ends. So `reduce=y` is exactly a neutral grounded at both ends, and it keeps a 3x3 YPrim. `reduce=n` on a `.1.2.3` bus puts the neutral on node 4, ungrounded: it floats (292 V in the probe), and the phase voltages move by up to 4 %. CIM has no per-conductor neutral grounding to export, so `reduce=n` has nothing to carry. A code line with a neutral row raises |
+| B4 | Line neutrals (approved by the user 2026-11-09, as recommended and built) | Geometry `reduce=y`, and the neutral is not written on the bus. Engine probe (2026-11-09, geometry 601 under an unbalanced load): `reduce=y` gives the same voltages, to 1e-9 V, as `reduce=n` with the neutral on node 0 at both ends. So `reduce=y` is exactly a neutral grounded at both ends, and it keeps a 3x3 YPrim. `reduce=n` on a `.1.2.3` bus puts the neutral on node 4, ungrounded: it floats (292 V in the probe), and the phase voltages move by up to 4 %. CIM has no per-conductor neutral grounding to export, so `reduce=n` has nothing to carry. A code line with a neutral row raises |
 | B5 | Code values | Code-level getters; a code no line uses is still exported |
 | B6 | Lumped-only lines (amended by the user) | Written inline: the whole-line values divided by the length, `r1 x1 r0 x0` in ohm/km and `C1 C0` in nF/km, `units=km`; with no length, `length=1` |
 
@@ -919,8 +919,9 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
   - a mode other than voltage.
 - **Getters:** T2 (a template Y with an instance Yn gives Yn), and T3 (a TankEnd coil in its phase-end order, plus
   phase ends that are not the terminal's, which raise).
-- **Deck round trip:** IEEE13_CDPSM still cannot run, and moves to S6d. Its loads and capacitors raise
-  "no DSS export yet" (`_check_exported`), so element-by-element parity on a whole deck starts with S6d.
+- **Deck round trip:** IEEE13_CDPSM still cannot run. Its loads and capacitors raise "no DSS export yet"
+  (`_check_exported`). (S6d found it also has PVSystems and Storage, so it waits for S6e; S6d's deck check runs on
+  four other engine decks.)
 - **Goldens:** `export/*.dss` beside each atom (mrid).
 - **Suite:** 1,090 passed. With the external decks (`CIMHUB_DSS_DECKS`, `--roundtrip`), all 607 opendss tests pass,
   the sweep included.
@@ -1089,4 +1090,271 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | idleForward | unset | untranscribed or raising on import; not in CIM |
 | basefreq | unset | untranscribed or raising on import; not in CIM |
 | enabled | written | the control's enabled; the tap's controlEnabled must agree |
+| like | not mapped | the writer never writes like= |
+
+## S6d: loads, capacitors, CapControl (built 2026-11-09 at the user's word, with decisions L1-L7 as recommended)
+
+Content: EnergyConsumer → Load, LinearShuntCompensator → Capacitor, the RegulatingControl of a shunt →
+CapControl. Plan §8.1 row S6d; DSS-5, DSS-7, S4-2, E4, E8 and E9 apply. The user approved S6d together with B4
+("go ahead and implement that and 6d"), so this spec was written alongside the code. Its decisions, L1-L7, are
+at the end of this section, as recommended; any of them can still be amended.
+
+### Layout
+
+```
+cimhub_opendss/src/cimhub_opendss/exporter/
+    injection.py     a one-terminal device's bus1, phases, conn and a load's kV (Load, Capacitor; DER in S6e)
+    controls.py      PTPhase and enabled, shared by RegControl and CapControl (moved out of regcontrol.py)
+    load.py          EnergyConsumer (ConformLoad, NonConformLoad, StationSupply) -> Load
+    capacitor.py     LinearShuntCompensator -> Capacitor
+    capcontrol.py    RegulatingControl -> Capcontrol
+```
+
+`EXPORT_ORDER` gains `load, capacitor, capcontrol` after `regcontrol`. The writer's `WRITE_ORDER` already has
+Capacitor before CapControl.
+
+### Connection (the importer's shared phase rule inverted)
+
+- `bus1`: the phase conductors (no neutral), A/B/C as 1/2/3 and s1/s2 as 1/2.
+- A wye device's neutral is the engine's node 0, so the device must be `grounded=true`. Unset or false raises (an
+  ungrounded or impedance-grounded neutral is not mapped, as on import).
+- `phaseConnection` Y and Yn are wye and D is delta; I, G and unset raise.
+- A delta across two conductors is DSS's 1-phase delta, written in branch order A-B, B-C, C-A (L2). Engine
+  probe: CIM's PhaseCode `AC` written `.1.3` gives the same YPrim, but the node order differs from the deck's `.3.1`.
+- A delta on another count raises.
+
+### Load
+
+| DSS slot | from |
+|---|---|
+| `kW`, `kvar` | `get_phase_loads` total (kW, kVAr) |
+| `kV` | the BaseVoltage (L1) |
+| `model` | `get_load_response`: pure constant PQ → 1, Z → 2, I → 5; exponential → 4 with `CVRwatts`/`CVRvars` |
+| `NumCust` | `customerCount`; unset → not written |
+| `enabled` | `get_in_service(which='normal')` |
+
+- **kV (L1, E9):** CIM gives a load no rating (S4-2), so `kV` is the bus's: LL for delta and for 2 or 3 phases,
+  LN for 1-phase wye. On a split-phase secondary the BaseVoltage (240 V) is the whole coil, so a leg is half of it
+  (0.12) and a 2-phase wye leg pair is read by the engine's sqrt 3 rule (0.2078). A deck's rounded kV comes back
+  as the bus's: IEEE13's `kV=2.4` as 2.40178. Probe: the YPrim moves by (2.4 / 2.40178)^2, 0.15 %. A constant PQ
+  load solves to the same power, but a Z, I or CVR load's power moves by the same ratio.
+- **Model (L3):** a mix of fractions raises. ZIPV (model 8) and model 3 raise on import too.
+- **Per phase (E8, L4):** when the `EnergyConsumerPhase` values differ, each phase becomes a 1-phase wye Load
+  `<name>_<phase>`. Its kV is LN, and the first carries `customerCount`, the others `NumCust=0`, so the deck's
+  total is CIM's. A delta load with unequal phases raises. The importer never writes phase values, so a unit test
+  builds them.
+- **Not written:** `pf`, `kVA`, `xfkVA` (kW and kvar carry the power); `Vminpu`, `Vmaxpu`, `status` and the other
+  untranscribed slots (L6, the engine's defaults).
+
+### Capacitor
+
+- `kvar` = `get_shunt_reactive_power(sections='maximum', voltage='nominal')` (kVAr), that is, bPerSection x
+  nomU^2. `maximumSections` other than 1 raises (L5, as on import).
+- `kv` = `nomU`, the voltage bPerSection was derived on.
+- `states` = `[sections]`, the sections in service. DSS has no normal state for a capacitor, so `normalSections`
+  is not written (L5). A `sections` other than 0 or 1 raises.
+- `conn`, `bus1` and `phases` as above, and `enabled`.
+
+### CapControl
+
+One per `RegulatingControl` (a TapChangerControl is another class, RegControl's). It must regulate exactly one
+LinearShuntCompensator; anything else raises, because other regulated equipment is not exported yet (L7).
+
+| DSS slot | from |
+|---|---|
+| `type` | mode voltage, currentFlow, reactivePower, timeScheduled → voltage, current, kvar, time; others raise |
+| `ONsetting`, `OFFsetting` | `on_off_from_band(target, deadband)`: ON = target - deadband / 2 for voltage and time, + for current and kvar; then voltage / PTratio, current / CTratio, kvar in kvar, time in hours |
+| `PTratio`, `CTratio` | `ptRatio`, `ctRatio`; unset → not written. A voltage control needs PTratio and a current control needs CTratio: unset raises |
+| `element`, `terminal` | the monitored Terminal's equipment, as its record is named (`Line.<line>`, `Line.<switch>`, `Capacitor.<shunt>`; others raise), and its `sequenceNumber` |
+| `capacitor` | the regulated shunt |
+| `Delay` | the shunt's `aVRDelay` (s) |
+| `PTPhase` | the 1-based place of `monitoredPhase` among the monitored equipment's phase conductors (`controls.pt_phase`, shared with RegControl) |
+| `enabled` | the control's `enabled`; the shunt's `controlEnabled` must agree (`controls.control_enabled`) |
+
+What raises:
+- an unset `targetDeadband` (DSS needs both settings);
+- `minAllowedTargetValue`, `maxAllowedTargetValue`, or a reverse target or deadband (no CapControl slot).
+
+`VoltOverride`, `Vmax`, `Vmin`, `DelayOFF` and `DeadTime` are untranscribed on import (S4-5), so they come back at
+the engine's defaults (L6).
+
+### Core changes
+
+- **`derived/control_band.py`:** `band_from_on_off` (the importer's midpoint and width, moved out of
+  `on_off_target`) and its inverse `on_off_from_band`, as `derived/regulator.py` did for RegControl.
+- **Getters:** none new; `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`,
+  `get_equipment_control` and `get_base_voltage` as built in G6.
+
+### Findings
+
+- **An XfmrCode that leaves its reactances unset.** The engine reports XHL=7, XHT=35, XLT=30, but it builds the
+  instance with X near 0. Probe: YPrim almost purely resistive, while an inline transformer with the same unset
+  slots gets 7 %. The importer reads the reported defaults (DSS-6), so it disagrees with the engine on such a code.
+  No sweep deck has one; only the old `load/loads` atom did, and it now sets them (after CDPSM's CT5).
+  Proposed follow-up: the importer raises on an XfmrCode with unset reactances.
+- **Decks that solve when compiled** (IEEE13_original, IEEE37, IEEE13_Assets) run `Solve` with controls on. That
+  moves regulator taps and switches capacitors (IEEE13_Assets' time-controlled `cap1` is off at hour 0) before a
+  comparison can read the model. A whole-deck YPrim and voltage comparison therefore compares solved states, and
+  belongs to S6f.
+- **IEEE37's `reg1c`** is a coil C → B, which an AutoTransformerEnd's PhaseCode holds as BC. It comes back
+  `.2.3`, with its RegControl's node 2. Both windings reverse together, so it is the same coil. It is a listed node
+  order difference; T3's phase ends cover templates only.
+- **The IEEE13_CDPSM round trip** waits for S6e: the deck also has PVSystems and Storage.
+
+### Tests
+
+As built (`tests/test_export_injection.py`, 24 tests; core `test_derived_control_band.py`):
+- **Per atom, in the engine** (§8.3), exported under `name`: per element, buses, NodeOrder and YPrim (rel 1e-9),
+  then the voltages. Under `mrid`/`uri` only the voltages. The atoms:
+  - `load/loads`. Changed so that it compares: the CVR loads' kV is now the bus's to full precision, and the
+    XfmrCode sets its reactances. `load.house` (0.208 → 0.2078) is the listed YPrim difference.
+  - `capacitor/caps`. Its switch now carries B3's 1 mOhm, so the bank behind it solves alike.
+
+  The import goldens do not change: kV is not written, and the switch impedance is untranscribed.
+- **Settings in the engine:**
+  - every Load's phases, conn, kW, kvar, model, CVR exponents, NumCust and enabled (rel 1e-9), and its kV
+    within 1 %;
+  - every Capacitor's phases, conn, kvar, kv, states and enabled;
+  - every CapControl's element, terminal, capacitor, type, ratios, ON, OFF, Delay, PTPhase and enabled.
+- **Whole decks** (IEEE13_original, IEEE123, IEEE37, IEEE13_Assets; vendored, about 1 s each): the same elements,
+  each on the same buses and node order (listed: IEEE37's `reg1c`/`creg1c`), and every Load, Capacitor (states
+  aside) and CapControl set alike.
+- **Spoke unit tests:**
+  - the kV rule (LN, LL, a leg, two legs);
+  - branch order (`.3.1`);
+  - E8 per-phase loads, with the customer count;
+  - an open bank `states=[0]`;
+  - ON/OFF rebuilt for all four types.
+- **Raises:**
+  - mixed ZIP fractions;
+  - an ungrounded wye load;
+  - two sections;
+  - an unset deadband;
+  - an unset ptRatio on a voltage control;
+  - another mode;
+  - a control that regulates no shunt.
+- **Harness:** `engine_compare` records a disabled element as disabled; the engine gives it no nodes.
+- **Goldens:** `export/loads.dss` and `export/caps.dss` (mrid).
+- **Suite:** 1,120 passed. With the external decks (`CIMHUB_DSS_DECKS`, `--roundtrip`), all 634 opendss tests pass,
+  the sweep included.
+
+### Decisions for S6d (recommended; built at the user's word 2026-11-09)
+
+| # | question | recommendation |
+|---|---|---|
+| L1 | A load's kV | The BaseVoltage by E9 and DSS-5 (a leg half the coil, a 2-phase leg pair x sqrt 3). A deck's rounded kV comes back as the bus's, a listed YPrim difference. A 1-phase source's island (its BaseVoltage is the LN source voltage) is not told apart: no sweep deck has a 1-phase source, so a load there would be written at LN / sqrt 3 |
+| L2 | 1-phase delta order | Branch order A-B, B-C, C-A (IEEE13's `692.3.1`), since a PhaseCode has none |
+| L3 | Load models | A pure ZIP is 1, 2 or 5 and exponential is 4; a mix raises (model 8, as on import) |
+| L4 | E8 per-phase loads and NumCust | The first phase's load carries customerCount and the others 0, so the total is kept |
+| L5 | Capacitor sections | One section; `states=[sections]` (actual), and normalSections is not written |
+| L6 | Untranscribed settings | Load `Vminpu`/`Vmaxpu`/`status`, CapControl `VoltOverride`/`Vmax`/`Vmin`/`DelayOFF`/`DeadTime`: the engine's defaults |
+| L7 | Which RegulatingControls | Every plain RegulatingControl is a CapControl on its one LinearShuntCompensator; one regulating anything else raises until S6e exports that equipment |
+
+### Slot tables (S6d, generated from `SLOTS`)
+
+**Load** (`exporter/load.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names; one load per phase is <name>_<phase> (E8) |
+| bus1 | written | bus_ref of the phase conductors; a wye's neutral is node 0, so it must be grounded |
+| phases | written | the phase conductors; a delta across two is 1 |
+| kV | written | the BaseVoltage: LL for delta and 2-3 phases, LN for 1-phase wye; a split-phase leg half the coil, a 2-phase wye leg pair x sqrt 3 (E9, DSS-5) |
+| kW | written | get_phase_loads total p (kW); per phase when the phases differ (E8) |
+| pf | not mapped | kvar carries q |
+| model | written | get_load_response: a pure ZIP 1 (PQ), 2 (Z), 5 (I); exponential 4 (CVR); a mix raises |
+| yearly | unset | untranscribed or raising on import; not in CIM |
+| daily | unset | untranscribed or raising on import; not in CIM |
+| duty | unset | untranscribed or raising on import; not in CIM |
+| growth | unset | untranscribed or raising on import; not in CIM |
+| conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
+| kvar | written | get_phase_loads total q (kVAr); per phase when the phases differ (E8) |
+| Rneut | unset | untranscribed or raising on import; not in CIM |
+| Xneut | unset | untranscribed or raising on import; not in CIM |
+| status | unset | DSS solution control; untranscribed on import, the engine's default |
+| load_class | unset | untranscribed or raising on import; not in CIM |
+| Vminpu | unset | DSS solution control; untranscribed on import, the engine's default |
+| Vmaxpu | unset | DSS solution control; untranscribed on import, the engine's default |
+| Vminnorm | unset | DSS solution control; untranscribed on import, the engine's default |
+| Vminemerg | unset | DSS solution control; untranscribed on import, the engine's default |
+| xfkVA | not mapped | kW carries p |
+| allocationfactor | not mapped | kW carries p |
+| kVA | not mapped | kW and kvar carry the power |
+| pct_mean | unset | untranscribed or raising on import; not in CIM |
+| pct_stddev | unset | untranscribed or raising on import; not in CIM |
+| CVRwatts | written | pVoltageExponent; model 4 only |
+| CVRvars | written | qVoltageExponent; model 4 only |
+| kwh | unset | untranscribed or raising on import; not in CIM |
+| kwhdays | unset | untranscribed or raising on import; not in CIM |
+| Cfactor | unset | untranscribed or raising on import; not in CIM |
+| CVRcurve | unset | untranscribed or raising on import; not in CIM |
+| NumCust | written | customerCount; unset -> not written; per phase on the first load, 0 on the others |
+| ZIPV | not mapped | model 8 raises, as on import |
+| pct_SeriesRL | unset | untranscribed or raising on import; not in CIM |
+| RelWeight | unset | untranscribed or raising on import; not in CIM |
+| Vlowpu | unset | DSS solution control; untranscribed on import, the engine's default |
+| puXharm | unset | untranscribed or raising on import; not in CIM |
+| XRharm | unset | untranscribed or raising on import; not in CIM |
+| spectrum | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**Capacitor** (`exporter/capacitor.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the Capacitor namespace |
+| bus1 | written | bus_ref of the phase conductors; a wye's neutral is node 0, so it must be grounded |
+| bus2 | not mapped | a shunt has one terminal |
+| phases | written | the phase conductors; a delta across two is 1 |
+| kvar | written | get_shunt_reactive_power(sections='maximum', voltage='nominal') (kVAr); maximumSections other than 1 raises |
+| kv | written | nomU (kV), the voltage bPerSection was derived on |
+| conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
+| cmatrix | not mapped | kvar carries the susceptance |
+| cuf | not mapped | kvar carries the susceptance |
+| R | unset | untranscribed or raising on import; not in CIM |
+| XL | unset | untranscribed or raising on import; not in CIM |
+| Harm | unset | untranscribed or raising on import; not in CIM |
+| Numsteps | not mapped | one section; more raise, as on import |
+| states | written | [sections], the sections in service (0 or 1); normalSections is not written |
+| normamps | unset | untranscribed or raising on import; not in CIM |
+| emergamps | unset | untranscribed or raising on import; not in CIM |
+| faultrate | unset | untranscribed or raising on import; not in CIM |
+| pctperm | unset | untranscribed or raising on import; not in CIM |
+| repair | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**CapControl** (`exporter/capcontrol.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the CapControl namespace |
+| element | written | the monitored Terminal's equipment: Line.<line or switch>, Capacitor.<shunt>; others raise |
+| terminal | written | the monitored Terminal's sequenceNumber |
+| capacitor | written | the one LinearShuntCompensator the control regulates |
+| type | written | mode voltage, currentFlow, reactivePower, timeScheduled -> voltage, current, kvar, time; others raise |
+| PTratio | written | ptRatio; unset -> not written, and a voltage control raises |
+| CTratio | written | ctRatio; unset -> not written, and a current control raises |
+| ONsetting | written | targetValue -+ targetDeadband / 2 (on_off_from_band), voltage / PTratio, current / CTratio; ON below OFF for voltage and time |
+| OFFsetting | written | targetValue +- targetDeadband / 2 (on_off_from_band), voltage / PTratio, current / CTratio; an unset deadband raises |
+| Delay | written | the shunt's aVRDelay (s); unset -> not written |
+| VoltOverride | unset | untranscribed on import (S4-5); the engine's default |
+| Vmax | unset | untranscribed on import (S4-5); the engine's default |
+| Vmin | unset | untranscribed on import (S4-5); the engine's default |
+| DelayOFF | unset | untranscribed on import (S4-5); the engine's default |
+| DeadTime | unset | untranscribed on import (S4-5); the engine's default |
+| CTPhase | unset | untranscribed or raising on import; not in CIM |
+| PTPhase | written | 1-based place of monitoredPhase among the monitored equipment's phase conductors |
+| VBus | unset | untranscribed or raising on import; not in CIM |
+| EventLog | unset | untranscribed or raising on import; not in CIM |
+| UserModel | unset | untranscribed or raising on import; not in CIM |
+| UserData | unset | untranscribed or raising on import; not in CIM |
+| pctMinkvar | unset | untranscribed or raising on import; not in CIM |
+| Reset | unset | untranscribed or raising on import; not in CIM |
+| ControlSignal | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | the control's enabled; the shunt's controlEnabled must agree |
 | like | not mapped | the writer never writes like= |

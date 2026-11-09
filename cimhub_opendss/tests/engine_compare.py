@@ -23,6 +23,9 @@ def _engine_state(path: Path) -> tuple[dict[str, tuple], dict[str, complex]]:
     elements = {}
     for name in dss.Circuit.AllElementNames():
         dss.Circuit.SetActiveElement(name)
+        if not dss.CktElement.Enabled():  # a disabled element has no nodes and no YPrim: both decks must disable it
+            elements[name.lower()] = (("disabled",), np.array([]))
+            continue
         # the engine's own connection: bus names and the node of each conductor (bare `650` = `650.1.2.3`)
         buses = (tuple(bus.split(".")[0].lower() for bus in dss.CktElement.BusNames()),
                  tuple(dss.CktElement.NodeOrder()))
