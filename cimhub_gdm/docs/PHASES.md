@@ -21,6 +21,16 @@ gaps, cross-cutting fail-fast rules, the atom list, and findings for other owner
 
 ## Phase 1: scaffold, shell, buses, source, switches
 
+**Status:** built 2026-11-08, waiting for review.
+- `scripts/test-all.sh gdm`: 63 passed; the 8 opt-in gdmloader cases skip; 2 ditto decks xfail (ditto can't read them).
+- The opt-in gdmloader sweep (`CIMHUB_GDMLOADER=1`): all 8 systems stop only at `PENDING` classes.
+- The ditto sweep: the 4 readable decks do the same.
+- Changes from the plan below:
+  - `GeometrySwitch` moved to Phase 2, because its equipment is a geometry catalog.
+  - The bus-voltage check across a switch is GDM's own validator, not ours.
+  - Untranscribed values go to `DEBUG` through a local formatter, because core's `untranscribed_values` formats
+    through `cell()`, which raises on GDM objects.
+
 **Goal:** `to_cim(system)` works end to end on a system with a source, buses and switches, and the harness proves
 itself on one complete family.
 

@@ -130,7 +130,7 @@ GDM carries several values per phase where CIM has one per object:
 
 | GDM | equal on every phase | differs by phase |
 |---|---|---|
-| load `phase_loads` p/q (OPEN_DECISIONS 13) | one EnergyConsumer, totals, **no** EnergyConsumerPhase (**G3**) | totals plus EnergyConsumerPhase p/q. A standalone single-phase load and an s1/s2 triplex load always get phase children. SMART-DS writes each triplex customer as two loads, one on `S1` and one on `S2` (935 each in p1rhs7), so each is a single-phase load with one child |
+| load `phase_loads` p/q (OPEN_DECISIONS 13) | one EnergyConsumer, totals, **no** EnergyConsumerPhase (G3: `phases=None`) | totals plus EnergyConsumerPhase p/q. A standalone single-phase load and an s1/s2 triplex load always get phase children. SMART-DS writes each triplex customer as two loads, one on `S1` and one on `S2` (935 each in p1rhs7), so each is a single-phase load with one child |
 | load ZIP coefficients | one LoadResponseCharacteristic | raise: CIM has one LRC per EnergyConsumer |
 | switch `is_closed` | `Switch.open = not is_closed[0]` | SwitchPhase `open` per phase (`SwitchPhaseBuilder`) |
 | capacitor `phase_capacitors` | LinearShuntCompensator totals | plus LinearShuntCompensatorPhase |
@@ -233,8 +233,10 @@ root `tests/cross_format/`), with ditto's known losses (regulators, angle sign) 
   `Vsource angle=30` (standard ABC rotation) becomes A 30°, B 150°, C 270°. So the +120° is ditto's convention, not
   an ACB system. *Recommendation:* accept a 120° spacing in either direction and write phase A's angle as
   `voltageAngle`. Report the convention to ditto/GDM (§14).
-- **G3. Balanced loads without phase children** (cross-spoke). Decision 13 wants no EnergyConsumerPhase for a balanced
-  3-phase load. Both CIM-Builder (`add_connectivity(phases=...)`) and cimtables (the `phases` column) write the
+- **G3. Balanced loads without phase children.** **Decided (user, 2026-11-08):** balanced three-phase equipment of every
+  class passes `phases=None` to its builder (`shared.builder_phases`), so it gets no per-phase children and no
+  Terminal phases. The DSS wave has to adopt the same rule. The original question: decision 13 wants no
+  EnergyConsumerPhase for a balanced 3-phase load. Both CIM-Builder (`add_connectivity(phases=...)`) and cimtables (the `phases` column) write the
   Terminal's phases only through `add_phase_children`, which always creates the children. The core `load` shape's
   `ld_y1 … ABC` row therefore makes three children too. Options:
   - (a) a builder/cimtables option to set Terminal phases only, plus a core shape change (DSS S4 adopts it too);
@@ -256,4 +258,6 @@ root `tests/cross_format/`), with ditto's known losses (regulators, angle sign) 
 | GDM maintainers | the gdm-cases data at format 2.0.0 can't load on 2.4.1: the upgrade chain starts at 2.0.1, and relabelled files then fail `PhaseVoltageSourceEquipment` validation. `RegulatorController.example()` has min/max voltage limits swapped. `example()`s use `watt` for reactive power |
 | CIM-Profiles | W, VA and VAr interconvert in the CIM unit registry (X2) |
 | gdmloader (0.0.5) | Downloads are cached outside the working directory (nothing lands in the cwd). It pins `fsspec`/`gcsfs ~=2025.3.2`, so it runs as `uv run --with gdmloader`, not as a workspace dependency |
+| infrasys | `System.list_parent_components` misses components held in a list (`VoltageSourceEquipment.sources`) and components nested in another component (a switch equipment's controller). So the orphan check walks the model fields itself (`gdm_to_cim._referenced_uuids`) |
+| GDM (validation) | GDM already rejects a switch between buses of different line-to-ground voltage, and `conductor_phases` that don't cover exactly the switch phases, so the importer doesn't repeat those checks |
 | ditto (0.1.8) | IEEE13_CDPSM fails (`TypeError: 'NoneType' object is not iterable`, `branches.py:187`); IEEE13_Assets fails (`'str' object cannot be interpreted as an integer`, in geometry); regulators (Transformer + RegControl) become plain `DistributionTransformer`s with no controller and `tap_positions=None`; phase angles step +120° (B leads A); `system.name` is `None`; `voltage_type` set as a `str`, not the enum (pydantic serialization warnings). The importer reads enums through `VoltageTypes(value)`, so both forms work |

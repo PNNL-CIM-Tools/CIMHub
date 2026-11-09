@@ -1,0 +1,11 @@
+# add_source(): DistributionVoltageSource src on b1, three equal phase sources of 2.4018 kV line-to-ground,
+# angles 0/120/240 deg (ditto's +120 deg convention). Balanced ABC: no phases, so no EnergySourcePhase.
+# nominalVoltage is b1's system voltage (4.16 kV line-to-line). voltageMagnitude = 2.4018 x sqrt(3) = 4.160039630 kV.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+Object EnergySource: mRID=src_src, name=src, node=b1, nominalVoltage (kV)=4.16, voltageMagnitude (kV)=4.160039630, voltageAngle (deg)=0, r (ohm)=0.160377, x (ohm)=0.641507, r0 (ohm)=0.179604, x0 (ohm)=0.538811, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom

@@ -64,6 +64,10 @@ builder owner on 2026-11-08.
 13. **Load phase convention.** **Decided (user, 2026-11-08):**
     - A three-phase load with equal per-phase values is one `EnergyConsumer` with the totals and no
       `EnergyConsumerPhase`.
+    - **How (user, 2026-11-08, G3):** balanced three-phase equipment passes `phases=None` to its builder, for loads
+      and every other three-phase class (sources, switches, lines, ...). So there are no per-phase children and no
+      `Terminal.phases`; absent means ABC. This is `shared.builder_phases`. The core shapes and the DSS goldens still
+      write `phases=ABC`, so the DSS wave has to adopt the same rule before the DSS/GDM parity test.
     - `EnergyConsumerPhase` children are written when the per-phase values differ, for a standalone single-phase load
       (A, B or C), and for a split-phase (`s1`/`s2`) triplex load.
 14. **Switch class.** **Decided (user, 2026-11-08):** by equipment class.

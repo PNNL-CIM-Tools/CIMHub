@@ -23,7 +23,8 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | bus `coordinate` | inline | none: ConnectivityNode is not a PowerSystemResource (B14) | none | G | 1 |
 | bus `phases`, `in_service` | structural | phases checked against attached equipment; `in_service=False` raises | none | n/a | 1 |
 | DistributionVoltageSource | instance | EnergySource `src_` + EnergySourcePhase: nominalVoltage, voltageMagnitude (LL), voltageAngle (degree), r/x/r0/x0; unequal per-phase values raise (EnergySourcePhase has only `phase`) | `EnergySourceBuilder` | R | 1 |
-| MatrixImpedanceSwitch, SequenceImpedanceSwitch *(new in 2.4)*, GeometrySwitch *(new in 2.4)* | instance | class by equipment (14) `sw_`: open = not `is_closed`, normalOpen from the controller | switch builders | R (GroundDisconnector U, B19) | 1 |
+| MatrixImpedanceSwitch, SequenceImpedanceSwitch *(new in 2.4)* | instance | class by equipment (14) `sw_`: open = not `is_closed`, normalOpen from the controller; per-phase states that differ → SwitchPhase `open` | switch builders | R (GroundDisconnector U, B19) | 1 (done) |
+| GeometrySwitch *(new in 2.4)* | instance | LoadBreakSwitch `sw_`; its equipment is a `GeometryBranchEquipment` catalog | switch builders | R | 2 |
 | MatrixImpedanceFuse | instance | Fuse `sw_` | `FuseBuilder` | R | 1 |
 | MatrixImpedanceRecloser | instance | Recloser `sw_`; `controller` untranscribed (no RecloseSequence, 12) | `RecloserBuilder` | R | 1 |
 | MatrixImpedanceBranch | instance | ACLineSegment `ln_`: node1/node2, phases, length; PerLengthImpedance `lc_` | `ACLineSegmentBuilder` | R | 2 |
