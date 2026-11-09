@@ -42,6 +42,19 @@ def per_unit_from_mva(value_mva: float, base_mva: float) -> float:
     return value_mva / base_mva
 
 
+def ohms_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> float:
+    """An impedance in ohm from pu on a base kV and MVA: ohm = pu x kV^2 / MVA (kV^2 / MVA is exactly ohm).
+
+    Generator ZR, in pu on the machine's MBASE and its bus's BASKV (R3).
+    """
+    return per_unit * base_kv ** 2 / base_mva
+
+
+def generation_p_q(record) -> tuple[float, float]:
+    """A generator's (p, q) under the CIM load sign convention: (-PG, -QG), with 0 kept 0.0, not -0.0 (R3)."""
+    return 0.0 - record.p_output, 0.0 - record.q_output
+
+
 def load_p_q(record) -> tuple[float, float]:
     """A load's p (MW) and q (Mvar) at 1 pu voltage, CIM's nominal: p = PL + IP + YP, q = QL + IQ - YQ.
 

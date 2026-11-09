@@ -16,7 +16,7 @@ substations, BusbarSections, voltage limits (kV) and SvVoltage, through `RawImpo
 - IEEE14 (11 substations), WECC240 (134) and the node-breaker atom bind.
 - Every WECC240 limit and solved voltage in SI equals pu × BASKV; 64 tests.
 - **R1 done 2026-11-08** (81 tests; atoms `cimhub_raw/tests/atoms/branch/`). **R2 done 2026-11-08** (112 tests; atoms
-`tests/atoms/load/`, `tests/atoms/shunt/`; R3 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
+`tests/atoms/load/`, `tests/atoms/shunt/`). **R3 done 2026-11-08** (130 tests; atom `tests/atoms/generator/`; RAW-7, RAW-23..25; R4 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
 with the DSS wave on branch `raw-v34`, in a worktree that sits beside the repo checkout (and so beside the `CIM-*`
 checkouts, which the root `../CIM-*` path sources need).
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (its F3 wave for `cimhub_raw`). **Pattern:**
@@ -295,13 +295,25 @@ Each decision has a recommendation; the slice's spec section settles it.
   - COD 0 with WINDV ≠ 1 still needs a tap changer (fixed, no control). COD ±1/±2/±3 add a `TapChangerControl`
     (voltage, reactive power, active power), and a negative COD sets the control out of service.
   - This is the riskiest mapping in the wave; R4's spec section works it out on atoms first.
-- **RAW-7. Generators.**
-  - `SynchronousMachine` + `GeneratingUnit`; `p` = −PG under the CIM load sign convention.
-  - QT/QB → maxQ/minQ, MBASE → ratedS, ZR/ZX → r/x in `(pu)` on MBASE, PT/PB → the unit's maxOperatingP/
-    minOperatingP.
-  - The `synchronous_machine` shape and its prefixes are core and translate-skill requests (C2, C3).
-  - Area membership: one `ControlAreaGeneratingUnit` per unit, in the `ControlArea` of the generator's bus
-    (cim18v17 profile of 2026-11-08).
+- **RAW-7. Generators.** *Decided 2026-11-08 (user, with the R3 spec; `CIMTBL_MAPPING.md#generator-r3`).*
+  - Per record, by WMOD (RAW-24): `SynchronousMachine` `sm_` + `GeneratingUnit` `gu_` + `ControlAreaGeneratingUnit`
+    `cagu_`, or `PowerElectronicsConnection` `pec_` + `PowerElectronicsUnit` `pecu_` +
+    `ControlAreaPowerElectronicsUnit` `capu_`, all keyed `<I>_<ID>`, in the `ControlArea` of the bus's AREA.
+  - `p` = −PG, `q` = −QG (load sign convention). QT/QB → maxQ/minQ, MBASE → ratedS, PT/PB → the unit's P limits,
+    all copied.
+  - Per plant (bus I): one `RegulatingControl` `gc_<I>`, since VS/IREG/RMPCT are plant quantities in PSS/E (the
+    records must agree, else raise). Enabled iff bus IDE is 2 or 3; target VS × BASKV(IREG) in V.
+  - The `synchronous_machine` shape and the prefixes are core and translate-skill requests (C2, C3).
+- **RAW-23. Machine attributes.** *User 2026-11-08:* `SynchronousMachine.referencePriority` (IDE 3) and `qPercent`
+  (RMPCT) added to cim18v17. ZR → the existing `r (ohm)`. **TODO:** cim18v17 has no positive-sequence machine
+  reactance for ZX ("bizarre", user), so a new profile extension is to be made; ZX is untranscribed until then.
+- **RAW-24. WMOD.** *User 2026-11-08:* a CSP plant is a steam-turbine synchronous machine (WMOD 0 in PSS/E, so
+  `SynchronousMachine` + `GeneratingUnit`); a PV farm is converter-interfaced, so `PowerElectronicsConnection` +
+  a `PowerElectronicsUnit` (concrete in cim18v17, no kind) carries it. WMOD 1 → the latter; 2, 3, 4 raise until a
+  case has one. Gap: RAW cannot say PV vs wind, or an induction-machine wind plant.
+- **RAW-25. Implicit step-up transformer.** RT + jXT ≠ 0 raises `NotImplementedError` until a case has one (both
+  cases: 0); GTAP untranscribed. The physical form, a generator-with-GSU builder shape, is a TODO for an owner
+  (C8): the user had seen it as a CIM-Builder GUI feature, but converters need it as much.
 - **RAW-8. Loads.** *Decided 2026-11-08 (user, with the R2 spec; `CIMTBL_MAPPING.md#load-r2`).*
   - p = PL + IP + YP, q = QL + IQ − YQ (`load_p_q`; YQ < 0 is inductive, checked against the v34 data format).
   - ZIP fractions by `zip_mix`: one shared `zip_<six fractions>` row per distinct mix. Core's
@@ -398,7 +410,9 @@ Each decision has a recommendation; the slice's spec section settles it.
 | ~~The load-area hierarchy (`SubLoadArea` → `LoadArea`)~~ added to the profile 2026-11-08 (user). Still open: the area/zone of machines and DC equipment, and a zone association for equipment | induction machine and multi-terminal DC bus AREA/ZONE; load ZONE ≠ bus ZONE | loads in `LoadArea` ⊃ `SubLoadArea` per (area, zone); machine and DC AREA/ZONE untranscribed | here and in the shared register |
 | The metered (loss-allocation) end of a branch | branch, switch, multi-section line MET | untranscribed (RAW-22) | here and in the shared register |
 | A shunt switched with its line, in a bus-branch model (a node-breaker model says it by placement) | branch GI/BI/GJ/BJ | an ordinary `LinearShuntCompensator` per end, linked by mRID only (RAW-13) | here and in the shared register |
-| A shunt's share of a coordinated voltage control (`SynchronousMachine.qPercent` exists only for machines) | switched shunt RMPCT | untranscribed (R2) | here and in the shared register |
+| A shunt's or converter's share of a coordinated voltage control (`SynchronousMachine.qPercent` exists only for machines; in cim18v17 since 2026-11-08, RAW-23) | switched shunt RMPCT; generator RMPCT on WMOD 1 | untranscribed (R2) | here and in the shared register |
+| The kind of a renewable bus-branch generator: PV, wind, or an induction machine (RAW-24) | generator WMOD 1 | a kindless `PowerElectronicsConnection` + `PowerElectronicsUnit` (R3) | here and in the shared register |
+| A machine's positive-sequence reactance: TODO, a profile extension (RAW-23) | generator ZX | untranscribed (R3) | here and in the shared register |
 
 Not gaps (by design, user 2026-11-08): limits and regulation always sit on a terminal. A bus's voltage limits and
 its regulation use the Terminal of its `BusbarSection` (RAW-11, RAW-19).
@@ -412,11 +426,12 @@ in the root `pyproject.toml` / `uv.lock`. Requests to the core owner:
 |---|---|---|
 | C1 | ~~`GraphModel.add_to_graph` raises on a duplicate key instead of warning and dropping (I8)~~ done on `rc_1` 2026-11-08 (uncommitted): `GraphModel.add_to_graph` raises `ValueError` on an identifier already in its class (user: the new API shape; identifiers seed mRIDs, unique at least within the local model). The RAW reader keeps its own earlier raise, which names both line numbers | nothing (the RAW reader checks first) |
 | C2 | `line_bus_branch` with a `BusbarSection` per bus, and its node mRID made bare (RAW-18); the voltage `OperationalLimitType`s with `direction` high and low (normal and emergency) in `common.cimtbl`; shapes `control_area` (ControlArea, ControlAreaGeneratingUnit, ConformLoadGroup, SubLoadArea, TieFlow), `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example | R0–R6 |
-| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, the switched-shunt block (`swsh_`), LoadArea (`la_`), SubLoadArea (`sla_`), ConformLoadGroup (`clg_`), NonConformLoadGroup (`nclg_`), the multi-section `Line` (`msl_`) in the `cimtbl-translate` table (its owners) | R0–R3 |
+| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, the switched-shunt block (`swsh_`), LoadArea (`la_`), SubLoadArea (`sla_`), ConformLoadGroup (`clg_`), NonConformLoadGroup (`nclg_`), the multi-section `Line` (`msl_`), SynchronousMachine (`sm_`), GeneratingUnit (`gu_`), ControlAreaGeneratingUnit (`cagu_`), the plant control (`gc_`), a kindless PowerElectronicsConnection (`pec_`), PowerElectronicsUnit (`pecu_`), ControlAreaPowerElectronicsUnit (`capu_`) in the `cimtbl-translate` table (its owners) | R0–R3 |
 | C4 | the ZIP fraction function and the CZ/CM derivations as U4 candidates | nothing |
 | C5 | `scripts/leak-gate.sh`: `--exclude-dir=.git` does not skip a worktree's `.git` *file*, so the gate always fails in a worktree; add `--exclude=.git` | a clean gate on this branch |
 | C6 | ~~`cimhub_core.cimtbl.fill_defaults` keeps attributes `dataclasses.replace` drops (the reader's composite `record.ID`)~~ done on `rc_1` 2026-11-08 (uncommitted), with a test. `importer/cimtbl/records.py`'s `fill_keyed_defaults` goes once `raw-v34` takes `rc_1`; so do the pure `zip_` rows in `load.py` (core's `zip_fractions.cimtbl` replaces them) | R1, R2 |
 | C7 | ~~the golden diff (`cimtbl_testing._keyed_records`) crashes on a master's `Import` records~~ already fixed on `rc_1` (it keys them as `("Import", path)`); `raw-v34` predates the fix | R1 |
+| C8 | **TODO, owner wanted:** a generator-with-step-up-transformer builder shape (the machine, a `PowerTransformer` and the internal node between them). RAW's implicit GSU (RT/XT/GTAP) needs it, and it is a common need beyond RAW (user, 2026-11-08); the user had thought of it as a CIM-Builder GUI feature | RAW-25 (a nonzero RT/XT raises meanwhile) |
 | U-RAW-2 | cimtables: a second `SubLoadArea` naming one `ControlArea` binds without error and overwrites the 0..1 inverse `ControlArea.EnergyArea`; it should raise (I8) | nothing (R2 hangs sub-areas on a `LoadArea`) |
 | U-RAW-3 | cimtables: a unit on a unitless float column (`RegulatingControl.targetValue (kV)`) is silently dropped; it should raise | nothing (R2 writes V) |
 | ~~U-RAW-1~~ | withdrawn 2026-11-08: bus voltage limits and solved voltages are written in kV, derived as pu × BASKV (RAW-14, RAW-19) | |

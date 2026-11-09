@@ -1,5 +1,5 @@
-"""R0-R2: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt and
-switched shunt documents, and their bind under cim18v17 (BusBranchModel).
+"""R0-R3: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
+shunt and generator documents, and their bind under cim18v17 (BusBranchModel).
 
 Goldens: ``tests/goldens/IEEE14/`` (``CIMHUB_UPDATE_GOLDENS=1`` rewrites them; review the diff).
 """
@@ -20,6 +20,7 @@ from cimhub_raw.importer.cimtbl import (
     bus,
     case_identification,
     fixed_shunt,
+    generator,
     load,
     multi_section_line,
     owner,
@@ -29,9 +30,11 @@ from cimhub_raw.importer.cimtbl import (
 )
 from cimhub_raw.importer.cimtbl.derived import (
     block_sections,
+    generation_p_q,
     ka_from_rating,
     kv_from_per_unit,
     load_p_q,
+    ohms_from_per_unit,
     per_unit_from_mva,
     volts_from_per_unit,
     zip_mix,
@@ -66,7 +69,7 @@ def ieee14_documents():
 
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
-                                    multi_section_line, load, fixed_shunt, switched_shunt],
+                                    multi_section_line, load, fixed_shunt, switched_shunt, generator],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
@@ -89,7 +92,7 @@ def test_master_matches_golden(ieee14_documents):
     assert_matches_golden(ieee14_documents.master, GOLDENS / "IEEE14.cimtbl")
 
 
-@pytest.mark.parametrize("part", ["zone", "area_interchange", "bus", "branch", "load", "fixed_shunt"])
+@pytest.mark.parametrize("part", ["zone", "area_interchange", "bus", "branch", "load", "fixed_shunt", "generator"])
 def test_part_matches_golden(ieee14_documents, part):
     document = next(doc for doc in ieee14_documents.parts if doc.name == part)
     assert_matches_golden(document, GOLDENS / f"{part}.cimtbl")
@@ -97,7 +100,7 @@ def test_part_matches_golden(ieee14_documents, part):
 
 def test_import_order_is_the_mapping_order(ieee14_documents):
     assert [part.name for part in ieee14_documents.parts] == ["zone", "area_interchange", "bus", "branch", "load",
-                                                              "fixed_shunt"]
+                                                              "fixed_shunt", "generator"]
 
 
 # -- the bound networks ------------------------------------------------------------------------------
@@ -167,8 +170,7 @@ def test_a_zone_no_record_names_is_synthesized():
 
 
 def test_the_master_lists_what_is_not_mapped(ieee14_documents):
-    assert "not mapped: GeneratorRecord 5, TransformerRecord 3" \
-        in ieee14_documents.master.comment
+    assert "not mapped: TransformerRecord 3" in ieee14_documents.master.comment
 
 
 # -- R1: branches, switches, multi-section lines ----------------------------------------------------------
@@ -366,7 +368,7 @@ def test_wecc240_switched_shunts(wecc240):
         assert control.Terminal.mRID == f"bb_{record.swreg}_T1"
         assert (control.mode.name, control.discrete, control.enabled) == ("voltage", True, True)
         assert control.targetValue == pytest.approx(kv * 1000.0)
-    assert len(_objects(network, "RegulatingControl")) == 7
+    assert len([control for control in _objects(network, "RegulatingControl") if control.startswith("cc_")]) == 7
 
 
 def test_ieee14_fixed_shunt():
@@ -458,3 +460,107 @@ def test_a_bus_without_base_voltage_raises():
     native.graph[schema.BusRecord]["1"] = dataclasses.replace(first, base_voltage=0.0)
     with pytest.raises(ValueError, match="bus 1: BASKV=0.0 is no base voltage"):
         RawImporter("IEEE14").to_cimtbl(native)
+
+
+# -- R3: generators ----------------------------------------------------------------------------------
+
+GENERATOR_ATOMS = TESTS / "atoms" / "generator"
+
+
+def test_ohms_from_per_unit():
+    """kV^2 / MVA is ohm: 0.01 pu on 13.8 kV and 100 MVA is 0.019044 ohm."""
+    assert ohms_from_per_unit(0.01, 13.8, 100.0) == pytest.approx(0.019044)
+
+
+def test_generation_p_q_keeps_zero_positive():
+    record = schema.GeneratorRecord(bus_number=1, p_output=0.0, q_output=-3.5)
+    p, q = generation_p_q(record)
+    assert (str(p), q) == ("0.0", 3.5)
+
+
+def test_wecc240_generators(wecc240):
+    """p = -PG and the limits in SI; WMOD picks the class; one control per plant on IREG's busbar; each unit in its
+    bus's ControlArea."""
+    native, network = wecc240
+    buses = {record.bus_number: record for record in native.list_by_class(schema.BusRecord)}
+    machines, converters = _objects(network, "SynchronousMachine"), _objects(network, "PowerElectronicsConnection")
+    for record in native.list_by_class(schema.GeneratorRecord):
+        if record.wmod == 1:
+            equipment = converters[f"pec_{record.ID}"]
+            unit = equipment.PowerElectronicsUnit[0]
+            assert unit.maxP.to("MW") == pytest.approx(record.max_p_output)
+            membership = _objects(network, "ControlAreaPowerElectronicsUnit")[f"capu_{record.ID}"]
+            assert membership.PowerElectronicsUnit is unit
+        else:
+            equipment = machines[f"sm_{record.ID}"]
+            assert equipment.GeneratingUnit.minOperatingP.to("MW") == pytest.approx(record.min_p_output)
+            assert float(equipment.qPercent) == record.rmpct
+            membership = equipment.GeneratingUnit.ControlAreaGeneratingUnit[0]
+        assert membership.ControlArea.mRID == f"ca_{buses[record.bus_number].area}"
+        assert equipment.p.to("MW") == pytest.approx(-record.p_output)
+        assert equipment.q.to("MVAr") == pytest.approx(-record.q_output)
+        assert (equipment.maxQ.to("MVAr"), equipment.ratedS.to("MVA")) == (pytest.approx(record.max_q_output),
+                                                                           pytest.approx(record.rated_mva))
+        assert equipment.inService is (record.status == 1)
+        control = equipment.RegulatingControl
+        regulated = buses[record.regulated_bus_number]
+        assert (control.mRID, control.Terminal.mRID) == (f"gc_{record.bus_number}", f"bb_{regulated.bus_number}_T1")
+        assert control.targetValue == pytest.approx(record.regulated_voltage_setpoint * regulated.base_voltage * 1000)
+    assert (len(machines), len(converters)) == (109, 37)
+    plants = {control for control in _objects(network, "RegulatingControl") if control.startswith("gc_")}
+    assert len(plants) == 56
+    swing = [machine.mRID for machine in machines.values() if machine.referencePriority == 1]
+    assert sorted(swing) == ["sm_3933_CG", "sm_3933_NB", "sm_3933_ND", "sm_3933_NG", "sm_3933_NH"]
+
+
+def test_ieee14_swing_machine():
+    machines = _objects(_network(IEEE14, "IEEE14"), "SynchronousMachine")
+    assert {mrid: machine.referencePriority for mrid, machine in machines.items()} == {
+        "sm_1_1": 1, "sm_2_1": None, "sm_3_1": None, "sm_6_1": None, "sm_8_1": None}
+
+
+def test_generator_atom():
+    network = _network(GENERATOR_ATOMS / "generators.raw")
+    machines = _objects(network, "SynchronousMachine")
+    controls = _objects(network, "RegulatingControl")
+    swing = machines["sm_1_1"]
+    assert (swing.referencePriority, swing.RegulatingControl.Terminal.mRID) == (1, "bb_1_T1")
+    assert swing.r.to("ohm") == pytest.approx(0.003 * 230.0 ** 2 / 200.0)
+    plant = controls["gc_2"]  # a machine and a converter on bus 2, regulating remote bus 3 (230 kV)
+    converter = _objects(network, "PowerElectronicsConnection")["pec_2_PV"]
+    assert machines["sm_2_G"].RegulatingControl is plant and converter.RegulatingControl is plant
+    assert (plant.Terminal.mRID, plant.targetValue) == ("bb_3_T1", pytest.approx(1.01 * 230000.0))
+    assert (converter.inService, converter.PowerElectronicsUnit[0].mRID) == (False, "pecu_2_PV")
+    assert machines["sm_2_G"].GeneratingUnit.minOperatingP.to("MW") == pytest.approx(-40.0)  # pumping
+    assert (controls["gc_4"].enabled, machines["sm_4_1"].controlEnabled) == (False, False)  # an IDE 1 bus
+    blank = machines["sm_5_1"]  # every field defaulted
+    assert (blank.ratedS.to("MVA"), blank.maxQ.to("MVAr"), blank.p.to("MW")) == (pytest.approx(100.0),
+                                                                                 pytest.approx(9999.0), 0.0)
+
+
+def test_generator_atom_comments():
+    document = next(part for part in RawImporter("atom").to_cimtbl(
+        Raw34Reader(GENERATOR_ATOMS / "generators.raw").read_all()).parts if part.name == "generator")
+    rows = {row.cells[0]: row for statement in document.statements for row in statement.rows}
+    assert rows["sm_5_1"].comment.startswith("defaulted: gen_id=1, p_output=0.0")
+    assert "rated_mva=100.0" in rows["sm_5_1"].comment
+
+
+@pytest.mark.parametrize(("key", "changes", "error", "message"), [
+    ("2_G", {"wmod": 2}, NotImplementedError, "WMOD 2 .renewable, Q limits from WPF"),
+    ("2_G", {"wmod": 4}, NotImplementedError, "WMOD 4 .infeed"),
+    ("2_G", {"xt": 0.1}, NotImplementedError, "an implicit step-up transformer"),
+    ("2_G", {"nreg": 2}, NotImplementedError, "NREG 2 names a node"),
+    ("2_PV", {"regulated_voltage_setpoint": 1.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
+    ("2_PV", {"rmpct": 50.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
+    ("1_1", {"regulated_bus_number": 3}, ValueError, "plant 1: a swing bus regulates remote bus 3"),
+    ("2_G", {"regulated_bus_number": 99}, ValueError, "plant 2: IREG 99 is no bus"),
+    ("1_1", {"wmod": 1}, ValueError, "plant 1: a swing bus with no SynchronousMachine"),
+])
+def test_a_generator_outside_r3_raises(key, changes, error, message):
+    native = Raw34Reader(GENERATOR_ATOMS / "generators.raw").read_all()
+    if key == "2_G" and "regulated_bus_number" in changes:  # a plant's records agree, so change both
+        _replace_record(native, schema.GeneratorRecord, "2_PV", **changes)
+    _replace_record(native, schema.GeneratorRecord, key, **changes)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)

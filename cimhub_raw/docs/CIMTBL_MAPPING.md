@@ -3,7 +3,8 @@
 **Status:** R0 approved 2026-11-08 and implemented (master, zone, area, bus with substations, busbars, voltage
 limits and solved voltages; owner). R1 (branch, system switching device, multi-section line, rating
 sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. R2 (load, fixed shunt, switched
-shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. R3 (generator) approved and
+implemented 2026-11-08; atom in `tests/atoms/generator/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -31,9 +32,10 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 7 | Load | `load.cimtbl` | `load` with `bus`: `LoadArea` ⊃ `SubLoadArea` ⊃ load groups, ZIP `LoadResponseCharacteristic`s, `ConformLoad` / `NonConformLoad` (R2) | 2, 3 |
 | 8 | Fixed shunt | `fixed_shunt.cimtbl` | `shunt` with `bus`: `LinearShuntCompensator` (R2) | 3 |
 | 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
+| 10 | Generator | `generator.cimtbl` | `synchronous_machine` (bus-branch, new, C2) and `der` with `bus`: a `RegulatingControl` per plant; `SynchronousMachine` + `GeneratingUnit` (WMOD 0) or `PowerElectronicsConnection` + `PowerElectronicsUnit` (WMOD 1), each with its control-area membership (R3) | 2, 3 |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Later slices append to this order: generator (R3); transformer (R4); inter-area transfer
+Later slices append to this order: transformer (R4); inter-area transfer
 (R5); substation (R6).
 
 ## Master
@@ -590,8 +592,8 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
   - WECC240's 1.5/0.5 pu bands give target = BASKV and deadband = BASKV.
 - **Status:** `inService` = STATUS == 1 on every block.
 - **Untranscribed:**
-  - RMPCT: CIM has no participation share for a shunt (`SynchronousMachine.qPercent` covers only machines);
-    CIM 18 gap; 100 everywhere in both cases;
+  - RMPCT: CIM has no participation share for a shunt (canonical CIM 18's `SynchronousMachine.qPercent` covers
+    only machines; cim18v17 has it since 2026-11-08); CIM 18 gap; 100 everywhere in both cases;
   - RMIDNT: only used by MODSW 4 and 6, which raise.
 - **Atom:** `tests/atoms/shunt/switched_shunts.raw` covers reactor + capacitor blocks with remote regulation,
   continuous mode with 2.5 steps, and a locked shunt (10 × 1.0 and 5 × 1.5 Mvar, BINIT 13 → 10 and 2 steps).
@@ -626,6 +628,169 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
 | `b8` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `nreg` | `Optional[int]` |  | structural | NREG: a node of bus SWREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
 
+## Generator (R3)
+
+**Approved 2026-11-08 and implemented.** RAW-7, RAW-23, RAW-24, RAW-25. Atom: `tests/atoms/generator/`.
+
+Mapper: `importer/cimtbl/generator.py` (`map_generator`). Shape: `synchronous_machine` (bus-branch), new (C2), and
+the `der` shape's `PowerElectronicsConnection` with `bus`.
+- **What a record is:** one machine, or several aggregated, at bus I. PSS/E treats VS, IREG and RMPCT as **plant**
+  quantities: every machine at bus I shares them, and the plant's output and limits are the sums of its in-service
+  machines'.
+- **Class by WMOD (RAW-24):** WMOD is PSS/E's own line between a conventional machine (0) and a renewable or
+  infeed one (1-4), whose reactive limits do not come from a synchronous machine.
+
+  | WMOD | CIM, per record |
+  |---|---|
+  | 0 conventional | `SynchronousMachine` + `GeneratingUnit` + `ControlAreaGeneratingUnit` |
+  | 1 renewable, limits QT/QB | `PowerElectronicsConnection` + `PowerElectronicsUnit` (concrete in cim18v17, no kind) + `ControlAreaPowerElectronicsUnit` |
+  | 2, 3 renewable, Q limits or Q from WPF | raise `NotImplementedError`: no case has one yet |
+  | 4 infeed, fixed Q | raise `NotImplementedError`: no case has one yet |
+
+  - **CSP vs PV:** a concentrating solar thermal plant drives a synchronous generator from a steam turbine. PSS/E
+    models it as a conventional machine, WMOD 0, so it lands on `SynchronousMachine` + `GeneratingUnit`.
+    `SolarGeneratingUnit` is not in cim18v17, and RAW has no fuel anyway. WMOD 1 is a converter-interfaced plant
+    (PV, type 3/4 wind), and `PowerElectronicsConnection` is its class.
+  - WECC240's 37 WMOD 1 machines are its aggregated wind (11) and solar (26) plants. That count comes from the
+    working workbook beside the old CIMHub_2_0 copy of the case, which does not say PV or CSP. The case is built
+    for a study of high renewable integration.
+  - What stays a gap: RAW cannot say PV or wind (so no `PhotoVoltaicUnit` / `PowerElectronicsWindUnit`). Nor can it
+    say a type 1/2 wind plant, an induction machine (`AsynchronousMachine`), entered as WMOD 1.
+- **Per plant:** one `RegulatingControl` for all the machines and connections at bus I. This matches the physical
+  joint voltage control, and the switched shunt's form (one control, several pieces of equipment). A plant and a
+  switched shunt regulating the same bus have their own controls: their setpoints differ (a VS and a band). WECC240
+  has three such buses (4001, 4005, 7001).
+- **Order:** `RegulatingControl`; `GeneratingUnit`, `ControlAreaGeneratingUnit`, `SynchronousMachine`;
+  `PowerElectronicsConnection`, `PowerElectronicsUnit`, `ControlAreaPowerElectronicsUnit`. Each reference points
+  backwards, so no `Update` is needed.
+
+WECC240 (bus 1032: two machines and a converter plant regulating 1002; 3933: the swing plant):
+
+```
+# one per plant (bus I); targetValue in V
+Table RegulatingControl: mRID, name, mode, discrete, enabled, targetValue, Terminal
+    gc_1032, 1032, voltage, false, true,  349830.0,           bb_1002_T1
+    gc_1333, 1333, voltage, false, true,  346724.99999999994, bb_1303_T1
+    gc_3933, 3933, voltage, false, true,  20400.0,            bb_3933_T1
+    ...
+Table GeneratingUnit: mRID, name, maxOperatingP (MW), minOperatingP (MW), EquipmentContainer
+    gu_1032_C,  1032_C,  873.0,   0.0,     sub_1032
+    ...
+Table ControlAreaGeneratingUnit: mRID, name, ControlArea, GeneratingUnit
+    cagu_1032_C,  1032_C,  ca_1, gu_1032_C
+    ...
+# WMOD 0
+# untranscribed: zx, gtap, o1, o2, o3, o4, f1, f2, f3, f4, wpf
+Table SynchronousMachine: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), r (ohm), qPercent, referencePriority, inService, controlEnabled, RegulatingControl, GeneratingUnit, BaseVoltage, EquipmentContainer
+    # defaulted: wmod=0, nreg=0
+    sm_1032_C,  1032_C,  1032, -712.0,    3.332,    200.0,  -200.0,  873.0,   0.0, 100.0, ,  true,  true,  gc_1032, gu_1032_C,  bv_20kv, sub_1032
+    ...
+    sm_3933_CG, 3933_CG, 3933, -404.88,   -88.652,  363.0,  -82.0,   865.0,   0.0, 100.0, 1, true,  true,  gc_3933, gu_3933_CG, bv_20kv, sub_3903
+    ...
+# WMOD 1; untranscribed here also: zr, rmpct (no qPercent)
+# untranscribed: zx, gtap, o1, o2, o3, o4, f1, f2, f3, f4, wpf
+Table PowerElectronicsConnection: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), inService, controlEnabled, RegulatingControl, BaseVoltage, EquipmentContainer
+    pec_1032_S,  1032_S,  1032, -520.0,   3.332,    360.0,  -360.0,  638.0,  true, true, gc_1032, bv_20kv, sub_1032
+    ...
+Table PowerElectronicsUnit: mRID, name, maxP (MW), minP (MW), PowerElectronicsConnection, EquipmentContainer
+    pecu_1032_S,  1032_S,  638.0,  0.0, pec_1032_S,  sub_1032
+    ...
+Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronicsUnit
+    capu_1032_S,  1032_S,  ca_1, pecu_1032_S
+    ...
+```
+
+- **mRIDs** (prefixes requested, C3), all keyed `<I>_<ID>` with name `I_ID`:
+  - `sm_`, `gu_`, `cagu_` for WMOD 0, and `pec_`, `pecu_`, `capu_` for WMOD 1. The `der` shape's `pv_` and
+    `<pec>_unit` assume the kind (PV) is known, and here it is not;
+  - the plant control is `gc_<I>`. It cannot be `cc_<I>`, the switched shunt's, since one bus can have both.
+- **Sign (RAW-14):** `p` = −PG and `q` = −QG on both classes, which use the load sign convention ("positive sign
+  means flow out from a node"), so generation is negative.
+  - The limits keep the generator convention, as CIM writes them, all copied: `maxQ` = QT, `minQ` = QB, and PT/PB
+    → `maxOperatingP`/`minOperatingP` (unit) or `maxP`/`minP` (power-electronics unit).
+  - WECC240 has 5 machines with PB < 0 (pumping), copied as is.
+- **Rating:** `ratedS` = MBASE (blank: SBASE, the schema rule, defaulted). `ratedU` is blank: RAW has no machine
+  voltage.
+- **Plant control:**
+  - `mode = voltage`, `discrete = false`, `targetValue` = VS × the regulated bus's BASKV in V
+    (`volts_from_per_unit`), `targetDeadband` blank (PSS/E holds VS exactly). The product can leave a
+    last-digit float residue (1.005 × 345 kV is `346724.99999999994`): written as computed, never rounded, so the
+    exporter's VS can differ in the last digit (expected difference). `r (ohm)` likewise;
+  - `Terminal` = `bb_<IREG>_T1`, or `bb_<I>_T1` when IREG is 0 or I (RAW-11). WECC240: 137 of 146 machines
+    regulate a remote bus, and 7 regulate their own (the swing plant at 3933);
+  - `enabled` = bus I's IDE is 2 or 3, and every member's `controlEnabled` follows it. An IDE 1 bus has no voltage
+    control (WECC240's machine at 3432 is on one, out of service). The exporter writes IDE 2 for a bus with an
+    enabled plant control and 1 otherwise, so IDE 1/2 round-trip;
+  - the plant's records must agree on VS, IREG and RMPCT, as PSS/E requires. A disagreement raises with both IDs;
+  - a remote IREG from a swing bus raises (PSS/E would silently regulate bus I instead), and so does an IREG that
+    is no bus. NREG ≠ 0 raises until R6.
+- **RMPCT:** `qPercent` on every `SynchronousMachine` of the plant (added to the profile 2026-11-08). A
+  `PowerElectronicsConnection` has none, so its row lists RMPCT untranscribed, and the exporter takes the plant's
+  RMPCT from one of its machines, else 100. Gap: the shunt RMPCT gap now covers power-electronics connections too.
+  RMPCT is 100 everywhere in both cases.
+- **Swing bus:** IDE 3 → `referencePriority = 1` on every `SynchronousMachine` at the bus (added to the profile
+  2026-11-08; "1 = highest priority" for the angle-reference choice); blank elsewhere. The exporter writes IDE 3 for
+  a bus with such a machine. A swing bus with no in-model `SynchronousMachine` (only WMOD 1 records) raises; no case
+  has one. The 3933 swing plant has 5 machines and 2 connections.
+- **Status:** `inService` = STAT == 1 on the machine or connection. The units carry no status of their own.
+- **Area:** each unit's control-area membership → `ca_<AREA of bus I>`. A generator record has no AREA. A bus AREA
+  with no area-interchange record raises, as for loads.
+- **ZSORCE (RAW-23):** ZR/ZX are the source impedance for switching, fault and dynamic studies (pu on MBASE).
+  - ZR → `r (ohm)` = ZR × BASKV² / MBASE on a `SynchronousMachine` (`ohms_from_per_unit`, through the units
+    library);
+  - ZX: **TODO, a new profile extension.** cim18v17's `SynchronousMachine` has no positive-sequence reactance (the
+    canonical saturated `satDirect*X` were never in it). It stays untranscribed until the extension lands. The
+    exporter writes the default 1.0 meanwhile, an expected difference for WECC240 (0.2);
+  - on a `PowerElectronicsConnection`, both are untranscribed: a converter has no ZSORCE in CIM.
+- **Step-up transformer (RAW-25):** RT + jXT ≠ 0 (an implicit GSU) raises `NotImplementedError` until a case has
+  one. Both cases model their GSUs as transformer branches (RT = XT = 0), and GTAP is used only then, so it is
+  untranscribed. The physical form is a generator-with-step-up-transformer builder shape: a `PowerTransformer` to
+  an internal node. That is a common need beyond RAW, so it is a TODO for an owner to take (plan §7, C8).
+- **Untranscribed:** GTAP, WPF (used only by WMOD 2/3), ZX (TODO extension), O1..F4 (ownership, CIM 18 gap).
+- **Atom** `tests/atoms/generator/generators.raw`:
+  - a plant of one WMOD 0 machine and one WMOD 1 connection regulating a remote bus, with one member out of service;
+  - a swing plant;
+  - a machine on an IDE 1 bus (control disabled);
+  - a record with every optional field blank (all defaulted, MBASE = SBASE).
+  
+  Raise tests: plant records that disagree on VS, IREG or RMPCT; RT/XT ≠ 0; WMOD 2, 3 and 4; NREG ≠ 0; a remote IREG
+  from a swing bus; an IREG that is no bus; a swing bus with only WMOD 1 records.
+- **Checks:** all 151 records bind (IEEE14 5 machines; WECC240 109 machines and 37 connections). In SI, each p =
+  −PG in W, each target = VS × BASKV in V, and each unit reaches its bus's `ControlArea`. Each plant has one
+  control.
+
+| GeneratorRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `bus_number` | `int` | `1032`, `1034`, `1131` | structural | I: the machine's bus, BaseVoltage, EquipmentContainer (its substation) and ControlArea (the bus's AREA, through ControlAreaGeneratingUnit or ControlAreaPowerElectronicsUnit); the plant key gc_<I>; IDE 2 or 3 enables the plant control, IDE 3 sets referencePriority = 1 on its SynchronousMachines |
+| `gen_id` | `Optional[str]` | `C`, `G`, `S` | structural | ID: with I the key, mRIDs sm_/gu_/cagu_ or pec_/pecu_/capu_<I>_<ID>, name I_ID; blank: 1 (defaulted) |
+| `p_output` | `Optional[float]` | `712.0`, `856.0`, `520.0` | derived | PG (MW): p = -PG, load sign convention (generation_p_q, RAW-14); blank: 0 (defaulted) |
+| `q_output` | `Optional[float]` | `-3.332`, `262.628`, `-46.791` | derived | QG (Mvar): q = -QG, load sign convention (generation_p_q, RAW-14); blank: 0 (defaulted) |
+| `max_q_output` | `Optional[float]` | `200.0`, `357.0`, `360.0` | copied | `SynchronousMachine.maxQ` (MVAr), `PowerElectronicsConnection.maxQ` (MVAr); QT, generator convention as CIM's limit; blank: 9999 (defaulted) |
+| `min_q_output` | `Optional[float]` | `-200.0`, `-357.0`, `-360.0` | copied | `SynchronousMachine.minQ` (MVAr), `PowerElectronicsConnection.minQ` (MVAr); QB; blank: -9999 (defaulted) |
+| `regulated_voltage_setpoint` | `Optional[float]` | `1.014`, `1.03`, `1.01` | derived | VS (pu): targetValue = VS x the regulated bus's BASKV, in V (volts_from_per_unit); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 1.0 (defaulted) |
+| `regulated_bus_number` | `Optional[int]` | `1002`, `1004`, `1101` | structural | IREG: the plant control's Terminal bb_<IREG>_T1, or bb_<I>_T1 when 0 (RAW-11); a remote IREG from a swing bus raises; a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
+| `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE; blank: SBASE (defaulted) |
+| `zr` | `Optional[float]` | `0.0` | derived | ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE (ohms_from_per_unit); untranscribed on a PowerElectronicsConnection; blank: 0 (defaulted) |
+| `zx` | `Optional[float]` | `0.2` | untranscribed | ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile extension, RAW-23) |
+| `rt` | `Optional[float]` | `0.0` | structural | RT: the implicit step-up transformer; nonzero raises until a case has one (RAW-25); blank: 0 (defaulted) |
+| `xt` | `Optional[float]` | `0.0` | structural | XT: as RT |
+| `gtap` | `Optional[float]` | `1.0` | untranscribed | GTAP: used only when RT + jXT is nonzero, which raises |
+| `status` | `Optional[int]` | `1`, `0` | mapped | STAT: inService = (STAT == 1); blank: 1 (defaulted) |
+| `rmpct` | `Optional[float]` | `100.0` | copied | `SynchronousMachine.qPercent`; RMPCT, on every SynchronousMachine of the plant; a PowerElectronicsConnection has no qPercent (CIM 18 gap); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 100 (defaulted) |
+| `max_p_output` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `GeneratingUnit.maxOperatingP` (MW), `PowerElectronicsUnit.maxP` (MW); PT, by WMOD; blank: 9999 (defaulted) |
+| `min_p_output` | `Optional[float]` | `0.0`, `-1006.0`, `-2841.0` | copied | `GeneratingUnit.minOperatingP` (MW), `PowerElectronicsUnit.minP` (MW); PB, by WMOD; blank: -9999 (defaulted) |
+| `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o2` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f2` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o3` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f3` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o4` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f4` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `wmod` | `Optional[int]` | `1` | mapped | WMOD: the class (RAW-24), 0 conventional a SynchronousMachine + GeneratingUnit, 1 renewable with QT/QB limits a PowerElectronicsConnection + PowerElectronicsUnit; 2, 3 and 4 raise until a case has one; blank: 0 (defaulted) |
+| `wpf` | `Optional[float]` | `1.0` | untranscribed | WPF: used only by WMOD 2 and 3, which raise |
+| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus IREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+
 ## Owner
 
 
@@ -648,7 +813,8 @@ IDE and IC are checked in the mapper (above). They are not CIM enums.
 | 3 disconnect switch | `Disconnector` |
 | blank or other | raises |
 
-MODSW (R2): the table in [Switched shunt](#switched-shunt-r2).
+MODSW (R2): the table in [Switched shunt](#switched-shunt-r2). WMOD (R3): the table in
+[Generator](#generator-r3).
 
 ## CIM 18 gaps
 
@@ -662,7 +828,9 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
 | the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET | untranscribed |
 | a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
-| a shunt's share of a coordinated voltage control (R2) | switched shunt RMPCT | untranscribed |
+| a shunt's or converter's share of a coordinated voltage control (R2, R3) | switched shunt RMPCT; generator RMPCT on WMOD 1 | untranscribed |
+| the kind of a renewable bus-branch generator: PV, wind, or an induction machine (R3) | generator WMOD 1 | a `PowerElectronicsConnection` + `PowerElectronicsUnit` (no kind) |
+| a machine's positive-sequence reactance: TODO, a profile extension (R3) | generator ZX | untranscribed |
 
 Not gaps: a bus's voltage limits and its regulation sit on its `BusbarSection`'s terminal. CIM puts limits and
 regulating controls on terminals by design (RAW-11, RAW-19).
@@ -679,6 +847,10 @@ regulating controls on terminals by design (RAW-11, RAW-19).
   (MET untranscribed, a gap).
 - **R2** (user, 2026-11-08): RAW-8 (loads: SCALE → Conform/NonConformLoad; `LoadArea` ⊃ `SubLoadArea` per (area,
   zone)); RAW-10 (a switched shunt's blocks as one `LinearShuntCompensator` each, under one `RegulatingControl`).
+- **R3** (user, 2026-11-08): RAW-7 (one `RegulatingControl` per plant), RAW-23
+  (`referencePriority` and `qPercent` added to the profile; ZX a TODO extension), RAW-24 (WMOD 0 a
+  `SynchronousMachine`, WMOD 1 a `PowerElectronicsConnection`), RAW-25 (an implicit step-up transformer raises; the
+  builder shape a TODO for an owner).
 
 ## Reference model and expected differences
 

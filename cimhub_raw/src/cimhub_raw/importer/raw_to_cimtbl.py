@@ -26,6 +26,7 @@ from cimhub_raw.importer.cimtbl import (
     case_identification,
     facts_device,
     fixed_shunt,
+    generator,
     gne_device,
     impedance_correction,
     induction_machine,
@@ -47,8 +48,8 @@ AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
 
 
 class Site:
-    """What the orchestrator computes once and hands to the mappers: case values, region, bus zones, areas and base
-    voltages, and substations."""
+    """What the orchestrator computes once and hands to the mappers: case values, region, bus zones, areas, types and
+    base voltages, and substations."""
 
     def __init__(self, native, name: str):
         self.values = case_identification.case_values(native)
@@ -57,6 +58,7 @@ class Site:
         buses = [record for record, _ in bus.filled_buses(native)]
         self.base_kv = {record.bus_number: record.base_voltage for record in buses}
         self.areas = {record.bus_number: int(record.area) for record in buses}
+        self.bus_types = {record.bus_number: record.bus_type for record in buses}
         self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold)
         self.substation_of = bus.substation_of(self.substations)
 
@@ -80,6 +82,8 @@ MAPPING_ORDER = (
                                                                                 site.base_kv, site.values.base_mva)),
     (switched_shunt.NATIVE_CLASS, lambda native, site: switched_shunt.map_switched_shunt(
         native, site.substation_of, site.base_kv, site.values.base_mva)),
+    (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
+        native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.values.base_mva)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),

@@ -2,7 +2,7 @@
 # Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#master
 # untranscribed: GAUSS, NEWTON, ADJUST, TYSL, SOLVER (solution options)
 # untranscribed: Owner 1 (ownership is a CIM 18 gap)
-# not mapped: GeneratorRecord 5, TransformerRecord 3
+# not mapped: TransformerRecord 3
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -51,3 +51,5 @@ Import branch.cimtbl
 Import load.cimtbl
 
 Import fixed_shunt.cimtbl
+
+Import generator.cimtbl
