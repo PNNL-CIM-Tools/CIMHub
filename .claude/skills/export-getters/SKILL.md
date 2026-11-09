@@ -80,6 +80,13 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
 6. **Raw floats:** an attribute that is not a CIMUnit fails fast (`get_qty` raises); never guess kV vs V.
 7. **Frequency:** from the network (`network.base_frequency`, set by cimgraph's `set_default_bases`), never a
    hard-coded 60 Hz in a getter or spoke.
+8. **Unset is `None`, and the spoke decides** (user, 2026-11-08). A getter returns `None` for an optional value CIM
+   leaves unset (a line's `b`, `g`, zero sequence), never 0.0, so "not modelled" and "zero" stay distinguishable.
+   Each spoke writes its own rule, with a comment saying why:
+   - RAW and MATPOWER write `b = 0.0` when `None` (RAW's spec default for `B`; MATPOWER's `BR_B` column cannot be
+     blank). Neither has a series line conductance: a set `g` raises until a real case needs a `GI`/`GJ` split.
+   - DSS writes `C1=0`/`C0=0` when `b` is `None`. A blank lets the engine default in (C1=3.4, C0=1.6 nF per unit
+     length, or the balanced 2.8/-0.6 C matrix on a matrix code), which silently adds line charging.
 
 ## Import-side code tables (`cimhub_core/codes.py`)
 

@@ -7,11 +7,11 @@ that each one is already implemented.
 ## 1. Design signatures
 
 ```python
-class ImpedanceSource(Enum):
-    LUMPED = ...; PER_LENGTH_SEQ = ...; MATRIX_REDUCED = ...; GEOMETRY = ...
+class ImpedanceSource(IntEnum):   # ordered: as derive=, the furthest step allowed
+    LUMPED = 1; PER_LENGTH_SEQ = 2; MATRIX_REDUCED = 3; GEOMETRY = 4
 
-class SequenceImpedance(NamedTuple):
-    r: float; x: float; b: float; g: float
+class SequenceImpedance(NamedTuple):   # None: unset in CIM (SKILL.md semantic rule 8)
+    r: float; x: float; b: float | None; g: float | None
     r0: float | None; x0: float | None; b0: float | None; g0: float | None
     source: ImpedanceSource
 
