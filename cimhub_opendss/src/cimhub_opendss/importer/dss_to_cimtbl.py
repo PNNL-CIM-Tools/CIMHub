@@ -1,7 +1,8 @@
 """OpenDSS deck -> ``.cimtbl`` documents -> cim18v17: the orchestrator.
 
 The topology walk runs once (``site``); the master holds the containers, BaseFrequency and BaseVoltages, and
-``bus.cimtbl`` gives every bus its ``ConnectivityNode`` and BaseVoltage. ``MAPPING_ORDER`` is the ``Import``
+``bus.cimtbl`` gives every bus its ``ConnectivityNode`` and BaseVoltage; the core ``zip_fractions.cimtbl``
+(DSS-7) is always written. ``MAPPING_ORDER`` is the ``Import``
 order of the class parts (DSS_REWRITE_PLAN.md section 2): catalogs before the instances that use them. Each slice
 adds its mappers here. A DSS class nothing reads is listed by count on the master's comment (DSS-11), so nothing
 disappears silently.
@@ -20,8 +21,9 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_opendss.dss_reader import dss_defaults
-from cimhub_opendss.importer.cimtbl import (geometry, line, linecode, regcontrol, transformer, vsource, wire,
-                                            xfmrcode)
+from cimhub_core.load_response import zip_fractions
+from cimhub_opendss.importer.cimtbl import (capacitor, capcontrol, geometry, line, linecode, load, regcontrol,
+                                            transformer, vsource, wire, xfmrcode)
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -55,6 +57,9 @@ MAPPING_ORDER = (
                                                            length_unit=site.length_unit)),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(native, site.buses, site.feeder)),
     (regcontrol.NATIVE_CLASS, lambda native, site: regcontrol.map_regcontrol(native)),
+    (load.NATIVE_CLASS, lambda native, site: load.map_load(native, site.buses, site.feeder)),
+    (capacitor.NATIVE_CLASS, lambda native, site: capacitor.map_capacitor(native, site.buses, site.feeder)),
+    (capcontrol.NATIVE_CLASS, lambda native, site: capcontrol.map_capcontrol(native, site.buses)),
 )
 
 #: Classes a mapper of another class reads in full, so they are mapped too: the switch controls (DSS-9).
@@ -163,7 +168,7 @@ class DssImporter(CimtblImporter):
 
     def to_cimtbl(self, model) -> DocumentSet:
         walked = site(model, self.length_unit)
-        documents = [map_buses(walked), *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
+        documents = [map_buses(walked), zip_fractions(), *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
         parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, name=self.name, authority=self.authority),
                            parts=parts)

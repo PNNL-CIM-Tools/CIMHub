@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -26,6 +26,9 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (TankEnd), `transformer_template_1ph` (center tap, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
+| `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
+| `Capacitor` | `capacitor.cimtbl` | `shunt` (`LinearShuntCompensator`) | the master, `bus.cimtbl` |
+| `CapControl` | `capcontrol.cimtbl` | `shunt` (`RegulatingControl` + `Update` of the compensator) | `line.cimtbl`, `capacitor.cimtbl` |
 
 ## Master
 
@@ -1103,3 +1106,335 @@ headers carry no unit (primary volts, amps).
 - **R2:** `RatioTapChanger.normalStep` is not written. The converter writes `step` (the deck's tap position) only.
 - **R3:** S3a/S3b as proposed.
 - **R4:** synthesized templates are `ln_<name>_lc` and `ln_<name>_wc`.
+
+## S4 (S4a approved and done 2026-11-08)
+
+S4 maps the injections.
+
+**Result (S4a, 2026-11-08).**
+- 25 of the 31 sweep decks bind with every load, capacitor and CapControl; the stops are S3's six (DSS-10 in
+  J1, K1, M1, IEEE13_OCHRE; the two balanced IEEE9500 copies).
+- Engine checks pass on the atoms and the 8 engine decks: every load's kW, kvar, model, CVR exponents,
+  connection and customer count; every capacitor's kvar, kV, connection and steps (states on the atom); every
+  CapControl's mode, ON and OFF (rebuilt from target and deadband), ratios, delay, element and terminal. IEEE8500
+  and IEEE9500's kvar controls monitor switches (`sw_<name>_T1`).
+- Each equipment's BaseVoltage is its bus's (the walk's, as `ConnectivityNode.BaseVoltage` in `bus.cimtbl`).
+- Found on the way: `pce/capacitor.yaml` was an orphan copy of `pde/capacitor.yaml` that hid its `dss_default`s
+  from the reader; removed.
+
+Census of the 31 sweep decks, 2026-11-08 (throwaway scripts; the counts include the
+repeated IEEE8500/IEEE9500 copies):
+- **Loads:** 17,447 in 19 decks. Model 1 (ConstantPQ) 14,060; 4 (CVR) 3,184; 5 (ConstantI) 112; 2 (ConstantZ) 86.
+  q from `pf` 15,535 (13,356 at 0.97), from `kvar` 3,381; no load sets both. Two ACEP_PSIL loads give `kVA` and `pf`
+  without `kW`. 320 K1 loads set `xfkVA` (and `allocationfactor`) besides `kW`. 4 are disabled.
+- **Capacitors:** 106 in 11 decks, every one a single step; 78 single-phase, all wye. **CapControls:** 59. 48 are
+  kvar (IEEE8500, IEEE9500, M1), 5 voltage (IEEE13_Assets ×2, IEEE13_OCHRE), 3 J1 `volt` and 3 time
+  (IEEE13_Assets ×2 + `_geo`).
+- **S4b classes:** 950 PVSystems (887 of them 2-phase on a split-phase secondary), 27 Storage, 61 Generators
+  (ACEP_PSIL and the IEEE9500 copies; models 1, 3, 7) and 8 Reactors (7 series `HVMV_Sub_HSB` in IEEE8500/IEEE9500,
+  and K1's neutral reactor `T2_neutral`, node 4 to node 0 on one bus).
+
+**Scope split (approved, S4-1).** S4a uses only shapes that exist; S4b needs two new ones.
+- **S4a:** Load, Capacitor, CapControl (shapes `load`, `shunt`; the core `zip_fractions.cimtbl`, DSS-7).
+- **S4b:** PVSystem and Storage (`der`), Generator (new `machine` shape: `SynchronousMachine`), Reactor (new
+  `series_compensator` shape), and the full IEEE13_CDPSM artifact directory as the reference golden (D6). Its spec
+  section follows S4a, as S3b's followed S3a.
+
+**Findings that change the plan:**
+- **U3 is closed.** IEEE13_OCHRE's two voltage controls and IEEE13_Assets' time control monitor their own
+  capacitor, so the plan's "all CapControls monitor a line" is wrong. CIM-Tables' `Update` form breaks the reference
+  cycle: the compensator row comes first, then the control (naming the compensator's generated `cap_<name>_T1`),
+  then `Update LinearShuntCompensator: mRID=cap_<name>, RegulatingControl=cc_<name>`. Checked: this binds, and
+  `RegulatingControl.RegulatingCondEq` is the compensator.
+- **A 2-phase wye load on a split-phase secondary is two legs to neutral,** not one 240 V load. The engine reads its
+  `kV` as line-to-line by the √3 rule: 0.208 = 0.120 × √3. So IEEE13_CDPSM's `House` is phases `s1s2`, wye,
+  grounded, with each leg at 120 V. A 240 V load across s1 and s2 would be a 1-phase load on `.1.2`; no deck has one.
+- **Every load's kV agrees with its bus** within 1 % (17,447 of 17,447; the nearest misses are 2.4 kV against 4.16/√3, 0.07 %). CIM gives
+  a load no rated voltage: `EnergyConsumer.p` is at the BaseVoltage. So `kV` is checked and not written.
+- **Engine rules** (pinned with probes; 13 engine decks, every load's kW and kvar equal the engine's):
+  - kvar wins over pf in either order;
+  - pf alone gives q = kW·tan(acos |pf|) with the sign of pf, and the default pf is 0.88;
+  - kVA without kW gives kW = kVA·|pf|;
+  - kW, kVA and xfkVA override each other in the order given: `kW=10 pf=0.9 xfkVA=20 allocationfactor=0.5` is
+    9 kW, but with kW last it is 10 kW. The reader's record keeps no order.
+  - CapControl defaults: type current, ON 300, OFF 200, PTratio 60, CTratio 60, Delay 15; a Capacitor's are
+    1200 kvar at 12.47 kV.
+
+**Shared phase rule** (one helper for every S4 mapper): a 1-terminal device's nodes give its phases.
+- Nodes 1/2/3 are A/B/C, and s1/s2 on a split-phase island (DSS-5). An omitted node is the DSS default.
+- Wye: `phaseConnection=Y`, `grounded=true`. A neutral on node 0, or none, is ground; a neutral on another node
+  raises.
+- Delta: `D`, `grounded=false`. A 1-phase delta device needs its two nodes: `.3.1` is `AC` (cimtables names its
+  phase child C, CIM's delta convention).
+- A 3-phase device on a split-phase island raises.
+
+**Artifact order.** `MAPPING_ORDER` grows by load, capacitor and capcontrol, after regcontrol. A control references
+a line's or its capacitor's Terminal, so it comes after both.
+
+### Load
+
+Mapper: `cimhub_opendss/importer/cimtbl/load.py` (`map_load`). Artifact `load.cimtbl`; shape `load`. Atom
+`tests/atoms/load/loads.dss` (after IEEE13_CDPSM):
+- models 1, 2, 4 (two CVR pairs) and 5;
+- q from pf, from kvar, and from neither (pf 0.88), plus kVA-only;
+- a 1-phase delta on `.3.1`, s1 and s2 legs, a 2-phase `s1s2` load and a disabled load.
+
+**Identity.** `EnergyConsumer` `ld_` + name, lowercased.
+
+**Voltage response (DSS-7).**
+- The master imports the fixed `zip_fractions.cimtbl` that core writes: `zip_constant_pq`, `zip_constant_z` and
+  `zip_constant_i`, `exponentModel=false`.
+- Model 1, 2 or 5 names one of them.
+- Model 4 names `exp_<CVRwatts>_<CVRvars>` (`exp_0.8_3`, `exp_1_2`). That is one `LoadResponseCharacteristic` row
+  per distinct pair, first in `load.cimtbl`, with `exponentModel=true` and `pVoltageExponent`/`qVoltageExponent`.
+  Its constant fractions are unset.
+- Models 3, 6, 7 and 8 raise.
+
+**What raises:**
+- `kV` more than 1 % off its bus's phase voltage (LL for delta and 2-3 phases, LN for 1-phase wye);
+- `kW` with `kVA` or `xfkVA` (K1, which stops earlier on DSS-10);
+- `Rneut` ≥ 0;
+- the unmapped models.
+
+`enabled=false` gives `normallyInService=false` and the row is written, as for a line. EPRI's ExportCIMXML skips
+disabled loads.
+
+### Capacitor
+
+Mapper: `cimhub_opendss/importer/cimtbl/capacitor.py` (`map_capacitor`). Artifact `capacitor.cimtbl`; shape `shunt`.
+Atom `tests/atoms/capacitor/caps.dss` (after IEEE13_Assets and IEEE13_OCHRE): a 3-phase and a 1-phase wye bank, a
+delta bank, and a bank whose `states=[0]`. The same atom carries the CapControls below.
+
+**Identity.** `LinearShuntCompensator` `cap_` + name, lowercased.
+
+**One section.**
+- `nomQ` = kvar (the total over the phases) and `nomU` = kv, as rated. K1's `10548920-1` is 13.8 kV on a 13.2 kV
+  bus, and that stays.
+- `bPerSection` (S) = nomQ / nomU² (`b_per_section`, through pint). Every CIM consumer reads b.
+- `maximumSections=1`. `sections` = `normalSections` = the steps `states` closes (M1's Cap1 and Cap2 are 0), as a
+  switch's `normalOpen` follows `open` when nothing else is given.
+
+**What raises:** more than one step; `bus2`; `cmatrix` or `cuf`; a nonzero `R` or `XL` (IEEE4's `Stabilizer`
+writes `R=0`, which is untranscribed); `normamps`/`emergamps`.
+
+### CapControl
+
+Mapper: `cimhub_opendss/importer/cimtbl/capcontrol.py` (`map_capcontrol`). Artifact `capcontrol.cimtbl`; shape
+`shunt`. Atom: `caps.dss`, with controls of four kinds:
+- kvar on a line (after IEEE8500);
+- voltage on a line with PTratio 20 and PTPhase 1 (after IEEE13_Assets `Cap2`);
+- voltage on its own capacitor (after IEEE13_OCHRE);
+- time (after IEEE13_Assets `Cap1`).
+
+**Identity.** `RegulatingControl` `cc_` + name, lowercased. The shape had `<cap>_ctrl`; a DSS control has a name of
+its own, and `rc_<name>` is the RegControl precedent (S4-8).
+
+**Rows.**
+- `RegulatingControl` with `discrete=true`, `enabled`, `mode`, `monitoredPhase`, `ptRatio`, `ctRatio`,
+  `targetValue`, `targetDeadband`.
+  - `Terminal` = `ln_<line>_T<terminal>` or `cap_<capacitor>_T<terminal>`. Any other element raises.
+  - `monitoredPhase` is the phase of the monitored terminal's conductor `PTPhase` (EPRI's rule).
+- Then `Update LinearShuntCompensator: mRID=cap_<capacitor>, RegulatingControl=cc_<name>, aVRDelay (s)=<Delay>,
+  controlEnabled=<enabled>`. So the capacitor mapper knows nothing of controls, and the own-terminal cycle is
+  broken (U3).
+
+**ON/OFF to target and deadband** (derived, `on_off_target`; EPRI ExportCIMXML's convention, made positive):
+- targetValue = (ON + OFF) / 2, targetDeadband = |OFF − ON|. Both are plain floats in cim18v17 (S3a), in primary
+  units by mode:
+  - voltage: × PTratio, in V;
+  - current: × CTratio, in A;
+  - kvar: in var, converted through pint;
+  - time: hours from midnight.
+- The type fixes which side ON is on: below OFF for voltage and time, above it for kvar and current. A control with
+  ON on the wrong side raises, so the exporter can invert the pair without a sign (EPRI writes a negative deadband
+  for kvar).
+
+| control | ON / OFF | ratio | targetValue | targetDeadband |
+|---|---|---|---|---|
+| IEEE8500 `CAPBank0A_Ctrl` (kvar) | 200 / −300 kvar | — | −50,000 var | 500,000 var |
+| IEEE13_Assets `Cap2` (voltage) | 115 / 125 V | PT 20 | 2,400 V | 200 V |
+| IEEE13_OCHRE `CAP1_ctrl` (voltage, own terminal) | 1,950 / 2,500 V | PT 1 | 2,225 V | 550 V |
+| IEEE13_Assets `Cap1` (time) | 8 / 19 h | — | 13.5 h | 11 h |
+
+**Untranscribed, with no CIM home:** `VoltOverride`, `Vmax`, `Vmin` (45 IEEE8500/IEEE9500 kvar controls) and
+`DelayOFF`, `DeadTime`. `maxAllowedTargetValue` limits the target, not the bus voltage, so it is not a stand-in.
+This changes how those controls act when the engine solves (S4-5).
+
+**What raises:** PF and Follow types; `CTPhase`, `VBus`, `UserModel`, `ControlSignal`; PTPhase AVG/MAX/MIN; a
+capacitor or element that no `New` defines.
+
+**Schema (DSS-6):**
+- `dss_default`s for CapControl and Capacitor (the defaults listed above);
+- `OFFsetting`, `Delay`, `DelayOFF` and `DeadTime` ranges → float (they are strings today);
+- `type` stays a string read by unique prefix, as the engine reads J1's `volt`.
+
+### Engine checks (S4a)
+
+On the atoms and the engine decks, as in S3:
+- every load's kW and kvar (already equal on 13 decks with the rule above) and its model;
+- every capacitor's kvar, kV, connection and step count; the states on the atom (a deck that solves when compiled
+  switches them);
+- every CapControl's mode, ON and OFF (back from target and deadband), PTratio, CTratio, Delay and monitored
+  element and terminal.
+
+### Core and shape changes (S4a)
+
+- `cimhub_core`: a `zip_fractions()` document (`zip_constant_pq`, `_z`, `_i`). The `common` shape gains
+  `zip_constant_i` from it, and a test keeps the two equal.
+- `shunt.cimtbl`: replace the R11 note with the own-terminal form (control, then `Update`). Drop the `(V)` on
+  `targetValue`/`targetDeadband` here and in `voltage_regulator.cimtbl` (plain floats, S3a).
+- `load.cimtbl`: an `exp_0.8_3` row and a model-4 consumer.
+- The `cimtbl-shapes` skill rows to match. `UPSTREAM_REQUESTS.md`: U3 closed.
+
+### Load, Capacitor and CapControl fields
+
+#### Load
+
+| Load field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LoadName]` | `611`, `634a`, `634b` | copied | `EnergyConsumer.name`; mRID = ld_ + name, lowercased |
+| `bus1` | `str` | `611.3`, `634.1`, `634.2` | structural | node; the nodes give the phases: 1/2/3 are A/B/C, and s1/s2 on a split-phase island (DSS-5); an omitted node is the DSS default (conductor k on node k) |
+| `phases` | `Optional[int]` | `1`, `3`, `2` | structural | the conductor count; default 3. On a split-phase island 2 wye phases on 1.2 are two legs to neutral (s1s2, kV is LL by the sqrt 3 rule) |
+| `kV` | `Optional[float]` | `2.4`, `0.277`, `4.16` | structural | checked, not written: the phase voltage it gives (LL for delta and 2-3 phases, LN for 1-phase wye) must be within 1 % of the bus's, else it raises; CIM p is at the BaseVoltage |
+| `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p |
+| `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset (kvar wins in either order, engine-checked); default 0.88 |
+| `model` | `Union[str, ForwardRef('LoadModel'), NoneType]` | `ConstantI`, `ConstantPQ`, `ConstantZ` | mapped | `EnergyConsumer.LoadResponse`; 1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, 8 raise; default 1 |
+| `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `daily` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `duty` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `growth` | `Optional[str]` |  | untranscribed | a GrowthShape reference; not mapped (DSS-11) |
+| `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `EnergyConsumer.phaseConnection`, `EnergyConsumer.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
+| `kvar` | `Optional[float]` | `80.0`, `110.0`, `90.0` | copied | `EnergyConsumer.q` (kVAr) |
+| `Rneut` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (>= 0: a wye neutral impedance) |
+| `Xneut` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `status` | `Union[str, ForwardRef('LoadStatus'), NoneType]` | `Variable`, `Fixed` | untranscribed | Fixed/Exempt: whether load multipliers scale it; DSS solution control; no home in the network profile parts |
+| `load_class` | `Optional[int]` | `1`, `2` | untranscribed | a DSS report grouping |
+| `Vminpu` | `Optional[float]` | `0.88`, `0.85`, `0.75` | untranscribed | below it the engine models the load as constant Z; DSS solution control; no home in the network profile parts |
+| `Vmaxpu` | `Optional[float]` | `1.15` | untranscribed | above it the engine models the load as constant Z; DSS solution control; no home in the network profile parts |
+| `Vminnorm` | `Optional[float]` |  | untranscribed | an EnergyMeter UE threshold; DSS solution control; no home in the network profile parts |
+| `Vminemerg` | `Optional[float]` |  | untranscribed | an EnergyMeter EEN threshold; DSS solution control; no home in the network profile parts |
+| `xfkVA` | `Optional[float]` | `1.70148`, `397.465666666668`, `25.1736633333333` | structural | raises: not mapped, and with kW the engine takes whichever comes last (K1 only, behind DSS-10) |
+| `allocationfactor` | `Optional[float]` | `1.2136`, `1.2096`, `1.2172` | structural | raises: it scales xfkVA |
+| `kVA` | `Optional[float]` | `313.0` | derived | with kW unset: p = kVA x abs(pf), q = kVA x sin(acos abs(pf)) with the sign of pf (ACEP_PSIL); raises with kW: the engine takes whichever of kW, kVA and xfkVA comes last, and the record keeps no order |
+| `pct_mean` | `Optional[float]` |  | untranscribed | a Monte Carlo setting; DSS solution control; no home in the network profile parts |
+| `pct_stddev` | `Optional[float]` |  | untranscribed | a Monte Carlo setting; DSS solution control; no home in the network profile parts |
+| `CVRwatts` | `Optional[float]` | `0.8`, `0.7` | copied | `LoadResponseCharacteristic.pVoltageExponent`; model 4 only (the exp_ row); default 1; unused by other models |
+| `CVRvars` | `Optional[float]` | `3.0` | copied | `LoadResponseCharacteristic.qVoltageExponent`; model 4 only (the exp_ row); default 2; unused by other models |
+| `kwh` | `Optional[float]` |  | untranscribed | sizes the load only in the AllocateLoads command |
+| `kwhdays` | `Optional[float]` |  | untranscribed | sizes the load only in the AllocateLoads command |
+| `Cfactor` | `Optional[float]` |  | untranscribed | sizes the load only in the AllocateLoads command |
+| `CVRcurve` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `NumCust` | `Optional[int]` | `1`, `2`, `6` | copied | `EnergyConsumer.customerCount`; default 1 |
+| `ZIPV` | `Union[float, list[float], NoneType]` |  | untranscribed | used only by model 8, which raises |
+| `pct_SeriesRL` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `RelWeight` | `Optional[float]` |  | untranscribed | a reliability weighting |
+| `Vlowpu` | `Optional[float]` |  | untranscribed | below it the engine models the load as open; DSS solution control; no home in the network profile parts |
+| `puXharm` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `XRharm` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a load |
+| `enabled` | `Union[bool, Bool, NoneType]` | `False` | copied | `EnergyConsumer.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+#### Capacitor
+
+| Capacitor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, CapacitorName]` | `Cap1`, `Cap2`, `CAPBank1A` | copied | `LinearShuntCompensator.name`; mRID = cap_ + name, lowercased |
+| `bus1` | `Optional[str]` | `675`, `611.3`, `R20185.1` | structural | node and phases, as a load's (1/2/3 are A/B/C) |
+| `bus2` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an ungrounded wye or a series capacitor) |
+| `phases` | `Optional[int]` | `3`, `1` | structural | the conductor count; default 3 |
+| `kvar` | `Union[float, list[float], NoneType]` | `[600.0]`, `[100.0]`, `[300.0]` | copied | `LinearShuntCompensator.nomQ` (kVAr); the total over the phases; more than one step raises; default 1200 |
+| `kv` | `Optional[float]` | `4.16`, `2.4`, `7.2` | copied | `LinearShuntCompensator.nomU` (kV); as rated (LN for 1-phase wye, else LL); also bPerSection (S) = nomQ / nomU^2 (b_per_section); default 12.47 |
+| `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye` | mapped | `LinearShuntCompensator.phaseConnection`, `LinearShuntCompensator.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
+| `cmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a capacitance matrix instead of kvar) |
+| `cuf` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (microfarads instead of kvar) |
+| `R` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | 0 is untranscribed; nonzero raises (a series R is not mapped) |
+| `XL` | `Union[float, list[float], NoneType]` |  | structural | 0 is untranscribed; nonzero raises (a series reactor is not mapped) |
+| `Harm` | `Union[float, list[float], NoneType]` |  | untranscribed | the tuning harmonic of the R/XL filter |
+| `Numsteps` | `Optional[int]` |  | structural | maximumSections; more than 1 raises (unequal steps would need a NonlinearShuntCompensator); default 1 |
+| `states` | `Union[int, list[int], NoneType]` | `[0]`, `[1]` | structural | sections = normalSections = the steps closed (a switch's normalOpen = open rule); default all closed |
+| `normamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an OperationalLimitSet, as a line's) |
+| `emergamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `faultrate` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `pctperm` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `repair` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a compensator; bPerSection is at the model's frequency |
+| `enabled` | `Union[bool, Bool, NoneType]` | `True` | copied | `LinearShuntCompensator.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+#### CapControl
+
+| Capcontrol field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, CapcontrolName]` | `Cap1`, `Cap2`, `CAPBank1A_Ctrl` | copied | `RegulatingControl.name`; mRID = cc_ + name, lowercased |
+| `element` | `Optional[str]` | `capacitor.cap1`, `line.684611`, `line.CAP_1A` | structural | Terminal = ln_<line>_T<n> (sw_ for a switch) or cap_<capacitor>_T<n>; another element class raises |
+| `terminal` | `Optional[int]` | `2`, `1` | structural | the element's terminal; default 1 |
+| `capacitor` | `Optional[str]` | `cap1`, `cap2`, `CAPBank1A` | structural | the Update row: LinearShuntCompensator cap_<capacitor> gets RegulatingControl; a capacitor no New defines raises |
+| `type` | `Optional[str]` | `time`, `voltage`, `kvar` | mapped | `RegulatingControl.mode`; voltage -> voltage, current -> currentFlow, kvar -> reactivePower, time -> timeScheduled (a unique prefix, as the engine reads it: J1's volt); PF and Follow raise; default current |
+| `PTratio` | `Optional[float]` | `20.0`, `1.0`, `60.0` | copied | `RegulatingControl.ptRatio`; default 60 |
+| `CTratio` | `Optional[float]` | `1.0` | copied | `RegulatingControl.ctRatio`; default 60 |
+| `ONsetting` | `Optional[float]` | `8.0`, `115.0`, `150.0` | derived | targetValue = (ON + OFF) / 2 (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours; ON on the wrong side of OFF for the type raises; default 300 |
+| `OFFsetting` | `Optional[float]` | `19.0`, `125.0`, `-225.0` | derived | targetDeadband = abs(OFF - ON) (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours; default 200 |
+| `Delay` | `Optional[float]` | `100.0`, `101.0`, `102.0` | copied | `LinearShuntCompensator.aVRDelay` (s); on the Update row; default 15 |
+| `VoltOverride` | `Union[bool, Bool, NoneType]` | `True`, `False` | untranscribed | a voltage override band of a kvar/current control; no home (maxAllowedTargetValue limits the target, not the voltage) |
+| `Vmax` | `Optional[float]` | `7740.0`, `126.0` | untranscribed | the VoltOverride band (V on the PT secondary) |
+| `Vmin` | `Optional[float]` | `7110.0`, `114.0` | untranscribed | the VoltOverride band (V on the PT secondary) |
+| `DelayOFF` | `Optional[float]` | `100.0`, `101.0`, `102.0` | untranscribed | CIM has one aVRDelay (Delay); DSS solution control; no home in the network profile parts |
+| `DeadTime` | `Optional[float]` | `0.0` | untranscribed | DSS solution control; no home in the network profile parts |
+| `CTPhase` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `PTPhase` | `Optional[int]` | `1`, `2` | structural | monitoredPhase = the phase of the monitored terminal's conductor PTPhase (default 1); AVG/MAX/MIN raise |
+| `VBus` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (remote voltage sensing) |
+| `EventLog` | `Optional[str]` |  | untranscribed | DSS report flag |
+| `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `pctMinkvar` | `Optional[float]` |  | untranscribed | used only by PF control, which raises |
+| `Reset` | `Union[bool, Bool, NoneType]` |  | untranscribed | a command, not a setting |
+| `ControlSignal` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a control |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `RegulatingControl.enabled`, `LinearShuntCompensator.controlEnabled`; default true; controlEnabled on the Update row |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+### S4b outline (direction only; its spec section follows S4a)
+
+- **PVSystem → `PowerElectronicsConnection` `pv_` + `PhotoVoltaicUnit` `pv_<name>_unit`** (shape `der`).
+  - ratedS = kVA, ratedU = kV, maxP = Pmpp;
+  - p = −Pmpp × irradiance (default 1), capped at kVA, as the engine gives it with no curves; q from pf (default 1)
+    or kvar;
+  - curves and `%Cutin`/`%Cutout` untranscribed.
+  - The 531 ieee9500_2025 2-phase PVs give kV 0.24 on 120 V legs. ratedU keeps the deck's value; S4b pins what the
+    engine does with it.
+- **Storage → `PowerElectronicsConnection` `storage_` + `BatteryUnit`.**
+  - ratedS = kVA, ratedE = kWhrated, storedE from kWhstored or %stored;
+  - batteryState from `State` (charging, discharging, idling → waiting);
+  - p from kW by state (CIM sign: discharge negative).
+- **Generator → `SynchronousMachine` `gen_`** (new `machine` shape).
+  - p = −kW, q from pf or kvar, ratedS = kVA, ratedU = kV, `operatingMode=generator`;
+  - model 3 (PV bus) adds a voltage `RegulatingControl` on its own terminal, by `Update` as above;
+  - model 7 (current-limited) maps as model 1, with a note;
+  - Xdp, Xdpp and H are dynamics, so untranscribed.
+- **Reactor.**
+  - A series reactor (bus1 + bus2) becomes a `SeriesCompensator` `rx_`: r, x in ohm, with an `OperationalLimitSet`
+    for normamps/emergamps as a line's (new `series_compensator` shape).
+  - A reactor between two nodes of one bus (K1's neutral reactor) raises; K1 stops on DSS-10 first.
+- **Exit:** the full IEEE13_CDPSM artifact directory as the reference golden (D6).
+
+### Decisions for S4 (approved 2026-11-08)
+
+- **S4-1:** split S4a / S4b as above.
+- **S4-2:** a load's `kV` is checked against its bus (1 %) and not written; off by more, it raises. The alternative
+  is to rescale p and q to the bus voltage by the model's exponent. No deck needs that.
+- **S4-3:** `kW` with `kVA` or `xfkVA` raises, because the order decides the value and the record keeps none. `kVA`
+  without `kW` is derived (ACEP_PSIL). The alternative is the reader keeping the last of the three; K1 is the only
+  user, and it stops on DSS-10 first.
+- **S4-4:** CapControl target/deadband by EPRI's midpoint and width, deadband positive, in primary units by mode
+  (V, A, var, hours). The side of ON is checked per type.
+- **S4-5:** VoltOverride/Vmax/Vmin, DelayOFF and DeadTime untranscribed. A GridAPPS-D extension
+  (`RegulatingControl` voltage override limits, an off delay) is the candidate if power-flow parity on IEEE8500 needs
+  it.
+- **S4-6:** one-step capacitors only. `sections` = `normalSections` from `states`. `bPerSection` is written
+  (derived).
+- **S4-7:** the CapControl writes the compensator's `RegulatingControl`, `aVRDelay` and `controlEnabled` by
+  `Update` (closes U3).
+- **S4-8:** `cc_<name>` for a CapControl.
+- **S4-9:** disabled loads and capacitors are written with `normallyInService=false`, as lines are.

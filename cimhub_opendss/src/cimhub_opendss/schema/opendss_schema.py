@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T15:05:14
+# Generation date: 2026-11-08T16:11:33
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -3280,13 +3280,13 @@ class Capcontrol(YAMLRoot):
     PTratio: Optional[float] = None
     CTratio: Optional[float] = None
     ONsetting: Optional[float] = None
-    OFFsetting: Optional[str] = None
-    Delay: Optional[str] = None
+    OFFsetting: Optional[float] = None
+    Delay: Optional[float] = None
     VoltOverride: Optional[Union[bool, Bool]] = None
     Vmax: Optional[float] = None
     Vmin: Optional[float] = None
-    DelayOFF: Optional[str] = None
-    DeadTime: Optional[str] = None
+    DelayOFF: Optional[float] = None
+    DeadTime: Optional[float] = None
     CTPhase: Optional[int] = None
     PTPhase: Optional[int] = None
     VBus: Optional[float] = None
@@ -3327,11 +3327,11 @@ class Capcontrol(YAMLRoot):
         if self.ONsetting is not None and not isinstance(self.ONsetting, float):
             self.ONsetting = float(self.ONsetting)
 
-        if self.OFFsetting is not None and not isinstance(self.OFFsetting, str):
-            self.OFFsetting = str(self.OFFsetting)
+        if self.OFFsetting is not None and not isinstance(self.OFFsetting, float):
+            self.OFFsetting = float(self.OFFsetting)
 
-        if self.Delay is not None and not isinstance(self.Delay, str):
-            self.Delay = str(self.Delay)
+        if self.Delay is not None and not isinstance(self.Delay, float):
+            self.Delay = float(self.Delay)
 
         if self.VoltOverride is not None and not isinstance(self.VoltOverride, Bool):
             self.VoltOverride = Bool(self.VoltOverride)
@@ -3342,11 +3342,11 @@ class Capcontrol(YAMLRoot):
         if self.Vmin is not None and not isinstance(self.Vmin, float):
             self.Vmin = float(self.Vmin)
 
-        if self.DelayOFF is not None and not isinstance(self.DelayOFF, str):
-            self.DelayOFF = str(self.DelayOFF)
+        if self.DelayOFF is not None and not isinstance(self.DelayOFF, float):
+            self.DelayOFF = float(self.DelayOFF)
 
-        if self.DeadTime is not None and not isinstance(self.DeadTime, str):
-            self.DeadTime = str(self.DeadTime)
+        if self.DeadTime is not None and not isinstance(self.DeadTime, float):
+            self.DeadTime = float(self.DeadTime)
 
         if self.CTPhase is not None and not isinstance(self.CTPhase, int):
             self.CTPhase = int(self.CTPhase)
@@ -9387,10 +9387,10 @@ slots.capcontrol__ONsetting = Slot(uri=DSS.ONsetting, name="capcontrol__ONsettin
                    model_uri=DSS.capcontrol__ONsetting, domain=None, range=Optional[float])
 
 slots.capcontrol__OFFsetting = Slot(uri=DSS.OFFsetting, name="capcontrol__OFFsetting", curie=DSS.curie('OFFsetting'),
-                   model_uri=DSS.capcontrol__OFFsetting, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__OFFsetting, domain=None, range=Optional[float])
 
 slots.capcontrol__Delay = Slot(uri=DSS.Delay, name="capcontrol__Delay", curie=DSS.curie('Delay'),
-                   model_uri=DSS.capcontrol__Delay, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__Delay, domain=None, range=Optional[float])
 
 slots.capcontrol__VoltOverride = Slot(uri=DSS.VoltOverride, name="capcontrol__VoltOverride", curie=DSS.curie('VoltOverride'),
                    model_uri=DSS.capcontrol__VoltOverride, domain=None, range=Optional[Union[bool, Bool]])
@@ -9402,10 +9402,10 @@ slots.capcontrol__Vmin = Slot(uri=DSS.Vmin, name="capcontrol__Vmin", curie=DSS.c
                    model_uri=DSS.capcontrol__Vmin, domain=None, range=Optional[float])
 
 slots.capcontrol__DelayOFF = Slot(uri=DSS.DelayOFF, name="capcontrol__DelayOFF", curie=DSS.curie('DelayOFF'),
-                   model_uri=DSS.capcontrol__DelayOFF, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__DelayOFF, domain=None, range=Optional[float])
 
 slots.capcontrol__DeadTime = Slot(uri=DSS.DeadTime, name="capcontrol__DeadTime", curie=DSS.curie('DeadTime'),
-                   model_uri=DSS.capcontrol__DeadTime, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__DeadTime, domain=None, range=Optional[float])
 
 slots.capcontrol__CTPhase = Slot(uri=DSS.CTPhase, name="capcontrol__CTPhase", curie=DSS.curie('CTPhase'),
                    model_uri=DSS.capcontrol__CTPhase, domain=None, range=Optional[int])

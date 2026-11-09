@@ -7,8 +7,10 @@ from pathlib import Path
 import pytest
 from cimgraph.models import BusBranchModel
 from cimtables import load_model
+from cimtables.document import format_document
 
 from cimhub_core.cimtbl_testing import cim_scope
+from cimhub_core.load_response import zip_fractions
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
 BUS_BRANCH = {"line_bus_branch"}
@@ -60,3 +62,17 @@ def test_bus_branch_per_unit_converts_on_the_system_base():
     [line] = network.graph[network.cim.ACLineSegment].values()
     z_base = 115.0**2 / 100.0  # ohm, 115 kV on 100 MVA
     assert float(line.r.to("ohm")) == pytest.approx(0.0194 * z_base)
+
+
+def test_common_zip_rows_are_the_core_zip_fractions(tmp_path):
+    document = zip_fractions()
+    path = tmp_path / f"{document.name}.cimtbl"
+    path.write_text(format_document(document), encoding="utf-8")
+
+    def fractions(network):
+        return {zip_model.mRID: (zip_model.exponentModel, zip_model.pConstantPower, zip_model.pConstantCurrent,
+                                 zip_model.pConstantImpedance, zip_model.qConstantPower, zip_model.qConstantCurrent,
+                                 zip_model.qConstantImpedance)
+                for zip_model in network.graph[network.cim.LoadResponseCharacteristic].values()}
+
+    assert fractions(_load("common")) == fractions(load_model(path))

@@ -13,7 +13,7 @@ Table AutoTransformerEnd: mRID, node, phase, endNumber, grounded, baseU (kV), ra
     xf_reg1_1, n0,  AN, 1, true, 2.4, 1666, bv_4p16kv
     xf_reg1_2, rg1, AN, 2, true, 2.4, 1666, bv_4p16kv
 Object TransformerMeshImpedance: mRID=xf_reg1_mesh_12, FromTransformerEnd=xf_reg1_1, ToTransformerEnd=xf_reg1_2, r (percent)=0.01, x (percent)=0.01
-Object TapChangerControl: mRID=rc_reg1, name=reg1, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, ptRatio=20, targetValue (V)=2440, targetDeadband (V)=40, lineDropCompensation=true, lineDropR (ohm)=0.085714, lineDropX (ohm)=0.257143, Terminal=xf_reg1_T2
+Object TapChangerControl: mRID=rc_reg1, name=reg1, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, ptRatio=20, targetValue=2440, targetDeadband=40, lineDropCompensation=true, lineDropR (ohm)=0.085714, lineDropX (ohm)=0.257143, Terminal=xf_reg1_T2
 Object RatioTapChanger: mRID=rc_reg1_tap, name=reg1, lowStep=-16, highStep=16, neutralStep=0, step=10, stepVoltageIncrement (percent)=0.625, neutralU (kV)=2.4, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating (A)=700, ctRatio=3500, initialDelay (s)=15, subsequentDelay (s)=2, TapChangerControl=rc_reg1, TransformerEnd=xf_reg1_2
 
 Object VoltageRegulator: mRID=xf_vr3, name=vr3, EquipmentContainer=fdr_shapes

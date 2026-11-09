@@ -1,0 +1,33 @@
+# OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset).
+# Models 1, 2, 5 name the shared zip_fractions rows; model 4 an exp_<CVRwatts>_<CVRvars> row here.
+# Source table: Load (records: 9)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load
+
+Profile = cim18v17
+
+# model 4 (CVR): p = p0 (V/V0)^CVRwatts, q = q0 (V/V0)^CVRvars
+Table LoadResponseCharacteristic: mRID, exponentModel, pVoltageExponent, qVoltageExponent
+    exp_0.8_3, true, 0.8, 3.0
+    exp_1_2,   true, 1.0, 2.0
+
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: NumCust=1, enabled=true
+    ld_ca,    ca,    b1,    CA,   D, false, 170.0,  82.33475782243494,   1, zip_constant_i,  true,  bv_4p16kv
+    # defaulted: conn=wye, NumCust=1, enabled=true
+    ld_cvr1,  cvr1,  b1,    A,    Y, true,  100.0,  32.86841051788632,   1, exp_0.8_3,       true,  bv_4p16kv
+    # defaulted: pf=0.88, conn=wye, CVRwatts=1.0, CVRvars=2.0, NumCust=1, enabled=true
+    ld_cvr2,  cvr2,  b1,    C,    Y, true,  100.0,  53.97428221380871,   1, exp_1_2,         true,  bv_4p16kv
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    # untranscribed: Vminpu=0.88
+    ld_house, house, house, s1s2, Y, true,  5.0,    3.0987216920155114,  1, zip_constant_pq, true,  bv_240v
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_kva,   kva,   b1,    ABC,  Y, true,  250.4,  -187.79999999999995, 1, zip_constant_pq, true,  bv_4p16kv
+    # defaulted: model=ConstantPQ, conn=wye, enabled=true
+    # untranscribed: status=Fixed
+    ld_leg2,  leg2,  house, s2,   Y, true,  2.0,    0.5,                 3, zip_constant_pq, true,  bv_240v
+    # defaulted: pf=0.88, model=ConstantPQ, conn=wye, NumCust=1
+    ld_off,   off,   b1,    C,    Y, true,  10.0,   5.397428221380871,   1, zip_constant_pq, false, bv_4p16kv
+    # defaulted: conn=wye, NumCust=1, enabled=true
+    ld_pq,    pq,    b1,    ABC,  Y, true,  1155.0, 660.0,               1, zip_constant_pq, true,  bv_4p16kv
+    # defaulted: NumCust=1, enabled=true
+    ld_z,     z,     b1,    BC,   D, false, 170.0,  125.0,               1, zip_constant_z,  true,  bv_4p16kv

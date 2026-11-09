@@ -1,6 +1,6 @@
 # OpenDSS deck IEEE13_CDPSM
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master
-# not mapped: Buscoords 22, Capacitor 2, Load 16, Pvsystem 2, Relay 1, Storage 3
+# not mapped: Buscoords 22, Pvsystem 2, Relay 1, Storage 3
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -27,6 +27,8 @@ Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direct
 
 Import bus.cimtbl
 
+Import zip_fractions.cimtbl
+
 Import linecode.cimtbl
 
 Import xfmrcode.cimtbl
@@ -38,3 +40,7 @@ Import line.cimtbl
 Import transformer.cimtbl
 
 Import regcontrol.cimtbl
+
+Import load.cimtbl
+
+Import capacitor.cimtbl

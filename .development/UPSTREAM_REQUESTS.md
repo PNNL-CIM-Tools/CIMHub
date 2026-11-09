@@ -7,7 +7,6 @@ commit once it is verified from this repo.
 | # | repo | ask | blocks |
 |---|---|---|---|
 | U1 | CIM-Graph | Import legacy profiles lazily. `import cimgraph.models` loads `cim17v40` (from `cimgraph.queries.sparql.get_all_nodes`) and `cimhub_2023` (from `cimgraph.models.feeder_model`) at module import: about 0.6 s and two profiles a cim18v17-only process never uses. | F1 exit check "importing `cimhub_core` loads no legacy profile". Until it is fixed, the check is a grep of `cimhub_*/src`. |
-| U3 | CIM-Tables | (old R11) A `RegulatingControl` that monitors its own equipment's generated Terminal cannot be written: `RegulatingCondEq` is `serialize=False`, so neither row can come first. Accept `RegulatingCondEq` on the control row, or resolve references to generated Terminals after the file binds. | DSS/GLM capacitor and regulator controls with local voltage sensing |
 | U4 | CIM-Tables or CIM-Builder | Upstream homes for derived math that is now in `cimhub_core/derived/`: star↔mesh impedance, short-circuit/no-load test → mesh/core admittance, trilateration of conductor distances → `XYSpacing`, ZIPV coefficients, a 1- or 2-phase line's phase matrix from sequence values and the n-conductor balanced matrix (`derived/sequence.py`, S2, S3). | nothing; move upstream when accepted |
 | U5 | CIM-Builder | About 15 builder modules (`new_base_voltage`, …) still import cimhub_2023 or cim18gad. Spokes use only the cim18v17 builders until they are ported. | GDM wave, if it needs one of them |
 | U6 | CIM-Profiles | Native unit spellings that pint misreads (`sf`, `$` → `USD`) need a home in the shared unit registry. Today they are in the old core `units.py`, which is not carried over. | any spoke whose reader meets them |
@@ -15,6 +14,9 @@ commit once it is verified from this repo.
 
 ## Closed (verified from this repo, 2026-11-07)
 
+- U3 (2026-11-08): own-terminal control. CIM-Tables' additive `Update` breaks the cycle: the compensator row,
+  then the control naming its generated `cap_<name>_T1`, then `Update LinearShuntCompensator: mRID=...,
+  RegulatingControl=...`; `RegulatingControl.RegulatingCondEq` binds as the compensator (S4a CapControl).
 - U2 (2026-11-08): the template shapes bind. CIM-Tables `8fc537f` keeps a TransformerEnd's phases on its Terminal
   only, so a `phases` column on a `TransformerTankEnd` (which has none on a configuration) raises by design. The
   fix was in core: `shapes/transformer_template.cimtbl` no longer gives its tank ends phases; the instance's

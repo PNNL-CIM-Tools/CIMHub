@@ -15,6 +15,7 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
 Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
     zip_constant_pq, false, 1, 0, 0, 1, 0, 0
     zip_constant_z,  false, 0, 0, 1, 0, 0, 1
+    zip_constant_i,  false, 0, 1, 0, 0, 1, 0
 
 Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
     olt_normal,    normal,    normal,    true,  absoluteValue

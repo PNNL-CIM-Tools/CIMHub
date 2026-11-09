@@ -64,6 +64,7 @@ classes:
         required: false
         annotations:
           order: 2
+          dss_default: int(1)
         related_mappings:
           - cim:RegulatingControl.Terminal
         comments:
@@ -91,6 +92,7 @@ classes:
         required: false
         annotations:
           order: 4
+          dss_default: string(current)
         exact_mappings:
           - cim:RegulatingControl.mode
         comments:
@@ -109,6 +111,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 5
+          dss_default: float(60.0)
         exact_mappings:
           - cim:RegulatingControl.ptRatio
         comments:
@@ -124,6 +127,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 6
+          dss_default: float(60.0)
         exact_mappings:
           - cim:RegulatingControl.ctRatio
         comments:
@@ -138,39 +142,41 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(300.0)
           dss_name: "on"
         exact_mappings:
           - cim:RegulatingControl.targetValue
         comments:
-          - "Import: RegulatingControl.targetValue = ONsetting. Export: ONsetting = targetValue."
+          - "Import: targetValue = (ONsetting + OFFsetting) / 2 in primary units by type (CIMTBL_MAPPING.md#capcontrol). Export: ON and OFF = targetValue -/+ targetDeadband / 2, ON on the side the type fixes."
 
       # (8) OFFsetting
       OFFsetting:
         description: >-
           Value at which the control arms to switch the capacitor OFF.
           Default is 200 amps.
-        range: string
+        range: float
         required: false
         annotations:
           order: 8
+          dss_default: float(200.0)
           dss_name: "off"
         close_mappings:
           - cim:RegulatingControl.targetDeadband
         comments:
           - >-
-            Import: RegulatingControl.targetDeadband = ONsetting - OFFsetting (the CIM
-            deadband is a half-width symmetric band around targetValue).
-            Export: OFFsetting = targetValue - targetDeadband.
+            Import: targetDeadband = abs(OFFsetting - ONsetting) in primary units by type (the full
+            width of the band). Export: see ONsetting.
 
       # (9) Delay
       Delay:
         description: >-
           Time delay, in seconds, from when the control is armed before it sends
           the switching command to turn ON. Default is 15 s.
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
+          dss_default: float(15.0)
         exact_mappings:
           - cim:ShuntCompensator.aVRDelay
         comments:
@@ -221,10 +227,11 @@ classes:
         description: >-
           Time delay, in seconds, for control to turn OFF when present state is ON.
           Default is 15 s.
-        range: string
+        range: float
         required: false
         annotations:
           order: 13
+          dss_default: float(15.0)
         comments:
           - "OpenDSS-only (N/A): asymmetric OFF delay; no CIM equivalent distinguishing ON vs OFF delay in RegulatingControl."
 
@@ -233,7 +240,7 @@ classes:
         description: >-
           Dead time after capacitor is turned OFF before it can be turned back ON.
           Default is 300 s.
-        range: string
+        range: float
         required: false
         annotations:
           order: 14
@@ -261,6 +268,7 @@ classes:
         required: false
         annotations:
           order: 16
+          dss_default: int(1)
         exact_mappings:
           - cim:RegulatingControl.monitoredPhase
         comments:
@@ -368,6 +376,7 @@ classes:
         required: false
         annotations:
           order: 25
+          dss_default: "true"
         exact_mappings:
           - cim:RegulatingControl.enabled
         comments:
