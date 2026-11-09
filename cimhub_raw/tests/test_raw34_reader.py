@@ -83,7 +83,11 @@ def test_reads_every_record(case, counts):
     assert {cls: model.count(cls) for cls in counts} == counts
 
 
-@pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER], ids=["IEEE14", "WECC240", "node_breaker"])
+BRANCH_ATOMS = Path(__file__).parent / "atoms" / "branch"
+
+
+@pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER, *sorted(BRANCH_ATOMS.glob("*.raw"))],
+                         ids=lambda case: case.stem)
 def test_read_write_read_is_lossless(case, tmp_path):
     model = Raw34Reader(case).read_all()
     out = tmp_path / "out.raw"

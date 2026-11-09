@@ -2,7 +2,7 @@
 # Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#master
 # untranscribed: GAUSS, NEWTON, ADJUST, TYSL, SOLVER (solution options)
 # untranscribed: Owner 1 (ownership is a CIM 18 gap)
-# not mapped: BranchRecord 17, FixedShuntRecord 1, GeneratorRecord 5, LoadRecord 11, TransformerRecord 3
+# not mapped: FixedShuntRecord 1, GeneratorRecord 5, LoadRecord 11, TransformerRecord 3
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -25,8 +25,25 @@ Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direct
     olt_emergency_high, emergency high, emergency, false, high
     olt_emergency_low,  emergency low,  emergency, false, low
 
+# rating sets RATE1..RATE12 (RAW-9)
+Table OperationalLimitType: mRID, name, description, direction=absoluteValue
+    olt_rate1,  RATE1,  RATING SET 1
+    olt_rate2,  RATE2,  RATING SET 2
+    olt_rate3,  RATE3,  RATING SET 3
+    olt_rate4,  RATE4,  RATING SET 4
+    olt_rate5,  RATE5,  RATING SET 5
+    olt_rate6,  RATE6,  RATING SET 6
+    olt_rate7,  RATE7,  RATING SET 7
+    olt_rate8,  RATE8,  RATING SET 8
+    olt_rate9,  RATE9,  RATING SET 9
+    olt_rate10, RATE10, RATING SET 10
+    olt_rate11, RATE11, RATING SET 11
+    olt_rate12, RATE12, RATING SET 12
+
 Import zone.cimtbl
 
 Import area_interchange.cimtbl
 
 Import bus.cimtbl
+
+Import branch.cimtbl

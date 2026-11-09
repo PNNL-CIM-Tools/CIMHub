@@ -1,0 +1,155 @@
+"""RAW Non-transformer branch -> ``branch.cimtbl``: an ``ACLineSegment`` per branch, or a ``SeriesCompensator`` when
+X < 0, with its ratings on terminal 1 and its line shunts as ordinary shunts.
+
+Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#branch``.
+"""
+
+from __future__ import annotations
+
+from cimtables.document import Column, Document, Row, Table
+from cimtopology.core.voltage import base_voltage_mrid
+
+import cimhub_raw.schema.raw_v34.raw34_schema as schema
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
+from cimhub_raw.importer.cimtbl.ratings import RatingRows
+from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+
+NATIVE_CLASS = schema.BranchRecord
+LINE_PREFIX = "ln_"
+SERIES_CAPACITOR_PREFIX = "sc_"  # requested from the cimtbl-translate table owners (plan C3)
+SHUNT_PREFIX = "cap_"
+
+#: ST -> inService
+IN_SERVICE = {1: True, 0: False}
+
+_OWNER = "ownership is an asset concept (CIM 18 gap)"
+_SHUNT = ("{name}: with {pair}, a LinearShuntCompensator cap_<I>_<J>_<CKT>_{end} on bus {bus} when either is nonzero "
+          "(RAW-13): {column} (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation")
+FIELDS = {
+    "from_bus_number": Field("structural", note="I: bus1; BaseVoltage = bus I's bv_<BASKV>; I and J with different "
+                                                "BASKV raise ((pu system) would have two bases)"),
+    "to_bus_number": Field("structural", note="J: bus2"),
+    "circuit": Field("structural", note="CKT: with I and J the key, mRID ln_<I>_<J>_<CKT> (X < 0: sc_); a first "
+                                        "character @ or * is a substation merge edge (plan 3.2)"),
+    "r": Field("copied", (("ACLineSegment", "r", "pu system"), ("SeriesCompensator", "r", "pu system")), note="R"),
+    "x": Field("copied", (("ACLineSegment", "x", "pu system"), ("SeriesCompensator", "x", "pu system")),
+               note="X; X < 0: a SeriesCompensator, compensatorType = capacitor, x verbatim (RAW-15)"),
+    "b": Field("copied", (("ACLineSegment", "bch", "pu system"),),
+               note="B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch)"),
+    "name": Field("copied", (("ACLineSegment", "name", None), ("SeriesCompensator", "name", None)),
+                  note="NAME; blank: the key I_J_CKT"),
+    "ratings": Field("structural", note="RATE1..RATE12: each nonzero RATEn an ApparentPowerLimit <eq>_rate<n> "
+                                        "(normalValue (MVA)) in the set <eq>_ratings on terminal <eq>_T1, type "
+                                        "olt_rate<n> (RAW-9, RAW-20); NXFRAT > 0: a CurrentLimit, normalValue (kA) "
+                                        "= RATEn / (sqrt(3) x BASKV) (ka_from_rating); 0 is no limit, no row"),
+    "g_from": Field("structural", note=_SHUNT.format(name="GI", pair="BI", end="i", bus="I", column="gPerSection")),
+    "b_from": Field("structural", note=_SHUNT.format(name="BI", pair="GI", end="i", bus="I", column="bPerSection")),
+    "g_to": Field("structural", note=_SHUNT.format(name="GJ", pair="BJ", end="j", bus="J", column="gPerSection")),
+    "b_to": Field("structural", note=_SHUNT.format(name="BJ", pair="GJ", end="j", bus="J", column="bPerSection")),
+    "status": Field("mapped", note="ST: inService = (ST == 1), also on the line shunts; blank: 1 (defaulted)"),
+    "metered_end": Field("untranscribed", note="MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22)"),
+    "length": Field("copied", (("ACLineSegment", "length", "km"),),
+                    note="LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series "
+                         "capacitor with LEN != 0 raises (SeriesCompensator is no Conductor)"),
+    **{slot: Field("untranscribed", note=_OWNER) for slot in ("o1", "f1", "o2", "f2", "o3", "f3", "o4", "f4")},
+}
+
+_PROVENANCE = """PSS/E RAW Non-transformer branch -> ACLineSegment, SeriesCompensator (X < 0), LinearShuntCompensator
+(line shunts), OperationalLimitSet + ApparentPowerLimit or CurrentLimit (ratings).
+Source table: Non-transformer branch (records: {count})
+Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#branch"""
+
+
+def is_series_capacitor(record: schema.BranchRecord) -> bool:
+    return record.x < 0.0
+
+
+def branch_class(record: schema.BranchRecord) -> str:
+    return "SeriesCompensator" if is_series_capacitor(record) else "ACLineSegment"
+
+
+def branch_mrid(record: schema.BranchRecord) -> str:
+    return mrid(SERIES_CAPACITOR_PREFIX if is_series_capacitor(record) else LINE_PREFIX, record.ID)
+
+
+def filled_branches(native) -> list[tuple[schema.BranchRecord, str | None]]:
+    """Every branch in (I, J, CKT) order with its blank slots filled from ``raw_default``, and the defaulted comment."""
+    defaults = raw_defaults(NATIVE_CLASS)
+    records = sorted(native.list_by_class(NATIVE_CLASS),
+                     key=lambda branch: (branch.from_bus_number, branch.to_bus_number, str(branch.circuit)))
+    return [fill_keyed_defaults(FIELDS, record, defaults) for record in records]
+
+
+def _base_kv(record, base_kv_of: dict[int, float]) -> float:
+    base_kv = base_kv_of[record.from_bus_number]
+    if base_kv_of[record.to_bus_number] != base_kv:
+        raise ValueError(f"branch {record.ID}: buses {record.from_bus_number} and {record.to_bus_number} have BASKV "
+                         f"{base_kv!r} and {base_kv_of[record.to_bus_number]!r}; a branch's (pu system) needs one base")
+    return base_kv
+
+
+def _check_series_capacitor(record) -> None:
+    if record.b:
+        raise ValueError(f"branch {record.ID}: a series capacitor (X < 0) with B={record.b!r}; SeriesCompensator "
+                         "has no bch")
+    if record.length:
+        raise ValueError(f"branch {record.ID}: a series capacitor (X < 0) with LEN={record.length!r}; "
+                         "SeriesCompensator has no length")
+
+
+def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
+               ratings_in_current: bool) -> Document:
+    branches = filled_branches(native)
+    line_rows, capacitor_rows, shunt_rows = [], [], []
+    ratings = RatingRows(ratings_in_current)
+    for branch, defaulted in branches:
+        base_kv = _base_kv(branch, base_kv_of)
+        voltage = base_voltage_mrid(base_kv)
+        in_service = lookup(IN_SERVICE, branch.status, slot="status", record_id=f"branch {branch.ID}")
+        first, second = substations_by_bus[branch.from_bus_number], substations_by_bus[branch.to_bus_number]
+        container = first if first == second else None
+        equipment = branch_mrid(branch)
+        common = [equipment, cell(branch.name or branch.ID), str(branch.from_bus_number), str(branch.to_bus_number)]
+        if is_series_capacitor(branch):
+            _check_series_capacitor(branch)
+            capacitor_rows.append(Row([*common, "capacitor", cell(branch.r), cell(branch.x), cell(in_service), voltage,
+                                       container], comment=defaulted))
+        else:
+            line_values = [cell(branch.r), cell(branch.x), cell(branch.b), cell(branch.length or None)]
+            line_rows.append(Row([*common, *line_values, cell(in_service), voltage, container], comment=defaulted))
+        ratings.add(equipment, branch.ratings, base_kv)
+        for end, bus, g, b in (("i", branch.from_bus_number, branch.g_from, branch.b_from),
+                               ("j", branch.to_bus_number, branch.g_to, branch.b_to)):
+            if g or b:
+                shunt_rows.append(Row([mrid(SHUNT_PREFIX, f"{branch.ID}_{end}"), f"{branch.ID}_{end}", str(bus),
+                                       cell(g), cell(b), cell(base_kv), "1", "1", "1", cell(in_service), voltage,
+                                       substations_by_bus[bus]]))
+
+    statements = []
+    untranscribed = untranscribed_names(FIELDS)
+    if line_rows:
+        statements.append(Table(
+            "ACLineSegment",
+            [Column("mRID"), Column("name"), Column("bus1"), Column("bus2"), Column("r", "pu system"),
+             Column("x", "pu system"), Column("bch", "pu system"), Column("length", "km"), Column("inService"),
+             Column("BaseVoltage"), Column("EquipmentContainer")],
+            line_rows, comment=untranscribed))
+        untranscribed = None
+    if capacitor_rows:
+        statements.append(Table(
+            "SeriesCompensator",
+            [Column("mRID"), Column("name"), Column("bus1"), Column("bus2"), Column("compensatorType"),
+             Column("r", "pu system"), Column("x", "pu system"), Column("inService"), Column("BaseVoltage"),
+             Column("EquipmentContainer")],
+            capacitor_rows, comment="\n".join(filter(None, [untranscribed, "series capacitors: X < 0 (RAW-15)"]))))
+    if shunt_rows:
+        statements.append(Table(
+            "LinearShuntCompensator",
+            [Column("mRID"), Column("name"), Column("bus"), Column("gPerSection", "pu system"),
+             Column("bPerSection", "pu system"), Column("nomU", "kV"), Column("sections"), Column("normalSections"),
+             Column("maximumSections"), Column("inService"), Column("BaseVoltage"), Column("EquipmentContainer")],
+            shunt_rows, comment="line shunts GI + jBI, GJ + jBJ, switched with their line (RAW-13); linked to it by "
+                                "the mRID only (CIM 18 gap)"))
+    statements.extend(ratings.tables())
+    return Document(name="branch", statements=statements, profile=CIM_PROFILE,
+                    comment=_PROVENANCE.format(count=len(branches)))

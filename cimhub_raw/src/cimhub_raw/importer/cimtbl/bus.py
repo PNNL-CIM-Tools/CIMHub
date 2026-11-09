@@ -70,6 +70,11 @@ def substation_mrid(group: SubstationGroup) -> str:
     return mrid(SUBSTATION_PREFIX, group.buses[0])
 
 
+def substation_of(groups: list[SubstationGroup]) -> dict[int, str]:
+    """Bus number -> the mRID of its substation."""
+    return {number: substation_mrid(group) for group in groups for number in group.buses}
+
+
 def filled_buses(native) -> list[tuple[schema.BusRecord, str | None]]:
     """Every bus in number order with its blank slots filled from ``raw_default``, and the defaulted comment.
 
@@ -99,7 +104,7 @@ def base_voltages(native) -> dict[str, float]:
 def map_bus(native, groups: list[SubstationGroup], threshold: float) -> Document:
     buses = filled_buses(native)
     by_number = {bus.bus_number: bus for bus, _ in buses}
-    substation_of = {number: substation_mrid(group) for group in groups for number in group.buses}
+    substations_by_bus = substation_of(groups)
 
     substation_rows = []
     for group in groups:
@@ -120,8 +125,8 @@ def map_bus(native, groups: list[SubstationGroup], threshold: float) -> Document
         number = bus.bus_number
         name = cell(bus.name or str(number))
         voltage = base_voltage_mrid(bus.base_voltage)
-        node_rows.append(Row([str(number), name, str(number), voltage, substation_of[number]], comment=defaulted))
-        busbar_rows.append(Row([busbar_mrid(number), name, str(number), voltage, substation_of[number]]))
+        node_rows.append(Row([str(number), name, str(number), voltage, substations_by_bus[number]], comment=defaulted))
+        busbar_rows.append(Row([busbar_mrid(number), name, str(number), voltage, substations_by_bus[number]]))
         set_rows.append(Row([f"{busbar_mrid(number)}_limits", f"{busbar_mrid(number)}_T1"]))
         for slot, suffix, limit_type in VOLTAGE_LIMITS:
             limit_rows.append(Row([f"{busbar_mrid(number)}_{suffix}", f"{busbar_mrid(number)}_limits", limit_type,

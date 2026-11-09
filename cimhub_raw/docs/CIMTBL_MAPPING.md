@@ -1,7 +1,8 @@
 # PSS/E RAW v34 → `.cimtbl` mapping spec
 
 **Status:** R0 approved 2026-11-08 and implemented (master, zone, area, bus with substations, busbars, voltage
-limits and solved voltages; owner). Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+limits and solved voltages; owner). R1 (branch, system switching device, multi-section line, rating
+sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -23,10 +24,13 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 1 | Zone | `zone.cimtbl` | `SubGeographicalRegion` (`srgn_<I>`) | the master |
 | 2 | Area | `area_interchange.cimtbl` | `ControlArea` (`ca_<I>`; new, C2/C3) | the master |
 | 3 | Bus | `bus.cimtbl` | `line_bus_branch`: `Substation`s (synthesized, §bus), `TopologicalNode`s, one `BusbarSection` per bus | 0, 1 |
+| 4 | Branch | `branch.cimtbl` | `line_bus_branch`: `ACLineSegment` (`ln_`), `SeriesCompensator` (`sc_`, X < 0), ratings on terminals, line shunts (R1) | 3 |
+| 5 | System switching device | `switch.cimtbl` | `switch` with `bus1`/`bus2` (R1) | 3 |
+| 6 | Multi-section line | `multi_section_line.cimtbl` | `Line` + `Update` rows on its sections (R1) | 4 |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Later slices append to this order: branch, switch, multi-section line (R1); load and shunts (R2); generator (R3);
-transformer (R4); inter-area transfer (R5); substation (R6).
+Later slices append to this order: load and shunts (R2); generator (R3); transformer (R4); inter-area transfer
+(R5); substation (R6).
 
 ## Master
 
@@ -77,7 +81,7 @@ Import bus
 | `system_base_mva` | `Optional[float]` | `100.0` | copied | `BasePower.basePower` (MVA); SBASE; blank: 100 (defaulted) |
 | `revision` | `Optional[float]` | `34.0` | structural | REV: the reader reads 34 only |
 | `transformer_ratings_units` | `Optional[int]` | `0` | mapped | XFRRAT: selects what transformer RATEn-k are (<= 0 MVA; > 0 current as MVA at 1 pu voltage); read by R4 |
-| `branch_ratings_units` | `Optional[int]` | `0` | mapped | NXFRAT: the same for branch RATEn; read by R1 |
+| `branch_ratings_units` | `Optional[int]` | `0` | mapped | NXFRAT: what branch and switch RATEn are: <= 0 MVA (ApparentPowerLimit), > 0 current as MVA (CurrentLimit, kA); blank: MVA (defaulted; the spec's 'present option setting') |
 | `system_base_frequency` | `Optional[float]` | `60.0` | copied | `BaseFrequency.frequency` (Hz); BASFRQ; blank: 60 (defaulted; the spec's 'present option setting', RAW-17) |
 | `titles` | `Union[str, list[str], NoneType]` | `[' 08/19/93 UW ARCHIVE           100....`, `['This is a reduced WECC 240-bus powe...` | untranscribed | the two title lines go on the master's comment; no CIM home |
 | `general` | `Optional[str]` | `GENERAL, THRSHZ=0.0001, PQBRAK=0.7, B...` | structural | GENERAL: its THRSHZ is the zero-impedance threshold of the substation merge (plan 3.2; default 0.0001); the record itself is a solution option |
@@ -86,7 +90,18 @@ Import bus
 | `adjust` | `Optional[str]` | `ADJUST, ADJTHR=0.005, ACCTAP=1.0, TAP...` | untranscribed | solution options; no home in the network profile parts |
 | `tysl` | `Optional[str]` | `TYSL, ITMXTY=20, ACCTY=1.0, TOLTY=0.0...` | untranscribed | solution options; no home in the network profile parts |
 | `solver` | `Optional[str]` | `SOLVER,     , ACTAPS=0, AREAIN=0, PHS...` | untranscribed | solution options; no home in the network profile parts |
-| `ratings` | `Union[dict[Union[int, RatingRecordRatingSetNumber], Union[dict, ForwardRef('RatingRecord')]], list[Union[dict, ForwardRef('RatingRecord')]], NoneType]` | `[RatingRecord({'rating_set_number': 1...` | structural | RATING records: one OperationalLimitType olt_rate<n> each, written with R1 (RAW-9) |
+| `ratings` | `Union[dict[Union[int, RatingRecordRatingSetNumber], Union[dict, ForwardRef('RatingRecord')]], list[Union[dict, ForwardRef('RatingRecord')]], NoneType]` | `[RatingRecord({'rating_set_number': 1...` | structural | RATING records: the names of the twelve OperationalLimitTypes olt_rate<n> in the master (RAW-9; mapping in importer/cimtbl/ratings.py) |
+
+**Rating sets (R1; RAW-9).** The master adds one `OperationalLimitType` per rating set, all twelve whether
+used or not: `olt_rate<n>`, with `name`/`description` from the `RATING` record (else `RATEn` / `RATING SET n`)
+and `direction = absoluteValue`. `durationKind` is left unset, because a PSS/E rating set has no fixed meaning.
+
+```
+# rating sets RATE1..RATE12 (RAW-9)
+Table OperationalLimitType: mRID, name, description, direction=absoluteValue
+    olt_rate1,  RATE1,  RATING SET 1
+    ...
+```
 
 ## Zone
 
@@ -218,6 +233,174 @@ Table BusbarSection: mRID, name, bus, BaseVoltage, EquipmentContainer
 | `emergency_voltage_magnitude_high_limit` | `Optional[float]` | `1.1` | derived | EVHI (pu): home VoltageLimit bb_<I>_evhi on the BusbarSection terminal's set bb_<I>_limits (RAW-19); normalValue (kV) = pu x BASKV (kv_from_per_unit) |
 | `emergency_voltage_magnitude_low_limit` | `Optional[float]` | `0.9` | derived | EVLO (pu): home VoltageLimit bb_<I>_evlo on the BusbarSection terminal's set bb_<I>_limits (RAW-19); normalValue (kV) = pu x BASKV (kv_from_per_unit) |
 
+## Branch (R1)
+
+Mapper: `importer/cimtbl/branch.py` (`map_branch`). Shape: `line_bus_branch` (`r/x/bch (pu system)` on bus I's
+`BaseVoltage` and the master's `BasePower`). One row per branch, in key order:
+
+```
+# untranscribed: metered_end, o1, f1, o2, f2, o3, f3, o4, f4
+Table ACLineSegment: mRID, name, bus1, bus2, r (pu system), x (pu system), bch (pu system), length (km), inService, BaseVoltage, EquipmentContainer
+    ln_1_2_1,   1_2_1,   1,  2,  0.01938, 0.05917, 0.0528, , true, bv_138kv,
+    ...
+    ln_7_9_1,   7_9_1,   7,  9,  -0.0,    0.11001, 0.0,    , true, bv_138kv, sub_4
+    ...
+# series capacitors: X < 0 (RAW-15)
+Table SeriesCompensator: mRID, name, bus1, bus2, compensatorType, r (pu system), x (pu system), inService, BaseVoltage, EquipmentContainer
+    sc_2404_3893_1, 2404_3893_1, 2404, 3893, capacitor, 1e-07, -0.00935, true, bv_500kv, sub_2404
+    ...
+```
+
+- **Class:** X < 0 → `SeriesCompensator` (`sc_`, `compensatorType = capacitor`, r/x verbatim; RAW-15). A
+  series capacitor with B ≠ 0 raises: `SeriesCompensator` has no `bch`. Every other branch is an
+  `ACLineSegment` (`ln_`). `gch` is not written (RAW has no line conductance).
+- **BaseVoltage:** bus I's. A branch whose buses have different BASKV raises, because its `(pu system)` base
+  would be ambiguous. Neither public case has one.
+- **Container:** the substation, when both buses are in one (a zero-impedance branch, a `@`/`*` circuit, a
+  series capacitor, or a parallel path inside a merged substation). Otherwise none, or the multi-section `Line`
+  (below).
+- **Status:** `inService` = ST == 1, written on every row. WECC240 has 4 branches out of service.
+- **Ratings (RAW-9, RAW-20):** each nonzero RATEn is an `ApparentPowerLimit` in one `OperationalLimitSet` on the
+  branch's first terminal (`sequenceNumber` 1, bus I; user 2026-11-08):
+
+  ```
+  Table OperationalLimitSet: mRID, Terminal
+      ln_2000_2202_1_ratings, ln_2000_2202_1_T1
+  Table ApparentPowerLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue (MVA)
+      ln_2000_2202_1_rate2, ln_2000_2202_1_ratings, olt_rate2, 986.0
+      ln_2000_2202_1_rate3, ln_2000_2202_1_ratings, olt_rate3, 888.0
+      ...
+  ```
+
+  A zero RATEn is "no limit" in PSS/E, so it writes no row, and a branch with no nonzero rating has no set
+  (IEEE14 has none; WECC240 has 281 nonzero ratings on 192 branches). When NXFRAT > 0 the ratings are a current
+  "expressed as MVA" at the bus's base voltage. They become a `CurrentLimit` with `normalValue (kA)` = RATEn /
+  (√3 × BASKV), derived by `current_from_rating`. A blank NXFRAT ("the present option setting", as for BASFRQ)
+  is MVA, marked `# defaulted: NXFRAT=0` on the master.
+- **Line shunts (RAW-13):** GI + jBI ≠ 0 gives a `LinearShuntCompensator` `cap_<I>_<J>_<CKT>_i` on bus I, and
+  GJ + jBJ ≠ 0 gives `_j` on bus J. Each has `gPerSection`/`bPerSection (pu system)`, `nomU (kV)` = BASKV, one
+  section, `inService` = the branch's ST, and the end bus's substation as its container: an ordinary shunt
+  (user 2026-11-08). "Switched with its line" has no CIM association in a bus-branch model, so it is carried by
+  the mRID only (CIM 18 gap; in a node-breaker model the shunt would sit on the line's side of the breaker).
+  Neither public case sets a line shunt; the atom `tests/atoms/branch/line_shunts.raw` covers it.
+- **LEN (RAW-21):** `Conductor.length (km)`, copied: RAW's "user-selected units" are taken as km (user
+  2026-11-08). LEN = 0 (the default, "not given") writes no length. A series capacitor with LEN ≠ 0 raises
+  (`SeriesCompensator` is no `Conductor`). Neither public case sets one.
+- **MET (RAW-22):** untranscribed, a CIM 18 gap (user 2026-11-08: power flow only, no interchange balancing).
+  WECC240 has 81 branches with MET = 2, written back as MET = 1 (expected difference).
+- **Owners:** untranscribed (CIM 18 gap).
+- **Name:** NAME, else the key `I_J_CKT`.
+
+| BranchRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `from_bus_number` | `int` | `1001`, `1002`, `1004` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>; I and J with different BASKV raise ((pu system) would have two bases) |
+| `to_bus_number` | `int` | `1201`, `1202`, `1004` | structural | J: bus2 |
+| `r` | `float` | `0.00177`, `0.0108`, `0.0005` | copied | `ACLineSegment.r` (pu system), `SeriesCompensator.r` (pu system); R |
+| `x` | `float` | `0.03169`, `0.0965`, `0.0053` | copied | `ACLineSegment.x` (pu system), `SeriesCompensator.x` (pu system); X; X < 0: a SeriesCompensator, compensatorType = capacitor, x verbatim (RAW-15) |
+| `circuit` | `Optional[str]` | `1`, `9`, `2` | structural | CKT: with I and J the key, mRID ln_<I>_<J>_<CKT> (X < 0: sc_); a first character @ or * is a substation merge edge (plan 3.2) |
+| `b` | `Optional[float]` | `3.3446`, `0.3296`, `0.0882` | copied | `ACLineSegment.bch` (pu system); B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch) |
+| `name` | `Optional[str]` |  | copied | `ACLineSegment.name`, `SeriesCompensator.name`; NAME; blank: the key I_J_CKT |
+| `ratings` | `Union[float, list[float], NoneType]` | `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...`, `[0.0, 0.0, 1630.0, 0.0, 0.0, 0.0, 0.0...`, `[0.0, 0.0, 1800.0, 0.0, 0.0, 0.0, 0.0...` | structural | RATE1..RATE12: each nonzero RATEn an ApparentPowerLimit <eq>_rate<n> (normalValue (MVA)) in the set <eq>_ratings on terminal <eq>_T1, type olt_rate<n> (RAW-9, RAW-20); NXFRAT > 0: a CurrentLimit, normalValue (kA) = RATEn / (sqrt(3) x BASKV) (ka_from_rating); 0 is no limit, no row |
+| `g_from` | `Optional[float]` | `0.0` | structural | GI: with BI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
+| `b_from` | `Optional[float]` | `0.0` | structural | BI: with GI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
+| `g_to` | `Optional[float]` | `0.0` | structural | GJ: with BJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
+| `b_to` | `Optional[float]` | `0.0` | structural | BJ: with GJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
+| `status` | `Optional[int]` | `1`, `0` | mapped | ST: inService = (ST == 1), also on the line shunts; blank: 1 (defaulted) |
+| `metered_end` | `Optional[int]` | `1`, `2` | untranscribed | MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
+| `length` | `Optional[float]` | `0.0` | copied | `ACLineSegment.length` (km); LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series capacitor with LEN != 0 raises (SeriesCompensator is no Conductor) |
+| `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o2` | `Optional[int]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f2` | `Optional[float]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o3` | `Optional[int]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f3` | `Optional[float]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o4` | `Optional[int]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f4` | `Optional[float]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
+
+## System switching device (R1)
+
+Mapper: `importer/cimtbl/switch.py` (`map_switch`). Shape: `switch` with `bus1`/`bus2`. Every switch merges its
+buses into one substation (§3.2), which is its container. Neither public case has one; the atom
+`tests/atoms/branch/switches.raw` has one of each STYPE, one open and one normally open.
+
+```
+# untranscribed: x, metered_end
+Table Switch: mRID, name, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_101_102_1, CONNECTOR, 101, 102, false, false, bv_138kv, sub_101
+
+Table Breaker: mRID, name, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_102_103_1, BREAKER, 102, 103, true, false, bv_138kv, sub_101
+
+Table Disconnector: mRID, name, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_103_104_1, DISCONNECT, 103, 104, false, true, bv_138kv, sub_101
+
+# NXFRAT > 0: derived, normalValue = RATEn / (sqrt(3) x BASKV) (ka_from_rating)
+Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue (kA)
+    sw_101_102_1_rate1, sw_101_102_1_ratings, olt_rate1, 0.836739520564675
+```
+
+- **Class by STYPE:** 1 (generic connector) → `Switch`, 2 → `Breaker`, 3 → `Disconnector`. The `sw_` prefix is
+  shared, so a change of class keeps the mRID. A blank or unknown STYPE raises: the spec gives no default.
+- **Status:** `open` = STATUS == 0 and `normalOpen` = NSTATUS == 0.
+- **X** is untranscribed: it is the solver's stand-in for zero impedance (X < THRSHZ), and a `Switch` has none.
+  The exporter writes THRSHZ back (expected difference).
+- **Ratings** as for branches (`sw_<key>_ratings` on `sw_<key>_T1`).
+- A switch across a zone boundary is not a merge edge (§3.2). Its container is bus I's substation.
+
+| SwitchRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `from_bus_number` | `int` | `101`, `102`, `103` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>; EquipmentContainer = bus I's substation |
+| `to_bus_number` | `int` | `102`, `103`, `104` | structural | J: bus2 |
+| `circuit` | `Optional[str]` | `1` | structural | CKT: with I and J the key, mRID sw_<I>_<J>_<CKT> |
+| `x` | `Optional[float]` | `0.0001` | untranscribed | X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; the exporter writes THRSHZ back (expected difference) |
+| `ratings` | `Union[float, list[float], NoneType]` | `[200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,...`, `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...` | structural | RATE1..RATE12: as a branch's, the set sw_<key>_ratings on sw_<key>_T1 (RAW-9, RAW-20) |
+| `status` | `Optional[int]` | `1`, `0` | mapped | STATUS: open = (STATUS == 0); blank: 1 (defaulted) |
+| `nstat` | `Optional[int]` | `1`, `0` | mapped | NSTATUS: normalOpen = (NSTATUS == 0); blank: 1 (defaulted) |
+| `metered_end` | `Optional[int]` | `1`, `2` | untranscribed | METERED: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
+| `stype` | `Optional[int]` | `1`, `2`, `3` | mapped | STYPE: the class, 1 Switch (generic connector), 2 Breaker, 3 Disconnector; blank or another code raises (the spec gives no default) |
+| `name` | `Optional[str]` | `CONNECTOR`, `BREAKER`, `DISCONNECT` | copied | `Switch.name`, `Breaker.name`, `Disconnector.name`; NAME; blank: the key I_J_CKT |
+
+## Multi-section line (R1)
+
+Mapper: `importer/cimtbl/multi_section_line.py` (`map_multi_section_line`), after `branch.cimtbl` (RAW-12). The
+sections stay ordinary branches and the dummy buses stay nodes. The record becomes a `Line` container, and each
+section is moved into it by an `Update` row:
+
+```
+# untranscribed: met
+Table Line: mRID, name, Region
+    # path 1, 2, 3, 4
+    msl_1_4_&1, &1, srgn_1
+
+Update Table ACLineSegment: mRID, EquipmentContainer
+    ln_1_2_1, msl_1_4_&1
+    ln_2_3_1, msl_1_4_&1
+    ln_4_3_1, msl_1_4_&1
+```
+
+- **Members:** the path I, DUM1, …, J. Each consecutive pair must be joined by exactly one branch not already
+  used, in either direction, and each dummy bus must have exactly two branches. Anything else raises with the
+  record. A member already in a substation raises too, because an `Update` only adds.
+- **Region:** bus I's zone. **Name:** ID.
+- The `msl_` prefix is requested from the translate-table owners (C3).
+- Neither public case has one; the atom `tests/atoms/branch/multi_section_line.raw` covers it.
+
+| MultiSectionLineRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `i` | `int` | `1` | structural | I: the path's first bus; with J and ID the key, mRID msl_<I>_<J>_<ID>; the Line's Region is bus I's zone |
+| `j` | `int` | `4` | structural | J: the path's last bus |
+| `dum1` | `int` | `2` | structural | DUM1: the path I, DUM1, .., J names the sections, one branch per step; each section's EquipmentContainer becomes the Line (an Update row) |
+| `line_id` | `Optional[str]` | `&1` | copied | `Line.name`; ID: the key |
+| `met` | `Optional[int]` | `1` | untranscribed | MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
+| `dum2` | `Optional[int]` | `3` | structural | as DUM1 |
+| `dum3` | `Optional[int]` |  | structural | as DUM1 |
+| `dum4` | `Optional[int]` |  | structural | as DUM1 |
+| `dum5` | `Optional[int]` |  | structural | as DUM1 |
+| `dum6` | `Optional[int]` |  | structural | as DUM1 |
+| `dum7` | `Optional[int]` |  | structural | as DUM1 |
+| `dum8` | `Optional[int]` |  | structural | as DUM1 |
+| `dum9` | `Optional[int]` |  | structural | as DUM1 |
+
 ## Owner
 
 No artifact. The Owner table and every owner field on other records (bus OWNER, O1/F1..O4/F4) are untranscribed:
@@ -230,7 +413,14 @@ CIM keeps ownership in asset management (CIM 18 gap). The master comment counts 
 
 ## Code tables
 
-None in R0. IDE and IC are checked in the mapper (above). They are not CIM enums.
+IDE and IC are checked in the mapper (above). They are not CIM enums.
+
+| STYPE (R1) | class |
+|---|---|
+| 1 generic connector | `Switch` |
+| 2 circuit breaker | `Breaker` |
+| 3 disconnect switch | `Disconnector` |
+| blank or other | raises |
 
 ## CIM 18 gaps
 
@@ -241,10 +431,12 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | zone membership of a bus | ZONE | substations never span two zones |
 | a bus's own control area, and the area slack (equipment is covered: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea`, `TieFlow`) | bus AREA, area ISW | untranscribed |
 | the load-area hierarchy (`SubLoadArea` → `LoadArea` missing); area/zone of machines and DC equipment | induction machine, MTDC bus AREA/ZONE | loads per (area, zone) `SubLoadArea` (R2); the rest untranscribed |
+| ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
+| the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET | untranscribed |
+| a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
 
 Not gaps: a bus's voltage limits and its regulation sit on its `BusbarSection`'s terminal. CIM puts limits and
 regulating controls on terminals by design (RAW-11, RAW-19).
-| ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
 
 ## Decisions this spec applies
 
@@ -253,6 +445,9 @@ regulating controls on terminals by design (RAW-11, RAW-19).
 - **RAW-18** (recommended): bare bus numbers as node mRIDs, per the translate table (the shape example writes
   `bus_<I>`; request C2).
 - **RAW-19** (user, 2026-11-08): a `BusbarSection` per bus; voltage limits in kV on its terminal.
+- **R1** (user, 2026-11-08): RAW-9 (rating sets, NXFRAT), RAW-12 (multi-section `Line` with `Update` rows),
+  RAW-13 (line shunts as ordinary shunts), RAW-20 (one rating set on terminal 1), RAW-21 (LEN in km), RAW-22
+  (MET untranscribed, a gap).
 
 ## Reference model and expected differences
 

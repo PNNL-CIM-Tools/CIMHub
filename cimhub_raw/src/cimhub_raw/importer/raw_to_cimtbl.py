@@ -21,18 +21,22 @@ from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_raw.importer.cimtbl import (
     area_interchange,
+    branch,
     bus,
     case_identification,
     facts_device,
     gne_device,
     impedance_correction,
     induction_machine,
+    multi_section_line,
     multi_terminal_dc,
     owner,
+    switch,
     two_terminal_dc,
     vsc_dc,
     zone,
 )
+from cimhub_raw.importer.cimtbl.ratings import rating_type_table
 from cimhub_raw.importer.topology import substation_groups
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -40,12 +44,16 @@ AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
 
 
 class Site:
-    """What the orchestrator computes once and hands to the mappers: case values, region, substations."""
+    """What the orchestrator computes once and hands to the mappers: case values, region, zones, base voltages and
+    substations."""
 
     def __init__(self, native, name: str):
         self.values = case_identification.case_values(native)
         self.region = mrid("rgn_", name, lowercase=True)
-        self.substations = substation_groups(native, zone.bus_zones(native), self.values.zero_impedance_threshold)
+        self.zones = zone.bus_zones(native)
+        self.base_kv = {record.bus_number: record.base_voltage for record, _ in bus.filled_buses(native)}
+        self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold)
+        self.substation_of = bus.substation_of(self.substations)
 
 
 #: ``(native class, mapper(native, site))`` in ``Import`` order. The phase-2 stubs return an empty document, or
@@ -55,6 +63,12 @@ MAPPING_ORDER = (
     (area_interchange.NATIVE_CLASS, lambda native, site: area_interchange.map_area_interchange(native)),
     (bus.NATIVE_CLASS, lambda native, site: bus.map_bus(native, site.substations,
                                                         site.values.zero_impedance_threshold)),
+    (branch.NATIVE_CLASS, lambda native, site: branch.map_branch(native, site.substation_of, site.base_kv,
+                                                                 site.values.branch_ratings_in_current)),
+    (switch.NATIVE_CLASS, lambda native, site: switch.map_switch(native, site.substation_of, site.base_kv,
+                                                                 site.values.branch_ratings_in_current)),
+    (multi_section_line.NATIVE_CLASS, lambda native, site: multi_section_line.map_multi_section_line(native,
+                                                                                                    site.zones)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),
@@ -76,7 +90,7 @@ _VOLTAGE_LIMIT_TYPES = (
 )
 
 
-def _master_comment(native, name: str) -> str:
+def _master_comment(native, site: Site, name: str) -> str:
     case = case_identification.case_record(native)
     lines = [f"PSS/E RAW case {name}: {(case.titles or [''])[0].strip()}",
              "Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#master"]
@@ -84,6 +98,8 @@ def _master_comment(native, name: str) -> str:
                if getattr(case, keyword)]
     if options:
         lines.append(f"untranscribed: {', '.join(options)} (solution options)")
+    if site.values.branch_ratings_units_defaulted:
+        lines.append("defaulted: NXFRAT=0 (branch and switch ratings in MVA; the spec's 'present option setting')")
     owners = native.count(owner.NATIVE_CLASS)
     if owners:
         lines.append(f"untranscribed: Owner {owners} (ownership is a CIM 18 gap)")
@@ -97,7 +113,8 @@ def _master_comment(native, name: str) -> str:
 
 def map_master(native, parts: list[Document], site: Site, *, name: str, authority: str = AUTHORITY) -> Document:
     """The master: BasePower first (every later ``(pu system)`` converts on it), BaseFrequency, the case's
-    GeographicalRegion, the BaseVoltages, the voltage-limit types, then one ``Import`` per non-empty part."""
+    GeographicalRegion, the BaseVoltages, the voltage-limit and rating-set types, then one ``Import`` per non-empty
+    part."""
     values = site.values
     voltages = bus.base_voltages(native)
     statements = [
@@ -113,10 +130,11 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
         Table("OperationalLimitType", [Column("mRID"), Column("name"), Column("durationKind"),
                                        Column("isInfiniteDuration"), Column("direction")],
               [Row(list(row)) for row in _VOLTAGE_LIMIT_TYPES], comment="bus voltage limits (RAW-19)"),
+        rating_type_table(case_identification.case_record(native)),
         *(Import(part.name) for part in parts),
     ]
     return Document(name=name, statements=statements, profile=CIM_PROFILE, authority=authority, model=name,
-                    comment=_master_comment(native, name))
+                    comment=_master_comment(native, site, name))
 
 
 class RawImporter(CimtblImporter):

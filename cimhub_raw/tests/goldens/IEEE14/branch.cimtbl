@@ -1,0 +1,26 @@
+# PSS/E RAW Non-transformer branch -> ACLineSegment, SeriesCompensator (X < 0), LinearShuntCompensator
+# (line shunts), OperationalLimitSet + ApparentPowerLimit or CurrentLimit (ratings).
+# Source table: Non-transformer branch (records: 17)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#branch
+
+Profile = cim18v17
+
+# untranscribed: metered_end, o1, f1, o2, f2, o3, f3, o4, f4
+Table ACLineSegment: mRID, name, bus1, bus2, r (pu system), x (pu system), bch (pu system), length (km), inService, BaseVoltage, EquipmentContainer
+    ln_1_2_1,   1_2_1,   1,  2,  0.01938, 0.05917, 0.0528, , true, bv_138kv,
+    ln_1_5_1,   1_5_1,   1,  5,  0.05403, 0.22304, 0.0492, , true, bv_138kv,
+    ln_2_3_1,   2_3_1,   2,  3,  0.04699, 0.19797, 0.0438, , true, bv_138kv,
+    ln_2_4_1,   2_4_1,   2,  4,  0.05811, 0.17632, 0.034,  , true, bv_138kv,
+    ln_2_5_1,   2_5_1,   2,  5,  0.05695, 0.17388, 0.0346, , true, bv_138kv,
+    ln_3_4_1,   3_4_1,   3,  4,  0.06701, 0.17103, 0.0128, , true, bv_138kv,
+    ln_4_5_1,   4_5_1,   4,  5,  0.01335, 0.04211, 0.0,    , true, bv_138kv,
+    ln_6_11_1,  6_11_1,  6,  11, 0.09498, 0.1989,  0.0,    , true, bv_138kv,
+    ln_6_12_1,  6_12_1,  6,  12, 0.12291, 0.25581, 0.0,    , true, bv_138kv,
+    ln_6_13_1,  6_13_1,  6,  13, 0.06615, 0.13027, 0.0,    , true, bv_138kv,
+    ln_7_8_1,   7_8_1,   7,  8,  -0.0,    0.17615, 0.0,    , true, bv_138kv,
+    ln_7_9_1,   7_9_1,   7,  9,  -0.0,    0.11001, 0.0,    , true, bv_138kv, sub_4
+    ln_9_10_1,  9_10_1,  9,  10, 0.03181, 0.0845,  0.0,    , true, bv_138kv,
+    ln_9_14_1,  9_14_1,  9,  14, 0.12711, 0.27038, 0.0,    , true, bv_138kv,
+    ln_10_11_1, 10_11_1, 10, 11, 0.08205, 0.19207, 0.0,    , true, bv_138kv,
+    ln_12_13_1, 12_13_1, 12, 13, 0.22092, 0.19988, 0.0,    , true, bv_138kv,
+    ln_13_14_1, 13_14_1, 13, 14, 0.17093, 0.34802, 0.0,    , true, bv_138kv,

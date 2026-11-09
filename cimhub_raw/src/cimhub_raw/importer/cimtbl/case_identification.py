@@ -1,7 +1,8 @@
 """RAW case identification and system-wide data: the values the master and the other mappers read.
 
 The master document itself is built by the orchestrator (``importer/raw_to_cimtbl.py``). This module holds the
-record's classification (``FIELDS``) and the case-level values: SBASE, BASFRQ and the zero-impedance threshold.
+record's classification (``FIELDS``) and the case-level values: SBASE, BASFRQ, the zero-impedance threshold
+and the branch rating units.
 Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#master``.
 """
 
@@ -21,7 +22,9 @@ FIELDS = {
     "revision": Field("structural", note="REV: the reader reads 34 only"),
     "transformer_ratings_units": Field("mapped", note="XFRRAT: selects what transformer RATEn-k are (<= 0 MVA; > 0 "
                                                       "current as MVA at 1 pu voltage); read by R4"),
-    "branch_ratings_units": Field("mapped", note="NXFRAT: the same for branch RATEn; read by R1"),
+    "branch_ratings_units": Field("mapped", note="NXFRAT: what branch and switch RATEn are: <= 0 MVA "
+                                                 "(ApparentPowerLimit), > 0 current as MVA (CurrentLimit, kA); "
+                                                 "blank: MVA (defaulted; the spec's 'present option setting')"),
     "system_base_frequency": Field("copied", (("BaseFrequency", "frequency", "Hz"),),
                                    note="BASFRQ; blank: 60 (defaulted; the spec's 'present option setting', RAW-17)"),
     "titles": Field("untranscribed", note="the two title lines go on the master's comment; no CIM home"),
@@ -32,8 +35,8 @@ FIELDS = {
     "adjust": Field("untranscribed", note="solution options; no home in the network profile parts"),
     "tysl": Field("untranscribed", note="solution options; no home in the network profile parts"),
     "solver": Field("untranscribed", note="solution options; no home in the network profile parts"),
-    "ratings": Field("structural", note="RATING records: one OperationalLimitType olt_rate<n> each, written with R1 "
-                                        "(RAW-9)"),
+    "ratings": Field("structural", note="RATING records: the names of the twelve OperationalLimitTypes olt_rate<n> "
+                                        "in the master (RAW-9; mapping in importer/cimtbl/ratings.py)"),
 }
 
 #: BASFRQ's spec default is "the present option setting"; a blank takes PSS/E's shipped setting (RAW-17).
@@ -51,6 +54,8 @@ class CaseValues(NamedTuple):
     base_frequency_defaulted: bool
     zero_impedance_threshold: float
     zero_impedance_threshold_defaulted: bool
+    branch_ratings_in_current: bool  # NXFRAT > 0: branch and switch RATEn are a current expressed as MVA
+    branch_ratings_units_defaulted: bool
 
 
 def case_record(native) -> schema.CaseIdentificationRecord:
@@ -74,7 +79,7 @@ def _system_wide_value(text: str | None, keyword: str) -> float | None:
 
 
 def case_values(native) -> CaseValues:
-    """SBASE, BASFRQ and THRSHZ, each with whether it was defaulted."""
+    """SBASE, BASFRQ, THRSHZ and NXFRAT, each with whether it was defaulted."""
     case = case_record(native)
     base_mva = case.system_base_mva
     if base_mva is None:
@@ -85,4 +90,5 @@ def case_values(native) -> CaseValues:
         float(base_mva), case.system_base_mva is None,
         float(frequency if frequency is not None else DEFAULT_BASE_FREQUENCY), frequency is None,
         threshold if threshold is not None else DEFAULT_ZERO_IMPEDANCE_THRESHOLD, threshold is None,
+        case.branch_ratings_units is not None and case.branch_ratings_units > 0, case.branch_ratings_units is None,
     )
