@@ -1,14 +1,14 @@
 """DistributionVoltageSource → EnergySource (tests/atoms/source)."""
 
+import gdm_atoms
 import pytest
+from cimhub_core.cimtbl import check_fields
+from cimhub_gdm.importer import source
 from gdm.distribution.components import DistributionVoltageSource
 from gdm.distribution.equipment import PhaseVoltageSourceEquipment, VoltageSourceEquipment
 from gdm.quantities import Voltage
 
-import gdm_atoms
-from cimhub_core.cimtbl import check_fields
 from cimhub_gdm import gdm_to_cim
-from cimhub_gdm.importer import source
 
 GOLDEN = gdm_atoms.ATOMS / "source" / "balanced_3ph.cimtbl"
 

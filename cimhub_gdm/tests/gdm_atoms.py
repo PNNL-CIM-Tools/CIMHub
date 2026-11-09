@@ -7,24 +7,76 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-from gdm.distribution import DistributionSystem
-from gdm.distribution.common import TimeCurrentCurve
-from gdm.distribution.components import (DistributionBus, DistributionFeeder, DistributionSubstation,
-                                         DistributionVoltageSource, MatrixImpedanceFuse, MatrixImpedanceRecloser,
-                                         MatrixImpedanceSwitch, SequenceImpedanceSwitch)
-from gdm.distribution.controllers import DistributionRecloserController, DistributionSwitchController
-from gdm.distribution.enums import Phase, VoltageTypes
-from gdm.distribution.equipment import (CircuitBreakerEquipment, DisconnectorEquipment, MatrixImpedanceFuseEquipment,
-                                        MatrixImpedanceRecloserEquipment, MatrixImpedanceSwitchEquipment,
-                                        PhaseVoltageSourceEquipment, SequenceImpedanceSwitchEquipment,
-                                        VoltageSourceEquipment)
-from gdm.quantities import (Angle, CapacitancePULength, Current, Distance, Reactance, ReactancePULength, Resistance,
-                            ResistancePULength, Voltage)
-from infrasys.quantities import Time
-
 import cimtables
+import numpy as np
 from cimtables.diff import diff_models
+from gdm.distribution import DistributionSystem
+from gdm.distribution.common import SequencePair, TimeCurrentCurve
+from gdm.distribution.components import (
+    DistributionBus,
+    DistributionCapacitor,
+    DistributionFeeder,
+    DistributionLoad,
+    DistributionRegulator,
+    DistributionSubstation,
+    DistributionTransformer,
+    DistributionVoltageSource,
+    GeometryBranch,
+    GeometrySwitch,
+    MatrixImpedanceBranch,
+    MatrixImpedanceFuse,
+    MatrixImpedanceRecloser,
+    MatrixImpedanceSwitch,
+    SequenceImpedanceBranch,
+    SequenceImpedanceSwitch,
+)
+from gdm.distribution.controllers import (
+    ActivePowerCapacitorController,
+    CurrentCapacitorController,
+    DistributionRecloserController,
+    DistributionSwitchController,
+    ReactivePowerCapacitorController,
+    RegulatorController,
+    VoltageCapacitorController,
+)
+from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
+from gdm.distribution.equipment import (
+    BareConductorEquipment,
+    CapacitorEquipment,
+    CircuitBreakerEquipment,
+    ConcentricCableEquipment,
+    DisconnectorEquipment,
+    DistributionTransformerEquipment,
+    GeometryBranchEquipment,
+    LoadEquipment,
+    MatrixImpedanceBranchEquipment,
+    MatrixImpedanceFuseEquipment,
+    MatrixImpedanceRecloserEquipment,
+    MatrixImpedanceSwitchEquipment,
+    PhaseCapacitorEquipment,
+    PhaseLoadEquipment,
+    PhaseVoltageSourceEquipment,
+    PowerTransformerEquipment,
+    SequenceImpedanceBranchEquipment,
+    SequenceImpedanceSwitchEquipment,
+    VoltageSourceEquipment,
+    WindingEquipment,
+)
+from gdm.quantities import (
+    ActivePower,
+    ApparentPower,
+    Angle,
+    CapacitancePULength,
+    Current,
+    Distance,
+    Reactance,
+    ReactancePULength,
+    ReactivePower,
+    Resistance,
+    ResistancePULength,
+    Voltage,
+)
+from infrasys.quantities import Time
 
 from cimhub_gdm import gdm_to_cim
 
@@ -162,3 +214,289 @@ def add_switches(system) -> None:
     )
 
 
+# --- lines (tests/atoms/line/lines.cimtbl) -------------------------------------------------------------------------
+
+#: IEEE13 configuration 601 (ohm/mile, nF/mile); c's off-diagonals are negative, as a Maxwell matrix's are.
+MTX601_R = [[0.3465, 0.1560, 0.1580], [0.1560, 0.3375, 0.1535], [0.1580, 0.1535, 0.3414]]
+MTX601_X = [[1.0179, 0.5017, 0.4236], [0.5017, 1.0478, 0.3849], [0.4236, 0.3849, 1.0348]]
+MTX601_C = [[16.71, -5.294, -3.341], [-5.294, 15.81, -1.967], [-3.341, -1.967, 14.96]]
+
+
+def matrix_catalog(name, r, x, c, length_unit, ampacity):
+    return MatrixImpedanceBranchEquipment(
+        name=name, r_matrix=ResistancePULength(np.array(r), f"ohm / {length_unit}"),
+        x_matrix=ReactancePULength(np.array(x), f"ohm / {length_unit}"),
+        c_matrix=CapacitancePULength(np.array(c), f"nanofarad / {length_unit}"), ampacity=Current(ampacity, "ampere"))
+
+
+def acsr_556():
+    return BareConductorEquipment(name="acsr_556", conductor_diameter=Distance(0.927, "inch"),
+                                  conductor_gmr=Distance(0.0313, "foot"), ampacity=Current(730, "ampere"),
+                                  emergency_ampacity=Current(1095, "ampere"),
+                                  ac_resistance=ResistancePULength(0.1859, "ohm / mile"),
+                                  dc_resistance=ResistancePULength(0.1803, "ohm / mile"))
+
+
+def acsr_4_0():
+    return BareConductorEquipment(name="acsr_4/0", conductor_diameter=Distance(0.563, "inch"),
+                                  conductor_gmr=Distance(0.00814, "foot"), ampacity=Current(340, "ampere"),
+                                  emergency_ampacity=Current(510, "ampere"),
+                                  ac_resistance=ResistancePULength(0.592, "ohm / mile"),
+                                  dc_resistance=ResistancePULength(0.556, "ohm / mile"))
+
+
+def cn_250():
+    return ConcentricCableEquipment(
+        name="cn_250", strand_diameter=Distance(0.0641, "inch"), conductor_diameter=Distance(0.567, "inch"),
+        cable_diameter=Distance(1.29, "inch"), insulation_thickness=Distance(0.22, "inch"),
+        insulation_diameter=Distance(1.06, "inch"), ampacity=Current(260, "ampere"),
+        conductor_gmr=Distance(0.0171, "foot"), strand_gmr=Distance(0.00208, "foot"),
+        phase_ac_resistance=ResistancePULength(0.41, "ohm / mile"),
+        strand_ac_resistance=ResistancePULength(14.8722, "ohm / mile"), num_neutral_strands=13,
+        rated_voltage=Voltage(15, "kilovolt"))
+
+
+def add_lines(system) -> None:
+    """One line of each kind (tests/atoms/line/lines.cimtbl).
+
+    | name | GDM | buses | phases | catalog | length |
+    |---|---|---|---|---|---|
+    | mtx3 | MatrixImpedanceBranch | b1-b2 | ABC | mtx601 (3x3, ohm/mile) | 2000 ft |
+    | mtx3b | MatrixImpedanceBranch | b2-b3 | CAB | mtx601 again: built once | 500 ft |
+    | mtx1 | MatrixImpedanceBranch | b2-b3 | C | mtx1ph (1x1, ohm/km) | 0.3 km |
+    | seq | SequenceImpedanceBranch | b1-b3 | ABC | seq1 (ohm/km, nF/km) | 1 km |
+    | geo | GeometryBranch | b6-b7 | ABCN | g601: acsr_556 x3 + acsr_4/0 | 300 m |
+    | ug | GeometryBranch | b1-b2 | ABC | ug3: cn_250 x3 | 100 ft |
+    | gsw | GeometrySwitch | b6-b7 | ABC, closed | g601 | 1 m |
+
+    b6 and b7 are 4.16 kV line-to-line ABCN buses (a neutral conductor needs a bus with N).
+    """
+    atom = feeder(system, "atom")
+    b1, b2, b3 = bus(system, "b1"), bus(system, "b2"), bus(system, "b3")
+    b6, b7 = (DistributionBus(name=name, rated_voltage=Voltage(4.16, "kilovolt"), voltage_type=LL,
+                              phases=ABC + [Phase.N], feeder=atom, substation=system.get_component(
+                                  DistributionSubstation, "atom")) for name in ("b6", "b7"))
+    mtx601 = matrix_catalog("mtx601", MTX601_R, MTX601_X, MTX601_C, "mile", 730)
+    mtx1ph = matrix_catalog("mtx1ph", [[0.5]], [[0.9]], [[3.4]], "kilometer", 200)
+    seq1 = SequenceImpedanceBranchEquipment(
+        name="seq1", pos_seq_resistance=ResistancePULength(0.3, "ohm / kilometer"),
+        zero_seq_resistance=ResistancePULength(0.6, "ohm / kilometer"),
+        pos_seq_reactance=ReactancePULength(0.6, "ohm / kilometer"),
+        zero_seq_reactance=ReactancePULength(1.8, "ohm / kilometer"),
+        pos_seq_capacitance=CapacitancePULength(10, "nanofarad / kilometer"),
+        zero_seq_capacitance=CapacitancePULength(4, "nanofarad / kilometer"), ampacity=Current(400, "ampere"))
+    overhead, neutral, cable = acsr_556(), acsr_4_0(), cn_250()
+    g601 = GeometryBranchEquipment(name="g601", conductors=[overhead, overhead, overhead, neutral],
+                                   horizontal_positions=Distance(np.array([0.0, 2.5, 7.0, 4.0]), "foot"),
+                                   vertical_positions=Distance(np.array([28.0, 28.0, 28.0, 24.0]), "foot"))
+    ug3 = GeometryBranchEquipment(name="ug3", conductors=[cable, cable, cable],
+                                  horizontal_positions=Distance(np.array([-0.5, 0.0, 0.5]), "foot"),
+                                  vertical_positions=Distance(np.array([-4.0, -4.0, -4.0]), "foot"))
+    system.add_components(
+        MatrixImpedanceBranch(name="mtx3", buses=[b1, b2], phases=ABC, length=Distance(2000, "foot"),
+                              equipment=mtx601, feeder=atom),
+        MatrixImpedanceBranch(name="mtx3b", buses=[b2, b3], phases=[Phase.C, Phase.A, Phase.B],
+                              length=Distance(500, "foot"), equipment=mtx601, feeder=atom),
+        MatrixImpedanceBranch(name="mtx1", buses=[b2, b3], phases=[Phase.C], length=Distance(0.3, "kilometer"),
+                              equipment=mtx1ph, feeder=atom),
+        SequenceImpedanceBranch(name="seq", buses=[b1, b3], phases=ABC, length=Distance(1, "kilometer"),
+                                equipment=seq1, feeder=atom),
+        b6, b7,
+        GeometryBranch(name="geo", buses=[b6, b7], phases=ABC + [Phase.N], length=Distance(300, "meter"),
+                       equipment=g601, feeder=atom),
+        GeometryBranch(name="ug", buses=[b1, b2], phases=ABC, length=Distance(100, "foot"), equipment=ug3,
+                       feeder=atom),
+        GeometrySwitch(name="gsw", buses=[b6, b7], phases=ABC, is_closed=[True] * 3,
+                       length=Distance(1, "meter"), equipment=g601, feeder=atom),
+    )
+
+
+# --- loads (tests/atoms/load/loads.cimtbl) -------------------------------------------------------------------------
+
+def phase_load(p_kw, q_kvar, zip_fractions=(0, 0, 1, 0, 0, 1), exponents=(None, None), customers=None):
+    """A PhaseLoadEquipment: ``zip_fractions`` is (pZ, pI, pP, qZ, qI, qP)."""
+    z_real, i_real, p_real, z_imag, i_imag, p_imag = zip_fractions
+    return PhaseLoadEquipment(name="", real_power=ActivePower(p_kw, "kilowatt"),
+                              reactive_power=ReactivePower(q_kvar, "kilovar"),
+                              z_real=z_real, i_real=i_real, p_real=p_real, z_imag=z_imag, i_imag=i_imag,
+                              p_imag=p_imag, num_customers=customers, active_power_voltage_exponent=exponents[0],
+                              reactive_power_voltage_exponent=exponents[1])
+
+
+def load(system, name, bus_name, phases, phase_loads, connection=ConnectionType.STAR) -> DistributionLoad:
+    return DistributionLoad(name=name, bus=bus(system, bus_name), phases=phases,
+                            equipment=LoadEquipment(name=f"{name}_eq", phase_loads=phase_loads,
+                                                    connection_type=connection),
+                            feeder=feeder(system, "atom"))
+
+
+Z_ONLY, I_ONLY = (1, 0, 0, 1, 0, 0), (0, 1, 0, 0, 1, 0)
+
+
+def add_loads(system) -> None:
+    """One load of each phase and model form (tests/atoms/load/loads.cimtbl).
+
+    | name | bus | phases | conn | per phase (kW, kvar) | model | CIM |
+    |---|---|---|---|---|---|---|
+    | bal | b1 | ABC | wye | 100, 50 each; 1 customer | constant PQ | totals, no phases |
+    | unbal | b2 | ABC | wye | A 100, 50; B 200, 80; C 50, 20 | constant Z | totals + per-phase p, q |
+    | one | b3 | B | wye | 50, 25 | constant I | phases B, no per-phase values |
+    | tpx | b5 | S1 S2 | wye | 2.5, 1 each | constant PQ | phases s1s2 |
+    | leg | b5 | S2 | wye | 2, 0.5; 3 customers | constant PQ | phases s2 |
+    | dbc | b1 | B C | delta | 85, 40 each | constant PQ | one branch child ld_dbc_BC |
+    | zip | b2 | ABC | wye | 100, 40 each | ZIP 0.4 0.3 0.3 / 0.5 0 0.5 | its own zip_ row |
+    | cvr | b3 | A | wye | 100, 30 | exponents 0.8, 3 | exp_0.8_3 |
+    """
+    zip_fractions = (0.4, 0.3, 0.3, 0.5, 0, 0.5)
+    system.add_components(
+        load(system, "bal", "b1", ABC, [phase_load(100, 50, customers=1) for _ in ABC]),
+        load(system, "unbal", "b2", ABC, [phase_load(100, 50, Z_ONLY), phase_load(200, 80, Z_ONLY),
+                                          phase_load(50, 20, Z_ONLY)]),
+        load(system, "one", "b3", [Phase.B], [phase_load(50, 25, I_ONLY)]),
+        load(system, "tpx", "b5", [Phase.S1, Phase.S2], [phase_load(2.5, 1), phase_load(2.5, 1)]),
+        load(system, "leg", "b5", [Phase.S2], [phase_load(2, 0.5, customers=3)]),
+        load(system, "dbc", "b1", [Phase.B, Phase.C], [phase_load(85, 40), phase_load(85, 40)], ConnectionType.DELTA),
+        load(system, "zip", "b2", ABC, [phase_load(100, 40, zip_fractions) for _ in ABC]),
+        load(system, "cvr", "b3", [Phase.A], [phase_load(100, 30, exponents=(0.8, 3.0))]),
+    )
+
+
+# --- capacitors (tests/atoms/capacitor/capacitors.cimtbl) ----------------------------------------------------------
+
+def capacitor(system, name, bus_name, phases, kvar, rated_voltage, voltage_type, *, banks=1, banks_on=1,
+              connection=ConnectionType.STAR, state=(True,), controllers=()) -> DistributionCapacitor:
+    """A capacitor with ``kvar`` on each phase."""
+    equipment = CapacitorEquipment(
+        name=f"{name}_eq", connection_type=connection, rated_voltage=Voltage(rated_voltage, "kilovolt"),
+        voltage_type=voltage_type,
+        phase_capacitors=[PhaseCapacitorEquipment(name="", rated_reactive_power=ReactivePower(kvar, "kilovar"),
+                                                  num_banks=banks, num_banks_on=banks_on) for _ in phases])
+    return DistributionCapacitor(name=name, bus=bus(system, bus_name), phases=phases, equipment=equipment,
+                                 state=list(state), controllers=list(controllers), feeder=feeder(system, "atom"))
+
+
+def add_capacitors(system) -> None:
+    """Fixed and controlled capacitors (tests/atoms/capacitor/capacitors.cimtbl).
+
+    | name | bus | phases | per phase | rating | banks (on) | state | controller |
+    |---|---|---|---|---|---|---|---|
+    | c3 | b1 | ABC | 200 kvar | 4.16 kV LL, wye | 1 (1) | on | none |
+    | c1 | b2 | C | 100 kvar | 2.4 kV LG, wye | 1 (1) | on | none |
+    | cd | b3 | ABC | 100 kvar | 2.4018 kV LG, delta | 2 (1) | on, per phase | none |
+    | off | b1 | A | 50 kvar | 2.4 kV LG, wye | 1 (1) | off | none |
+    | vc | b2 | ABC | 300 kvar | 4.16 kV LL | 1 (1) | on | voltage 115-125 V, PT 20, delay 15 s, one per phase |
+    | qc | b3 | ABC | 200 kvar | 4.16 kV LL | 1 (1) | on | reactive power 150-225 kvar (GDM requires > 0) |
+    | ic | b1 | ABC | 100 kvar | 4.16 kV LL | 1 (1) | on | current 50-100 A, CT 60 |
+    | pc | b2 | ABC | 100 kvar | 4.16 kV LL | 1 (1) | on | active power 500-1000 kW |
+    """
+    def voltage_controller():
+        return VoltageCapacitorController(on_voltage=Voltage(115, "volt"), off_voltage=Voltage(125, "volt"),
+                                          pt_ratio=20, delay_on=Time(15, "second"), delay_off=Time(30, "second"))
+
+    system.add_components(
+        capacitor(system, "c3", "b1", ABC, 200, 4.16, LL),
+        capacitor(system, "c1", "b2", [Phase.C], 100, 2.4, LG),
+        capacitor(system, "cd", "b3", ABC, 100, 2.4018, LG, banks=2, connection=ConnectionType.DELTA,
+                  state=(True, True, True)),
+        capacitor(system, "off", "b1", [Phase.A], 50, 2.4, LG, state=(False,)),
+        capacitor(system, "vc", "b2", ABC, 300, 4.16, LL, controllers=[voltage_controller() for _ in ABC]),
+        capacitor(system, "qc", "b3", ABC, 200, 4.16, LL, controllers=[ReactivePowerCapacitorController(
+            on_power=ReactivePower(150, "kilovar"), off_power=ReactivePower(225, "kilovar"))]),
+        capacitor(system, "ic", "b1", ABC, 100, 4.16, LL, controllers=[CurrentCapacitorController(
+            on_current=Current(50, "ampere"), off_current=Current(100, "ampere"), ct_ratio=60)]),
+        capacitor(system, "pc", "b2", ABC, 100, 4.16, LL, controllers=[ActivePowerCapacitorController(
+            on_power=ActivePower(500, "kilowatt"), off_power=ActivePower(1000, "kilowatt"))]),
+    )
+
+
+def winding(kv, voltage_type, kva, r_pct, connection=ConnectionType.STAR, phases=3, taps=None, grounded=False):
+    """A WindingEquipment: 32 taps over 0.9-1.1 pu, ``taps`` per phase (default nominal), ungrounded unless asked."""
+    return WindingEquipment(name="", resistance=r_pct, is_grounded=grounded, rated_voltage=Voltage(kv, "kilovolt"),
+                            voltage_type=voltage_type, rated_power=ApparentPower(kva, "kilova"), num_phases=phases,
+                            connection_type=connection, tap_positions=taps or [1.0] * phases, total_taps=32,
+                            min_tap_pu=0.9, max_tap_pu=1.1)
+
+
+def transformer_catalog(name, windings, pairs, reactances, *, no_load=0.0, full_load=0.0, magnetizing=None,
+                        center_tap=False, cls=DistributionTransformerEquipment, **extra):
+    return cls(name=name, mounting="POLE_MOUNT", pct_no_load_loss=no_load, pct_full_load_loss=full_load,
+               windings=windings, coupling_sequences=[SequencePair(from_index=i, to_index=j) for i, j in pairs],
+               winding_reactances=reactances, is_center_tapped=center_tap, magnetizing_current_pct=magnetizing,
+               **extra)
+
+
+def add_transformers(system) -> None:
+    """One transformer of each catalog shape (GDM_MAPPING.md §18), ditto-style ratings (line-to-ground on a wye):
+
+    | instance | catalog | windings (g = is_grounded) | buses, phases | taps |
+    |---|---|---|---|---|
+    | t_dy | dy (PowerTransformerEquipment, Dyn1, ONAN) | 75 kVA D 4.16 kV LL / Y g 0.27713 kV LG | b1 ABC, b4 ABCN | |
+    | t3w | yyd | 1000 kVA Y 2.4018 LG / Y 0.27713 LG / D 0.24 LL | b2 ABC, b4 ABCN, b8 ABC | catalog winding 2 1.0125 |
+    | t_ln | ln1 (1-based couplings) | 50 kVA Y g 2.4018 LG / Y g 0.27713 LG | b2 B, b4 B | instance winding 2 1.025 |
+    | t_ll | ll1 | 100 kVA D 4.16 LL / D 0.48 LL | b1 AB, b4 AB | |
+    | t_ct | ct25 (center tap) | 25 kVA Y g 2.4018 LG / g 0.12 / g 0.12 | b2 C, b5 S1 N, b5 N S2 | |
+    """
+    tertiary = DistributionBus(name="b8", rated_voltage=Voltage(0.24, "kilovolt"), voltage_type=LL, phases=ABC,
+                              feeder=feeder(system, "atom"))
+    system.add_component(tertiary)
+    fdr = feeder(system, "atom")
+    dy = transformer_catalog("dy", [winding(4.16, LL, 75, 0.87204, ConnectionType.DELTA),
+                                    winding(0.27713, LG, 75, 0.87204, grounded=True)], [(0, 1)], [3.24],
+                             no_load=0.6, full_load=1.74408, cls=PowerTransformerEquipment, vector_group="Dyn1",
+                             cooling_class="ONAN", fluid_type="mineral_oil")
+    yyd = transformer_catalog("yyd", [winding(2.4018, LG, 1000, 0.2),
+                                      winding(0.27713, LG, 1000, 0.3, taps=[1.0125] * 3),
+                                      winding(0.24, LL, 1000, 0.4, ConnectionType.DELTA)],
+                              [(0, 1), (0, 2), (1, 2)], [6.0, 4.0, 3.0], no_load=0.1, full_load=0.5)
+    ln1 = transformer_catalog("ln1", [winding(2.4018, LG, 50, 0.5, phases=1, grounded=True),
+                                      winding(0.27713, LG, 50, 0.5, phases=1, grounded=True)],
+                              [(1, 2)], [2.0], no_load=0.2, full_load=1.0)
+    ll1 = transformer_catalog("ll1", [winding(4.16, LL, 100, 0.4, ConnectionType.DELTA, phases=1),
+                                      winding(0.48, LL, 100, 0.4, ConnectionType.DELTA, phases=1)],
+                              [(0, 1)], [2.5], full_load=0.8)
+    ct25 = transformer_catalog("ct25", [winding(2.4018, LG, 25, 0.6, phases=1, grounded=True),
+                                        winding(0.12, LG, 25, 1.2, phases=1, grounded=True),
+                                        winding(0.12, LG, 25, 1.2, phases=1, grounded=True)],
+                               [(0, 1), (0, 2), (1, 2)], [2.04, 2.04, 1.36], no_load=0.2, full_load=1.8,
+                               magnetizing=0.5, center_tap=True)
+    b = {name: bus(system, name) for name in ("b1", "b2", "b4", "b5", "b8")}
+    rows = [
+        ("t_dy", dy, ["b1", "b4"], [ABC, ABC + [Phase.N]], None),
+        ("t3w", yyd, ["b2", "b4", "b8"], [ABC, ABC + [Phase.N], ABC], None),
+        ("t_ln", ln1, ["b2", "b4"], [[Phase.B], [Phase.B]], [[1.0], [1.025]]),
+        ("t_ll", ll1, ["b1", "b4"], [[Phase.A, Phase.B], [Phase.A, Phase.B]], None),
+        ("t_ct", ct25, ["b2", "b5", "b5"], [[Phase.C], [Phase.S1, Phase.N], [Phase.N, Phase.S2]], None),
+    ]
+    for name, catalog, buses, phases, taps in rows:
+        system.add_component(DistributionTransformer(name=name, buses=[b[n] for n in buses], winding_phases=phases,
+                                                     tap_positions=taps, equipment=catalog, feeder=fdr))
+
+
+def regulator_controller(phase, *, ldc=False, bus_name="b3", system=None):
+    """A RegulatorController on the L side (winding 2): 122 V band 2 V on a PT of 20, limits 110-130 V."""
+    return RegulatorController(
+        name="", tapped_winding=2, delay=Time(30, "second"), v_setpoint=Voltage(122, "volt"),
+        min_v_limit=Voltage(110, "volt"), max_v_limit=Voltage(130, "volt"), pt_ratio=20.0, use_ldc=ldc,
+        is_reversible=False, ldc_R=Voltage(3, "volt") if ldc else None, ldc_X=Voltage(9, "volt") if ldc else None,
+        ct_primary=Current(700, "ampere"), max_step=16, bandwidth=Voltage(2, "volt"),
+        controlled_bus=bus(system, bus_name), controlled_phase=phase)
+
+
+def add_regulators(system) -> None:
+    """r1: one phase (A), line drop compensation, tap 1.0125 (step 2); rb: a bank of three, one controller each,
+    taps 1.00625 / 1.0125 / 1.0 (steps 1, 2, 0). Both b1 → b3; GDM requires one controller per phase."""
+    fdr = feeder(system, "atom")
+    reg1666 = transformer_catalog("reg1666", [winding(2.4018, LG, 1666, 0.005, phases=1),
+                                              winding(2.4018, LG, 1666, 0.005, phases=1)], [(0, 1)], [0.01])
+    reg3 = transformer_catalog("reg3", [winding(2.4018, LG, 5000, 0.001), winding(2.4018, LG, 5000, 0.001)],
+                               [(0, 1)], [0.01])
+    buses = [bus(system, "b1"), bus(system, "b3")]
+    rows = [
+        ("r1", reg1666, [[Phase.A], [Phase.A]], [[1.0], [1.0125]],
+         [regulator_controller(Phase.A, ldc=True, system=system)]),
+        ("rb", reg3, [ABC, ABC], [[1.0] * 3, [1.00625, 1.0125, 1.0]],
+         [regulator_controller(p, system=system) for p in ABC]),
+    ]
+    for name, catalog, phases, taps, controllers in rows:
+        system.add_component(DistributionRegulator(name=name, buses=buses, winding_phases=phases, tap_positions=taps,
+                                                   equipment=catalog, controllers=controllers, feeder=fdr))

@@ -7,21 +7,31 @@ from cimbuilder.object_builder import FeederBuilder, SubstationBuilder
 from cimhub_core.cimtbl import Field, mrid
 from gdm.distribution.components import DistributionFeeder, DistributionSubstation
 
-from cimhub_gdm.importer.shared import AUTHORITY, FEEDER_PREFIX, FREQUENCY_HZ, SUBSTATION_PREFIX, components
+from cimhub_gdm.importer.shared import (
+    AUTHORITY,
+    FEEDER_PREFIX,
+    FREQUENCY_HZ,
+    SUBSTATION_PREFIX,
+    Naming,
+    check_shell_name,
+    components,
+)
 
 FIELDS_DistributionSubstation = {
-    "uuid": Field("structural", note="never the mRID; only rehashed for an empty or clashing name (B18)"),
-    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)), note="mRID = sub_ + name"),
+    "uuid": Field("structural", note="never copied; an empty or clashing name raises (check_shell_name)"),
+    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)),
+                  note="mRID = sub_ + name; a GUID raises"),
     "feeders": Field("structural", note="each listed Feeder's NormalEnergizingSubstation"),
 }
 
 FIELDS_DistributionFeeder = {
-    "uuid": Field("structural", note="never the mRID; only rehashed for an empty or clashing name (B18)"),
-    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)), note="mRID = fdr_ + name"),
+    "uuid": Field("structural", note="never copied; an empty or clashing name raises (check_shell_name)"),
+    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)),
+                  note="mRID = fdr_ + name; a GUID raises"),
 }
 
 
-def new_network(system):
+def new_network(system, naming: Naming):
     """An empty cim18v17 FeederModel holding every Feeder and Substation of ``system``.
 
     The model's own container is the system Feeder ``fdr_<system.name>`` when some component names neither a
@@ -31,6 +41,8 @@ def new_network(system):
         raise ValueError("DistributionSystem.name is empty; set it, it is the CIM Model name")
     feeders = components(system, DistributionFeeder)
     substations = components(system, DistributionSubstation)
+    for shell_component in feeders + substations:
+        check_shell_name(shell_component, naming)
     energizing = _energizing_substations(substations)
 
     if not feeders or _needs_system_feeder(system):

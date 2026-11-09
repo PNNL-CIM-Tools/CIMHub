@@ -66,6 +66,24 @@ itself on one complete family.
 
 ## Phase 2: lines, loads, capacitors
 
+**Status: built 2026-11-08, awaiting review.** 116 passed, 8 skipped (gdmloader, opt-in), 2 xfailed (ditto can't read
+two decks); the opt-in gdmloader sweep passes 8 of 8. With the Phase 3/4 classes stripped, all 4 ditto decks and all
+8 gdmloader systems import through Phase 2 (SMART-DS p1rhs7: 1,841 lines, 1,896 loads). The spec is
+`GDM_MAPPING.md` §15-§17. Changes from the plan below:
+  - Lines keep their phases, balanced ABC included (G7, the DSS wave's S4b-9).
+  - Limit mRIDs are `<ln>_norm` / `<ln>_emerg` and the cable prefix `cn_`, as the DSS goldens write them.
+  - Wye loads and capacitors are `Y`, grounded; delta `D`, not grounded (the DSS wave's S4a), instead of `Yn`.
+  - A capacitor's nomU is line-to-line for balanced ABC and the rating across the unit otherwise (the DSS rule), not
+    always line-to-line. Unequal per-phase capacitors raise (the exit check), so no LinearShuntCompensatorPhase values.
+  - A capacitor control is `cc_<capacitor>` (the DSS prefix); U3 had closed, so the control golden is not `xfail`.
+  - `DailyTimedCapacitorController` is `PENDING`, not a raise inside the build.
+  - Wire insulation is untranscribed (no builder keyword), so G5 is moot; the wire info's own limit set has no
+    builder, so `emergency_ampacity` rates geometry lines only (`GDM_MAPPING.md` §14).
+  - B18 landed: GUID and clashing names are rehashed (`shared.object_mrid`, `Naming`); every add function takes
+    `naming` instead of `system_name`.
+  - GDM validates a matrix's size against the line's phases and the voltage exponents' pairing, so those checks are
+    GDM's.
+
 **Create:** `importer/line.py`, `importer/load.py`, `importer/capacitor.py`; goldens `atoms/{line,load,capacitor}/`;
 `test_{line,load,capacitor}_import.py`.
 
@@ -103,10 +121,31 @@ per-phase capacitors and an unmapped `ConnectionType`.
 
 ## Phase 3: transformers and regulators
 
+**Status: built 2026-11-08, awaiting review.** 160 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
+gdmloader sweep passes 8 of 8. With the Phase 4 classes stripped, all 4 ditto decks and all 8 gdmloader systems
+import completely (SMART-DS p1rhs7: 503 transformers, 481 center taps). The spec is `GDM_MAPPING.md` §18-§19.
+Changes from the plan below:
+  - Catalogs follow the DSS wave's XfmrCode goldens: a TankEnd and winding per winding (`<xc>_end_<n>`,
+    `<xc>_wdg_<n>`), or lugs for a center tap; no template phase ends. CIM-Builder had no TankEnd method; with the
+    user's go-ahead this session added `add_transformer_tank_end` and loosened `add_transformer_winding` and
+    `add_mesh_impedance` (B26, `GDM_MAPPING.md` §14; uncommitted in CIM-Builder).
+  - Instance phase ends only for a center tap (its lugs need them); a by-end template's end n is the instance's end n.
+  - Wye ends as GDM writes them (G8, user, revised): `Yn` when N is listed, `grounded` = `is_grounded`; a 1-phase
+    wye coil gets its N. ditto-made data therefore imports ungrounded (its OpenDSS reader hard-codes
+    `is_grounded=False`); the ask is in `GDM_MAPPING.md` §14. Taps are read for the phase conductors only.
+  - B27 filed: no `grounded` on `add_auto_transformer_end`, so regulators leave `is_grounded` untranscribed.
+  - G4 decided (user): taps from the instance, else the catalog; a RatioTapChanger with no control.
+  - Regulators: one single-phase VoltageRegulator per phase, after CIMTBL-Models `regulator_example.cimtbl`;
+    TapChangerInfo `tci_` is B17's catalog home; the stand-in impedance is untranscribed. GDM requires one controller
+    per phase, so there is no gang regulator.
+  - Prefix `vr_` (the CIMTBL-Models example) for regulators, not `xf_`.
+  - Coupling indices: GDM requires every pair once, so they are never ambiguous; out of range raises.
+  - Plain-transformer taps and the regulator shape are not in the DSS goldens yet (parity, §18-§19).
+
 **Entry:** the mesh mRID fix (plan's upstream table) for transformers; B17 (regulator template) for regulators. The
 two land separately: transformers don't wait for B17.
 
-**Create:** `importer/transformer.py`; goldens in `atoms/transformer/`: single-phase, center-tap, 3-phase Dyn,
+**Create:** `importer/transformer.py`, `importer/regulator.py`; goldens in `atoms/transformer/`, `atoms/regulator/`: single-phase, center-tap, 3-phase Dyn,
 3-winding, regulator bank, regulator with LDC. Start each from the DSS S3b golden for the same pattern.
 
 - **Catalog:** `DistributionTransformerEquipment` (and `PowerTransformerEquipment`) → TransformerTankConfiguration `xc_`

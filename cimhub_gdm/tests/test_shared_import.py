@@ -3,11 +3,10 @@
 import math
 
 import pytest
+from cimhub_gdm.importer import shared
 from gdm.distribution.components import DistributionBus, DistributionFeeder, DistributionSubstation
 from gdm.distribution.enums import Phase, VoltageTypes
-from gdm.quantities import ApparentPower, Voltage
-
-from cimhub_gdm.importer import shared
+from gdm.quantities import ActivePower, ApparentPower, CapacitancePULength, ReactivePower, Voltage
 
 LL, LG = VoltageTypes.LINE_TO_LINE, VoltageTypes.LINE_TO_GROUND
 ABC = [Phase.A, Phase.B, Phase.C]
@@ -91,19 +90,63 @@ def _bus(name, **kwargs):
     return DistributionBus(name=name, rated_voltage=Voltage(4.16, "kilovolt"), voltage_type=LL, phases=ABC, **kwargs)
 
 
+NAMING = shared.Naming("sys")
+GUID = "372a4dea-63f2-4737-bc0f-5549c04b3d54"
+
+
 def test_container_mrid_prefers_feeder_then_substation_then_system():
     feeder = DistributionFeeder(name="f")
     substation = DistributionSubstation(name="s", feeders=[feeder])
-    assert shared.container_mrid(_bus("b", feeder=feeder, substation=substation), "sys") == "fdr_f"
-    assert shared.container_mrid(_bus("b", substation=substation), "sys") == "sub_s"
-    assert shared.container_mrid(_bus("b"), "sys") == "fdr_sys"
+    assert shared.container_mrid(_bus("b", feeder=feeder, substation=substation), NAMING) == "fdr_f"
+    assert shared.container_mrid(_bus("b", substation=substation), NAMING) == "sub_s"
+    assert shared.container_mrid(_bus("b"), NAMING) == "fdr_sys"
 
 
-def test_check_names_rejects_empty_guid_and_clashing_names():
-    with pytest.raises(ValueError, match="empty name"):
-        shared.check_names([DistributionFeeder(name="")])
-    with pytest.raises(ValueError, match="GUID"):
-        shared.check_names([DistributionFeeder(name="372a4dea-63f2-4737-bc0f-5549c04b3d54")])
-    with pytest.raises(ValueError, match="used by"):
-        shared.check_names([DistributionFeeder(name="f"), DistributionFeeder(name="f")])
-    shared.check_names([DistributionFeeder(name="f"), DistributionSubstation(name="f", feeders=[])])
+def test_name_clashes_are_empty_or_shared_names_within_a_class():
+    empty, f1, f2, other = (DistributionFeeder(name=""), DistributionFeeder(name="f"), DistributionFeeder(name="f"),
+                            DistributionFeeder(name="g"))
+    substation = DistributionSubstation(name="f", feeders=[])
+    assert shared.name_clashes([empty, f1, f2, other, substation]) == {empty.uuid, f1.uuid, f2.uuid}
+
+
+def test_object_mrid_is_the_prefixed_name():
+    assert shared.object_mrid("ln_", _bus("l1"), "ACLineSegment", NAMING) == "ln_l1"
+
+
+def test_object_mrid_rehashes_a_guid_name_per_class():
+    bus = _bus(GUID)
+    first = shared.object_mrid("ln_", bus, "ACLineSegment", NAMING)
+    assert first != GUID and not first.startswith("ln_")
+    assert first == shared.object_mrid("ln_", _bus(GUID), "ACLineSegment", NAMING)  # seeded: stable
+    assert first != shared.object_mrid("lc_", bus, "PerLengthPhaseImpedance", NAMING)
+
+
+def test_object_mrid_rehashes_the_uuid_of_a_clashing_name():
+    a, b = _bus("x"), _bus("x")
+    naming = shared.Naming("sys", shared.name_clashes([a, b]))
+    mrids = {shared.object_mrid("", bus, "ConnectivityNode", naming) for bus in (a, b)}
+    assert len(mrids) == 2 and "x" not in mrids
+
+
+def test_check_shell_name_rejects_guid_and_clashing_names():
+    with pytest.raises(ValueError, match="not supported"):
+        shared.check_shell_name(DistributionFeeder(name=GUID), NAMING)
+    clashing = DistributionFeeder(name="")
+    with pytest.raises(ValueError, match="not supported"):
+        shared.check_shell_name(clashing, shared.Naming("sys", frozenset({clashing.uuid})))
+    shared.check_shell_name(DistributionFeeder(name="f"), NAMING)
+
+
+def test_power_qty_rejects_a_power_of_the_wrong_kind():
+    assert shared.power_qty(ReactivePower(5, "kilovar"), "reactive", label="x").value == 5
+    with pytest.raises(ValueError, match="not an reactive power unit"):
+        shared.power_qty(ReactivePower(5, "kilowatt"), "reactive", label="x")
+    with pytest.raises(ValueError, match="not an active power unit"):
+        shared.power_qty(ActivePower(5, "kilova"), "active", label="x")
+
+
+def test_susceptance_is_omega_c():
+    """10 nF/km at 60 Hz: 2π·60·10e-9 S/km = 3.7699e-6 S/km = 3.7699e-9 S/m."""
+    b = shared.susceptance(CapacitancePULength(10, "nanofarad / kilometer"))
+    assert b.value == pytest.approx(2 * math.pi * 60 * 10)
+    assert b.unit == "hertz * nanofarad / kilometer"

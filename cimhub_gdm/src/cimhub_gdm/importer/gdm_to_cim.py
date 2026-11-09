@@ -17,10 +17,9 @@ from gdm.distribution import controllers as K
 from gdm.distribution import equipment as E
 from infrasys import Component
 
-from cimhub_gdm.importer import bus, source, switch
-from cimhub_gdm.importer.network import (FIELDS_DistributionFeeder, FIELDS_DistributionSubstation,
-                                         new_network)
-from cimhub_gdm.importer.shared import check_names, components
+from cimhub_gdm.importer import bus, capacitor, line, load, regulator, source, switch, transformer
+from cimhub_gdm.importer.network import FIELDS_DistributionFeeder, FIELDS_DistributionSubstation, new_network
+from cimhub_gdm.importer.shared import Naming, components, name_clashes
 
 log = logging.getLogger(__name__)
 
@@ -33,11 +32,27 @@ SHELL = {
 #: (class, add function, FIELDS), in build order (GDM_MAPPING.md §1).
 ORDER = [
     (C.DistributionBus, bus.add_bus, bus.FIELDS_DistributionBus),
+    (E.BareConductorEquipment, line.add_wire, line.FIELDS_BareConductorEquipment),
+    (E.ConcentricCableEquipment, line.add_cable, line.FIELDS_ConcentricCableEquipment),
+    (E.GeometryBranchEquipment, line.add_geometry, line.FIELDS_GeometryBranchEquipment),
+    (E.MatrixImpedanceBranchEquipment, line.add_matrix_impedance, line.FIELDS_MatrixImpedanceBranchEquipment),
+    (E.SequenceImpedanceBranchEquipment, line.add_sequence_impedance, line.FIELDS_SequenceImpedanceBranchEquipment),
+    (E.DistributionTransformerEquipment, transformer.add_tank_configuration,
+     transformer.FIELDS_DistributionTransformerEquipment),
+    (E.PowerTransformerEquipment, transformer.add_tank_configuration, transformer.FIELDS_PowerTransformerEquipment),
     (C.DistributionVoltageSource, source.add_source, source.FIELDS_DistributionVoltageSource),
     (C.MatrixImpedanceSwitch, switch.add_switch, switch.FIELDS_MatrixImpedanceSwitch),
     (C.SequenceImpedanceSwitch, switch.add_switch, switch.FIELDS_SequenceImpedanceSwitch),
+    (C.GeometrySwitch, switch.add_switch, switch.FIELDS_GeometrySwitch),
     (C.MatrixImpedanceFuse, switch.add_switch, switch.FIELDS_MatrixImpedanceFuse),
     (C.MatrixImpedanceRecloser, switch.add_switch, switch.FIELDS_MatrixImpedanceRecloser),
+    (C.MatrixImpedanceBranch, line.add_line, line.FIELDS_MatrixImpedanceBranch),
+    (C.SequenceImpedanceBranch, line.add_line, line.FIELDS_SequenceImpedanceBranch),
+    (C.GeometryBranch, line.add_line, line.FIELDS_GeometryBranch),
+    (C.DistributionTransformer, transformer.add_transformer, transformer.FIELDS_DistributionTransformer),
+    (C.DistributionRegulator, regulator.add_regulator, regulator.FIELDS_DistributionRegulator),
+    (C.DistributionLoad, load.add_load, load.FIELDS_DistributionLoad),
+    (C.DistributionCapacitor, capacitor.add_capacitor, capacitor.FIELDS_DistributionCapacitor),
 ]
 
 #: Read through their parent; each must have one.
@@ -51,6 +66,16 @@ INLINE = {
     E.MatrixImpedanceFuseEquipment: switch.FIELDS_MatrixImpedanceFuseEquipment,
     E.MatrixImpedanceRecloserEquipment: switch.FIELDS_MatrixImpedanceRecloserEquipment,
     K.DistributionSwitchController: switch.FIELDS_DistributionSwitchController,
+    E.LoadEquipment: load.FIELDS_LoadEquipment,
+    E.PhaseLoadEquipment: load.FIELDS_PhaseLoadEquipment,
+    E.CapacitorEquipment: capacitor.FIELDS_CapacitorEquipment,
+    E.PhaseCapacitorEquipment: capacitor.FIELDS_PhaseCapacitorEquipment,
+    K.VoltageCapacitorController: capacitor.FIELDS_VoltageCapacitorController,
+    K.CurrentCapacitorController: capacitor.FIELDS_CurrentCapacitorController,
+    K.ActivePowerCapacitorController: capacitor.FIELDS_ActivePowerCapacitorController,
+    K.ReactivePowerCapacitorController: capacitor.FIELDS_ReactivePowerCapacitorController,
+    E.WindingEquipment: transformer.FIELDS_WindingEquipment,
+    K.RegulatorController: regulator.FIELDS_RegulatorController,
 }
 
 #: No CIM home (GDM_MAPPING.md §10).
@@ -64,38 +89,11 @@ UNTRANSCRIBED = {
     K.DistributionRecloserController: "no RecloseSequence in cim18v17",
 }
 
-_PHASE_2 = "Phase 2 (lines, loads, capacitors)"
-_PHASE_3 = "Phase 3 (transformers, regulators)"
 _PHASE_4 = "Phase 4 (DER, reactors)"
 
 #: Not mapped yet: the phase or the builder each waits for.
 PENDING = {
-    C.GeometrySwitch: _PHASE_2,
-    C.MatrixImpedanceBranch: _PHASE_2,
-    C.SequenceImpedanceBranch: _PHASE_2,
-    C.GeometryBranch: _PHASE_2,
-    E.MatrixImpedanceBranchEquipment: _PHASE_2,
-    E.SequenceImpedanceBranchEquipment: _PHASE_2,
-    E.GeometryBranchEquipment: _PHASE_2,
-    E.BareConductorEquipment: _PHASE_2,
-    E.ConcentricCableEquipment: _PHASE_2,
-    C.DistributionLoad: _PHASE_2,
-    E.LoadEquipment: _PHASE_2,
-    E.PhaseLoadEquipment: _PHASE_2,
-    C.DistributionCapacitor: _PHASE_2,
-    E.CapacitorEquipment: _PHASE_2,
-    E.PhaseCapacitorEquipment: _PHASE_2,
-    K.VoltageCapacitorController: _PHASE_2,
-    K.CurrentCapacitorController: _PHASE_2,
-    K.ActivePowerCapacitorController: _PHASE_2,
-    K.ReactivePowerCapacitorController: _PHASE_2,
-    K.DailyTimedCapacitorController: _PHASE_2,
-    C.DistributionTransformer: _PHASE_3,
-    C.DistributionRegulator: _PHASE_3,
-    E.DistributionTransformerEquipment: _PHASE_3,
-    E.PowerTransformerEquipment: _PHASE_3,
-    E.WindingEquipment: _PHASE_3,
-    K.RegulatorController: _PHASE_3,
+    K.DailyTimedCapacitorController: "a schedule: no CIM time-of-day control yet (OPEN_DECISIONS 12)",
     C.DistributionSolar: _PHASE_4,
     C.DistributionBattery: _PHASE_4,
     C.DistributionReactor: _PHASE_4,
@@ -134,13 +132,13 @@ class GdmImporter(FormatImporter):
         system = model
         check_coverage(system)
         drop_time_series(system)
-        check_names(_named_components(system))
+        naming = Naming(system.name, name_clashes(_named_components(system)))
 
-        feeder_model = new_network(system)
+        feeder_model = new_network(system, naming)
         for cls, add, fields in ORDER:
             for component in components(system, cls):
                 log_untranscribed(fields, component)
-                add(feeder_model, component, system.name)
+                add(feeder_model, component, naming)
         return feeder_model
 
 

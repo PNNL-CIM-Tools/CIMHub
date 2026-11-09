@@ -15,8 +15,10 @@ system.name = system.name or "my_feeder"   # the CIM Model name; ditto leaves it
 feeder_model = gdm_to_cim(system)
 ```
 
-**Status (Phase 1):** the network shell (feeders, substations), buses, voltage sources and switches are mapped.
-Every other GDM class raises as pending, naming the phase that ports it, so real systems don't import yet.
-Time series are dropped with one warning.
+**Status (Phase 3):** the network shell (feeders, substations), buses, voltage sources, switches, lines (matrix,
+sequence and geometry, with their wire and cable catalogs), loads, capacitors (with their controllers), transformers
+(tank-configuration templates, center taps by lug, off-nominal taps) and regulators (with their tap changers and
+controls) are mapped. DER and reactors raise as pending, naming the phase that ports them. Time series are dropped
+with one warning. Requires the CIM-Builder `TransformerTankEnd` method (`add_transformer_tank_end`).
 
 The plan is [`docs/GDM_REWRITE_PLAN.md`](docs/GDM_REWRITE_PLAN.md).

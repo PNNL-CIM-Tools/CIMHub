@@ -1,19 +1,29 @@
 """Switching devices → Switch subclasses by equipment class (tests/atoms/switch)."""
 
+import gdm_atoms
 import pytest
-from gdm.distribution.components import (MatrixImpedanceFuse, MatrixImpedanceRecloser,
-                                         MatrixImpedanceSwitch, SequenceImpedanceSwitch)
+from cimhub_core.cimtbl import check_fields
+from cimhub_gdm.importer import switch
+from gdm.distribution.components import (
+    MatrixImpedanceFuse,
+    MatrixImpedanceRecloser,
+    MatrixImpedanceSwitch,
+    SequenceImpedanceSwitch,
+)
 from gdm.distribution.controllers import DistributionSwitchController
 from gdm.distribution.enums import Phase
-from gdm.distribution.equipment import (CircuitBreakerEquipment, DisconnectorEquipment, EarthingSwitchEquipment,
-                                        MatrixImpedanceFuseEquipment, MatrixImpedanceRecloserEquipment,
-                                        MatrixImpedanceSwitchEquipment, SequenceImpedanceSwitchEquipment)
+from gdm.distribution.equipment import (
+    CircuitBreakerEquipment,
+    DisconnectorEquipment,
+    EarthingSwitchEquipment,
+    MatrixImpedanceFuseEquipment,
+    MatrixImpedanceRecloserEquipment,
+    MatrixImpedanceSwitchEquipment,
+    SequenceImpedanceSwitchEquipment,
+)
 from gdm.quantities import Current
 
-import gdm_atoms
-from cimhub_core.cimtbl import check_fields
 from cimhub_gdm import gdm_to_cim
-from cimhub_gdm.importer import switch
 
 
 def _system():

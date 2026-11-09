@@ -6,16 +6,27 @@ EnergySourcePhase has only ``phase``, so every per-phase value must be equal; th
 from __future__ import annotations
 
 from cimbuilder.object_builder import EnergySourceBuilder
-from cimhub_core.cimtbl import Field, mrid
+from cimhub_core.cimtbl import Field
 
-from cimhub_gdm.importer.shared import (builder_phases, bus_base_voltage, bus_mrid, container_mrid, qty,
-                                        require_in_service, system_voltage)
+from cimhub_gdm.importer.shared import (
+    UUID_FIELD,
+    Naming,
+    builder_phases,
+    bus_base_voltage,
+    bus_mrid,
+    container_mrid,
+    name_field,
+    object_mrid,
+    qty,
+    require_in_service,
+    system_voltage,
+)
 
 PREFIX = "src_"
 
 FIELDS_DistributionVoltageSource = {
-    "uuid": Field("structural", note="never the mRID; only rehashed for an empty or clashing name (B18)"),
-    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)), note="mRID = src_ + name"),
+    "uuid": UUID_FIELD,
+    "name": name_field(PREFIX),
     "substation": Field("structural", note="EquipmentContainer when there is no feeder"),
     "feeder": Field("structural", note="EquipmentContainer"),
     "in_service": Field("structural", note="False raises: no CIM home"),
@@ -46,7 +57,7 @@ FIELDS_PhaseVoltageSourceEquipment = {
 _EQUAL_FIELDS = ("r0", "r1", "x0", "x1", "voltage", "voltage_type")
 
 
-def add_source(network, source, system_name: str) -> None:
+def add_source(network, source, naming: Naming) -> None:
     """An EnergySource on the source's bus, from its (equal) per-phase values."""
     require_in_service(source)
     phase_sources = source.equipment.sources
@@ -63,13 +74,13 @@ def add_source(network, source, system_name: str) -> None:
     bus = source.bus
 
     builder = EnergySourceBuilder(network, network.container)
-    energy_source = builder.create(mRID=mrid(PREFIX, source.name), name=source.name)
+    energy_source = builder.create(mRID=object_mrid(PREFIX, source, "EnergySource", naming), name=source.name)
     builder.add_connectivity(
         energy_source,
-        node=bus_mrid(bus),
+        node=bus_mrid(bus, naming),
         nominalVoltage=qty(system_voltage(bus.rated_voltage, bus.voltage_type, bus.phases)),
         phases=builder_phases(source.phases),
-        EquipmentContainer=container_mrid(source, system_name),
+        EquipmentContainer=container_mrid(source, naming),
         BaseVoltage=bus_base_voltage(bus),
     )
     builder.add_electrical(energy_source, r=qty(first.r1), x=qty(first.x1))

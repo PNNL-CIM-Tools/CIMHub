@@ -5,18 +5,18 @@ import logging
 import sys
 from datetime import datetime, timedelta
 
+import gdm_atoms
 import pydantic
 import pytest
 from cimgraph.models import FeederModel
+from cimhub_core.base import FormatImporter
+from cimhub_gdm.importer.gdm_to_cim import INLINE, ORDER, PENDING, SHELL, UNTRANSCRIBED
 from gdm.distribution import common, components, controllers, equipment
 from gdm.distribution.components import DistributionFeeder, DistributionVoltageSource
-from gdm.distribution.equipment import SequenceImpedanceBranchEquipment, VoltageSourceEquipment
+from gdm.distribution.equipment import BatteryEquipment, VoltageSourceEquipment
 from infrasys.time_series_models import SingleTimeSeries
 
-import gdm_atoms
-from cimhub_core.base import FormatImporter
 from cimhub_gdm import GdmImporter, gdm_to_cim
-from cimhub_gdm.importer.gdm_to_cim import INLINE, ORDER, PENDING, SHELL, UNTRANSCRIBED
 
 LEGACY_PROFILES = ("cimhub_2023", "cim18gad", "cim17v40", "cimhub_2026")
 
@@ -38,8 +38,8 @@ def test_every_gdm_class_is_in_exactly_one_list():
 
 def test_pending_class_raises_naming_its_phase():
     system = gdm_atoms.shell_system()
-    system.add_component(SequenceImpedanceBranchEquipment.example())
-    with pytest.raises(ValueError, match=r"SequenceImpedanceBranchEquipment x1: pending, Phase 2"):
+    system.add_component(BatteryEquipment.example())
+    with pytest.raises(ValueError, match=r"BatteryEquipment x1: pending, Phase 4"):
         gdm_to_cim(system)
 
 

@@ -6,18 +6,40 @@ become SwitchPhase ``open`` values (GDM_MAPPING.md §6).
 
 from __future__ import annotations
 
-from cimbuilder.object_builder import (BreakerBuilder, DisconnectorBuilder, FuseBuilder, LoadBreakSwitchBuilder,
-                                       RecloserBuilder, SwitchPhaseBuilder)
-from cimhub_core.cimtbl import Field, lookup, mrid
+from cimbuilder.object_builder import (
+    BreakerBuilder,
+    DisconnectorBuilder,
+    FuseBuilder,
+    LoadBreakSwitchBuilder,
+    RecloserBuilder,
+    SwitchPhaseBuilder,
+)
+from cimhub_core.cimtbl import Field, lookup
 from cimtables.units import Qty
-from gdm.distribution.equipment import (CircuitBreakerEquipment, DisconnectorEquipment, MatrixImpedanceFuseEquipment,
-                                        MatrixImpedanceRecloserEquipment, MatrixImpedanceSwitchEquipment,
-                                        SequenceImpedanceSwitchEquipment)
+from gdm.distribution.equipment import (
+    CircuitBreakerEquipment,
+    DisconnectorEquipment,
+    GeometryBranchEquipment,
+    MatrixImpedanceFuseEquipment,
+    MatrixImpedanceRecloserEquipment,
+    MatrixImpedanceSwitchEquipment,
+    SequenceImpedanceSwitchEquipment,
+)
 
-from gdm.distribution.enums import Phase
-
-from cimhub_gdm.importer.shared import (PHASE, builder_phases, bus_base_voltage, bus_mrid, container_mrid,
-                                        phases_text, qty, require_in_service)
+from cimhub_gdm.importer.shared import (
+    UUID_FIELD,
+    Naming,
+    builder_phases,
+    bus_base_voltage,
+    bus_mrid,
+    children_by_phase,
+    container_mrid,
+    name_field,
+    object_mrid,
+    phases_text,
+    qty,
+    require_in_service,
+)
 
 PREFIX = "sw_"
 
@@ -25,6 +47,7 @@ PREFIX = "sw_"
 SWITCH_BUILDER = {
     MatrixImpedanceSwitchEquipment: LoadBreakSwitchBuilder,
     SequenceImpedanceSwitchEquipment: LoadBreakSwitchBuilder,
+    GeometryBranchEquipment: LoadBreakSwitchBuilder,
     CircuitBreakerEquipment: BreakerBuilder,
     DisconnectorEquipment: DisconnectorBuilder,
     MatrixImpedanceFuseEquipment: FuseBuilder,
@@ -35,8 +58,8 @@ _INLINE = "inline: no CIM object of its own"
 _NO_IMPEDANCE = "a switch has no impedance in CIM"
 
 _SWITCH_FIELDS = {
-    "uuid": Field("structural", note="never the mRID; only rehashed for an empty or clashing name (B18)"),
-    "name": Field("copied", (("create", "mRID", None), ("create", "name", None)), note="mRID = sw_ + name"),
+    "uuid": UUID_FIELD,
+    "name": name_field(PREFIX),
     "substation": Field("structural", note="EquipmentContainer when there is no feeder"),
     "feeder": Field("structural", note="EquipmentContainer"),
     "in_service": Field("structural", note="False raises: no CIM home"),
@@ -51,6 +74,10 @@ FIELDS_MatrixImpedanceSwitch = _SWITCH_FIELDS | {
     "conductor_phases": Field("structural", note="parallel conductors are not mapped: must be unset or = phases"),
 }
 FIELDS_SequenceImpedanceSwitch = dict(_SWITCH_FIELDS)
+FIELDS_GeometrySwitch = _SWITCH_FIELDS | {
+    "equipment": Field("structural", note="a GeometryBranchEquipment catalog: LoadBreakSwitch; ratedCurrent from its "
+                                          "first conductor, as a geometry line's normal limit"),
+}
 FIELDS_MatrixImpedanceFuse = dict(_SWITCH_FIELDS)
 FIELDS_MatrixImpedanceRecloser = _SWITCH_FIELDS | {
     "controller": Field("untranscribed", note="no RecloseSequence in cim18v17 (OPEN_DECISIONS 12)"),
@@ -103,7 +130,14 @@ FIELDS_DistributionSwitchController = {
 NORMAL_OPEN = {"open": True, "close": False}
 
 
-def add_switch(network, switch, system_name: str) -> None:
+def rated_current(equipment):
+    """The switch equipment's ampacity; a geometry catalog's is its first conductor's."""
+    if isinstance(equipment, GeometryBranchEquipment):
+        return equipment.conductors[0].ampacity
+    return equipment.ampacity
+
+
+def add_switch(network, switch, naming: Naming) -> None:
     """A Switch subclass between the switch's two buses, with its state and rating."""
     require_in_service(switch)
     equipment = switch.equipment
@@ -128,17 +162,18 @@ def add_switch(network, switch, system_name: str) -> None:
         normal_open = None if mixed else not closed[0]
 
     builder = builder_cls(network, network.container)
-    cim_switch = builder.create(mRID=mrid(PREFIX, switch.name), name=switch.name)
+    cim_switch = builder.create(mRID=object_mrid(PREFIX, switch, builder_cls.cim_class_name, naming),
+                                name=switch.name)
     _, _, switch_phases = builder.add_connectivity(
         cim_switch,
-        node1=bus_mrid(bus1),
-        node2=bus_mrid(bus2),
+        node1=bus_mrid(bus1, naming),
+        node2=bus_mrid(bus2, naming),
         phases=phases_text(switch.phases) if mixed else builder_phases(switch.phases),
         normalOpen=normal_open,
-        EquipmentContainer=container_mrid(switch, system_name),
+        EquipmentContainer=container_mrid(switch, naming),
         BaseVoltage=bus_base_voltage(bus1),
     )
-    electrical = {"ratedCurrent": qty(equipment.ampacity)}
+    electrical = {"ratedCurrent": qty(rated_current(equipment))}
     if isinstance(equipment, CircuitBreakerEquipment) and equipment.interrupting_current is not None:
         electrical["breakingCapacity"] = Qty(float(equipment.interrupting_current),
                                              equipment.interrupting_current_unit)
@@ -148,7 +183,5 @@ def add_switch(network, switch, system_name: str) -> None:
         builder.add_ssh(cim_switch, open=not closed[0])
         return
     phase_builder = SwitchPhaseBuilder(network, network.container)
-    by_mrid = {child.mRID: child for child in switch_phases}
-    for phase, is_closed in zip(switch.phases, closed):
-        token = PHASE[Phase(phase)]
-        phase_builder.add_ssh(by_mrid[f"{cim_switch.mRID}_{token}"], open=not is_closed)
+    for child, is_closed in zip(children_by_phase(cim_switch.mRID, switch_phases, switch.phases), closed):
+        phase_builder.add_ssh(child, open=not is_closed)

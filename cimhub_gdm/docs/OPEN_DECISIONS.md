@@ -1,6 +1,6 @@
 # Decisions and risks
 
-Numbers 1-18 are kept from the earlier plan so older notes still resolve. Builder requests B17-B20 were filed with the
+Numbers 1-18 are kept from the earlier plan so older notes still resolve. Builder requests B17-B20 (and B21-B25, Phase 2) were filed with the
 builder owner on 2026-11-08.
 
 ## Decided
@@ -27,12 +27,19 @@ builder owner on 2026-11-08.
    winding, no phases on the template; instance end n is template end n. A center-tap catalog is a 3-winding tank with
    lugs H1 H2 X1 X3 X2 and windings H1→H2, X1→X2, X2→X3 (additive polarity, IEEE C57.12.00); its instance's phase ends
    land on the lugs by `sequenceNumber` (DSS-2). Ratings are nameplate values (`ratedU` line-to-line, `baseU` the coil).
+   - **Built (Phase 3, 2026-11-08)** through CIM-Builder: the user had TankEnd marked for deletion, kept for by-end
+     templates, and the TankEnd builder method was added this session. A center tap's windings carry the polarity
+     (`bus.1.0` / `bus.0.2`); its low side is one PowerTransformerEnd and Terminal with a phase end each for s1, s2,
+     N (user, 2026-11-08). Taps sit on the instance's PowerTransformerEnd (a regulator's on its AutoTransformerEnd),
+     never on a TankEnd: cim18v17 has no TankEnd tap.
 7. **Regulator model.** **Decided (user, 2026-11-08):** a regulator **template**, which CIM-Builder is asked to build
    from the CYME regulator database and the GDM catalog (**B17**). Instances follow DSS-13 (a `VoltageRegulator` with
    two `AutoTransformerEnd`s), built from that template, with `RatioTapChanger` + `TapChangerControl` per instance.
    cim18v17 has no AutoTransformer configuration class, so the template's CIM shape is the builder owner's call
-   (`TapChangerInfo` for the tap data; an extension for the impedance). `DistributionRegulator` stays `PENDING` until
-   B17 lands.
+   (`TapChangerInfo` for the tap data; an extension for the impedance).
+   - **Built (Phase 3, 2026-11-08):** one single-phase VoltageRegulator per phase, as CIMTBL-Models
+     `regulator_example.cimtbl` (lugs S L SL, one series winding); `TapChangerInfoBuilder` (B17's tap data) is each
+     tap changer's AssetDatasheet; the impedance stays untranscribed until the owner picks its template home.
 8. **Enum strings.** **Decided (user, 2026-11-06):** builders accept strings and build the enum (C1, landed).
 9. **mRIDs.** **Decided (user, 2026-11-08):** as planned: `mrid(prefix, gdm.name)`, names as written, prefixes and
    children per the `cimtbl-translate` tables, missing prefixes per the DSS wave where they fit
@@ -49,7 +56,9 @@ builder owner on 2026-11-08.
     - In the p5r sample (GDM data format 1.2.0), every component and catalog name is present and unique. Only inline
       objects (WindingEquipment, VoltageLimitSet, ThermalLimitSet, Location) have empty or repeated names, and those
       get child mRIDs from their parent (`<xc>_wdg_<n>`, `<ln>_limits`), not uuids.
-    - Until B18 lands, a clash raises, naming both uuids.
+    - B18 landed 2026-11-08 (`cimbuilder.network.rehash_mrid`); `shared.object_mrid` applies it. Feeder and
+      substation names can't be rehashed (their mRIDs come before the model scope exists), so an empty, GUID or
+      clashing one raises.
 11. **Untranscribed values.** **Decided (user, 2026-11-08):** `FIELDS` is the record. When values are needed, they go
     to a log file: `to_cim` logs each object's untranscribed values at `DEBUG` on the `cimhub_gdm` logger, and the
     caller attaches a `FileHandler`. The importer never opens files itself (I7).
@@ -58,18 +67,27 @@ builder owner on 2026-11-08.
       Only fuse curves (`FuseCharacteristicCurve`) and reclose sequences (`RecloseSequence`) are missing, in the
       `protection` package. So fuse `tcc_curve` / `delay` and the recloser controller are **untranscribed** (not
       raised on), and each is logged as a gap in `CIMTBL-Models/distribution/CIM18_GAPS.md`.
-    - Still open: DailyTimed capacitor control, inverter controllers (`function_block_control` has classes, but there
+    - `DailyTimedCapacitorController` is `PENDING` (Phase 2): a system with one stops at the coverage check.
+    - Still open: inverter controllers (`function_block_control` has classes, but there
       is no builder), bus coordinates (B14), bus voltage limits, `in_service=False` on buses. *Recommendation:* raise
       on the control gaps; bus voltage limits untranscribed; coordinates untranscribed until B14.
 13. **Load phase convention.** **Decided (user, 2026-11-08):**
     - A three-phase load with equal per-phase values is one `EnergyConsumer` with the totals and no
       `EnergyConsumerPhase`.
     - **How (user, 2026-11-08, G3):** balanced three-phase equipment passes `phases=None` to its builder, for loads
-      and every other three-phase class (sources, switches, lines, ...). So there are no per-phase children and no
-      `Terminal.phases`; absent means ABC. This is `shared.builder_phases`. The core shapes and the DSS goldens still
-      write `phases=ABC`, so the DSS wave has to adopt the same rule before the DSS/GDM parity test.
+      and every other three-phase device (sources, switches, capacitors, DER, ...). So there are no per-phase children
+      and no `Terminal.phases`; absent means ABC. This is `shared.builder_phases`. Transformer and regulator ends
+    always write their phases (on the Terminal only), as GDM writes them: `Yn` when N is listed, `grounded` from
+    `is_grounded`; only a single-phase wye coil written with one phase gets the N it returns to (G8, user
+    2026-11-08, revised: never override the grounding flag). The DSS wave adopted the same rule
+      (S4b-9, `cimhub_core.cimtbl.phases_cell`).
+    - **Lines keep their phases** (Phase 2, G7, as the DSS wave's S4b-9): an ACLineSegment always writes `phases`,
+      balanced ABC included, because its ACLineSegmentPhases are the conductor order of its impedance matrix or wire
+      positions. Transformer ends will follow the DSS wave's rule too (phases on the Terminal only).
     - `EnergyConsumerPhase` children are written when the per-phase values differ, for a standalone single-phase load
-      (A, B or C), and for a split-phase (`s1`/`s2`) triplex load.
+      (A, B or C), and for a split-phase (`s1`/`s2`) triplex load. They carry p and q only when the values differ
+      (the DSS goldens' children carry none). A delta load's children are per branch (`ld_x_BC`), as cimtables and
+      CIM write them.
 14. **Switch class.** **Decided (user, 2026-11-08):** by equipment class.
 
     | GDM equipment | CIM class | builder |
