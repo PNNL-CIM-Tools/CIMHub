@@ -30,7 +30,6 @@ classes:
         description: ID - Shunt identifier (1 or 2 characters)
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           order: 2
           value_type: string
@@ -44,7 +43,6 @@ classes:
         description: STATUS - Shunt status (0=out of service, 1=in service)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 3
           value_type: int
@@ -55,7 +53,6 @@ classes:
         description: GL - Active component of shunt admittance in MW at 1.0 pu voltage
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -69,7 +66,6 @@ classes:
         description: BL - Reactive component of shunt admittance in MVAr at 1.0 pu voltage
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:

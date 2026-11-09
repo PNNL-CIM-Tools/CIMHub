@@ -1,7 +1,21 @@
 # PSS/E RAW v34 rewrite on `.cimtbl`: wave plan
 
-**Status:** draft 2026-11-08; RAW-1/2/3/15 and the node-breaker slice decided by the user the same day. Seed copied
-and baseline-tested; nothing is mapped yet. Runs in parallel
+**Status:** RAW-1/2/3/15, the zone split and the node-breaker slice decided by the user 2026-11-08.
+**R0 reader + writer done 2026-11-08:**
+- `raw34_reader.py` / `raw34_writer.py` are rewritten on one schema-driven layout (`record_layout.py`) and cover
+  every §4.1 row; the phase-2 layouts raise.
+- All `ifabsent`s are removed (RAW-3).
+- IEEE14, WECC240 and the node-breaker atom round-trip losslessly; 43 tests.
+- Against the seed reader, every value agrees, except that blanks are now `None` and names are trimmed. The seed
+  never read transformer lines 3-5 past RATE1-12 (COD..NOD, all 122 WECC240 transformers).
+
+**R0 mappers done 2026-11-08** (spec approved the same day): master, zone, area interchange, and bus with
+substations, BusbarSections, voltage limits (kV) and SvVoltage, through `RawImporter` / `raw_to_cim`
+(`BusBranchModel`).
+- IEEE14 goldens are committed under `tests/goldens/IEEE14/`.
+- IEEE14 (11 substations), WECC240 (134) and the node-breaker atom bind.
+- Every WECC240 limit and solved voltage in SI equals pu × BASKV; 64 tests.
+- **R1 is next.** Runs in parallel
 with the DSS wave on branch `raw-v34`, in a worktree that sits beside the repo checkout (and so beside the `CIM-*`
 checkouts, which the root `../CIM-*` path sources need).
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (its F3 wave for `cimhub_raw`). **Pattern:**
@@ -89,7 +103,8 @@ One file per native table (D4); the stem is the LinkML schema module. Proposed `
 | P2 | `two_terminal_dc`, `vsc_dc`, `multi_terminal_dc`, `facts_device`, `gne_device`, `induction_machine`, `impedance_correction` | | phase 2 stubs, §4 | |
 
 A remote regulated bus (generator `IREG`, switched shunt `SWREG`, transformer `CONT1`) is a reference to a node,
-not to equipment. That is why buses come before every controlled device, and why RAW-11 is open.
+not to equipment. Every bus gets a `BusbarSection` (RAW-19), whose Terminal is the regulated point (RAW-11), so
+buses come before every controlled device.
 
 ## 3. Native passes the mappers share
 
@@ -123,8 +138,8 @@ with every bus in `nodes`, so a bus on no merge equipment is its own substation.
   grouping is reviewable. Each lists its buses and the merge equipment on its row comment.
 - **Zones.** Two WECC240 substations straddle zones (buses 1001 and 4006, each within one area). A substation can
   sit in only one `SubGeographicalRegion`, so taking one zone would lose the other buses' zones on the round trip.
-  *Recommended:* merge only within a zone, so a transformer or zero-impedance device that joins two zones stays a
-  boundary. *To confirm in R0.*
+  *Decided 2026-11-08:* merge only within a zone, so a transformer or zero-impedance device that joins two zones
+  stays a boundary. The fix belongs in CIM (a bus → zone association, §6a); the split is the interim form.
 - **Node-breaker (R6):** a bus listed in a SUBSTATION block belongs to that `sub_s<IS>`, which takes precedence
   over the merge. A merged group holding buses of two SUBSTATION blocks raises until a case shows the intent.
 
@@ -253,7 +268,7 @@ Each decision has a recommendation; the slice's spec section settles it.
 
 - **RAW-1. v34 only.** *Decided 2026-11-08.*
 - **RAW-2. Containers.** *Decided 2026-11-08.*
-  - Every bus lands in a `Substation`, merged per §3.2 (the zone boundary is to confirm).
+  - Every bus lands in a `Substation`, merged per §3.2, never across a zone boundary.
   - Area → `ControlArea` (netInterchange = PDES, pTolerance = PTOL; the swing bus `ISW` untranscribed unless a
     home is found). `ControlArea` holds no nodes, so how a bus's AREA round-trips (through its zone's region, or
     `ControlArea` ↔ equipment) is settled in R5.
@@ -261,7 +276,8 @@ Each decision has a recommendation; the slice's spec section settles it.
   - Owner → untranscribed, and logged as a CIM 18 gap (§6a).
   - No `VoltageLevel`s: the old converter's Bus → `VoltageLevel` caused 34 mRID collisions in WECC240.
 - **RAW-3. Defaults** mapped from the v34 specification, in a `raw_default` annotation; the mapper fills them and lists them (§3.4). *Decided 2026-11-08.*
-- **RAW-4. Identity** per §3.3. *Recommended.*
+- **RAW-4. Identity** per §3.3. *Recommended.* The bus number I also goes to `TopologicalNode.busNumber`, which
+  cim18v17 has.
 - **RAW-5. Transformer impedance codes.**
   - CZ 1 → `r/x (pu system)` on the end's BaseVoltage and SBASE.
   - CZ 2 → `(pu)` on the winding's SBASE and NOMV, or the bus BASKV when NOMV = 0.
@@ -283,12 +299,19 @@ Each decision has a recommendation; the slice's spec section settles it.
   - QT/QB → maxQ/minQ, MBASE → ratedS, ZR/ZX → r/x in `(pu)` on MBASE, PT/PB → the unit's maxOperatingP/
     minOperatingP.
   - The `synchronous_machine` shape and its prefixes are core and translate-skill requests (C2, C3).
+  - Area membership: one `ControlAreaGeneratingUnit` per unit, in the `ControlArea` of the generator's bus
+    (cim18v17 profile of 2026-11-08).
 - **RAW-8. Loads.**
   - One `EnergyConsumer` per load, with p = PL + IP + YP and q = QL + IQ − YQ (YQ is positive for a capacitive
     admittance load, so it enters q with a minus sign).
   - A derived `LoadResponseCharacteristic` per distinct fraction mix gives the constant-power, current and
     impedance fractions. Its function is a U4 candidate.
   - SCALE, INTRPT, DGENP/Q/M and LOADTYPE: untranscribed unless a home is found.
+  - Area and zone: the load's own AREA and ZONE (which may differ from its bus's). Each load is a
+    `ConformLoad` in a `ConformLoadGroup`, one group per (area, zone) pair. Each group is in a `SubLoadArea`
+    for that pair, which as an `EnergyArea` names `ControlArea` ca_<area>. `LoadArea` stays out, because
+    cim18v17 has no `SubLoadArea` → `LoadArea` link (§6a). `ConformLoad` rather than `NonConformLoad`:
+    RAW does not say whether a load follows the system load curve. *To settle in R2.*
 - **RAW-9. Ratings.**
   - RATE1..12 are MVA, so each becomes an `ApparentPowerLimit` on the branch's or transformer's
     `OperationalLimitSet`.
@@ -297,9 +320,12 @@ Each decision has a recommendation; the slice's spec section settles it.
 - **RAW-10. Switched shunts.** Blocks Ni × Bi become a `NonlinearShuntCompensator` with one point per cumulative
   step, or a `LinearShuntCompensator` when there is one block. MODSW → `RegulatingControl` mode;
   VSWHI/VSWLO → the target value and deadband.
-- **RAW-11. Remote regulation.** CIM puts a `RegulatingControl` on a `Terminal`, but a RAW controlled bus may have no
-  equipment of its own. Options: the terminal of any equipment on that bus, picked deterministically; or a
-  cimtables request to name a `TopologicalNode`. *Open*, decided in R2.
+- **RAW-11. Remote regulation.** *Decided 2026-11-08 (user).* `RegulatingControl.Terminal` names a terminal by
+  design, never a node: "the terminal could connect into either a topological node or a connectivity node.
+  Sometimes it is useful to model regulation at a terminal of a bus bar object" (CIM UML). So a control
+  regulating bus I names the Terminal of that bus's `BusbarSection`, `bb_<I>_T1` (RAW-19). In a node-breaker
+  substation (NREG ≠ 0) it names the Terminal of a `BusbarSection` on that node (R6). This is not a CIM gap.
+  WECC240: 137 of 146 generators regulate another bus.
 - **RAW-12. Multi-section line.**
   - The sections are ordinary branch records joined through dummy buses.
   - Proposed: the branches map as usual, and the multi-section record becomes a `Line` container holding them.
@@ -307,9 +333,28 @@ Each decision has a recommendation; the slice's spec section settles it.
 - **RAW-13. Branch line shunts GI/BI/GJ/BJ** have no home on `ACLineSegment`, which has only a total `bch`/`gch`.
   - Proposed: a `LinearShuntCompensator` at each end where the value is nonzero.
   - Alternatively they could raise until a public case sets them. R1 counts the public cases first.
-- **RAW-14. Solved state.** Bus VM/VA and generator PG/QG are a solved case. Proposed: VM/VA → `SvVoltage` per
-  `TopologicalNode` in `bus.cimtbl`, so `cim_to_raw` can write them back. PG/QG are the machine's `p`/`q`
-  (RAW-7). *To decide in R0.*
+- **RAW-14. Solved state.** *Decided 2026-11-08 (user).* Bus VM/VA → one `SvVoltage` per `TopologicalNode` in
+  `bus.cimtbl` (identity-only, `identifier` = `<I>_sv`): `v (kV)` = VM × BASKV (derived, `kv_from_per_unit`) and
+  `angle (deg)` = VA (copied). `cim_to_raw` writes them back. Generator PG/QG → `RotatingMachine.p`/`q` (RAW-7).
+- **RAW-17. A blank BASFRQ.** The spec's default is "the present option setting", which is not a value. A blank
+  becomes 60 Hz, PSS/E's shipped setting, marked `# defaulted: BASFRQ=60` on the master's BaseFrequency (WECC240
+  leaves it blank). *Recommended; listed for the user.*
+- **RAW-18. Node mRIDs.** A `TopologicalNode`'s mRID is the bare bus number. The `cimtbl-translate` prefix table,
+  which its owners maintain, gives nodes no prefix. The core shape example `line_bus_branch.cimtbl` writes
+  `bus_1`, so the example should follow the table (C2). Equipment on the bus references the node by that number
+  (`bus=1001`). *Recommended; listed for the user.*
+- **RAW-19. A `BusbarSection` per bus.** *Decided 2026-11-08 (user).* An `OperationalLimitSet` belongs to a
+  terminal, never a node (the old OpenDSS cim100 export put limits on nodes, which CIM does not allow). So
+  `bus.cimtbl` gives every bus a `BusbarSection` `bb_<I>` (prefix requested, C3) on its `TopologicalNode`. Its
+  terminal `bb_<I>_T1` carries:
+  - the bus's voltage limits: an `OperationalLimitSet` `bb_<I>_limits` with four `VoltageLimit`s
+    (NVHI/NVLO/EVHI/EVLO). High vs low is `OperationalLimitType.direction` (`OperationalLimitDirectionKind`
+    high/low) and normal vs emergency is `durationKind`, so the limits need four types beside the shared
+    `absoluteValue` ones: `olt_normal_high`/`olt_normal_low` (`durationKind=normal`) and
+    `olt_emergency_high`/`olt_emergency_low` (`durationKind=emergency`), in `common.cimtbl` (C2). The values are
+    written in kV: `normalValue (kV)` = pu × BASKV (derived, `kv_from_per_unit`; user 2026-11-08). A pu cell would
+    need cimtables to reach the base through `Terminal.ConductingEquipment.BaseVoltage`, one hop too many;
+  - any regulating control of that bus (RAW-11).
 - **RAW-15. Negative branch reactance.** *Decided 2026-11-08.* WECC240 has 9 branches with X < 0 (for example
   `2404-3893`: R = 1e-7, X = −0.00935), which are series capacitors. Each becomes a `SeriesCompensator` (`sc_`,
   C3) with `compensatorType = capacitor`. That attribute uses `CompensatorKind {capacitor, reactor}`, a WiresEXT
@@ -325,6 +370,12 @@ Each decision has a recommendation; the slice's spec section settles it.
 | gap | RAW fields | today | logged |
 |---|---|---|---|
 | Ownership of network equipment: CIM puts ownership in asset management (`AssetOwner` / `Ownership` on an `Asset`), not on a `PowerSystemResource` | Owner table (I, OWNAME); O1/F1..O4/F4 on loads, generators, branches, transformers, switched shunts, FACTS, VSC; bus OWNER | untranscribed | here and in the mapping spec; also to the shared CIM 18 gap register (`CIMTBL-Models/distribution/CIM18_GAPS.md`) |
+| Zone membership of a bus: a node reaches a region only through its container, so all the buses of a substation share one zone | Zone table, bus ZONE | substations split at zone boundaries (§3.2) | here and in the shared register |
+| A bus's own control area, and the area slack bus. Equipment is covered since the 2026-11-08 profile: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea` (an `EnergyArea`) → `ControlArea`, `TieFlow` on terminals. A node or `BusbarSection` still has no area | bus AREA, area ISW | equipment memberships written (R2, R3, R5); bus AREA and ISW untranscribed | here and in the shared register |
+| The load-area hierarchy (`SubLoadArea` → `LoadArea` is missing), and the area/zone of machines and DC equipment | induction machine and multi-terminal DC bus AREA/ZONE | loads in a `SubLoadArea` per (area, zone), no `LoadArea`; machine and DC AREA/ZONE untranscribed | here and in the shared register |
+
+Not gaps (by design, user 2026-11-08): limits and regulation always sit on a terminal. A bus's voltage limits and
+its regulation use the Terminal of its `BusbarSection` (RAW-11, RAW-19).
 
 ## 7. Ownership and requests
 
@@ -334,9 +385,11 @@ in the root `pyproject.toml` / `uv.lock`. Requests to the core owner:
 | # | ask | blocks |
 |---|---|---|
 | C1 | `GraphModel.add_to_graph` raises on a duplicate key instead of warning and dropping (I8) | nothing (the RAW reader checks first) |
-| C2 | shapes `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example | R0–R6 |
-| C3 | prefixes for SynchronousMachine, GeneratingUnit, ControlArea, SeriesCompensator, NonlinearShuntCompensator in the `cimtbl-translate` table (its owners) | R0–R3 |
+| C2 | `line_bus_branch` with a `BusbarSection` per bus, and its node mRID made bare (RAW-18); the voltage `OperationalLimitType`s with `direction` high and low (normal and emergency) in `common.cimtbl`; shapes `control_area` (ControlArea, ControlAreaGeneratingUnit, ConformLoadGroup, SubLoadArea, TieFlow), `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example | R0–R6 |
+| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, NonlinearShuntCompensator in the `cimtbl-translate` table (its owners) | R0–R3 |
 | C4 | the ZIP fraction function and the CZ/CM derivations as U4 candidates | nothing |
+| C5 | `scripts/leak-gate.sh`: `--exclude-dir=.git` does not skip a worktree's `.git` *file*, so the gate always fails in a worktree; add `--exclude=.git` | a clean gate on this branch |
+| ~~U-RAW-1~~ | withdrawn 2026-11-08: bus voltage limits and solved voltages are written in kV, derived as pu × BASKV (RAW-14, RAW-19) | |
 
 ## 8. Oracle
 

@@ -47,7 +47,6 @@ classes:
         description: MDC - Control mode (0=out of service, 1=in service)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 2
@@ -59,7 +58,6 @@ classes:
         description: RDC - DC line resistance in ohms (must be positive)
         range: float
         required: true
-        ifabsent: float(0.0)
         unit:
           ucum_code: "ohm"
         annotations:
@@ -73,7 +71,6 @@ classes:
         description: O1 - Owner 1 number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 4
@@ -85,7 +82,6 @@ classes:
         description: F1 - Fraction of ownership for owner 1 (0.0 to 1.0)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 1
           order: 5
@@ -98,7 +94,6 @@ classes:
         description: O2 - Owner 2 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 6
@@ -110,7 +105,6 @@ classes:
         description: F2 - Fraction of ownership for owner 2 (0.0 to 1.0)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 7
@@ -123,7 +117,6 @@ classes:
         description: O3 - Owner 3 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 8
@@ -135,7 +128,6 @@ classes:
         description: F3 - Fraction of ownership for owner 3 (0.0 to 1.0)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 9
@@ -148,7 +140,6 @@ classes:
         description: O4 - Owner 4 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 10
@@ -160,7 +151,6 @@ classes:
         description: F4 - Fraction of ownership for owner 4 (0.0 to 1.0)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 11
@@ -184,7 +174,6 @@ classes:
         description: TYPE - Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
         range: integer
         required: true
-        ifabsent: int(1)
         annotations:
           line_number: 2
           order: 2
@@ -195,7 +184,6 @@ classes:
         description: MODE - Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 2
           order: 3
@@ -207,7 +195,6 @@ classes:
         description: DCSET - DC voltage setpoint (TYPE 1) or power demand (TYPE 2, + into AC network)
         range: float
         required: true
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 4
@@ -220,7 +207,6 @@ classes:
         description: ACSET - AC voltage setpoint in pu (MODE 1) or power factor setpoint (MODE 2)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 2
           order: 5
@@ -234,7 +220,6 @@ classes:
         description: ALOSS - Constant converter loss coefficient in kW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kW"
         annotations:
@@ -249,7 +234,6 @@ classes:
         description: BLOSS - Linear converter loss coefficient in kW per ampere of DC current
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kW/A"
         annotations:
@@ -264,7 +248,6 @@ classes:
         description: MINLOSS - Minimum converter loss in kW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kW"
         annotations:
@@ -279,7 +262,6 @@ classes:
         description: SMAX - Converter MVA rating in MVA (0 = unlimited)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -294,7 +276,6 @@ classes:
         description: IMAX - Converter AC current rating in amperes (0 = unlimited)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "A"
         annotations:
@@ -309,7 +290,6 @@ classes:
         description: PWF - Power weighting factor (0 to 1) splitting the reduction between active and reactive power when the rating is exceeded
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 2
           order: 11
@@ -322,7 +302,6 @@ classes:
         description: MAXQ - Maximum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
-        ifabsent: float(9999.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -337,7 +316,6 @@ classes:
         description: MINQ - Minimum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
-        ifabsent: float(-9999.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -352,7 +330,6 @@ classes:
         description: VSREG - Bus number whose voltage is regulated by this converter (0=own bus)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 2
           order: 14
@@ -364,7 +341,6 @@ classes:
         description: RMPCT - Percent of the total Mvar at the regulated bus supplied by this converter (must be positive)
         range: float
         required: false
-        ifabsent: float(100.0)
         annotations:
           line_number: 2
           order: 15
@@ -377,7 +353,6 @@ classes:
         description: NREG - Node number of bus VSREG (0 if VSREG is not in a substation)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 2
           order: 16

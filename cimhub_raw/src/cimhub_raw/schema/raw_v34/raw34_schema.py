@@ -1,5 +1,5 @@
 # Auto generated from main.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T14:51:37
+# Generation date: 2026-11-08T15:08:07
 # Schema: raw-raw-v34-schema
 #
 # id: https://gridappsd.org/cimhub/raw_v34
@@ -126,10 +126,6 @@ class ImpedanceCorrectionRecordTableNumber(extended_int):
     pass
 
 
-class MultiSectionLineRecordLineId(extended_str):
-    pass
-
-
 class ZoneRecordZoneNumber(extended_int):
     pass
 
@@ -167,7 +163,7 @@ class RawModel(YAMLRoot):
     vsc_dc_records: Optional[Union[Union[dict, "VscDcRecord"], list[Union[dict, "VscDcRecord"]]]] = empty_list()
     impedance_correction_records: Optional[Union[dict[Union[int, ImpedanceCorrectionRecordTableNumber], Union[dict, "ImpedanceCorrectionRecord"]], list[Union[dict, "ImpedanceCorrectionRecord"]]]] = empty_dict()
     multi_terminal_dc_records: Optional[Union[Union[dict, "MultiTerminalDCRecord"], list[Union[dict, "MultiTerminalDCRecord"]]]] = empty_list()
-    multi_section_line_records: Optional[Union[dict[Union[str, MultiSectionLineRecordLineId], Union[dict, "MultiSectionLineRecord"]], list[Union[dict, "MultiSectionLineRecord"]]]] = empty_dict()
+    multi_section_line_records: Optional[Union[Union[dict, "MultiSectionLineRecord"], list[Union[dict, "MultiSectionLineRecord"]]]] = empty_list()
     zone_records: Optional[Union[dict[Union[int, ZoneRecordZoneNumber], Union[dict, "ZoneRecord"]], list[Union[dict, "ZoneRecord"]]]] = empty_dict()
     interarea_transfer_records: Optional[Union[Union[dict, "InterareaTransferRecord"], list[Union[dict, "InterareaTransferRecord"]]]] = empty_list()
     owner_records: Optional[Union[dict[Union[int, OwnerRecordOwnerNumber], Union[dict, "OwnerRecord"]], list[Union[dict, "OwnerRecord"]]]] = empty_dict()
@@ -229,7 +225,9 @@ class RawModel(YAMLRoot):
             self.multi_terminal_dc_records = [self.multi_terminal_dc_records] if self.multi_terminal_dc_records is not None else []
         self.multi_terminal_dc_records = [v if isinstance(v, MultiTerminalDCRecord) else MultiTerminalDCRecord(**as_dict(v)) for v in self.multi_terminal_dc_records]
 
-        self._normalize_inlined_as_list(slot_name="multi_section_line_records", slot_type=MultiSectionLineRecord, key_name="line_id", keyed=True)
+        if not isinstance(self.multi_section_line_records, list):
+            self.multi_section_line_records = [self.multi_section_line_records] if self.multi_section_line_records is not None else []
+        self.multi_section_line_records = [v if isinstance(v, MultiSectionLineRecord) else MultiSectionLineRecord(**as_dict(v)) for v in self.multi_section_line_records]
 
         self._normalize_inlined_as_list(slot_name="zone_records", slot_type=ZoneRecord, key_name="zone_number", keyed=True)
 
@@ -296,12 +294,12 @@ class CaseIdentificationRecord(YAMLRoot):
     class_name: ClassVar[str] = "CaseIdentificationRecord"
     class_model_uri: ClassVar[URIRef] = RAW.CaseIdentificationRecord
 
-    new_case_flag: Union[int, CaseIdentificationRecordNewCaseFlag] = 0
-    system_base_mva: Optional[float] = 100.0
-    revision: Optional[float] = 34.0
-    transformer_ratings_units: Optional[int] = 0
-    branch_ratings_units: Optional[int] = 0
-    system_base_frequency: Optional[float] = 60.0
+    new_case_flag: Union[int, CaseIdentificationRecordNewCaseFlag] = None
+    system_base_mva: Optional[float] = None
+    revision: Optional[float] = None
+    transformer_ratings_units: Optional[int] = None
+    branch_ratings_units: Optional[int] = None
+    system_base_frequency: Optional[float] = None
     titles: Optional[Union[str, list[str]]] = empty_list()
     general: Optional[str] = None
     gauss: Optional[str] = None
@@ -407,18 +405,18 @@ class BusRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.BusRecord
 
     bus_number: Union[int, BusRecordBusNumber] = None
-    name: Optional[str] = "            "
-    base_voltage: Optional[float] = 0.0
-    bus_type: Optional[int] = 1
-    area: Optional[int] = 1
-    zone: Optional[int] = 1
-    owner: Optional[int] = 1
-    voltage_magnitude: Optional[float] = 1.0
-    voltage_angle: Optional[float] = 0.0
-    normal_voltage_magnitude_high_limit: Optional[float] = 1.1
-    normal_voltage_magnitude_low_limit: Optional[float] = 0.9
-    emergency_voltage_magnitude_high_limit: Optional[float] = 1.1
-    emergency_voltage_magnitude_low_limit: Optional[float] = 0.9
+    name: Optional[str] = None
+    base_voltage: Optional[float] = None
+    bus_type: Optional[int] = None
+    area: Optional[int] = None
+    zone: Optional[int] = None
+    owner: Optional[int] = None
+    voltage_magnitude: Optional[float] = None
+    voltage_angle: Optional[float] = None
+    normal_voltage_magnitude_high_limit: Optional[float] = None
+    normal_voltage_magnitude_low_limit: Optional[float] = None
+    emergency_voltage_magnitude_high_limit: Optional[float] = None
+    emergency_voltage_magnitude_low_limit: Optional[float] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_number):
@@ -478,22 +476,22 @@ class LoadRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.LoadRecord
 
     bus_number: int = None
-    load_id: Optional[str] = "1 "
-    status: Optional[int] = 1
-    area: Optional[int] = 1
-    zone: Optional[int] = 1
-    constant_real_power: Optional[float] = 0.0
-    constant_imag_power: Optional[float] = 0.0
-    constant_current_real_power: Optional[float] = 0.0
-    constant_current_imag_power: Optional[float] = 0.0
-    constant_admittance_real_power: Optional[float] = 0.0
-    constant_admittance_imag_power: Optional[float] = 0.0
-    owner: Optional[int] = 1
-    scale: Optional[int] = 1
-    interruptible: Optional[int] = 0
-    dgenp: Optional[float] = 0.0
-    dgenq: Optional[float] = 0.0
-    dgenf: Optional[int] = 0
+    load_id: Optional[str] = None
+    status: Optional[int] = None
+    area: Optional[int] = None
+    zone: Optional[int] = None
+    constant_real_power: Optional[float] = None
+    constant_imag_power: Optional[float] = None
+    constant_current_real_power: Optional[float] = None
+    constant_current_imag_power: Optional[float] = None
+    constant_admittance_real_power: Optional[float] = None
+    constant_admittance_imag_power: Optional[float] = None
+    owner: Optional[int] = None
+    scale: Optional[int] = None
+    interruptible: Optional[int] = None
+    dgenp: Optional[float] = None
+    dgenq: Optional[float] = None
+    dgenf: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_number):
@@ -565,10 +563,10 @@ class FixedShuntRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.FixedShuntRecord
 
     bus_number: int = None
-    shunt_id: Optional[str] = "1 "
-    status: Optional[int] = 1
-    gl: Optional[float] = 0.0
-    bl: Optional[float] = 0.0
+    shunt_id: Optional[str] = None
+    status: Optional[int] = None
+    gl: Optional[float] = None
+    bl: Optional[float] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_number):
@@ -604,34 +602,34 @@ class GeneratorRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.GeneratorRecord
 
     bus_number: int = None
-    gen_id: Optional[str] = "1 "
-    p_output: Optional[float] = 0.0
-    q_output: Optional[float] = 0.0
-    max_q_output: Optional[float] = 9999.0
-    min_q_output: Optional[float] = -9999.0
-    regulated_voltage_setpoint: Optional[float] = 1.0
-    regulated_bus_number: Optional[int] = 0
-    rated_mva: Optional[float] = 100.0
-    zr: Optional[float] = 0.0
-    zx: Optional[float] = 1.0
-    rt: Optional[float] = 0.0
-    xt: Optional[float] = 0.0
-    gtap: Optional[float] = 1.0
-    status: Optional[int] = 1
-    rmpct: Optional[float] = 100.0
-    max_p_output: Optional[float] = 9999.0
-    min_p_output: Optional[float] = -9999.0
-    o1: Optional[int] = 1
-    f1: Optional[float] = 1.0
-    o2: Optional[int] = 0
-    f2: Optional[float] = 0.0
-    o3: Optional[int] = 0
-    f3: Optional[float] = 0.0
-    o4: Optional[int] = 0
-    f4: Optional[float] = 0.0
-    wmod: Optional[int] = 0
-    wpf: Optional[float] = 1.0
-    nreg: Optional[int] = 0
+    gen_id: Optional[str] = None
+    p_output: Optional[float] = None
+    q_output: Optional[float] = None
+    max_q_output: Optional[float] = None
+    min_q_output: Optional[float] = None
+    regulated_voltage_setpoint: Optional[float] = None
+    regulated_bus_number: Optional[int] = None
+    rated_mva: Optional[float] = None
+    zr: Optional[float] = None
+    zx: Optional[float] = None
+    rt: Optional[float] = None
+    xt: Optional[float] = None
+    gtap: Optional[float] = None
+    status: Optional[int] = None
+    rmpct: Optional[float] = None
+    max_p_output: Optional[float] = None
+    min_p_output: Optional[float] = None
+    o1: Optional[int] = None
+    f1: Optional[float] = None
+    o2: Optional[int] = None
+    f2: Optional[float] = None
+    o3: Optional[int] = None
+    f3: Optional[float] = None
+    o4: Optional[int] = None
+    f4: Optional[float] = None
+    wmod: Optional[int] = None
+    wpf: Optional[float] = None
+    nreg: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_number):
@@ -742,25 +740,25 @@ class BranchRecord(YAMLRoot):
     to_bus_number: int = None
     r: float = None
     x: float = None
-    circuit: Optional[str] = "1 "
-    b: Optional[float] = 0.0
-    name: Optional[str] = "                                        "
+    circuit: Optional[str] = None
+    b: Optional[float] = None
+    name: Optional[str] = None
     ratings: Optional[Union[float, list[float]]] = empty_list()
-    g_from: Optional[float] = 0.0
-    b_from: Optional[float] = 0.0
-    g_to: Optional[float] = 0.0
-    b_to: Optional[float] = 0.0
-    status: Optional[int] = 1
-    metered_end: Optional[int] = 1
-    length: Optional[float] = 0.0
-    o1: Optional[int] = 1
-    f1: Optional[float] = 1.0
-    o2: Optional[int] = 0
-    f2: Optional[float] = 0.0
-    o3: Optional[int] = 0
-    f3: Optional[float] = 0.0
-    o4: Optional[int] = 0
-    f4: Optional[float] = 0.0
+    g_from: Optional[float] = None
+    b_from: Optional[float] = None
+    g_to: Optional[float] = None
+    b_to: Optional[float] = None
+    status: Optional[int] = None
+    metered_end: Optional[int] = None
+    length: Optional[float] = None
+    o1: Optional[int] = None
+    f1: Optional[float] = None
+    o2: Optional[int] = None
+    f2: Optional[float] = None
+    o3: Optional[int] = None
+    f3: Optional[float] = None
+    o4: Optional[int] = None
+    f4: Optional[float] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.from_bus_number):
@@ -858,14 +856,14 @@ class SwitchRecord(YAMLRoot):
 
     from_bus_number: int = None
     to_bus_number: int = None
-    circuit: Optional[str] = "1 "
-    x: Optional[float] = 0.0001
+    circuit: Optional[str] = None
+    x: Optional[float] = None
     ratings: Optional[Union[float, list[float]]] = empty_list()
-    status: Optional[int] = 1
-    nstat: Optional[int] = 1
-    metered_end: Optional[int] = 1
-    stype: Optional[int] = 1
-    name: Optional[str] = "                                        "
+    status: Optional[int] = None
+    nstat: Optional[int] = None
+    metered_end: Optional[int] = None
+    stype: Optional[int] = None
+    name: Optional[str] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.from_bus_number):
@@ -929,118 +927,118 @@ class TransformerRecord(YAMLRoot):
 
     i: int = None
     j: int = None
-    x1_2: float = 0.0
-    k: Optional[int] = 0
-    circuit: Optional[str] = "1 "
-    cw: Optional[int] = 1
-    cz: Optional[int] = 1
-    cm: Optional[int] = 1
-    mag1: Optional[float] = 0.0
-    mag2: Optional[float] = 0.0
-    nmetr: Optional[int] = 2
-    name: Optional[str] = "                                        "
-    status: Optional[int] = 1
-    o1: Optional[int] = 1
-    f1: Optional[float] = 1.0
-    o2: Optional[int] = 0
-    f2: Optional[float] = 0.0
-    o3: Optional[int] = 0
-    f3: Optional[float] = 0.0
-    o4: Optional[int] = 0
-    f4: Optional[float] = 0.0
-    vecgrp: Optional[str] = "            "
-    zcod: Optional[int] = 0
-    r1_2: Optional[float] = 0.0
-    sbase1_2: Optional[float] = 100.0
-    r2_3: Optional[float] = 0.0
-    x2_3: Optional[float] = 0.0
-    sbase2_3: Optional[float] = 100.0
-    r3_1: Optional[float] = 0.0
-    x3_1: Optional[float] = 0.0
-    sbase3_1: Optional[float] = 100.0
-    vmstar: Optional[float] = 1.0
-    anstar: Optional[float] = 0.0
-    windv1: Optional[float] = 1.0
-    nomv1: Optional[float] = 0.0
-    ang1: Optional[float] = 0.0
-    rate1_1: Optional[float] = 0.0
-    rate1_2: Optional[float] = 0.0
-    rate1_3: Optional[float] = 0.0
-    rate1_4: Optional[float] = 0.0
-    rate1_5: Optional[float] = 0.0
-    rate1_6: Optional[float] = 0.0
-    rate1_7: Optional[float] = 0.0
-    rate1_8: Optional[float] = 0.0
-    rate1_9: Optional[float] = 0.0
-    rate1_10: Optional[float] = 0.0
-    rate1_11: Optional[float] = 0.0
-    rate1_12: Optional[float] = 0.0
-    cod1: Optional[int] = 0
-    cont1: Optional[int] = 0
-    rma1: Optional[float] = 1.1
-    rmi1: Optional[float] = 0.9
-    vma1: Optional[float] = 1.1
-    vmi1: Optional[float] = 0.9
-    ntp1: Optional[int] = 33
-    tab1: Optional[int] = 0
-    cr1: Optional[float] = 0.0
-    cx1: Optional[float] = 0.0
-    cnxa1: Optional[float] = 0.0
-    nod1: Optional[int] = 0
-    windv2: Optional[float] = 1.0
-    nomv2: Optional[float] = 0.0
-    ang2: Optional[float] = 0.0
-    rate2_1: Optional[float] = 0.0
-    rate2_2: Optional[float] = 0.0
-    rate2_3: Optional[float] = 0.0
-    rate2_4: Optional[float] = 0.0
-    rate2_5: Optional[float] = 0.0
-    rate2_6: Optional[float] = 0.0
-    rate2_7: Optional[float] = 0.0
-    rate2_8: Optional[float] = 0.0
-    rate2_9: Optional[float] = 0.0
-    rate2_10: Optional[float] = 0.0
-    rate2_11: Optional[float] = 0.0
-    rate2_12: Optional[float] = 0.0
-    cod2: Optional[int] = 0
-    cont2: Optional[int] = 0
-    rma2: Optional[float] = 1.1
-    rmi2: Optional[float] = 0.9
-    vma2: Optional[float] = 1.1
-    vmi2: Optional[float] = 0.9
-    ntp2: Optional[int] = 33
-    tab2: Optional[int] = 0
-    cr2: Optional[float] = 0.0
-    cx2: Optional[float] = 0.0
-    cnxa2: Optional[float] = 0.0
-    nod2: Optional[int] = 0
-    windv3: Optional[float] = 1.0
-    nomv3: Optional[float] = 0.0
-    ang3: Optional[float] = 0.0
-    rate3_1: Optional[float] = 0.0
-    rate3_2: Optional[float] = 0.0
-    rate3_3: Optional[float] = 0.0
-    rate3_4: Optional[float] = 0.0
-    rate3_5: Optional[float] = 0.0
-    rate3_6: Optional[float] = 0.0
-    rate3_7: Optional[float] = 0.0
-    rate3_8: Optional[float] = 0.0
-    rate3_9: Optional[float] = 0.0
-    rate3_10: Optional[float] = 0.0
-    rate3_11: Optional[float] = 0.0
-    rate3_12: Optional[float] = 0.0
-    cod3: Optional[int] = 0
-    cont3: Optional[int] = 0
-    rma3: Optional[float] = 1.1
-    rmi3: Optional[float] = 0.9
-    vma3: Optional[float] = 1.1
-    vmi3: Optional[float] = 0.9
-    ntp3: Optional[int] = 33
-    tab3: Optional[int] = 0
-    cr3: Optional[float] = 0.0
-    cx3: Optional[float] = 0.0
-    cnxa3: Optional[float] = 0.0
-    nod3: Optional[int] = 0
+    x1_2: float = None
+    k: Optional[int] = None
+    circuit: Optional[str] = None
+    cw: Optional[int] = None
+    cz: Optional[int] = None
+    cm: Optional[int] = None
+    mag1: Optional[float] = None
+    mag2: Optional[float] = None
+    nmetr: Optional[int] = None
+    name: Optional[str] = None
+    status: Optional[int] = None
+    o1: Optional[int] = None
+    f1: Optional[float] = None
+    o2: Optional[int] = None
+    f2: Optional[float] = None
+    o3: Optional[int] = None
+    f3: Optional[float] = None
+    o4: Optional[int] = None
+    f4: Optional[float] = None
+    vecgrp: Optional[str] = None
+    zcod: Optional[int] = None
+    r1_2: Optional[float] = None
+    sbase1_2: Optional[float] = None
+    r2_3: Optional[float] = None
+    x2_3: Optional[float] = None
+    sbase2_3: Optional[float] = None
+    r3_1: Optional[float] = None
+    x3_1: Optional[float] = None
+    sbase3_1: Optional[float] = None
+    vmstar: Optional[float] = None
+    anstar: Optional[float] = None
+    windv1: Optional[float] = None
+    nomv1: Optional[float] = None
+    ang1: Optional[float] = None
+    rate1_1: Optional[float] = None
+    rate1_2: Optional[float] = None
+    rate1_3: Optional[float] = None
+    rate1_4: Optional[float] = None
+    rate1_5: Optional[float] = None
+    rate1_6: Optional[float] = None
+    rate1_7: Optional[float] = None
+    rate1_8: Optional[float] = None
+    rate1_9: Optional[float] = None
+    rate1_10: Optional[float] = None
+    rate1_11: Optional[float] = None
+    rate1_12: Optional[float] = None
+    cod1: Optional[int] = None
+    cont1: Optional[int] = None
+    rma1: Optional[float] = None
+    rmi1: Optional[float] = None
+    vma1: Optional[float] = None
+    vmi1: Optional[float] = None
+    ntp1: Optional[int] = None
+    tab1: Optional[int] = None
+    cr1: Optional[float] = None
+    cx1: Optional[float] = None
+    cnxa1: Optional[float] = None
+    nod1: Optional[int] = None
+    windv2: Optional[float] = None
+    nomv2: Optional[float] = None
+    ang2: Optional[float] = None
+    rate2_1: Optional[float] = None
+    rate2_2: Optional[float] = None
+    rate2_3: Optional[float] = None
+    rate2_4: Optional[float] = None
+    rate2_5: Optional[float] = None
+    rate2_6: Optional[float] = None
+    rate2_7: Optional[float] = None
+    rate2_8: Optional[float] = None
+    rate2_9: Optional[float] = None
+    rate2_10: Optional[float] = None
+    rate2_11: Optional[float] = None
+    rate2_12: Optional[float] = None
+    cod2: Optional[int] = None
+    cont2: Optional[int] = None
+    rma2: Optional[float] = None
+    rmi2: Optional[float] = None
+    vma2: Optional[float] = None
+    vmi2: Optional[float] = None
+    ntp2: Optional[int] = None
+    tab2: Optional[int] = None
+    cr2: Optional[float] = None
+    cx2: Optional[float] = None
+    cnxa2: Optional[float] = None
+    nod2: Optional[int] = None
+    windv3: Optional[float] = None
+    nomv3: Optional[float] = None
+    ang3: Optional[float] = None
+    rate3_1: Optional[float] = None
+    rate3_2: Optional[float] = None
+    rate3_3: Optional[float] = None
+    rate3_4: Optional[float] = None
+    rate3_5: Optional[float] = None
+    rate3_6: Optional[float] = None
+    rate3_7: Optional[float] = None
+    rate3_8: Optional[float] = None
+    rate3_9: Optional[float] = None
+    rate3_10: Optional[float] = None
+    rate3_11: Optional[float] = None
+    rate3_12: Optional[float] = None
+    cod3: Optional[int] = None
+    cont3: Optional[int] = None
+    rma3: Optional[float] = None
+    rmi3: Optional[float] = None
+    vma3: Optional[float] = None
+    vmi3: Optional[float] = None
+    ntp3: Optional[int] = None
+    tab3: Optional[int] = None
+    cr3: Optional[float] = None
+    cx3: Optional[float] = None
+    cnxa3: Optional[float] = None
+    nod3: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.i):
@@ -1407,10 +1405,10 @@ class AreaInterchangeRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.AreaInterchangeRecord
 
     area_number: Union[int, AreaInterchangeRecordAreaNumber] = None
-    bus_number: Optional[int] = 0
-    pdes: Optional[float] = 0.0
-    ptol: Optional[float] = 10.0
-    name: Optional[str] = "            "
+    bus_number: Optional[int] = None
+    pdes: Optional[float] = None
+    ptol: Optional[float] = None
+    name: Optional[str] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.area_number):
@@ -1453,53 +1451,53 @@ class TwoTerminalDCRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.TwoTerminalDCRecord
 
     name: Union[str, TwoTerminalDCRecordName] = None
+    rdc: float = None
+    setvl: float = None
+    vschd: float = None
     ipr: int = None
+    nbr: int = None
+    anmxr: float = None
+    anmnr: float = None
+    rcr: float = None
+    xcr: float = None
+    ebasr: float = None
     ipi: int = None
-    rdc: float = 0.0
-    setvl: float = 0.0
-    vschd: float = 0.0
-    nbr: int = 0
-    anmxr: float = 90.0
-    anmnr: float = 0.0
-    rcr: float = 0.0
-    xcr: float = 0.0
-    ebasr: float = 0.0
-    nbi: int = 0
-    anmxi: float = 90.0
-    anmni: float = 0.0
-    rci: float = 0.0
-    xci: float = 0.0
-    ebasi: float = 0.0
-    mdc: Optional[int] = 0
-    vcmod: Optional[float] = 0.0
-    rcomp: Optional[float] = 0.0
-    delti: Optional[float] = 0.0
-    meter: Optional[str] = "I"
-    dcvmin: Optional[float] = 0.0
-    cccitmx: Optional[int] = 20
-    cccacc: Optional[float] = 1.0
-    trr: Optional[float] = 1.0
-    tapr: Optional[float] = 1.0
-    tmxr: Optional[float] = 1.5
-    tmnr: Optional[float] = 0.51
-    stpr: Optional[float] = 0.00625
-    icr: Optional[int] = 0
-    ifr: Optional[int] = 0
-    itr: Optional[int] = 0
-    idr: Optional[str] = "1"
-    xcapr: Optional[float] = 0.0
-    ndr: Optional[int] = 0
-    tri: Optional[float] = 1.0
-    tapi: Optional[float] = 1.0
-    tmxi: Optional[float] = 1.5
-    tmni: Optional[float] = 0.51
-    stpi: Optional[float] = 0.00625
-    ici: Optional[int] = 0
-    ifi: Optional[int] = 0
-    iti: Optional[int] = 0
-    idi: Optional[str] = "1"
-    xcapi: Optional[float] = 0.0
-    ndi: Optional[int] = 0
+    nbi: int = None
+    anmxi: float = None
+    anmni: float = None
+    rci: float = None
+    xci: float = None
+    ebasi: float = None
+    mdc: Optional[int] = None
+    vcmod: Optional[float] = None
+    rcomp: Optional[float] = None
+    delti: Optional[float] = None
+    meter: Optional[str] = None
+    dcvmin: Optional[float] = None
+    cccitmx: Optional[int] = None
+    cccacc: Optional[float] = None
+    trr: Optional[float] = None
+    tapr: Optional[float] = None
+    tmxr: Optional[float] = None
+    tmnr: Optional[float] = None
+    stpr: Optional[float] = None
+    icr: Optional[int] = None
+    ifr: Optional[int] = None
+    itr: Optional[int] = None
+    idr: Optional[str] = None
+    xcapr: Optional[float] = None
+    ndr: Optional[int] = None
+    tri: Optional[float] = None
+    tapi: Optional[float] = None
+    tmxi: Optional[float] = None
+    tmni: Optional[float] = None
+    stpi: Optional[float] = None
+    ici: Optional[int] = None
+    ifi: Optional[int] = None
+    iti: Optional[int] = None
+    idi: Optional[str] = None
+    xcapi: Optional[float] = None
+    ndi: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.name):
@@ -1704,32 +1702,32 @@ class VscDcRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.VscDcRecord
 
     name: str = None
+    rdc: float = None
     ibus: int = None
-    rdc: float = 0.0
-    converter_type: int = 1
-    dcset: float = 0.0
-    mdc: Optional[int] = 1
-    o1: Optional[int] = 1
-    f1: Optional[float] = 1.0
-    o2: Optional[int] = 0
-    f2: Optional[float] = 0.0
-    o3: Optional[int] = 0
-    f3: Optional[float] = 0.0
-    o4: Optional[int] = 0
-    f4: Optional[float] = 0.0
-    mode: Optional[int] = 1
-    acset: Optional[float] = 1.0
-    aloss: Optional[float] = 0.0
-    bloss: Optional[float] = 0.0
-    minloss: Optional[float] = 0.0
-    smax: Optional[float] = 0.0
-    imax: Optional[float] = 0.0
-    pwf: Optional[float] = 1.0
-    maxq: Optional[float] = 9999.0
-    minq: Optional[float] = -9999.0
-    vsreg: Optional[int] = 0
-    rmpct: Optional[float] = 100.0
-    nreg: Optional[int] = 0
+    converter_type: int = None
+    dcset: float = None
+    mdc: Optional[int] = None
+    o1: Optional[int] = None
+    f1: Optional[float] = None
+    o2: Optional[int] = None
+    f2: Optional[float] = None
+    o3: Optional[int] = None
+    f3: Optional[float] = None
+    o4: Optional[int] = None
+    f4: Optional[float] = None
+    mode: Optional[int] = None
+    acset: Optional[float] = None
+    aloss: Optional[float] = None
+    bloss: Optional[float] = None
+    minloss: Optional[float] = None
+    smax: Optional[float] = None
+    imax: Optional[float] = None
+    pwf: Optional[float] = None
+    maxq: Optional[float] = None
+    minq: Optional[float] = None
+    vsreg: Optional[int] = None
+    rmpct: Optional[float] = None
+    nreg: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.name):
@@ -2260,26 +2258,21 @@ class MultiSectionLineRecord(YAMLRoot):
     class_name: ClassVar[str] = "MultiSectionLineRecord"
     class_model_uri: ClassVar[URIRef] = RAW.MultiSectionLineRecord
 
-    line_id: Union[str, MultiSectionLineRecordLineId] = None
     i: int = None
     j: int = None
-    dum1: int = 0
-    met: Optional[int] = 1
-    dum2: Optional[int] = 0
-    dum3: Optional[int] = 0
-    dum4: Optional[int] = 0
-    dum5: Optional[int] = 0
-    dum6: Optional[int] = 0
-    dum7: Optional[int] = 0
-    dum8: Optional[int] = 0
-    dum9: Optional[int] = 0
+    dum1: int = None
+    line_id: Optional[str] = None
+    met: Optional[int] = None
+    dum2: Optional[int] = None
+    dum3: Optional[int] = None
+    dum4: Optional[int] = None
+    dum5: Optional[int] = None
+    dum6: Optional[int] = None
+    dum7: Optional[int] = None
+    dum8: Optional[int] = None
+    dum9: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
-        if self._is_empty(self.line_id):
-            self.MissingRequiredField("line_id")
-        if not isinstance(self.line_id, MultiSectionLineRecordLineId):
-            self.line_id = MultiSectionLineRecordLineId(self.line_id)
-
         if self._is_empty(self.i):
             self.MissingRequiredField("i")
         if not isinstance(self.i, int):
@@ -2294,6 +2287,9 @@ class MultiSectionLineRecord(YAMLRoot):
             self.MissingRequiredField("dum1")
         if not isinstance(self.dum1, int):
             self.dum1 = int(self.dum1)
+
+        if self.line_id is not None and not isinstance(self.line_id, str):
+            self.line_id = str(self.line_id)
 
         if self.met is not None and not isinstance(self.met, int):
             self.met = int(self.met)
@@ -2338,7 +2334,7 @@ class ZoneRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.ZoneRecord
 
     zone_number: Union[int, ZoneRecordZoneNumber] = None
-    zone_name: Optional[str] = "            "
+    zone_name: Optional[str] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.zone_number):
@@ -2366,8 +2362,8 @@ class InterareaTransferRecord(YAMLRoot):
 
     from_area: int = None
     to_area: int = None
-    transfer_id: Optional[str] = "1"
-    power_transfer: Optional[float] = 0.0
+    transfer_id: Optional[str] = None
+    power_transfer: Optional[float] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.from_area):
@@ -2402,7 +2398,7 @@ class OwnerRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.OwnerRecord
 
     owner_number: Union[int, OwnerRecordOwnerNumber] = None
-    owner_name: Optional[str] = "            "
+    owner_name: Optional[str] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.owner_number):
@@ -2430,26 +2426,26 @@ class FactsDeviceRecord(YAMLRoot):
 
     name: str = None
     ibus: int = None
-    jbus: Optional[int] = 0
-    mode: Optional[int] = 1
-    pdes: Optional[float] = 0.0
-    qdes: Optional[float] = 0.0
-    vset: Optional[float] = 1.0
-    shmx: Optional[float] = 9999.0
-    trmx: Optional[float] = 9999.0
-    vtmn: Optional[float] = 0.9
-    vtmx: Optional[float] = 1.1
-    vsmx: Optional[float] = 1.0
-    imx: Optional[float] = 9999.0
-    linx: Optional[float] = 0.05
-    rmpct: Optional[float] = 100.0
-    owner: Optional[int] = 1
-    set1: Optional[float] = 0.0
-    set2: Optional[float] = 0.0
-    vsref: Optional[int] = 0
-    remot: Optional[int] = 0
-    mname: Optional[str] = "            "
-    nreg: Optional[int] = 0
+    jbus: Optional[int] = None
+    mode: Optional[int] = None
+    pdes: Optional[float] = None
+    qdes: Optional[float] = None
+    vset: Optional[float] = None
+    shmx: Optional[float] = None
+    trmx: Optional[float] = None
+    vtmn: Optional[float] = None
+    vtmx: Optional[float] = None
+    vsmx: Optional[float] = None
+    imx: Optional[float] = None
+    linx: Optional[float] = None
+    rmpct: Optional[float] = None
+    owner: Optional[int] = None
+    set1: Optional[float] = None
+    set2: Optional[float] = None
+    vsref: Optional[int] = None
+    remot: Optional[int] = None
+    mname: Optional[str] = None
+    nreg: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.name):
@@ -2543,31 +2539,31 @@ class SwitchedShuntRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.SwitchedShuntRecord
 
     bus_number: int = None
-    modsw: Optional[int] = 1
-    adjm: Optional[int] = 0
-    status: Optional[int] = 1
-    vswhi: Optional[float] = 1.0
-    vswlo: Optional[float] = 1.0
-    swreg: Optional[int] = 0
-    rmpct: Optional[float] = 100.0
-    rmidnt: Optional[str] = ""
-    binit: Optional[float] = 0.0
-    n1: Optional[int] = 0
-    b1: Optional[float] = 0.0
-    n2: Optional[int] = 0
-    b2: Optional[float] = 0.0
-    n3: Optional[int] = 0
-    b3: Optional[float] = 0.0
-    n4: Optional[int] = 0
-    b4: Optional[float] = 0.0
-    n5: Optional[int] = 0
-    b5: Optional[float] = 0.0
-    n6: Optional[int] = 0
-    b6: Optional[float] = 0.0
-    n7: Optional[int] = 0
-    b7: Optional[float] = 0.0
-    n8: Optional[int] = 0
-    b8: Optional[float] = 0.0
+    modsw: Optional[int] = None
+    adjm: Optional[int] = None
+    status: Optional[int] = None
+    vswhi: Optional[float] = None
+    vswlo: Optional[float] = None
+    swreg: Optional[int] = None
+    rmpct: Optional[float] = None
+    rmidnt: Optional[str] = None
+    binit: Optional[float] = None
+    n1: Optional[int] = None
+    b1: Optional[float] = None
+    n2: Optional[int] = None
+    b2: Optional[float] = None
+    n3: Optional[int] = None
+    b3: Optional[float] = None
+    n4: Optional[int] = None
+    b4: Optional[float] = None
+    n5: Optional[int] = None
+    b5: Optional[float] = None
+    n6: Optional[int] = None
+    b6: Optional[float] = None
+    n7: Optional[int] = None
+    b7: Optional[float] = None
+    n8: Optional[int] = None
+    b8: Optional[float] = None
     nreg: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
@@ -2749,39 +2745,39 @@ class InductionMachineRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.InductionMachineRecord
 
     bus_id: int = None
-    name: Optional[str] = "1 "
-    status: Optional[int] = 1
-    scode: Optional[int] = 1
-    dcode: Optional[int] = 1
-    area: Optional[int] = 1
-    zone: Optional[int] = 1
-    owner: Optional[int] = 1
-    tcode: Optional[int] = 1
-    bcode: Optional[int] = 1
-    mbase: Optional[float] = 100.0
-    ratekv: Optional[float] = 0.0
-    pcode: Optional[int] = 1
-    pset: Optional[float] = 0.0
-    h: Optional[float] = 1.0
-    a: Optional[float] = 0.0
-    b: Optional[float] = 0.0
-    d: Optional[float] = 0.0
-    e: Optional[float] = 0.0
-    ra: Optional[float] = 0.0
-    xa: Optional[float] = 0.0
-    xm: Optional[float] = 0.0
-    r1: Optional[float] = 0.0
-    x1: Optional[float] = 0.0
-    r2: Optional[float] = 0.0
-    x2: Optional[float] = 0.0
-    x3: Optional[float] = 0.0
-    e1: Optional[float] = 1.0
-    se1: Optional[float] = 0.0
-    e2: Optional[float] = 1.0
-    se2: Optional[float] = 0.0
-    ia1: Optional[float] = 0.0
-    ia2: Optional[float] = 0.0
-    xamult: Optional[float] = 1.0
+    name: Optional[str] = None
+    status: Optional[int] = None
+    scode: Optional[int] = None
+    dcode: Optional[int] = None
+    area: Optional[int] = None
+    zone: Optional[int] = None
+    owner: Optional[int] = None
+    tcode: Optional[int] = None
+    bcode: Optional[int] = None
+    mbase: Optional[float] = None
+    ratekv: Optional[float] = None
+    pcode: Optional[int] = None
+    pset: Optional[float] = None
+    h: Optional[float] = None
+    a: Optional[float] = None
+    b: Optional[float] = None
+    d: Optional[float] = None
+    e: Optional[float] = None
+    ra: Optional[float] = None
+    xa: Optional[float] = None
+    xm: Optional[float] = None
+    r1: Optional[float] = None
+    x1: Optional[float] = None
+    r2: Optional[float] = None
+    x2: Optional[float] = None
+    x3: Optional[float] = None
+    e1: Optional[float] = None
+    se1: Optional[float] = None
+    e2: Optional[float] = None
+    se2: Optional[float] = None
+    ia1: Optional[float] = None
+    ia2: Optional[float] = None
+    xamult: Optional[float] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.bus_id):
@@ -3150,7 +3146,7 @@ slots.rawModel__multi_terminal_dc_records = Slot(uri=RAW.multi_terminal_dc_recor
                    model_uri=RAW.rawModel__multi_terminal_dc_records, domain=None, range=Optional[Union[Union[dict, MultiTerminalDCRecord], list[Union[dict, MultiTerminalDCRecord]]]])
 
 slots.rawModel__multi_section_line_records = Slot(uri=RAW.multi_section_line_records, name="rawModel__multi_section_line_records", curie=RAW.curie('multi_section_line_records'),
-                   model_uri=RAW.rawModel__multi_section_line_records, domain=None, range=Optional[Union[dict[Union[str, MultiSectionLineRecordLineId], Union[dict, MultiSectionLineRecord]], list[Union[dict, MultiSectionLineRecord]]]])
+                   model_uri=RAW.rawModel__multi_section_line_records, domain=None, range=Optional[Union[Union[dict, MultiSectionLineRecord], list[Union[dict, MultiSectionLineRecord]]]])
 
 slots.rawModel__zone_records = Slot(uri=RAW.zone_records, name="rawModel__zone_records", curie=RAW.curie('zone_records'),
                    model_uri=RAW.rawModel__zone_records, domain=None, range=Optional[Union[dict[Union[int, ZoneRecordZoneNumber], Union[dict, ZoneRecord]], list[Union[dict, ZoneRecord]]]])
@@ -4341,7 +4337,7 @@ slots.multiSectionLineRecord__j = Slot(uri=RAW.j, name="multiSectionLineRecord__
                    model_uri=RAW.multiSectionLineRecord__j, domain=None, range=int)
 
 slots.multiSectionLineRecord__line_id = Slot(uri=RAW.line_id, name="multiSectionLineRecord__line_id", curie=RAW.curie('line_id'),
-                   model_uri=RAW.multiSectionLineRecord__line_id, domain=None, range=URIRef)
+                   model_uri=RAW.multiSectionLineRecord__line_id, domain=None, range=Optional[str])
 
 slots.multiSectionLineRecord__met = Slot(uri=RAW.met, name="multiSectionLineRecord__met", curie=RAW.curie('met'),
                    model_uri=RAW.multiSectionLineRecord__met, domain=None, range=Optional[int])

@@ -20,7 +20,6 @@ classes:
         description: IC - Change code (0=base case, other=adding/changing data)
         range: integer
         required: true
-        ifabsent: int(0)
         identifier: true
         annotations:
           order: 1
@@ -32,7 +31,6 @@ classes:
         description: SBASE - System base MVA
         range: float
         required: false
-        ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -46,7 +44,6 @@ classes:
         description: REV - raw revision number (34 for v34)
         range: float
         required: false
-        ifabsent: float(34.0)
         annotations:
           order: 3
           value_type: float
@@ -57,7 +54,6 @@ classes:
         description: XFRRAT - Transformer ratings units flag
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 4
           value_type: int
@@ -67,7 +63,6 @@ classes:
         description: NXFRAT - Non-transformer branch ratings units flag (<=0 MVA, >0 current as MVA)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 5
           value_type: int
@@ -77,7 +72,6 @@ classes:
         description: BASFRQ - System base frequency in Hz
         range: float
         required: false
-        ifabsent: float(60.0)
         unit:
           ucum_code: "Hz"
         annotations:

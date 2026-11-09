@@ -53,7 +53,6 @@ classes:
         description: K - Winding 3 bus number (0 for 2-winding)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 3
@@ -65,7 +64,6 @@ classes:
         description: CKT - Circuit identifier (1 or 2 characters)
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           line_number: 1
           order: 4
@@ -80,7 +78,6 @@ classes:
         description: CW - Winding data I/O code
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 5
@@ -92,7 +89,6 @@ classes:
         description: CZ - Impedance data I/O code
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 6
@@ -104,7 +100,6 @@ classes:
         description: CM - Magnetizing admittance I/O code
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 7
@@ -116,7 +111,6 @@ classes:
         description: MAG1 - Magnetizing conductance in pu (CM 1, system MVA base) or no-load loss in W (CM 2)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 8
@@ -129,7 +123,6 @@ classes:
         description: MAG2 - Magnetizing susceptance in pu (CM 1, system MVA base) or exciting current in pu (CM 2)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 9
@@ -142,7 +135,6 @@ classes:
         description: NMETR - Metered end flag (1, 2, or 3)
         range: integer
         required: false
-        ifabsent: int(2)
         annotations:
           line_number: 1
           order: 10
@@ -154,7 +146,6 @@ classes:
         description: NAME - Transformer name (40 characters)
         range: string
         required: false
-        ifabsent: string("                                        ")
         annotations:
           line_number: 1
           order: 11
@@ -169,7 +160,6 @@ classes:
         description: STAT - Transformer status (0 out of service, 1 in service; 3-winding also 2, 3, 4 = one winding out)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 12
@@ -181,7 +171,6 @@ classes:
         description: O1 - Owner 1 number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           line_number: 1
           order: 13
@@ -193,7 +182,6 @@ classes:
         description: F1 - Fraction of ownership for owner 1
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 1
           order: 14
@@ -206,7 +194,6 @@ classes:
         description: O2 - Owner 2 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 15
@@ -218,7 +205,6 @@ classes:
         description: F2 - Fraction of ownership for owner 2
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 16
@@ -231,7 +217,6 @@ classes:
         description: O3 - Owner 3 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 17
@@ -243,7 +228,6 @@ classes:
         description: F3 - Fraction of ownership for owner 3
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 18
@@ -256,7 +240,6 @@ classes:
         description: O4 - Owner 4 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 19
@@ -268,7 +251,6 @@ classes:
         description: F4 - Fraction of ownership for owner 4
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 1
           order: 20
@@ -281,7 +263,6 @@ classes:
         description: VECGRP - Vector group (12 characters)
         range: string
         required: false
-        ifabsent: string("            ")
         annotations:
           line_number: 1
           order: 21
@@ -296,7 +277,6 @@ classes:
         description: ZCOD - Impedance correction method (0 winding impedances, 1 bus-to-bus impedances); 3-winding only
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 1
           order: 22
@@ -310,7 +290,6 @@ classes:
         description: R1-2 - Winding 1-2 resistance in pu (CZ 1 system base, CZ 2 SBASE1-2) or load loss in W (CZ 3)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 1
@@ -323,7 +302,6 @@ classes:
         description: X1-2 - Winding 1-2 reactance in pu (CZ 1 system base, CZ 2 SBASE1-2) or impedance magnitude in pu (CZ 3)
         range: float
         required: true
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 2
@@ -335,7 +313,6 @@ classes:
         description: SBASE1-2 - Winding 1-2 base MVA
         range: float
         required: false
-        ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -350,7 +327,6 @@ classes:
         description: R2-3 - Winding 2-3 resistance in pu (CZ 1 system base, CZ 2 SBASE2-3) or load loss in W (CZ 3); 3-winding only
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 4
@@ -364,7 +340,6 @@ classes:
         description: X2-3 - Winding 2-3 reactance in pu (CZ 1 system base, CZ 2 SBASE2-3) or impedance magnitude in pu (CZ 3); 3-winding only
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 5
@@ -377,7 +352,6 @@ classes:
         description: SBASE2-3 - Winding 2-3 base MVA (3-winding only)
         range: float
         required: false
-        ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -393,7 +367,6 @@ classes:
         description: R3-1 - Winding 3-1 resistance in pu (CZ 1 system base, CZ 2 SBASE3-1) or load loss in W (CZ 3); 3-winding only
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 7
@@ -407,7 +380,6 @@ classes:
         description: X3-1 - Winding 3-1 reactance in pu (CZ 1 system base, CZ 2 SBASE3-1) or impedance magnitude in pu (CZ 3); 3-winding only
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 2
           order: 8
@@ -420,7 +392,6 @@ classes:
         description: SBASE3-1 - Winding 3-1 base MVA (3-winding only)
         range: float
         required: false
-        ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -436,7 +407,6 @@ classes:
         description: VMSTAR - Star point voltage magnitude in pu
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 2
           order: 10
@@ -450,7 +420,6 @@ classes:
         description: ANSTAR - Star point voltage angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -467,7 +436,6 @@ classes:
         description: WINDV1 - Winding 1 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 3
           order: 1
@@ -480,7 +448,6 @@ classes:
         description: NOMV1 - Winding 1 nominal voltage in kV
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
         annotations:
@@ -495,7 +462,6 @@ classes:
         description: ANG1 - Winding 1 phase shift angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -510,7 +476,6 @@ classes:
         description: RATE1-1 - Winding 1 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -525,7 +490,6 @@ classes:
         description: RATE1-2 - Winding 1 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -540,7 +504,6 @@ classes:
         description: RATE1-3 - Winding 1 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -555,7 +518,6 @@ classes:
         description: RATE1-4 - Winding 1 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -570,7 +532,6 @@ classes:
         description: RATE1-5 - Winding 1 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -585,7 +546,6 @@ classes:
         description: RATE1-6 - Winding 1 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -600,7 +560,6 @@ classes:
         description: RATE1-7 - Winding 1 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -615,7 +574,6 @@ classes:
         description: RATE1-8 - Winding 1 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -630,7 +588,6 @@ classes:
         description: RATE1-9 - Winding 1 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -645,7 +602,6 @@ classes:
         description: RATE1-10 - Winding 1 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -660,7 +616,6 @@ classes:
         description: RATE1-11 - Winding 1 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -675,7 +630,6 @@ classes:
         description: RATE1-12 - Winding 1 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -690,7 +644,6 @@ classes:
         description: COD1 - Winding 1 control mode
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 3
           order: 16
@@ -702,7 +655,6 @@ classes:
         description: CONT1 - Winding 1 controlled bus number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 3
           order: 17
@@ -714,7 +666,6 @@ classes:
         description: RMA1 - Winding 1 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 3
           order: 18
@@ -727,7 +678,6 @@ classes:
         description: RMI1 - Winding 1 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 3
           order: 19
@@ -740,7 +690,6 @@ classes:
         description: VMA1 - Winding 1 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 3
           order: 20
@@ -753,7 +702,6 @@ classes:
         description: VMI1 - Winding 1 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 3
           order: 21
@@ -766,7 +714,6 @@ classes:
         description: NTP1 - Winding 1 number of tap positions
         range: integer
         required: false
-        ifabsent: int(33)
         annotations:
           line_number: 3
           order: 22
@@ -778,7 +725,6 @@ classes:
         description: TAB1 - Winding 1 tap position table number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 3
           order: 23
@@ -790,7 +736,6 @@ classes:
         description: CR1 - Winding 1 load drop compensation resistance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 3
           order: 24
@@ -803,7 +748,6 @@ classes:
         description: CX1 - Winding 1 load drop compensation reactance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 3
           order: 25
@@ -816,7 +760,6 @@ classes:
         description: CNXA1 - Winding 1 connection angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -831,7 +774,6 @@ classes:
         description: NOD1 - Winding 1 node number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 3
           order: 27
@@ -844,7 +786,6 @@ classes:
         description: WINDV2 - Winding 2 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 4
           order: 1
@@ -857,7 +798,6 @@ classes:
         description: NOMV2 - Winding 2 nominal voltage in kV
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
         annotations:
@@ -872,7 +812,6 @@ classes:
         description: ANG2 - Winding 2 phase shift angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -888,7 +827,6 @@ classes:
         description: RATE2-1 - Winding 2 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -904,7 +842,6 @@ classes:
         description: RATE2-2 - Winding 2 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -920,7 +857,6 @@ classes:
         description: RATE2-3 - Winding 2 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -936,7 +872,6 @@ classes:
         description: RATE2-4 - Winding 2 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -952,7 +887,6 @@ classes:
         description: RATE2-5 - Winding 2 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -968,7 +902,6 @@ classes:
         description: RATE2-6 - Winding 2 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -984,7 +917,6 @@ classes:
         description: RATE2-7 - Winding 2 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1000,7 +932,6 @@ classes:
         description: RATE2-8 - Winding 2 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1016,7 +947,6 @@ classes:
         description: RATE2-9 - Winding 2 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1032,7 +962,6 @@ classes:
         description: RATE2-10 - Winding 2 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1048,7 +977,6 @@ classes:
         description: RATE2-11 - Winding 2 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1064,7 +992,6 @@ classes:
         description: RATE2-12 - Winding 2 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1080,7 +1007,6 @@ classes:
         description: COD2 - Winding 2 control mode
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 4
           order: 16
@@ -1093,7 +1019,6 @@ classes:
         description: CONT2 - Winding 2 controlled bus number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 4
           order: 17
@@ -1106,7 +1031,6 @@ classes:
         description: RMA2 - Winding 2 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 4
           order: 18
@@ -1120,7 +1044,6 @@ classes:
         description: RMI2 - Winding 2 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 4
           order: 19
@@ -1134,7 +1057,6 @@ classes:
         description: VMA2 - Winding 2 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 4
           order: 20
@@ -1148,7 +1070,6 @@ classes:
         description: VMI2 - Winding 2 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 4
           order: 21
@@ -1162,7 +1083,6 @@ classes:
         description: NTP2 - Winding 2 number of tap positions
         range: integer
         required: false
-        ifabsent: int(33)
         annotations:
           line_number: 4
           order: 22
@@ -1175,7 +1095,6 @@ classes:
         description: TAB2 - Winding 2 tap position table number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 4
           order: 23
@@ -1188,7 +1107,6 @@ classes:
         description: CR2 - Winding 2 load drop compensation resistance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 4
           order: 24
@@ -1202,7 +1120,6 @@ classes:
         description: CX2 - Winding 2 load drop compensation reactance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 4
           order: 25
@@ -1216,7 +1133,6 @@ classes:
         description: CNXA2 - Winding 2 connection angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -1232,7 +1148,6 @@ classes:
         description: NOD2 - Winding 2 node number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 4
           order: 27
@@ -1246,7 +1161,6 @@ classes:
         description: WINDV3 - Winding 3 turns ratio in pu (CW 1 or 3) or voltage in kV (CW 2)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           line_number: 5
           order: 1
@@ -1260,7 +1174,6 @@ classes:
         description: NOMV3 - Winding 3 nominal voltage in kV
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
         annotations:
@@ -1276,7 +1189,6 @@ classes:
         description: ANG3 - Winding 3 phase shift angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -1292,7 +1204,6 @@ classes:
         description: RATE3-1 - Winding 3 rating 1 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1308,7 +1219,6 @@ classes:
         description: RATE3-2 - Winding 3 rating 2 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1324,7 +1234,6 @@ classes:
         description: RATE3-3 - Winding 3 rating 3 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1340,7 +1249,6 @@ classes:
         description: RATE3-4 - Winding 3 rating 4 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1356,7 +1264,6 @@ classes:
         description: RATE3-5 - Winding 3 rating 5 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1372,7 +1279,6 @@ classes:
         description: RATE3-6 - Winding 3 rating 6 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1388,7 +1294,6 @@ classes:
         description: RATE3-7 - Winding 3 rating 7 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1404,7 +1309,6 @@ classes:
         description: RATE3-8 - Winding 3 rating 8 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1420,7 +1324,6 @@ classes:
         description: RATE3-9 - Winding 3 rating 9 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1436,7 +1339,6 @@ classes:
         description: RATE3-10 - Winding 3 rating 10 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1452,7 +1354,6 @@ classes:
         description: RATE3-11 - Winding 3 rating 11 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1468,7 +1369,6 @@ classes:
         description: RATE3-12 - Winding 3 rating 12 in MVA (or current as MVA, per XFRRAT)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -1484,7 +1384,6 @@ classes:
         description: COD3 - Winding 3 control mode
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 5
           order: 16
@@ -1497,7 +1396,6 @@ classes:
         description: CONT3 - Winding 3 controlled bus number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 5
           order: 17
@@ -1510,7 +1408,6 @@ classes:
         description: RMA3 - Winding 3 upper limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 5
           order: 18
@@ -1524,7 +1421,6 @@ classes:
         description: RMI3 - Winding 3 lower limit (pu or kV per CW, or degrees for |COD| 3 or 5)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 5
           order: 19
@@ -1538,7 +1434,6 @@ classes:
         description: VMA3 - Winding 3 upper limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           line_number: 5
           order: 20
@@ -1552,7 +1447,6 @@ classes:
         description: VMI3 - Winding 3 lower limit (pu bus voltage, Mvar or MW per |COD|)
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           line_number: 5
           order: 21
@@ -1566,7 +1460,6 @@ classes:
         description: NTP3 - Winding 3 number of tap positions
         range: integer
         required: false
-        ifabsent: int(33)
         annotations:
           line_number: 5
           order: 22
@@ -1579,7 +1472,6 @@ classes:
         description: TAB3 - Winding 3 tap position table number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 5
           order: 23
@@ -1592,7 +1484,6 @@ classes:
         description: CR3 - Winding 3 load drop compensation resistance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 5
           order: 24
@@ -1606,7 +1497,6 @@ classes:
         description: CX3 - Winding 3 load drop compensation reactance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           line_number: 5
           order: 25
@@ -1620,7 +1510,6 @@ classes:
         description: CNXA3 - Winding 3 connection angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -1636,7 +1525,6 @@ classes:
         description: NOD3 - Winding 3 node number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           line_number: 5
           order: 27

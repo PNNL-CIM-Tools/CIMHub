@@ -25,7 +25,6 @@ classes:
         description: ID - Machine identifier (one or two characters)
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           order: 2
           value_type: string
@@ -38,7 +37,6 @@ classes:
         description: ST - Machine status (1 in-service, 0 out-of-service)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 3
           value_type: int
@@ -48,7 +46,6 @@ classes:
         description: SC - Machine standard code (1 NEMA, 2 IEC)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 4
           value_type: int
@@ -58,7 +55,6 @@ classes:
         description: DC - Machine design code (0 custom, 1-5 NEMA or IEC design)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 5
           value_type: int
@@ -68,7 +64,6 @@ classes:
         description: AREA - Area number (1 through 9999)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 6
           value_type: int
@@ -78,7 +73,6 @@ classes:
         description: ZONE - Zone number (1 through 9999)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 7
           value_type: int
@@ -88,7 +82,6 @@ classes:
         description: OWNER - Owner number (1 through 9999)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 8
           value_type: int
@@ -98,7 +91,6 @@ classes:
         description: TC - Mechanical load torque model (1 power law, 2 WECC)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 9
           value_type: int
@@ -108,7 +100,6 @@ classes:
         description: BC - Machine base power code (1 mechanical MW, 2 electrical MVA)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 10
           value_type: int
@@ -118,7 +109,6 @@ classes:
         description: MBASE - Machine base power in MW or MVA (unit per BCODE)
         range: float
         required: false
-        ifabsent: float(100.0)
         annotations:
           order: 11
           value_type: float
@@ -129,7 +119,6 @@ classes:
         description: RATEKV - Machine rated voltage in kV line-to-line (0 uses the base voltage of bus I)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
         annotations:
@@ -142,7 +131,6 @@ classes:
         description: PC - Scheduled power code (1 mechanical MW output, 2 electrical MW drawn)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 13
           value_type: int
@@ -152,7 +140,6 @@ classes:
         description: PSET - Scheduled active power in MW at 1.0 pu terminal voltage (positive means motoring)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -164,7 +151,6 @@ classes:
         description: H - Machine inertia in pu on MBASE
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 15
           value_type: float
@@ -175,7 +161,6 @@ classes:
         description: A - Load torque coefficient A (WECC model only)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 16
           value_type: float
@@ -186,7 +171,6 @@ classes:
         description: B - Load torque coefficient B (WECC model only)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 17
           value_type: float
@@ -197,7 +181,6 @@ classes:
         description: D - Load torque coefficient D (power law exponent term, or WECC)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 18
           value_type: float
@@ -208,7 +191,6 @@ classes:
         description: E - Load torque coefficient E (WECC model only)
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 19
           value_type: float
@@ -219,7 +201,6 @@ classes:
         description: RA - Armature resistance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 20
           value_type: float
@@ -230,7 +211,6 @@ classes:
         description: XA - Armature leakage reactance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 21
           value_type: float
@@ -241,7 +221,6 @@ classes:
         description: XM - Unsaturated magnetizing reactance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 22
           value_type: float
@@ -252,7 +231,6 @@ classes:
         description: R1 - First rotor cage resistance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 23
           value_type: float
@@ -263,7 +241,6 @@ classes:
         description: X1 - First rotor cage reactance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 24
           value_type: float
@@ -274,7 +251,6 @@ classes:
         description: R2 - Second rotor cage resistance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 25
           value_type: float
@@ -285,7 +261,6 @@ classes:
         description: X2 - Second rotor cage reactance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 26
           value_type: float
@@ -296,7 +271,6 @@ classes:
         description: X3 - Third rotor reactance in pu on MBASE and RATEKV
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 27
           value_type: float
@@ -307,7 +281,6 @@ classes:
         description: E1 - First terminal voltage point on the saturation curve in pu on RATEKV
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 28
           value_type: float
@@ -318,7 +291,6 @@ classes:
         description: SE1 - Saturation factor at terminal voltage E1
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 29
           value_type: float
@@ -329,7 +301,6 @@ classes:
         description: E2 - Second terminal voltage point on the saturation curve in pu on RATEKV
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 30
           value_type: float
@@ -340,7 +311,6 @@ classes:
         description: SE2 - Saturation factor at terminal voltage E2
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 31
           value_type: float
@@ -351,7 +321,6 @@ classes:
         description: IA1 - First stator current in pu for stator leakage saturation
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 32
           value_type: float
@@ -362,7 +331,6 @@ classes:
         description: IA2 - Second stator current in pu for stator leakage saturation
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 33
           value_type: float
@@ -373,7 +341,6 @@ classes:
         description: XAMULT - Multiplier for the saturated XA (0 to 1.0)
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 34
           value_type: float

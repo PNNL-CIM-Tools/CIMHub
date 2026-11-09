@@ -1,0 +1,9 @@
+# PSS/E RAW Area interchange -> ControlArea.
+# Source table: Area interchange (records: 1)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#area-interchange
+
+Profile = cim18v17
+
+# untranscribed: bus_number
+Table ControlArea: mRID, name, netInterchange (MW), pTolerance (MW)
+    ca_1, IEEE14, 0.0, 999.99

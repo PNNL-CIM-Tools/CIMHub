@@ -31,7 +31,6 @@ classes:
         description: ISW - Slack bus number for this area
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 2
           value_type: int
@@ -42,7 +41,6 @@ classes:
         description: PDES - Desired net interchange (export) in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -56,7 +54,6 @@ classes:
         description: PTOL - Interchange tolerance in MW
         range: float
         required: false
-        ifabsent: float(10.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -70,7 +67,6 @@ classes:
         description: ARNAME - Area name
         range: string
         required: false
-        ifabsent: string("            ")
         annotations:
           order: 5
           value_type: string

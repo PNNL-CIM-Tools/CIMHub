@@ -1,0 +1,150 @@
+# PSS/E RAW Bus -> Substation (synthesized), TopologicalNode, BusbarSection, OperationalLimitSet +
+# VoltageLimit, SvVoltage.
+# Source table: Bus (records: 14)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#bus
+
+Profile = cim18v17
+
+# synthesized: substations, buses merged across switching devices, zero-impedance branches (R = 0, |X| <= THRSHZ
+# 0.0001), series capacitors and transformers, within a zone (11 substations)
+Table Substation: mRID, name, Region
+    sub_1,  BUS 1,  srgn_1
+    sub_2,  BUS 2,  srgn_1
+    sub_3,  BUS 3,  srgn_1
+    # buses 4, 7, 9; xf_4_7_0_1, xf_4_9_0_1
+    sub_4,  BUS 4,  srgn_1
+    # buses 5, 6; xf_5_6_0_1
+    sub_5,  BUS 5,  srgn_1
+    sub_8,  BUS 8,  srgn_1
+    sub_10, BUS 10, srgn_1
+    sub_11, BUS 11, srgn_1
+    sub_12, BUS 12, srgn_1
+    sub_13, BUS 13, srgn_1
+    sub_14, BUS 14, srgn_1
+
+# untranscribed: area, owner; IDE 4 (isolated): none
+Table TopologicalNode: mRID, name, busNumber, BaseVoltage, ConnectivityNodeContainer
+    1,  BUS 1,  1,  bv_138kv, sub_1
+    2,  BUS 2,  2,  bv_138kv, sub_2
+    3,  BUS 3,  3,  bv_138kv, sub_3
+    4,  BUS 4,  4,  bv_138kv, sub_4
+    5,  BUS 5,  5,  bv_138kv, sub_5
+    6,  BUS 6,  6,  bv_138kv, sub_5
+    7,  BUS 7,  7,  bv_138kv, sub_4
+    8,  BUS 8,  8,  bv_138kv, sub_8
+    9,  BUS 9,  9,  bv_138kv, sub_4
+    10, BUS 10, 10, bv_138kv, sub_10
+    11, BUS 11, 11, bv_138kv, sub_11
+    12, BUS 12, 12, bv_138kv, sub_12
+    13, BUS 13, 13, bv_138kv, sub_13
+    14, BUS 14, 14, bv_138kv, sub_14
+
+# one BusbarSection per bus: its terminal holds the bus's voltage limits and any regulation
+# of the bus (RAW-11, RAW-19)
+Table BusbarSection: mRID, name, bus, BaseVoltage, EquipmentContainer
+    bb_1,  BUS 1,  1,  bv_138kv, sub_1
+    bb_2,  BUS 2,  2,  bv_138kv, sub_2
+    bb_3,  BUS 3,  3,  bv_138kv, sub_3
+    bb_4,  BUS 4,  4,  bv_138kv, sub_4
+    bb_5,  BUS 5,  5,  bv_138kv, sub_5
+    bb_6,  BUS 6,  6,  bv_138kv, sub_5
+    bb_7,  BUS 7,  7,  bv_138kv, sub_4
+    bb_8,  BUS 8,  8,  bv_138kv, sub_8
+    bb_9,  BUS 9,  9,  bv_138kv, sub_4
+    bb_10, BUS 10, 10, bv_138kv, sub_10
+    bb_11, BUS 11, 11, bv_138kv, sub_11
+    bb_12, BUS 12, 12, bv_138kv, sub_12
+    bb_13, BUS 13, 13, bv_138kv, sub_13
+    bb_14, BUS 14, 14, bv_138kv, sub_14
+
+Table OperationalLimitSet: mRID, Terminal
+    bb_1_limits,  bb_1_T1
+    bb_2_limits,  bb_2_T1
+    bb_3_limits,  bb_3_T1
+    bb_4_limits,  bb_4_T1
+    bb_5_limits,  bb_5_T1
+    bb_6_limits,  bb_6_T1
+    bb_7_limits,  bb_7_T1
+    bb_8_limits,  bb_8_T1
+    bb_9_limits,  bb_9_T1
+    bb_10_limits, bb_10_T1
+    bb_11_limits, bb_11_T1
+    bb_12_limits, bb_12_T1
+    bb_13_limits, bb_13_T1
+    bb_14_limits, bb_14_T1
+
+# derived: normalValue = NVHI, NVLO, EVHI, EVLO (pu) x BASKV (kv_from_per_unit)
+Table VoltageLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue (kV)
+    bb_1_nvhi,  bb_1_limits,  olt_normal_high,    151.8
+    bb_1_nvlo,  bb_1_limits,  olt_normal_low,     124.2
+    bb_1_evhi,  bb_1_limits,  olt_emergency_high, 151.8
+    bb_1_evlo,  bb_1_limits,  olt_emergency_low,  124.2
+    bb_2_nvhi,  bb_2_limits,  olt_normal_high,    151.8
+    bb_2_nvlo,  bb_2_limits,  olt_normal_low,     124.2
+    bb_2_evhi,  bb_2_limits,  olt_emergency_high, 151.8
+    bb_2_evlo,  bb_2_limits,  olt_emergency_low,  124.2
+    bb_3_nvhi,  bb_3_limits,  olt_normal_high,    151.8
+    bb_3_nvlo,  bb_3_limits,  olt_normal_low,     124.2
+    bb_3_evhi,  bb_3_limits,  olt_emergency_high, 151.8
+    bb_3_evlo,  bb_3_limits,  olt_emergency_low,  124.2
+    bb_4_nvhi,  bb_4_limits,  olt_normal_high,    151.8
+    bb_4_nvlo,  bb_4_limits,  olt_normal_low,     124.2
+    bb_4_evhi,  bb_4_limits,  olt_emergency_high, 151.8
+    bb_4_evlo,  bb_4_limits,  olt_emergency_low,  124.2
+    bb_5_nvhi,  bb_5_limits,  olt_normal_high,    151.8
+    bb_5_nvlo,  bb_5_limits,  olt_normal_low,     124.2
+    bb_5_evhi,  bb_5_limits,  olt_emergency_high, 151.8
+    bb_5_evlo,  bb_5_limits,  olt_emergency_low,  124.2
+    bb_6_nvhi,  bb_6_limits,  olt_normal_high,    151.8
+    bb_6_nvlo,  bb_6_limits,  olt_normal_low,     124.2
+    bb_6_evhi,  bb_6_limits,  olt_emergency_high, 151.8
+    bb_6_evlo,  bb_6_limits,  olt_emergency_low,  124.2
+    bb_7_nvhi,  bb_7_limits,  olt_normal_high,    151.8
+    bb_7_nvlo,  bb_7_limits,  olt_normal_low,     124.2
+    bb_7_evhi,  bb_7_limits,  olt_emergency_high, 151.8
+    bb_7_evlo,  bb_7_limits,  olt_emergency_low,  124.2
+    bb_8_nvhi,  bb_8_limits,  olt_normal_high,    151.8
+    bb_8_nvlo,  bb_8_limits,  olt_normal_low,     124.2
+    bb_8_evhi,  bb_8_limits,  olt_emergency_high, 151.8
+    bb_8_evlo,  bb_8_limits,  olt_emergency_low,  124.2
+    bb_9_nvhi,  bb_9_limits,  olt_normal_high,    151.8
+    bb_9_nvlo,  bb_9_limits,  olt_normal_low,     124.2
+    bb_9_evhi,  bb_9_limits,  olt_emergency_high, 151.8
+    bb_9_evlo,  bb_9_limits,  olt_emergency_low,  124.2
+    bb_10_nvhi, bb_10_limits, olt_normal_high,    151.8
+    bb_10_nvlo, bb_10_limits, olt_normal_low,     124.2
+    bb_10_evhi, bb_10_limits, olt_emergency_high, 151.8
+    bb_10_evlo, bb_10_limits, olt_emergency_low,  124.2
+    bb_11_nvhi, bb_11_limits, olt_normal_high,    151.8
+    bb_11_nvlo, bb_11_limits, olt_normal_low,     124.2
+    bb_11_evhi, bb_11_limits, olt_emergency_high, 151.8
+    bb_11_evlo, bb_11_limits, olt_emergency_low,  124.2
+    bb_12_nvhi, bb_12_limits, olt_normal_high,    151.8
+    bb_12_nvlo, bb_12_limits, olt_normal_low,     124.2
+    bb_12_evhi, bb_12_limits, olt_emergency_high, 151.8
+    bb_12_evlo, bb_12_limits, olt_emergency_low,  124.2
+    bb_13_nvhi, bb_13_limits, olt_normal_high,    151.8
+    bb_13_nvlo, bb_13_limits, olt_normal_low,     124.2
+    bb_13_evhi, bb_13_limits, olt_emergency_high, 151.8
+    bb_13_evlo, bb_13_limits, olt_emergency_low,  124.2
+    bb_14_nvhi, bb_14_limits, olt_normal_high,    151.8
+    bb_14_nvlo, bb_14_limits, olt_normal_low,     124.2
+    bb_14_evhi, bb_14_limits, olt_emergency_high, 151.8
+    bb_14_evlo, bb_14_limits, olt_emergency_low,  124.2
+
+# solved state; derived: v = VM (pu) x BASKV (kv_from_per_unit); angle = VA
+Table SvVoltage: identifier, TopologicalNode, v (kV), angle (deg)
+    1_sv,  1,  146.28,             0.0
+    2_sv,  2,  144.20999999999998, -4.9826
+    3_sv,  3,  139.38,             -12.725
+    4_sv,  4,  140.43846000000002, -10.3128
+    5_sv,  5,  140.69237999999999, -8.7738
+    6_sv,  6,  147.66,             -14.2209
+    7_sv,  7,  146.48976,          -13.3596
+    8_sv,  8,  150.42000000000002, -13.3596
+    9_sv,  9,  145.71834,          -14.9385
+    10_sv, 10, 145.03662,          -15.0972
+    11_sv, 11, 145.85358,          -14.7906
+    12_sv, 12, 145.61622,          -15.0755
+    13_sv, 13, 144.95244000000002, -15.1562
+    14_sv, 14, 142.90314,          -16.0336

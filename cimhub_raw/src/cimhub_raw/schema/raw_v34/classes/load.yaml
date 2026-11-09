@@ -30,7 +30,6 @@ classes:
         description: ID - Load identifier (1 or 2 characters)
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           order: 2
           value_type: string
@@ -44,7 +43,6 @@ classes:
         description: STAT - Load status (0=out of service, 1=in service)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 3
           value_type: int
@@ -55,7 +53,6 @@ classes:
         description: AREA - Area number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 4
           value_type: int
@@ -65,7 +62,6 @@ classes:
         description: ZONE - Zone number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 5
           value_type: int
@@ -75,7 +71,6 @@ classes:
         description: PL - Active power component of constant MVA load in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -89,7 +84,6 @@ classes:
         description: QL - Reactive power component of constant MVA load in MVAr
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -103,7 +97,6 @@ classes:
         description: IP - Active power component of constant current load in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -117,7 +110,6 @@ classes:
         description: IQ - Reactive power component of constant current load in MVAr
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -131,7 +123,6 @@ classes:
         description: YP - Active power component of constant admittance load in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -145,7 +136,6 @@ classes:
         description: YQ - Reactive power component of constant admittance load in MVAr
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -159,7 +149,6 @@ classes:
         description: OWNER - Owner number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 12
           value_type: int
@@ -169,7 +158,6 @@ classes:
         description: SCALE - Load scaling flag
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 13
           value_type: int
@@ -180,7 +168,6 @@ classes:
         description: INTRPT - Interruptible load flag
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 14
           value_type: int
@@ -191,7 +178,6 @@ classes:
         description: DGENP - Distributed generation active power in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -205,7 +191,6 @@ classes:
         description: DGENQ - Distributed generation reactive power in MVAr
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -219,7 +204,6 @@ classes:
         description: DGENM - Distributed generation operation mode (0=off, 1=on)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 17
           value_type: int

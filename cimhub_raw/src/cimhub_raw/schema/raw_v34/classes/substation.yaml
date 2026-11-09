@@ -320,6 +320,8 @@ classes:
         annotations:
           order: 3
           value_type: string
+          quote: true
+          quote_char: "'"
           separator: ","
 
       j_bus:

@@ -30,7 +30,6 @@ classes:
         description: ID - Generator identifier (1 or 2 characters)
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           order: 2
           value_type: string
@@ -44,7 +43,6 @@ classes:
         description: PG - Generator active power output in MW
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -58,7 +56,6 @@ classes:
         description: QG - Generator reactive power output in MVAr
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -72,7 +69,6 @@ classes:
         description: QT - Maximum generator reactive power output in MVAr
         range: float
         required: false
-        ifabsent: float(9999.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -86,7 +82,6 @@ classes:
         description: QB - Minimum generator reactive power output in MVAr
         range: float
         required: false
-        ifabsent: float(-9999.0)
         unit:
           ucum_code: "MVAr"
         annotations:
@@ -100,7 +95,6 @@ classes:
         description: VS - Regulated voltage setpoint in pu
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 7
           value_type: float
@@ -112,7 +106,6 @@ classes:
         description: IREG - Regulated bus number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 8
           value_type: int
@@ -123,7 +116,6 @@ classes:
         description: MBASE - Generator MVA base
         range: float
         required: false
-        ifabsent: float(100.0)
         unit:
           ucum_code: "MVA"
         annotations:
@@ -136,7 +128,6 @@ classes:
         description: ZR - Complex machine impedance ZSORCE, resistance component in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 10
           value_type: float
@@ -148,7 +139,6 @@ classes:
         description: ZX - Complex machine impedance ZSORCE, reactance component in pu
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 11
           value_type: float
@@ -160,7 +150,6 @@ classes:
         description: RT - Step-up transformer resistance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 12
           value_type: float
@@ -172,7 +161,6 @@ classes:
         description: XT - Step-up transformer reactance in pu
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 13
           value_type: float
@@ -184,7 +172,6 @@ classes:
         description: GTAP - Step-up transformer off-nominal turns ratio
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 14
           value_type: float
@@ -196,7 +183,6 @@ classes:
         description: STAT - Generator status (0=out of service, 1=in service)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 15
           value_type: int
@@ -207,7 +193,6 @@ classes:
         description: RMPCT - Percent of Mvar required to hold voltage at IREG
         range: float
         required: false
-        ifabsent: float(100.0)
         annotations:
           order: 16
           value_type: float
@@ -219,7 +204,6 @@ classes:
         description: PT - Maximum generator active power output in MW
         range: float
         required: false
-        ifabsent: float(9999.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -233,7 +217,6 @@ classes:
         description: PB - Minimum generator active power output in MW
         range: float
         required: false
-        ifabsent: float(-9999.0)
         unit:
           ucum_code: "MW"
         annotations:
@@ -247,7 +230,6 @@ classes:
         description: O1 - Owner 1 number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 19
           value_type: int
@@ -257,7 +239,6 @@ classes:
         description: F1 - Fraction of ownership for owner 1
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 20
           value_type: float
@@ -269,7 +250,6 @@ classes:
         description: O2 - Owner 2 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 21
           value_type: int
@@ -280,7 +260,6 @@ classes:
         description: F2 - Fraction of ownership for owner 2
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 22
           value_type: float
@@ -292,7 +271,6 @@ classes:
         description: O3 - Owner 3 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 23
           value_type: int
@@ -303,7 +281,6 @@ classes:
         description: F3 - Fraction of ownership for owner 3
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 24
           value_type: float
@@ -315,7 +292,6 @@ classes:
         description: O4 - Owner 4 number
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 25
           value_type: int
@@ -326,7 +302,6 @@ classes:
         description: F4 - Fraction of ownership for owner 4
         range: float
         required: false
-        ifabsent: float(0.0)
         annotations:
           order: 26
           value_type: float
@@ -338,7 +313,6 @@ classes:
         description: WMOD - Wind machine control mode
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 27
           value_type: int
@@ -349,7 +323,6 @@ classes:
         description: WPF - Wind machine power factor
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 28
           value_type: float
@@ -361,7 +334,6 @@ classes:
         description: NREG - Node number of IREG bus section to regulate (0 if IREG is not in a substation)
         range: integer
         required: false
-        ifabsent: int(0)
         annotations:
           order: 29
           value_type: int

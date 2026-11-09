@@ -31,7 +31,6 @@ classes:
         description: OWNAME - Owner name (12 characters)
         range: string
         required: false
-        ifabsent: string("            ")
         annotations:
           order: 2
           value_type: string

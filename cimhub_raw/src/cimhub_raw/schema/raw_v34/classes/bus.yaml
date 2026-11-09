@@ -31,7 +31,6 @@ classes:
         description: NAME - Bus name (12 characters max)
         range: string
         required: false
-        ifabsent: string("            ")
         annotations:
           order: 2
           value_type: string
@@ -45,7 +44,6 @@ classes:
         description: BASKV - Bus base voltage in kV
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "kV"
         annotations:
@@ -59,7 +57,6 @@ classes:
         description: IDE - Bus type code (1=PQ, 2=PV, 3=swing, 4=isolated)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 4
           value_type: int
@@ -70,7 +67,6 @@ classes:
         description: AREA - Area number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 5
           value_type: int
@@ -81,7 +77,6 @@ classes:
         description: ZONE - Zone number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 6
           value_type: int
@@ -92,7 +87,6 @@ classes:
         description: OWNER - Owner number
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 7
           value_type: int
@@ -103,7 +97,6 @@ classes:
         description: VM - Voltage magnitude in pu
         range: float
         required: false
-        ifabsent: float(1.0)
         annotations:
           order: 8
           value_type: float
@@ -115,7 +108,6 @@ classes:
         description: VA - Voltage angle in degrees
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "deg"
         annotations:
@@ -129,7 +121,6 @@ classes:
         description: NVHI - Normal voltage magnitude high limit in pu
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           order: 10
           value_type: float
@@ -141,7 +132,6 @@ classes:
         description: NVLO - Normal voltage magnitude low limit in pu
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           order: 11
           value_type: float
@@ -153,7 +143,6 @@ classes:
         description: EVHI - Emergency voltage magnitude high limit in pu
         range: float
         required: false
-        ifabsent: float(1.1)
         annotations:
           order: 12
           value_type: float
@@ -165,7 +154,6 @@ classes:
         description: EVLO - Emergency voltage magnitude low limit in pu
         range: float
         required: false
-        ifabsent: float(0.9)
         annotations:
           order: 13
           value_type: float

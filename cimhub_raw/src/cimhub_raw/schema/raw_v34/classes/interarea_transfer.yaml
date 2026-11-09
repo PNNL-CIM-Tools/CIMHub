@@ -39,7 +39,6 @@ classes:
         description: TRID - Single-character interarea transfer identifier (0-9 or A-Z)
         range: string
         required: false
-        ifabsent: string("1")
         annotations:
           order: 3
           value_type: string
@@ -53,7 +52,6 @@ classes:
         description: PTRAN - MW comprising this transfer (positive = ARFROM selling to ARTO)
         range: float
         required: false
-        ifabsent: float(0.0)
         unit:
           ucum_code: "MW"
         annotations:

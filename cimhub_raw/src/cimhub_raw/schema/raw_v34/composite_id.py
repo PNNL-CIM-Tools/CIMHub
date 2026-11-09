@@ -1,103 +1,56 @@
-"""Composite identifier assignment for PSS/E RAW v34 records.
+"""Composite identifiers for PSS/E RAW v34 records.
 
-``GraphModel`` deduplicates on ``_get_identifier(obj)``, which prefers a
-schema ``identifier: true`` field and otherwise falls back to ``obj.ID``.
-Most RAW record types have a *composite* natural key (e.g. a load is keyed by
-bus number **and** load id, since one bus can carry several loads), which a
-single-field schema identifier cannot express. We therefore assign a composite
-``.ID`` string here.
+``GraphModel`` keys a record on its schema ``identifier: true`` field, else on ``record.ID``. Most RAW
+records have a natural key of several fields (a load is its bus and its load ID, since one bus can carry
+several loads), which one schema field cannot express, so ``assign_composite_id`` sets ``record.ID``.
 
-This is the single source of truth for those ID strings. Both the reader
-(``raw34_reader``) and the exporter (``cim_to_raw``) import it, so the string
-that seeds cimgraph's deterministic UUID is byte-identical on import and export
-— any drift between the two silently breaks round-trips.
+The key is the fields' values joined with ``_``, trimmed (PSS/E compares IDs without their padding). A key
+field the file leaves blank takes its ``raw_default`` (a load ID defaults to ``1``), so the same record has
+the same key however it was written. This is the only place the reader applies a default.
+
+Reader and exporter both use this module, so the key that later seeds an mRID is identical in both
+directions.
 """
 
 from __future__ import annotations
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
+from cimhub_core.serialization import get_schema_annotations
 
-
-def set_load_id(r: schema.LoadRecord) -> None:
-    r.ID = f"{r.bus_number}_{r.load_id.strip()}"
-
-
-def set_fixed_shunt_id(r: schema.FixedShuntRecord) -> None:
-    r.ID = f"{r.bus_number}_{r.shunt_id.strip()}"
-
-
-def set_generator_id(r: schema.GeneratorRecord) -> None:
-    r.ID = f"{r.bus_number}_{r.gen_id.strip()}"
-
-
-def set_branch_id(r: schema.BranchRecord) -> None:
-    r.ID = f"{r.from_bus_number}_{r.to_bus_number}_{r.circuit.strip()}"
-
-
-def set_switch_id(r: schema.SwitchRecord) -> None:
-    r.ID = f"{r.from_bus_number}_{r.to_bus_number}_{r.circuit.strip()}"
-
-
-def set_transformer_id(r: schema.TransformerRecord) -> None:
-    r.ID = f"{r.i}_{r.j}_{r.k}_{r.circuit.strip()}"
-
-
-def set_switched_shunt_id(r: schema.SwitchedShuntRecord) -> None:
-    r.ID = f"{r.bus_number}"
-
-
-def set_facts_id(r: schema.FactsDeviceRecord) -> None:
-    r.ID = f"{r.ibus}_{str(r.name).strip()}"
-
-
-def set_induction_id(r: schema.InductionMachineRecord) -> None:
-    r.ID = f"{r.bus_id}_{str(r.name).strip()}"
-
-
-def set_interarea_id(r: schema.InterareaTransferRecord) -> None:
-    r.ID = f"{r.from_area}_{r.to_area}_{str(r.transfer_id).strip()}"
-
-
-def set_multi_terminal_dc_id(r: schema.MultiTerminalDCRecord) -> None:
-    r.ID = f"{str(r.name).strip()}"
-
-
-def set_vsc_id(r: schema.VscDcRecord) -> None:
-    # Two records (rectifier + inverter) share NAME per DC line; ibus differs.
-    r.ID = f"{str(r.name).strip()}_{r.ibus}"
-
-
-def set_case_id(r: schema.CaseIdentificationRecord) -> None:
-    # Singleton per file.
-    r.ID = "CASE"
-
-
-# Dispatcher keyed on record type. Record types absent from this map carry a
-# single-field ``identifier: true`` in the schema (bus, area, zone, owner,
-# two-terminal DC, multi-section line, impedance correction) and need no
-# composite ID — GraphModel keys them directly on that field.
-_DISPATCH = {
-    schema.LoadRecord: set_load_id,
-    schema.FixedShuntRecord: set_fixed_shunt_id,
-    schema.GeneratorRecord: set_generator_id,
-    schema.BranchRecord: set_branch_id,
-    schema.SwitchRecord: set_switch_id,
-    schema.TransformerRecord: set_transformer_id,
-    schema.SwitchedShuntRecord: set_switched_shunt_id,
-    schema.FactsDeviceRecord: set_facts_id,
-    schema.InductionMachineRecord: set_induction_id,
-    schema.InterareaTransferRecord: set_interarea_id,
-    schema.MultiTerminalDCRecord: set_multi_terminal_dc_id,
-    schema.VscDcRecord: set_vsc_id,
-    schema.CaseIdentificationRecord: set_case_id,
+KEY_FIELDS: dict[type, tuple[str, ...]] = {
+    schema.LoadRecord: ("bus_number", "load_id"),
+    schema.FixedShuntRecord: ("bus_number", "shunt_id"),
+    schema.GeneratorRecord: ("bus_number", "gen_id"),
+    schema.BranchRecord: ("from_bus_number", "to_bus_number", "circuit"),
+    schema.SwitchRecord: ("from_bus_number", "to_bus_number", "circuit"),
+    schema.TransformerRecord: ("i", "j", "k", "circuit"),
+    schema.SwitchedShuntRecord: ("bus_number",),
+    schema.FactsDeviceRecord: ("name",),
+    schema.InductionMachineRecord: ("bus_id", "name"),
+    schema.InterareaTransferRecord: ("from_area", "to_area", "transfer_id"),
+    schema.MultiSectionLineRecord: ("i", "j", "line_id"),
+    schema.SubstationNodeRecord: ("substation_number", "node_number"),
+    schema.StationSwitchingDeviceRecord: ("substation_number", "from_node", "to_node", "circuit"),
+    schema.EquipmentTerminalRecord: (
+        "substation_number", "bus_number", "terminal_type", "j_bus", "k_bus", "identifier"),
 }
 
 
-def assign_composite_id(record: object) -> None:
-    """Assign ``record.ID`` if the record type needs a composite identifier.
+def _key_text(record: object, field: str) -> str:
+    """The trimmed text of one key field; a blank field takes its ``raw_default``."""
+    value = getattr(record, field)
+    if value is None:
+        value = get_schema_annotations(type(record)).get(field, {}).get("raw_default")
+    if value is None:
+        return ""
+    return str(value).strip()
 
-    No-op for record types that carry a single-field schema identifier.
-    """
-    setter = _DISPATCH.get(type(record))
-    if setter is not None:
-        setter(record)
+
+def assign_composite_id(record: object) -> None:
+    """Set ``record.ID`` for a record type with a composite key; no-op for the others."""
+    if isinstance(record, schema.CaseIdentificationRecord):
+        record.ID = "CASE"  # one per file
+        return
+    fields = KEY_FIELDS.get(type(record))
+    if fields is not None:
+        record.ID = "_".join(_key_text(record, field) for field in fields)

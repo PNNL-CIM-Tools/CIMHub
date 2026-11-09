@@ -39,7 +39,6 @@ classes:
         description: CKT - Circuit identifier
         range: string
         required: false
-        ifabsent: string("1 ")
         annotations:
           order: 3
           value_type: string
@@ -53,7 +52,6 @@ classes:
         description: X - Switch reactance in pu
         range: float
         required: false
-        ifabsent: float(0.0001)
         annotations:
           order: 4
           value_type: float
@@ -80,7 +78,6 @@ classes:
         description: STAT - Switch status (0=open, 1=closed)
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 17
           value_type: int
@@ -91,7 +88,6 @@ classes:
         description: NSTAT - Normal switch status
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 18
           value_type: int
@@ -102,7 +98,6 @@ classes:
         description: METERED - Metered end flag
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 19
           value_type: int
@@ -112,7 +107,6 @@ classes:
         description: STYPE - Switch type
         range: integer
         required: false
-        ifabsent: int(1)
         annotations:
           order: 20
           value_type: int
@@ -122,7 +116,6 @@ classes:
         description: NAME - Switch name
         range: string
         required: false
-        ifabsent: string("                                        ")
         annotations:
           order: 21
           value_type: string
