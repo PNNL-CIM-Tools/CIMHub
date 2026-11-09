@@ -28,7 +28,7 @@ tests/gdm_compare.py                       gdm_differences(original, exported): 
 tests/test_export_round_trip.py           every golden: load, export (CIM names), reimport, same golden (or its listed differences)
 tests/test_export_gdm_level.py            export vs the atom system: only the listed losses; JSON round trip
 tests/test_export_framework.py            exporter slot coverage, naming, system name, fills, fail-fast
-tests/test_export_ditto.py                export → ditto OpenDSS writer → OpenDSS: compiles, solves like the original; a regulator bank holds its band
+tests/test_export_ditto.py                export → ditto OpenDSS writer → OpenDSS: compiles, solves like the original; a regulator bank holds its band; each PV makes its CIM output
 ```
 
 - **Every golden master has the same header** (`Profile`, `Authority` = the CIMHub authority, `Model` = `atom`), equal

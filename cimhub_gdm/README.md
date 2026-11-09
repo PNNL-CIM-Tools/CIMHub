@@ -30,9 +30,10 @@ cim18v17 home are untranscribed (each listed in its class's `FIELDS`, logged at 
 
 **Exporter (in progress, branch `gdm-exporter`).** `GdmExporter().to_model(network)` returns a GDM
 `DistributionSystem`, reading every value through the core getters. `cim_to_gdm(network, path)` writes it as GDM
-JSON (`write_gdm`). It exports feeders, substations, buses, sources, switches, fuses, reclosers, matrix and
-sequence lines, loads, capacitors, transformers (center taps included) and regulators so far. The result writes and
-solves through ditto's OpenDSS writer. DER, reactors and geometry lines raise `no GDM export yet`.
+JSON (`write_gdm`). It exports feeders, substations, buses, sources, switches, fuses, reclosers, matrix, sequence
+and geometry lines (bare and concentric wire), loads, capacitors, transformers (center taps included), regulators,
+solar and batteries so far. The result writes and solves through ditto's OpenDSS writer (which has no battery
+writer). Reactors raise `no GDM export yet`, and a tape-shield cable raises (GDM has no class for one).
 Plan: [`docs/EXPORT_PLAN.md`](docs/EXPORT_PLAN.md); spec: [`docs/EXPORT_MAPPING.md`](docs/EXPORT_MAPPING.md).
 The tap assumptions both directions make, to review later: [`docs/TAP_ASSUMPTIONS.md`](docs/TAP_ASSUMPTIONS.md).
 

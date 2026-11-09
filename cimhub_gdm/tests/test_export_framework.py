@@ -119,9 +119,33 @@ def test_a_sectionaliser_has_no_export():
         GdmExporter().to_model(network, name_source="name", system_name="atom")
 
 
-def test_a_geometry_line_has_no_export_yet():
+def test_a_geometry_line_rates_its_first_conductor():
+    """geo's own emergency limit goes on its first conductor, which splits acsr_556; the others keep their wire's
+    rating, 1.5 x normal where the wire has no emergency limit (acsr_4/0: 340 A, 510 A)."""
     network = gdm_atoms.type_limit_durations(_golden("line", "lines"))
-    with pytest.raises(ValueError, match="no GDM export yet for geometry lines: ACLineSegment 'ln_geo'"):
+    geo = _named(network, network.cim.ACLineSegment, "geo")
+    [emergency] = [value for limit_set in geo.OperationalLimitSet for value in limit_set.OperationalLimitValue
+                   if value.OperationalLimitType.name == "emergency"]
+    emergency.normalValue = network.cim.CurrentFlow(900, "A")
+    exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    conductors = exported.get_component(gdm_atoms.GeometryBranch, "geo").equipment.conductors
+    assert [(conductor.name, float(conductor.emergency_ampacity.to("ampere").magnitude)) for conductor in conductors] \
+        == [("acsr_556", 900.0), ("acsr_556_2", 1095.0), ("acsr_556_2", 1095.0), ("acsr_4/0", 510.0)]
+
+
+def test_an_unnamed_inverter_is_shared():
+    """roof and roof2 on one InverterInfo with no name: one GDM equipment, named '' (infrasys keys it by uuid)."""
+    network = _golden("der", "der")
+    _named(network, network.cim.GenerationInverterInfo, "inv33").name = None
+    exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    roof, roof2 = (exported.get_component(gdm_atoms.DistributionSolar, name) for name in ("roof", "roof2"))
+    assert roof.inverter is roof2.inverter and roof.inverter.name == ""
+
+
+def test_a_battery_rated_differently_each_way_raises():
+    network = _golden("der", "der")
+    _named(network, network.cim.BatteryUnit, "ess").minP = network.cim.ActivePower(-100, "kW")
+    with pytest.raises(ValueError, match="minP -100.0 kW is not the negative of maxP 250.0 kW"):
         GdmExporter().to_model(network, name_source="name", system_name="atom")
 
 

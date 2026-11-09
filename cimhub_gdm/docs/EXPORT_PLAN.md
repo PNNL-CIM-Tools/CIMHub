@@ -4,7 +4,9 @@
 review ([`EXPORT_MAPPING.md`](EXPORT_MAPPING.md)):
 - X1;
 - X2, built at the user's request so that ditto gets what it needs, without the geometry lines (X4);
-- X3, at the user's "continue to next phase".
+- X3, at the user's "continue to next phase";
+- X4 part one (geometry lines, solar, batteries), at the user's next "continue to next phase". Reactors wait for
+  `get_series_compensator` (S6e).
 
 ditto changed two decisions in X2: X6 (buses line to ground) and the §3.1 switch matrices (OpenDSS's 1 mΩ switch).
 In X3 it set four rules:
@@ -13,8 +15,11 @@ In X3 it set four rules:
 - each regulator unit is its own GDM regulator;
 - unset line drop is 0 V.
 
-The X3 catalog-transformer tests are conditional xfails until rc_1's transformer getter agrees template Y with
-instance Yn: the DSS session's S6c fix, in progress. X4 waits for DSS S6b and S6e on rc_1 (X11). Branch
+In X4 it set one more: a PV's irradiance is the output's share of the panel's rating (OpenDSS makes
+Pmpp × Irradiance, and ditto writes no `active_power`), so it moved from §3.1's fills to a rule.
+
+rc_1 was merged in at S6d (2026-11-09, user): its transformer getter agrees template Y with instance Yn (S6c), and
+`get_wire_info` is there (S6b). X4's reactors wait for `get_series_compensator` (S6e) (X11). Branch
 `gdm-exporter`, made from `rc_1` at `7cbcf0c`, in the `~/CIMHub-gdm` worktree.
 
 `GdmExporter(FormatExporter).to_model(network) -> DistributionSystem` is written fresh in `cimhub_gdm/exporter/`,
@@ -91,7 +96,7 @@ Required in GDM 2.4.1, untranscribed on import (found by walking the importer's 
 | `length` on MatrixImpedanceSwitch | 1 m | `length > 0` is enforced; with the switch matrices it gives 1 mΩ |
 | DistributionReactor `length` | 1 m | ReactorEquipment `resistance` / `reactance` are totals, so the length scales nothing (importer 17b) |
 | DistributionSwitchController `delay`, `is_locked` | 0 s, False | no CIM home |
-| DistributionSolar `irradiance` | 1000 W/m² (STC) | GDM carries `active_power` itself; irradiance only scales a curve CIM doesn't have |
+| ~~DistributionSolar `irradiance`~~ | **now a rule (X4 as built):** p / maxP × 1 kW/m² | not neutral: ditto writes no `active_power`, and OpenDSS makes Pmpp × Irradiance, so a constant would change the PV's output |
 | SolarEquipment `resistance`, `reactance` | 0 %, 0 % | no CIM home |
 | InverterEquipment `cutin_percent`, `cutout_percent`, `dc_to_ac_efficiency`; `rise_limit`, `fall_limit` | 0 %, 0 %, 100 %; None, None (the field is required but takes None) | no CIM home |
 | BatteryEquipment `idling_efficiency` | 100 % | no CIM home |

@@ -5,7 +5,8 @@ Each expected difference is a loss the plan lists:
 - A bus has the phases of its terminals (none when nothing is on it).
 - An object has one container.
 - A source has one angle (positive sequence) and line-to-line voltages.
-- A switch class comes from its CIM class.
+- A switch class comes from its CIM class (a geometry switch is a LoadBreakSwitch).
+- A DER's inverter and panel values with no CIM home are fills, untranscribed on import.
 - A capacitor's rating, state and controllers are held as CIM holds them.
 - A transformer's taps are its catalog's, and its couplings 0-based (X3, for ditto).
 - A regulator is one GDM regulator per CIM unit, and its impedance a fill (X3).
@@ -53,12 +54,22 @@ SOURCE_DIFFERENCES = [
       for i in range(3)),
 ]
 
-#: The matrix and sequence lines put phases on b1-b3 and come back as they went.
-LINE_DIFFERENCES = _without(SHELL_DIFFERENCES, *ON_B1_TO_B3)
+#: The lines put phases on b1-b3 and come back as they went, geometry included. b6 and b7 are their ABCN buses, rated
+#: line to ground as every bus. gsw is a LoadBreakSwitch in CIM, so it comes back a MatrixImpedanceSwitch.
+LINE_DIFFERENCES = [
+    *_without(SHELL_DIFFERENCES, *ON_B1_TO_B3),
+    *(line for bus in ("b6", "b7") for line in (f"DistributionBus {bus}.rated_voltage: 4.16 kV -> {LG_FROM_4P16}",
+                                                 f"DistributionBus {bus}.substation: atom -> None",
+                                                 f"DistributionBus {bus}.voltage_type: line-to-line -> line-to-ground")),
+    "GeometrySwitch gsw: not exported",
+    "MatrixImpedanceSwitch gsw: only in the export",
+]
+#: The switches alone: the matrix and sequence lines' differences without b6 and b7.
+MATRIX_LINE_DIFFERENCES = _without(SHELL_DIFFERENCES, *ON_B1_TO_B3)
 
 #: tie's CIM class is a LoadBreakSwitch, so it comes back a MatrixImpedanceSwitch.
 SWITCH_DIFFERENCES = [
-    *LINE_DIFFERENCES,
+    *MATRIX_LINE_DIFFERENCES,
     "MatrixImpedanceSwitch tie: only in the export",
     "SequenceImpedanceSwitch tie: not exported",
 ]
@@ -72,7 +83,7 @@ LOAD_DIFFERENCES = [
 
 #: cd is delta on ABC: nomU is line to line. CIM holds one state, the sections in (off's 0), and one control.
 CAPACITOR_DIFFERENCES = [
-    *LINE_DIFFERENCES,
+    *MATRIX_LINE_DIFFERENCES,
     "DistributionCapacitor cd.equipment.rated_voltage: 2.4018 kV -> 4.16004 kV",
     "DistributionCapacitor cd.equipment.voltage_type: line-to-ground -> line-to-line",
     "DistributionCapacitor cd.state: [True, True, True] -> [True]",
@@ -116,8 +127,16 @@ REGULATOR_DIFFERENCES = [
         f"DistributionTransformerEquipment reg3.windings[{winding}].tap_positions: [1.0, 1.0, 1.0] -> [1.0]")),
 ]
 
+#: The DER put their phases on b2 (primary on C), b4 and b5. Irradiance and the inverter and panel values CIM has no
+#: home for are fills, which the importer leaves untranscribed.
+DER_DIFFERENCES = [
+    *_without(SHELL_DIFFERENCES, *(f"DistributionBus {bus}.phases: [A, B, C] -> []" for bus in ("b2", "b4")),
+              "DistributionBus b5.phases: [S1, S2] -> []", "DistributionBus b5.rated_voltage: 0.12 kV -> 0.138564 kV"),
+    "DistributionBus b2.phases: [A, B, C] -> [C]",
+]
+
 FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_loads,
-            gdm_atoms.add_capacitors, gdm_atoms.add_transformers, gdm_atoms.add_regulators)
+            gdm_atoms.add_capacitors, gdm_atoms.add_transformers, gdm_atoms.add_regulators, gdm_atoms.add_der)
 
 
 def _export(system):
@@ -129,7 +148,7 @@ def _system(*families):
     system = gdm_atoms.shell_system()
     for add_family in families:
         add_family(system)
-    return gdm_atoms.without_geometry(system)
+    return system
 
 
 def test_shell_differences_are_the_listed_losses():
@@ -162,7 +181,6 @@ def test_capacitor_differences_are_the_listed_losses():
     assert gdm_differences(system, _export(system)) == sorted(CAPACITOR_DIFFERENCES)
 
 
-@gdm_atoms.needs_yn_getter
 def test_transformer_differences_are_the_listed_losses():
     system = _system(gdm_atoms.add_transformers)
     assert gdm_differences(system, _export(system)) == sorted(TRANSFORMER_DIFFERENCES)
@@ -173,7 +191,11 @@ def test_regulator_differences_are_the_listed_losses():
     assert gdm_differences(system, _export(system)) == sorted(REGULATOR_DIFFERENCES)
 
 
-@gdm_atoms.needs_yn_getter
+def test_der_differences_are_the_listed_losses():
+    system = _system(gdm_atoms.add_der)
+    assert gdm_differences(system, _export(system)) == sorted(DER_DIFFERENCES)
+
+
 def test_a_catalog_splits_by_tap():
     """Two transformers on one catalog at different taps: the second tap is <catalog>_2 (X3)."""
     system = _system(gdm_atoms.add_transformers)
@@ -186,8 +208,8 @@ def test_a_catalog_splits_by_tap():
     assert taps == {"t_ln": ("ln1", [1.025]), "t_ln2": ("ln1_2", [1.0])}
 
 
-def test_matrix_and_sequence_lines_reimport_unchanged():
-    """The CIM fixed point for the lines X2 exports; the line golden also holds geometry (X4)."""
+def test_lines_reimport_unchanged():
+    """The CIM fixed point for every line kind, geometry included."""
     system = _system(gdm_atoms.add_lines)
     assert diff_models(gdm_to_cim(system), gdm_to_cim(_export(system))) == []
 
@@ -204,13 +226,11 @@ def test_lines_share_one_catalog_per_ampacity():
     assert by_line == {"mtx3": ("mtx601", 730.0), "mtx3b": ("mtx601_2", 600.0), "mtx1": ("mtx1ph", 200.0)}
 
 
-@gdm_atoms.needs_yn_getter
 def test_a_second_export_changes_nothing():
     exported = _export(_system(*FAMILIES))
     assert gdm_differences(exported, _export(exported)) == []
 
 
-@gdm_atoms.needs_yn_getter
 def test_json_round_trip(tmp_path):
     exported = _export(_system(*FAMILIES))
     path = tmp_path / "export.json"

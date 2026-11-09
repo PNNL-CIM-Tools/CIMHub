@@ -38,6 +38,20 @@ ZIP_UNDER_EXPONENTS = (0.0, 0.0, 1.0, 0.0, 0.0, 1.0)
 REGULATOR_RESISTANCE = 0.01
 REGULATOR_REACTANCE = 0.01
 
+#: A PV panel's impedance (percent on its rating) has no CIM home (no PowerElectronicsConnection impedance).
+SOLAR_RESISTANCE = 0.0
+SOLAR_REACTANCE = 0.0
+
+#: An inverter's cut-in and cut-out (percent of its rating) and efficiency have no InverterInfo slot: it runs at any
+#: output and loses nothing, so the CIM p is the AC output as stored. Ramp limits are required but take None (none).
+INVERTER_CUTIN_PERCENT = 0.0
+INVERTER_CUTOUT_PERCENT = 0.0
+INVERTER_EFFICIENCY = 100.0
+INVERTER_RAMP_LIMIT = None
+
+#: A battery's idling efficiency has no CIM home (BatteryUnit idlingP is a power): no idling loss.
+BATTERY_IDLING_EFFICIENCY = 100.0
+
 #: Fields whose fill is placeholder protection, named in the WARNING (decision X5).
 PROTECTION_FIELDS = ("MatrixImpedanceFuseEquipment.tcc_curve", "MatrixImpedanceRecloser.controller")
 

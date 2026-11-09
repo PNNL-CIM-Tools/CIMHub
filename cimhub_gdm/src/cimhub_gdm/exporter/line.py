@@ -3,8 +3,8 @@
 The line's PerLengthImpedance picks the GDM class: PerLengthPhaseImpedance → MatrixImpedanceBranchEquipment,
 PerLengthSequenceImpedance → SequenceImpedanceBranchEquipment. GDM puts the line's ``ampacity`` on the catalog, so one
 GDM equipment is made per (catalog, normal current limit): ``<catalog>`` for the first limit seen, ``<catalog>_2``
-and on for others (X3). A line with a WireConfiguration is geometry, exported in X4, never as a computed matrix
-(CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md).
+and on for others (X3). A line with a WireConfiguration is a GeometryBranch on its wires and positions (``geometry.py``, X4), never a
+computed matrix (CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md).
 
 GDM holds capacitance, CIM susceptance: C = b / (2πf) at the importer's 60 Hz, the inverse of its ``susceptance``.
 """
@@ -20,10 +20,11 @@ from cimhub_core.getters.current_limits import get_current_limits
 from cimhub_core.getters.line_impedance import get_line_phase_impedance_matrix, get_line_sequence_impedance_per_length
 from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes
 from gdm.quantities import CapacitancePULength, ReactancePULength, ResistancePULength
-from gdm.systems.distribution.components import MatrixImpedanceBranch, SequenceImpedanceBranch
+from gdm.systems.distribution.components import GeometryBranch, MatrixImpedanceBranch, SequenceImpedanceBranch
 from gdm.systems.distribution.equipment import MatrixImpedanceBranchEquipment, SequenceImpedanceBranchEquipment
 from infrasys.quantities import Current, Distance
 
+from cimhub_gdm.exporter import geometry
 from cimhub_gdm.exporter.shared import ExportContext, containers, gdm_phases, in_service, shared_equipment
 from cimhub_gdm.exporter.slots import UUID, Slot
 from cimhub_gdm.importer.shared import FREQUENCY_HZ
@@ -54,6 +55,10 @@ SLOTS = {
         "equipment": Slot("written", "the SequenceImpedanceBranchEquipment for (PerLengthSequenceImpedance, "
                                      "ampacity)"),
     },
+    GeometryBranch: _LINE_SLOTS | {
+        "equipment": Slot("written", "the GeometryBranchEquipment for (WireConfiguration, the line's positions and "
+                                     "ratings) (geometry.py)"),
+    },
     MatrixImpedanceBranchEquipment: {
         "uuid": UUID,
         "name": Slot("written", "the catalog's name; <catalog>_<n> for its n-th ampacity (X3)"),
@@ -75,27 +80,31 @@ SLOTS = {
         "zero_seq_capacitance": Slot("rule", "b0 (S/km) / 2πf; unset is zero; a non-zero g0 raises"),
         "ampacity": _AMPACITY,
     },
+    **geometry.SLOTS,
 }
 
 
 def export(line: cim.ACLineSegment, context: ExportContext):
-    if line.WireConfiguration is not None:
-        raise ValueError(f"no GDM export yet for geometry lines: {describe(line)} has a WireConfiguration "
-                         "(EXPORT_PLAN.md X4)")
     code = line.PerLengthImpedance
-    if isinstance(code, cim.PerLengthPhaseImpedance):
-        component_class = MatrixImpedanceBranch
+    phases = get_conductor_phases(line)
+    if line.WireConfiguration is not None:
+        if code is not None:
+            raise ValueError(f"{describe(line)}: has both a WireConfiguration and a PerLengthImpedance")
+        component_class, equipment = GeometryBranch, geometry.geometry_equipment(line, len(phases), context)
+    elif isinstance(code, cim.PerLengthPhaseImpedance):
+        component_class, equipment = MatrixImpedanceBranch, catalog(line, code, context)
     elif isinstance(code, cim.PerLengthSequenceImpedance):
-        component_class = SequenceImpedanceBranch
+        component_class, equipment = SequenceImpedanceBranch, catalog(line, code, context)
     else:
-        raise ValueError(f"{describe(line)}: has no PerLengthImpedance; GDM lines are per length")
+        raise ValueError(f"{describe(line)}: has no PerLengthImpedance or WireConfiguration; GDM lines are per "
+                         "length")
     node1, node2 = get_terminal_nodes(line)
     return component_class(
         name=context.names.name(line, component_class),
         buses=[context.gdm(node1), context.gdm(node2)],
-        phases=gdm_phases(get_conductor_phases(line), line),
+        phases=gdm_phases(phases, line),
         length=Distance(required_qty(line, "length", "m"), "meter"),
-        equipment=catalog(line, code, context),
+        equipment=equipment,
         in_service=in_service(line),
         **containers(line.EquipmentContainer, context),
     )

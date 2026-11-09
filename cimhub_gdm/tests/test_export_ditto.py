@@ -6,6 +6,10 @@ original is left out of both:
 - t_ln: ditto rejects ln1's 1-based couplings and drops an instance tap (its Transformer has no Tap_wdg). The export
   writes 0-based couplings and puts the tap on the catalog (X3), so it is in the export-only test.
 
+The DER are left out of the comparison, and checked on their own: ditto writes no PV ``active_power`` (OpenDSS
+makes Pmpp × Irradiance, and the atoms' irradiance is not their output's share), writes a PV's kV from its bus
+rating, line to line taken as line to ground, and has no battery writer at all.
+
 Capacitors are left out of the comparison: ditto reads a bus rating as line to ground in its capacitor writer whatever
 its ``voltage_type``, so the original's line-to-line buses put its capacitors at √3 times their voltage. The export's
 line-to-ground buses (X6) do not. The atoms' regulators can't be compared: ditto writes no RegControl without line
@@ -46,7 +50,7 @@ def _system(*families, unwritten=DITTO_UNWRITTEN):
         add_family(system)
     for component_class, name in unwritten:
         _remove(system, system.get_component(component_class, name))
-    return gdm_atoms.without_geometry(system)
+    return system
 
 
 def _export(system):
@@ -64,7 +68,6 @@ def _solve(system, folder) -> dict[str, float]:
     return dict(zip(opendssdirect.Circuit.AllNodeNames(), opendssdirect.Circuit.AllBusMagPu()))
 
 
-@gdm_atoms.needs_yn_getter
 def test_the_export_solves_like_its_original(tmp_path):
     original = _solve(_system(*FAMILIES, unwritten=ORIGINAL_UNWRITTEN), tmp_path / "original")
     exported = _solve(_export(_system(*FAMILIES, unwritten=ORIGINAL_UNWRITTEN)), tmp_path / "exported")
@@ -72,7 +75,6 @@ def test_the_export_solves_like_its_original(tmp_path):
     assert exported == pytest.approx(original, abs=VOLTAGE_TOL_PU)
 
 
-@gdm_atoms.needs_yn_getter
 def test_the_export_with_capacitors_and_t_ln_solves(tmp_path):
     voltages = _solve(_export(_system(*FAMILIES, gdm_atoms.add_capacitors)), tmp_path / "exported")
     assert all(0.9 < voltages[f"b1.{conductor}"] < 1.1 for conductor in (1, 2, 3))
@@ -86,6 +88,22 @@ def test_an_exported_regulator_bank_holds_its_band(tmp_path):
     base = 4160 / math.sqrt(3)  # b3's line-to-ground volts at 1 pu
     low, high = (121 * 20 / base, 123 * 20 / base)
     assert all(low < voltages[f"b3.{conductor}"] < high for conductor in (1, 2, 3))
+
+
+def test_an_exported_pv_makes_its_cim_output(tmp_path):
+    """Each PV's OpenDSS output is the p and q CIM holds (generation sign), through the irradiance rule."""
+    system = _system(gdm_atoms.add_source, gdm_atoms.add_lines, gdm_atoms.add_transformers, gdm_atoms.add_der,
+                     unwritten=((gdm_atoms.DistributionTransformer, "t_ln"),))
+    expected = {f"{pv.name}.{kind}": getattr(pv, f"{kind}_power").to(unit).magnitude
+                for pv in system.get_components(gdm_atoms.DistributionSolar)
+                for kind, unit in (("active", "kilowatt"), ("reactive", "kilovar"))}
+    _solve(_export(system), tmp_path / "exported")
+    made = {}
+    for name in opendssdirect.PVsystems.AllNames():
+        opendssdirect.Circuit.SetActiveElement(f"PVSystem.{name}")
+        powers = opendssdirect.CktElement.Powers()
+        made[f"{name}.active"], made[f"{name}.reactive"] = -sum(powers[0::2]), -sum(powers[1::2])
+    assert made == pytest.approx(expected, abs=1e-6)
 
 
 @pytest.mark.xfail(reason="ditto 0.1.8 writes no LineCode for CircuitBreaker or Disconnector equipment",

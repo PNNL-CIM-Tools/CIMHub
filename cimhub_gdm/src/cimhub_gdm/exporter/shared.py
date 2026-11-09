@@ -92,7 +92,7 @@ def shared_equipment(context: ExportContext, catalog, equipment):
     made per (catalog, values): the first is named ``<catalog>``, each later one ``<catalog>_<n>``, in export order.
     ``equipment`` is built with any name; an equal one already made is returned instead.
     """
-    key = (catalog.uri(), _values(equipment))
+    key = (catalog.uri(), shared_values(equipment))
     if key not in context.catalogs:
         variant = 1 + sum(1 for catalog_uri, _ in context.catalogs if catalog_uri == catalog.uri())
         suffix = "" if variant == 1 else f"_{variant}"
@@ -101,7 +101,7 @@ def shared_equipment(context: ExportContext, catalog, equipment):
     return context.catalogs[key]
 
 
-def _values(equipment) -> str:
+def shared_values(equipment) -> str:
     """Every field of ``equipment`` but its name and the uuids, as comparable text."""
     def without_uuids(value):
         if isinstance(value, dict):

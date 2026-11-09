@@ -13,9 +13,9 @@
   - a 1-phase wye coil lists no N;
   - each regulator unit is its own GDM regulator;
   - unset line drop R and X are 0 V.
-
-  The catalog-transformer tests are conditional xfails until rc_1's transformer getter agrees template Y with
-  instance Yn (the DSS S6c fix, in progress); a scratch patch of the same semantics passes them all.
+- X4, part one (geometry lines with bare and concentric wire; solar and batteries) built 2026-11-09, at the user's
+  "continue to next phase", after rc_1 (S6d) was merged. Reactors wait for S6e's `get_series_compensator` (X11).
+  ditto drove one rule: a PV's irradiance is its output's share of the panel's rating, not a neutral fill.
 
 One section per phase ([`EXPORT_PLAN.md`](EXPORT_PLAN.md) §2). The slot tables are generated from each module's
 `SLOTS` (`exporter/slots.py` `slots_table`), and a test fails on a GDM field with no slot.
@@ -382,8 +382,24 @@ Decision X5, the importer's decision 14 inverted:
 - **Catalogs (X3).** GDM puts the line's `ampacity` on the catalog, so one GDM equipment is made per (catalog, the
   line's normal current limit from `get_current_limits`). The first value seen is named `<catalog>`, and each later
   one `<catalog>_2`, `_3` in export order: no pre-pass. A line with no normal limit raises.
-- **Not here.** A line with a WireConfiguration raises `no GDM export yet for geometry lines`: X4 exports it as
-  native geometry, never a computed matrix. A line with no PerLengthImpedance (lumped r, x only) raises.
+- **Geometry (X4, `exporter/geometry.py`).** A line with a WireConfiguration is a GeometryBranch on a
+  GeometryBranchEquipment: native geometry, never a computed matrix (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`).
+  - The positions are the line's (`get_line_conductor_xy`, m): the spacing raised by the line's `spacingYOffset`.
+    So one GDM equipment is made per (configuration, positions, conductors), named `<configuration>`, then
+    `<configuration>_<n>`.
+  - The conductors are the configuration's wires by sequence number (`get_configuration_wires`, `get_wire_info`).
+    An OverheadWireInfo becomes a BareConductorEquipment and a ConcentricNeutralCableInfo a ConcentricCableEquipment,
+    each shared per (wire, values). A TapeShieldCableInfo raises: GDM has no tape-shield cable (IEEE13_Assets has
+    one). A configuration that mixes bare wires and cables raises, because GDM's conductors are one kind.
+  - **Ratings.** The importer puts a geometry line's first conductor's ratings on the line (the DSS engine's rule).
+    So the first conductor carries the line's own normal and emergency limits where it has them, and every other
+    conductor its wire's (its normal limit, else `ratedCurrent`). An unset emergency rating is 1.5 × normal,
+    OpenDSS's `emergamps`. A line whose limits differ from its first wire's splits that wire's equipment.
+  - A cable's `rated_voltage` is its `ratedVoltage` (read with `get_qty`: `get_wire_info` has none, and DSS has no
+    such field). Unset, it is the line's BaseVoltage, line to line.
+  - Every other wire value CIM can hold (radius, gmr, rAC25, rDC20, the cable's construction) raises when unset.
+- A line with neither a PerLengthImpedance nor a WireConfiguration (lumped r, x only) raises, and so does one with
+  both.
 - `length` is `length` in m.
 
 The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_type` has no keyword for it (B22 b,
@@ -418,6 +434,20 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 | phases | written | get_conductor_phases: ACLineSegmentPhase order, the matrix's row order |
 | equipment | written | the SequenceImpedanceBranchEquipment for (PerLengthSequenceImpedance, ampacity) |
 
+**GeometryBranch**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | Names (X2) |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| buses | written | get_terminal_nodes |
+| length | written | required_qty(length, 'm') |
+| phases | written | get_conductor_phases: ACLineSegmentPhase order, the matrix's row order |
+| equipment | written | the GeometryBranchEquipment for (WireConfiguration, the line's positions and ratings) (geometry.py) |
+
 **MatrixImpedanceBranchEquipment**
 
 | GDM field | kind | from / why |
@@ -443,6 +473,50 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 | pos_seq_capacitance | rule | b (S/km) / 2πf; unset is zero; a non-zero g raises |
 | zero_seq_capacitance | rule | b0 (S/km) / 2πf; unset is zero; a non-zero g0 raises |
 | ampacity | written | get_current_limits(line).normal (A) of the lines on it; unset raises |
+
+**GeometryBranchEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the WireConfiguration's name; <configuration>_<n> for its n-th values (X3) |
+| conductors | written | get_configuration_wires, by sequence number: one kind (bare or concentric), a tape-shield cable raises |
+| horizontal_positions | written | get_line_conductor_xy x (m) |
+| vertical_positions | written | get_line_conductor_xy y (m): the spacing raised by the line's spacingYOffset |
+| insulation | unset | untranscribed on import: CIM has no permittivity; GDM's default (air) |
+
+**BareConductorEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the OverheadWireInfo's name; <wire>_<n> for its n-th values (X3) |
+| conductor_diameter | written | 2 × get_wire_info.radius (m); unset raises |
+| conductor_gmr | written | get_wire_info.gmr (m); unset raises |
+| ampacity | rule | the first conductor: the line's normal limit (get_current_limits), else its wire's; the others: the wire's normal limit, else ratedCurrent (get_wire_info); none raises |
+| ac_resistance | written | get_wire_info.r_ac25 (ohm/m); unset raises |
+| emergency_ampacity | rule | the first conductor: the line's emergency limit, else its wire's; the others: the wire's; unset is 1.5 × ampacity (OpenDSS's emergamps) |
+| dc_resistance | written | get_wire_info.r_dc20 (ohm/m); unset raises |
+
+**ConcentricCableEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the ConcentricNeutralCableInfo's name; <cable>_<n> for its n-th values (X3) |
+| strand_diameter | written | 2 × neutral_strand_radius (m); unset raises |
+| conductor_diameter | written | 2 × radius (m); unset raises |
+| cable_diameter | written | diameter_over_jacket (m); unset raises |
+| insulation_thickness | written | insulation_thickness (m); unset raises |
+| insulation_diameter | written | diameter_over_insulation (m); unset raises |
+| ampacity | rule | the first conductor: the line's normal limit (get_current_limits), else its wire's; the others: the wire's normal limit, else ratedCurrent (get_wire_info); none raises |
+| conductor_gmr | written | gmr (m); unset raises |
+| strand_gmr | written | neutral_strand_gmr (m); unset raises |
+| phase_ac_resistance | written | r_ac25 (ohm/m); unset raises |
+| strand_ac_resistance | written | neutral_strand_r_dc20 (ohm/m), CIM's one strand resistance; unset raises |
+| num_neutral_strands | written | neutral_strand_count; unset raises |
+| rated_voltage | rule | the cable's ratedVoltage (kV; get_wire_info has none); unset is the line's BaseVoltage, line to line |
+| insulation | unset | untranscribed on import: CIM has no permittivity; GDM's default (PE) |
 
 ## Loads
 
@@ -792,18 +866,120 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 | controlled_bus | written | the bus of the monitored Terminal |
 | controlled_phase | rule | monitoredPhase; unset is the regulator's phase |
 
+## DER
+
+X4, X7, X8. `PowerElectronicsConnection` → `DistributionSolar` or `DistributionBattery`, picked by its one
+PowerElectronicsUnit (`get_inverter_unit`). A PhotoVoltaicUnit gives a solar and a BatteryUnit a battery; another unit
+raises.
+- **Output.** GDM holds one output per DER: the connection's total p and q in the generation sign
+  (`get_der_output(sign='generation')`, kW and kVAr), on its phase conductors.
+- **Inverter.** `rated_apparent_power` is the connection's ratedS (`get_inverter_rating`). Its InverterInfo shares
+  it (X3); without one it is the DER's own, named after it. An unnamed InverterInfo under name source `name` keeps
+  GDM's default name `''` and the uuid of its `uri()`, so the importer (B18) names it alike on every export.
+  Cut-in, cut-out, efficiency and the ramp limits have no InverterInfo slot: fills (0 %, 0 %, 100 %, None).
+- **Rating voltage.** The equipment's `rated_voltage` is the connection's ratedU in the importer's `system_voltage`
+  form, inverted. It is line to line on three phases, and otherwise line to ground: half on a split-phase leg, and
+  ratedU / √3 on any other phase.
+- **Solar.** `rated_power` is the PhotoVoltaicUnit's maxP; unset raises. The panel's resistance and reactance are
+  fills (0 %). **Irradiance is a rule, not a fill.** ditto 0.1.8 writes no `active_power`, and OpenDSS makes
+  `Pmpp × Irradiance`. So irradiance is p / maxP × 1 kW/m², and the PV makes CIM's p (`test_export_ditto.py`).
+- **Battery.** `rated_power` is the BatteryUnit's maxP, with minP unset or −maxP (GDM has one rating both ways);
+  otherwise it raises. ratedE and the two efficiencies are required; idling efficiency is a fill (100 %: idlingP is
+  a power). The unit's BatteryInfo shares the equipment; without one it is the DER's own. ditto 0.1.8 has no battery
+  writer, so an exported battery does not reach OpenDSS.
+- `controller` is None: inverter controllers are not in CIM (X8).
+
+**DistributionSolar**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | Names (X2) |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| bus | written | the bus of get_terminal_nodes |
+| phases | written | get_der_output.phases: the phase conductors, no neutral (balanced ABC on none, G3) |
+| active_power | written | get_der_output(sign='generation').total p (kW) |
+| reactive_power | written | get_der_output(sign='generation').total q (kVAr) |
+| controller | unset | inverter controllers are not in CIM (PENDING on import, X8) |
+| inverter | written | the InverterEquipment of the connection's InverterInfo (shared, X3), else the DER's own |
+| irradiance | rule | p / the panel's maxP × 1 kW/m² (standard test conditions): what OpenDSS makes of it (Pmpp × Irradiance) is CIM's p; untranscribed on import |
+| equipment | written | a SolarEquipment made for this DER |
+
+**DistributionBattery**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | Names (X2) |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| bus | written | the bus of get_terminal_nodes |
+| phases | written | get_der_output.phases: the phase conductors, no neutral (balanced ABC on none, G3) |
+| active_power | written | get_der_output(sign='generation').total p (kW) |
+| reactive_power | written | get_der_output(sign='generation').total q (kVAr) |
+| controller | unset | inverter controllers are not in CIM (PENDING on import, X8) |
+| inverter | written | the InverterEquipment of the connection's InverterInfo (shared, X3), else the DER's own |
+| equipment | written | the BatteryEquipment of the unit's BatteryInfo (shared, X3), else the DER's own |
+
+**SolarEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the DER's name (X2) |
+| rated_power | written | get_photovoltaic_unit(sign='generation').max_p (kW); unset raises |
+| power_temp_curve | unset | untranscribed on import: until the Curve builder (B12) |
+| resistance | fill | fills.SOLAR_RESISTANCE, 0 % (§3.1) |
+| reactance | fill | fills.SOLAR_REACTANCE, 0 % (§3.1) |
+| rated_voltage | rule | the connection's ratedU (get_inverter_rating), line to line on three phases, else line to ground: / 2 on a split-phase leg, / √3 otherwise (the importer's system_voltage inverted) |
+| voltage_type | rule | line-to-line on A, B and C, else line-to-ground |
+
+**BatteryEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the BatteryInfo's name (X2); else the DER's |
+| rated_energy | written | get_battery_unit.rated_e (kWh); unset raises |
+| rated_power | rule | get_battery_unit(sign='generation').max_p (kW), with min_p unset or -max_p (GDM has one rating both ways); else raises |
+| charging_efficiency | written | get_battery_unit.charging_efficiency (%); unset raises |
+| discharging_efficiency | written | get_battery_unit.discharging_efficiency (%); unset raises |
+| idling_efficiency | fill | fills.BATTERY_IDLING_EFFICIENCY, 100 % (§3.1) |
+| rated_voltage | rule | the connection's ratedU (get_inverter_rating), line to line on three phases, else line to ground: / 2 on a split-phase leg, / √3 otherwise (the importer's system_voltage inverted) |
+| voltage_type | rule | line-to-line on A, B and C, else line-to-ground |
+
+**InverterEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | rule | GDM makes a fresh one; an unnamed InverterInfo under name source 'name': its uri(), so the importer names it alike every time (B18) |
+| name | written | the InverterInfo's name (X2), '' when it has none under name source 'name' (GDM's default, the importer's inverse); else the DER's |
+| rated_apparent_power | written | get_inverter_rating.rated_s (kVA) |
+| rise_limit | fill | fills.INVERTER_RAMP_LIMIT, None (§3.1) |
+| fall_limit | fill | fills.INVERTER_RAMP_LIMIT, None (§3.1) |
+| cutout_percent | fill | fills.INVERTER_CUTOUT_PERCENT, 0 % (§3.1) |
+| cutin_percent | fill | fills.INVERTER_CUTIN_PERCENT, 0 % (§3.1) |
+| dc_to_ac_efficiency | fill | fills.INVERTER_EFFICIENCY, 100 % (§3.1) |
+| eff_curve | unset | untranscribed on import: until the Curve builder (B12) |
+
 ## Tests
 
 - `test_export_round_trip.py`: every importer golden is loaded, exported with CIM names, imported again, and must
   match itself. The exceptions:
-  - Families not exported yet must raise `no GDM export yet`. The line golden still raises, because it holds geometry
-    lines (X4). The `EXPORTED` set grows phase by phase.
+  - Families not exported yet must raise `no GDM export yet`: the reactor golden, until S6e. The `EXPORTED` set
+    grows phase by phase. The reference system (`e2e`) is in it.
+  - Each reimport is named after its golden's `Model` header, which seeds the hashed PhaseImpedanceData
+    identifiers.
+  - The DER golden lists the unnamed inverter's mRID: the importer names it by the exported uuid (B18), not the
+    atom's pinned one.
   - The regulator golden lists its differences (`CIM_DIFFERENCES`). Its catalog TransformerTankConfigurations, which
     no regulator links, are rebuilt from the per-unit equipment and the impedance fill.
 - `test_export_gdm_level.py`: the export against the atom system it came from (`gdm_compare.gdm_differences`), one
-  test per family, every difference listed with its reason. The X2 tests drop the geometry lines and catalogs
-  (`gdm_atoms.without_geometry`). It also checks:
-  - the matrix and sequence lines' CIM fixed point;
+  test per family, every difference listed with its reason. It also checks:
+  - the lines' CIM fixed point, geometry included;
   - a split of a catalog by ampacity, and of a transformer catalog by tap;
   - that a second export changes nothing;
   - the JSON round trip;
@@ -811,7 +987,9 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 - `test_export_framework.py`:
   - slot coverage, the naming switch, a name clash, the system name, unset source impedance, `phase_angle`;
   - the fills WARNING, the placeholder names, the switch controller rule;
-  - fail-fast: a fuse's differing normal state, a Sectionaliser, a geometry line, a control on another terminal;
+  - fail-fast: a fuse's differing normal state, a Sectionaliser, a control on another terminal, a battery rated
+    differently each way;
+  - a geometry line's first conductor carrying the line's ratings, the others their wire's;
   - a disabled control, and the capacitor targets;
   - a transformer under tap control, a bank of tanks, a 3-phase regulator and a regulator without an enabled control
     (all raise);
@@ -820,8 +998,10 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
   - It writes, compiles and solves.
   - Without capacitors, it solves to the original's node voltages within 1e-4 pu. ditto misrates the original's
     capacitors, whose buses are line to line.
-  - The comparison includes the transformers, but not t_ln: ditto can't write the original's 1-based couplings or
-    its instance tap.
+  - The comparison includes the geometry lines and the transformers, but not t_ln: ditto can't write the original's
+    1-based couplings or its instance tap. It leaves out the DER: ditto writes the original's PV kV from its line to
+    line bus as if line to ground, and the atoms' irradiance is not their output's share.
+  - Each exported PV makes the p and q CIM holds.
   - With capacitors and t_ln, it still solves.
   - An exported regulator bank (rb alone) holds its band, 121–123 V on its PT.
   - A strict xfail pins ditto 0.1.8's missing CircuitBreaker and Disconnector equipment writers. ditto writes their

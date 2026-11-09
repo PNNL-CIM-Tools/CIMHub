@@ -14,13 +14,25 @@ from cimhub_core.base import FormatExporter
 from cimhub_core.names import export_name
 from gdm.systems.distribution import DistributionSystem
 
-from cimhub_gdm.exporter import bus, capacitor, fills, line, load, regulator, shell, source, switch, transformer
+from cimhub_gdm.exporter import (
+    bus,
+    capacitor,
+    der,
+    fills,
+    line,
+    load,
+    regulator,
+    shell,
+    source,
+    switch,
+    transformer,
+)
 from cimhub_gdm.exporter.naming import Names
 from cimhub_gdm.exporter.shared import ExportContext
 from cimhub_gdm.gdm_writer import write_gdm
 
 #: Modules in export order; each has ``CIM_CLASSES``, ``SLOTS`` and ``export(obj, context)`` -> one GDM component.
-EXPORT_ORDER = (shell, bus, source, switch, line, transformer, regulator, load, capacitor)
+EXPORT_ORDER = (shell, bus, source, switch, line, transformer, regulator, load, capacitor, der)
 
 __all__ = ["EXPORT_ORDER", "GdmExporter", "cim_to_gdm"]
 
