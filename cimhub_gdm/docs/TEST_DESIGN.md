@@ -24,6 +24,11 @@ tests/test_shared_import.py                shared.py units
 tests/test_coverage_import.py              class coverage, time-series drop, name clashes
 tests/test_reference_import.py             the e2e reference system (gdm_atoms.reference_system())
 tests/test_xml_round_trip.py               every atom family in one system: write_xml, reload, diff_models
+tests/gdm_compare.py                       gdm_differences(original, exported): the GDM-level comparison (exporter)
+tests/test_export_round_trip.py           every golden: load, export (CIM names), reimport, same golden
+tests/test_export_gdm_level.py            export vs the atom system: only the listed losses; JSON round trip
+tests/test_export_framework.py            exporter slot coverage, naming, system name, fills, fail-fast
+tests/test_export_ditto.py                export → ditto OpenDSS writer → OpenDSS: compiles, solves like the original
 ```
 
 - **Every golden master has the same header** (`Profile`, `Authority` = the CIMHub authority, `Model` = `atom`), equal

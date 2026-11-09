@@ -13,7 +13,7 @@ from cimbuilder.network import rehash_mrid
 from cimhub_core.cimtbl import Field, lookup, mrid
 from cimprofiles.identity import as_uuid
 from cimtables.units import Qty
-from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
+from gdm.systems.distribution.enums import ConnectionType, Phase, VoltageTypes
 
 #: CIM model authority for every GDM import (plan D7). The model name is the GDM system's name.
 AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"

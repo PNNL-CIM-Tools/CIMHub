@@ -26,7 +26,13 @@ Time series are dropped with one warning. Requires the CIM-Builder `TransformerT
 The output is cim18v17 only, and survives a cim18v17 XML round trip unchanged. An IEEE13-like reference system
 (`tests/gdm_atoms.py`, `reference_system()`) is checked end to end against a reviewed golden. GDM fields with no
 cim18v17 home are untranscribed (each listed in its class's `FIELDS`, logged at `DEBUG`); the gaps are in
-[`docs/GDM_MAPPING.md`](docs/GDM_MAPPING.md) §10. There is no CIM → GDM exporter yet: it is rewritten on the core
-getters in a later wave, so there is no GDM round trip until then.
+[`docs/GDM_MAPPING.md`](docs/GDM_MAPPING.md) §10.
+
+**Exporter (in progress, branch `gdm-exporter`).** `GdmExporter().to_model(network)` returns a GDM
+`DistributionSystem`, reading every value through the core getters. `cim_to_gdm(network, path)` writes it as GDM
+JSON (`write_gdm`). It exports feeders, substations, buses, sources, switches, fuses, reclosers, matrix and
+sequence lines, loads and capacitors so far, and the result writes and solves through ditto's OpenDSS writer.
+Transformers, regulators, DER, reactors and geometry lines raise `no GDM export yet`.
+Plan: [`docs/EXPORT_PLAN.md`](docs/EXPORT_PLAN.md); spec: [`docs/EXPORT_MAPPING.md`](docs/EXPORT_MAPPING.md).
 
 The plan is [`docs/GDM_REWRITE_PLAN.md`](docs/GDM_REWRITE_PLAN.md).

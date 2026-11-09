@@ -23,7 +23,7 @@ from cimbuilder.object_builder import (
 )
 from cimhub_core.cimtbl import Field
 from cimtables.units import Qty
-from gdm.distribution.enums import Phase
+from gdm.systems.distribution.enums import Phase
 
 from cimhub_gdm.importer.shared import (
     POWER_UNIT_ENDINGS,

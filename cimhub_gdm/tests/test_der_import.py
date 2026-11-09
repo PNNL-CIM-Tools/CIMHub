@@ -6,10 +6,10 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import der
-from gdm.distribution.components import DistributionBattery, DistributionSolar
-from gdm.distribution.controllers import InverterController
-from gdm.distribution.enums import Phase
-from gdm.distribution.equipment import BatteryEquipment, InverterEquipment, SolarEquipment
+from gdm.systems.distribution.components import DistributionBattery, DistributionSolar
+from gdm.systems.distribution.controllers import InverterController
+from gdm.systems.distribution.enums import Phase
+from gdm.systems.distribution.equipment import BatteryEquipment, InverterEquipment, SolarEquipment
 from gdm.quantities import ActivePower, ReactivePower
 
 from cimhub_gdm import gdm_to_cim

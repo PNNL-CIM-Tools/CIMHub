@@ -16,7 +16,7 @@ from cimbuilder.object_builder import (
 )
 from cimhub_core.cimtbl import Field, lookup
 from cimtables.units import Qty
-from gdm.distribution.equipment import (
+from gdm.systems.distribution.equipment import (
     CircuitBreakerEquipment,
     DisconnectorEquipment,
     GeometryBranchEquipment,

@@ -4,15 +4,15 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import switch
-from gdm.distribution.components import (
+from gdm.systems.distribution.components import (
     MatrixImpedanceFuse,
     MatrixImpedanceRecloser,
     MatrixImpedanceSwitch,
     SequenceImpedanceSwitch,
 )
-from gdm.distribution.controllers import DistributionSwitchController
-from gdm.distribution.enums import Phase
-from gdm.distribution.equipment import (
+from gdm.systems.distribution.controllers import DistributionSwitchController
+from gdm.systems.distribution.enums import Phase
+from gdm.systems.distribution.equipment import (
     CircuitBreakerEquipment,
     DisconnectorEquipment,
     EarthingSwitchEquipment,

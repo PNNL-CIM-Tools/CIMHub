@@ -5,7 +5,7 @@ from __future__ import annotations
 from cimbuilder.network import new_feeder_model
 from cimbuilder.object_builder import FeederBuilder, SubstationBuilder
 from cimhub_core.cimtbl import Field, mrid
-from gdm.distribution.components import DistributionFeeder, DistributionSubstation
+from gdm.systems.distribution.components import DistributionFeeder, DistributionSubstation
 
 from cimhub_gdm.importer.shared import (
     AUTHORITY,

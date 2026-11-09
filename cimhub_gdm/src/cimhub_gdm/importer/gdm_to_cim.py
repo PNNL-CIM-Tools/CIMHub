@@ -11,10 +11,10 @@ import logging
 
 from cimgraph.models import FeederModel
 from cimhub_core.base import FormatImporter
-from gdm.distribution import common as M
-from gdm.distribution import components as C
-from gdm.distribution import controllers as K
-from gdm.distribution import equipment as E
+from gdm.systems.distribution import common as M
+from gdm.systems.distribution import components as C
+from gdm.systems.distribution import controllers as K
+from gdm.systems.distribution import equipment as E
 from infrasys import Component
 
 from cimhub_gdm.importer import bus, capacitor, der, line, load, reactor, regulator, source, switch, transformer
