@@ -15,6 +15,7 @@ from cimhub_core.getters.der import (
     get_der_output,
     get_inverter_rating,
     get_inverter_unit,
+    get_inverter_units,
     get_machine_impedance,
     get_machine_rating,
     get_photovoltaic_unit,
@@ -134,6 +135,57 @@ def test_inverter_unit():
     inverter.PowerElectronicsUnit = []
     with pytest.raises(ValueError, match="'pv_p1': has 0 PowerElectronicsUnits; one is read"):
         get_inverter_unit(inverter)
+
+
+# get_inverter_units -----------------------------------------------------------------------------------------------
+
+
+def _shares(inverter, sign="generation"):
+    return [(share.unit.mRID, share.share, share.p, share.q)
+            for share in get_inverter_units(inverter, "kW", "kVAr", sign=sign)]
+
+
+def test_one_unit_is_the_whole_connection():
+    assert _shares(_inverter("pv_p1")) == [("pv_p1_unit", 1.0, 240.0, 0.0)]
+
+
+def test_hybrid_units_share_by_max_p_and_keep_their_own_p():
+    shares = _shares(_inverter("hybrid_h1"))
+    assert [mrid for mrid, *_ in shares] == ["hybrid_h1_pv", "hybrid_h1_bat"]
+    assert [values for _, *values in shares] == [pytest.approx([2 / 3, 80.0, 10.0]), pytest.approx([1 / 3, -20.0, 5.0])]
+    load = _shares(_inverter("hybrid_h1"), "load")
+    assert [values[1:] for _, *values in load] == [pytest.approx([-80.0, -10.0]), pytest.approx([20.0, -5.0])]
+
+
+def test_units_without_p_take_their_share_of_it():
+    inverter = _inverter("hybrid_h1")
+    for unit in inverter.PowerElectronicsUnit:
+        unit.p = None
+    assert [p for _, _, p, _ in _shares(inverter)] == pytest.approx([40.0, 20.0])
+
+
+def test_units_p_must_be_the_connections():
+    inverter = _inverter("hybrid_h1")
+    inverter.PowerElectronicsUnit[1].p = cim.ActivePower(10, "kW")
+    with pytest.raises(ValueError, match="'hybrid_h1': its units' p sum to"):
+        get_inverter_units(inverter, sign="load")
+    inverter.PowerElectronicsUnit[1].p = None
+    with pytest.raises(ValueError, match="some of its units have p and some do not"):
+        get_inverter_units(inverter, sign="load")
+    single = _inverter("pv_p1")
+    single.PowerElectronicsUnit[0].p = cim.ActivePower(-100, "kW")
+    with pytest.raises(ValueError, match="'pv_p1': its units' p sum to -100000"):
+        get_inverter_units(single, sign="load")
+
+
+def test_shared_units_need_max_p():
+    inverter = _inverter("hybrid_h1")
+    inverter.PowerElectronicsUnit[0].maxP = None
+    with pytest.raises(ValueError, match=r"its units' maxP \[None, 50.0\]; sharing it"):
+        get_inverter_units(inverter, "kW", sign="load")
+    inverter.PowerElectronicsUnit = []
+    with pytest.raises(ValueError, match="has no PowerElectronicsUnit"):
+        get_inverter_units(inverter, sign="load")
 
 
 # get_photovoltaic_unit, get_battery_unit ---------------------------------------------------------------------------

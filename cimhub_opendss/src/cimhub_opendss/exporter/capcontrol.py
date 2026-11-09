@@ -2,8 +2,8 @@
 
 The importer's band inverted: ON and OFF = targetValue -+ targetDeadband / 2 (``on_off_from_band``), ON below OFF
 for voltage and time and above it for current and kvar, then on the relay's side: voltage / PTratio, current /
-CTratio, kvar in kvar, time in hours. A TapChangerControl is RegControl's; every other RegulatingControl must
-regulate one LinearShuntCompensator.
+CTratio, kvar in kvar, time in hours. A TapChangerControl is RegControl's and a SynchronousMachine's control its
+Generator's (model 3); every other RegulatingControl must regulate one LinearShuntCompensator.
 """
 
 from __future__ import annotations
@@ -54,8 +54,15 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 
 
 def export(context) -> list[schema.Capcontrol]:
-    """One CapControl per RegulatingControl (a TapChangerControl is another class, RegControl's)."""
-    return [_capcontrol(control, context.names) for control in context.objects(*CIM_CLASSES)]
+    """One CapControl per RegulatingControl (a TapChangerControl is another class, RegControl's), except a
+    machine's own, which its Generator carries (model 3)."""
+    return [_capcontrol(control, context.names) for control in context.objects(*CIM_CLASSES)
+            if not _machines_own(control)]
+
+
+def _machines_own(control: cim.RegulatingControl) -> bool:
+    regulated = control.RegulatingCondEq
+    return len(regulated) == 1 and isinstance(regulated[0], cim.SynchronousMachine)
 
 
 def _capcontrol(control: cim.RegulatingControl, names: Names) -> schema.Capcontrol:

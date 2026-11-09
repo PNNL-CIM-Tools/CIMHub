@@ -1,5 +1,6 @@
-"""A one-terminal device's DSS connection: ``bus1``, ``phases``, ``conn`` and a load's ``kV``, shared by Load and
-Capacitor (and the DER of S6e) (``EXPORT_MAPPING.md#s6d-loads-capacitors-capcontrol``).
+"""A one-terminal device's DSS connection: ``bus1``, ``phases``, ``conn``, a load's ``kV`` from its bus and a DER's
+from its ``ratedU``; shared by Load, Capacitor, PVSystem, Storage and Generator
+(``EXPORT_MAPPING.md#s6d-loads-capacitors-capcontrol``, ``#s6e-der-and-reactors``).
 
 The importer's shared phase rule inverted: the phase conductors go on the bus (1/2/3 for A/B/C, 1/2 for s1/s2), and a
 wye device's neutral is the engine's node 0, so it must be grounded. A delta device across two conductors is DSS's
@@ -15,6 +16,7 @@ import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.getters import describe
 from cimhub_core.getters.base_voltage import SPLIT_PHASE, get_base_voltage
+from cimhub_core.getters.phase_power import SUM_REL_TOL, PhasePower
 from cimhub_core.getters.terminals import get_terminal_nodes
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.naming import Names
@@ -64,3 +66,15 @@ def device_kv(device, conductors: tuple[cim.SinglePhaseKind, ...], conn: str) ->
     if conn == "delta" or len(conductors) > 1:
         return line_to_line
     return get_base_voltage(device, "kV", form="LN")
+
+
+def rated_kv(rated_u: float, conductors: tuple[cim.SinglePhaseKind, ...], conn: str) -> float:
+    """A DER's DSS ``kv`` from its ``ratedU`` (line to line, in kV): / sqrt 3 for a 1-phase wye device, the importer's
+    ``line_kv`` inverted (S4b-4). Not the bus's: a 240 V inverter on 120 V legs stays 240 V."""
+    return rated_u / math.sqrt(3) if len(conductors) == 1 and conn == "wye" else rated_u
+
+
+def equal_phases(per_phase: dict[cim.SinglePhaseKind, PhasePower]) -> bool:
+    """Every phase's p and q alike (rel ``SUM_REL_TOL``): one DSS device carries them (E8)."""
+    values = list(per_phase.values())
+    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL) for value in values for a, b in zip(value, values[0]))

@@ -14,8 +14,7 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.load import LoadResponse, get_load_response, get_phase_loads
-from cimhub_core.getters.phase_power import SUM_REL_TOL
-from cimhub_opendss.exporter.injection import device_connection, device_kv
+from cimhub_opendss.exporter.injection import device_connection, device_kv, equal_phases
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
@@ -61,8 +60,7 @@ def export(context) -> list[schema.Load]:
 def _loads(consumer: cim.EnergyConsumer, names: Names) -> list[schema.Load]:
     loads = get_phase_loads(consumer, "kW", "kVAr")
     common = dict(**_model(consumer, get_load_response(consumer)), enabled=get_in_service(consumer, which="normal"))
-    values = list(loads.per_phase.values())
-    if loads.split or all(_same(value, values[0]) for value in values):
+    if loads.split or equal_phases(loads.per_phase):
         name = names.name(consumer, NAMESPACE)
         return [_load(consumer, loads, name, loads.phases, loads.total, consumer.customerCount, common, names)]
     if loads.connection is cim.PhaseShuntConnectionKind.D:
@@ -83,10 +81,6 @@ def _load(consumer, loads, name: str, conductors, power, customers: int | None, 
     return NATIVE_CLASS(name=name, bus1=connection.bus1, phases=connection.phases, conn=connection.conn,
                         kV=device_kv(consumer, conductors, connection.conn), kW=power.p, kvar=power.q,
                         NumCust=customers, **common)
-
-
-def _same(power, other) -> bool:
-    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL) for a, b in zip(power, other))
 
 
 def _model(consumer, response: LoadResponse) -> dict:

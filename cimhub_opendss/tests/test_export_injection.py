@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
-import opendssdirect as dss
 import pytest
 
 from cimhub_core.cimtbl_testing import cim_scope
@@ -13,8 +12,8 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import compile_deck, deck
-from engine_compare import _engine_state, assert_same_engine_state
+from conftest import deck
+from engine_compare import _engine_state, assert_same_engine_state, assert_same_settings, engine_settings
 from export_atoms import assert_matches_dss_golden, bus_names, export_atom, export_network
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -25,7 +24,7 @@ CASES = {
 }
 #: the engine properties the importer maps, per class (kV is the bus's: compared to 1 %, as the importer checks it)
 SETTINGS = {
-    "Load": ("phases", "conn", "kW", "kvar", "model", "CVRwatts", "CVRvars", "NumCust", "enabled"),
+    "Load": ("phases", "conn", "kW", "kvar", "model", "CVRwatts", "CVRvars", "NumCust", "enabled", "kV"),
     "Capacitor": ("phases", "conn", "kvar", "kv", "states", "enabled"),
     "CapControl": ("element", "terminal", "capacitor", "type", "PTratio", "CTratio", "ONsetting", "OFFsetting",
                    "Delay", "PTPhase", "enabled"),
@@ -65,40 +64,14 @@ def _object(network, cim_class, mrid):
 
 
 def _settings(path: Path, *, states: bool = True) -> dict[str, dict[str, object]]:
-    """Every Load, Capacitor and CapControl's mapped engine properties, numbers as floats; ``states=False`` leaves
-    out a capacitor's states (a deck that solves when compiled switches them)."""
-    compile_deck(path)
-    found = {}
-    for name in dss.Circuit.AllElementNames():
-        kind = name.split(".")[0]
-        if kind not in SETTINGS:
-            continue
-        dss.Circuit.SetActiveElement(name)
-        properties = [p for p in SETTINGS[kind] if states or p != "states"]
-        found[name.lower()] = {p: _value(dss.Properties.Value(p)) for p in properties}
-        if kind == "Load":
-            found[name.lower()]["kV"] = float(dss.Properties.Value("kV"))
-    return found
-
-
-def _value(text: str) -> object:
-    text = text.strip().lower()
-    try:
-        return float(text)
-    except ValueError:
-        return text
+    """Every Load, Capacitor and CapControl's mapped engine properties; ``states=False`` leaves out a capacitor's
+    states (a deck that solves when compiled switches them)."""
+    properties = {kind: tuple(p for p in names if states or p != "states") for kind, names in SETTINGS.items()}
+    return engine_settings(path, properties)
 
 
 def _assert_same_settings(expected: dict, actual: dict) -> None:
-    assert actual.keys() == expected.keys()
-    for element, properties in expected.items():
-        for name, value in properties.items():
-            if name == "kV":
-                assert actual[element][name] == pytest.approx(value, rel=KV_TOLERANCE), f"{element}.{name}"
-            elif isinstance(value, str):
-                assert actual[element][name] == value, f"{element}.{name}"
-            else:
-                assert actual[element][name] == pytest.approx(value, rel=1e-9), f"{element}.{name}"
+    assert_same_settings(expected, actual, tolerance={"kV": KV_TOLERANCE})
 
 
 # atoms ---------------------------------------------------------------------------------------------------------

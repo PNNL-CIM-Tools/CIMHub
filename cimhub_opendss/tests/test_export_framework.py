@@ -83,8 +83,10 @@ def test_options_carry_circuit_frequency_and_voltage_bases():
 
 
 def test_unexported_equipment_raises():
-    with pytest.raises(ValueError, match=r"no DSS export yet for \{'PowerElectronicsConnection': 20"):
-        DssExporter().to_model(_network("der/der.dss"))
+    network = _network("vsource/defaults.dss")
+    network.add_to_graph(cim.AsynchronousMachine(mRID="motor"))
+    with pytest.raises(ValueError, match=r"no DSS export yet for \{'AsynchronousMachine': 1\}"):
+        DssExporter().to_model(network)
 
 
 def test_several_sources_need_the_circuit_source_named():
