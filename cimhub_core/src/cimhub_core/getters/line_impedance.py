@@ -30,6 +30,8 @@ from cimtables.impedance import z_base
 
 from cimhub_core.derived.kron import kron_reduce
 from cimhub_core.derived.sequence import balanced_matrix, phase_matrix
+from cimhub_core.getters import describe
+from cimhub_core.getters.terminals import get_conductor_phases
 
 
 class ImpedanceSource(IntEnum):
@@ -65,7 +67,7 @@ class MatrixSource(Enum):
 
 class PhaseMatrix(NamedTuple):
     """Per-length phase matrices as lower triangles ``{(row, column): value}``, 1-based in conductor order
-    (``phases``, from ``ACLineSegmentPhase.sequenceNumber``). ``b``/``g`` are ``None`` when unset."""
+    (``phases``, from ``getters.terminals.get_conductor_phases``). ``b``/``g`` are ``None`` when unset."""
 
     phases: tuple[cim.SinglePhaseKind, ...]
     r: dict[tuple[int, int], float]
@@ -142,26 +144,26 @@ def get_line_phase_impedance_matrix(
     Z1 alone, more are self (2 Z1 + Z0) / 3 and mutual (Z0 - Z1) / 3). A line with geometry and no
     PerLengthImpedance raises: export the geometry instead (skill ``conductor-geometry``)."""
     code = line.PerLengthImpedance
-    phases = _conductor_phases(line)
+    phases = get_conductor_phases(line)
     if isinstance(code, cim.PerLengthPhaseImpedance):
         entries = _matrix_entries(line, code, len(phases))
         r = _entry_values(code, entries, "r", impedance_unit)
         x = _entry_values(code, entries, "x", impedance_unit)
         if r is None or x is None:
-            raise ValueError(f"{_describe(code)}: r and x must be set")
+            raise ValueError(f"{describe(code)}: r and x must be set")
         return PhaseMatrix(phases=phases, r=r, x=x,
                            b=_entry_values(code, entries, "b", admittance_unit),
                            g=_entry_values(code, entries, "g", admittance_unit),
                            source=MatrixSource.PHASE_CODE)
     if isinstance(code, cim.PerLengthSequenceImpedance):
         if not expand_sequence:
-            raise ValueError(f"{_describe(line)}: its PerLengthSequenceImpedance becomes a phase matrix only by "
+            raise ValueError(f"{describe(line)}: its PerLengthSequenceImpedance becomes a phase matrix only by "
                              f"assuming a transposed line: pass expand_sequence=True")
         return _expand_sequence_code(line, code, phases, impedance_unit, admittance_unit)
     if line.WireConfiguration is not None:
-        raise ValueError(f"{_describe(line)}: has a WireConfiguration and no PerLengthImpedance; export its "
+        raise ValueError(f"{describe(line)}: has a WireConfiguration and no PerLengthImpedance; export its "
                          f"geometry through the spacing getters, never a computed matrix")
-    raise ValueError(f"{_describe(line)}: has no PerLengthImpedance")
+    raise ValueError(f"{describe(line)}: has no PerLengthImpedance")
 
 
 def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance | None:
@@ -171,7 +173,7 @@ def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance
     if r is None and x is None:
         return None
     if r is None or x is None:
-        raise ValueError(f"{_describe(line)}: lumped r and x must be set together (r={r}, x={x})")
+        raise ValueError(f"{describe(line)}: lumped r and x must be set together (r={r}, x={x})")
     admittance_unit = ADMITTANCE_UNIT[unit]
     return SequenceImpedance(
         r=r,
@@ -206,7 +208,7 @@ def _per_length_sequence(line: cim.ACLineSegment, impedance_unit: str, admittanc
     elif source == ImpedanceSource.MATRIX_REDUCED:
         values = _phase_code_sequence_values(line, code, impedance_unit, admittance_unit)
     else:
-        raise NotImplementedError(f"{_describe(line)}: the geometry -> impedance engine (step 4) is not built")
+        raise NotImplementedError(f"{describe(line)}: the geometry -> impedance engine (step 4) is not built")
     return SequenceImpedance(**values, source=source)
 
 
@@ -214,7 +216,7 @@ def _whole_line(line: cim.ACLineSegment, per_metre: SequenceImpedance, unit: str
     """Per-metre values times the line's length, then in pu on z_base when asked."""
     length = get_qty(line, "length", "m")
     if length is None:
-        raise ValueError(f"{_describe(line)}: a per-length impedance needs the line's length")
+        raise ValueError(f"{describe(line)}: a per-length impedance needs the line's length")
     base = z_base(line, base_power) if unit == "pu" else 1.0
     totals = {}
     for name, value in per_metre._asdict().items():
@@ -241,7 +243,7 @@ def _sequence_code_values(code: cim.PerLengthSequenceImpedance, impedance_unit: 
         "g0": get_qty(code, "g0ch", admittance_unit),
     }
     if values["r"] is None or values["x"] is None:
-        raise ValueError(f"{_describe(code)}: r and x must be set")
+        raise ValueError(f"{describe(code)}: r and x must be set")
     return values
 
 
@@ -252,18 +254,18 @@ def _phase_code_sequence_values(line: cim.ACLineSegment, code: cim.PerLengthPhas
     ``cimhub_core.derived.sequence.phase_matrix``: self Zs and mutual Zm are the means of the diagonal and
     off-diagonal entries; positive = Zs - Zm, zero = Zs + 2 Zm. One phase conductor has positive = Z11 and no
     zero sequence. Split-phase (s1/s2) and other conductor kinds raise."""
-    phases = _conductor_phases(line)
+    phases = get_conductor_phases(line)
     _require_phase_conductors(line, phases)
     neutrals = [index for index, phase in enumerate(phases, start=1) if phase is cim.SinglePhaseKind.N]
     if len(neutrals) == len(phases):
-        raise ValueError(f"{_describe(line)}: no phase conductor, only neutrals")
+        raise ValueError(f"{describe(line)}: no phase conductor, only neutrals")
 
     count = len(phases)
     entries = _matrix_entries(line, code, count)
     r = _entry_values(code, entries, "r", impedance_unit)
     x = _entry_values(code, entries, "x", impedance_unit)
     if r is None or x is None:
-        raise ValueError(f"{_describe(code)}: r and x must be set")
+        raise ValueError(f"{describe(code)}: r and x must be set")
     impedance = kron_reduce({key: complex(r[key], x[key]) for key in entries}, neutrals)
     positive, zero = _sequence_values(impedance)
     values = {"r": positive.real, "x": positive.imag,
@@ -291,29 +293,21 @@ def _expand_sequence_code(line: cim.ACLineSegment, code: cim.PerLengthSequenceIm
         if positive is None and zero is None:
             matrices[positive_name] = None
         elif positive is None:
-            raise ValueError(f"{_describe(code)}: {positive_name}0 is set without {positive_name}")
+            raise ValueError(f"{describe(code)}: {positive_name}0 is set without {positive_name}")
         elif count == 1:
             matrices[positive_name] = phase_matrix(positive, zero, 1)
         elif zero is None:
-            raise ValueError(f"{_describe(code)}: {count} conductors need {positive_name}0 to expand {positive_name}")
+            raise ValueError(f"{describe(code)}: {count} conductors need {positive_name}0 to expand {positive_name}")
         else:
             matrices[positive_name] = balanced_matrix(positive, zero, count)
     return PhaseMatrix(phases=phases, **matrices, source=MatrixSource.SEQUENCE_EXPANDED)
-
-
-def _conductor_phases(line: cim.ACLineSegment) -> tuple[cim.SinglePhaseKind, ...]:
-    """The line's conductors in ``sequenceNumber`` order, which is the matrix row/column order."""
-    phases = tuple(phase.phase for phase in sorted(line.ACLineSegmentPhases, key=lambda phase: phase.sequenceNumber))
-    if not phases:
-        raise ValueError(f"{_describe(line)}: a phase matrix needs ACLineSegmentPhases for its conductor order")
-    return phases
 
 
 def _require_phase_conductors(line: cim.ACLineSegment, phases: tuple[cim.SinglePhaseKind, ...]) -> None:
     """Sequence values exist only for A, B, C conductors (and neutrals, which the reduction folds out)."""
     unsupported = [phase.value for phase in phases if phase not in (*PHASE_CONDUCTORS, cim.SinglePhaseKind.N)]
     if unsupported:
-        raise ValueError(f"{_describe(line)}: conductors {unsupported} have no sequence values")
+        raise ValueError(f"{describe(line)}: conductors {unsupported} have no sequence values")
 
 
 def _matrix_entries(line: cim.ACLineSegment, code: cim.PerLengthPhaseImpedance, count: int) -> dict:
@@ -321,8 +315,8 @@ def _matrix_entries(line: cim.ACLineSegment, code: cim.PerLengthPhaseImpedance, 
     entries = {(max(data.row, data.column), min(data.row, data.column)): data for data in code.PhaseImpedanceData}
     expected = {(row, column) for row in range(1, count + 1) for column in range(1, row + 1)}
     if set(entries) != expected:
-        raise ValueError(f"{_describe(code)}: entries {sorted(entries)} are not the lower triangle of the "
-                         f"{count} conductors of {_describe(line)}")
+        raise ValueError(f"{describe(code)}: entries {sorted(entries)} are not the lower triangle of the "
+                         f"{count} conductors of {describe(line)}")
     return entries
 
 
@@ -332,7 +326,7 @@ def _entry_values(code: cim.PerLengthPhaseImpedance, entries: dict, attribute: s
     if all(value is None for value in values.values()):
         return None
     if any(value is None for value in values.values()):
-        raise ValueError(f"{_describe(code)}: {attribute} is set on some entries but not all")
+        raise ValueError(f"{describe(code)}: {attribute} is set on some entries but not all")
     return values
 
 
@@ -363,18 +357,14 @@ def _check_agreement(line: cim.ACLineSegment, lumped: SequenceImpedance, per_len
         if lumped_value is None or per_length_value is None:
             continue
         if not math.isclose(lumped_value, per_length_value, rel_tol=DISAGREEMENT_REL_TOL):
-            raise ValueError(f"{_describe(line)}: lumped {name}={lumped_value} disagrees with "
+            raise ValueError(f"{describe(line)}: lumped {name}={lumped_value} disagrees with "
                              f"{per_length.source.name} {name}={per_length_value}")
 
 
 def _no_source(line: cim.ACLineSegment, derive: ImpedanceSource) -> ValueError:
     code = line.PerLengthImpedance
     return ValueError(
-        f"{_describe(line)}: no sequence impedance within derive={derive.name} (lumped r/x: "
+        f"{describe(line)}: no sequence impedance within derive={derive.name} (lumped r/x: "
         f"{'set' if line.r is not None else 'unset'}, PerLengthImpedance: "
         f"{type(code).__name__ if code else 'none'}, WireConfiguration: {'set' if line.WireConfiguration else 'none'})"
     )
-
-
-def _describe(obj) -> str:
-    return f"{type(obj).__name__} {obj.mRID!r}"

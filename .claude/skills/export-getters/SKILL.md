@@ -66,8 +66,8 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
 - **Geometry-capable formats (GLM, DSS) never use the chain.** They export native geometry (`line_spacing` +
   `overhead_line_conductor`; `LineSpacing` + `LineGeometry`) via the spacing and wire getters, and fall back to the
   phase matrix only when CIM has no geometry (skill `conductor-geometry`).
-- Heights matter for shunt `b` and Deri earth return: take them from the positions or an explicit `height=`; raise
-  otherwise.
+- Heights matter for shunt `b` and Deri earth return: take them from `get_line_conductor_xy` (the spacing's y plus
+  `ACLineSegment.spacingYOffset`, or a distance to earth); raise otherwise.
 
 ## Semantic rules the getters settle (one documented rule each)
 
