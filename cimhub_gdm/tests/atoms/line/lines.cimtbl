@@ -1,0 +1,113 @@
+# add_lines(): one line of each kind. Catalogs are built once each (mtx601 serves mtx3 and mtx3b), units as GDM
+# writes them. A line keeps its phases, balanced ABC included: its ACLineSegmentPhases are the conductor order.
+# Ratings: the line's own OperationalLimitSet; a geometry line's come from its first conductor (the DSS rule).
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# b6, b7: 4.16 kV line-to-line ABCN, so the geometry line can carry its neutral conductor.
+Table ConnectivityNode: mRID, name, BaseVoltage=bv_4p16kv, ConnectivityNodeContainer=fdr_atom
+    b6, b6
+    b7, b7
+
+# --- wire and cable catalogs ---------------------------------------------------------------------------------------
+# derived: radius = diameter / 2 (0.927 / 2, 0.563 / 2). ac_resistance -> rAC25, dc_resistance -> rDC20.
+# emergency_ampacity has no slot here (the wire info's own limit set has no builder); it rates the geometry line.
+Table OverheadWireInfo: mRID, name, gmr (ft), radius (in), rAC25 (ohm/mi), rDC20 (ohm/mi), ratedCurrent (A)
+    wire_acsr_556, acsr_556, 0.0313,  0.4635, 0.1859, 0.1803, 730
+    wire_acsr_4/0, acsr_4/0, 0.00814, 0.2815, 0.592,  0.556,  340
+
+# derived: radius = 0.567 / 2, neutralStrandRadius = 0.0641 / 2. strand_ac_resistance -> neutralStrandRDC20 (as DSS).
+# untranscribed: insulation (a permittivity; no builder keyword for a material)
+Table ConcentricNeutralCableInfo: mRID, name, gmr (ft), radius (in), rAC25 (ohm/mi), ratedCurrent (A), ratedVoltage (kV), insulationThickness (in), diameterOverInsulation (in), diameterOverJacket (in), neutralStrandCount, neutralStrandRadius (in), neutralStrandGmr (ft), neutralStrandRDC20 (ohm/mi)
+    cn_cn_250, cn_250, 0.0171, 0.2835, 0.41, 260, 15, 0.22, 1.06, 1.29, 13, 0.03205, 0.00208, 14.8722
+
+# --- geometry catalogs ---------------------------------------------------------------------------------------------
+Table XYSpacing: mRID, name, isTemplate=true
+    spc_g601, g601
+    spc_ug3,  ug3
+
+Table XYConductorPosition: mRID, XYSpacing, sequenceNumber, xCoord (ft), yCoord (ft)
+    spc_g601_1, spc_g601, 1,  0.0, 28.0
+    spc_g601_2, spc_g601, 2,  2.5, 28.0
+    spc_g601_3, spc_g601, 3,  7.0, 28.0
+    spc_g601_4, spc_g601, 4,  4.0, 24.0
+    spc_ug3_1,  spc_ug3,  1, -0.5, -4.0
+    spc_ug3_2,  spc_ug3,  2,  0.0, -4.0
+    spc_ug3_3,  spc_ug3,  3,  0.5, -4.0
+
+Table WireConfiguration: mRID, name, WireSpacing
+    wc_g601, g601, spc_g601
+    wc_ug3,  ug3,  spc_ug3
+
+Table WireSequenceConfiguration: mRID, WireConfiguration, sequenceNumber, WireInfo
+    wc_g601_1, wc_g601, 1, wire_acsr_556
+    wc_g601_2, wc_g601, 2, wire_acsr_556
+    wc_g601_3, wc_g601, 3, wire_acsr_556
+    wc_g601_4, wc_g601, 4, wire_acsr_4/0
+    wc_ug3_1,  wc_ug3,  1, cn_cn_250
+    wc_ug3_2,  wc_ug3,  2, cn_cn_250
+    wc_ug3_3,  wc_ug3,  3, cn_cn_250
+
+# --- impedance catalogs --------------------------------------------------------------------------------------------
+# untranscribed: construction=OVERHEAD (no home on PerLengthImpedance). ampacity rates each line using the code.
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+    lc_mtx601, mtx601, 3, 60
+    lc_mtx1ph, mtx1ph, 1, 60
+
+# Lower triangle, row >= column. derived: b = 2 pi 60 C (C in nF/mi -> b in nS/mi):
+#   2 pi 60 x 16.71 = 6299.52; x -5.294 = -1995.79; x 15.81 = 5960.23; x -3.341 = -1259.53; x -1.967 = -741.542;
+#   x 14.96 = 5639.79; mtx1ph: 2 pi 60 x 3.4 nF/km = 1281.77 nS/km
+Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/mi), x (ohm/mi), b (nS/mi)
+    lc_mtx601_11, lc_mtx601, 1, 1, 0.3465, 1.0179,  6299.521588978253
+    lc_mtx601_21, lc_mtx601, 2, 1, 0.1560, 0.5017, -1995.7909809725234
+    lc_mtx601_22, lc_mtx601, 2, 2, 0.3375, 1.0478,  5960.229582390555
+    lc_mtx601_31, lc_mtx601, 3, 1, 0.1580, 0.4236, -1259.52732667722
+    lc_mtx601_32, lc_mtx601, 3, 2, 0.1535, 0.3849, -741.5415299533347
+    lc_mtx601_33, lc_mtx601, 3, 3, 0.3414, 1.0348,  5639.787131724396
+Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/km), x (ohm/km), b (nS/km)
+    lc_mtx1ph_11, lc_mtx1ph, 1, 1, 0.5, 0.9, 1281.7698026646356
+
+# derived: bch = 2 pi 60 x 10 nF/km = 3769.91 nS/km; b0ch = 2 pi 60 x 4 nF/km = 1507.96 nS/km
+Object PerLengthSequenceImpedance: mRID=lc_seq1, name=seq1, calculatedFrequency (Hz)=60, r (ohm/km)=0.3, x (ohm/km)=0.6, r0 (ohm/km)=0.6, x0 (ohm/km)=1.8, bch (nS/km)=3769.9111843077517, b0ch (nS/km)=1507.9644737231006
+
+# --- lines ---------------------------------------------------------------------------------------------------------
+# mtx3b is written C A B: conductor 1 is phase C.
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+    ln_mtx3,  mtx3,  b1, b2, ABC, 2000, lc_mtx601
+    ln_mtx3b, mtx3b, b2, b3, CAB, 500,  lc_mtx601
+Table ACLineSegment: mRID, name, node1, node2, phases, length (km), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+    ln_mtx1, mtx1, b2, b3, C,   0.3, lc_mtx1ph
+    ln_seq,  seq,  b1, b3, ABC, 1,   lc_seq1
+Object ACLineSegment: mRID=ln_geo, name=geo, node1=b6, node2=b7, phases=ABCN, length (m)=300, WireConfiguration=wc_g601, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+Object ACLineSegment: mRID=ln_ug, name=ug, node1=b1, node2=b2, phases=ABC, length (ft)=100, WireConfiguration=wc_ug3, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+# A GeometrySwitch is a LoadBreakSwitch; its rating is its geometry's first conductor's (acsr_556, 730 A).
+Object LoadBreakSwitch: mRID=sw_gsw, name=gsw, node1=b6, node2=b7, open=false, normalOpen=false, ratedCurrent (A)=730, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+# --- ratings -------------------------------------------------------------------------------------------------------
+Table OperationalLimitType: mRID, name, isInfiniteDuration, direction
+    olt_normal,    normal,    true,  absoluteValue
+    olt_emergency, emergency, false, absoluteValue
+
+Table OperationalLimitSet: mRID, Equipment
+    ln_mtx3_limits,  ln_mtx3
+    ln_mtx3b_limits, ln_mtx3b
+    ln_mtx1_limits,  ln_mtx1
+    ln_seq_limits,   ln_seq
+    ln_geo_limits,   ln_geo
+    ln_ug_limits,    ln_ug
+
+# normal: the catalog's ampacity, or a geometry's first conductor's; emergency: that conductor's emergency_ampacity
+# (a cable has none).
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_mtx3_norm,  730,  olt_normal,    ln_mtx3_limits
+    ln_mtx3b_norm, 730,  olt_normal,    ln_mtx3b_limits
+    ln_mtx1_norm,  200,  olt_normal,    ln_mtx1_limits
+    ln_seq_norm,   400,  olt_normal,    ln_seq_limits
+    ln_geo_norm,   730,  olt_normal,    ln_geo_limits
+    ln_geo_emerg,  1095, olt_emergency, ln_geo_limits
+    ln_ug_norm,    260,  olt_normal,    ln_ug_limits

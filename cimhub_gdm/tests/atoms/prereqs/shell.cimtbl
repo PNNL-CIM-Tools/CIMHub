@@ -1,0 +1,25 @@
+# What GdmImporter builds for tests/gdm_atoms.py shell_system(): the network shell and its five buses.
+# No Authority or Model here, so importing it never re-scopes (TEST_DESIGN.md).
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_atom, name=atom
+Table Feeder: mRID, name, NormalEnergizingSubstation
+    fdr_atom,  atom,  sub_atom
+    fdr_atom2, atom2, sub_atom
+
+Object BaseFrequency: mRID=base_freq, frequency (Hz)=60
+
+# 4 significant figures. b2 is 2.4018 kV line-to-ground: 2.4018 x sqrt(3) = 4.16004 kV, the same BaseVoltage as b1.
+# b5 is 0.12 kV line-to-ground on S1 S2: split-phase, 0.12 x 2 = 0.24 kV.
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+    bv_240v,   0.24
+
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_atom
+    b1, b1, bv_4p16kv
+    b2, b2, bv_4p16kv
+    b3, b3, bv_4p16kv
+    b4, b4, bv_480v
+    b5, b5, bv_240v

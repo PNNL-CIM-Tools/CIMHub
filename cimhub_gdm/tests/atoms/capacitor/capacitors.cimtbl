@@ -1,0 +1,42 @@
+# add_capacitors(): fixed and controlled capacitors. The LinearShuntCompensator holds the totals: nomQ summed over
+# phases; nomU across one unit (line-to-line for balanced ABC, the rating as written otherwise, as the DSS wave
+# writes it); bPerSection = nomQ / (nomU^2 x maximumSections). sections = num_banks_on when state is on, else 0.
+# Wye is grounded, delta is not.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# derived: c3 600 / 4.16^2 = 0.0346709 S; c1 100 / 2.4^2 = 0.0173611; off 50 / 2.4^2 = 0.00868056;
+#   cd nomU = 2.4018 x sqrt 3 = 4.16004 kV (line-to-ground on ABC), b = 300 / (4.16004^2 x 2) = 0.00866755;
+#   vc 900 / 4.16^2 = 0.0520063; qc 600 / 4.16^2; ic, pc 300 / 4.16^2 = 0.0173354
+# untranscribed on every phase capacitor: resistance=0 ohm, reactance=0 ohm
+Table LinearShuntCompensator: mRID, name, node, phases, compensatorType=capacitor, phaseConnection, grounded, nomQ (kVAr), nomU (kV), bPerSection (S), maximumSections, normalSections, sections, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+    cap_c3,  c3,  b1,  , Y, true,  600, 4.16,             0.03467085798816568,  1, 1, 1
+    cap_c1,  c1,  b2, C, Y, true,  100, 2.4,              0.017361111111111112, 1, 1, 1
+    cap_cd,  cd,  b3,  , D, false, 300, 4.16003962961893, 0.008667549356025004, 2, 1, 1
+    cap_off, off, b1, A, Y, true,  50,  2.4,              0.008680555555555556, 1, 0, 0
+    cap_vc,  vc,  b2,  , Y, true,  900, 4.16,             0.05200628698224852,  1, 1, 1
+    cap_qc,  qc,  b3,  , Y, true,  600, 4.16,             0.03467085798816568,  1, 1, 1
+    cap_ic,  ic,  b1,  , Y, true,  300, 4.16,             0.01733542899408284,  1, 1, 1
+    cap_pc,  pc,  b2,  , Y, true,  300, 4.16,             0.01733542899408284,  1, 1, 1
+
+# One control per capacitor, on its own Terminal (GDM names no monitored element), on the first phase.
+# targetValue = (on + off) / 2, targetDeadband = |off - on|, on the primary side in the mode's SI unit:
+#   vc (115 + 125) / 2 x PT 20 = 2400 V, 10 x 20 = 200 V; qc (150 + 225) / 2 = 187.5 kvar = 187500 var, 75000 var;
+#   ic (50 + 100) / 2 x CT 60 = 4500 A, 50 x 60 = 3000 A; pc (500 + 1000) / 2 = 750 kW = 750000 W, 500000 W
+# untranscribed: vc delay_off=30 s (CIM has one delay)
+Table RegulatingControl: mRID, name, mode, discrete=true, enabled=true, monitoredPhase=A, ptRatio, ctRatio, targetValue, targetDeadband, Terminal
+    cc_vc, vc, voltage,       20,   , 2400,   200,    cap_vc_T1
+    cc_qc, qc, reactivePower,   ,   , 187500, 75000,  cap_qc_T1
+    cc_ic, ic, currentFlow,     , 60, 4500,   3000,   cap_ic_T1
+    cc_pc, pc, activePower,     ,   , 750000, 500000, cap_pc_T1
+
+# aVRDelay: the controller's delay_on
+Update Table LinearShuntCompensator: mRID, RegulatingControl, aVRDelay (s), controlEnabled=true
+    cap_vc, cc_vc, 15
+    cap_qc, cc_qc,
+    cap_ic, cc_ic,
+    cap_pc, cc_pc,
