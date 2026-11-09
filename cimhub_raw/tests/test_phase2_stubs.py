@@ -10,7 +10,6 @@ from cimhub_core import GraphModel
 from cimhub_raw.importer.cimtbl import (
     facts_device,
     gne_device,
-    impedance_correction,
     induction_machine,
     multi_terminal_dc,
     two_terminal_dc,
@@ -27,7 +26,6 @@ STUBS = [
     (facts_device, facts_device.map_facts_device),
     (gne_device, gne_device.map_gne_device),
     (induction_machine, induction_machine.map_induction_machine),
-    (impedance_correction, impedance_correction.map_impedance_correction),
 ]
 
 

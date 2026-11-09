@@ -72,7 +72,12 @@ SECTIONS: tuple[tuple[str, type], ...] = (
 )
 
 #: Sections whose record structure is phase-2 work; a populated one raises.
-PHASE_2_SECTIONS = frozenset({"VSC DC LINE", "IMPEDANCE CORRECTION", "MULTI-TERMINAL DC", "GNE"})
+PHASE_2_SECTIONS = frozenset({"MULTI-TERMINAL DC", "GNE"})
+
+#: An impedance correction table's points: (T, Re(F), Im(F)) triples, six per line; three zeros end the table.
+POINT_FIELDS = 3
+POINTS_PER_LINE = 6
+MAX_POINTS = 99
 
 #: System-wide data records kept as their text, by keyword (RATING records become RatingRecords).
 SYSTEM_WIDE_KEYWORDS = ("GENERAL", "GAUSS", "NEWTON", "ADJUST", "TYSL", "SOLVER")
@@ -283,6 +288,9 @@ class _FileReader:
             if first is None:
                 break
             line_number, text, tokens = first
+            if record_class is schema.ImpedanceCorrectionRecord:
+                records.append((line_number, self._impedance_correction(line_number, text, tokens)))
+                continue
             values = self._values(record_class, layout[0], tokens, line_number, text)
             for index in range(1, line_count(record_class, values)):
                 next_number, next_text = self.next_line()
@@ -292,6 +300,40 @@ class _FileReader:
                                            next_number, next_text))
             records.append((line_number, self._construct(record_class, values, line_number)))
         return records
+
+    def _impedance_correction(self, line_number: int, text: str, tokens) -> schema.ImpedanceCorrectionRecord:
+        """One impedance correction table: its number and points, read line by line up to its 0, 0, 0 point."""
+        number_slot, = record_lines(schema.ImpedanceCorrectionRecord)[0]
+        table_number = self._values(schema.ImpedanceCorrectionRecord, (number_slot,), tokens[:1], line_number, text)
+        where = f"impedance correction table {table_number['table_number']}"
+        point_slot = Slot("point", "float", 1, {})
+        fields, line_tokens = [], tokens[1:]
+        while True:
+            if len(line_tokens) % POINT_FIELDS or len(line_tokens) > POINT_FIELDS * POINTS_PER_LINE:
+                raise self.error(f"{where}: {len(line_tokens)} point fields on a line (whole points, up to "
+                                 f"{POINTS_PER_LINE})", line_number, text)
+            try:
+                values = [self._convert(point_slot, token) for token in line_tokens]
+            except ValueError as exc:
+                raise self.error(f"{where}: {exc}", line_number, text) from exc
+            if None in values:
+                raise self.error(f"{where}: a blank point field", line_number, text)
+            fields += values
+            ends = [index for index in range(0, len(fields), POINT_FIELDS)
+                    if fields[index:index + POINT_FIELDS] == [0.0] * POINT_FIELDS]
+            if ends:
+                if ends[0] != len(fields) - POINT_FIELDS:
+                    raise self.error(f"{where}: points after its 0, 0, 0 point", line_number, text)
+                break
+            line_number, text = self.next_line()
+            if _is_q(text):
+                raise self.error(f"{where}: a Q record before its 0, 0, 0 point", line_number)
+            line_tokens = self._tokens(line_number, text)
+        points = [schema.ImpedanceCorrectionPoint(*fields[index:index + POINT_FIELDS])
+                  for index in range(0, len(fields) - POINT_FIELDS, POINT_FIELDS)]
+        if len(points) > MAX_POINTS:
+            raise self.error(f"{where}: {len(points)} points (at most {MAX_POINTS})", line_number)
+        return self._construct(schema.ImpedanceCorrectionRecord, {**table_number, "points": points}, line_number)
 
     def _read_substations(self) -> None:
         """The SUBSTATION section: blocks of a substation record, then its nodes, switching devices and

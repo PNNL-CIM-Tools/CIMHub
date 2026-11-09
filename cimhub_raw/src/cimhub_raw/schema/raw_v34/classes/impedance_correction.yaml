@@ -15,241 +15,53 @@ default_prefix: raw
 
 classes:
   ImpedanceCorrectionRecord:
-    description: Transformer impedance correction table data record
+    description: |
+      Transformer impedance correction table data record: the table number, then its points, six per line,
+      as many lines as needed. A point of three zeros ends the table (it is not a point of the table).
+    comments:
+      - Variable length; read and written by raw34_reader / raw34_writer, not by the positional layout
     attributes:
       table_number:
         description: I - Impedance correction table number
         range: integer
         required: true
         identifier: true
-
-      t1:
-        description: T1 - First transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
         annotations:
-          raw_default: 0.0
+          line_number: 1
+          order: 1
+          value_type: int
 
-      f1_real:
-        description: Re(F1) - Real part of first scaling factor
-        range: float
+      points:
+        description: The table's points (T, Re(F), Im(F)), up to 99, in file order
+        range: ImpedanceCorrectionPoint
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
         required: false
-        annotations:
-          raw_default: 0.0
 
-      f1_imag:
-        description: Im(F1) - Imaginary part of first scaling factor
+  ImpedanceCorrectionPoint:
+    description: One point of an impedance correction table
+    attributes:
+      t:
+        description: Ti - Off-nominal turns ratio (pu) or phase shift angle (deg)
         range: float
-        required: false
+        required: true
         annotations:
-          raw_default: 0.0
+          value_type: float
+          precision: 5
 
-      t2:
-        description: T2 - Second transformer off-nominal turns ratio or phase shift
+      f_real:
+        description: Re(Fi) - Real part of the impedance scaling factor
         range: float
-        required: false
+        required: true
         annotations:
-          raw_default: 0.0
+          value_type: float
+          precision: 5
 
-      f2_real:
-        description: Re(F2) - Real part of second scaling factor
+      f_imag:
+        description: Im(Fi) - Imaginary part of the impedance scaling factor
         range: float
-        required: false
+        required: true
         annotations:
-          raw_default: 0.0
-
-      f2_imag:
-        description: Im(F2) - Imaginary part of second scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t3:
-        description: T3 - Third transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f3_real:
-        description: Re(F3) - Real part of third scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f3_imag:
-        description: Im(F3) - Imaginary part of third scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t4:
-        description: T4 - Fourth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f4_real:
-        description: Re(F4) - Real part of fourth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f4_imag:
-        description: Im(F4) - Imaginary part of fourth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t5:
-        description: T5 - Fifth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f5_real:
-        description: Re(F5) - Real part of fifth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f5_imag:
-        description: Im(F5) - Imaginary part of fifth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t6:
-        description: T6 - Sixth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f6_real:
-        description: Re(F6) - Real part of sixth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f6_imag:
-        description: Im(F6) - Imaginary part of sixth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t7:
-        description: T7 - Seventh transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f7_real:
-        description: Re(F7) - Real part of seventh scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f7_imag:
-        description: Im(F7) - Imaginary part of seventh scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t8:
-        description: T8 - Eighth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f8_real:
-        description: Re(F8) - Real part of eighth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f8_imag:
-        description: Im(F8) - Imaginary part of eighth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t9:
-        description: T9 - Ninth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f9_real:
-        description: Re(F9) - Real part of ninth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f9_imag:
-        description: Im(F9) - Imaginary part of ninth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t10:
-        description: T10 - Tenth transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f10_real:
-        description: Re(F10) - Real part of tenth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f10_imag:
-        description: Im(F10) - Imaginary part of tenth scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      t11:
-        description: T11 - Eleventh transformer off-nominal turns ratio or phase shift
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f11_real:
-        description: Re(F11) - Real part of eleventh scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
-
-      f11_imag:
-        description: Im(F11) - Imaginary part of eleventh scaling factor
-        range: float
-        required: false
-        annotations:
-          raw_default: 0.0
+          value_type: float
+          precision: 5

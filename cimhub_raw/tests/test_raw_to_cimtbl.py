@@ -24,6 +24,7 @@ from cimhub_raw.importer.cimtbl import (
     equipment_terminal,
     fixed_shunt,
     generator,
+    impedance_correction,
     interarea_transfer,
     load,
     multi_section_line,
@@ -36,7 +37,10 @@ from cimhub_raw.importer.cimtbl import (
 )
 from cimhub_raw.importer.cimtbl.derived import (
     block_sections,
+    cim_angle,
     generation_p_q,
+    impedance_deviation_percent,
+    is_angle_table,
     ka_from_rating,
     kv_from_per_unit,
     load_p_q,
@@ -44,11 +48,13 @@ from cimhub_raw.importer.cimtbl.derived import (
     net_import,
     ohms_from_per_unit,
     per_unit_from_mva,
+    phase_tap,
     ratio_tap,
     siemens_from_per_unit,
     transformer_ohms,
     vars_from_mvar,
     volts_from_per_unit,
+    watts_from_mw,
     winding_unit_kv,
     zip_mix,
 )
@@ -85,15 +91,16 @@ def ieee14_documents():
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
                                     multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer,
-                                    interarea_transfer, substation, equipment_terminal],
+                                    interarea_transfer, substation, equipment_terminal, impedance_correction],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
 
 
-@pytest.mark.parametrize(("fields", "native_class"), [(substation.NODE_FIELDS, substation.NODE_CLASS),
-                                                      (substation.DEVICE_FIELDS, substation.DEVICE_CLASS)],
-                         ids=["substation_node", "substation_switching_device"])
+@pytest.mark.parametrize(("fields", "native_class"), [
+    (substation.NODE_FIELDS, substation.NODE_CLASS), (substation.DEVICE_FIELDS, substation.DEVICE_CLASS),
+    (impedance_correction.POINT_FIELDS, impedance_correction.POINT_CLASS),
+], ids=["substation_node", "substation_switching_device", "impedance_correction_point"])
 def test_substation_record_classification_is_complete(fields, native_class):
     check_fields(fields, native_class)
 
@@ -644,7 +651,6 @@ def test_ratio_tap(windv, rma, rmi, ntp, units, expected):
 @pytest.mark.parametrize(("windv", "rma", "rmi", "ntp", "message"), [
     (1.0, 1.1, 0.9, 1, "NTP 1 gives no tap range"),
     (1.0, 0.9, 1.1, 33, "RMA 0.9 is not above RMI 1.1"),
-    (1.2, 1.1, 0.9, 33, "WINDV 1.2 is outside RMI..RMA"),
 ])
 def test_ratio_tap_raises(windv, rma, rmi, ntp, message):
     with pytest.raises(ValueError, match=message):
@@ -737,29 +743,175 @@ def test_transformer_atom_comments():
 
 
 @pytest.mark.parametrize(("key", "changes", "error", "message"), [
-    ("1_2_0_1", {"cod1": 3}, NotImplementedError, "COD1 3 .phase shift"),
     ("1_2_0_1", {"cod1": -5}, NotImplementedError, "COD1 -5 .asymmetric phase shift"),
     ("1_2_0_1", {"cod1": 4}, NotImplementedError, "COD1 4 .DC line control: phase 2"),
-    ("1_2_0_1", {"ang1": 30.0}, NotImplementedError, "ANG1 = 30.0, a phase shift"),
-    ("1_2_3_1", {"tab2": 1}, NotImplementedError, "TAB2 = 1, an impedance correction table"),
-    ("1_2_0_1", {"cr1": 0.01}, NotImplementedError, "CR1 = 0.01, load-drop compensation"),
+    ("1_2_3_1", {"tab2": 1}, NotImplementedError, "TAB2 = 1 on a 3-winding unit"),
+    ("1_2_0_1", {"tab1": 7}, ValueError, "TAB1 7 names no impedance correction table"),
+    ("6_7_0_1", {"cr1": 0.01}, ValueError, "CR1/CX1 .load-drop compensation. on COD1 2, not a voltage control"),
     ("1_2_0_1", {"cnxa1": 30.0}, NotImplementedError, "CNXA1 = 30.0"),
     ("1_2_0_1", {"nod1": 2}, ValueError, "which has no SUBSTATION block"),
-    ("1_2_3_1", {"status": 2}, NotImplementedError, "STAT 2 .winding 2 out"),
-    ("1_2_0_1", {"cont1": -5}, NotImplementedError, "CONT1 -5 is negative"),
-    ("1_2_0_1", {"cont1": 0}, ValueError, "COD1 1 controls a voltage but CONT1 is 0"),
+    ("1_2_0_1", {"status": 2}, ValueError, "STAT 2 .one winding out. on a 2-winding unit"),
     ("1_2_0_1", {"cont1": 99}, ValueError, "CONT1 99 is no bus"),
-    ("1_2_0_1", {"windv2": 231.0}, NotImplementedError, "an off-nominal winding 2"),
-    ("1_2_0_1", {"windv1": 361.0}, ValueError, "WINDV 361.0 is outside RMI..RMA"),
     ("1_2_0_1", {"ntp1": 1}, ValueError, "NTP 1 gives no tap range"),
+    ("1_2_0_1", {"cod1": 3, "rma1": 30.0, "rmi1": -30.0, "vma1": 10.0, "vmi1": 5.0, "ang1": 40.0}, ValueError,
+     "ANG 40.0 is outside RMI..RMA"),
     ("1_2_0_1", {"rma1": None}, ValueError, "RMA1 is blank and has no default .CW 2, COD1 1"),
     ("6_7_0_1", {"vma1": None}, ValueError, "VMA1 is blank and has no default .CW 1, COD1 2"),
     ("2_6_0_1", {"x1_2": 0.0001}, ValueError, "CZ 3 .Z. = 0.0001 pu is less than its load-loss r"),
 ])
-def test_a_transformer_outside_r4_raises(key, changes, error, message):
+def test_a_transformer_outside_r4b_raises(key, changes, error, message):
     native = Raw34Reader(TRANSFORMER_ATOMS / "transformers.raw").read_all()
     _replace_record(native, schema.TransformerRecord, key, **changes)
     with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+# -- R4b: the transformer forms R4 raised on ---------------------------------------------------------------------
+
+R4B_ATOM = TRANSFORMER_ATOMS / "forms_r4b.raw"
+
+
+def test_ratio_tap_extends_to_a_windv_outside_its_range():
+    tap = ratio_tap(1.15, 1.1, 0.9, 33, unit_kv=345.0, rated_kv=345.0, record_id="x")
+    assert (tap.low_step, tap.high_step, tap.neutral_step, tap.step) == (1, 41, 17, pytest.approx(41.0))
+    below = ratio_tap(0.85, 1.1, 0.9, 33, unit_kv=1.0, rated_kv=1.0, record_id="x")
+    assert (below.low_step, below.high_step, below.step) == (-7, 33, pytest.approx(-7.0))
+
+
+@pytest.mark.parametrize(("angle", "rma", "rmi", "ntp", "expected"), [
+    (7.5, 30.0, -30.0, 33, (17, -1.875, 21.0, 0.0)),  # 0 deg on the grid
+    (-10.0, 40.0, -30.0, 32, (14, -70.0 / 31, 14 - 10.0 * 31 / 70.0, -30.0 + 13 * 70.0 / 31)),  # off the grid
+])
+def test_phase_tap(angle, rma, rmi, ntp, expected):
+    tap = phase_tap(angle, rma, rmi, ntp, "x")
+    assert (tap.neutral_step, tap.increment_degrees, tap.step, tap.zero_offset_degrees) == \
+        (expected[0], *(pytest.approx(value) for value in expected[1:]))
+
+
+@pytest.mark.parametrize(("args", "message"), [
+    ((0.0, 30.0, -30.0, 1), "NTP 1 gives no tap range"),
+    ((0.0, -30.0, 30.0, 33), "RMA -30.0 is not above RMI 30.0"),
+    ((31.0, 30.0, -30.0, 33), "ANG 31.0 is outside RMI..RMA"),
+])
+def test_phase_tap_raises(args, message):
+    with pytest.raises(ValueError, match=message):
+        phase_tap(*args, "x")
+
+
+def test_r4b_derived_values():
+    assert (cim_angle(30.0), cim_angle(-13.5), str(cim_angle(0.0))) == (-30.0, 13.5, "0.0")
+    assert (watts_from_mw(110.0), impedance_deviation_percent(1.2)) == (110.0e6, pytest.approx(20.0))
+    assert (is_angle_table([-30.0, 40.0]), is_angle_table([0.9, 1.1]), is_angle_table([0.94, 1.6])) == \
+        (True, False, True)
+
+
+@pytest.fixture(scope="module")
+def r4b_network():
+    return _network(R4B_ATOM)
+
+
+def test_r4b_fixed_phase_shifts(r4b_network):
+    """phaseShift = cim_angle(ANGk) on each end; a phase shifter's angle is on its tap, not its end (R4b-2)."""
+    ends = _objects(r4b_network, "PowerTransformerEnd")
+    shifts = {mrid: float(end.phaseShift) for mrid, end in ends.items() if end.phaseShift is not None}
+    assert shifts == {"xf_1_2_0_F_1": -30.0, "xf_1_2_3_G_2": 13.5}
+
+
+def test_r4b_phase_shifters(r4b_network):
+    """COD +-3: a PhaseTapChangerLinear over NTP steps and an activePower control on its own terminal (R4b-3)."""
+    taps = _objects(r4b_network, "PhaseTapChangerLinear")
+    j, k = taps["xf_2_5_0_J_ptap1"], taps["xf_2_5_0_K_ptap1"]
+    assert (j.lowStep, j.highStep, j.neutralStep, j.step) == (1, 33, 17, 21.0)
+    assert float(j.stepPhaseShiftIncrement) == -1.875
+    assert (j.neutralStep - j.step) * float(j.stepPhaseShiftIncrement) == pytest.approx(7.5)  # back to ANG
+    assert (j.TransformerEnd.mRID, j.ltcFlag, j.controlEnabled) == ("xf_2_5_0_J_1", True, True)
+    control = j.TapChangerControl
+    assert (control.mode.name, control.Terminal.mRID, control.targetValue, control.targetDeadband) == \
+        ("activePower", "xf_2_5_0_J_T1", 110.0e6, 20.0e6)
+    assert (k.controlEnabled, k.TapChangerControl.enabled) == (False, False)  # COD -3
+    assert (k.neutralStep - k.step) * float(k.stepPhaseShiftIncrement) == pytest.approx(-10.0)
+    fixed = k.TransformerEnd.RatioTapChanger  # its off-nominal WINDV1 1.02: a fixed ratio (R4b-4)
+    assert (fixed.lowStep, fixed.highStep, fixed.neutralU.to("kV"), fixed.TapChangerControl) == \
+        (1, 1, pytest.approx(234.6), None)
+
+
+def test_r4b_fixed_ratios(r4b_network):
+    """A winding without a usable tap range gets a one-step RatioTapChanger at WINDV in kV (R4b-4)."""
+    taps = _objects(r4b_network, "RatioTapChanger")
+    fixed = {mrid: tap.neutralU.to("kV") for mrid, tap in taps.items() if tap.lowStep == tap.highStep}
+    assert fixed == {"xf_2_5_0_K_tap1": pytest.approx(234.6), "xf_3_4_0_N_tap2": pytest.approx(13.2),
+                     "xf_3_7_0_P_tap1": pytest.approx(82.8), "xf_6_7_0_M_tap2": pytest.approx(35.3625),
+                     "xf_6_7_0_O_tap1": pytest.approx(120.75)}
+    assert taps["xf_6_7_0_O_tap1"].TapChangerControl.enabled is False  # COD 0 keeps its control, disabled
+    assert taps["xf_6_7_0_M_tap2"].TapChangerControl is None  # winding 2 has no COD data
+    q = taps["xf_1_6_0_Q_tap1"]  # COD 1, WINDV 1.15 above RMA 1.1: the range extends to it (R4b-5)
+    assert (q.lowStep, q.highStep, q.step) == (1, 41, pytest.approx(41.0))
+
+
+def test_r4b_one_winding_out(r4b_network):
+    """STAT 2/3/4: the unit stays in service, the out winding's terminal is disconnected (R4b-6)."""
+    terminals = _objects(r4b_network, "Terminal")
+    disconnected = sorted(mrid for mrid, terminal in terminals.items() if terminal.connected is False)
+    assert disconnected == ["xf_1_2_3_G_T3", "xf_1_2_4_H_T2", "xf_1_3_4_I_T1"]
+    assert all(_objects(r4b_network, "PowerTransformer")[f"xf_{key}"].inService for key in ("1_2_3_G", "1_2_4_H"))
+
+
+def test_r4b_voltage_control_terminals_and_line_drop(r4b_network):
+    """CONT 0 names the own terminal (R4b-7), a negative CONT bus |CONT| (R4b-8); CR/CX in ohm (R4b-9)."""
+    controls = _objects(r4b_network, "TapChangerControl")
+    assert controls["xf_2_7_0_R_ctrl1"].Terminal.mRID == "xf_2_7_0_R_T1"
+    assert controls["xf_5_6_0_S_ctrl1"].Terminal.mRID == "bb_2_T1"
+    t = controls["xf_5_7_0_T_ctrl1"]
+    assert (t.lineDropCompensation, t.lineDropR.to("ohm"), t.lineDropX.to("ohm")) == \
+        (True, pytest.approx(0.01 * 34.5 ** 2 / 100.0), pytest.approx(0.05 * 34.5 ** 2 / 100.0))
+
+
+def test_r4b_impedance_tables(r4b_network):
+    """One shared table per RAW table; angle points in CIM's sign, ratio points per ratedU; rEnd1 = xEnd1 =
+    100 x (F - 1); each winding with TABk links its end to its table (R4b-10)."""
+    tables = _objects(r4b_network, "ImpedanceTapChangerTable")
+    points = {name: sorted(table.ImpedanceTapChangerTablePoint,
+                           key=lambda point: float(point.angle) if point.angle is not None else point.ratio)
+              for name, table in tables.items()}
+    assert [float(point.angle) for point in points["ict_1"]] == [-40.0, -30.0, -20.0, -10.0, 0.0, 10.0, 30.0]
+    assert [float(point.rEnd1) for point in points["ict_1"]] == pytest.approx([30.0, 20.0, 12.0, 5.0, 0.0, 5.0, 20.0])
+    assert [point.ratio for point in points["ict_2"]] == pytest.approx([t * 230.0 / 240.0 for t in (0.9, 1.0, 1.1)])
+    assert all(float(point.xEnd1) == float(point.rEnd1) for table in points.values() for point in table)
+    tabulars = _objects(r4b_network, "ImpedanceTapChangerTabular")
+    assert {mrid: (tabular.TransformerEnd.mRID, tabular.ImpedanceTapChangerTable.mRID)
+            for mrid, tabular in tabulars.items()} == {"xf_2_5_0_K_ztab1": ("xf_2_5_0_K_1", "ict_1"),
+                                                      "xf_2_6_0_L_ztab1": ("xf_2_6_0_L_1", "ict_2")}
+
+
+def test_r4b_row_comments():
+    documents = RawImporter("atom").to_cimtbl(Raw34Reader(R4B_ATOM).read_all())
+    rows = {row.cells[0]: row.comment for part in documents.parts if part.name == "transformer"
+            for statement in part.statements for row in statement.rows}
+    assert rows["xf_2_5_0_K_ptap1"].startswith("untranscribed: rma1=40.0, rmi1=-30.0 (0 deg lies 0.645")
+    assert rows["xf_2_5_0_J_ptap1"] is None
+    assert rows["xf_6_7_0_O_tap1"] == ("fixed: untranscribed: rma1=1.0, rmi1=1.0, ntp1=33 (RMI..RMA holds no WINDV; "
+                                       "unused at COD 0)")
+    assert rows["xf_1_6_0_Q_tap1"] == "untranscribed: rma1=1.1, rmi1=0.9 (steps extended to the WINDV)"
+    assert rows["xf_5_6_0_S_ctrl1"] == "untranscribed: cont1=-2 (bus 2 taken as on winding 1's side)"
+    assert rows["xf_2_7_0_R_ctrl1"] == "CONT 0: regulates its own terminal"
+
+
+@pytest.mark.parametrize(("changes", "error", "message"), [
+    ({"points": [schema.ImpedanceCorrectionPoint(0.9, 0.95, 0.01), schema.ImpedanceCorrectionPoint(1.1, 1.0, 0.0)]},
+     NotImplementedError, r"Im\(F\) != 0 at T \[0.9\]"),
+    ({"points": [schema.ImpedanceCorrectionPoint(0.9, 0.95, 0.0)]}, ValueError, "1 point.s., at least 2 needed"),
+])
+def test_an_impedance_table_outside_r4b_raises(changes, error, message):
+    native = Raw34Reader(R4B_ATOM).read_all()
+    _replace_record(native, schema.ImpedanceCorrectionRecord, "2", **changes)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+def test_a_ratio_table_with_disagreeing_users_raises():
+    native = Raw34Reader(R4B_ATOM).read_all()
+    _replace_record(native, schema.TransformerRecord, "6_7_0_M", tab1=2)  # NOMV 0 on 115 kV: BASKV / ratedU = 1
+    with pytest.raises(ValueError, match="table 2: a ratio table whose users .* have different BASKV / ratedU"):
         RawImporter("atom").to_cimtbl(native)
 
 

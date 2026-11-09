@@ -1,5 +1,6 @@
 # PSS/E RAW Transformer -> PowerTransformer + PowerTransformerEnd per winding; TransformerMeshImpedance
-# (3-winding, Delta model); RatioTapChanger + TapChangerControl per tapped winding; ratings per winding.
+# (3-winding, Delta model); TapChangerControl + RatioTapChanger or PhaseTapChangerLinear per tapped winding; fixed
+# RatioTapChangers; ImpedanceTapChangerTabular per corrected winding; ratings per winding.
 # Source table: Transformer (records: 3)
 # Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#transformer-r4
 

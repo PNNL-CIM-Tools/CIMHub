@@ -27,7 +27,7 @@ from pathlib import Path
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatWriter
-from cimhub_raw.raw34_reader import PHASE_2_SECTIONS, SECTIONS, SYSTEM_WIDE_KEYWORDS
+from cimhub_raw.raw34_reader import PHASE_2_SECTIONS, POINTS_PER_LINE, SECTIONS, SYSTEM_WIDE_KEYWORDS
 from cimhub_raw.record_layout import Slot, line_count, record_lines, terminal_slots
 
 __all__ = ["Raw34Writer", "format_field"]
@@ -76,9 +76,23 @@ def format_line(slots: tuple[Slot, ...], record: object) -> str:
     return ",".join(fields)
 
 
+def format_impedance_correction(record: schema.ImpedanceCorrectionRecord) -> list[str]:
+    """An impedance correction table: its number, then its points six per line, ended by a 0, 0, 0 point."""
+    number_slot, = record_lines(schema.ImpedanceCorrectionRecord)[0]
+    points = [[point.t, point.f_real, point.f_imag] for point in record.points or []] + [[0.0, 0.0, 0.0]]
+    point_slot = Slot("point", "float", 1, {"precision": 5})
+    lines = []
+    for start in range(0, len(points), POINTS_PER_LINE):
+        fields = [format_field(point_slot, value) for point in points[start:start + POINTS_PER_LINE] for value in point]
+        lines.append(",".join(([format_field(number_slot, record.table_number)] if not start else []) + fields))
+    return lines
+
+
 def format_record(record: object) -> list[str]:
     """Every line of one record."""
     record_class = type(record)
+    if record_class is schema.ImpedanceCorrectionRecord:
+        return format_impedance_correction(record)
     layout = record_lines(record_class)
     first_line = {slot.name: getattr(record, slot.name) for slot in layout[0]}
     return [format_line(layout[index], record) for index in range(line_count(record_class, first_line))]

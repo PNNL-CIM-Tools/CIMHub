@@ -192,7 +192,7 @@ def test_a_q_record_ends_the_data(tmp_path):
 
 
 def test_a_phase_2_section_raises(tmp_path):
-    terminators = "\n".join(["0"] * 9)  # the ends of bus .. two-terminal DC
-    body = f"1,'A',115.0\n{terminators}\n'VSC1',1,0.5\n1,1,1,0.0\n0\nQ"
-    with pytest.raises(NotImplementedError, match="VSC DC LINE section"):
+    terminators = "\n".join(["0"] * 11)  # the ends of bus .. impedance correction
+    body = f"1,'A',115.0\n{terminators}\n'MT1',2,2,1,1,1\n0\nQ"
+    with pytest.raises(NotImplementedError, match="MULTI-TERMINAL DC section"):
         Raw34Reader(_raw(tmp_path, body)).read_all()

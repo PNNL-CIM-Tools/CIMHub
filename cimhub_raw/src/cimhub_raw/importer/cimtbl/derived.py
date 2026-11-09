@@ -59,6 +59,12 @@ def siemens_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> f
     return per_unit * base_mva / base_kv ** 2
 
 
+def watts_from_mw(value_mw: float) -> float:
+    """An active power in W from MW, through the units library: a ``TapChangerControl`` target in mode activePower
+    (transformer COD 3 VMA/VMI, R4b)."""
+    return ureg.Quantity(value_mw, "MW").to("W").magnitude
+
+
 def vars_from_mvar(value_mvar: float) -> float:
     """A reactive power in VAr from Mvar, through the units library: a ``TapChangerControl`` target in mode
     reactivePower (transformer COD 2 VMA/VMI, R4)."""
@@ -126,12 +132,19 @@ def winding_unit_kv(cw: int, base_kv: float, nominal_kv: float, record_id) -> fl
 
 
 class TapPosition(NamedTuple):
-    """A ``RatioTapChanger``'s neutral and position over steps 1..NTP (``ratio_tap``)."""
+    """A ``RatioTapChanger``'s steps, neutral and position (``ratio_tap``)."""
 
+    low_step: int
+    high_step: int
     neutral_step: int
     neutral_kv: float
     increment_percent: float
     step: float
+
+
+def usable_tap_range(windv: float, rma: float, rmi: float) -> bool:
+    """Whether RMI..RMA is a tap range that holds WINDV: RMA > RMI and RMI <= WINDV <= RMA (R4b-4)."""
+    return rma > rmi and rmi <= windv <= rma
 
 
 def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float, rated_kv: float,
@@ -144,26 +157,81 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     - neutralStep = the step nearest ratio 1 (WINDV x unit = ratedU; a tie takes the upper), and neutralU = the
       voltage at that step: CIM's neutralStep is an integer, and RAW's ratio 1 often falls between steps;
     - step = neutralStep + (WINDV - the neutral ratio) / the step size, a float (CIM allows a non-integer
-      step); measured from the neutral, so a WINDV at ratio 1 is exactly neutralStep.
+      step); measured from the neutral, so a WINDV at ratio 1 is exactly neutralStep;
+    - a WINDV outside RMI..RMA extends lowStep below 1 or highStep above NTP to the first whole step past it
+      (R4b-5; CIM: lowStep <= step <= highStep).
 
-    NTP < 2, RMA <= RMI, or a WINDV outside RMI..RMA (CIM: lowStep <= step <= highStep) raises.
+    NTP < 2 or RMA <= RMI raises.
     """
     if ntp < 2:
         raise ValueError(f"{record_id}: NTP {ntp} gives no tap range (at least 2 positions)")
     if rma <= rmi:
         raise ValueError(f"{record_id}: RMA {rma} is not above RMI {rmi}")
-    if not rmi <= windv <= rma:
-        raise ValueError(f"{record_id}: WINDV {windv} is outside RMI..RMA ({rmi}..{rma})")
     step_size = (rma - rmi) / (ntp - 1)
     nearest = math.floor((rated_kv / unit_kv - rmi) / step_size + 0.5)
     neutral_offset = min(max(nearest, 0), ntp - 1)
     neutral = rmi + step_size * neutral_offset
+    step = 1 + neutral_offset + (windv - neutral) / step_size
     return TapPosition(
+        low_step=min(1, math.floor(step)),
+        high_step=max(ntp, math.ceil(step)),
         neutral_step=1 + neutral_offset,
         neutral_kv=neutral * unit_kv,
         increment_percent=ureg.Quantity(step_size * unit_kv / rated_kv, "").to("percent").magnitude,
-        step=1 + neutral_offset + (windv - neutral) / step_size,
+        step=step,
     )
+
+
+def cim_angle(angle_degrees: float) -> float:
+    """A PSS/E angle in CIM's sign (R4b-1): PSS/E's ANG is positive when the winding's bus leads the transformer's
+    internal voltage; CIM's ``phaseShift`` and ``PhaseTapChanger`` angles are positive from the terminal into the
+    transformer, the opposite. Used for ANGk, a shifter's step, and an impedance table's angle points."""
+    return 0.0 - angle_degrees  # not -angle: 0.0 stays 0.0, not -0.0
+
+
+class PhaseTap(NamedTuple):
+    """A ``PhaseTapChangerLinear``'s neutral, increment and position (``phase_tap``), and how far PSS/E's 0 deg lies
+    off its grid."""
+
+    neutral_step: int
+    increment_degrees: float  # in CIM's sign
+    step: float
+    zero_offset_degrees: float  # PSS/E's angle at neutralStep: 0 when 0 deg is on the grid
+
+
+def phase_tap(angle: float, rma: float, rmi: float, ntp: int, record_id) -> PhaseTap:
+    """A phase shifter's tap (COD +-3, R4b-3) over steps 1..NTP from RMI to RMA (PSS/E angles, deg):
+
+    - neutralStep = the step nearest 0 deg (a tie takes the upper); CIM has no neutral angle, so a shifter whose
+      0 deg falls between steps moves its end steps' angles by that offset (``zero_offset_degrees``);
+    - stepPhaseShiftIncrement = (RMA - RMI) / (NTP - 1), in CIM's sign (``cim_angle``);
+    - step = neutralStep + ANG / the step size, a float, so ANG itself is exact.
+
+    NTP < 2, RMA <= RMI, or an ANG outside RMI..RMA raises.
+    """
+    if ntp < 2:
+        raise ValueError(f"{record_id}: NTP {ntp} gives no tap range (at least 2 positions)")
+    if rma <= rmi:
+        raise ValueError(f"{record_id}: RMA {rma} is not above RMI {rmi}")
+    if not rmi <= angle <= rma:
+        raise ValueError(f"{record_id}: ANG {angle} is outside RMI..RMA ({rmi}..{rma})")
+    step_size = (rma - rmi) / (ntp - 1)
+    neutral_offset = min(max(math.floor(-rmi / step_size + 0.5), 0), ntp - 1)
+    return PhaseTap(neutral_step=1 + neutral_offset, increment_degrees=cim_angle(step_size),
+                    step=1 + neutral_offset + angle / step_size,
+                    zero_offset_degrees=rmi + step_size * neutral_offset)
+
+
+def impedance_deviation_percent(factor: float) -> float:
+    """An impedance correction factor F as CIM's deviation in percent of the nominal impedance, 100 x (F - 1),
+    through the units library (``ImpedanceTapChangerTablePoint.rEnd1``/``xEnd1``, R4b-10)."""
+    return ureg.Quantity(factor - 1.0, "").to("percent").magnitude
+
+
+def is_angle_table(t_values: list[float]) -> bool:
+    """PSS/E's rule for an impedance correction table (R4b-10): a first T below 0.5 or a last T above 1.5 makes it
+    a table of phase shift angles (deg); otherwise of off-nominal turns ratios."""
+    return t_values[0] < 0.5 or t_values[-1] > 1.5
 
 
 def net_import(pdes: float) -> float:

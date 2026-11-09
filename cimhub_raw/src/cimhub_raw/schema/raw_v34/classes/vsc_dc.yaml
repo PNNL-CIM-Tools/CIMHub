@@ -1,7 +1,7 @@
 id: https://gridappsd.org/cimhub/raw_v34/classes/vsc_dc
 name: vsc_dc
 title: Voltage Source Converter DC Transmission Line Record
-description: raw RAW VSC DC Transmission Line Record (2 lines per record)
+description: "raw RAW VSC DC Transmission Line Record (3 lines per record: the line, then its two converters)"
 
 imports:
   - linkml:types
@@ -20,20 +20,17 @@ classes:
 
       Multi-line format:
       - Line 1: VSC DC line identification, resistance, and ownership
-      - Line 2: Converter data and control parameters
+      - Lines 2 and 3: the two converters' data and control parameters
 
       Maps to CIM: cim.DCLineSegment, cim.VsConverter
 
     attributes:
       # ==== LINE 1: VSC DC Line Data ====
       name:
-        # NOT an identifier: two VscDcRecords (rectifier + inverter) share the
-        # same NAME per DC line. Marking it identifier: true would make
-        # GraphModel silently drop the second converter. Uniqueness comes from a
-        # composite runtime .ID (name + ibus) assigned by the reader/exporter.
         description: NAME - VSC DC line name (12 characters)
         range: string
         required: true
+        identifier: true
         annotations:
           line_number: 1
           order: 1
@@ -159,9 +156,9 @@ classes:
           separator: ""
           raw_default: 1.0
 
-      # ==== LINE 2: Converter Data ====
-      ibus:
-        description: IBUS - Converter bus number
+      # ==== LINE 2: Converter 1 Data ====
+      ibus_1:
+        description: IBUS - (converter 1) Converter bus number
         range: integer
         required: true
         annotations:
@@ -170,8 +167,8 @@ classes:
           value_type: int
           separator: ","
 
-      converter_type:
-        description: TYPE - Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
+      converter_type_1:
+        description: TYPE - (converter 1) Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
         range: integer
         required: true
         annotations:
@@ -180,8 +177,8 @@ classes:
           value_type: int
           separator: ","
 
-      mode:
-        description: MODE - Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
+      mode_1:
+        description: MODE - (converter 1) Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
         range: integer
         required: false
         annotations:
@@ -191,8 +188,8 @@ classes:
           separator: ","
           raw_default: 1
 
-      dcset:
-        description: DCSET - DC voltage setpoint (TYPE 1) or power demand (TYPE 2, + into AC network)
+      dcset_1:
+        description: DCSET - (converter 1) DC voltage setpoint (TYPE 1) or power demand (TYPE 2, + into AC network)
         range: float
         required: true
         annotations:
@@ -203,8 +200,8 @@ classes:
           separator: ","
           note: "Unit depends on TYPE - kV for TYPE 1 (DC voltage), MW for TYPE 2 (power)"
 
-      acset:
-        description: ACSET - AC voltage setpoint in pu (MODE 1) or power factor setpoint (MODE 2)
+      acset_1:
+        description: ACSET - (converter 1) AC voltage setpoint in pu (MODE 1) or power factor setpoint (MODE 2)
         range: float
         required: false
         annotations:
@@ -216,8 +213,8 @@ classes:
           comments: "Unit depends on MODE - pu for MODE 1 (AC voltage), power factor for MODE 2"
           raw_default: 1.0
 
-      aloss:
-        description: ALOSS - Constant converter loss coefficient in kW
+      aloss_1:
+        description: ALOSS - (converter 1) Constant converter loss coefficient in kW
         range: float
         required: false
         unit:
@@ -230,8 +227,8 @@ classes:
           separator: ","
           raw_default: 0.0
 
-      bloss:
-        description: BLOSS - Linear converter loss coefficient in kW per ampere of DC current
+      bloss_1:
+        description: BLOSS - (converter 1) Linear converter loss coefficient in kW per ampere of DC current
         range: float
         required: false
         unit:
@@ -244,8 +241,8 @@ classes:
           separator: ","
           raw_default: 0.0
 
-      minloss:
-        description: MINLOSS - Minimum converter loss in kW
+      minloss_1:
+        description: MINLOSS - (converter 1) Minimum converter loss in kW
         range: float
         required: false
         unit:
@@ -258,8 +255,8 @@ classes:
           separator: ","
           raw_default: 0.0
 
-      smax:
-        description: SMAX - Converter MVA rating in MVA (0 = unlimited)
+      smax_1:
+        description: SMAX - (converter 1) Converter MVA rating in MVA (0 = unlimited)
         range: float
         required: false
         unit:
@@ -272,8 +269,8 @@ classes:
           separator: ","
           raw_default: 0.0
 
-      imax:
-        description: IMAX - Converter AC current rating in amperes (0 = unlimited)
+      imax_1:
+        description: IMAX - (converter 1) Converter AC current rating in amperes (0 = unlimited)
         range: float
         required: false
         unit:
@@ -286,8 +283,8 @@ classes:
           separator: ","
           raw_default: 0.0
 
-      pwf:
-        description: PWF - Power weighting factor (0 to 1) splitting the reduction between active and reactive power when the rating is exceeded
+      pwf_1:
+        description: PWF - (converter 1) Power weighting factor (0 to 1) splitting the reduction between active and reactive power when the rating is exceeded
         range: float
         required: false
         annotations:
@@ -298,8 +295,8 @@ classes:
           separator: ","
           raw_default: 1.0
 
-      maxq:
-        description: MAXQ - Maximum reactive power limit in MVAr (not used when MODE is 2)
+      maxq_1:
+        description: MAXQ - (converter 1) Maximum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
         unit:
@@ -312,8 +309,8 @@ classes:
           separator: ","
           raw_default: 9999.0
 
-      minq:
-        description: MINQ - Minimum reactive power limit in MVAr (not used when MODE is 2)
+      minq_1:
+        description: MINQ - (converter 1) Minimum reactive power limit in MVAr (not used when MODE is 2)
         range: float
         required: false
         unit:
@@ -326,8 +323,8 @@ classes:
           separator: ","
           raw_default: -9999.0
 
-      vsreg:
-        description: VSREG - Bus number whose voltage is regulated by this converter (0=own bus)
+      vsreg_1:
+        description: VSREG - (converter 1) Bus number whose voltage is regulated by this converter (0=own bus)
         range: integer
         required: false
         annotations:
@@ -337,8 +334,8 @@ classes:
           separator: ","
           raw_default: 0
 
-      rmpct:
-        description: RMPCT - Percent of the total Mvar at the regulated bus supplied by this converter (must be positive)
+      rmpct_1:
+        description: RMPCT - (converter 1) Percent of the total Mvar at the regulated bus supplied by this converter (must be positive)
         range: float
         required: false
         annotations:
@@ -349,12 +346,212 @@ classes:
           separator: ","
           raw_default: 100.0
 
-      nreg:
-        description: NREG - Node number of bus VSREG (0 if VSREG is not in a substation)
+      nreg_1:
+        description: NREG - (converter 1) Node number of bus VSREG (0 if VSREG is not in a substation)
         range: integer
         required: false
         annotations:
           line_number: 2
+          order: 16
+          value_type: int
+          separator: ""
+          raw_default: 0
+      # ==== LINE 3: Converter 2 Data ====
+      ibus_2:
+        description: IBUS - (converter 2) Converter bus number
+        range: integer
+        required: true
+        annotations:
+          line_number: 3
+          order: 1
+          value_type: int
+          separator: ","
+
+      converter_type_2:
+        description: TYPE - (converter 2) Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
+        range: integer
+        required: true
+        annotations:
+          line_number: 3
+          order: 2
+          value_type: int
+          separator: ","
+
+      mode_2:
+        description: MODE - (converter 2) Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
+        range: integer
+        required: false
+        annotations:
+          line_number: 3
+          order: 3
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      dcset_2:
+        description: DCSET - (converter 2) DC voltage setpoint (TYPE 1) or power demand (TYPE 2, + into AC network)
+        range: float
+        required: true
+        annotations:
+          line_number: 3
+          order: 4
+          value_type: float
+          precision: 4
+          separator: ","
+          note: "Unit depends on TYPE - kV for TYPE 1 (DC voltage), MW for TYPE 2 (power)"
+
+      acset_2:
+        description: ACSET - (converter 2) AC voltage setpoint in pu (MODE 1) or power factor setpoint (MODE 2)
+        range: float
+        required: false
+        annotations:
+          line_number: 3
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+          comments: "Unit depends on MODE - pu for MODE 1 (AC voltage), power factor for MODE 2"
+          raw_default: 1.0
+
+      aloss_2:
+        description: ALOSS - (converter 2) Constant converter loss coefficient in kW
+        range: float
+        required: false
+        unit:
+          ucum_code: "kW"
+        annotations:
+          line_number: 3
+          order: 6
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      bloss_2:
+        description: BLOSS - (converter 2) Linear converter loss coefficient in kW per ampere of DC current
+        range: float
+        required: false
+        unit:
+          ucum_code: "kW/A"
+        annotations:
+          line_number: 3
+          order: 7
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      minloss_2:
+        description: MINLOSS - (converter 2) Minimum converter loss in kW
+        range: float
+        required: false
+        unit:
+          ucum_code: "kW"
+        annotations:
+          line_number: 3
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      smax_2:
+        description: SMAX - (converter 2) Converter MVA rating in MVA (0 = unlimited)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVA"
+        annotations:
+          line_number: 3
+          order: 9
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: 0.0
+
+      imax_2:
+        description: IMAX - (converter 2) Converter AC current rating in amperes (0 = unlimited)
+        range: float
+        required: false
+        unit:
+          ucum_code: "A"
+        annotations:
+          line_number: 3
+          order: 10
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: 0.0
+
+      pwf_2:
+        description: PWF - (converter 2) Power weighting factor (0 to 1) splitting the reduction between active and reactive power when the rating is exceeded
+        range: float
+        required: false
+        annotations:
+          line_number: 3
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      maxq_2:
+        description: MAXQ - (converter 2) Maximum reactive power limit in MVAr (not used when MODE is 2)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          line_number: 3
+          order: 12
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: 9999.0
+
+      minq_2:
+        description: MINQ - (converter 2) Minimum reactive power limit in MVAr (not used when MODE is 2)
+        range: float
+        required: false
+        unit:
+          ucum_code: "MVAr"
+        annotations:
+          line_number: 3
+          order: 13
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: -9999.0
+
+      vsreg_2:
+        description: VSREG - (converter 2) Bus number whose voltage is regulated by this converter (0=own bus)
+        range: integer
+        required: false
+        annotations:
+          line_number: 3
+          order: 14
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      rmpct_2:
+        description: RMPCT - (converter 2) Percent of the total Mvar at the regulated bus supplied by this converter (must be positive)
+        range: float
+        required: false
+        annotations:
+          line_number: 3
+          order: 15
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: 100.0
+
+      nreg_2:
+        description: NREG - (converter 2) Node number of bus VSREG (0 if VSREG is not in a substation)
+        range: integer
+        required: false
+        annotations:
+          line_number: 3
           order: 16
           value_type: int
           separator: ""

@@ -103,12 +103,13 @@ MAPPING_ORDER = (
         native, site.substation_of, site.base_kv, site.node_breaker, site.values.base_mva)),
     (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
         native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.node_breaker, site.values.base_mva)),
+    (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(
+        native, transformer.table_users(native, site.base_kv, site.values.base_mva))),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(
         native, site.substation_of, site.base_kv, site.areas, site.node_breaker, site.values.base_mva,
         site.values.transformer_ratings_in_current)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
-    (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),
     (multi_terminal_dc.NATIVE_CLASS, lambda native, site: multi_terminal_dc.map_multi_terminal_dc(native)),
     (facts_device.NATIVE_CLASS, lambda native, site: facts_device.map_facts_device(native)),
     (gne_device.NATIVE_CLASS, lambda native, site: gne_device.map_gne_device(native)),

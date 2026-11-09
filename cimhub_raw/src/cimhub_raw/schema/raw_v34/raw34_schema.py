@@ -1,5 +1,4 @@
 # Auto generated from main.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T20:52:19
 # Schema: raw-raw-v34-schema
 #
 # id: https://gridappsd.org/cimhub/raw_v34
@@ -58,7 +57,7 @@ from rdflib import (
 
 from linkml_runtime.linkml_model.types import Float, Integer, String
 
-metamodel_version = "1.7.0"
+metamodel_version = "1.12.0"
 version = "1.0.0"
 
 # Namespaces
@@ -122,6 +121,10 @@ class TwoTerminalDCRecordName(extended_str):
     pass
 
 
+class VscDcRecordName(extended_str):
+    pass
+
+
 class ImpedanceCorrectionRecordTableNumber(extended_int):
     pass
 
@@ -160,7 +163,7 @@ class RawModel(YAMLRoot):
     transformer_records: Optional[Union[Union[dict, "TransformerRecord"], list[Union[dict, "TransformerRecord"]]]] = empty_list()
     area_interchange_records: Optional[Union[dict[Union[int, AreaInterchangeRecordAreaNumber], Union[dict, "AreaInterchangeRecord"]], list[Union[dict, "AreaInterchangeRecord"]]]] = empty_dict()
     two_terminal_dc_records: Optional[Union[dict[Union[str, TwoTerminalDCRecordName], Union[dict, "TwoTerminalDCRecord"]], list[Union[dict, "TwoTerminalDCRecord"]]]] = empty_dict()
-    vsc_dc_records: Optional[Union[Union[dict, "VscDcRecord"], list[Union[dict, "VscDcRecord"]]]] = empty_list()
+    vsc_dc_records: Optional[Union[dict[Union[str, VscDcRecordName], Union[dict, "VscDcRecord"]], list[Union[dict, "VscDcRecord"]]]] = empty_dict()
     impedance_correction_records: Optional[Union[dict[Union[int, ImpedanceCorrectionRecordTableNumber], Union[dict, "ImpedanceCorrectionRecord"]], list[Union[dict, "ImpedanceCorrectionRecord"]]]] = empty_dict()
     multi_terminal_dc_records: Optional[Union[Union[dict, "MultiTerminalDCRecord"], list[Union[dict, "MultiTerminalDCRecord"]]]] = empty_list()
     multi_section_line_records: Optional[Union[Union[dict, "MultiSectionLineRecord"], list[Union[dict, "MultiSectionLineRecord"]]]] = empty_list()
@@ -187,97 +190,57 @@ class RawModel(YAMLRoot):
 
         self._normalize_inlined_as_list(slot_name="bus_records", slot_type=BusRecord, key_name="bus_number", keyed=True)
 
-        if not isinstance(self.load_records, list):
-            self.load_records = [self.load_records] if self.load_records is not None else []
-        self.load_records = [v if isinstance(v, LoadRecord) else LoadRecord(**as_dict(v)) for v in self.load_records]
+        self._normalize_inlined_as_list(slot_name="load_records", slot_type=LoadRecord, key_name="bus_number", keyed=False)
 
-        if not isinstance(self.fixed_shunt_records, list):
-            self.fixed_shunt_records = [self.fixed_shunt_records] if self.fixed_shunt_records is not None else []
-        self.fixed_shunt_records = [v if isinstance(v, FixedShuntRecord) else FixedShuntRecord(**as_dict(v)) for v in self.fixed_shunt_records]
+        self._normalize_inlined_as_list(slot_name="fixed_shunt_records", slot_type=FixedShuntRecord, key_name="bus_number", keyed=False)
 
-        if not isinstance(self.generator_records, list):
-            self.generator_records = [self.generator_records] if self.generator_records is not None else []
-        self.generator_records = [v if isinstance(v, GeneratorRecord) else GeneratorRecord(**as_dict(v)) for v in self.generator_records]
+        self._normalize_inlined_as_list(slot_name="generator_records", slot_type=GeneratorRecord, key_name="bus_number", keyed=False)
 
-        if not isinstance(self.branch_records, list):
-            self.branch_records = [self.branch_records] if self.branch_records is not None else []
-        self.branch_records = [v if isinstance(v, BranchRecord) else BranchRecord(**as_dict(v)) for v in self.branch_records]
+        self._normalize_inlined_as_list(slot_name="branch_records", slot_type=BranchRecord, key_name="from_bus_number", keyed=False)
 
-        if not isinstance(self.switch_records, list):
-            self.switch_records = [self.switch_records] if self.switch_records is not None else []
-        self.switch_records = [v if isinstance(v, SwitchRecord) else SwitchRecord(**as_dict(v)) for v in self.switch_records]
+        self._normalize_inlined_as_list(slot_name="switch_records", slot_type=SwitchRecord, key_name="from_bus_number", keyed=False)
 
-        if not isinstance(self.transformer_records, list):
-            self.transformer_records = [self.transformer_records] if self.transformer_records is not None else []
-        self.transformer_records = [v if isinstance(v, TransformerRecord) else TransformerRecord(**as_dict(v)) for v in self.transformer_records]
+        self._normalize_inlined_as_list(slot_name="transformer_records", slot_type=TransformerRecord, key_name="i", keyed=False)
 
         self._normalize_inlined_as_list(slot_name="area_interchange_records", slot_type=AreaInterchangeRecord, key_name="area_number", keyed=True)
 
         self._normalize_inlined_as_list(slot_name="two_terminal_dc_records", slot_type=TwoTerminalDCRecord, key_name="name", keyed=True)
 
-        if not isinstance(self.vsc_dc_records, list):
-            self.vsc_dc_records = [self.vsc_dc_records] if self.vsc_dc_records is not None else []
-        self.vsc_dc_records = [v if isinstance(v, VscDcRecord) else VscDcRecord(**as_dict(v)) for v in self.vsc_dc_records]
+        self._normalize_inlined_as_list(slot_name="vsc_dc_records", slot_type=VscDcRecord, key_name="name", keyed=True)
 
         self._normalize_inlined_as_list(slot_name="impedance_correction_records", slot_type=ImpedanceCorrectionRecord, key_name="table_number", keyed=True)
 
-        if not isinstance(self.multi_terminal_dc_records, list):
-            self.multi_terminal_dc_records = [self.multi_terminal_dc_records] if self.multi_terminal_dc_records is not None else []
-        self.multi_terminal_dc_records = [v if isinstance(v, MultiTerminalDCRecord) else MultiTerminalDCRecord(**as_dict(v)) for v in self.multi_terminal_dc_records]
+        self._normalize_inlined_as_list(slot_name="multi_terminal_dc_records", slot_type=MultiTerminalDCRecord, key_name="name", keyed=False)
 
-        if not isinstance(self.multi_section_line_records, list):
-            self.multi_section_line_records = [self.multi_section_line_records] if self.multi_section_line_records is not None else []
-        self.multi_section_line_records = [v if isinstance(v, MultiSectionLineRecord) else MultiSectionLineRecord(**as_dict(v)) for v in self.multi_section_line_records]
+        self._normalize_inlined_as_list(slot_name="multi_section_line_records", slot_type=MultiSectionLineRecord, key_name="i", keyed=False)
 
         self._normalize_inlined_as_list(slot_name="zone_records", slot_type=ZoneRecord, key_name="zone_number", keyed=True)
 
-        if not isinstance(self.interarea_transfer_records, list):
-            self.interarea_transfer_records = [self.interarea_transfer_records] if self.interarea_transfer_records is not None else []
-        self.interarea_transfer_records = [v if isinstance(v, InterareaTransferRecord) else InterareaTransferRecord(**as_dict(v)) for v in self.interarea_transfer_records]
+        self._normalize_inlined_as_list(slot_name="interarea_transfer_records", slot_type=InterareaTransferRecord, key_name="from_area", keyed=False)
 
         self._normalize_inlined_as_list(slot_name="owner_records", slot_type=OwnerRecord, key_name="owner_number", keyed=True)
 
-        if not isinstance(self.facts_device_records, list):
-            self.facts_device_records = [self.facts_device_records] if self.facts_device_records is not None else []
-        self.facts_device_records = [v if isinstance(v, FactsDeviceRecord) else FactsDeviceRecord(**as_dict(v)) for v in self.facts_device_records]
+        self._normalize_inlined_as_list(slot_name="facts_device_records", slot_type=FactsDeviceRecord, key_name="name", keyed=False)
 
-        if not isinstance(self.switched_shunt_records, list):
-            self.switched_shunt_records = [self.switched_shunt_records] if self.switched_shunt_records is not None else []
-        self.switched_shunt_records = [v if isinstance(v, SwitchedShuntRecord) else SwitchedShuntRecord(**as_dict(v)) for v in self.switched_shunt_records]
+        self._normalize_inlined_as_list(slot_name="switched_shunt_records", slot_type=SwitchedShuntRecord, key_name="bus_number", keyed=False)
 
-        if not isinstance(self.gne_device_records, list):
-            self.gne_device_records = [self.gne_device_records] if self.gne_device_records is not None else []
-        self.gne_device_records = [v if isinstance(v, GneDeviceRecord) else GneDeviceRecord(**as_dict(v)) for v in self.gne_device_records]
+        self._normalize_inlined_as_list(slot_name="gne_device_records", slot_type=GneDeviceRecord, key_name="name", keyed=False)
 
-        if not isinstance(self.induction_machine_records, list):
-            self.induction_machine_records = [self.induction_machine_records] if self.induction_machine_records is not None else []
-        self.induction_machine_records = [v if isinstance(v, InductionMachineRecord) else InductionMachineRecord(**as_dict(v)) for v in self.induction_machine_records]
+        self._normalize_inlined_as_list(slot_name="induction_machine_records", slot_type=InductionMachineRecord, key_name="bus_id", keyed=False)
 
         self._normalize_inlined_as_list(slot_name="substation_records", slot_type=SubstationRecord, key_name="substation_number", keyed=True)
 
-        if not isinstance(self.substation_node_records, list):
-            self.substation_node_records = [self.substation_node_records] if self.substation_node_records is not None else []
-        self.substation_node_records = [v if isinstance(v, SubstationNodeRecord) else SubstationNodeRecord(**as_dict(v)) for v in self.substation_node_records]
+        self._normalize_inlined_as_list(slot_name="substation_node_records", slot_type=SubstationNodeRecord, key_name="node_number", keyed=False)
 
-        if not isinstance(self.station_switching_device_records, list):
-            self.station_switching_device_records = [self.station_switching_device_records] if self.station_switching_device_records is not None else []
-        self.station_switching_device_records = [v if isinstance(v, StationSwitchingDeviceRecord) else StationSwitchingDeviceRecord(**as_dict(v)) for v in self.station_switching_device_records]
+        self._normalize_inlined_as_list(slot_name="station_switching_device_records", slot_type=StationSwitchingDeviceRecord, key_name="from_node", keyed=False)
 
-        if not isinstance(self.equipment_terminal_records, list):
-            self.equipment_terminal_records = [self.equipment_terminal_records] if self.equipment_terminal_records is not None else []
-        self.equipment_terminal_records = [v if isinstance(v, EquipmentTerminalRecord) else EquipmentTerminalRecord(**as_dict(v)) for v in self.equipment_terminal_records]
+        self._normalize_inlined_as_list(slot_name="equipment_terminal_records", slot_type=EquipmentTerminalRecord, key_name="bus_number", keyed=False)
 
-        if not isinstance(self.multi_terminal_converter_records, list):
-            self.multi_terminal_converter_records = [self.multi_terminal_converter_records] if self.multi_terminal_converter_records is not None else []
-        self.multi_terminal_converter_records = [v if isinstance(v, MultiTerminalConverterRecord) else MultiTerminalConverterRecord(**as_dict(v)) for v in self.multi_terminal_converter_records]
+        self._normalize_inlined_as_list(slot_name="multi_terminal_converter_records", slot_type=MultiTerminalConverterRecord, key_name="ib", keyed=False)
 
-        if not isinstance(self.multi_terminal_dc_bus_records, list):
-            self.multi_terminal_dc_bus_records = [self.multi_terminal_dc_bus_records] if self.multi_terminal_dc_bus_records is not None else []
-        self.multi_terminal_dc_bus_records = [v if isinstance(v, MultiTerminalDCBusRecord) else MultiTerminalDCBusRecord(**as_dict(v)) for v in self.multi_terminal_dc_bus_records]
+        self._normalize_inlined_as_list(slot_name="multi_terminal_dc_bus_records", slot_type=MultiTerminalDCBusRecord, key_name="idc", keyed=False)
 
-        if not isinstance(self.multi_terminal_dc_link_records, list):
-            self.multi_terminal_dc_link_records = [self.multi_terminal_dc_link_records] if self.multi_terminal_dc_link_records is not None else []
-        self.multi_terminal_dc_link_records = [v if isinstance(v, MultiTerminalDCLinkRecord) else MultiTerminalDCLinkRecord(**as_dict(v)) for v in self.multi_terminal_dc_link_records]
+        self._normalize_inlined_as_list(slot_name="multi_terminal_dc_link_records", slot_type=MultiTerminalDCLinkRecord, key_name="idc", keyed=False)
 
         super().__post_init__(**kwargs)
 
@@ -1690,7 +1653,7 @@ class VscDcRecord(YAMLRoot):
 
     Multi-line format:
     - Line 1: VSC DC line identification, resistance, and ownership
-    - Line 2: Converter data and control parameters
+    - Lines 2 and 3: the two converters' data and control parameters
 
     Maps to CIM: cim.DCLineSegment, cim.VsConverter
     """
@@ -1701,11 +1664,14 @@ class VscDcRecord(YAMLRoot):
     class_name: ClassVar[str] = "VscDcRecord"
     class_model_uri: ClassVar[URIRef] = RAW.VscDcRecord
 
-    name: str = None
+    name: Union[str, VscDcRecordName] = None
     rdc: float = None
-    ibus: int = None
-    converter_type: int = None
-    dcset: float = None
+    ibus_1: int = None
+    converter_type_1: int = None
+    dcset_1: float = None
+    ibus_2: int = None
+    converter_type_2: int = None
+    dcset_2: float = None
     mdc: Optional[int] = None
     o1: Optional[int] = None
     f1: Optional[float] = None
@@ -1715,45 +1681,73 @@ class VscDcRecord(YAMLRoot):
     f3: Optional[float] = None
     o4: Optional[int] = None
     f4: Optional[float] = None
-    mode: Optional[int] = None
-    acset: Optional[float] = None
-    aloss: Optional[float] = None
-    bloss: Optional[float] = None
-    minloss: Optional[float] = None
-    smax: Optional[float] = None
-    imax: Optional[float] = None
-    pwf: Optional[float] = None
-    maxq: Optional[float] = None
-    minq: Optional[float] = None
-    vsreg: Optional[int] = None
-    rmpct: Optional[float] = None
-    nreg: Optional[int] = None
+    mode_1: Optional[int] = None
+    acset_1: Optional[float] = None
+    aloss_1: Optional[float] = None
+    bloss_1: Optional[float] = None
+    minloss_1: Optional[float] = None
+    smax_1: Optional[float] = None
+    imax_1: Optional[float] = None
+    pwf_1: Optional[float] = None
+    maxq_1: Optional[float] = None
+    minq_1: Optional[float] = None
+    vsreg_1: Optional[int] = None
+    rmpct_1: Optional[float] = None
+    nreg_1: Optional[int] = None
+    mode_2: Optional[int] = None
+    acset_2: Optional[float] = None
+    aloss_2: Optional[float] = None
+    bloss_2: Optional[float] = None
+    minloss_2: Optional[float] = None
+    smax_2: Optional[float] = None
+    imax_2: Optional[float] = None
+    pwf_2: Optional[float] = None
+    maxq_2: Optional[float] = None
+    minq_2: Optional[float] = None
+    vsreg_2: Optional[int] = None
+    rmpct_2: Optional[float] = None
+    nreg_2: Optional[int] = None
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.name):
             self.MissingRequiredField("name")
-        if not isinstance(self.name, str):
-            self.name = str(self.name)
+        if not isinstance(self.name, VscDcRecordName):
+            self.name = VscDcRecordName(self.name)
 
         if self._is_empty(self.rdc):
             self.MissingRequiredField("rdc")
         if not isinstance(self.rdc, float):
             self.rdc = float(self.rdc)
 
-        if self._is_empty(self.ibus):
-            self.MissingRequiredField("ibus")
-        if not isinstance(self.ibus, int):
-            self.ibus = int(self.ibus)
+        if self._is_empty(self.ibus_1):
+            self.MissingRequiredField("ibus_1")
+        if not isinstance(self.ibus_1, int):
+            self.ibus_1 = int(self.ibus_1)
 
-        if self._is_empty(self.converter_type):
-            self.MissingRequiredField("converter_type")
-        if not isinstance(self.converter_type, int):
-            self.converter_type = int(self.converter_type)
+        if self._is_empty(self.converter_type_1):
+            self.MissingRequiredField("converter_type_1")
+        if not isinstance(self.converter_type_1, int):
+            self.converter_type_1 = int(self.converter_type_1)
 
-        if self._is_empty(self.dcset):
-            self.MissingRequiredField("dcset")
-        if not isinstance(self.dcset, float):
-            self.dcset = float(self.dcset)
+        if self._is_empty(self.dcset_1):
+            self.MissingRequiredField("dcset_1")
+        if not isinstance(self.dcset_1, float):
+            self.dcset_1 = float(self.dcset_1)
+
+        if self._is_empty(self.ibus_2):
+            self.MissingRequiredField("ibus_2")
+        if not isinstance(self.ibus_2, int):
+            self.ibus_2 = int(self.ibus_2)
+
+        if self._is_empty(self.converter_type_2):
+            self.MissingRequiredField("converter_type_2")
+        if not isinstance(self.converter_type_2, int):
+            self.converter_type_2 = int(self.converter_type_2)
+
+        if self._is_empty(self.dcset_2):
+            self.MissingRequiredField("dcset_2")
+        if not isinstance(self.dcset_2, float):
+            self.dcset_2 = float(self.dcset_2)
 
         if self.mdc is not None and not isinstance(self.mdc, int):
             self.mdc = int(self.mdc)
@@ -1782,44 +1776,83 @@ class VscDcRecord(YAMLRoot):
         if self.f4 is not None and not isinstance(self.f4, float):
             self.f4 = float(self.f4)
 
-        if self.mode is not None and not isinstance(self.mode, int):
-            self.mode = int(self.mode)
+        if self.mode_1 is not None and not isinstance(self.mode_1, int):
+            self.mode_1 = int(self.mode_1)
 
-        if self.acset is not None and not isinstance(self.acset, float):
-            self.acset = float(self.acset)
+        if self.acset_1 is not None and not isinstance(self.acset_1, float):
+            self.acset_1 = float(self.acset_1)
 
-        if self.aloss is not None and not isinstance(self.aloss, float):
-            self.aloss = float(self.aloss)
+        if self.aloss_1 is not None and not isinstance(self.aloss_1, float):
+            self.aloss_1 = float(self.aloss_1)
 
-        if self.bloss is not None and not isinstance(self.bloss, float):
-            self.bloss = float(self.bloss)
+        if self.bloss_1 is not None and not isinstance(self.bloss_1, float):
+            self.bloss_1 = float(self.bloss_1)
 
-        if self.minloss is not None and not isinstance(self.minloss, float):
-            self.minloss = float(self.minloss)
+        if self.minloss_1 is not None and not isinstance(self.minloss_1, float):
+            self.minloss_1 = float(self.minloss_1)
 
-        if self.smax is not None and not isinstance(self.smax, float):
-            self.smax = float(self.smax)
+        if self.smax_1 is not None and not isinstance(self.smax_1, float):
+            self.smax_1 = float(self.smax_1)
 
-        if self.imax is not None and not isinstance(self.imax, float):
-            self.imax = float(self.imax)
+        if self.imax_1 is not None and not isinstance(self.imax_1, float):
+            self.imax_1 = float(self.imax_1)
 
-        if self.pwf is not None and not isinstance(self.pwf, float):
-            self.pwf = float(self.pwf)
+        if self.pwf_1 is not None and not isinstance(self.pwf_1, float):
+            self.pwf_1 = float(self.pwf_1)
 
-        if self.maxq is not None and not isinstance(self.maxq, float):
-            self.maxq = float(self.maxq)
+        if self.maxq_1 is not None and not isinstance(self.maxq_1, float):
+            self.maxq_1 = float(self.maxq_1)
 
-        if self.minq is not None and not isinstance(self.minq, float):
-            self.minq = float(self.minq)
+        if self.minq_1 is not None and not isinstance(self.minq_1, float):
+            self.minq_1 = float(self.minq_1)
 
-        if self.vsreg is not None and not isinstance(self.vsreg, int):
-            self.vsreg = int(self.vsreg)
+        if self.vsreg_1 is not None and not isinstance(self.vsreg_1, int):
+            self.vsreg_1 = int(self.vsreg_1)
 
-        if self.rmpct is not None and not isinstance(self.rmpct, float):
-            self.rmpct = float(self.rmpct)
+        if self.rmpct_1 is not None and not isinstance(self.rmpct_1, float):
+            self.rmpct_1 = float(self.rmpct_1)
 
-        if self.nreg is not None and not isinstance(self.nreg, int):
-            self.nreg = int(self.nreg)
+        if self.nreg_1 is not None and not isinstance(self.nreg_1, int):
+            self.nreg_1 = int(self.nreg_1)
+
+        if self.mode_2 is not None and not isinstance(self.mode_2, int):
+            self.mode_2 = int(self.mode_2)
+
+        if self.acset_2 is not None and not isinstance(self.acset_2, float):
+            self.acset_2 = float(self.acset_2)
+
+        if self.aloss_2 is not None and not isinstance(self.aloss_2, float):
+            self.aloss_2 = float(self.aloss_2)
+
+        if self.bloss_2 is not None and not isinstance(self.bloss_2, float):
+            self.bloss_2 = float(self.bloss_2)
+
+        if self.minloss_2 is not None and not isinstance(self.minloss_2, float):
+            self.minloss_2 = float(self.minloss_2)
+
+        if self.smax_2 is not None and not isinstance(self.smax_2, float):
+            self.smax_2 = float(self.smax_2)
+
+        if self.imax_2 is not None and not isinstance(self.imax_2, float):
+            self.imax_2 = float(self.imax_2)
+
+        if self.pwf_2 is not None and not isinstance(self.pwf_2, float):
+            self.pwf_2 = float(self.pwf_2)
+
+        if self.maxq_2 is not None and not isinstance(self.maxq_2, float):
+            self.maxq_2 = float(self.maxq_2)
+
+        if self.minq_2 is not None and not isinstance(self.minq_2, float):
+            self.minq_2 = float(self.minq_2)
+
+        if self.vsreg_2 is not None and not isinstance(self.vsreg_2, int):
+            self.vsreg_2 = int(self.vsreg_2)
+
+        if self.rmpct_2 is not None and not isinstance(self.rmpct_2, float):
+            self.rmpct_2 = float(self.rmpct_2)
+
+        if self.nreg_2 is not None and not isinstance(self.nreg_2, int):
+            self.nreg_2 = int(self.nreg_2)
 
         super().__post_init__(**kwargs)
 
@@ -1827,7 +1860,8 @@ class VscDcRecord(YAMLRoot):
 @dataclass(repr=False)
 class ImpedanceCorrectionRecord(YAMLRoot):
     """
-    Transformer impedance correction table data record
+    Transformer impedance correction table data record: the table number, then its points, six per line,
+    as many lines as needed. A point of three zeros ends the table (it is not a point of the table).
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -1837,39 +1871,7 @@ class ImpedanceCorrectionRecord(YAMLRoot):
     class_model_uri: ClassVar[URIRef] = RAW.ImpedanceCorrectionRecord
 
     table_number: Union[int, ImpedanceCorrectionRecordTableNumber] = None
-    t1: Optional[float] = None
-    f1_real: Optional[float] = None
-    f1_imag: Optional[float] = None
-    t2: Optional[float] = None
-    f2_real: Optional[float] = None
-    f2_imag: Optional[float] = None
-    t3: Optional[float] = None
-    f3_real: Optional[float] = None
-    f3_imag: Optional[float] = None
-    t4: Optional[float] = None
-    f4_real: Optional[float] = None
-    f4_imag: Optional[float] = None
-    t5: Optional[float] = None
-    f5_real: Optional[float] = None
-    f5_imag: Optional[float] = None
-    t6: Optional[float] = None
-    f6_real: Optional[float] = None
-    f6_imag: Optional[float] = None
-    t7: Optional[float] = None
-    f7_real: Optional[float] = None
-    f7_imag: Optional[float] = None
-    t8: Optional[float] = None
-    f8_real: Optional[float] = None
-    f8_imag: Optional[float] = None
-    t9: Optional[float] = None
-    f9_real: Optional[float] = None
-    f9_imag: Optional[float] = None
-    t10: Optional[float] = None
-    f10_real: Optional[float] = None
-    f10_imag: Optional[float] = None
-    t11: Optional[float] = None
-    f11_real: Optional[float] = None
-    f11_imag: Optional[float] = None
+    points: Optional[Union[Union[dict, "ImpedanceCorrectionPoint"], list[Union[dict, "ImpedanceCorrectionPoint"]]]] = empty_list()
 
     def __post_init__(self, *_: str, **kwargs: Any):
         if self._is_empty(self.table_number):
@@ -1877,104 +1879,42 @@ class ImpedanceCorrectionRecord(YAMLRoot):
         if not isinstance(self.table_number, ImpedanceCorrectionRecordTableNumber):
             self.table_number = ImpedanceCorrectionRecordTableNumber(self.table_number)
 
-        if self.t1 is not None and not isinstance(self.t1, float):
-            self.t1 = float(self.t1)
+        self._normalize_inlined_as_list(slot_name="points", slot_type=ImpedanceCorrectionPoint, key_name="t", keyed=False)
 
-        if self.f1_real is not None and not isinstance(self.f1_real, float):
-            self.f1_real = float(self.f1_real)
+        super().__post_init__(**kwargs)
 
-        if self.f1_imag is not None and not isinstance(self.f1_imag, float):
-            self.f1_imag = float(self.f1_imag)
 
-        if self.t2 is not None and not isinstance(self.t2, float):
-            self.t2 = float(self.t2)
+@dataclass(repr=False)
+class ImpedanceCorrectionPoint(YAMLRoot):
+    """
+    One point of an impedance correction table
+    """
+    _inherited_slots: ClassVar[list[str]] = []
 
-        if self.f2_real is not None and not isinstance(self.f2_real, float):
-            self.f2_real = float(self.f2_real)
+    class_class_uri: ClassVar[URIRef] = RAW["ImpedanceCorrectionPoint"]
+    class_class_curie: ClassVar[str] = "raw:ImpedanceCorrectionPoint"
+    class_name: ClassVar[str] = "ImpedanceCorrectionPoint"
+    class_model_uri: ClassVar[URIRef] = RAW.ImpedanceCorrectionPoint
 
-        if self.f2_imag is not None and not isinstance(self.f2_imag, float):
-            self.f2_imag = float(self.f2_imag)
+    t: float = None
+    f_real: float = None
+    f_imag: float = None
 
-        if self.t3 is not None and not isinstance(self.t3, float):
-            self.t3 = float(self.t3)
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.t):
+            self.MissingRequiredField("t")
+        if not isinstance(self.t, float):
+            self.t = float(self.t)
 
-        if self.f3_real is not None and not isinstance(self.f3_real, float):
-            self.f3_real = float(self.f3_real)
+        if self._is_empty(self.f_real):
+            self.MissingRequiredField("f_real")
+        if not isinstance(self.f_real, float):
+            self.f_real = float(self.f_real)
 
-        if self.f3_imag is not None and not isinstance(self.f3_imag, float):
-            self.f3_imag = float(self.f3_imag)
-
-        if self.t4 is not None and not isinstance(self.t4, float):
-            self.t4 = float(self.t4)
-
-        if self.f4_real is not None and not isinstance(self.f4_real, float):
-            self.f4_real = float(self.f4_real)
-
-        if self.f4_imag is not None and not isinstance(self.f4_imag, float):
-            self.f4_imag = float(self.f4_imag)
-
-        if self.t5 is not None and not isinstance(self.t5, float):
-            self.t5 = float(self.t5)
-
-        if self.f5_real is not None and not isinstance(self.f5_real, float):
-            self.f5_real = float(self.f5_real)
-
-        if self.f5_imag is not None and not isinstance(self.f5_imag, float):
-            self.f5_imag = float(self.f5_imag)
-
-        if self.t6 is not None and not isinstance(self.t6, float):
-            self.t6 = float(self.t6)
-
-        if self.f6_real is not None and not isinstance(self.f6_real, float):
-            self.f6_real = float(self.f6_real)
-
-        if self.f6_imag is not None and not isinstance(self.f6_imag, float):
-            self.f6_imag = float(self.f6_imag)
-
-        if self.t7 is not None and not isinstance(self.t7, float):
-            self.t7 = float(self.t7)
-
-        if self.f7_real is not None and not isinstance(self.f7_real, float):
-            self.f7_real = float(self.f7_real)
-
-        if self.f7_imag is not None and not isinstance(self.f7_imag, float):
-            self.f7_imag = float(self.f7_imag)
-
-        if self.t8 is not None and not isinstance(self.t8, float):
-            self.t8 = float(self.t8)
-
-        if self.f8_real is not None and not isinstance(self.f8_real, float):
-            self.f8_real = float(self.f8_real)
-
-        if self.f8_imag is not None and not isinstance(self.f8_imag, float):
-            self.f8_imag = float(self.f8_imag)
-
-        if self.t9 is not None and not isinstance(self.t9, float):
-            self.t9 = float(self.t9)
-
-        if self.f9_real is not None and not isinstance(self.f9_real, float):
-            self.f9_real = float(self.f9_real)
-
-        if self.f9_imag is not None and not isinstance(self.f9_imag, float):
-            self.f9_imag = float(self.f9_imag)
-
-        if self.t10 is not None and not isinstance(self.t10, float):
-            self.t10 = float(self.t10)
-
-        if self.f10_real is not None and not isinstance(self.f10_real, float):
-            self.f10_real = float(self.f10_real)
-
-        if self.f10_imag is not None and not isinstance(self.f10_imag, float):
-            self.f10_imag = float(self.f10_imag)
-
-        if self.t11 is not None and not isinstance(self.t11, float):
-            self.t11 = float(self.t11)
-
-        if self.f11_real is not None and not isinstance(self.f11_real, float):
-            self.f11_real = float(self.f11_real)
-
-        if self.f11_imag is not None and not isinstance(self.f11_imag, float):
-            self.f11_imag = float(self.f11_imag)
+        if self._is_empty(self.f_imag):
+            self.MissingRequiredField("f_imag")
+        if not isinstance(self.f_imag, float):
+            self.f_imag = float(self.f_imag)
 
         super().__post_init__(**kwargs)
 
@@ -3137,7 +3077,7 @@ slots.rawModel__two_terminal_dc_records = Slot(uri=RAW.two_terminal_dc_records, 
                    model_uri=RAW.rawModel__two_terminal_dc_records, domain=None, range=Optional[Union[dict[Union[str, TwoTerminalDCRecordName], Union[dict, TwoTerminalDCRecord]], list[Union[dict, TwoTerminalDCRecord]]]])
 
 slots.rawModel__vsc_dc_records = Slot(uri=RAW.vsc_dc_records, name="rawModel__vsc_dc_records", curie=RAW.curie('vsc_dc_records'),
-                   model_uri=RAW.rawModel__vsc_dc_records, domain=None, range=Optional[Union[Union[dict, VscDcRecord], list[Union[dict, VscDcRecord]]]])
+                   model_uri=RAW.rawModel__vsc_dc_records, domain=None, range=Optional[Union[dict[Union[str, VscDcRecordName], Union[dict, VscDcRecord]], list[Union[dict, VscDcRecord]]]])
 
 slots.rawModel__impedance_correction_records = Slot(uri=RAW.impedance_correction_records, name="rawModel__impedance_correction_records", curie=RAW.curie('impedance_correction_records'),
                    model_uri=RAW.rawModel__impedance_correction_records, domain=None, range=Optional[Union[dict[Union[int, ImpedanceCorrectionRecordTableNumber], Union[dict, ImpedanceCorrectionRecord]], list[Union[dict, ImpedanceCorrectionRecord]]]])
@@ -4034,7 +3974,7 @@ slots.twoTerminalDCRecord__ndi = Slot(uri=RAW.ndi, name="twoTerminalDCRecord__nd
                    model_uri=RAW.twoTerminalDCRecord__ndi, domain=None, range=Optional[int])
 
 slots.vscDcRecord__name = Slot(uri=RAW.name, name="vscDcRecord__name", curie=RAW.curie('name'),
-                   model_uri=RAW.vscDcRecord__name, domain=None, range=str)
+                   model_uri=RAW.vscDcRecord__name, domain=None, range=URIRef)
 
 slots.vscDcRecord__mdc = Slot(uri=RAW.mdc, name="vscDcRecord__mdc", curie=RAW.curie('mdc'),
                    model_uri=RAW.vscDcRecord__mdc, domain=None, range=Optional[int])
@@ -4066,155 +4006,116 @@ slots.vscDcRecord__o4 = Slot(uri=RAW.o4, name="vscDcRecord__o4", curie=RAW.curie
 slots.vscDcRecord__f4 = Slot(uri=RAW.f4, name="vscDcRecord__f4", curie=RAW.curie('f4'),
                    model_uri=RAW.vscDcRecord__f4, domain=None, range=Optional[float])
 
-slots.vscDcRecord__ibus = Slot(uri=RAW.ibus, name="vscDcRecord__ibus", curie=RAW.curie('ibus'),
-                   model_uri=RAW.vscDcRecord__ibus, domain=None, range=int)
+slots.vscDcRecord__ibus_1 = Slot(uri=RAW.ibus_1, name="vscDcRecord__ibus_1", curie=RAW.curie('ibus_1'),
+                   model_uri=RAW.vscDcRecord__ibus_1, domain=None, range=int)
 
-slots.vscDcRecord__converter_type = Slot(uri=RAW.converter_type, name="vscDcRecord__converter_type", curie=RAW.curie('converter_type'),
-                   model_uri=RAW.vscDcRecord__converter_type, domain=None, range=int)
+slots.vscDcRecord__converter_type_1 = Slot(uri=RAW.converter_type_1, name="vscDcRecord__converter_type_1", curie=RAW.curie('converter_type_1'),
+                   model_uri=RAW.vscDcRecord__converter_type_1, domain=None, range=int)
 
-slots.vscDcRecord__mode = Slot(uri=RAW.mode, name="vscDcRecord__mode", curie=RAW.curie('mode'),
-                   model_uri=RAW.vscDcRecord__mode, domain=None, range=Optional[int])
+slots.vscDcRecord__mode_1 = Slot(uri=RAW.mode_1, name="vscDcRecord__mode_1", curie=RAW.curie('mode_1'),
+                   model_uri=RAW.vscDcRecord__mode_1, domain=None, range=Optional[int])
 
-slots.vscDcRecord__dcset = Slot(uri=RAW.dcset, name="vscDcRecord__dcset", curie=RAW.curie('dcset'),
-                   model_uri=RAW.vscDcRecord__dcset, domain=None, range=float)
+slots.vscDcRecord__dcset_1 = Slot(uri=RAW.dcset_1, name="vscDcRecord__dcset_1", curie=RAW.curie('dcset_1'),
+                   model_uri=RAW.vscDcRecord__dcset_1, domain=None, range=float)
 
-slots.vscDcRecord__acset = Slot(uri=RAW.acset, name="vscDcRecord__acset", curie=RAW.curie('acset'),
-                   model_uri=RAW.vscDcRecord__acset, domain=None, range=Optional[float])
+slots.vscDcRecord__acset_1 = Slot(uri=RAW.acset_1, name="vscDcRecord__acset_1", curie=RAW.curie('acset_1'),
+                   model_uri=RAW.vscDcRecord__acset_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__aloss = Slot(uri=RAW.aloss, name="vscDcRecord__aloss", curie=RAW.curie('aloss'),
-                   model_uri=RAW.vscDcRecord__aloss, domain=None, range=Optional[float])
+slots.vscDcRecord__aloss_1 = Slot(uri=RAW.aloss_1, name="vscDcRecord__aloss_1", curie=RAW.curie('aloss_1'),
+                   model_uri=RAW.vscDcRecord__aloss_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__bloss = Slot(uri=RAW.bloss, name="vscDcRecord__bloss", curie=RAW.curie('bloss'),
-                   model_uri=RAW.vscDcRecord__bloss, domain=None, range=Optional[float])
+slots.vscDcRecord__bloss_1 = Slot(uri=RAW.bloss_1, name="vscDcRecord__bloss_1", curie=RAW.curie('bloss_1'),
+                   model_uri=RAW.vscDcRecord__bloss_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__minloss = Slot(uri=RAW.minloss, name="vscDcRecord__minloss", curie=RAW.curie('minloss'),
-                   model_uri=RAW.vscDcRecord__minloss, domain=None, range=Optional[float])
+slots.vscDcRecord__minloss_1 = Slot(uri=RAW.minloss_1, name="vscDcRecord__minloss_1", curie=RAW.curie('minloss_1'),
+                   model_uri=RAW.vscDcRecord__minloss_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__smax = Slot(uri=RAW.smax, name="vscDcRecord__smax", curie=RAW.curie('smax'),
-                   model_uri=RAW.vscDcRecord__smax, domain=None, range=Optional[float])
+slots.vscDcRecord__smax_1 = Slot(uri=RAW.smax_1, name="vscDcRecord__smax_1", curie=RAW.curie('smax_1'),
+                   model_uri=RAW.vscDcRecord__smax_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__imax = Slot(uri=RAW.imax, name="vscDcRecord__imax", curie=RAW.curie('imax'),
-                   model_uri=RAW.vscDcRecord__imax, domain=None, range=Optional[float])
+slots.vscDcRecord__imax_1 = Slot(uri=RAW.imax_1, name="vscDcRecord__imax_1", curie=RAW.curie('imax_1'),
+                   model_uri=RAW.vscDcRecord__imax_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__pwf = Slot(uri=RAW.pwf, name="vscDcRecord__pwf", curie=RAW.curie('pwf'),
-                   model_uri=RAW.vscDcRecord__pwf, domain=None, range=Optional[float])
+slots.vscDcRecord__pwf_1 = Slot(uri=RAW.pwf_1, name="vscDcRecord__pwf_1", curie=RAW.curie('pwf_1'),
+                   model_uri=RAW.vscDcRecord__pwf_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__maxq = Slot(uri=RAW.maxq, name="vscDcRecord__maxq", curie=RAW.curie('maxq'),
-                   model_uri=RAW.vscDcRecord__maxq, domain=None, range=Optional[float])
+slots.vscDcRecord__maxq_1 = Slot(uri=RAW.maxq_1, name="vscDcRecord__maxq_1", curie=RAW.curie('maxq_1'),
+                   model_uri=RAW.vscDcRecord__maxq_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__minq = Slot(uri=RAW.minq, name="vscDcRecord__minq", curie=RAW.curie('minq'),
-                   model_uri=RAW.vscDcRecord__minq, domain=None, range=Optional[float])
+slots.vscDcRecord__minq_1 = Slot(uri=RAW.minq_1, name="vscDcRecord__minq_1", curie=RAW.curie('minq_1'),
+                   model_uri=RAW.vscDcRecord__minq_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__vsreg = Slot(uri=RAW.vsreg, name="vscDcRecord__vsreg", curie=RAW.curie('vsreg'),
-                   model_uri=RAW.vscDcRecord__vsreg, domain=None, range=Optional[int])
+slots.vscDcRecord__vsreg_1 = Slot(uri=RAW.vsreg_1, name="vscDcRecord__vsreg_1", curie=RAW.curie('vsreg_1'),
+                   model_uri=RAW.vscDcRecord__vsreg_1, domain=None, range=Optional[int])
 
-slots.vscDcRecord__rmpct = Slot(uri=RAW.rmpct, name="vscDcRecord__rmpct", curie=RAW.curie('rmpct'),
-                   model_uri=RAW.vscDcRecord__rmpct, domain=None, range=Optional[float])
+slots.vscDcRecord__rmpct_1 = Slot(uri=RAW.rmpct_1, name="vscDcRecord__rmpct_1", curie=RAW.curie('rmpct_1'),
+                   model_uri=RAW.vscDcRecord__rmpct_1, domain=None, range=Optional[float])
 
-slots.vscDcRecord__nreg = Slot(uri=RAW.nreg, name="vscDcRecord__nreg", curie=RAW.curie('nreg'),
-                   model_uri=RAW.vscDcRecord__nreg, domain=None, range=Optional[int])
+slots.vscDcRecord__nreg_1 = Slot(uri=RAW.nreg_1, name="vscDcRecord__nreg_1", curie=RAW.curie('nreg_1'),
+                   model_uri=RAW.vscDcRecord__nreg_1, domain=None, range=Optional[int])
+
+slots.vscDcRecord__ibus_2 = Slot(uri=RAW.ibus_2, name="vscDcRecord__ibus_2", curie=RAW.curie('ibus_2'),
+                   model_uri=RAW.vscDcRecord__ibus_2, domain=None, range=int)
+
+slots.vscDcRecord__converter_type_2 = Slot(uri=RAW.converter_type_2, name="vscDcRecord__converter_type_2", curie=RAW.curie('converter_type_2'),
+                   model_uri=RAW.vscDcRecord__converter_type_2, domain=None, range=int)
+
+slots.vscDcRecord__mode_2 = Slot(uri=RAW.mode_2, name="vscDcRecord__mode_2", curie=RAW.curie('mode_2'),
+                   model_uri=RAW.vscDcRecord__mode_2, domain=None, range=Optional[int])
+
+slots.vscDcRecord__dcset_2 = Slot(uri=RAW.dcset_2, name="vscDcRecord__dcset_2", curie=RAW.curie('dcset_2'),
+                   model_uri=RAW.vscDcRecord__dcset_2, domain=None, range=float)
+
+slots.vscDcRecord__acset_2 = Slot(uri=RAW.acset_2, name="vscDcRecord__acset_2", curie=RAW.curie('acset_2'),
+                   model_uri=RAW.vscDcRecord__acset_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__aloss_2 = Slot(uri=RAW.aloss_2, name="vscDcRecord__aloss_2", curie=RAW.curie('aloss_2'),
+                   model_uri=RAW.vscDcRecord__aloss_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__bloss_2 = Slot(uri=RAW.bloss_2, name="vscDcRecord__bloss_2", curie=RAW.curie('bloss_2'),
+                   model_uri=RAW.vscDcRecord__bloss_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__minloss_2 = Slot(uri=RAW.minloss_2, name="vscDcRecord__minloss_2", curie=RAW.curie('minloss_2'),
+                   model_uri=RAW.vscDcRecord__minloss_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__smax_2 = Slot(uri=RAW.smax_2, name="vscDcRecord__smax_2", curie=RAW.curie('smax_2'),
+                   model_uri=RAW.vscDcRecord__smax_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__imax_2 = Slot(uri=RAW.imax_2, name="vscDcRecord__imax_2", curie=RAW.curie('imax_2'),
+                   model_uri=RAW.vscDcRecord__imax_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__pwf_2 = Slot(uri=RAW.pwf_2, name="vscDcRecord__pwf_2", curie=RAW.curie('pwf_2'),
+                   model_uri=RAW.vscDcRecord__pwf_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__maxq_2 = Slot(uri=RAW.maxq_2, name="vscDcRecord__maxq_2", curie=RAW.curie('maxq_2'),
+                   model_uri=RAW.vscDcRecord__maxq_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__minq_2 = Slot(uri=RAW.minq_2, name="vscDcRecord__minq_2", curie=RAW.curie('minq_2'),
+                   model_uri=RAW.vscDcRecord__minq_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__vsreg_2 = Slot(uri=RAW.vsreg_2, name="vscDcRecord__vsreg_2", curie=RAW.curie('vsreg_2'),
+                   model_uri=RAW.vscDcRecord__vsreg_2, domain=None, range=Optional[int])
+
+slots.vscDcRecord__rmpct_2 = Slot(uri=RAW.rmpct_2, name="vscDcRecord__rmpct_2", curie=RAW.curie('rmpct_2'),
+                   model_uri=RAW.vscDcRecord__rmpct_2, domain=None, range=Optional[float])
+
+slots.vscDcRecord__nreg_2 = Slot(uri=RAW.nreg_2, name="vscDcRecord__nreg_2", curie=RAW.curie('nreg_2'),
+                   model_uri=RAW.vscDcRecord__nreg_2, domain=None, range=Optional[int])
 
 slots.impedanceCorrectionRecord__table_number = Slot(uri=RAW.table_number, name="impedanceCorrectionRecord__table_number", curie=RAW.curie('table_number'),
                    model_uri=RAW.impedanceCorrectionRecord__table_number, domain=None, range=URIRef)
 
-slots.impedanceCorrectionRecord__t1 = Slot(uri=RAW.t1, name="impedanceCorrectionRecord__t1", curie=RAW.curie('t1'),
-                   model_uri=RAW.impedanceCorrectionRecord__t1, domain=None, range=Optional[float])
+slots.impedanceCorrectionRecord__points = Slot(uri=RAW.points, name="impedanceCorrectionRecord__points", curie=RAW.curie('points'),
+                   model_uri=RAW.impedanceCorrectionRecord__points, domain=None, range=Optional[Union[Union[dict, ImpedanceCorrectionPoint], list[Union[dict, ImpedanceCorrectionPoint]]]])
 
-slots.impedanceCorrectionRecord__f1_real = Slot(uri=RAW.f1_real, name="impedanceCorrectionRecord__f1_real", curie=RAW.curie('f1_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f1_real, domain=None, range=Optional[float])
+slots.impedanceCorrectionPoint__t = Slot(uri=RAW.t, name="impedanceCorrectionPoint__t", curie=RAW.curie('t'),
+                   model_uri=RAW.impedanceCorrectionPoint__t, domain=None, range=float)
 
-slots.impedanceCorrectionRecord__f1_imag = Slot(uri=RAW.f1_imag, name="impedanceCorrectionRecord__f1_imag", curie=RAW.curie('f1_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f1_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionPoint__f_real = Slot(uri=RAW.f_real, name="impedanceCorrectionPoint__f_real", curie=RAW.curie('f_real'),
+                   model_uri=RAW.impedanceCorrectionPoint__f_real, domain=None, range=float)
 
-slots.impedanceCorrectionRecord__t2 = Slot(uri=RAW.t2, name="impedanceCorrectionRecord__t2", curie=RAW.curie('t2'),
-                   model_uri=RAW.impedanceCorrectionRecord__t2, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f2_real = Slot(uri=RAW.f2_real, name="impedanceCorrectionRecord__f2_real", curie=RAW.curie('f2_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f2_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f2_imag = Slot(uri=RAW.f2_imag, name="impedanceCorrectionRecord__f2_imag", curie=RAW.curie('f2_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f2_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t3 = Slot(uri=RAW.t3, name="impedanceCorrectionRecord__t3", curie=RAW.curie('t3'),
-                   model_uri=RAW.impedanceCorrectionRecord__t3, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f3_real = Slot(uri=RAW.f3_real, name="impedanceCorrectionRecord__f3_real", curie=RAW.curie('f3_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f3_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f3_imag = Slot(uri=RAW.f3_imag, name="impedanceCorrectionRecord__f3_imag", curie=RAW.curie('f3_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f3_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t4 = Slot(uri=RAW.t4, name="impedanceCorrectionRecord__t4", curie=RAW.curie('t4'),
-                   model_uri=RAW.impedanceCorrectionRecord__t4, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f4_real = Slot(uri=RAW.f4_real, name="impedanceCorrectionRecord__f4_real", curie=RAW.curie('f4_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f4_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f4_imag = Slot(uri=RAW.f4_imag, name="impedanceCorrectionRecord__f4_imag", curie=RAW.curie('f4_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f4_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t5 = Slot(uri=RAW.t5, name="impedanceCorrectionRecord__t5", curie=RAW.curie('t5'),
-                   model_uri=RAW.impedanceCorrectionRecord__t5, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f5_real = Slot(uri=RAW.f5_real, name="impedanceCorrectionRecord__f5_real", curie=RAW.curie('f5_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f5_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f5_imag = Slot(uri=RAW.f5_imag, name="impedanceCorrectionRecord__f5_imag", curie=RAW.curie('f5_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f5_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t6 = Slot(uri=RAW.t6, name="impedanceCorrectionRecord__t6", curie=RAW.curie('t6'),
-                   model_uri=RAW.impedanceCorrectionRecord__t6, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f6_real = Slot(uri=RAW.f6_real, name="impedanceCorrectionRecord__f6_real", curie=RAW.curie('f6_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f6_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f6_imag = Slot(uri=RAW.f6_imag, name="impedanceCorrectionRecord__f6_imag", curie=RAW.curie('f6_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f6_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t7 = Slot(uri=RAW.t7, name="impedanceCorrectionRecord__t7", curie=RAW.curie('t7'),
-                   model_uri=RAW.impedanceCorrectionRecord__t7, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f7_real = Slot(uri=RAW.f7_real, name="impedanceCorrectionRecord__f7_real", curie=RAW.curie('f7_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f7_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f7_imag = Slot(uri=RAW.f7_imag, name="impedanceCorrectionRecord__f7_imag", curie=RAW.curie('f7_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f7_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t8 = Slot(uri=RAW.t8, name="impedanceCorrectionRecord__t8", curie=RAW.curie('t8'),
-                   model_uri=RAW.impedanceCorrectionRecord__t8, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f8_real = Slot(uri=RAW.f8_real, name="impedanceCorrectionRecord__f8_real", curie=RAW.curie('f8_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f8_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f8_imag = Slot(uri=RAW.f8_imag, name="impedanceCorrectionRecord__f8_imag", curie=RAW.curie('f8_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f8_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t9 = Slot(uri=RAW.t9, name="impedanceCorrectionRecord__t9", curie=RAW.curie('t9'),
-                   model_uri=RAW.impedanceCorrectionRecord__t9, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f9_real = Slot(uri=RAW.f9_real, name="impedanceCorrectionRecord__f9_real", curie=RAW.curie('f9_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f9_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f9_imag = Slot(uri=RAW.f9_imag, name="impedanceCorrectionRecord__f9_imag", curie=RAW.curie('f9_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f9_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t10 = Slot(uri=RAW.t10, name="impedanceCorrectionRecord__t10", curie=RAW.curie('t10'),
-                   model_uri=RAW.impedanceCorrectionRecord__t10, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f10_real = Slot(uri=RAW.f10_real, name="impedanceCorrectionRecord__f10_real", curie=RAW.curie('f10_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f10_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f10_imag = Slot(uri=RAW.f10_imag, name="impedanceCorrectionRecord__f10_imag", curie=RAW.curie('f10_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f10_imag, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__t11 = Slot(uri=RAW.t11, name="impedanceCorrectionRecord__t11", curie=RAW.curie('t11'),
-                   model_uri=RAW.impedanceCorrectionRecord__t11, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f11_real = Slot(uri=RAW.f11_real, name="impedanceCorrectionRecord__f11_real", curie=RAW.curie('f11_real'),
-                   model_uri=RAW.impedanceCorrectionRecord__f11_real, domain=None, range=Optional[float])
-
-slots.impedanceCorrectionRecord__f11_imag = Slot(uri=RAW.f11_imag, name="impedanceCorrectionRecord__f11_imag", curie=RAW.curie('f11_imag'),
-                   model_uri=RAW.impedanceCorrectionRecord__f11_imag, domain=None, range=Optional[float])
+slots.impedanceCorrectionPoint__f_imag = Slot(uri=RAW.f_imag, name="impedanceCorrectionPoint__f_imag", curie=RAW.curie('f_imag'),
+                   model_uri=RAW.impedanceCorrectionPoint__f_imag, domain=None, range=float)
 
 slots.multiTerminalDCRecord__name = Slot(uri=RAW.name, name="multiTerminalDCRecord__name", curie=RAW.curie('name'),
                    model_uri=RAW.multiTerminalDCRecord__name, domain=None, range=str)
