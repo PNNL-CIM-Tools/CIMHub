@@ -70,12 +70,13 @@ Columns: **required** / *optional*.
 | inverter-based DER | `der.cimtbl` | `PowerElectronicsConnection` (`pv_`, `storage_`), `PhotoVoltaicUnit` / `BatteryUnit` (`<pec>_unit`) | Connection: **node**, **phases**, **ratedS** (kVA), **ratedU** (LL: a 1-phase wye unit's kV x sqrt 3), **p**, **q** (load sign: generation and discharge negative), **BaseVoltage**, *phaseConnection* (no grounded), *maxQ/minQ* (kVAr), *maxIFault* (pu of rated current). PV: *maxP*, *minP*. Battery: *ratedE*, *storedE*, *minimumE* (kWh), *maxP/minP*, *chargingEfficiency/dischargingEfficiency* (percent), *idlingP*, *batteryState* (p follows it) | DSS PVSystem/Storage, GLM inverter + solar/battery |
 | synchronous machine (distribution) | `synchronous_machine.cimtbl` | `SynchronousMachine` (`gen_`), `RotatingMachinePhase` (generated from `phases`), PV bus: `RegulatingControl` (`<gen>_ctrl`) then `Update SynchronousMachine` | **node**, **phases**, **ratedS** (kVA), **ratedU** (kV, LL), **p**, **q** (load sign: generation negative), **BaseVoltage**, *type*, *operatingMode*, *earthing*, *maxQ/minQ* (kVAr). Control: **mode**=voltage, **Terminal** (own `<gen>_T1`), **targetValue** (V, LL), *targetDeadband*; Update: *RegulatingControl*, *controlEnabled*. Bus-branch form with `GeneratingUnit`: the transmission waves | DSS Generator |
 | series compensator | `series_compensator.cimtbl` | `SeriesCompensator` (`rx_`), `Update Terminal` (phases), `OperationalLimitSet` (`<rx>_limits`) + `CurrentLimit` | **node1**, **node2**, **r**, **x**, *r0*, *x0* (ohm, per phase), **BaseVoltage**. No per-phase class: balanced three-phase has no terminal phases; fewer phases by `Update Table Terminal: mRID, phases` on the generated `<rx>_T1`/`_T2` | DSS series Reactor |
+| coordinates | `location.cimtbl` | `CoordinateSystem` (`crs_<kind>`), `Location` (`<equipment>_loc`), `PositionPoint` (identifier `<loc>_<n>`), then `Update Table PowerSystemResource: mRID, Location` | CoordinateSystem: **crsUrn**. Location: **CoordinateSystem**, *name* (`<equipment name>_Loc`). Point: **Location**, **sequenceNumber** (bus coordinates: the Terminal's, 1-based), **xPosition**, **yPosition** (text; x = easting or longitude). One Location per ConductingEquipment, never on a ConnectivityNode (not a PowerSystemResource); written after every equipment file | DSS BusCoords/LatLongCoords, GLM latitude/longitude, CYME section points |
 
 ## Not yet catalogued
 
 Added here first, by the wave that needs them: the bus-branch forms of the synchronous machine (with
 `GeneratingUnit`) and the series compensator (RAW, MATPOWER), per-phase load and shunt rows (`EnergyConsumerPhase`,
-`LinearShuntCompensatorPhase`), FACTS, protection beyond switches, measurements, the open-delta template (D14).
+`LinearShuntCompensatorPhase`), FACTS, protection beyond switches, measurements, CIM18's `Geometry` form of a Location, the open-delta template (D14).
 
 ## Adding a shape
 

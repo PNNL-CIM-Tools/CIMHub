@@ -18,10 +18,13 @@ import re
 import tempfile
 import textwrap
 from pathlib import Path
-from typing import Literal
+from collections.abc import Iterable
+from typing import Literal, NamedTuple
 
 import cimtables
-from cimtables.document import Column, DocumentSet, write_documents
+from cimtables.document import Column, Document, DocumentSet, ObjectStatement, Row, Table, write_documents
+from cimtables.synthetic import CONNECTIVITY_COLUMNS
+from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from linkml_runtime.linkml_model.meta import PermissibleValue
 from linkml_runtime.utils.enumerations import EnumDefinitionImpl
 
@@ -33,6 +36,8 @@ __all__ = [
     "cell",
     "mrid",
     "lookup",
+    "EquipmentTerminals",
+    "document_terminals",
     "copied_columns",
     "untranscribed_values",
     "untranscribed_names",
@@ -112,6 +117,70 @@ def mrid(prefix: str, native_id, *, lowercase: bool = False) -> str:
         raise ValueError(f"{prefix}: the native ID is missing ({native_id!r})")
     text = prefix + str(native_id)
     return text.lower() if lowercase else text
+
+
+#: The ConnectivityNode columns of cimtables' connectivity shorthand -> the Terminal's sequenceNumber.
+_NODE_COLUMNS = {column: sequence for column, (node_class, sequence) in CONNECTIVITY_COLUMNS.items()
+                 if node_class == "ConnectivityNode"}
+#: A TransformerEnd row puts its Terminal on this column's transformer, numbered by ``endNumber``.
+_END_OWNERS = {"PowerTransformerEnd": "PowerTransformer", "AutoTransformerEnd": "AutoTransformer"}
+
+
+class EquipmentTerminals(NamedTuple):
+    """The Terminals a document set gives one piece of equipment."""
+    mrid: str
+    name: str | None
+    nodes: dict[int, str]
+    """Terminal ``sequenceNumber`` -> ConnectivityNode mRID, in sequence order."""
+
+
+def _row_values(table: Table, row: Row) -> dict[str, str | None]:
+    """A row's cell per column name: cells fill the columns without defaults in header order, then any trailing
+    cells override the defaulted columns in header order (the cimtables rule)."""
+    plain = [column for column in table.columns if column.default is None]
+    defaulted = [column for column in table.columns if column.default is not None]
+    values = {column.name: column.default for column in defaulted}
+    values.update(zip((column.name for column in plain), row.cells))
+    values.update(zip((column.name for column in defaulted), row.cells[len(plain):]))
+    return values
+
+
+def _statement_rows(statement) -> list[tuple[str, dict[str, str | None]]]:
+    if isinstance(statement, Table) and not statement.update:
+        return [(statement.cim_class, _row_values(statement, row)) for row in statement.rows]
+    if isinstance(statement, ObjectStatement) and not statement.update:
+        return [(statement.cim_class, {column.name: value for column, value in statement.cells})]
+    return []
+
+
+def document_terminals(documents: Iterable[Document]) -> list[EquipmentTerminals]:
+    """Every piece of equipment the documents give Terminals on a ConnectivityNode, in the order its row first
+    appears, by cimtables' connectivity rule: ``node``/``node1`` is Terminal 1 and ``node2`` Terminal 2 of the row's
+    equipment; a ``PowerTransformerEnd``/``AutoTransformerEnd`` row's ``node`` is Terminal ``endNumber`` of its
+    transformer. A stand-in until CIM-Tables gives this inverse of its connectivity columns (U11)."""
+    names: dict[str, str | None] = {}
+    nodes: dict[str, dict[int, str]] = {}
+    for document in documents:
+        for statement in document.statements:
+            for cim_class, values in _statement_rows(statement):
+                if values.get("mRID") is not None:
+                    names.setdefault(values["mRID"], values.get("name"))
+                node_cells = {_NODE_COLUMNS[column]: value for column, value in values.items()
+                              if column in _NODE_COLUMNS and value is not None}
+                if not node_cells:
+                    continue
+                if cim_class in _END_OWNERS:
+                    [node] = node_cells.values()
+                    owner, sequence = values[_END_OWNERS[cim_class]], int(values["endNumber"])
+                    nodes.setdefault(owner, {})[sequence] = node
+                elif issubclass(getattr(cim, cim_class, object), cim.TransformerEnd):
+                    raise ValueError(f"{cim_class} {values.get('mRID')}: a node on a TransformerEnd that names no "
+                                     f"PowerTransformer or AutoTransformer")
+                else:
+                    nodes.setdefault(values["mRID"], {}).update(node_cells)
+    order = {equipment: position for position, equipment in enumerate(names)}
+    return [EquipmentTerminals(equipment, names.get(equipment), dict(sorted(terminals.items())))
+            for equipment, terminals in sorted(nodes.items(), key=lambda item: order[item[0]])]
 
 
 def lookup(table: dict, value, *, slot: str, record_id):

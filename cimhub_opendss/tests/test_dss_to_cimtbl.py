@@ -62,7 +62,7 @@ def test_artifact_directory_matches_golden(documents):
 def test_parts_follow_the_mapping_order(documents):
     assert [part.name for part in documents.parts] == ["bus", "zip_fractions", "linecode", "xfmrcode", "vsource",
                                                        "line", "transformer", "regcontrol", "load", "capacitor",
-                                                       "pvsystem", "storage"]
+                                                       "pvsystem", "storage", "buscoords"]
     assert len(MAPPING_ORDER) == len({native_class for native_class, _ in MAPPING_ORDER})
 
 
@@ -91,17 +91,19 @@ def test_base_frequency_comes_from_the_deck(tmp_path):
 def test_ieee13_binds_under_cim18v17(ieee13, tmp_path):
     network = dss_to_cim(ieee13, name="IEEE13_CDPSM", artifact_dir=tmp_path)
     assert sorted(path.name for path in tmp_path.iterdir()) == [
-        "IEEE13_CDPSM.cimtbl", "bus.cimtbl", "capacitor.cimtbl", "line.cimtbl", "linecode.cimtbl", "load.cimtbl",
-        "pvsystem.cimtbl", "regcontrol.cimtbl", "storage.cimtbl", "transformer.cimtbl", "vsource.cimtbl",
-        "xfmrcode.cimtbl", "zip_fractions.cimtbl"]
+        "IEEE13_CDPSM.cimtbl", "bus.cimtbl", "buscoords.cimtbl", "capacitor.cimtbl", "line.cimtbl",
+        "linecode.cimtbl", "load.cimtbl", "pvsystem.cimtbl", "regcontrol.cimtbl", "storage.cimtbl",
+        "transformer.cimtbl", "vsource.cimtbl", "xfmrcode.cimtbl", "zip_fractions.cimtbl"]
     assert_base_voltages_agree(network)
     cim = network.cim
     counts = {cls: len(network.graph.get(getattr(cim, cls), {})) for cls in (
         "ACLineSegment", "LoadBreakSwitch", "Fuse", "Recloser", "PowerTransformer", "VoltageRegulator",
-        "TapChangerControl", "EnergyConsumer", "LinearShuntCompensator", "PowerElectronicsConnection", "BatteryUnit")}
+        "TapChangerControl", "EnergyConsumer", "LinearShuntCompensator", "PowerElectronicsConnection", "BatteryUnit",
+        "Location")}
     assert counts == {"ACLineSegment": 11, "LoadBreakSwitch": 3, "Fuse": 1, "Recloser": 1, "PowerTransformer": 3,
                       "VoltageRegulator": 3, "TapChangerControl": 3, "EnergyConsumer": 16,
-                      "LinearShuntCompensator": 2, "PowerElectronicsConnection": 5, "BatteryUnit": 3}
+                      "LinearShuntCompensator": 2, "PowerElectronicsConnection": 5, "BatteryUnit": 3,
+                      "Location": 46}
     nodes = network.graph[network.cim.ConnectivityNode].values()
     assert len(nodes) == 22 and all(node.ConnectivityNodeContainer.mRID == "fdr_ieee13nodeckt" for node in nodes)
     [source] = network.graph[network.cim.EnergySource].values()
@@ -139,7 +141,7 @@ def test_ieee13_assets_catalogs_bind(tmp_path):
     native = DssReader(DECKS / "IEEE" / "IEEE13_assets" / "IEEE13_Assets.dss").read_all()
     network = dss_to_cim(native, name="IEEE13_Assets", artifact_dir=tmp_path)
     assert sorted(path.name for path in tmp_path.iterdir()) == [
-        "IEEE13_Assets.cimtbl", "bus.cimtbl", "capacitor.cimtbl", "capcontrol.cimtbl", "cndata.cimtbl",
+        "IEEE13_Assets.cimtbl", "bus.cimtbl", "buscoords.cimtbl", "capacitor.cimtbl", "capcontrol.cimtbl", "cndata.cimtbl",
         "line.cimtbl", "linegeometry.cimtbl", "linespacing.cimtbl", "load.cimtbl", "regcontrol.cimtbl",
         "transformer.cimtbl", "tsdata.cimtbl", "vsource.cimtbl", "wiredata.cimtbl", "xfmrcode.cimtbl",
         "zip_fractions.cimtbl"]

@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b done 2026-11-08** (PVSystem, Storage, Generator, Reactor). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b done 2026-11-08** (PVSystem, Storage, Generator, Reactor); **S5 done 2026-11-08** (bus coordinates, the deck sweep test). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -29,6 +29,10 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
 | `Capacitor` | `capacitor.cimtbl` | `shunt` (`LinearShuntCompensator`) | the master, `bus.cimtbl` |
 | `CapControl` | `capcontrol.cimtbl` | `shunt` (`RegulatingControl` + `Update` of the compensator) | `line.cimtbl`, `capacitor.cimtbl` |
+| `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der` | the master, `bus.cimtbl` |
+| `Generator` | `generator.cimtbl` | `synchronous_machine` | the master, `bus.cimtbl` |
+| `Reactor` | `reactor.cimtbl` | `series_compensator` | the master, `bus.cimtbl` |
+| `Buscoords` (BusCoords / LatLongCoords files) | `buscoords.cimtbl` (last) | `location` | every equipment part (their Terminals, S5-2) |
 
 ## Master
 
@@ -1952,3 +1956,185 @@ added that cim18v17's `RotatingMachinePhase` names a 1-phase machine's phase.
   and no `Terminal.phases` (above); U10 asks CIM-Tables for the balanced form.
 - **S4b-8 (approved 2026-11-08):** the reader keeps each record's assignment history (`DssModel`), and the Generator,
   PVSystem and Storage mappers replay it as the engine does (above). The Load keeps S4-3.
+
+## S5 (approved and done 2026-11-08)
+
+**Result (2026-11-08).**
+- Every equipment Location equals the engine's bus coordinates on both atoms and the 8 engine decks that bind:
+  - one point per Terminal where every Terminal bus has `Bus.Coorddefined()`, and no Location otherwise;
+  - this includes IEEE8500 and IEEE9500, where the engine's x is the longitude.
+- The sweep test passes: 18 of the 24 `CIMHUB_DSS_DECKS` decks bind and 6 stop as listed. The throwaway 31-deck sweep
+  is unchanged at 22.
+- The reader fix (S5-7) recovers the IEEE123 coordinates: IEEE123_PV 214 rows (was 2), deconfliction 134 and
+  test_harness 139 (were 0). Every coordinate file in the sweep parses.
+- Locations: IEEE9500 unbal 8,072; IEEE8500 6,082; IEEE123_PV 326; IEEE13_CDPSM 46.
+- The IEEE13_CDPSM golden directory has 14 files.
+- **G7 after S5:**
+
+  | deck | read | map | bind |
+  |---|---|---|---|
+  | IEEE9500 unbal | 4.0 s | 1.0 s | 8.2 s: 65,282 rows / 80,238 objects, about 7,900 rows/s |
+  | IEEE8500 | 0.5 s | 0.7 s | 6.6 s: 47,840 rows, about 7,200 rows/s |
+
+  The coordinates cost about 2 s of bind on each deck.
+
+**The user's review:** keep the CIM17 form, `PositionPoint.Location`, not cim18v17's `Geometry`/`GeometricElement`
+form (the catalog lists that as not yet catalogued). The decisions stand as recommended.
+
+**Changes from the proposal:**
+- A center-tap transformer gets two points, not three. Its secondary is one Terminal (`s1s2N`), because the windings
+  land on lugs (DSS-2). The engine writes a point for each of its 3 windings, but two of them are the same bus.
+- `document_terminals` checks a `TransformerEnd` row against the cim18v17 classes. A `node` on any end other than a
+  `PowerTransformerEnd` or `AutoTransformerEnd` raises.
+
+
+S5 adds bus coordinates (`buscoords.cimtbl`), turns the throwaway deck sweep into a test, and records the G7
+numbers. Census through today's reader on the 31 sweep decks: 14 decks have coordinates (about 31,000 rows; IEEE9500
+5,305, IEEE8500 4,893, J1 3,441, K1 650; the IEEE13s 16-74). Only `PNNL/IEEE9500` uses `LatLongCoords`; every other
+deck uses `BusCoords`. No deck uses both.
+
+### Where the coordinates go (S5-1)
+
+In CIM a `Location` hangs off a `PowerSystemResource`. A `ConnectivityNode` is not one, so a bus can't carry
+coordinates itself. **Proposed:** each piece of conducting equipment gets one `Location` with one `PositionPoint` per
+Terminal, holding the coordinates of that Terminal's bus. So a line is a two-point polyline, a load or capacitor is
+one point, and a center-tap transformer has three. This matches the engine's own CIM export (`WritePositions` in
+`ExportCIMXML.pas`), CIMHub_2_0's importer and GridAPPS-D. A CYME section's polyline also fits it, with more points
+per line. The alternative, rejected: a `Junction` per bus (the CIM note: "to associate ... Location to a
+ConnectivityNode"). It is closer to the native table, but it adds about 5,300 one-terminal equipment objects to
+IEEE9500, and every consumer and exporter would have to skip them. No tool reads it either.
+
+### Shape `location` (added to the catalog first)
+
+```
+Profile = cim18v17
+Import common.cimtbl
+
+Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
+
+Table Location: mRID, name, CoordinateSystem=crs_bus
+    ln_650632_loc, 650632_Loc
+
+Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
+    ln_650632_loc_1, ln_650632_loc, 1, 200, 350
+    ln_650632_loc_2, ln_650632_loc, 2, 200, 300
+
+Update Table PowerSystemResource: mRID, Location
+    ln_650632, ln_650632_loc
+```
+
+I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `PositionPoint` is Identity-only (an
+`identifier` column, no mRID), and an `Update` on the abstract `PowerSystemResource` resolves any subclass.
+
+### Buscoords
+
+- **Mapper:** `importer/cimtbl/buscoords.py`, `map_buscoords(native, parts)`. It runs after every equipment part, so
+  it is the last `Import` (DSS_REWRITE_PLAN.md §2, row 16), and it reads those parts.
+- **Finding the equipment (S5-2):** the mapper reads the Terminals from the documents the other mappers wrote, not
+  from the DSS records. That way no mapper's mRID or bus rules are written twice. It follows cimtables' own
+  connectivity rule (`cimtables.synthetic.CONNECTIVITY_COLUMNS`):
+  - a row with `node`/`node1`/`node2` puts Terminals 1 and 2 on that row's equipment;
+  - a `TransformerEnd` row's `node` puts Terminal `endNumber` on its transformer (`PowerTransformer` or
+    `AutoTransformer` column).
+
+  This goes in core as `cimhub_core.cimtbl.document_terminals(documents) -> {equipment mRID: [(sequenceNumber,
+  node)]}`, because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). U11 asks CIM-Tables to
+  provide it, since it is the inverse of its own connectivity columns (the "connectivity inverse" in its writer
+  plan). Core's version is then deleted.
+- **Identity:**
+  - Location: `<equipment mRID>_loc`, named `<equipment name>_Loc` (the engine's name);
+  - PositionPoint: `<location>_<n>`;
+  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords).
+- **Order:** documents in `Import` order, rows in document order, points by `sequenceNumber`.
+- **`sequenceNumber` (S5-5):** the Terminal's `sequenceNumber`, 1-based, as the engine writes it. cim18v17 gives the
+  attribute no description, and CIM16's "zero-relative" text is gone.
+- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so they
+  read back exactly. For LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
+- **Partial coordinates (S5-3):** equipment gets a Location only if **every** one of its Terminal buses has
+  coordinates. The engine writes 0, 0 for a bus without them, which would make a polyline vertex up. The file comment
+  counts what is left out: `# not located: <n> of <m> equipment (a terminal bus without coordinates)`. That case is
+  K1 (644 of 1,285 buses have none), plus IEEE123_PV and the deconfliction deck before the reader fix below.
+- **Coordinates for a bus the circuit doesn't have:** untranscribed, because the engine ignores them too. The comment
+  lists the count and the first names: `# no such bus: 17 (0000500000247160_load, ...)`. That covers IEEE8500's 17
+  `_load` buses, IEEE9500's 8, IEEE13_CDPSM's older copy's `tap`, and J1's blank-name row.
+- **Coordinate system (S5-4):** BusCoords → `crsUrn=OpenDSSLocalBusCoordinates`, the engine's value (a local
+  projection the deck does not name). LatLongCoords → `urn:ogc:def:crs:OGC:1.3:CRS84`: WGS84 longitude/latitude in
+  x, y order. The engine writes its local URN for both, which loses the fact that the values are degrees.
+- **Fail fast:** a deck that uses both BusCoords and LatLongCoords raises (none does). A coordinate row that doesn't
+  parse raises with its file and line (the reader fix below).
+
+| Buscoords field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it gets a PositionPoint; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
+| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | copied | `PositionPoint.xPosition`; on every point at the bus |
+| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | copied | `PositionPoint.yPosition`; on every point at the bus |
+| `geographic` | `Union[bool, Bool, NoneType]` | `False`, `True` | mapped | the directive (LatLongCoords -> true) picks the CoordinateSystem: COORDINATE_SYSTEMS |
+
+
+### Reader fix (S5-7)
+
+The reader splits a coordinate row only on commas, and it skips any row it can't parse. The IEEE123 family's files are
+whitespace-separated (`1     700     1500`), so IEEE123_PV keeps 2 of 216 rows and IEEE123_deconfliction and
+IEEE123_test_harness keep none, all silently. The engine reads the file with its own command parser, which takes
+commas or whitespace. The fix:
+- split on either;
+- raise on a row whose two coordinates aren't numbers, naming the file and line;
+- keep J1's blank-name row (its name is `''`, which is no bus).
+
+A bus listed twice keeps its last row, as in the engine; the reader's dict already does that.
+
+### Deck sweep test (S5-6)
+
+`tests/test_cimtbl_sweep.py`, marked `roundtrip`, runs every deck under `CIMHUB_DSS_DECKS` (the 24 in the
+`test_data/models/feeders/OpenDSS` layout). Each deck either binds, with its bus voltages equal to the walk's, or
+stops with the error its row in `SWEEP_STOPS` names. An unlisted stop fails the test, and so does a listed stop
+that now binds, so the table stays true. Expected today:
+
+| deck | stop |
+|---|---|
+| EPRI J1, K1, M1; IEEE13_OCHRE | DSS-10 (line phases ≠ code nphases) |
+| PNNL IEEE9500 `Master-bal-initial-config` | `linecode=3PH_H-4_ACSR4_ACSR4_ACSR4_ACSR is no LineCode`, which the engine rejects too |
+| IEEE123_test_harness | `Battery5` (S4b-6) |
+
+So 18 of 24 bind. The other 7 of the throwaway sweep's 31 decks are copies in CIMHub_2_0's private
+`cimhub_opendss/tests/test_models/`: IEEE13_CDPSM, IEEE13_assets plus its `_geo` variant, and the `ieee9500` and
+`ieee9500_2025` bal/unbal pairs. They are dropped from the sweep, because their findings are already recorded (the
+`Mode=7` PV, the open of an undefined switch). The per-slice sweep notes above stay as the history; this table is the current one.
+
+### Engine checks (S5)
+
+On the atom and every engine deck:
+- for each piece of equipment, each PositionPoint equals the engine's coordinates of its Terminal's bus
+  (`Circuit.SetActiveBus`, `Bus.X()`, `Bus.Y()`);
+- every equipment whose buses all have `Bus.Coorddefined()` has a Location, and no other equipment does.
+
+For IEEE9500 the engine's x is the longitude, which also checks the reader's swap.
+
+### Atoms, golden, G7
+
+- **Atoms:** `atoms/buscoords/`:
+  - `local.dss` + CSV: a line, a switch, a center-tap transformer, a regulator, a load, a capacitor and a PV. The CSV
+    has a whitespace row, a bus the circuit doesn't have, a bus listed twice, and one bus left without coordinates.
+  - `latlong.dss`: two buses, by LatLongCoords.
+- **Golden:** the IEEE13_CDPSM directory (D6) gains `buscoords.cimtbl`, so it holds 14 files.
+- **G7 before S5 (2026-11-08):**
+
+  | deck | read | map | bind |
+  |---|---|---|---|
+  | IEEE9500 unbal | 4.4 s | 1.2 s | 6.0 s: 35,747 rows / 58,774 objects, about 6,000 rows/s |
+  | IEEE8500 | 0.6 s | 0.4 s | 4.9 s: 24,700 rows, about 5,000 rows/s |
+
+  That was about 400 rows/s before R12 (G7's first measurement), so G7 is closed. Coordinates add about 13,400
+  points, 6,000-7,000 Locations and as many Update rows to IEEE9500 (the measurement after S5 is under Result).
+
+### Decisions for S5 (approved 2026-11-08)
+
+- **S5-1:** coordinates go on each piece of equipment's Location (one PositionPoint per Terminal), not on a Junction
+  per bus. The CIM17 form (`PositionPoint.Location`) stays, not cim18v17's `Geometry` (the user's review).
+- **S5-2:** the mapper finds the Terminals from the written documents, through core's `document_terminals`, until
+  U11 (CIM-Tables) provides it.
+- **S5-3:** no Location for equipment with a Terminal bus that has no coordinates; the file comment counts them.
+- **S5-4:** `crsUrn` is `OpenDSSLocalBusCoordinates` for BusCoords and CRS84 for LatLongCoords.
+- **S5-5:** `sequenceNumber` is the Terminal number, 1-based.
+- **S5-6:** the sweep test covers the 24 `CIMHUB_DSS_DECKS` decks; the 7 CIMHub_2_0 `test_models` copies are dropped.
+- **S5-7:** the reader reads whitespace-separated coordinate rows and raises on a row it can't parse.

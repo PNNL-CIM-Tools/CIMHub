@@ -1,6 +1,6 @@
 # OpenDSS deck IEEE13_CDPSM
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master
-# not mapped: Buscoords 22, Relay 1
+# not mapped: Relay 1
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -48,3 +48,5 @@ Import capacitor.cimtbl
 Import pvsystem.cimtbl
 
 Import storage.cimtbl
+
+Import buscoords.cimtbl

@@ -143,6 +143,10 @@ def _resolve_file_case_insensitive(path: Path) -> Path:
     return path
 
 
+#: A coordinate row's field separator: a comma (with any spaces around it) or a run of whitespace.
+_COORDINATE_FIELDS = re.compile(r"\s*,\s*|\s+")
+
+
 @dataclass
 class DssModel(GraphModel):
     """The records of a deck, and each record's assignment history.
@@ -220,25 +224,26 @@ class DssReader(FormatReader):
         The directive decides, not the filename — IEEE13_Assets points a
         ``BusCoords`` directive at a file called ``..._latlon.csv``.
 
-        Rows whose coordinate columns are not numeric are skipped: these files
-        are sometimes shipped with a header row or ``!`` comment banner. A
-        referenced file that does not exist raises.
+        Fields are separated by a comma or whitespace, as the engine's command
+        parser reads them (the IEEE123 files are whitespace-separated). Blank
+        lines and ``!``/``//`` comments are skipped; a row whose coordinates
+        are not two numbers raises with its file and line (S5-7). A blank name
+        (J1) is kept: it names no bus. A referenced file that does not exist
+        raises.
         """
         objects: list = []
         for csv_path, geographic in [(path, False) for path in self._buscoords_paths] + \
                 [(path, True) for path in self._latlongcoords_paths]:
             with open(csv_path, encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if not line or line.startswith("!") or line.startswith("//"):
+                for line_number, line in enumerate(fh, start=1):
+                    line = re.split(r"!|//", line, maxsplit=1)[0].strip()
+                    if not line:
                         continue
-                    parts = [p.strip() for p in line.split(",")]
-                    if len(parts) < 3:
-                        continue
+                    parts = _COORDINATE_FIELDS.split(line)
                     try:
                         c1, c2 = float(parts[1]), float(parts[2])
-                    except ValueError:
-                        continue  # header row
+                    except (IndexError, ValueError):
+                        raise ValueError(f"{csv_path.name} line {line_number}: {line!r} is not 'bus, x, y'") from None
                     x, y = (c2, c1) if geographic else (c1, c2)  # lat,long -> x=long, y=lat
                     objects.append(dss_schema.Buscoords(name=parts[0].lower(), x=x, y=y, geographic=geographic))
         return objects

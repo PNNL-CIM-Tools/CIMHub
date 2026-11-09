@@ -7,7 +7,7 @@ import math
 from typing import Optional
 
 import pytest
-from cimtables.document import Column, Document, DocumentSet, Import, Row, Table
+from cimtables.document import Column, Document, DocumentSet, Import, ObjectStatement, Row, Table
 from pydantic import BaseModel
 
 from cimhub_core import CimtblImporter
@@ -19,6 +19,7 @@ from cimhub_core.cimtbl import (
     check_fields,
     cimtbl_to_cim,
     copied_columns,
+    document_terminals,
     field_names,
     fill_defaults,
     fields_stub,
@@ -332,3 +333,30 @@ def test_record_diff():
         "BaseVoltage bv_1.nominalVoltage (kV): expected '4.16', got '<no column>'",
         "BaseVoltage bv_1.nominalVoltage (V): expected '<no column>', got '4160'",
     ]
+
+
+# --- document_terminals -----------------------------------------------------
+
+def test_document_terminals_follow_the_connectivity_columns():
+    container = Column("EquipmentContainer", default="fdr")
+    lines = Table("ACLineSegment", [Column("mRID"), Column("name"), Column("node1"), Column("node2"), container],
+                  [Row(["ln_a", "a", "n1", "n2"]), Row(["ln_b", "b", "n2", "n3", "other"])])
+    transformer = Table("PowerTransformer", [Column("mRID"), Column("name")], [Row(["xf_t", "T"])])
+    ends = Table("PowerTransformerEnd", [Column("mRID"), Column("PowerTransformer"), Column("node"),
+                                         Column("endNumber")],
+                 [Row(["xf_t_2", "xf_t", "n4", "2"]), Row(["xf_t_1", "xf_t", "n3", "1"])])
+    source = ObjectStatement("EnergySource", [(Column("mRID"), "src"), (Column("node"), "n0")])
+    update = Table("Terminal", [Column("mRID"), Column("phases")], [Row(["ln_a_T1", "A"])], update=True)
+    documents = [Document("one", [source, lines]), Document("two", [transformer, ends, update])]
+    assert [tuple(item) for item in document_terminals(documents)] == [
+        ("src", None, {1: "n0"}),
+        ("ln_a", "a", {1: "n1", 2: "n2"}),
+        ("ln_b", "b", {1: "n2", 2: "n3"}),
+        ("xf_t", "T", {1: "n3", 2: "n4"}),
+    ]
+
+
+def test_document_terminals_reject_an_end_with_no_transformer():
+    ends = Table("TransformerTankEnd", [Column("mRID"), Column("node"), Column("endNumber")], [Row(["e", "n1", "1"])])
+    with pytest.raises(ValueError, match="names no PowerTransformer or AutoTransformer"):
+        document_terminals([Document("one", [ends])])

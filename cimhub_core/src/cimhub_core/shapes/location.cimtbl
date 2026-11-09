@@ -1,0 +1,30 @@
+# Shape: equipment coordinates (a DSS BusCoords/LatLongCoords file, a GLM node's latitude/longitude, a CYME
+# section's polyline). Each ConductingEquipment gets one Location with a PositionPoint per vertex: for bus
+# coordinates, one per Terminal (sequenceNumber = the Terminal's, 1-based), so a line is a two-point polyline and a
+# load one point. PositionPoint is Identity-only (identifier, no mRID). The Location names its CoordinateSystem;
+# an Update on the abstract PowerSystemResource points each equipment at its Location. Written after every
+# equipment file, which the Update names.
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), BaseVoltage, EquipmentContainer=fdr_shapes
+    rx_hsb, hsb, n0, n1, 0, 14.798307, bv_4p16kv
+Table EnergyConsumer: mRID, name, node, p (kW), q (kVAr), BaseVoltage, EquipmentContainer=fdr_shapes
+    ld_y1, y1, n1, 1155, 660, bv_4p16kv
+
+Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
+
+Table Location: mRID, name, CoordinateSystem=crs_bus
+    rx_hsb_loc, hsb_Loc
+    ld_y1_loc,  y1_Loc
+
+Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
+    rx_hsb_loc_1, rx_hsb_loc, 1, 200.0, 400.0
+    rx_hsb_loc_2, rx_hsb_loc, 2, 200.0, 350.0
+    ld_y1_loc_1,  ld_y1_loc,  1, 200.0, 350.0
+
+Update Table PowerSystemResource: mRID, Location
+    rx_hsb, rx_hsb_loc
+    ld_y1,  ld_y1_loc

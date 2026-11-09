@@ -4,8 +4,8 @@ The topology walk runs once (``site``); the master holds the containers, BaseFre
 ``bus.cimtbl`` gives every bus its ``ConnectivityNode`` and BaseVoltage; the core ``zip_fractions.cimtbl``
 (DSS-7) is always written. ``MAPPING_ORDER`` is the ``Import``
 order of the class parts (DSS_REWRITE_PLAN.md section 2): catalogs before the instances that use them. Each slice
-adds its mappers here. A DSS class nothing reads is listed by count on the master's comment (DSS-11), so nothing
-disappears silently.
+adds its mappers here. ``buscoords.cimtbl`` comes last: it reads the Terminals of every other part (S5-2). A DSS
+class nothing reads is listed by count on the master's comment (DSS-11), so nothing disappears silently.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#master`` and ``#buses``.
 """
@@ -22,9 +22,9 @@ from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_core.load_response import zip_fractions
-from cimhub_opendss.importer.cimtbl import (capacitor, capcontrol, generator, geometry, line, linecode, load,
-                                            pvsystem, reactor, regcontrol, storage, transformer, vsource, wire,
-                                            xfmrcode)
+from cimhub_opendss.importer.cimtbl import (buscoords, capacitor, capcontrol, generator, geometry, line, linecode,
+                                            load, pvsystem, reactor, regcontrol, storage, transformer, vsource,
+                                            wire, xfmrcode)
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -129,7 +129,8 @@ def limit_types() -> Table:
 
 def map_master(native, parts: list[Document], site: Site, *, name: str, authority: str = AUTHORITY) -> Document:
     """The master document: containers, BaseFrequency, BaseVoltages, then one ``Import`` per non-empty part."""
-    mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options, *READ_BY_OTHERS}
+    mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options, buscoords.NATIVE_CLASS,
+                                                                    *READ_BY_OTHERS}
     counts = sorted((cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped)
     comment = f"OpenDSS deck {name}\nMapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master"
     if counts:
@@ -174,6 +175,7 @@ class DssImporter(CimtblImporter):
     def to_cimtbl(self, model) -> DocumentSet:
         walked = site(model, self.length_unit)
         documents = [map_buses(walked), zip_fractions(), *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
+        documents.append(buscoords.map_buscoords(model, documents, walked.buses))
         parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, name=self.name, authority=self.authority),
                            parts=parts)

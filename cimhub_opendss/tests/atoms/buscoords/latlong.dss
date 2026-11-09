@@ -1,0 +1,8 @@
+// Bus coordinates by LatLongCoords (latitude, longitude per row): the reader swaps them to x = longitude.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Load.ld bus1=b1 phases=3 kV=4.16 kW=100 pf=0.9
+Set voltagebases=[4.16]
+CalcVoltageBases
+LatLongCoords latlong.csv
