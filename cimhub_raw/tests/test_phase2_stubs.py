@@ -8,22 +8,16 @@ import pytest
 
 from cimhub_core import GraphModel
 from cimhub_raw.importer.cimtbl import (
-    facts_device,
     gne_device,
     induction_machine,
     multi_terminal_dc,
-    two_terminal_dc,
-    vsc_dc,
 )
 from cimhub_raw.raw34_reader import Raw34Reader
 
 IEEE14 = Path(__file__).parent / "cases" / "IEEE14" / "IEEE_14_bus.raw"
 
 STUBS = [
-    (two_terminal_dc, two_terminal_dc.map_two_terminal_dc),
-    (vsc_dc, vsc_dc.map_vsc_dc),
     (multi_terminal_dc, multi_terminal_dc.map_multi_terminal_dc),
-    (facts_device, facts_device.map_facts_device),
     (gne_device, gne_device.map_gne_device),
     (induction_machine, induction_machine.map_induction_machine),
 ]

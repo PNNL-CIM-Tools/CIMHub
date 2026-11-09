@@ -99,13 +99,14 @@ def filled_buses(native) -> list[tuple[schema.BusRecord, str | None]]:
     return buses
 
 
-def base_voltages(native) -> dict[str, float]:
-    """BaseVoltage mRID -> BASKV (kV), highest first. Two BASKVs that share an mRID raise."""
+def base_voltages(native, internal_kv: list[float] = ()) -> dict[str, float]:
+    """BaseVoltage mRID -> kV, highest first: every BASKV, and ``internal_kv``, the voltages of internal nodes that
+    are no RAW bus (a converter transformer's valve side, P2b). Two voltages that share an mRID raise."""
     by_mrid: dict[str, float] = {}
-    for bus, _ in filled_buses(native):
-        key = base_voltage_mrid(bus.base_voltage)
-        if by_mrid.setdefault(key, bus.base_voltage) != bus.base_voltage:
-            raise ValueError(f"BASKV {by_mrid[key]!r} and {bus.base_voltage!r} both give BaseVoltage {key}")
+    for kv in [bus.base_voltage for bus, _ in filled_buses(native)] + list(internal_kv):
+        key = base_voltage_mrid(kv)
+        if by_mrid.setdefault(key, kv) != kv:
+            raise ValueError(f"{by_mrid[key]!r} kV and {kv!r} kV both give BaseVoltage {key}")
     return dict(sorted(by_mrid.items(), key=lambda item: -item[1]))
 
 

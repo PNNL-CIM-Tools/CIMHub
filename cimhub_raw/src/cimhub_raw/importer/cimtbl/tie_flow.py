@@ -33,15 +33,17 @@ class TieFlowRows:
     def is_tie(self, buses: tuple[int, ...]) -> bool:
         return len({self.bus_area[bus] for bus in buses}) > 1
 
-    def add(self, equipment_mrid: str, key: str, buses: tuple[int, ...], home_end: int, record_id: str) -> None:
+    def add(self, equipment_mrid: str, key: str, buses: tuple[int, ...], home_end: int, record_id: str,
+            terminals: tuple[str, ...] | None = None) -> None:
         """A pair on each terminal ``<equipment>_T<k>`` (k = 1..) whose bus is outside the home end's area. Call only
-        for a tie (``is_tie``): ``home_end`` is looked up from MET / NMETR only there."""
+        for a tie (``is_tie``): ``home_end`` is looked up from MET / NMETR only there. ``terminals``: the terminal
+        mRIDs, one per bus, when they belong to different equipment (a DC line's converters, P2-3)."""
         home_area = self.bus_area[buses[home_end - 1]]
         for end, bus in enumerate(buses, start=1):
             area = self.bus_area[bus]
             if area == home_area:
                 continue
-            terminal = f"{equipment_mrid}_T{end}"
+            terminal = terminals[end - 1] if terminals else f"{equipment_mrid}_T{end}"
             for flow_area, flows_in in ((area, "false"), (home_area, "true")):
                 if flow_area not in self.control_areas:
                     raise ValueError(f"{record_id}: AREA {flow_area} has no area-interchange record (no ControlArea "

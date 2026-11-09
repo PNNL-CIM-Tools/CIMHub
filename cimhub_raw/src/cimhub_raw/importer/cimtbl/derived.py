@@ -297,3 +297,26 @@ def block_sections(binit: float, blocks: list[tuple[int, float]], record_id) -> 
     if abs(remaining) > tolerance:
         raise ValueError(f"switched shunt {record_id}: BINIT={binit!r} is beyond its blocks {blocks}")
     return sections
+
+
+#: valves per six-pulse bridge (a two-terminal DC converter's NB bridges in series)
+VALVES_PER_BRIDGE = 6
+
+
+def converter_transformer_ohms(per_bridge_ohm: float, bridges: int, ratio: float) -> float:
+    """A two-terminal converter's equivalent transformer r or x on end 1, in ohm (P2-5): RC / XC are per bridge on
+    the valve side (EBAS x TR), and the NB bridges' transformers are in parallel on the AC side, so
+    Z1 = Z_bridge / (NB x TR^2)."""
+    return per_bridge_ohm / (bridges * ratio ** 2)
+
+
+def converter_tap(tap: float, tmx: float, tmn: float, stp: float, *, ebas_kv: float, record_id) -> tuple[TapPosition,
+                                                                                                         float]:
+    """A converter transformer's tap on end 1 (P2-5): ``ratio_tap`` over the STP grid from TMN (step 1) up to the
+    last whole step at or below TMX, so stepVoltageIncrement is exactly STP; TAP is a ratio of EBAS. Returns the tap
+    and the grid's top ratio, which differs from TMX when TMX - TMN is no whole number of steps."""
+    if stp <= 0:
+        raise ValueError(f"{record_id}: STP {stp} must be positive")
+    positions = math.floor((tmx - tmn) / stp + 1e-9) + 1
+    top = tmn + (positions - 1) * stp
+    return ratio_tap(tap, top, tmn, positions, unit_kv=ebas_kv, rated_kv=ebas_kv, record_id=record_id), top

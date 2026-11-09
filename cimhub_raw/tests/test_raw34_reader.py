@@ -89,8 +89,9 @@ def test_reads_every_record(case, counts):
 
 
 ATOMS = Path(__file__).parent / "atoms"
-#: the atoms of R1-R6 (the substation folder holds NODE_BREAKER and the hand-built forms atom)
-SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer", "area", "substation")
+#: the atoms of R1-R6 and P2a (the substation folder holds NODE_BREAKER and the hand-built forms atom)
+SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer", "area", "substation",
+                                         "dc")
                      for path in (ATOMS / folder).glob("*.raw"))
 
 

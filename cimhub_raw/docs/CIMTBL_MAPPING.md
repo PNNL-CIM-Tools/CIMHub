@@ -10,7 +10,8 @@ and implemented 2026-11-08; atom in `tests/atoms/area/`. R6 (node-breaker substa
 devices, equipment terminals, regulated nodes) approved and implemented 2026-11-09; case `tests/cases/IEEE118/`,
 atoms in `tests/atoms/substation/`. R4b (the transformer forms R4 raised on: fixed phase shifts, phase shifters,
 impedance correction tables, fixed ratios, one winding out, CONT 0 and negative, load-drop compensation) approved
-and implemented 2026-11-09; atom `tests/atoms/transformer/forms_r4b.raw`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
+and implemented 2026-11-09; atom `tests/atoms/transformer/forms_r4b.raw`. P2a (shunt FACTS devices, VSC DC lines)
+and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
 `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
@@ -45,9 +46,12 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 12 | Equipment terminal | `equipment_terminal.cimtbl` | `Update Table Terminal: mRID, ConnectivityNode` (R6) | 3a and every equipment artifact |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). The phase-2 stubs (two-terminal DC,
-VSC DC, impedance correction, multi-terminal DC, FACTS, GNE, induction machine) follow 11 and write nothing yet;
-`equipment_terminal.cimtbl` (12) comes after them.
+Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). After 11 come `vsc_dc.cimtbl`
+(`DCLine`, `DCLineSegment`, `DCTopologicalNode`s, `VsConverter`s, their capability curves, ratings and the
+`TieFlow`s of ties) and `facts_device.cimtbl` (`StaticSynchronousCompensator` + `RegulatingControl`), both P2a, and
+before them `two_terminal_dc.cimtbl` (P2b: the same DC rows, `CsConverter`s behind their converter transformers on
+internal `TopologicalNode`s, whose BaseVoltages the master writes). Impedance correction comes before 11 (R4b). The
+remaining phase-2 stubs (multi-terminal DC, GNE, induction machine) write nothing yet. `equipment_terminal.cimtbl` (12) comes after them all.
 
 ## Master
 
@@ -1721,6 +1725,302 @@ record with NI = 0 is not written back (it places nothing); a `B`/`2` record com
 `B` for a branch; a substation switching device's X as 0.0001; a block at 0, 0 as 0, 0. A free bus merged into a
 block's substation (by a transformer) stays outside the block's node data, as it was.
 
+## FACTS devices and DC lines (phase 2, P2a / P2b)
+
+**P2a approved 2026-11-09 (user: "profiles fixed, continue") and implemented**: `facts_device.py`, `vsc_dc.py`,
+`dc_topology.py`; atom `tests/atoms/dc/facts_vsc.raw`. **P2b approved 2026-11-09 (user: "go ahead and build the
+converter transformer") and implemented**: `two_terminal_dc.py`, derived `converter_transformer_ohms`,
+`converter_tap`; atom `tests/atoms/dc/two_terminal.raw`; the converter transformer follows the new core shape
+`behind_transformer.cimtbl` (C8, on the core branch `c8-behind-transformer`). Profile additions (user, 2026-11-09): `ACDCConverter.PccTerminal`, and `VsCapabilityCurve` is a `Curve`. The local case set holds the following, the same in each of its 29 cases (counts only):
+
+| table | per case | forms | P2 |
+|---|---|---|---|
+| FACTS device | 25 | all shunt only (J = 0, MODE 0 or 1); 24 regulate a remote bus; PDES, QDES, SET1, SET2, IMX 0, MNAME blank | P2a |
+| VSC DC line | 2 | both are area ties; converter TYPE 1 + 2, MODE 1; 3 of the 4 converters regulate a remote bus | P2a |
+| two-terminal DC line | 19 | MDC 0 or 1; every converter transformer implicit (IFR = ITR = 0); no capacitor commutation (XCAP 0); 2 are area ties; 3 name a commutating bus ICR | P2b |
+| multi-terminal DC, GNE, induction machine | 0 | | stubs stay |
+
+The set has no node-breaker substations, so equipment terminal records of TYP A, D and V still raise. Switched
+shunts with MODSW 6 (they control a FACTS device's shunt output) go with MODSW 3 in R2b: both convert VSWHI/VSWLO
+from pu of the controlled device's reactive range.
+
+### DC topology (decision P2-1)
+
+- **Bus-branch, so `DCTopologicalNode`s**, as AC buses are `TopologicalNode`s. Each DC line has two:
+  `<line>_n1` (converter 1 or the rectifier) and `<line>_n2`.
+- **A `DCLine` container per line**, holding the nodes and one `DCLineSegment` `<line>_seg`. Its `resistance`
+  is RDC (ohm), and its `DCTerminal`s `<line>_seg_DC1`/`_DC2` sit on n1/n2.
+- **Each converter has one `ACDCConverterDCTerminal`** `<converter>_DC1` (`polarity` positive) on its node. RAW
+  gives one equivalent pole, so the return path is not modeled. CIM's monopole has a negative terminal as well.
+- **RDC = 0 is still a segment, with resistance 0.** About 3 lines per case have it; it looks like back-to-back,
+  but no topology is inferred from it.
+- **Converters sit in their AC bus's `Substation`**, as all AC equipment does. No `DCConverterUnit`: RAW says
+  nothing of poles or operating mode.
+- **cimtables binds these rows as they are:** the DC terminals are explicit rows, and the converters' AC
+  terminals come from the `bus` column. This was checked on a scratch document, so no core or cimtables request
+  is needed. mRIDs: two-terminal lines `dc2_<NAME>`, VSC lines `vsc_<NAME>` (prefixes requested, C3).
+
+### FACTS device: shunt only (decision P2-2)
+
+**Equipment.** `StaticSynchronousCompensator` `fd_<NAME>` (a `FACTSEquipment`, so a `RegulatingCondEq`), on bus
+I, in bus I's substation and BaseVoltage. J ≠ 0 raises: series FACTS (SSSC, UPFC, IPFC); there are none in the
+set, and UPFC/IPFC have no CIM class.
+
+| field | target |
+|---|---|
+| MODE | 0: `inService` false; 1: true; 2..8 need J ≠ 0 and raise |
+| VSET | a `RegulatingControl` `fdc_<NAME>`: mode voltage, discrete false, enabled true, targetValue = VSET × BASKV(FCREG) (V) |
+| FCREG, NREG | the control's Terminal: `bb_<FCREG>_T1`, or the node busbar (R6, RAW-11); FCREG 0 is bus I |
+| SHMX (MVA at unity voltage) | `ratedI` = SHMX / (√3 × BASKV(I)) kA (`ka_from_rating`, RAW-9); 0 (5 devices: shunt disabled) stays 0 |
+| PDES, QDES, TRMX, VTMN, VTMX, VSMX, IMX, LINX, SET1, SET2, VSREF, MNAME | the series element's; a shunt device does not use them; untranscribed, listed on the row when not the default (5 rows in the set) |
+| RMPCT | untranscribed, as the switched shunt's (gap); listed when not 100 (3 devices) |
+| OWNER | untranscribed (gap) |
+
+### VSC DC line (decision P2-3)
+
+**Line.** A `DCLine` `vsc_<NAME>` with segment `resistance` = RDC. MDC 0 sets `inService` false on the segment and
+both converters. O1..F4 are untranscribed (ownership gap).
+
+**Converters.** `VsConverter` `vsc_<NAME>_c1` and `_c2` on IBUS. Converter k:
+
+| field | target |
+|---|---|
+| TYPE | 0: `inService` false, DCSET listed; 1: `pPccControl` udc, `targetUdc` = DCSET (kV); 2: `pPccControl` pPcc, `targetPpcc` = −DCSET (MW; RAW's + feeds the AC network, CIM uses the load sign) |
+| MODE, ACSET | 1: `qPccControl` voltagePcc, `targetUpcc` = ACSET × BASKV(VSREG or IBUS) (kV); 2: `qPccControl` powerFactorPcc, `targetPowerFactorPcc` = ACSET |
+| ALOSS, BLOSS | `idleLoss` (kW) and `switchingLoss` (kW/A): PSS/E's loss = ALOSS + Idc × BLOSS |
+| MINLOSS | no CIM home (gap); listed when not 0 |
+| SMAX, IMAX | an `OperationalLimitSet` `<converter>_ratings` on T1, typed as RATE1: `ApparentPowerLimit` SMAX (MVA) and `CurrentLimit` IMAX (A); 0 (unlimited) writes no limit |
+| PWF | no CIM home (gap); listed when not 1.0 (all 4 converters are 0.5) |
+| MAXQ, MINQ | MODE 1: a `VsCapabilityCurve` `<converter>_qcurve` (curveStyle constantYValue, x in MW, y in MVAr) with one `CurveData` point: x 0, y1 MINQ, y2 MAXQ, so the limits hold at every P. MODE 2 does not use them; listed when not the default |
+| VSREG, NREG | MODE 1: `PccTerminal` = `bb_<VSREG>_T1` (`bb_<IBUS>_T1` when 0, RAW-11), or the NREG node's busbar (R6); MODE 2: `bb_<IBUS>_T1`, with VSREG and NREG listed when not 0 |
+| RMPCT | `qShare` (PerCent), copied |
+
+**Ties (both lines).** PSS/E makes the DC-voltage (TYPE 1) converter the non-metered home end. The `TieFlow` pair
+goes on the other converter's terminal, through R5's `TieFlowRows`. Its `add` takes the terminals' mRIDs, since a
+DC line's two terminals belong to two converters. A tie without exactly one TYPE 1 converter raises.
+
+### Two-terminal DC line (decision P2-4)
+
+**Line.** A `DCLine` `dc2_<NAME>`, the segment, and `CsConverter`s `dc2_<NAME>_r` (`operatingMode` rectifier,
+behind IPR) and `_i` (inverter, behind IPI), each on its internal node (P2-5).
+
+| field | target |
+|---|---|
+| MDC 0 (blocked) | `inService` false on the segment and both converters (the transformers stay in service); the rectifier has no `pPccControl`; SETVL listed on the `DCLine` row, since its unit (A or MW) depends on the MDC it was blocked from |
+| MDC 1, SETVL | rectifier `pPccControl` activePower. SETVL > 0 is `targetPpcc` on the rectifier; SETVL < 0 (most of the set) is `targetPpcc` on the inverter, as given: the load sign already makes an inverter's injection negative |
+| MDC 2, SETVL | rectifier `pPccControl` dcCurrent, `targetIdc` = SETVL (A) |
+| VSCHD | inverter `pPccControl` dcVoltage, `targetUdc` = VSCHD (kV). RCOMP 0 (all the set) puts the compounding point at the inverter; a nonzero RCOMP is listed |
+| VCMOD, RCOMP, DELTI, DCVMIN, CCCITMX, CCCACC | no CIM home (gap); listed on the `DCLine` row when not the default (DELTI is on every line of the set) |
+| METER | on a tie, the `TieFlow` pair sits on the metered converter's transformer terminal at the AC bus (`<converter>_xf_T1`); the other converter is home (R5) |
+| NBR / NBI | `numberOfValves` = 6 × NB (six valves per bridge) |
+| ANMXR, ANMNR / ANMXI, ANMNI | `maxAlpha`, `minAlpha` / `maxGamma`, `minGamma` (deg) |
+| RC, XC, EBAS, TR, TAP, TMX, TMN, STP | the converter transformer (P2-5) |
+| ICR, NDR | the firing-angle measuring bus has no CIM home (gap); listed on the converter row when nonzero |
+| IFR, ITR, IDR ≠ 0 | raise: an AC transformer used as the converter transformer (COD ±4; none in the set) |
+| XCAPR, XCAPI ≠ 0 | raise: capacitor commutated (none in the set) |
+
+### The converter transformer (decision P2-5)
+
+Every two-terminal converter has a transformer that RAW describes implicitly (EBAS, TR, TAP and its range, RC/XC
+per bridge). Each becomes the core shape `behind_transformer.cimtbl` (plan C8, widened to "equipment behind its own
+transformer"; it serves the step-up generators of R3b too):
+
+- **Internal node:** `TopologicalNode` `<converter>_int`, with no busNumber. It sits in the AC bus's substation,
+  with the BaseVoltage of EBAS × TR (the valve side). The master's BaseVoltage table adds these voltages
+  (`two_terminal_dc.valve_kv`). The `CsConverter` sits on this node.
+- **Transformer:** a 2-winding `PowerTransformer` `<converter>_xf`, always in service.
+  - End 1 is on the AC bus, with ratedU = EBAS.
+  - End 2 is on the internal node, with ratedU = EBAS × TR.
+  - **One equivalent per converter.** RAW gives RC/XC per bridge on the valve side and does not say how the NB
+    bridges' transformers are built (two 2-winding units or one 3-winding unit). Their AC sides are in parallel,
+    so end 1 r, x = RC, XC / (NB × TR²) (ohm; `converter_transformer_ohms`). The exporter gets RC/XC back with NB =
+    numberOfValves / 6 and TR = ratedU2 / ratedU1.
+  - No ratedS (RAW gives none) and no magnetizing branch.
+- **Tap:** a `RatioTapChanger` `<converter>_xf_tap1` on end 1, with `ltcFlag` true, built by `ratio_tap` (R4) over
+  the STP grid from TMN (`converter_tap`).
+  - stepVoltageIncrement is exactly STP. Step 1 is TMN; highStep is the last whole step at or below TMX. A third of
+    the set's ends have a TMX - TMN that is not a whole number of STP steps, and their TMX is listed on the tap row.
+  - neutralStep is the step nearest ratio 1, and the step comes from TAP (a float, since TAP is often off the grid).
+  - No `TapChangerControl`: PSS/E moves TAP to hold the firing angle within ANMN..ANMX, and no CIM mode says that.
+
+### Profile requests
+
+- **P2-R1 `ACDCConverter.PccTerminal` → `Terminal`**: added by the user. It is the AC point a converter's
+  `targetUpcc` refers to; 3 of the 4 VSC converters in the set name a remote bus.
+- **P2-R2 `VsCapabilityCurve` as a `Curve`**: added by the user. It holds MAXQ / MINQ.
+- **P2-R3 `qPercent` on `RegulatingCondEq`**: not taken. FACTS RMPCT stays a gap, as the switched shunt's does,
+  and is listed on the row when it is not 100.
+
+### Atom `tests/atoms/dc/facts_vsc.raw` (hand-built)
+
+Built on the R5 areas atom's buses and areas (3 areas):
+- **FACTS:** `STATCOM-LOC`, local FCREG; `STATCOM-REM`, FCREG 301 with TRMX 0 and RMPCT 75 (listed);
+  `STATCOM-OUT`, MODE 0 with SHMX 0.
+- **`VSC-TIE`:** an area tie. Converter 1 is TYPE 2, MODE 1, with SMAX/IMAX and PWF 0.5; converter 2 is TYPE 1,
+  MODE 2, with MINLOSS.
+- **`VSC-OUT`:** MDC 0. Converter 1 is MODE 1 with remote VSREG 201 and RMPCT 60; converter 2 is TYPE 0.
+
+It survives a read → write → read losslessly and binds. Each value is checked in SI, and the raises are tested
+form by form (`tests/test_raw_to_cimtbl.py`, P2a).
+
+### Atom `tests/atoms/dc/two_terminal.raw` (hand-built)
+
+On the same frame:
+- **`DC-TIE`** 102-201, an area tie: MDC 1, SETVL −250 (inverter power), METER I. The rectifier's TMX is off its
+  STP grid.
+- **`DC-B2B`** 202-201: RDC 0, SETVL 150 (rectifier power), ICR 201 (listed).
+- **`DC-CURRENT`** 301-302: MDC 2, SETVL 1000 A, VCMOD 118.1. The inverter's EBAS is 120 kV, on a 115 kV bus.
+- **`DC-BLOCKED`** 101-102: MDC 0.
+
+Every line has DELTI ≠ 0, which is listed. The atom survives a read → write → read losslessly and binds, with
+values checked in SI and its raises tested (`tests/test_raw_to_cimtbl.py`, P2b).
+
+Field classification (samples from the P2a atom):
+
+| FactsDeviceRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `str` | `STATCOM-LOC`, `STATCOM-OUT`, `STATCOM-REM` | structural | NAME: the key, mRID fd_<NAME> (control fdc_<NAME>), name NAME |
+| `ibus` | `int` | `202`, `102`, `302` | structural | I: the device's bus, BaseVoltage and EquipmentContainer (its substation) |
+| `jbus` | `Optional[int]` | `0` | structural | J: 0 is a shunt-only device; nonzero (a series element: SSSC, UPFC, IPFC) raises |
+| `mode` | `Optional[int]` | `1`, `0` | mapped | MODE: inService = (MODE == 1); 2..8 need J != 0; blank: 1 (defaulted) |
+| `pdes` | `Optional[float]` | `0.0` | untranscribed | PDES: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `qdes` | `Optional[float]` | `0.0` | untranscribed | QDES: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `vset` | `Optional[float]` | `1.02`, `1.0`, `1.01` | derived | VSET (pu): the control's targetValue = VSET x BASKV(FCREG), in V (volts_from_per_unit); blank: 1.0 (defaulted) |
+| `shmx` | `Optional[float]` | `100.0`, `0.0`, `50.0` | derived | SHMX (MVA at unity voltage): ratedI = SHMX / (sqrt(3) x BASKV(I)) kA (ka_from_rating); 0 (no shunt) stays 0; blank: 9999 (defaulted) |
+| `trmx` | `Optional[float]` | `9999.0`, `0.0` | untranscribed | TRMX: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `vtmn` | `Optional[float]` | `0.9` | untranscribed | VTMN: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `vtmx` | `Optional[float]` | `1.1` | untranscribed | VTMX: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `vsmx` | `Optional[float]` | `1.0` | untranscribed | VSMX: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `imx` | `Optional[float]` | `0.0` | untranscribed | IMX: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `linx` | `Optional[float]` | `0.05` | untranscribed | LINX: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `rmpct` | `Optional[float]` | `100.0`, `75.0` | untranscribed | RMPCT: a shunt's share of a coordinated voltage control has no CIM home (qPercent is SynchronousMachine's; CIM 18 gap); listed when not 100 |
+| `owner` | `Optional[int]` | `1` | untranscribed | OWNER: ownership is an asset concept (CIM 18 gap) |
+| `set1` | `Optional[float]` | `0.0` | untranscribed | SET1: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `set2` | `Optional[float]` | `0.0` | untranscribed | SET2: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `vsref` | `Optional[int]` | `0` | untranscribed | VSREF: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `remot` | `Optional[int]` | `0`, `301` | structural | FCREG: the control's Terminal bb_<FCREG>_T1, or bb_<I>_T1 when 0 (RAW-11), or the NREG node's busbar; blank: 0 (defaulted) |
+| `mname` | `Optional[str]` |  | untranscribed | MNAME: the series element's; a shunt-only device does not use it: listed on the row when not the default |
+| `nreg` | `Optional[int]` | `0` | structural | NREG: a node of bus FCREG; nonzero: the control's Terminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); blank: 0 (defaulted) |
+
+
+| VscDcRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, VscDcRecordName]` | `VSC-OUT`, `VSC-TIE` | structural | NAME: the key; DCLine vsc_<NAME>, its segment, nodes and converters |
+| `rdc` | `float` | `16.0`, `1.58` | copied | `DCLineSegment.resistance` (ohm); RDC |
+| `ibus_1` | `int` | `202`, `102` | structural | IBUS (converter 1): VsConverter vsc_<NAME>_c1 on this bus, its BaseVoltage and EquipmentContainer (its substation) |
+| `converter_type_1` | `int` | `1`, `2` | mapped | TYPE (converter 1): 0 inService false, 1 pPccControl udc, 2 pPccControl pPcc; on a tie the TYPE 1 converter is the home end (R5) |
+| `dcset_1` | `float` | `450.0`, `96.0` | derived | DCSET (converter 1): TYPE 1 targetUdc (kV); TYPE 2 targetPpcc = -DCSET (MW: RAW's + feeds the AC network, CIM's load sign); TYPE 0 listed |
+| `ibus_2` | `int` | `201`, `202` | structural | IBUS (converter 2): VsConverter vsc_<NAME>_c2 on this bus, its BaseVoltage and EquipmentContainer (its substation) |
+| `converter_type_2` | `int` | `0`, `1` | mapped | TYPE (converter 2): 0 inService false, 1 pPccControl udc, 2 pPccControl pPcc; on a tie the TYPE 1 converter is the home end (R5) |
+| `dcset_2` | `float` | `100.0`, `300.0` | derived | DCSET (converter 2): TYPE 1 targetUdc (kV); TYPE 2 targetPpcc = -DCSET (MW: RAW's + feeds the AC network, CIM's load sign); TYPE 0 listed |
+| `mdc` | `Optional[int]` | `0`, `1` | mapped | MDC: inService = (MDC == 1) on the segment and both converters; blank: 1 (defaulted) |
+| `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o2` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f2` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o3` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f3` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o4` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f4` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `mode_1` | `Optional[int]` | `1` | mapped | MODE (converter 1): 1 qPccControl voltagePcc, 2 qPccControl powerFactorPcc; blank: 1 (defaulted) |
+| `acset_1` | `Optional[float]` | `1.0`, `1.02` | derived | ACSET (converter 1): MODE 1 targetUpcc = ACSET x BASKV(VSREG or IBUS) (kv_from_per_unit); MODE 2 targetPowerFactorPcc = ACSET; blank: 1.0 (defaulted) |
+| `aloss_1` | `Optional[float]` | `0.0`, `1600.0` | copied | `VsConverter.idleLoss` (kW); ALOSS (converter 1); blank: 0 (defaulted) |
+| `bloss_1` | `Optional[float]` | `0.0`, `3.4` | copied | `VsConverter.switchingLoss` (kW/A); BLOSS (converter 1): loss = ALOSS + Idc x BLOSS; blank: 0 (defaulted) |
+| `minloss_1` | `Optional[float]` | `0.0` | untranscribed | MINLOSS (converter 1): no CIM home (CIM 18 gap); listed when not 0 |
+| `smax_1` | `Optional[float]` | `0.0`, `360.0` | structural | SMAX (converter 1): ApparentPowerLimit <converter>_smax (MVA) in the set <converter>_ratings on its T1, typed RATE1; 0 (unlimited) writes no limit |
+| `imax_1` | `Optional[float]` | `0.0`, `1032.0` | structural | IMAX (converter 1): CurrentLimit <converter>_imax (A), as SMAX |
+| `pwf_1` | `Optional[float]` | `1.0`, `0.5` | untranscribed | PWF (converter 1): no CIM home (CIM 18 gap); listed when not 1.0 |
+| `maxq_1` | `Optional[float]` | `50.0`, `200.0` | copied | `CurveData.y2value` (MVAr); MAXQ (converter 1): MODE 1: the VsCapabilityCurve <converter>_qcurve's one point (P 0, constantYValue), y2 = MAXQ (MVAr); MODE 2 does not use it (listed when not the default) |
+| `minq_1` | `Optional[float]` | `-50.0`, `-100.0` | copied | `CurveData.y1value` (MVAr); MINQ (converter 1): as MAXQ, y1 = MINQ |
+| `vsreg_1` | `Optional[int]` | `201`, `0` | structural | VSREG (converter 1): MODE 1: PccTerminal bb_<VSREG>_T1, or bb_<IBUS>_T1 when 0 (RAW-11), or the NREG node's busbar; MODE 2: bb_<IBUS>_T1 |
+| `rmpct_1` | `Optional[float]` | `60.0`, `100.0` | copied | `VsConverter.qShare`; RMPCT (converter 1); blank: 100 (defaulted) |
+| `nreg_1` | `Optional[int]` | `0` | structural | NREG (converter 1): a node of bus VSREG; nonzero: PccTerminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6) |
+| `mode_2` | `Optional[int]` | `1`, `2` | mapped | MODE (converter 2): 1 qPccControl voltagePcc, 2 qPccControl powerFactorPcc; blank: 1 (defaulted) |
+| `acset_2` | `Optional[float]` | `1.0`, `0.95` | derived | ACSET (converter 2): MODE 1 targetUpcc = ACSET x BASKV(VSREG or IBUS) (kv_from_per_unit); MODE 2 targetPowerFactorPcc = ACSET; blank: 1.0 (defaulted) |
+| `aloss_2` | `Optional[float]` | `0.0`, `615.0` | copied | `VsConverter.idleLoss` (kW); ALOSS (converter 2); blank: 0 (defaulted) |
+| `bloss_2` | `Optional[float]` | `0.0`, `2.527` | copied | `VsConverter.switchingLoss` (kW/A); BLOSS (converter 2): loss = ALOSS + Idc x BLOSS; blank: 0 (defaulted) |
+| `minloss_2` | `Optional[float]` | `0.0`, `1110.0` | untranscribed | MINLOSS (converter 2): no CIM home (CIM 18 gap); listed when not 0 |
+| `smax_2` | `Optional[float]` | `0.0` | structural | SMAX (converter 2): ApparentPowerLimit <converter>_smax (MVA) in the set <converter>_ratings on its T1, typed RATE1; 0 (unlimited) writes no limit |
+| `imax_2` | `Optional[float]` | `0.0` | structural | IMAX (converter 2): CurrentLimit <converter>_imax (A), as SMAX |
+| `pwf_2` | `Optional[float]` | `1.0` | untranscribed | PWF (converter 2): no CIM home (CIM 18 gap); listed when not 1.0 |
+| `maxq_2` | `Optional[float]` | `9999.0` | copied | `CurveData.y2value` (MVAr); MAXQ (converter 2): MODE 1: the VsCapabilityCurve <converter>_qcurve's one point (P 0, constantYValue), y2 = MAXQ (MVAr); MODE 2 does not use it (listed when not the default) |
+| `minq_2` | `Optional[float]` | `-9999.0` | copied | `CurveData.y1value` (MVAr); MINQ (converter 2): as MAXQ, y1 = MINQ |
+| `vsreg_2` | `Optional[int]` | `0` | structural | VSREG (converter 2): MODE 1: PccTerminal bb_<VSREG>_T1, or bb_<IBUS>_T1 when 0 (RAW-11), or the NREG node's busbar; MODE 2: bb_<IBUS>_T1 |
+| `rmpct_2` | `Optional[float]` | `100.0` | copied | `VsConverter.qShare`; RMPCT (converter 2); blank: 100 (defaulted) |
+| `nreg_2` | `Optional[int]` | `0` | structural | NREG (converter 2): a node of bus VSREG; nonzero: PccTerminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6) |
+
+
+Two-terminal DC field classification (samples from the P2b atom):
+
+| TwoTerminalDCRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, TwoTerminalDCRecordName]` | `DC-B2B`, `DC-BLOCKED`, `DC-CURRENT` | structural | NAME: the key; DCLine dc2_<NAME>, its segment, nodes, converters and their transformers |
+| `rdc` | `float` | `0.0`, `15.4`, `1.78` | copied | `DCLineSegment.resistance` (ohm); RDC; 0 is still a segment |
+| `setvl` | `float` | `150.0`, `-413.1`, `1000.0` | derived | SETVL: MDC 1 targetPpcc (MW, load sign as given): > 0 on the rectifier, < 0 on the inverter; MDC 2 the rectifier's targetIdc (A); MDC 0 listed (its unit depends on the MDC it was blocked from) |
+| `vschd` | `float` | `80.0`, `450.0`, `150.0` | copied | `CsConverter.targetUdc` (kV); VSCHD: the inverter's targetUdc, pPccControl dcVoltage |
+| `ipr` | `int` | `202`, `101`, `301` | structural | IPR: the rectifier's AC bus: end 1 of its converter transformer dc2_<NAME>_r_xf, its substation; the CsConverter dc2_<NAME>_r sits on the internal node dc2_<NAME>_r_int |
+| `nbr` | `int` | `2` | derived | NBR: numberOfValves = 6 x NB; the transformer's r, x divide by NB (converter_transformer_ohms) |
+| `anmxr` | `float` | `17.0`, `21.0`, `24.0` | copied | `CsConverter.maxAlpha` (deg); ANMXR |
+| `anmnr` | `float` | `13.0`, `15.0`, `22.0` | copied | `CsConverter.minAlpha` (deg); ANMNR |
+| `rcr` | `float` | `0.0`, `0.042`, `0.012` | derived | RCR (ohm per bridge, valve side): end 1 r = RC / (NB x TR^2) (converter_transformer_ohms) |
+| `xcr` | `float` | `1.779`, `2.796`, `2.1202` | derived | XCR: end 1 x, as RC |
+| `ebasr` | `float` | `230.0` | copied | `PowerTransformerEnd.ratedU` (kV); EBASR: end 1 ratedU; end 2 ratedU = EBAS x TR (valve side), the internal node's BaseVoltage |
+| `ipi` | `int` | `201`, `102`, `302` | structural | IPI: the inverter's AC bus: end 1 of its converter transformer dc2_<NAME>_i_xf, its substation; the CsConverter dc2_<NAME>_i sits on the internal node dc2_<NAME>_i_int |
+| `nbi` | `int` | `2` | derived | NBI: numberOfValves = 6 x NB; the transformer's r, x divide by NB (converter_transformer_ohms) |
+| `anmxi` | `float` | `18.0`, `21.0`, `29.0` | copied | `CsConverter.maxGamma` (deg); ANMXI |
+| `anmni` | `float` | `15.0`, `18.0`, `25.0` | copied | `CsConverter.minGamma` (deg); ANMNI |
+| `rci` | `float` | `0.0`, `0.042`, `0.012` | derived | RCI (ohm per bridge, valve side): end 1 r = RC / (NB x TR^2) (converter_transformer_ohms) |
+| `xci` | `float` | `1.779`, `2.796`, `2.1197` | derived | XCI: end 1 x, as RC |
+| `ebasi` | `float` | `230.0`, `120.0` | copied | `PowerTransformerEnd.ratedU` (kV); EBASI: end 1 ratedU; end 2 ratedU = EBAS x TR (valve side), the internal node's BaseVoltage |
+| `mdc` | `Optional[int]` | `1`, `0`, `2` | mapped | MDC: 0 blocked (inService false on the segment and both converters), 1 the rectifier's pPccControl activePower, 2 dcCurrent; blank: 0 (defaulted) |
+| `vcmod` | `Optional[float]` | `0.0`, `118.1` | untranscribed | VCMOD: no CIM home (CIM 18 gap); listed on the DCLine row when not the default |
+| `rcomp` | `Optional[float]` | `0.0` | untranscribed | RCOMP: no CIM home (CIM 18 gap); listed on the DCLine row when not the default (0 puts the compounding point at the inverter) |
+| `delti` | `Optional[float]` | `0.1`, `0.17`, `0.15` | untranscribed | DELTI: no CIM home (CIM 18 gap); listed on the DCLine row when not the default |
+| `meter` | `Optional[str]` | `R`, `I` | structural | METER: on a tie, the metered converter (R rectifier, I inverter); the other is the home end (R5); blank: I (defaulted) |
+| `dcvmin` | `Optional[float]` | `0.0` | untranscribed | DCVMIN: no CIM home (CIM 18 gap); listed on the DCLine row when not the default |
+| `cccitmx` | `Optional[int]` | `20` | untranscribed | CCCITMX: no CIM home (CIM 18 gap); listed on the DCLine row when not the default |
+| `cccacc` | `Optional[float]` | `1.0` | untranscribed | CCCACC: no CIM home (CIM 18 gap); listed on the DCLine row when not the default |
+| `trr` | `Optional[float]` | `0.1905`, `1.0`, `0.3143` | derived | TRR: end 2 ratedU = EBAS x TR; blank: 1.0 (defaulted) |
+| `tapr` | `Optional[float]` | `1.0`, `1.09`, `1.024` | derived | TAPR: the RatioTapChanger dc2_<NAME>_r_xf_tap1 on end 1: step from TAP over the STP grid from TMN (converter_tap), ltcFlag true; PSS/E adjusts it to hold the firing angle in range, which no TapChangerControl mode says; blank: 1.0 (defaulted) |
+| `tmxr` | `Optional[float]` | `1.06`, `1.12`, `1.1875` | derived | TMXR: highStep = the last whole STP step at or below TMX; a TMX off the grid is listed on the tap row; blank: 1.5 (defaulted) |
+| `tmnr` | `Optional[float]` | `0.94`, `0.88`, `0.9375` | derived | TMNR: step 1; blank: 0.51 (defaulted) |
+| `stpr` | `Optional[float]` | `0.012`, `0.005`, `0.0125` | derived | STPR: stepVoltageIncrement = STP in percent of EBAS; blank: 0.00625 (defaulted) |
+| `icr` | `Optional[int]` | `201`, `0` | untranscribed | ICR: the firing-angle measuring bus has no CIM home (CIM 18 gap); listed on the converter row when not 0 |
+| `ifr` | `Optional[int]` | `0` | structural | IFR: nonzero (an AC transformer as the converter transformer, COD +-4) raises |
+| `itr` | `Optional[int]` | `0` | structural | ITR: as IFR |
+| `idr` | `Optional[str]` | `1` | untranscribed | IDR: used only with IFR / ITR, which raise |
+| `xcapr` | `Optional[float]` | `0.0` | structural | XCAPR: nonzero (capacitor commutated) raises |
+| `ndr` | `Optional[int]` | `0` | untranscribed | NDR: a node of ICR, as ICR |
+| `tri` | `Optional[float]` | `0.1905`, `1.0`, `0.529` | derived | TRI: end 2 ratedU = EBAS x TR; blank: 1.0 (defaulted) |
+| `tapi` | `Optional[float]` | `1.0`, `1.01`, `0.9875` | derived | TAPI: the RatioTapChanger dc2_<NAME>_i_xf_tap1 on end 1: step from TAP over the STP grid from TMN (converter_tap), ltcFlag true; PSS/E adjusts it to hold the firing angle in range, which no TapChangerControl mode says; blank: 1.0 (defaulted) |
+| `tmxi` | `Optional[float]` | `1.06`, `1.12`, `1.0875` | derived | TMXI: highStep = the last whole STP step at or below TMX; a TMX off the grid is listed on the tap row; blank: 1.5 (defaulted) |
+| `tmni` | `Optional[float]` | `0.94`, `0.88`, `0.925` | derived | TMNI: step 1; blank: 0.51 (defaulted) |
+| `stpi` | `Optional[float]` | `0.012`, `0.005`, `0.0125` | derived | STPI: stepVoltageIncrement = STP in percent of EBAS; blank: 0.00625 (defaulted) |
+| `ici` | `Optional[int]` | `0` | untranscribed | ICI: the firing-angle measuring bus has no CIM home (CIM 18 gap); listed on the converter row when not 0 |
+| `ifi` | `Optional[int]` | `0` | structural | IFI: nonzero (an AC transformer as the converter transformer, COD +-4) raises |
+| `iti` | `Optional[int]` | `0` | structural | ITI: as IFI |
+| `idi` | `Optional[str]` | `1` | untranscribed | IDI: used only with IFI / ITI, which raise |
+| `xcapi` | `Optional[float]` | `0.0` | structural | XCAPI: nonzero (capacitor commutated) raises |
+| `ndi` | `Optional[int]` | `0` | untranscribed | NDI: a node of ICI, as ICI |
+
+
+### Expected export differences
+
+- A listed field comes back from its row note only if the exporter reads notes; otherwise it comes back as the
+  default.
+- A MODE 2 converter's unused VSREG, NREG, MAXQ and MINQ come back the same way.
+- A TYPE 0 converter's DCSET comes back the same way.
+- P2b: SETVL of a blocked line comes back from its row note, and no MDC beyond 0 is recovered. RC/XC come
+  back exactly from r, x, NB and TR. A TMX off the STP grid comes back from its note, or else as the grid's
+  top.
+
+### CIM 18 gaps (in the register and the table under CIM 18 gaps)
+
+- A FACTS device's series element, UPFC and IPFC (no class; SSSC has `StaticSynchronousSeriesCompensator`).
+- VSC MINLOSS and PWF.
+- Two-terminal VCMOD, DELTI, RCOMP, DCVMIN, CCCITMX, CCCACC and ICR.
+- RMPCT of a FACTS shunt (P2-R3 not taken).
+
 ## Owner
 
 
@@ -1767,6 +2067,10 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | the kind of a renewable bus-branch generator: PV, wind, or an induction machine (R3) | generator WMOD 1 | a `PowerElectronicsConnection` + `PowerElectronicsUnit` (no kind) |
 | a machine's positive-sequence reactance: TODO, a profile extension (R3) | generator ZX | untranscribed |
 | which side of a voltage-controlling winding its controlled bus is on (R4b) | transformer CONTk's sign | \|CONT\| regulated; the sign listed on the control row |
+| a FACTS device's series element; UPFC and IPFC have no class (P2a) | FACTS J ≠ 0, MODE 2..8 | raises (none in a case yet); a shunt-only device's series fields are listed when not the default |
+| a FACTS shunt's share of a coordinated voltage control (P2a) | FACTS RMPCT | listed on the row when not 100 |
+| a VSC converter's minimum loss and its power weighting factor (P2a) | VSC MINLOSS, PWF | listed on the row when not the default |
+| a two-terminal line's mode-switch voltage, margin, compounding, minimum DC voltage, CCC solution settings and commutating bus; its tap control's aim (hold the firing angle) (P2b) | VCMOD, DELTI, RCOMP, DCVMIN, CCCITMX, CCCACC, ICR, NDR; TAP's control | listed on the `DCLine` / converter row when not the default; the tap has no `TapChangerControl` |
 
 Not gaps: a bus's voltage limits and its regulation sit on its `BusbarSection`'s terminal. CIM puts limits and
 regulating controls on terminals by design (RAW-11, RAW-19). RAW not saying which nodes are busbars is a gap in

@@ -22,6 +22,7 @@ from cimhub_raw.importer.cimtbl import (
     bus,
     case_identification,
     equipment_terminal,
+    facts_device,
     fixed_shunt,
     generator,
     impedance_correction,
@@ -33,11 +34,15 @@ from cimhub_raw.importer.cimtbl import (
     switch,
     switched_shunt,
     transformer,
+    two_terminal_dc,
+    vsc_dc,
     zone,
 )
 from cimhub_raw.importer.cimtbl.derived import (
     block_sections,
     cim_angle,
+    converter_tap,
+    converter_transformer_ohms,
     generation_p_q,
     impedance_deviation_percent,
     is_angle_table,
@@ -91,7 +96,8 @@ def ieee14_documents():
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
                                     multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer,
-                                    interarea_transfer, substation, equipment_terminal, impedance_correction],
+                                    interarea_transfer, substation, equipment_terminal, impedance_correction,
+                                    facts_device, vsc_dc, two_terminal_dc],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
@@ -1250,5 +1256,184 @@ _LOAD_TERMINAL = "10_2_L___L1"
 def test_a_node_breaker_form_outside_r6_raises(change, error, message):
     native = Raw34Reader(FORMS_ATOM).read_all()
     change(native)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+# -- P2a: shunt FACTS devices and VSC DC lines -------------------------------------------------------------------
+
+DC_ATOM = TESTS / "atoms" / "dc" / "facts_vsc.raw"
+
+
+@pytest.fixture(scope="module")
+def dc_network():
+    return _network(DC_ATOM)
+
+
+def test_p2a_facts_devices(dc_network):
+    """A StaticSynchronousCompensator per shunt-only device: ratedI from SHMX, a voltage control on FCREG (P2-2)."""
+    devices = _objects(dc_network, "StaticSynchronousCompensator")
+    remote, local, out = devices["fd_STATCOM-REM"], devices["fd_STATCOM-LOC"], devices["fd_STATCOM-OUT"]
+    assert remote.ratedI.to("kA") == pytest.approx(ka_from_rating(50.0, 115.0))
+    assert remote.Terminals[0].TopologicalNode.mRID == "302"
+    control = remote.RegulatingControl
+    assert (control.mode.name, control.Terminal.mRID, control.targetValue) == ("voltage", "bb_301_T1",
+                                                                              pytest.approx(1.01 * 230000.0))
+    assert (local.RegulatingControl.Terminal.mRID, local.inService) == ("bb_202_T1", True)
+    assert (out.inService, out.ratedI.to("kA")) == (False, 0.0)
+
+
+def test_p2a_vsc_dc_topology(dc_network):
+    """A DCLine holds the segment and its two DCTopologicalNodes; each converter's one DC terminal sits on its own
+    node (P2-1)."""
+    segment = _objects(dc_network, "DCLineSegment")["vsc_VSC-TIE_seg"]
+    assert (segment.resistance.to("ohm"), segment.inService, segment.EquipmentContainer.mRID) == \
+        (1.58, True, "vsc_VSC-TIE")
+    node = _objects(dc_network, "DCTopologicalNode")["vsc_VSC-TIE_n1"]
+    assert sorted(terminal.mRID for terminal in node.DCTerminals) == ["vsc_VSC-TIE_c1_DC1", "vsc_VSC-TIE_seg_DC1"]
+    converter_terminal = _objects(dc_network, "ACDCConverterDCTerminal")["vsc_VSC-TIE_c1_DC1"]
+    assert converter_terminal.polarity.name == "positive"
+    assert _objects(dc_network, "DCLineSegment")["vsc_VSC-OUT_seg"].inService is False
+
+
+def test_p2a_vsc_converters(dc_network):
+    """TYPE, MODE and their setpoints, losses, qShare, PccTerminal, the Q curve and the ratings (P2-3)."""
+    converters = _objects(dc_network, "VsConverter")
+    mw = converters["vsc_VSC-TIE_c1"]  # TYPE 2, MODE 1 on its own bus
+    assert (mw.pPccControl.name, mw.targetPpcc.to("MW"), mw.qPccControl.name) == ("pPcc", -96.0, "voltagePcc")
+    assert mw.targetUpcc.to("kV") == pytest.approx(1.02 * 230.0)
+    assert (mw.idleLoss.to("kW"), float(mw.switchingLoss), mw.PccTerminal.mRID) == (1600.0, 3400.0, "bb_102_T1")
+    (curve,) = mw.CapabilityCurve
+    assert (curve.curveStyle.name, [(point.xvalue, point.y1value, point.y2value) for point in curve.CurveDatas]) == \
+        ("constantYValue", [(0.0, -100.0, 200.0)])
+    limits = {limit.mRID: limit.normalValue for limit in (*_objects(dc_network, "ApparentPowerLimit").values(),
+                                                           *_objects(dc_network, "CurrentLimit").values())}
+    assert (limits["vsc_VSC-TIE_c1_smax"].to("MVA"), limits["vsc_VSC-TIE_c1_imax"].to("A")) == (360.0, 1032.0)
+    voltage = converters["vsc_VSC-TIE_c2"]  # TYPE 1, MODE 2
+    assert (voltage.pPccControl.name, voltage.targetUdc.to("kV"), voltage.qPccControl.name,
+            voltage.targetPowerFactorPcc, voltage.CapabilityCurve) == ("udc", 300.0, "powerFactorPcc", 0.95, [])
+    remote = converters["vsc_VSC-OUT_c1"]  # MDC 0, VSREG 201, RMPCT 60
+    assert (remote.inService, remote.PccTerminal.mRID, float(remote.qShare)) == (False, "bb_201_T1", 60.0)
+    assert (converters["vsc_VSC-OUT_c2"].pPccControl, converters["vsc_VSC-OUT_c2"].inService) == (None, False)
+
+
+def test_p2a_vsc_tie_flows(dc_network):
+    """A tie's TieFlow pair is on the MW-control converter's terminal; the TYPE 1 converter is home (R5)."""
+    flows = {flow.mRID: (flow.ControlArea.mRID, flow.positiveFlowIn, flow.Terminal.mRID)
+             for flow in _objects(dc_network, "TieFlow").values() if "VSC" in flow.mRID}
+    assert flows == {"tf_1_vsc_VSC-TIE_c1_T1": ("ca_1", False, "vsc_VSC-TIE_c1_T1"),
+                     "tf_2_vsc_VSC-TIE_c1_T1": ("ca_2", True, "vsc_VSC-TIE_c1_T1")}
+
+
+def test_p2a_row_comments():
+    """What CIM cannot hold is listed on its row when it is not the default."""
+    parts = {part.name: part for part in RawImporter("atom").to_cimtbl(Raw34Reader(DC_ATOM).read_all()).parts}
+    rows = {row.cells[0]: row.comment for part in (parts["facts_device"], parts["vsc_dc"])
+            for statement in part.statements for row in statement.rows}
+    assert rows["fd_STATCOM-REM"] == "untranscribed: trmx=0.0, rmpct=75.0"
+    assert rows["fd_STATCOM-LOC"] is None
+    assert (rows["vsc_VSC-TIE_c1"], rows["vsc_VSC-TIE_c2"]) == ("untranscribed: pwf_1=0.5",
+                                                                "untranscribed: minloss_2=1110.0")
+    assert rows["vsc_VSC-OUT_c2"] == "untranscribed: dcset_2=100.0"
+
+
+@pytest.mark.parametrize(("cls", "key", "changes", "error", "message"), [
+    (schema.FactsDeviceRecord, "STATCOM-LOC", {"jbus": 201}, NotImplementedError, "J 201, a series element"),
+    (schema.FactsDeviceRecord, "STATCOM-LOC", {"mode": 2}, ValueError, "mode"),
+    (schema.FactsDeviceRecord, "STATCOM-LOC", {"remot": 999}, ValueError, "FCREG 999 is no bus"),
+    (schema.VscDcRecord, "VSC-TIE", {"converter_type_2": 2}, ValueError, "exactly one TYPE 1"),
+    (schema.VscDcRecord, "VSC-TIE", {"mode_1": 3}, ValueError, "mode_1"),
+    (schema.VscDcRecord, "VSC-OUT", {"vsreg_1": 999}, ValueError, "VSREG 999 is no bus"),
+])
+def test_a_p2a_record_outside_the_spec_raises(cls, key, changes, error, message):
+    native = Raw34Reader(DC_ATOM).read_all()
+    native.graph[cls][key] = dataclasses.replace(native.graph[cls][key], **changes)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+# -- P2b: two-terminal DC lines behind their converter transformers ------------------------------------------------
+
+DC2_ATOM = TESTS / "atoms" / "dc" / "two_terminal.raw"
+
+
+@pytest.fixture(scope="module")
+def dc2_network():
+    return _network(DC2_ATOM)
+
+
+def test_converter_transformer_derived_values():
+    """r, x on end 1 = per-bridge ohms / (NB x TR^2); the tap's grid steps by STP from TMN (P2-5)."""
+    assert converter_transformer_ohms(7.6004, 2, 0.5) == pytest.approx(15.2008)
+    tap, top = converter_tap(1.0625, 1.1375, 0.8625, 0.0125, ebas_kv=230.0, record_id="x")
+    assert (tap.low_step, tap.high_step, tap.neutral_step, tap.step, top) == \
+        (1, 23, 12, pytest.approx(17.0), pytest.approx(1.1375))
+    assert tap.increment_percent == pytest.approx(1.25)
+    _, off_grid_top = converter_tap(1.024, 1.12, 0.88, 0.0125, ebas_kv=230.0, record_id="x")
+    assert off_grid_top == pytest.approx(1.1175)
+
+
+def test_p2b_converters_behind_their_transformers(dc2_network):
+    """Each CsConverter sits on its internal valve-side node; its transformer joins that node to the AC bus."""
+    converters, transformers = _objects(dc2_network, "CsConverter"), _objects(dc2_network, "PowerTransformer")
+    inverter = converters["dc2_DC-TIE_i"]
+    assert inverter.Terminals[0].TopologicalNode.mRID == "dc2_DC-TIE_i_int"
+    assert [terminal.TopologicalNode.mRID for terminal in transformers["dc2_DC-TIE_i_xf"].Terminals] == \
+        ["201", "dc2_DC-TIE_i_int"]
+    ends = _objects(dc2_network, "PowerTransformerEnd")
+    end_1, end_2 = ends["dc2_DC-TIE_i_xf_1"], ends["dc2_DC-TIE_i_xf_2"]
+    assert (end_1.ratedU.to("kV"), end_2.ratedU.to("kV"), end_1.x.to("ohm")) == \
+        (230.0, 115.0, pytest.approx(7.6004 / (2 * 0.5 ** 2)))
+    assert end_2.BaseVoltage.nominalVoltage.to("kV") == 115.0
+    tap = end_1.RatioTapChanger
+    assert (tap.neutralStep, tap.step, tap.ltcFlag, tap.TapChangerControl) == (12, pytest.approx(17.0), True, None)
+    assert (inverter.numberOfValves, inverter.operatingMode.name, float(inverter.maxGamma)) == (12, "inverter", 18.0)
+
+
+def test_p2b_controls(dc2_network):
+    """MDC and SETVL's sign set the rectifier's order and where targetPpcc sits; the inverter holds VSCHD."""
+    converters = _objects(dc2_network, "CsConverter")
+    tie_r, tie_i = converters["dc2_DC-TIE_r"], converters["dc2_DC-TIE_i"]  # MDC 1, SETVL -250: inverter power
+    assert (tie_r.pPccControl.name, tie_r.targetPpcc) == ("activePower", None)
+    assert (tie_i.pPccControl.name, tie_i.targetPpcc.to("MW"), tie_i.targetUdc.to("kV")) == ("dcVoltage", -250.0,
+                                                                                             475.0)
+    assert converters["dc2_DC-B2B_r"].targetPpcc.to("MW") == 150.0  # SETVL > 0: rectifier power
+    current = converters["dc2_DC-CURRENT_r"]  # MDC 2
+    assert (current.pPccControl.name, current.targetIdc.to("A")) == ("dcCurrent", 1000.0)
+    blocked = converters["dc2_DC-BLOCKED_r"]  # MDC 0
+    assert (blocked.inService, blocked.pPccControl, converters["dc2_DC-BLOCKED_i"].inService) == (False, None, False)
+    assert _objects(dc2_network, "DCLineSegment")["dc2_DC-B2B_seg"].resistance.to("ohm") == 0.0
+
+
+def test_p2b_tie_flows(dc2_network):
+    """METER I: the inverter is metered, so its transformer's AC terminal carries the pair (R5)."""
+    flows = {flow.mRID: (flow.ControlArea.mRID, flow.positiveFlowIn, flow.Terminal.mRID)
+             for flow in _objects(dc2_network, "TieFlow").values() if "dc2" in flow.mRID}
+    assert flows == {"tf_2_dc2_DC-TIE_i_xf_T1": ("ca_2", False, "dc2_DC-TIE_i_xf_T1"),
+                     "tf_1_dc2_DC-TIE_i_xf_T1": ("ca_1", True, "dc2_DC-TIE_i_xf_T1")}
+
+
+def test_p2b_row_comments():
+    part = next(part for part in RawImporter("atom").to_cimtbl(Raw34Reader(DC2_ATOM).read_all()).parts
+                if part.name == "two_terminal_dc")
+    rows = {row.cells[0]: row.comment for statement in part.statements for row in statement.rows}
+    assert rows["dc2_DC-BLOCKED"] == "untranscribed: delti=0.1, setvl=-413.1"
+    assert rows["dc2_DC-CURRENT"] == "untranscribed: vcmod=118.1, delti=0.17"
+    assert rows["dc2_DC-B2B_r"] == "untranscribed: icr=201"
+    assert rows["dc2_DC-TIE_r_xf_tap1"] == "untranscribed: tmxr=1.12 (the STP grid tops out at 1.1175)"
+
+
+@pytest.mark.parametrize(("changes", "error", "message"), [
+    ({"ifr": 101, "itr": 102}, NotImplementedError, "IFR / ITR name an AC transformer"),
+    ({"xcapi": 2.0}, NotImplementedError, "XCAPI 2.0, capacitor commutated"),
+    ({"mdc": 3}, ValueError, "mdc"),
+    ({"meter": "X"}, ValueError, "meter"),
+    ({"ipi": 999}, ValueError, "inverter IPI 999 is no bus"),
+    ({"stpr": 0.0}, ValueError, "STP 0.0 must be positive"),
+])
+def test_a_p2b_record_outside_the_spec_raises(changes, error, message):
+    native = Raw34Reader(DC2_ATOM).read_all()
+    cls = schema.TwoTerminalDCRecord
+    native.graph[cls]["DC-TIE"] = dataclasses.replace(native.graph[cls]["DC-TIE"], **changes)
     with pytest.raises(error, match=message):
         RawImporter("atom").to_cimtbl(native)

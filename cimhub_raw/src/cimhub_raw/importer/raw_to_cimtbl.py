@@ -76,7 +76,7 @@ class Site:
 def _regulated_nodes(native) -> list[tuple[int, int, str]]:
     """Every control that regulates a substation node (NREG, NODk): its busbar is in ``substation.cimtbl``."""
     return generator.regulated_nodes(native) + switched_shunt.regulated_nodes(native) + \
-        transformer.regulated_nodes(native)
+        transformer.regulated_nodes(native) + vsc_dc.regulated_nodes(native) + facts_device.regulated_nodes(native)
 
 
 #: ``(native class, mapper(native, site))`` in ``Import`` order. The phase-2 stubs return an empty document, or
@@ -108,10 +108,13 @@ MAPPING_ORDER = (
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(
         native, site.substation_of, site.base_kv, site.areas, site.node_breaker, site.values.base_mva,
         site.values.transformer_ratings_in_current)),
-    (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
-    (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
+    (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(
+        native, site.substation_of, site.base_kv, site.areas)),
+    (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native, site.substation_of, site.base_kv,
+                                                                 site.areas, site.node_breaker)),
     (multi_terminal_dc.NATIVE_CLASS, lambda native, site: multi_terminal_dc.map_multi_terminal_dc(native)),
-    (facts_device.NATIVE_CLASS, lambda native, site: facts_device.map_facts_device(native)),
+    (facts_device.NATIVE_CLASS, lambda native, site: facts_device.map_facts_device(
+        native, site.substation_of, site.base_kv, site.node_breaker)),
     (gne_device.NATIVE_CLASS, lambda native, site: gne_device.map_gne_device(native)),
     (induction_machine.NATIVE_CLASS, lambda native, site: induction_machine.map_induction_machine(native)),
 )
@@ -159,7 +162,7 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
     GeographicalRegion, the BaseVoltages, the voltage-limit and rating-set types, then one ``Import`` per non-empty
     part."""
     values = site.values
-    voltages = bus.base_voltages(native)
+    voltages = bus.base_voltages(native, two_terminal_dc.valve_kv(native))
     statements = [
         ObjectStatement("BasePower", [(Column("mRID"), "sbase"), (Column("basePower", "MVA"), cell(values.base_mva))],
                         comment="defaulted: SBASE=100" if values.base_mva_defaulted else None),

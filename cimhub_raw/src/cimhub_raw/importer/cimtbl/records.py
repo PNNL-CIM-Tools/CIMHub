@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from cimhub_core.cimtbl import Field, fill_defaults, schema_defaults
+from cimhub_core.cimtbl import Field, cell, fill_defaults, schema_defaults
 
 
 def raw_defaults(native_cls: type) -> dict[str, object]:
@@ -17,3 +17,13 @@ def fill_keyed_defaults(fields: dict[str, Field], record, defaults: dict[str, ob
     filled, comment = fill_defaults(fields, record, defaults)
     filled.ID = record.ID
     return filled, comment
+
+
+def listed_off_default(record, slots, defaults: dict[str, object]) -> str | None:
+    """``untranscribed: a=1.0, b=2``: the ``slots`` CIM cannot hold whose value is not the default (a blank one, or
+    one with no default, counts as unset), listed on the record's row; ``None`` when there are none."""
+    values = [(slot, getattr(record, slot)) for slot in slots]
+    off = [(slot, value) for slot, value in values if value not in (None, "") and value != defaults.get(slot, value)]
+    if not off:
+        return None
+    return "untranscribed: " + ", ".join(f"{slot}={cell(value)}" for slot, value in off)
