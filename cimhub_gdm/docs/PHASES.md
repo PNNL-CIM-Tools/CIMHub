@@ -10,7 +10,7 @@ old 4 (transformers) is now 3, old 5 (DER) is now 4, old 6 (close-out) is now 5.
 
 ## Phase 0: mapping rules (docs only)
 
-**Status:** drafted 2026-11-08, waiting for approval and open points G1-G6.
+**Status:** approved 2026-11-08 (open points: `GDM_MAPPING.md` §13).
 
 **Deliverable:** [`GDM_MAPPING.md`](GDM_MAPPING.md): build order and class roles, identity, code tables, units,
 derived values, per-phase rules, BaseVoltage/containers/frequency, time series, shared CIM models with DSS, CIM 18
@@ -21,7 +21,7 @@ gaps, cross-cutting fail-fast rules, the atom list, and findings for other owner
 
 ## Phase 1: scaffold, shell, buses, source, switches
 
-**Status:** built 2026-11-08, waiting for review.
+**Status:** built 2026-11-08, committed (`4acdb6f`).
 - `scripts/test-all.sh gdm`: 63 passed; the 8 opt-in gdmloader cases skip; 2 ditto decks xfail (ditto can't read them).
 - The opt-in gdmloader sweep (`CIMHUB_GDMLOADER=1`): all 8 systems stop only at `PENDING` classes.
 - The ditto sweep: the 4 readable decks do the same.
@@ -66,7 +66,7 @@ itself on one complete family.
 
 ## Phase 2: lines, loads, capacitors
 
-**Status: built 2026-11-08, awaiting review.** 116 passed, 8 skipped (gdmloader, opt-in), 2 xfailed (ditto can't read
+**Status: built 2026-11-08, committed (`f96c670`).** 116 passed, 8 skipped (gdmloader, opt-in), 2 xfailed (ditto can't read
 two decks); the opt-in gdmloader sweep passes 8 of 8. With the Phase 3/4 classes stripped, all 4 ditto decks and all
 8 gdmloader systems import through Phase 2 (SMART-DS p1rhs7: 1,841 lines, 1,896 loads). The spec is
 `GDM_MAPPING.md` §15-§17. Changes from the plan below:
@@ -121,7 +121,7 @@ per-phase capacitors and an unmapped `ConnectionType`.
 
 ## Phase 3: transformers and regulators
 
-**Status: built 2026-11-08, awaiting review.** 160 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
+**Status: built 2026-11-08, committed (`f96c670`).** 160 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
 gdmloader sweep passes 8 of 8. With the Phase 4 classes stripped, all 4 ditto decks and all 8 gdmloader systems
 import completely (SMART-DS p1rhs7: 503 transformers, 481 center taps). The spec is `GDM_MAPPING.md` §18-§19.
 Changes from the plan below:
@@ -169,7 +169,7 @@ two land separately: transformers don't wait for B17.
 
 ## Phase 4: DER and reactors
 
-**Status: built 2026-11-08, awaiting review.** 179 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
+**Status: built 2026-11-08, committed (`3df515c`).** 179 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
 gdmloader sweep passes 8 of 8 with nothing stripped (p5r imports its 2 PVs). The spec is `GDM_MAPPING.md` §20-§21.
 Changes from the plan below:
   - B20 had landed: InverterInfo `inv_` (Generation- or Storage-, by the DER naming it) on the
@@ -203,6 +203,37 @@ Changes from the plan below:
 **Exit:** atoms and `check_fields` pass; `PENDING` holds only classes the user has signed off as waiting on upstream.
 
 ## Phase 5: close-out
+
+**Status: built 2026-11-09, awaiting review.** 181 passed, 8 skipped (gdmloader, opt-in), 2 xfailed (the two decks
+ditto 0.1.8 can't read, `GDM_MAPPING.md` §14: upstream). Changes from the plan below:
+  - **Reference system:** `gdm_atoms.reference_system()`, IEEE13-like: the vendored deck's line codes 601-605 (603
+    also as 604, 605 also on 652) with C from Kersting's admittances, its loads (delta and wye; PQ, Z, I), its
+    regulator bank with line drop compensation and solved taps (steps 10, 8, 11), XFM-1 and both capacitors; 670 and
+    its spot loads dropped; 692-675 as a cn_250 geometry line; one PV (680) and one battery (634) added. Golden
+    `tests/atoms/e2e/reference.cimtbl` (self-contained, `Model = ieee13`), test `test_reference_import.py`. The
+    hand-written golden matched on its first run; three mutations (a tap step, a delta load's phase pair, a rating)
+    each showed up in `diff_models`, so the match is not vacuous.
+  - **XML round trip:** `test_xml_round_trip.py`, every atom family in one system (353 objects): `write_xml` →
+    reload → `diff_models(built, reloaded) == []`. The importer never writes `percentImpedance`, so the PerCent check
+    is BatteryUnit `chargingEfficiency` 95 % → `95.0` (a `gad:` extension attribute).
+  - `gdm_atoms.load()` and `capacitor()` take their bus's feeder (the same result for every atom); the shell-header
+    test skips `e2e` goldens, which carry their own `Model`.
+  - **DSS/GDM parity: deferred to rc_1 (user, 2026-11-09).** Root `tests/cross_format/` is outside this branch's
+    scope, and this worktree's `cimhub_opendss` is 5 commits behind rc_1, so parity here would test a stale importer.
+
+**Hand-off at merge** (outside this branch's scope):
+  1. DSS/GDM parity on rc_1, in root `tests/cross_format/`: IEEE13_original through `dss_to_cim` and through ditto +
+     `gdm_to_cim`, matched by topology, with ditto's known losses (`GDM_MAPPING.md` §12, §14, G8) listed as expected
+     differences.
+  2. Commit CIM-Builder `gdm_support`'s TankEnd and `SeriesCompensatorBuilder` edits first: the importer needs both.
+  3. Move the open asks into `.development/UPSTREAM_REQUESTS.md`: CIM-Builder B21-B25, B27, `tap_steps` `isclose`,
+     the PowerElectronicsConnection `grounded` and `ratedS` docstring; CIM-Profiles TankEnd slicing and X2;
+     CIMTBL-Models X7; core `cimtbl._samples` (`GDM_MAPPING.md` §14, `GDM_REWRITE_PLAN.md` upstream status).
+  4. Log the `GDM_MAPPING.md` §10 gaps in `CIMTBL-Models/distribution/CIM18_GAPS.md` (its owner), and report the
+     ditto and GDM findings (§14) to their maintainers.
+
+**Exporter:** the importer writes cim18v17 only. The CIM→GDM exporter is rewritten on the core getters in a later
+wave, and that restores the GDM round trip; until then there is none.
 
 - **Reference system:** an IEEE13-like system built in Python in `tests/gdm_atoms.py`, run through `to_cim()`, compared
   with `tests/atoms/e2e/reference.cimtbl` by `diff_models`.

@@ -22,6 +22,8 @@ tests/atoms/e2e/<case>.cimtbl              self-contained end-to-end golden (Pha
 tests/test_<family>_import.py              atoms, check_fields, fail-fast, derived-function units per family
 tests/test_shared_import.py                shared.py units
 tests/test_coverage_import.py              class coverage, time-series drop, name clashes
+tests/test_reference_import.py             the e2e reference system (gdm_atoms.reference_system())
+tests/test_xml_round_trip.py               every atom family in one system: write_xml, reload, diff_models
 ```
 
 - **Every golden master has the same header** (`Profile`, `Authority` = the CIMHub authority, `Model` = `atom`), equal
@@ -90,8 +92,10 @@ shell bug shows as one failure, not one per family.
   never in CI): the 8 `gdm_data` DistributionSystems at the pinned data version (2_4_1), with the same "imports or
   stops at a listed reason" rule. `p1rhs7_1247` (13,380 components, center taps, split-phase, fuses) is the scale
   case. If `gdmloader` isn't importable, the test skips.
-- **DSS/GDM parity (Phase 5, tier 4):** one deck through `dss_to_cim` and through ditto + `to_cim`, compared by
+- **DSS/GDM parity (tier 4):** one deck through `dss_to_cim` and through ditto + `to_cim`, compared by
   topology in root `tests/cross_format/`, with ditto's losses as listed expected differences
-  ([`GDM_MAPPING.md`](GDM_MAPPING.md) §12, §14).
-- **XML round trip (Phase 5).** Build → `write_xml` → reload with cim-graph → `diff_models(built, reloaded) == []`,
-  plus a check that a PerCent value (`percentImpedance` 5) serializes as `5.0`.
+  ([`GDM_MAPPING.md`](GDM_MAPPING.md) §12, §14). Written on rc_1 after this branch merges (user, 2026-11-09): root
+  `tests/` is outside this branch, and its DSS importer is behind rc_1's.
+- **XML round trip (Phase 5).** Every atom family in one system: build → `write_xml` → reload with cim-graph →
+  `diff_models(built, reloaded) == []`, plus a check that a PerCent value serializes as the percent number. The
+  importer never writes `percentImpedance`, so the check is BatteryUnit `chargingEfficiency` 95 → `95.0`.
