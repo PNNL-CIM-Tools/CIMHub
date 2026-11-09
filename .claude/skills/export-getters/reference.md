@@ -65,6 +65,14 @@ def get_phase_loads(consumer, active_unit="W", reactive_unit="VAr") -> PhaseLoad
 def get_load_response(consumer) -> LoadResponse        # ZIP fractions (sum to 1) or exponents
 def get_source(source, *, angle_unit, voltage_unit="V", impedance_unit="ohm", base_power=None) -> Source
 def get_der_output(equipment, active_unit="W", reactive_unit="VAr", *, sign) -> DerOutput   # 'load' | 'generation'
+def get_inverter_rating(connection, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> InverterRating
+    # ratedS, ratedU (LL) required; (min_q, max_q) in sign; maxIFault pu
+def get_inverter_unit(connection) -> PowerElectronicsUnit   # its one unit; none or several raise
+def get_photovoltaic_unit(unit, active_unit="W", *, sign) -> PhotoVoltaicRating   # (min_p, max_p) in sign
+def get_battery_unit(unit, active_unit="W", energy_unit="Wh", *, sign) -> BatteryRating
+    # (min_p, max_p) in sign; energies, efficiencies (percent), idling_p (a loss, as stored), state
+def get_machine_rating(machine, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> MachineRating
+def get_machine_impedance(machine, unit="ohm") -> MachineImpedance   # r, r0, x0, r2, x2; 'pu' on ratedU/ratedS
 def get_regulating_control(control, unit=None) -> RegulatingSettings   # targets in unit (mode's SI), terminal, phases
 def get_tap_changer_control(tap, *, unit=None, time_unit="s", voltage_unit="V", power_unit="W") -> TapChangerSettings
 def get_equipment_control(equipment, *, unit=None, time_unit="s") -> EquipmentControl | None   # shunt aVRDelay
@@ -136,6 +144,7 @@ base-frequency, operational-limit, shunt and tap-changer reads.
 | `get_apparent_power_limits(eq, type, unit)` | RAW, MATPOWER | MVA vs amps |
 | `get_source(es, angle_unit=)` (done, G6b): voltage (pu/kV, angle) + sequence impedance | DSS, GDM, DistOPF | the angle unit is explicit |
 | `get_der_output(eq, sign=)` (done, G6b) | GLM, DSS, GDM, DistOPF, RAW, MATPOWER | the sign convention is explicit |
+| `get_inverter_rating` / `get_inverter_unit` / `get_photovoltaic_unit` / `get_battery_unit` / `get_machine_rating` / `get_machine_impedance` (done, G6d) | DSS, GLM, GDM, RAW, MATPOWER | limits stored in the generation sign come back as (min, max) in the caller's sign |
 | `get_regulating_control` / `get_tap_changer_control` / `get_equipment_control` (done, G6c) | DSS, GLM, GDM, RAW | target units by mode; pt/ct ratio on tap and control agree |
 | bus numbering context | RAW, MATPOWER | numbering never written back into CIM |
 

@@ -74,6 +74,8 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
 1. **Switch state:** `get_switch_state(switch, which='actual'|'normal')`; `which` has no default (`open` vs `normalOpen`).
 2. **Generator sign:** CIM terminal `p` is positive into equipment; generation is negative `p`.
    `get_der_output(eq, sign='load'|'generation')` takes the sign as an argument, so no spoke negates on its own.
+   Nameplate limits (`maxQ`/`minQ`, `maxP`/`minP`) are stored in the generation sign; the rating getters return
+   them as `(min, max)` in the same `sign=`.
 3. **Per-phase load:** `EnergyConsumerPhase` values when every child has them, else the total split evenly over the
    phase conductors (`phase_power.device_power`, also DER).
 4. **Shunt Q:** one formula, Q = bPerSection × V² × sections, with `voltage=` (`nomU` or the BaseVoltage, LN for one

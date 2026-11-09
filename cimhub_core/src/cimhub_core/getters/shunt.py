@@ -17,9 +17,8 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import cimprofiles.cim18.cim18v17 as cim
-from cimtables.graph_write import get_qty
 
-from cimhub_core.getters import describe
+from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.base_voltage import get_base_voltage
 from cimhub_core.getters.terminals import get_conductor_phases
 
@@ -53,9 +52,9 @@ def get_shunt_reactive_power(shunt: cim.LinearShuntCompensator, unit: str = "VAr
         raise ValueError(f"{describe(shunt)}: a per-phase bPerSection is not read")
 
     phases = tuple(phase for phase in get_conductor_phases(shunt) if phase is not cim.SinglePhaseKind.N)
-    b = _required(shunt, "bPerSection", "S")
+    b = required_qty(shunt, "bPerSection", "S")
     if voltage == "nominal":
-        volts = _required(shunt, "nomU", "V")
+        volts = required_qty(shunt, "nomU", "V")
     else:
         volts = get_base_voltage(shunt, "V", form="LN" if len(phases) == 1 else "LL")
     count = getattr(shunt, SECTIONS_ATTRIBUTE[sections])
@@ -72,10 +71,3 @@ def get_shunt_reactive_power(shunt: cim.LinearShuntCompensator, unit: str = "VAr
         total=total,
         per_phase={phase: total / len(phases) for phase in phases},
     )
-
-
-def _required(shunt, attribute: str, unit: str) -> float:
-    value = get_qty(shunt, attribute, unit)
-    if value is None:
-        raise ValueError(f"{describe(shunt)}: {attribute} is unset")
-    return value

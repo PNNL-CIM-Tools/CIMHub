@@ -12,7 +12,7 @@ from typing import NamedTuple
 import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
-from cimhub_core.getters import describe
+from cimhub_core.getters import required_qty
 from cimhub_core.getters.terminals import get_conductor_phases
 
 IMPEDANCE_UNITS = ("ohm", "pu")
@@ -42,16 +42,9 @@ def get_source(source: cim.EnergySource, *, angle_unit: str, voltage_unit: str =
     """The source's voltage and impedance; ``angle_unit`` (``'deg'`` or ``'rad'``) has no default."""
     if impedance_unit not in IMPEDANCE_UNITS:
         raise ValueError(f"impedance_unit must be one of {list(IMPEDANCE_UNITS)}, not {impedance_unit!r}")
-    nominal = _required(source, "nominalVoltage", voltage_unit)
-    magnitude = _required(source, "voltageMagnitude", voltage_unit)
+    nominal = required_qty(source, "nominalVoltage", voltage_unit)
+    magnitude = required_qty(source, "voltageMagnitude", voltage_unit)
     impedance = SourceImpedance(*(get_qty(source, name, impedance_unit, system_base=base_power)
                                   for name in IMPEDANCE_ATTRIBUTES))
     return Source(get_conductor_phases(source), nominal, magnitude, magnitude / nominal,
                   get_qty(source, "voltageAngle", angle_unit), impedance)
-
-
-def _required(source: cim.EnergySource, attribute: str, unit: str) -> float:
-    value = get_qty(source, attribute, unit)
-    if value is None:
-        raise ValueError(f"{describe(source)}: {attribute} is unset")
-    return value

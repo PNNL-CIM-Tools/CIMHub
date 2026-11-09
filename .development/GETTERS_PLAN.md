@@ -1,7 +1,7 @@
 # Export getters
 
 **Status:** started 2026-11-08 in a worktree, moved onto `rc_1` the same day once the DSS importer was done.
-Design: skill `export-getters` (SKILL.md + reference.md). G1-G5 committed (230fd8a); G6a-G6c uncommitted.
+Design: skill `export-getters` (SKILL.md + reference.md). G1-G5 committed (230fd8a); G6a-G6d uncommitted.
 
 **Decision change (user, 2026-11-08):** `REWRITE_PLAN.md` F1 said getters are built on demand, each landing with its
 first consumer in the DSS wave. The getters started ahead of DSS S6. Each getter is still tested against
@@ -26,7 +26,7 @@ exporter) may ask for signature changes before anything is frozen.
 | G6a | `get_transformer_units`, `get_transformer_model` (`TransformerModel`: windings, mesh, core on one declared power base; five CIM forms) | **done 2026-11-08**, 23 tests |
 | G6b | `get_tap_steps`/`get_tap_ratio`, `get_shunt_reactive_power`, `get_phase_loads`/`get_load_response`, `get_source`, `get_der_output` (+ `phase_power.device_power`) | **done 2026-11-08**, 46 tests |
 | G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
-| G6d | DER ratings and units (`ratedS`, q limits, `PhotoVoltaicUnit`, `BatteryUnit`), machine data | next, when DSS S6 asks |
+| G6d | `get_inverter_rating`, `get_inverter_unit`, `get_photovoltaic_unit`, `get_battery_unit`, `get_machine_rating`, `get_machine_impedance` (`getters/der.py`); `getters.required_qty` shared | **done 2026-11-08**, 15 tests |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)
@@ -149,3 +149,21 @@ exporter) may ask for signature changes before anything is frozen.
 - A control must monitor a Terminal and have a mode and a target; no control is `None` (tap: `control=None`).
 - `monitoredPhase` is parsed to SinglePhaseKind tokens (`terminals.phase_code_tokens`). `ptPhase`/`ctPhase` and
   `TapChanger.ptPhase` are not read (the DSS importer writes none).
+
+## G6d decisions and open points
+
+- **Limit sign** (confirmed by the user 2026-11-09)**:** `maxQ`/`minQ` (inverter, SynchronousMachine) and `maxP`/`minP` (PowerElectronicsUnit) are written
+  in the generation sign by every producer (DSS `kvarMax`/`-kvarMaxAbs`, `Pmpp`/0, `kWrated`/`-kWrated`; RAW
+  QT/QB). Each pair comes back as `(min, max)` in the caller's `sign=`: as stored for `'generation'`, negated and
+  swapped for `'load'`. A minimum above its maximum raises (a producer that wrote the load sign).
+- **`idlingP`** is "real power consumed while idling", a loss: returned as stored in either sign.
+- **Required:** `ratedS` and `ratedU` on an inverter and a machine; everything else unset is None. `ratedU` is line
+  to line as stored; the DSS exporter undoes its importer's 1-phase wye x sqrt 3 (`injection.line_kv`).
+- **One unit per connection** (`get_inverter_unit`); several units, a PowerElectronicsWindUnit and an
+  AsynchronousMachine are not read until a producer writes one.
+- **Machine impedance:** r, r0, x0, r2, x2 in ohm or pu on the machine's own ratedU/ratedS (`z_base`). cim18v17 has
+  no positive-sequence machine reactance (RAW ZX, DSS Xd/Xdp/Xdpp): U13. The IEC 60909 short-circuit data (`ikk`,
+  `mu`, star point earthing), voltage limits, AVR delays and capability curves are not read.
+- `BatteryUnit.minimumE` is documented in CIM as a percent but typed RealEnergy; it is read as an energy (the type,
+  as the DSS importer writes `%reserve x kWhrated`).
+- Open: GeneratingUnit (`maxOperatingP`/`minOperatingP`, RAW PT/PB for a machine) comes with the bus-branch shapes.

@@ -31,7 +31,7 @@ from typing import NamedTuple
 import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
-from cimhub_core.getters import describe
+from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.terminals import get_terminal_phases
 
 IMPEDANCE_UNITS = {"percent": 1.0, "pu": 0.01}  # the result unit -> its factor on a percent
@@ -114,15 +114,15 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=N
     form = _form(unit)
     coils = _coils(unit, form)
     first = coils[0].source
-    first_va = _required(first, "ratedS", "VA")
+    first_va = required_qty(first, "ratedS", "VA")
     result_va = first_va if base_power is None else base_power.to("VA")
     factor = IMPEDANCE_UNITS[impedance_unit]
 
     def stored_va(source) -> float:
         """The whole-unit power a percent on ``source``'s own base is on."""
         if form in END_FORMS:
-            return _required(source, "ratedS", "VA")
-        return first_va * _required(source, "baseS", "VA") / _required(first, "baseS", "VA")
+            return required_qty(source, "ratedS", "VA")
+        return first_va * required_qty(source, "baseS", "VA") / required_qty(first, "baseS", "VA")
 
     def impedance(holder, attribute: str, source) -> float | None:
         value = get_qty(holder, attribute, "percent")
@@ -343,12 +343,6 @@ def _agreed(objects: tuple, what: str, read):
             raise ValueError(f"{describe(first_obj)} and {describe(obj)}: {what} {first} and {value} differ")
     return found[0][1] if found else None
 
-
-def _required(obj, attribute: str, unit: str) -> float:
-    value = get_qty(obj, attribute, unit)
-    if value is None:
-        raise ValueError(f"{describe(obj)}: {attribute} is unset")
-    return value
 
 
 def _has(obj, attribute: str) -> bool:
