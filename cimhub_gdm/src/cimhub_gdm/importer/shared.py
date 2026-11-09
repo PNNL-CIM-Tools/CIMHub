@@ -66,6 +66,11 @@ def power_qty(quantity, kind: str, *, label: str) -> Qty:
     return qty(quantity)
 
 
+def active_power_unit(apparent: Qty) -> str:
+    """The active power unit with an apparent power's prefix: kVA → kW, volt_ampere → watt."""
+    return apparent.unit.replace("VA", "W").replace("volt_ampere", "watt")
+
+
 def susceptance(capacitance, frequency: float = FREQUENCY_HZ) -> Qty:
     """b = 2πf·C, in GDM's capacitance unit times hertz (10 nF/km at 60 Hz → 3769.9 nF·Hz/km = 3.7699e-9 S/m)."""
     return Qty(2 * math.pi * frequency * float(capacitance.magnitude), f"hertz * {capacitance.units}")

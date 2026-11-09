@@ -15,10 +15,12 @@ system.name = system.name or "my_feeder"   # the CIM Model name; ditto leaves it
 feeder_model = gdm_to_cim(system)
 ```
 
-**Status (Phase 3):** the network shell (feeders, substations), buses, voltage sources, switches, lines (matrix,
+**Status (Phase 4):** the network shell (feeders, substations), buses, voltage sources, switches, lines (matrix,
 sequence and geometry, with their wire and cable catalogs), loads, capacitors (with their controllers), transformers
-(tank-configuration templates, center taps by lug, off-nominal taps) and regulators (with their tap changers and
-controls) are mapped. DER and reactors raise as pending, naming the phase that ports them. Time series are dropped
-with one warning. Requires the CIM-Builder `TransformerTankEnd` method (`add_transformer_tank_end`).
+(tank-configuration templates, center taps by lug, off-nominal taps), regulators (with their tap changers and
+controls), DER (PV and batteries, with their inverter and battery AssetInfo) and series reactors are mapped. Inverter
+controllers, the daily-timed capacitor controller and earthing switches raise as pending, naming what they wait for.
+Time series are dropped with one warning. Requires the CIM-Builder `TransformerTankEnd` method
+(`add_transformer_tank_end`) and `SeriesCompensatorBuilder`.
 
 The plan is [`docs/GDM_REWRITE_PLAN.md`](docs/GDM_REWRITE_PLAN.md).

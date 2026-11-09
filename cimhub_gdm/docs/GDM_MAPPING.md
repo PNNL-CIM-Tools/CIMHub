@@ -2,7 +2,7 @@
 
 **Status:** Phase 0 approved 2026-11-08; Phase 1 (shell, buses, sources, switches) built; Phase 2 (lines, loads,
 capacitors, §15-§17) built 2026-11-08, for review; Phase 3 (transformers, regulators, §18-§19) built 2026-11-08,
-for review. Cross-cutting rules only. Each family adds its own section
+for review; Phase 4 (DER, reactors, §20-§21) built 2026-11-08, for review. Cross-cutting rules only. Each family adds its own section
 (field table generated from `FIELDS`, derived values, fail-fast list, atoms) when it lands, approved before its code.
 **Plan:** [`GDM_REWRITE_PLAN.md`](GDM_REWRITE_PLAN.md); decisions: [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); targets:
 [`CLASS_TARGETS.md`](CLASS_TARGETS.md). Contract: `cimtbl-import-contract` skill, reference §9 (builder-native).
@@ -32,11 +32,11 @@ names it is built:
 |---|---|---|---|
 | 1 | network shell | `DistributionSubstation`, `DistributionFeeder` | shell |
 | 2 | buses | `DistributionBus` (+ `VoltageLimitSet`, `Location` inline) | instance |
-| 3 | catalogs | `MatrixImpedanceBranchEquipment`, `SequenceImpedanceBranchEquipment`, `GeometryBranchEquipment`, `BareConductorEquipment`, `ConcentricCableEquipment`, `DistributionTransformerEquipment`, `PowerTransformerEquipment` (+ `WindingEquipment` inline; a regulator's catalog also becomes a TapChangerInfo when a regulator first names it, B17), `InverterEquipment` (AssetInfo, B20) | catalog |
+| 3 | catalogs | `MatrixImpedanceBranchEquipment`, `SequenceImpedanceBranchEquipment`, `GeometryBranchEquipment`, `BareConductorEquipment`, `ConcentricCableEquipment`, `DistributionTransformerEquipment`, `PowerTransformerEquipment` (+ `WindingEquipment` inline; a regulator's catalog also becomes a TapChangerInfo when a regulator first names it, B17) | catalog |
 | 4 | sources | `DistributionVoltageSource` (+ `VoltageSourceEquipment`, `PhaseVoltageSourceEquipment`) | instance + inline |
 | 5 | branches | the 3 switch components, `MatrixImpedanceFuse`, `MatrixImpedanceRecloser`, the 3 line components, `DistributionTransformer`, `DistributionRegulator`, `DistributionReactor` (+ their switch equipment, controllers, `RegulatorController`, `ReactorEquipment`) | instance + inline |
 | 6 | shunts | `DistributionLoad`, `DistributionCapacitor` (+ load/capacitor equipment and capacitor controllers) | instance + inline |
-| 7 | DER | `DistributionSolar`, `DistributionBattery` (+ `SolarEquipment`, `BatteryEquipment`, `InverterController` and settings) | instance + inline |
+| 7 | DER | `DistributionSolar`, `DistributionBattery` (+ `SolarEquipment`, `BatteryEquipment`, `InverterEquipment` inline; the inverter and battery equipment become an InverterInfo / BatteryInfo when a DER first names them, B20; `InverterController` and its settings are `PENDING`) | instance + inline |
 
 Inline classes are in `INLINE` and read through their parent. Classes with no CIM home are in `UNTRANSCRIBED` with a
 reason: `RecloserControllerEquipment`, `TimeCurrentCurve`, `Curve` (until B12), `ThermalLimitSet` (no GDM field
@@ -46,8 +46,8 @@ references it). A coverage test fails when a GDM release adds a class that is in
 
 - **mRID** = `object_mrid(PREFIX, component, cim_class, naming)`: `PREFIX` + the name as written. Prefixes come from
   the `cimtbl-translate` table: `sw_` `ln_` `lc_` `ld_` `cap_` `cc_` `src_` `xf_` `xc_` `vr_` `tci_` `cool_` `wire_` `cn_` `spc_` `wc_`
-  `pv_` `storage_` `bv_` `fdr_` `sub_`; buses are bare. A concentric cable is `cn_`, as the DSS wave writes CNData. Child mRIDs follow its child table (`<xf>_<n>`, `<xc>_end_<n>`, `<xc>_wdg_<n>`, `<xc>_mesh_<i><j>`,
-  `<xc>_lug_<designation>`, `<end>_tap`, `<vr>_end<n>`, `<vr>_tap`, `<vr>_ctrl`, `<lc>_<row><column>`, `<spc>_<n>`,
+  `pv_` `storage_` `inv_` `batt_` `rx_` `bv_` `fdr_` `sub_`; buses are bare. A concentric cable is `cn_`, as the DSS wave writes CNData. Child mRIDs follow its child table (`<xf>_<n>`, `<xc>_end_<n>`, `<xc>_wdg_<n>`, `<xc>_mesh_<i><j>`,
+  `<xc>_lug_<designation>`, `<end>_tap`, `<vr>_end<n>`, `<vr>_tap`, `<vr>_ctrl`, `<pec>_unit`, `<lc>_<row><column>`, `<spc>_<n>`,
   `<wc>_<n>`, `<ln>_limits`). Missing prefixes reuse the DSS wave's (`zip_constant_pq`/`_z`/`_i`, `exp_<p>_<q>`).
 - **GUID names.** ditto names many GDM objects with a GUID string (p5r: every `LoadEquipment`, `InverterEquipment`,
   `SolarEquipment`, `VoltageSourceEquipment`, `MatrixImpedanceSwitchEquipment` and `DistributionTransformerEquipment`,
@@ -125,7 +125,9 @@ Each is a pure, named function in `shared.py` (or its family module), with a uni
 | `system_voltage(v, voltage_type, phases)` | `line-to-line`: v; `line-to-ground` on a split-phase (`S1`/`S2`) bus: 2v; other `line-to-ground`: √3·v | buses and 3-phase ratings. Every sample bus is `line-to-ground`. 7.19977 kV → 12.47 kV, 39.84 kV → 69 kV, and p1rhs7's 1,667 `S1S2` buses at 0.1201 kV → 240 V. Single-phase A/B/C buses at 7.2 kV → 12.47 kV (the system's BaseVoltage). Coil voltages (`baseU`, 1-phase and center-tap windings) are never multiplied; the transformer section says which value is the coil |
 | `base_voltage_mrid(v_system)` | 4 significant figures; `bv_<kV with p>kv` at ≥ 1 kV, else `bv_<V>v` | 12.4700 kV → `bv_12p47kv`; 4.1600 kV → `bv_4p16kv`; 0.48003 kV → `bv_480v` |
 | `susceptance(c, f)` | b = 2πf·C, in pint (`Qty(2π·60·C.magnitude, f'hertz * {C.units}')`) | per matrix element, negative off-diagonals included; 10 nF/km → 3.7699e-9 S/m |
-| `generation_p(p)` | −p | PV output and battery discharge (CIM load sign) |
+| `injection(power)` | −power (`0.0 − v`, so zero stays 0.0) | PV output and battery discharge in the CIM load sign; also `q` (§20) |
+| `battery_state(p)` | discharging if p > 0, charging if p < 0, else waiting | GDM `active_power` is the output |
+| `panel_power(rated_power)` | the panel's active power; an apparent unit is taken as the same active one, with a WARNING | ditto writes the panel Pmpp in kVA (§14, §20) |
 | `coupling_pairs(equipment)` | GDM `SequencePair` indices → 0-based winding pairs | the examples and every gdmloader system are 0-based (center taps `0→1, 0→2, 1→2`); the GDM repo's p5r is 1-based (`1→2`). 0-based if any index is 0, else 1-based. GDM requires every pair exactly once, so a complete set is never ambiguous; an index out of range raises |
 | `loss(pct, rated_s)` | noLoadLoss = pct_no_load × S / 100; loadLoss = pct_full_load × S / 100, active power in S's prefix | p5r: 0.6 % and 1.74408 % of 75 kVA. 1.74408 = 2 × 0.87204 (the winding r), a consistency check the test asserts |
 | `tap_step(tap_pu, total_taps, min_pu, max_pu)` | neutralStep = 0; highStep = +total_taps / 2; lowStep = −total_taps / 2; stepVoltageIncrement = (max − min) / total_taps × 100 %; step = (tap − 1) / ((max − min) / total_taps) | a tap position, never a ratio; 32 taps, 0.9-1.1 → ±16, 0.625 %. Raises on an odd count, an asymmetric range, or a tap between steps. Computed here, not by `cimbuilder.core.tap_steps`, whose exact float comparison rejects 0.9-1.1 (§14) |
@@ -194,8 +196,8 @@ Untranscribed unless noted. Each is logged in `CIMTBL-Models/distribution/CIM18_
 | `in_service = False` (any class) | no CIM home for "modelled but out of service" on these classes; **raises** |
 | fuse `delay`, `tcc_curve`; recloser controller | no `FuseCharacteristicCurve` / `RecloseSequence` in cim18v17 |
 | switch-equipment r/x/c matrices, `construction`, `trip_circuit_count` | a switch has no impedance in CIM |
-| `TransformerMounting`, PV irradiance, PV R/X, efficiencies | no home (some may land with B20) |
-| DailyTimed capacitor control, inverter controllers | **raise** (OPEN_DECISIONS 12, still open) |
+| `TransformerMounting`, PV irradiance, PV R/X, battery idling efficiency, inverter ramp limits, cut-in/cut-out and efficiency, reactor length | no home; the B20 AssetInfo classes have no slot for them (§20, §21) |
+| DailyTimed capacitor control, inverter controllers | `PENDING`, so they **raise** (OPEN_DECISIONS 12, still open) |
 | curves | until B12 |
 
 ## 11. Fail fast (cross-cutting)
@@ -205,7 +207,7 @@ The importer raises on each of these, naming the class, the object and the field
 - an unmapped enum (the `lookup` message), an unknown unit spelling, or a power unit of the wrong kind (§4);
 - a GUID or clashing name until B18 lands;
 - per-phase values CIM can't hold (§6);
-- coupling indices out of range (§5); the transformer and regulator cases in §18-§19;
+- coupling indices out of range (§5); the transformer, regulator and DER cases in §18-§20;
 - `in_service = False`;
 - a `RegulatorController` whose `controlled_bus` is not one of the regulator's buses, or whose `min_v_limit` >
   `max_v_limit`. GDM's own `RegulatorController.example()` has 132 V / 102 V, swapped.
@@ -224,7 +226,8 @@ One golden per row in `tests/atoms/<family>/`, each on the shared shell ([`TEST_
 | capacitor | `fixed_3ph`, `single_phase`, `delta`, `off`, one per controller kind (built: `capacitors.cimtbl`; U3 closed, no `xfail`) | sections, nomU, control targets | B10 |
 | transformer | `dyn_3ph` (p5r's 75 kVA unit, Dyn1, ONAN), `three_winding` (catalog tap), `single_phase` (1-based couplings, instance tap), `phase_to_phase`, `center_tap` (built: `transformers.cimtbl`) | D10, DSS-2, percent r/x, losses, coupling indices, G4, G8 | the TankEnd method (§14) |
 | regulator | `single_phase_ldc`, `bank` (built: `regulators.cimtbl`) | per-phase VoltageRegulator, TapChangerInfo (B17), tap step, LDC ohms | |
-| der | `pv`, `battery` | sign, PEC + unit | |
+| der | `pv_3ph` (two sharing an inverter), `pv_split_phase` (an unnamed inverter), `pv_one_phase` (absorbing vars), `battery_discharging`, `battery_charging` (built: `der.cimtbl`) | sign, PEC + unit, InverterInfo / BatteryInfo (B20), ratedU line-to-line | B20 |
+| reactor | `three_phase`, `one_phase` (built: `reactors.cimtbl`) | SeriesCompensator, Terminal phases, r0 = r | `SeriesCompensatorBuilder` (§14) |
 | e2e | `reference` (Phase 5) | an IEEE13-like system end to end | all |
 
 **Sweep** (not atoms, nothing committed): ditto converts each vendored public deck that it can read, and `to_cim`
@@ -298,6 +301,8 @@ root `tests/cross_format/`), with ditto's known losses (regulators, angle sign) 
 | ditto (Phase 3, grounding) | the OpenDSS reader writes `is_grounded=False` on every winding (`readers/opendss/components/transformers.py:113`, "TODO: Should be moved to the transformer model"), and `winding_phases` gets N only from an explicit `.0` node, though OpenDSS grounds an unspecified wye neutral. Its CIM and CYME readers do read grounding. Ask: set `is_grounded` from the bus nodes (and the default `.0`) |
 | ditto (Phase 3) | regulators become plain transformers with the solved tap on the catalog (a `taps=[1 1.0625]` regulator comes back 1.025); delta windings are written line-to-ground (kV / √3), and a delta tertiary whose bus is not that voltage fails GDM's 15 % check. gdmloader p1rhs7's center taps have reactances (0-1, 0-2, 1-2) = (2.4, 1.6, 2.4): H-X1 ≠ H-X2, which no symmetric center tap has; today's ditto writes XHL, XHT, XLT in that order correctly, so the data predates it. Imported as written |
 | GDM (validation, Phase 3) | GDM checks a transformer's coupling count and distinct pairs, a center tap's 3 buses with bus 2 = bus 3, winding voltage within 15 % of the bus, and one regulator controller per phase, so the importer doesn't repeat those checks |
+| ditto (Phase 4) | the OpenDSS PVSystem reader writes the panel's Pmpp as `ActivePower(kw_dc, "kilova")` (`readers/opendss/components/pv_systems.py`, `_build_pv_equipment`), so `SolarEquipment.rated_power` is in kVA; gdmloader p5r has it too. The importer takes it as kW with a WARNING (§20). Its `readers/opendss/components/storage.py` is empty, so no DSS Storage reaches GDM; and it sets `InverterEquipment.dc_to_ac_efficiency` from `%Pmpp`. Ask: write kW, and read Storage |
+| CIM-Builder (Phase 4, edited in this session with the user's go-ahead, 2026-11-08, uncommitted) | there was no SeriesCompensator builder (OPEN_DECISIONS 17b). Added `cimbuilder/object_builder/line/series_compensator.py`: `SeriesCompensatorBuilder` with `add_connectivity(node1, node2, phases, EquipmentContainer, BaseVoltage)` (phases on both Terminals: the class has no per-phase child), `add_electrical(r, x)` and `add_short_circuit(r0, x0)`; 3 tests, builder suite 176 → 179 passed. `PowerElectronicsConnectionBuilder` has no `grounded` (commented out) and its `ratedS` docstring says VAr |
 | ditto (0.1.8) | IEEE13_CDPSM fails (`TypeError: 'NoneType' object is not iterable`, `branches.py:187`); IEEE13_Assets fails (`'str' object cannot be interpreted as an integer`, in geometry); regulators (Transformer + RegControl) become plain `DistributionTransformer`s with no controller and `tap_positions=None`; phase angles step +120° (B leads A); `system.name` is `None`; `voltage_type` set as a `str`, not the enum (pydantic serialization warnings). The importer reads enums through `VoltageTypes(value)`, so both forms work |
 
 ## 15. Lines (Phase 2)
@@ -874,3 +879,160 @@ gang), with the stand-in impedance as an end-to-end mesh and no lugs or winding.
 | `bandwidth` | `Voltage` |  | derived | targetDeadband = bandwidth × pt_ratio, in V |
 | `controlled_bus` | `DistributionBus` |  | structural | the Terminal of the end on it; not a regulator bus raises |
 | `controlled_phase` | `Phase` |  | copied | `add_regulating_control.monitoredPhase`; also picks the regulator a per-phase controller controls |
+
+## 20. DER (Phase 4)
+
+`importer/der.py`, after the DSS wave's PVSystem and Storage goldens (`cimhub_opendss/tests/atoms/der/`).
+
+- **PowerElectronicsConnection** `pv_<name>` / `storage_<name>` on the DER's bus: `ratedS` = the inverter's
+  `rated_apparent_power`; `ratedU` = the equipment's `rated_voltage`, line-to-line (`system_voltage`: a split-phase
+  0.12 kV rating → 0.24 kV, a 2.4018 kV phase rating → 4.16004 kV); the snapshot `p`, `q` in the load sign
+  (`injection`: −active_power, −reactive_power, so generation and discharge are negative; a zero stays 0.0). Phases
+  as `builder_phases` (none for ABC, G3). GDM names no connection kind for a DER, so `phaseConnection` is not written
+  (the DSS goldens write Y or D from `conn`); `maxQ`, `minQ`, `maxIFault` have no GDM source.
+- **PhotoVoltaicUnit** `<pec>_unit`: `maxP` = the panel's `rated_power` (`panel_power`). ditto writes that as an
+  ActivePower in kVA (§14); an apparent unit is taken as the same active one (3.0 kVA → 3.0 kW) with a WARNING (user,
+  2026-11-08). Irradiance, the panel R/X and `power_temp_curve` are untranscribed; no SolarPanelInfo slot fits a GDM
+  field, so none is built.
+- **BatteryUnit** `<pec>_unit`: `ratedE` = `rated_energy`; `maxP` = `rated_power`, `minP` = −`rated_power` (one rating
+  both ways, as the DSS goldens write `kWrated`); charging and discharging efficiency in percent;
+  `batteryState` from the sign of `active_power` (`battery_state`: discharging above zero, charging below, waiting at
+  zero). `idling_efficiency` is untranscribed (`idlingP` is a power). GDM has no stored energy, so `storedE` is not
+  written.
+- **AssetInfo** (OPEN_DECISIONS 15-18, B20): the inverter is an InverterInfo `inv_<inverter>` on the connection's
+  AssetDatasheet, a GenerationInverterInfo under a PV and a StorageInverterInfo under a battery, with
+  `apparentPowerMaximum`; it is built the first time a DER names it, so DERs sharing an inverter share one. The battery
+  equipment is a BatteryInfo `batt_<equipment>` (`ratedCapacity` = `rated_energy`) on the BatteryUnit's
+  AssetDatasheet. GDM's default inverter name is empty: the mRID is then the rehashed uuid (B18) and no name is
+  written. The inverter's ramp limits, cut-in/cut-out, efficiency and curve have no InverterInfo slot in the profile;
+  whether the InverterInfo or PowerElectronicsUnit child classes hold them is a TODO (OPEN_DECISIONS, "the missing
+  inverter and DER attributes").
+- **Inverter controllers** stay `PENDING` (OPEN_DECISIONS 12): `function_block_control` has classes but no builder,
+  so a system with one stops at the coverage check.
+
+**Fail fast:** a DER on the neutral (`N` in its phases); an inverter shared by a PV and a battery (it would be two
+InverterInfo classes at once); a power in the wrong quantity (§4), except the panel's kVA above.
+
+**p5r** (the only sample with DER): 2 PVs at 2.5 kW on 2.5 kVA inverters, 480 V; both panels rated in kVA, so 2
+warnings; their irradiance time series are dropped with the others (§8).
+
+**`DistributionSolar`**
+
+| DistributionSolar field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | structural | never copied; the rehashed mRID when the name is empty or clashes (B18) |
+| `name` | `str` |  | copied | `create.mRID`, `create.name`; mRID = pv_ + name; a GUID name is rehashed (B18) |
+| `substation` | `Optional[DistributionSubstation]` |  | structural | EquipmentContainer when there is no feeder |
+| `feeder` | `Optional[DistributionFeeder]` |  | structural | EquipmentContainer |
+| `in_service` | `bool` |  | structural | False raises: no CIM home |
+| `bus` | `DistributionBus` |  | structural | the Terminal's ConnectivityNode; BaseVoltage |
+| `phases` | `list[Phase]` |  | structural | PowerElectronicsConnectionPhase children; none for ABC (G3); N raises |
+| `irradiance` | `Irradiance` |  | untranscribed | no CIM home: p is the snapshot output |
+| `active_power` | `ActivePower` |  | derived | PowerElectronicsConnection p = -active_power (injection) |
+| `reactive_power` | `ReactivePower` |  | derived | PowerElectronicsConnection q = -reactive_power (injection) |
+| `controller` | `InverterController | None` |  | structural | an InverterController is PENDING (OPEN_DECISIONS 12) |
+| `inverter` | `InverterEquipment` |  | structural | ratedS; InverterInfo inv_<inverter> on the AssetDatasheet |
+| `equipment` | `SolarEquipment` |  | structural | ratedU; PhotoVoltaicUnit <pec>_unit |
+
+
+**`DistributionBattery`**
+
+| DistributionBattery field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | structural | never copied; the rehashed mRID when the name is empty or clashes (B18) |
+| `name` | `str` |  | copied | `create.mRID`, `create.name`; mRID = storage_ + name; a GUID name is rehashed (B18) |
+| `substation` | `Optional[DistributionSubstation]` |  | structural | EquipmentContainer when there is no feeder |
+| `feeder` | `Optional[DistributionFeeder]` |  | structural | EquipmentContainer |
+| `in_service` | `bool` |  | structural | False raises: no CIM home |
+| `bus` | `DistributionBus` |  | structural | the Terminal's ConnectivityNode; BaseVoltage |
+| `phases` | `list[Phase]` |  | structural | PowerElectronicsConnectionPhase children; none for ABC (G3); N raises |
+| `active_power` | `ActivePower` |  | derived | PowerElectronicsConnection p = -active_power (injection); BatteryUnit batteryState from its sign (battery_state) |
+| `reactive_power` | `ReactivePower` |  | derived | PowerElectronicsConnection q = -reactive_power (injection) |
+| `controller` | `InverterController | None` |  | structural | an InverterController is PENDING (OPEN_DECISIONS 12) |
+| `inverter` | `InverterEquipment` |  | structural | ratedS; InverterInfo inv_<inverter> on the AssetDatasheet |
+| `equipment` | `BatteryEquipment` |  | structural | ratedU; BatteryUnit <pec>_unit |
+
+
+**`SolarEquipment`**
+
+| SolarEquipment field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | untranscribed | inline: no CIM object of its own |
+| `name` | `str` |  | untranscribed | inline; the unit is named after its DER |
+| `rated_power` | `ActivePower` |  | copied | `add_electrical.maxP`; PhotoVoltaicUnit; a kVA unit (ditto) is taken as kW with a WARNING (panel_power) |
+| `power_temp_curve` | `Curve | None` |  | untranscribed | until the Curve builder (B12, OPEN_DECISIONS 16) |
+| `resistance` | `float` |  | untranscribed | no CIM home (no PowerElectronicsConnection impedance) |
+| `reactance` | `float` |  | untranscribed | no CIM home (no PowerElectronicsConnection impedance) |
+| `rated_voltage` | `Voltage` |  | derived | PowerElectronicsConnection ratedU, line-to-line (system_voltage) |
+| `voltage_type` | `VoltageTypes` |  | structural | how rated_voltage becomes line-to-line |
+
+
+**`BatteryEquipment`**
+
+| BatteryEquipment field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | structural | never copied; the rehashed mRID when the name is empty or clashes (B18) |
+| `name` | `str` |  | copied | `create.mRID`, `create.name`; mRID = batt_ + name; a GUID name is rehashed (B18) |
+| `rated_energy` | `EnergyDC` |  | copied | `add_electrical.ratedE`, `add_asset_info.ratedCapacity`; BatteryUnit ratedE; BatteryInfo batt_<equipment> ratedCapacity |
+| `rated_power` | `ActivePower` |  | derived | BatteryUnit maxP = rated_power, minP = -rated_power (one rating both ways) |
+| `charging_efficiency` | `float` |  | copied | `add_electrical.chargingEfficiency` (percent) |
+| `discharging_efficiency` | `float` |  | copied | `add_electrical.dischargingEfficiency` (percent) |
+| `idling_efficiency` | `float` |  | untranscribed | no CIM home: BatteryUnit idlingP is a power |
+| `rated_voltage` | `Voltage` |  | derived | PowerElectronicsConnection ratedU, line-to-line (system_voltage) |
+| `voltage_type` | `VoltageTypes` |  | structural | how rated_voltage becomes line-to-line |
+
+
+**`InverterEquipment`**
+
+| InverterEquipment field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | structural | never copied; the rehashed mRID when the name is empty or clashes (B18) |
+| `name` | `str` |  | copied | `create.mRID`, `create.name`; mRID = inv_ + name; a GUID name is rehashed (B18) |
+| `rated_apparent_power` | `ApparentPower` |  | copied | `add_electrical.ratedS`, `add_asset_info.apparentPowerMaximum`; PowerElectronicsConnection ratedS; InverterInfo apparentPowerMaximum |
+| `rise_limit` | `Optional[ActivePowerOverTime]` |  | untranscribed | no InverterInfo slot |
+| `fall_limit` | `Optional[ActivePowerOverTime]` |  | untranscribed | no InverterInfo slot |
+| `cutout_percent` | `float` |  | untranscribed | no InverterInfo slot |
+| `cutin_percent` | `float` |  | untranscribed | no InverterInfo slot |
+| `dc_to_ac_efficiency` | `float` |  | untranscribed | no InverterInfo slot |
+| `eff_curve` | `Optional[Curve]` |  | untranscribed | until the Curve builder (B12, OPEN_DECISIONS 16) |
+
+
+## 21. Reactors (Phase 4)
+
+`importer/reactor.py`, after the DSS wave's series Reactor golden (`cimhub_opendss/tests/atoms/reactor/`;
+OPEN_DECISIONS 17b).
+
+- **SeriesCompensator** `rx_<name>` between `buses[0]` (Terminal 1) and `buses[1]` (Terminal 2), on bus 1's
+  BaseVoltage (GDM requires both buses at one voltage): `r`, `x` = the ReactorEquipment's lumped values; `r0` = r,
+  `x0` = x (no mutual coupling, as the DSS goldens write it). SeriesCompensator has no per-phase class, so a reactor of
+  fewer than three phases writes its phases on both Terminals; balanced ABC writes none (G3).
+- `length` is untranscribed (the impedance is lumped). SeriesReactorInfo has no r/x slot, so no AssetInfo is built.
+- **Builder:** CIM-Builder had no SeriesCompensator builder. With the user's go-ahead (2026-11-08) this session added
+  `SeriesCompensatorBuilder` (`add_connectivity` with Terminal phases, `add_electrical` r/x, `add_short_circuit`
+  r0/x0); uncommitted there (§14).
+- **No current limits:** GDM's reactor has no ampacity (the DSS goldens write `rx_<name>_limits`).
+
+**`DistributionReactor`**
+
+| DistributionReactor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | structural | never copied; the rehashed mRID when the name is empty or clashes (B18) |
+| `name` | `str` |  | copied | `create.mRID`, `create.name`; mRID = rx_ + name; a GUID name is rehashed (B18) |
+| `substation` | `Optional[DistributionSubstation]` |  | structural | EquipmentContainer when there is no feeder |
+| `feeder` | `Optional[DistributionFeeder]` |  | structural | EquipmentContainer |
+| `in_service` | `bool` |  | structural | False raises: no CIM home |
+| `buses` | `list[DistributionBus]` |  | structural | Terminal 1 on bus 1, Terminal 2 on bus 2; bus 1's BaseVoltage (GDM requires both at one voltage) |
+| `length` | `Distance` |  | untranscribed | no CIM home: a reactor's r, x are lumped |
+| `phases` | `list[Phase]` |  | structural | Terminal phases as written; none for ABC (G3) |
+| `equipment` | `ReactorEquipment` |  | structural | r, x |
+
+
+**`ReactorEquipment`**
+
+| ReactorEquipment field | type | samples | kind | target |
+|---|---|---|---|---|
+| `uuid` | `UUID` |  | untranscribed | inline: no CIM object of its own |
+| `name` | `str` |  | untranscribed | inline; no SeriesReactorInfo slot for r, x, so no AssetInfo |
+| `resistance` | `Resistance` |  | copied | `add_electrical.r`, `add_short_circuit.r0`; r0 = r: no mutual coupling |
+| `reactance` | `Reactance` |  | copied | `add_electrical.x`, `add_short_circuit.x0`; x0 = x: no mutual coupling |
+

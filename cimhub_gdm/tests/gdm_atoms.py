@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import UUID
 
 import cimtables
 import numpy as np
@@ -13,11 +14,14 @@ from cimtables.diff import diff_models
 from gdm.distribution import DistributionSystem
 from gdm.distribution.common import SequencePair, TimeCurrentCurve
 from gdm.distribution.components import (
+    DistributionBattery,
     DistributionBus,
     DistributionCapacitor,
     DistributionFeeder,
     DistributionLoad,
+    DistributionReactor,
     DistributionRegulator,
+    DistributionSolar,
     DistributionSubstation,
     DistributionTransformer,
     DistributionVoltageSource,
@@ -42,12 +46,14 @@ from gdm.distribution.controllers import (
 from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
 from gdm.distribution.equipment import (
     BareConductorEquipment,
+    BatteryEquipment,
     CapacitorEquipment,
     CircuitBreakerEquipment,
     ConcentricCableEquipment,
     DisconnectorEquipment,
     DistributionTransformerEquipment,
     GeometryBranchEquipment,
+    InverterEquipment,
     LoadEquipment,
     MatrixImpedanceBranchEquipment,
     MatrixImpedanceFuseEquipment,
@@ -57,8 +63,10 @@ from gdm.distribution.equipment import (
     PhaseLoadEquipment,
     PhaseVoltageSourceEquipment,
     PowerTransformerEquipment,
+    ReactorEquipment,
     SequenceImpedanceBranchEquipment,
     SequenceImpedanceSwitchEquipment,
+    SolarEquipment,
     VoltageSourceEquipment,
     WindingEquipment,
 )
@@ -69,6 +77,8 @@ from gdm.quantities import (
     CapacitancePULength,
     Current,
     Distance,
+    EnergyDC,
+    Irradiance,
     Reactance,
     ReactancePULength,
     ReactivePower,
@@ -500,3 +510,69 @@ def add_regulators(system) -> None:
     for name, catalog, phases, taps, controllers in rows:
         system.add_component(DistributionRegulator(name=name, buses=buses, winding_phases=phases, tap_positions=taps,
                                                    equipment=catalog, controllers=controllers, feeder=fdr))
+
+
+def inverter(name: str, kva: float, **identity) -> InverterEquipment:
+    """An inverter: only rated_apparent_power has a CIM home; the rest is untranscribed."""
+    return InverterEquipment(name=name, **identity, rated_apparent_power=ApparentPower(kva, "kilova"), rise_limit=None,
+                             fall_limit=None, cutout_percent=10, cutin_percent=10, dc_to_ac_efficiency=98)
+
+
+#: The house PV's unnamed inverter: a fixed uuid, so its rehashed mRID (B18) is stable.
+UNNAMED_INVERTER = UUID("00000000-0000-4000-8000-000000000006")
+
+
+def add_der(system) -> None:
+    """PV: roof and roof2 (3-phase on b4, sharing inverter inv33), house (split-phase on b5, an unnamed inverter),
+    primary (phase C on b2, absorbing vars). Batteries: ess (3-phase on b4, discharging), home (split-phase on b5,
+    charging)."""
+    fdr = feeder(system, "atom")
+    inv33 = inverter("inv33", 33)
+    panel30 = SolarEquipment(name="panel30", rated_power=ActivePower(30, "kilowatt"), resistance=0.5, reactance=5,
+                             rated_voltage=Voltage(0.48, "kilovolt"), voltage_type=LL)
+    pv_rows = [
+        ("roof", "b4", ABC, panel30, inv33, 25, 2),
+        ("roof2", "b4", ABC, panel30, inv33, 30, 0),
+        ("house", "b5", [Phase.S1, Phase.S2],
+         SolarEquipment(name="panel5", rated_power=ActivePower(5, "kilowatt"), resistance=0.5, reactance=5,
+                        rated_voltage=Voltage(0.12, "kilovolt"), voltage_type=LG),
+         inverter("", 6, uuid=UNNAMED_INVERTER), 4, 0),
+        ("primary", "b2", [Phase.C],
+         SolarEquipment(name="panel120", rated_power=ActivePower(120, "kilowatt"), resistance=0.5, reactance=5,
+                        rated_voltage=Voltage(2.4018, "kilovolt"), voltage_type=LG), inverter("inv120", 120), 100, -10),
+    ]
+    for name, bus_name, phases, equipment, inv, p_kw, q_kvar in pv_rows:
+        system.add_component(DistributionSolar(
+            name=name, bus=bus(system, bus_name), phases=phases, irradiance=Irradiance(0.9, "kilowatt/meter**2"),
+            active_power=ActivePower(p_kw, "kilowatt"), reactive_power=ReactivePower(q_kvar, "kilovar"),
+            inverter=inv, equipment=equipment, feeder=fdr))
+    battery_rows = [
+        ("ess", "b4", ABC, BatteryEquipment(name="bess500", rated_energy=EnergyDC(500, "kilowatthour"),
+                                            rated_power=ActivePower(250, "kilowatt"), charging_efficiency=95,
+                                            discharging_efficiency=94, idling_efficiency=99,
+                                            rated_voltage=Voltage(0.48, "kilovolt"), voltage_type=LL),
+         inverter("inv250", 250), 150),
+        ("home", "b5", [Phase.S1, Phase.S2], BatteryEquipment(name="pw13", rated_energy=EnergyDC(13.5, "kilowatthour"),
+                                                              rated_power=ActivePower(5, "kilowatt"),
+                                                              charging_efficiency=90, discharging_efficiency=90,
+                                                              idling_efficiency=99,
+                                                              rated_voltage=Voltage(0.12, "kilovolt"),
+                                                              voltage_type=LG),
+         inverter("inv5", 5), -3),
+    ]
+    for name, bus_name, phases, equipment, inv, p_kw in battery_rows:
+        system.add_component(DistributionBattery(
+            name=name, bus=bus(system, bus_name), phases=phases, active_power=ActivePower(p_kw, "kilowatt"),
+            reactive_power=ReactivePower(0, "kilovar"), inverter=inv, equipment=equipment, feeder=fdr))
+
+
+def add_reactors(system) -> None:
+    """rx3: 3-phase b1 → b3 (no Terminal phases); r1: phase B b1 → b3. length has no CIM home."""
+    fdr = feeder(system, "atom")
+    rows = [("rx3", ABC, 0.0, 14.8), ("r1", [Phase.B], 0.5, 2.0)]
+    for name, phases, r_ohm, x_ohm in rows:
+        system.add_component(DistributionReactor(
+            name=name, buses=[bus(system, "b1"), bus(system, "b3")], length=Distance(1, "meter"), phases=phases,
+            equipment=ReactorEquipment(name=f"{name}_eq", resistance=Resistance(r_ohm, "ohm"),
+                                       reactance=Reactance(x_ohm, "ohm")),
+            feeder=fdr))

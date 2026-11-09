@@ -114,14 +114,39 @@ builder owner on 2026-11-08.
 
     - Each row is confirmed with `fields_table` before its family.
     - Until B20 lands, these fields are untranscribed, and the families don't wait for it.
+    - **B20 landed** (CIM-Builder `caff0ea`, 2026-11-08). Phase 4 builds InverterInfo `inv_` (Generation- under a PV,
+      Storage- under a battery: `apparentPowerMaximum`) and BatteryInfo `batt_` (`ratedCapacity`). No GDM field fits
+      a SolarPanelInfo or SeriesReactorInfo slot, so neither is built (`GDM_MAPPING.md` §20-§21).
+
+17b. **The `DistributionReactor` instance.** **Decided (user, 2026-11-08):** a `SeriesCompensator` `rx_<name>`
+    (r, x from `ReactorEquipment`, r0 = r, x0 = x), the shape of the DSS wave's series Reactor golden. CIM-Builder had
+    no builder, so this session added `SeriesCompensatorBuilder` with the user's go-ahead (uncommitted there;
+    `GDM_MAPPING.md` §21).
+- **DER panel power in kVA.** **Decided (user, 2026-11-08):** ditto writes `SolarEquipment.rated_power` as an
+  ActivePower in kVA; the importer takes an apparent unit there as the same active one, with a WARNING
+  (`der.panel_power`), rather than stopping p5r. Every other power keeps the §4 guard.
 
 ## Open
 
-- **17b. The `DistributionReactor` instance** [Phase 4]. The catalog follows 15-18, but the reactor itself is a
-  series branch (`buses`, `length`). Leaving it out would split the network at that point. *Recommendation:*
-  `SeriesCompensator` (r, x from `ReactorEquipment`) with the shape the DSS S4 slice adds for its series reactor. Until
-  there is a builder, it stays `PENDING`, so a system with a reactor raises instead of importing disconnected.
-- **12, the rest:** see 12 above.
+- **12, the rest:** see 12 above. Inverter controllers stay `PENDING` (no `function_block_control` builder).
+- **TODO (user, 2026-11-08): the missing inverter and DER attributes** [Phase 4 follow-up]. Phase 4 leaves these
+  untranscribed because neither `InverterInfo` nor `PowerElectronicsUnit` has a slot for them:
+  - `InverterEquipment`: `rise_limit`, `fall_limit`, `cutin_percent`, `cutout_percent`, `dc_to_ac_efficiency`,
+    `eff_curve`;
+  - `SolarEquipment`: `resistance`, `reactance`, `power_temp_curve`; `DistributionSolar.irradiance`;
+  - `BatteryEquipment.idling_efficiency`.
+
+  They may live in the child classes: `GenerationInverterInfo` / `StorageInverterInfo` under `InverterInfo`, and
+  `PhotoVoltaicUnit`, `BatteryUnit`, `PowerElectronicsWindUnit` and the rest under `PowerElectronicsUnit`. A probe of
+  the merged cim18v17 profile (2026-11-08) found none there: only `StorageInverterInfo` adds anything
+  (`chargeRateActiveMax`, `chargeRateReactiveMax`, `storageCapacity`), and the units add only the battery fields
+  already mapped. Next steps:
+  - check the full CIM 18 UML (not just the profile slices) for the subclasses' attributes;
+  - check the associated classes the profile does carry: `InverterInfo.ShortCircuitRespone`,
+    `ProductAssetModel`, and `OperationalLimitSet` (ramp limits as limits);
+  - for each attribute found, ask CIM-Profiles to slice it in and CIM-Builder for its keyword; then map it and move
+    its `FIELDS` entry from untranscribed to copied;
+  - log what has no home anywhere in `CIMTBL-Models/distribution/CIM18_GAPS.md`.
 
 ## Risks
 

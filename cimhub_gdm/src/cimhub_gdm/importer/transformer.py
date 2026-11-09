@@ -38,6 +38,7 @@ from gdm.distribution.equipment import PowerTransformerEquipment
 from cimhub_gdm.importer.shared import (
     PHASE,
     UUID_FIELD,
+    active_power_unit,
     Naming,
     bus_base_voltage,
     bus_mrid,
@@ -353,8 +354,8 @@ def winding_powers(winding, *, half: bool):
 
 def loss(pct: float, rated_power, label: str) -> Qty:
     """pct % of an apparent power, as active power in the same prefix (1.74408 % of 75 kVA → 1.30806 kW)."""
-    unit = str(power_qty(rated_power, "apparent", label=label).unit)
-    return Qty(pct / 100 * float(rated_power.magnitude), unit.replace("VA", "W").replace("volt_ampere", "watt"))
+    return Qty(pct / 100 * float(rated_power.magnitude),
+               active_power_unit(power_qty(rated_power, "apparent", label=label)))
 
 
 def vector_group(equipment) -> str:

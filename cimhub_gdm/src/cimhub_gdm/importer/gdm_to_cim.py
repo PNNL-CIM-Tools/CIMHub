@@ -17,7 +17,7 @@ from gdm.distribution import controllers as K
 from gdm.distribution import equipment as E
 from infrasys import Component
 
-from cimhub_gdm.importer import bus, capacitor, line, load, regulator, source, switch, transformer
+from cimhub_gdm.importer import bus, capacitor, der, line, load, reactor, regulator, source, switch, transformer
 from cimhub_gdm.importer.network import FIELDS_DistributionFeeder, FIELDS_DistributionSubstation, new_network
 from cimhub_gdm.importer.shared import Naming, components, name_clashes
 
@@ -51,8 +51,11 @@ ORDER = [
     (C.GeometryBranch, line.add_line, line.FIELDS_GeometryBranch),
     (C.DistributionTransformer, transformer.add_transformer, transformer.FIELDS_DistributionTransformer),
     (C.DistributionRegulator, regulator.add_regulator, regulator.FIELDS_DistributionRegulator),
+    (C.DistributionReactor, reactor.add_reactor, reactor.FIELDS_DistributionReactor),
     (C.DistributionLoad, load.add_load, load.FIELDS_DistributionLoad),
     (C.DistributionCapacitor, capacitor.add_capacitor, capacitor.FIELDS_DistributionCapacitor),
+    (C.DistributionSolar, der.add_solar, der.FIELDS_DistributionSolar),
+    (C.DistributionBattery, der.add_battery, der.FIELDS_DistributionBattery),
 ]
 
 #: Read through their parent; each must have one.
@@ -76,7 +79,14 @@ INLINE = {
     K.ReactivePowerCapacitorController: capacitor.FIELDS_ReactivePowerCapacitorController,
     E.WindingEquipment: transformer.FIELDS_WindingEquipment,
     K.RegulatorController: regulator.FIELDS_RegulatorController,
+    E.SolarEquipment: der.FIELDS_SolarEquipment,
+    E.BatteryEquipment: der.FIELDS_BatteryEquipment,
+    E.InverterEquipment: der.FIELDS_InverterEquipment,
+    E.ReactorEquipment: reactor.FIELDS_ReactorEquipment,
 }
+
+#: Inline classes whose name becomes an mRID (an AssetInfo built the first time a parent names it).
+NAMED_INLINE = (E.BatteryEquipment, E.InverterEquipment)
 
 #: No CIM home (GDM_MAPPING.md §10).
 UNTRANSCRIBED = {
@@ -89,28 +99,21 @@ UNTRANSCRIBED = {
     K.DistributionRecloserController: "no RecloseSequence in cim18v17",
 }
 
-_PHASE_4 = "Phase 4 (DER, reactors)"
+_INVERTER_CONTROL = "inverter controls: function_block_control has classes but no builder (OPEN_DECISIONS 12)"
 
-#: Not mapped yet: the phase or the builder each waits for.
+#: Not mapped yet: the decision or the builder each waits for.
 PENDING = {
     K.DailyTimedCapacitorController: "a schedule: no CIM time-of-day control yet (OPEN_DECISIONS 12)",
-    C.DistributionSolar: _PHASE_4,
-    C.DistributionBattery: _PHASE_4,
-    C.DistributionReactor: _PHASE_4,
-    E.SolarEquipment: _PHASE_4,
-    E.BatteryEquipment: _PHASE_4,
-    E.InverterEquipment: _PHASE_4,
-    E.ReactorEquipment: _PHASE_4,
-    K.InverterController: _PHASE_4,
-    K.CapacityFirmingControlSetting: _PHASE_4,
-    K.DemandChargeControlSetting: _PHASE_4,
-    K.PeakShavingBaseLoadingControlSetting: _PHASE_4,
-    K.PowerfactorControlSetting: _PHASE_4,
-    K.SelfConsumptionControlSetting: _PHASE_4,
-    K.TimeBasedControlSetting: _PHASE_4,
-    K.TimeOfUseControlSetting: _PHASE_4,
-    K.VoltVarControlSetting: _PHASE_4,
-    K.VoltWattControlSetting: _PHASE_4,
+    K.InverterController: _INVERTER_CONTROL,
+    K.CapacityFirmingControlSetting: _INVERTER_CONTROL,
+    K.DemandChargeControlSetting: _INVERTER_CONTROL,
+    K.PeakShavingBaseLoadingControlSetting: _INVERTER_CONTROL,
+    K.PowerfactorControlSetting: _INVERTER_CONTROL,
+    K.SelfConsumptionControlSetting: _INVERTER_CONTROL,
+    K.TimeBasedControlSetting: _INVERTER_CONTROL,
+    K.TimeOfUseControlSetting: _INVERTER_CONTROL,
+    K.VoltVarControlSetting: _INVERTER_CONTROL,
+    K.VoltWattControlSetting: _INVERTER_CONTROL,
     E.EarthingSwitchEquipment: "the GroundDisconnector builder (B19)",
 }
 
@@ -211,6 +214,6 @@ def log_untranscribed(fields, component) -> None:
 def _named_components(system) -> list:
     """Every component whose name becomes an mRID."""
     named = [c for cls in SHELL for c in components(system, cls)]
-    for cls, _, _ in ORDER:
+    for cls in [cls for cls, _, _ in ORDER] + list(NAMED_INLINE):
         named += components(system, cls)
     return named

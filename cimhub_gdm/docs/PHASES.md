@@ -169,6 +169,22 @@ two land separately: transformers don't wait for B17.
 
 ## Phase 4: DER and reactors
 
+**Status: built 2026-11-08, awaiting review.** 179 passed, 8 skipped (gdmloader, opt-in), 2 xfailed; the opt-in
+gdmloader sweep passes 8 of 8 with nothing stripped (p5r imports its 2 PVs). The spec is `GDM_MAPPING.md` §20-§21.
+Changes from the plan below:
+  - B20 had landed: InverterInfo `inv_` (Generation- or Storage-, by the DER naming it) on the
+    PowerElectronicsConnection, BatteryInfo `batt_` on the BatteryUnit, each built on first use. No GDM field fits a
+    SolarPanelInfo or SeriesReactorInfo slot, so neither is built.
+  - No `phaseConnection` on a DER: GDM has no connection kind for one. A DER on N raises.
+  - GDM has no stored energy, so `storedE` is not written; `batteryState` comes from the sign of the output, and
+    `minP` = −`rated_power`, as the DSS goldens write `kWrated`.
+  - ditto writes the panel's Pmpp in kVA: taken as kW with a WARNING (user, 2026-11-08; OPEN_DECISIONS).
+  - Reactor (17b, decided by the user): SeriesCompensator `rx_<name>` in `importer/reactor.py`. CIM-Builder had no
+    builder; this session added `SeriesCompensatorBuilder` with the user's go-ahead (uncommitted there).
+  - Still `PENDING`: inverter controllers (OPEN_DECISIONS 12, no `function_block_control` builder),
+    `DailyTimedCapacitorController`, `EarthingSwitchEquipment` (B19). None is signed off yet.
+  - No ditto deck has DER (ditto's Storage reader is empty), so the DSS/GDM DER parity rests on p5r and the atoms.
+
 **Entry:** none beyond Phase 1. The AssetInfo parts (B20) and curves (B12) are untranscribed until their builders land
 (OPEN_DECISIONS 15-18), and then added without changing the rest. The reactor waits on 17b.
 

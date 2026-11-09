@@ -34,9 +34,9 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | DistributionCapacitor | instance | LinearShuntCompensator `cap_`: nomU (LL), nomQ, bPerSection, sections (int); controllers → RegulatingControl `<cap>_ctrl` | `LinearShuntCompensatorBuilder` (+Phase), `RegulatingControlBuilder` | R | 2 (done) |
 | DistributionTransformer | instance | PowerTransformer `xf_` + TransformerTank `<xf>_tank` (TankConfiguration `xc_`) + PowerTransformerEnd `<xf>_<n>` per bus (a center tap's halves one end, `s1s2N`) + TransformerPhaseEnd `<xf>_<n>_<phase>` (center tap only) + RatioTapChanger `<end>_tap` off nominal (G4) | `TransformerBankFromConfigurationBuilder`, `RatioTapChangerBuilder` | R | 3 (done) |
 | DistributionRegulator | instance (a `DistributionTransformerBase`, not a `DistributionTransformer`) | a VoltageRegulator `vr_<name>[_<phase>]` per phase (AutoTransformerEnds, lugs S L SL, series winding) + RatioTapChanger `<vr>_tap` + TapChangerControl `<vr>_ctrl`; TapChangerInfo `tci_<equipment>` (B17) | `VoltageRegulatorBuilder`, `RatioTapChangerBuilder`, `TapChangerControlBuilder`, `TapChangerInfoBuilder` | R | 3 (done) |
-| DistributionSolar | instance | PowerElectronicsConnection `pv_` (ratedS, ratedU, p < 0, q) + PhotoVoltaicUnit `<pec>_unit` (maxP); irradiance untranscribed; controller G (12) | `PowerElectronicsConnectionBuilder` (+Phase), `PhotoVoltaicUnitBuilder` | R | 4 |
-| DistributionBattery | instance | PowerElectronicsConnection `storage_` + BatteryUnit `<pec>_unit` (ratedE, storedE, batteryState); discharge p < 0 | same + `BatteryUnitBuilder` | R | 4 |
-| DistributionReactor *(new in 2.4)* | instance (branch) | SeriesCompensator (17b, recommended); pending, so a system with one raises | none | U, D (17b) | 4 |
+| DistributionSolar | instance | PowerElectronicsConnection `pv_` (ratedS, ratedU LL, p = −output, q = −output) + PhotoVoltaicUnit `<pec>_unit` (maxP); no phaseConnection (GDM has none); irradiance untranscribed; controller `PENDING` (12) | `PowerElectronicsConnectionBuilder`, `PhotoVoltaicUnitBuilder` | R | 4 (done) |
+| DistributionBattery | instance | PowerElectronicsConnection `storage_` + BatteryUnit `<pec>_unit` (ratedE, maxP/minP ± rated_power, efficiencies, batteryState from the sign); discharge p < 0; storedE has no GDM source | same + `BatteryUnitBuilder` | R | 4 (done) |
+| DistributionReactor *(new in 2.4)* | instance (branch) | SeriesCompensator `rx_` (r, x, r0 = r, x0 = x; Terminal phases); length untranscribed (17b, decided) | `SeriesCompensatorBuilder` (added this session) | R | 4 (done) |
 | `substation` / `feeder` on every component | structural | EquipmentContainer (1) | `EquipmentContainer=` keyword | R | 1 |
 | `uuid` on every class | structural | not the mRID; used, rehashed (B18), only when the name is empty or clashes (9, 10) | B18 | U | all |
 
@@ -58,10 +58,10 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | DistributionTransformerEquipment | catalog | TransformerTankConfiguration `xc_` (D10): TankEnd `<xc>_end_<n>` + TransformerWinding `<xc>_wdg_<n>` per winding, or (center tap) lugs `<xc>_lug_<d>` + windings lug to lug; mesh `<xc>_mesh_<i><j>`; losses derived from pct × rated; mounting untranscribed | `TransformerTankConfigurationBuilder` (+ `add_transformer_tank_end`, added 2026-11-08) | R | 3 (done) |
 | PowerTransformerEquipment *(new in 2.4)* | catalog | as above; vector_group structural; cooling_class → CoolingInfo `cool_` (B20); fluid_type untranscribed (18) | same + `CoolingInfoBuilder` | R | 3 (done) |
 | WindingEquipment | inline in catalog | TransformerTankEnd (connection) + TransformerWinding (ratedS, baseS, ratedU, baseU, r percent); taps → the instance's RatioTapChanger (G4) | same | R | 3 (done) |
-| SolarEquipment | inline | rated_power → maxP; rated_voltage → PEC ratedU (LL); SolarPanelInfo where slots fit (B20); R/X untranscribed; power_temp_curve untranscribed (16) | `PhotoVoltaicUnitBuilder` | R | 4 |
-| InverterEquipment | catalog | rated_apparent_power → PEC ratedS and `GenerationInverterInfo` / `StorageInverterInfo.apparentPowerMaximum`; voltage and charge limits where the Info has slots (B20); eff_curve untranscribed (16) | `PowerElectronicsConnectionBuilder`; Info builders none (B20) | R / U | 4 |
-| BatteryEquipment | inline | rated_energy → ratedE; rated_power → PEC ratedS; `BatteryInfo` capacities (B20); efficiencies untranscribed | `BatteryUnitBuilder` | R | 4 |
-| ReactorEquipment *(new in 2.4)* | inline | SeriesCompensator r, x; SeriesReactorInfo where a slot fits (B20) | none | U | 4 |
+| SolarEquipment | inline | rated_power → maxP (kVA taken as kW with a WARNING, ditto); rated_voltage → PEC ratedU (LL); no SolarPanelInfo slot fits; R/X untranscribed; power_temp_curve untranscribed (16) | `PhotoVoltaicUnitBuilder` | R | 4 (done) |
+| InverterEquipment | inline (AssetInfo on first use) | rated_apparent_power → PEC ratedS and `GenerationInverterInfo` / `StorageInverterInfo` `inv_` apparentPowerMaximum; limits, cut-in/out, efficiency untranscribed (no slot); eff_curve untranscribed (16) | `GenerationInverterInfoBuilder`, `StorageInverterInfoBuilder` (B20) | R | 4 (done) |
+| BatteryEquipment | inline (AssetInfo on first use) | rated_energy → ratedE and `BatteryInfo` `batt_` ratedCapacity; rated_power → maxP / −minP; charging/discharging efficiency; idling_efficiency untranscribed | `BatteryUnitBuilder`, `BatteryInfoBuilder` (B20) | R | 4 (done) |
+| ReactorEquipment *(new in 2.4)* | inline | SeriesCompensator r, x (r0, x0); no SeriesReactorInfo slot fits | `SeriesCompensatorBuilder` | R | 4 (done) |
 
 ## Controllers
 
@@ -70,7 +70,7 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | Voltage / ActivePower / ReactivePower / Current CapacitorController | RegulatingControl `<cap>_ctrl`. Mode by class. target = (on + off) / 2, deadband = off − on, × pt/ct ratio. Terminal = the capacitor's own terminal. delay_on → `aVRDelay` (`LinearShuntCompensatorBuilder.add_regulating_control`). dead_time G | R (golden waits on U3) | 2 (done) |
 | DailyTimedCapacitorController | needs a schedule | G (`PENDING`) | 2 |
 | RegulatorController | TapChangerControl: targetValue, targetDeadband, lineDropCompensation, lineDropR/X, reversible, min/maxLimitVoltage, monitoredPhase = controlled_phase, Terminal on controlled_bus. RatioTapChanger: ptRatio, ctRating, initialDelay, high/low step | R | 3 (done) |
-| InverterController + settings (VoltVar, VoltWatt, PF, CapacityFirming, PeakShaving, TOU, TimeBased, SelfConsumption, DemandCharge) | function-block classes; no builder | G (raise) | 4 |
+| InverterController + settings (VoltVar, VoltWatt, PF, CapacityFirming, PeakShaving, TOU, TimeBased, SelfConsumption, DemandCharge) | function-block classes; no builder | G (`PENDING`) | 4 |
 
 ## Other
 

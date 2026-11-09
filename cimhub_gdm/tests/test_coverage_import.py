@@ -13,7 +13,8 @@ from cimhub_core.base import FormatImporter
 from cimhub_gdm.importer.gdm_to_cim import INLINE, ORDER, PENDING, SHELL, UNTRANSCRIBED
 from gdm.distribution import common, components, controllers, equipment
 from gdm.distribution.components import DistributionFeeder, DistributionVoltageSource
-from gdm.distribution.equipment import BatteryEquipment, VoltageSourceEquipment
+from gdm.distribution.controllers import PowerfactorControlSetting
+from gdm.distribution.equipment import VoltageSourceEquipment
 from infrasys.time_series_models import SingleTimeSeries
 
 from cimhub_gdm import GdmImporter, gdm_to_cim
@@ -36,10 +37,10 @@ def test_every_gdm_class_is_in_exactly_one_list():
         assert sum(cls in group for group in lists) == 1, cls.__name__
 
 
-def test_pending_class_raises_naming_its_phase():
+def test_pending_class_raises_naming_what_it_waits_for():
     system = gdm_atoms.shell_system()
-    system.add_component(BatteryEquipment.example())
-    with pytest.raises(ValueError, match=r"BatteryEquipment x1: pending, Phase 4"):
+    system.add_component(PowerfactorControlSetting.example())
+    with pytest.raises(ValueError, match=r"PowerfactorControlSetting x1: pending, inverter controls"):
         gdm_to_cim(system)
 
 

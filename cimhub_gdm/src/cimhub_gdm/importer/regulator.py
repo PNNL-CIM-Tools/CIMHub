@@ -4,11 +4,11 @@ Each regulated phase is one single-phase step-voltage regulator, as CIMTBL-Model
 it (OPEN_DECISIONS 7, DSS-13): a VoltageRegulator ``vr_<name>[_<phase>]`` with two AutoTransformerEnds (end 1 the S
 side on bus 1, end 2 the L side on bus 2), lugs S, L, SL and one series winding S→SL tapped at L. The
 RatioTapChanger ``<vr>_tap`` sits on the AutoTransformerEnd of the controller's ``tapped_winding``; its
-TapChangerControl ``<vr>_ctrl`` (GDM has one controller per phase) regulates the end on the controlled bus. A regulator coil is single-phase, so its ends are ``<phase>N``; the builder's AutoTransformerEnd has
-no ``grounded`` keyword, so a winding's ``is_grounded`` is untranscribed for regulators (B27). The regulator's catalog
-data is a TapChangerInfo ``tci_<equipment>`` (B17), each tap changer's
-AssetDatasheet. cim18v17 has no AutoTransformer configuration, so the two-winding stand-in impedance (winding r,
-coupling x) has no home.
+TapChangerControl ``<vr>_ctrl`` (GDM has one controller per phase) regulates the end on the controlled bus. A
+regulator coil is single-phase, so its ends are ``<phase>N``; the builder's AutoTransformerEnd has no ``grounded``
+keyword, so a winding's ``is_grounded`` is untranscribed for regulators (B27). The regulator's catalog data is a
+TapChangerInfo ``tci_<equipment>`` (B17), each tap changer's AssetDatasheet. cim18v17 has no AutoTransformer
+configuration, so the two-winding stand-in impedance (winding r, coupling x) has no home.
 """
 
 from __future__ import annotations
