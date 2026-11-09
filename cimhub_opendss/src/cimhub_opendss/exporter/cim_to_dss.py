@@ -14,14 +14,15 @@ from cimhub_core.base import FormatExporter
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
-from cimhub_opendss.exporter import line, linecode, linegeometry, switch, vsource, wire
+from cimhub_opendss.exporter import (line, linecode, linegeometry, regcontrol, switch, transformer, vsource, wire,
+                                     xfmrcode)
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
 
 #: Modules in export order. Each has ``CIM_CLASSES`` (what it exports), ``SLOTS`` (``{DSS class: {slot: Slot}}``)
 #: and ``export(context) -> list[record]`` over the whole network: a LineGeometry is one per (WireConfiguration,
 #: offset) over the lines, so a module cannot work object by object.
-EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch)
+EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch, xfmrcode, transformer, regcontrol)
 
 __all__ = ["DssExporter", "EXPORT_ORDER", "cim_to_dss"]
 

@@ -738,3 +738,355 @@ code-level tests in `test_getters_line_impedance.py`):
 | basefreq | unset | no home on a Switch (untranscribed on import) |
 | enabled | unset | no home on a Switch (untranscribed on import) |
 | like | not mapped | the writer never writes like= |
+
+## S6c: transformers, XfmrCode, regulators, RegControl (spec approved 2026-11-09; done 2026-11-09)
+
+Content: every transformer form `get_transformer_model` reads, written as an inline Transformer or as an XfmrCode and
+its instances; regulators and LTCs with their taps; RegControl. Plan §8.1 row S6c; DSS-2, DSS-5, DSS-13, E3 and E7
+apply. Decisions T1-T7 are at the end of this section.
+
+### Layout
+
+```
+cimhub_opendss/src/cimhub_opendss/exporter/
+    windings.py      a unit's DSS winding values (model on winding 1's kVA, buses, taps), shared by the three below
+    xfmrcode.py      TransformerTankConfiguration -> Xfmrcode (T5)
+    transformer.py   PowerTransformer / AutoTransformer (VoltageRegulator) -> Transformer, one per unit (T4), taps
+    regcontrol.py    TapChangerControl -> Regcontrol
+```
+
+`switch.py`'s slot-defaulting helper moved to `slots.with_default`, which all four modules use.
+
+`EXPORT_ORDER` becomes `(vsource, wire, linecode, linegeometry, line, switch, xfmrcode, transformer, regcontrol)`.
+The writer's `WRITE_ORDER` already has XfmrCode before Transformer and RegControl after it. A probe (2026-11-09)
+showed the writer's slot order `wdg=2 Rneut=0 Xneut=0.4 buses=[...]` puts the neutral impedance on winding 2, the
+same as the deck's `~ wdg=2 ... Rneut=0 Xneut=0.4` (YPrim and voltages equal), and the reader reads it back. A
+second probe showed that `XfmrCode=` must come first: written after `buses=`, it re-sizes a center tap to 3
+windings and resets winding 3's bus to `t_3`. The writer's `_LEADING_SLOTS` already puts it first.
+
+### Forms
+
+One DSS Transformer per unit of `get_transformer_units` (T4). Every value comes from
+`get_transformer_model(unit, base_power=<winding 1's DSS kVA>)`, so every percent is on the base DSS puts it on.
+
+| CIM form | DSS | kV, kVA | |
+|---|---|---|---|
+| BY_ENDS (`PowerTransformer`, balanced ends) | inline, `phases=3` | `ratedU` (LL), `ratedS` | `%imag`/`%noloadloss` = the core's b/g |
+| BY_PHASE_ENDS (a tank's own windings) | inline, `phases=1` | `baseU`, `baseS` (the coil) | the tank's `%imag`/`%noloadloss` |
+| BY_TANK_ENDS, BY_LUGS (a `TankConfiguration`) | the configuration's XfmrCode; the instance writes `XfmrCode=`, `buses` and `enabled` | (on the code) | |
+| AUTO (`AutoTransformer`, `VoltageRegulator`) | inline, `phases` 1 or 3 (DSS has no AutoTrans mapping here, DSS-11) | `baseU` (the deck's kV, LL on a 3-phase gang unit: an AutoTransformerEnd has no `ratedU`), `ratedS` | no core |
+
+- **kVA on a coil is `baseS`.** A center-tap half is written at the can's kVA (25 for a 25 kVA can), as every deck
+  writes it. Probe: writing the half at its `ratedS` (12.5) with its %R moved to that base is not engine-equal
+  (0.27 V on the atom): the engine takes more than %R from each winding's kVA.
+- **%Rs:** winding n's r from the getter (on winding 1's kVA) times kVA_n / kVA_1. A regulator's mesh r (DSS-13: %R1
+  + %R2) is written `%Rs=[r/2 r/2]`. Probe: equal to the deck's `%LoadLoss=r` (YPrim equal).
+- **XHL, XHT, XLT:** the mesh x (1,2), (1,3), (2,3), on winding 1's kVA. A missing pair raises. A mesh r on any
+  form but AUTO raises: DSS has no home for it.
+- **conns:** `connectionKind` D → delta; Y, Yn, I → wye. An AutoTransformerEnd has none: a coil with a neutral is
+  wye, a coil between two phases delta (IEEE37's `conns=[delta delta]`). Probe: on a 1-phase coil, wye and delta
+  differ only in the engine's anti-float conductance (YPrim within 1.5e-8), so a deck's 1-phase LL coil written
+  wye (the `center_tap` atom) comes back delta, a listed YPrim difference.
+- **Windings:** 2 or 3; more raise (`Xscarray` not mapped).
+- **Not written:** `normhkVA`/`emerghkVA` (untranscribed, D9), `bank`, `LeadLag`, `ppm_antifloat` (an instance's
+  `ppm=0` comes back at the engine's default, a listed YPrim difference), `XRConst`, the thermal and reliability
+  slots.
+
+### Bus references (E7, the windings' part; T6)
+
+A winding's `phases` in their order (a coil From → To). `bus_ref` gains the neutral's node:
+- **A 3-phase wye** (the terminal's ABCN):
+  - grounded solidly → `.1.2.3`, the engine's neutral on node 0;
+  - grounded through `rground`/`xground` → `.1.2.3.4` with `wdg=<n> Rneut= Xneut=`;
+  - ungrounded → `.1.2.3.4` with no Rneut.
+
+  Probe: Rneut on `.1.2.3` is shorted by the neutral on node 0 (the same as solid). Two windings with a neutral
+  impedance raise: the record has one `wdg`.
+- **A delta:** `.1.2.3`.
+- **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`). An ungrounded coil neutral
+  raises.
+
+### XfmrCode (T5)
+
+One per `TransformerTankConfiguration` that a unit uses. Its values come from the model of the first unit that uses
+it, so they follow the same rules as an inline Transformer:
+- `phases`: 3 when winding 1 has three phase conductors, else 1;
+- `windings`, `conns`, `kVs`, `kVAs` and `%Rs`;
+- `Xhl`, `Xht` and `Xlt`;
+- `%imag` and `%noloadloss`;
+- `Rneut`/`Xneut` from the TankEnd's `rground`/`xground`.
+
+`MaxTap` and the other tap slots are the instance's. Every instance names it `XfmrCode=<code>` and writes its buses
+from its own model.
+
+### Taps
+
+Every `RatioTapChanger` on a unit's end:
+- `taps` = 1 on every winding but the tap's, which gets `get_tap_ratio(which='actual')` (R2: `step` is the deck's
+  tap; `normalStep` is not read);
+- `MaxTap`/`MinTap` = the ratio at `highStep`/`lowStep`;
+- `NumTaps` = `highStep - lowStep`.
+
+What raises:
+- an unset `step`;
+- a `neutralU` other than the winding's kV;
+- a tap on an end with two windings (a center-tap secondary);
+- any other TapChanger class.
+
+A regulator by XfmrCode (IEEE8500 `regleg`) comes back inline. CIM has no AutoTransformer template, so its code was
+never written (S3a), a listed difference that is equal in the engine.
+
+### RegControl
+
+One per `TapChangerControl`, from `get_tap_changer_control`, inverting the importer's `secondary_to_primary` and
+`line_drop_ohms`. That pair moves to `cimhub_core/derived/regulator.py` beside its inverses, as `b_from_c` did.
+
+| DSS slot | from |
+|---|---|
+| `transformer`, `winding` | the tap's unit; the winding whose end holds the tap |
+| `vreg`, `band` | target, deadband (V) / `ptRatio` |
+| `revvreg`, `revband` | the reverse target and deadband / `ptRatio` |
+| `ptratio` | `ptRatio` (tap and control agreed) |
+| `CTprim` | `ctRating` (A) |
+| `R`, `X`, `revR`, `revX` | line drop (ohm) × `CTprim` / `ptratio` |
+| `delay`, `tapdelay` | `initialDelay`, `subsequentDelay` (s) |
+| `reversible`, `revNeutral`, `revDelay` | as stored |
+| `revThreshold` | `reversingPowerThreshold` (kW) |
+| `PTphase` | 1-based place of the `monitoredPhase` among the winding's phase conductors |
+| `enabled` | the control's `enabled`; the tap's `controlEnabled` must agree |
+
+`ctRatio` is not read: the engine's CT secondary is fixed at 0.2 A, and R/X go through `CTprim`.
+
+What raises:
+- a mode other than voltage;
+- an unset `ptRatio`;
+- a line drop with no `ctRating`;
+- R/X with `lineDropCompensation=false`;
+- a monitored Terminal other than the tap end's (remote sensing, `tapwinding`);
+- `maxLimitVoltage` (`vlimit`) or `minLimitVoltage`;
+- several monitored phases.
+
+### Core changes
+
+- **`get_transformer_model` (T2):** Y on a template TankEnd and Yn on its instance end agree, and the result is the
+  instance's. Found in the S6c probe: the getter raises on the importer's own `xfmrcode/codes` (`sub`: `xf_sub_2`
+  Yn, `xc_sub_end_2` Y), because grounding is the instance's (S3b) while the getter compared the kinds literally.
+- **T3 (polarity), importer and getter.** The importer wrote a 1-phase TankEnd instance's LL end as a PhaseCode,
+  which has no order, so IEEE4 YYD's `tert.3.1` came back `tert.1.3`. Probe: the 3-can bank's voltages move by
+  1.6 kV. Now:
+  - The importer gives every 1-phase instance by template a `TransformerPhaseEnd` per terminal conductor, on the
+    end's Terminal. A lug instance keeps terminal order (its lugs name them). A TankEnd instance follows its coil's
+    node order (`coil_phase_end_numbers`).
+  - BY_TANK_ENDS reads a coil's phases from them, in `sequenceNumber` order (`_ordered_phases`). Phase ends that
+    are not the terminal's phases raise.
+  - Goldens: `xfmrcode/codes_transformer.cimtbl` (the yyd instances' phase ends) and
+    `goldens/IEEE13_CDPSM/transformer.cimtbl` (the table comment only). The sweep still binds every deck it bound.
+- **`derived/regulator.py`:** `secondary_to_primary`, `line_drop_ohms` (moved from the importer) and their
+  inverses `primary_to_secondary`, `line_drop_volts`.
+- **`bus_ref(..., neutral=)`:** a neutral is written on the node the winding gives (0 for a coil, 4 for T6). Without
+  one it still raises, so a line can never write a neutral.
+
+### Tests
+
+As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regulator.py` and three tests in
+`test_getters_transformer.py`):
+- **Per atom, in the engine** (§8.3), exported under `name`. Per element: buses, NodeOrder and YPrim (rel 1e-9),
+  then the voltages. Under `mrid`/`uri` only the voltages. The atoms:
+  - `xfmrcode/codes`: three XfmrCodes and six instances; `transformer.t2` (its `ppm=0`) is the listed YPrim
+    difference;
+  - `regcontrol/regulators`: every regulator and the LTC inline, every RegControl; no difference;
+  - the new `transformer/inline.dss` (with a circuit): sub3, xfm1, the LL center tap `ct_ab` (listed: wye → delta),
+    the LN center tap `ct_bn`, the J1 service `svc`, an ungrounded wye `ug` on `.4`, and a delta-delta `dd`.
+- **Regulator settings in the engine:** every RegControl property the importer maps and every regulator's `taps`,
+  `MaxTap`, `MinTap`, `NumTaps` equal the original's (rel 1e-9; text properties exactly).
+- **Spoke unit tests:**
+  - the T6 nodes (sub3 `.1.2.3.4` with `wdg=2 Rneut=0 Xneut=0.4`; `ug` `.1.2.3.4` with no Rneut);
+  - a center-tap half at the can's kVA;
+  - yydc's `tert.3.1` (T3);
+  - an instance holding only `XfmrCode=` and buses;
+  - the regulator's `%Rs=[r/2 r/2]`;
+  - T4's per-tank names on a two-tank PowerTransformer.
+
+  The importer names no TransformerTank, so under `name` a several-tank transformer needs tank names. Without
+  them it raises, as any unnamed object does.
+- **Raises:**
+  - two neutral impedances;
+  - a mesh r on balanced ends;
+  - an unused configuration (T5);
+  - an unset `ptRatio`;
+  - remote sensing;
+  - a line drop without `ctRating`;
+  - a mode other than voltage.
+- **Getters:** T2 (a template Y with an instance Yn gives Yn), and T3 (a TankEnd coil in its phase-end order, plus
+  phase ends that are not the terminal's, which raise).
+- **Deck round trip:** IEEE13_CDPSM still cannot run, and moves to S6d. Its loads and capacitors raise
+  "no DSS export yet" (`_check_exported`), so element-by-element parity on a whole deck starts with S6d.
+- **Goldens:** `export/*.dss` beside each atom (mrid).
+- **Suite:** 1,090 passed. With the external decks (`CIMHUB_DSS_DECKS`, `--roundtrip`), all 607 opendss tests pass,
+  the sweep included.
+
+### Decisions for S6c (approved 2026-11-09, as recommended; T3 the phase-end option)
+
+| # | question | recommendation |
+|---|---|---|
+| T1 | Forms | As the Forms table: an inline Transformer for ends, phase ends and regulators; an XfmrCode plus `XfmrCode=` instances for a TankConfiguration; a coil's kV/kVA are `baseU`/`baseS`, a 3-phase unit's `ratedU`/`ratedS` |
+| T2 | Y vs Yn, template vs instance | Fix the getter: the kinds agree up to the grounding, and the instance's wins. The importer stays as built |
+| T3 | Polarity of a 1-phase TankEnd instance | The importer gives such an instance a `TransformerPhaseEnd` per terminal conductor in the deck's node order, and BY_TANK_ENDS reads a coil's phases from them when present. Alternatives: the importer writes such an instance inline (BY_PHASE_ENDS, a listed difference), or it raises on a descending LL coil (IEEE4 YYD stops binding) |
+| T4 | Several tanks on one PowerTransformer | One DSS Transformer per tank, named by the tank; a PowerTransformer with one tank is named by itself. A tap changer on a several-tank PowerTransformer raises until a producer writes one |
+| T5 | An unused TransformerTankConfiguration | Raises: the importer never writes one, and a template alone does not say its phases |
+| T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye is `.4` with no Rneut; two neutral impedances on one transformer raise |
+| T7 | Regulator impedance and range | `%Rs=[r/2 r/2]` (equal to `%LoadLoss=r`); `MaxTap`/`MinTap`/`NumTaps` from the step range; an unset `step` or `ptRatio` raises |
+
+### Slot tables (S6c, generated from `SLOTS`)
+
+**Transformer** (`exporter/transformer.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names; a one-unit transformer by itself, each tank of several by the tank (T4) |
+| phases | written | 3 when every winding has A, B, C, else 1 (a coil); inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| windings | written | the model's windings, 2 or 3; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| wdg | written | the one winding grounded through rground/xground (T6) |
+| bus | not mapped | the active-winding form; the arrays carry every winding |
+| conn | not mapped | the active-winding form; the arrays carry every winding |
+| kV | not mapped | the active-winding form; the arrays carry every winding |
+| kVA | not mapped | the active-winding form; the arrays carry every winding |
+| tap | not mapped | the active-winding form; the arrays carry every winding |
+| pct_R | not mapped | the active-winding form; the arrays carry every winding |
+| Rneut | written | rground (ohm) of winding wdg; its neutral on .4 (T6) |
+| Xneut | written | xground (ohm) of winding wdg |
+| buses | written | bus_ref of each winding's phases: a coil's N on .0; a 3-phase wye solid .1.2.3, else .1.2.3.4 (E7, T6) |
+| conns | written | connectionKind D -> delta, Y/Yn/I -> wye; AUTO: wye with a neutral; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| kVs | written | a coil's or an AutoTransformerEnd's baseU, a 3-phase winding's ratedU (kV); inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| kVAs | written | a coil's baseS (AUTO: ratedS), a 3-phase winding's ratedS (kVA); inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| taps | written | 1, and get_tap_ratio(actual) on the RatioTapChanger's winding |
+| XHL | written | mesh (1,2) x, percent on winding 1's kVA; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| XHT | written | mesh (1,3) x; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| XLT | written | mesh (2,3) x; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| Xscarray | not mapped | more than 3 windings raise |
+| thermal | unset | untranscribed on import; not in CIM |
+| n | unset | untranscribed on import; not in CIM |
+| m | unset | untranscribed on import; not in CIM |
+| flrise | unset | untranscribed on import; not in CIM |
+| hsrise | unset | untranscribed on import; not in CIM |
+| pct_loadloss | not mapped | %Rs carries the winding r (AUTO: the mesh r halved, T7) |
+| pct_noloadloss | written | the core g (percent on winding 1's kVA); unset -> not written; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| normhkVA | unset | untranscribed on import (D9) |
+| emerghkVA | unset | untranscribed (D9) |
+| sub | unset | untranscribed on import; not in CIM |
+| MaxTap | written | get_tap_ratio(high) |
+| MinTap | written | get_tap_ratio(low) |
+| NumTaps | written | highStep - lowStep |
+| subname | unset | untranscribed on import; not in CIM |
+| pct_imag | written | the core b (percent); unset -> not written; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| ppm_antifloat | unset | untranscribed on import; not in CIM |
+| pct_Rs | rule | winding r x kVA_n / kVA_1 (AUTO: [r/2 r/2], T7); unset -> 0; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| bank | unset | each DSS Transformer is its own PowerTransformer (DSS-2) |
+| XfmrCode | written | the unit's TankConfiguration (BY_TANK_ENDS, BY_LUGS) |
+| XRConst | unset | untranscribed on import; not in CIM |
+| X12 | unset | untranscribed on import; not in CIM |
+| X13 | unset | untranscribed on import; not in CIM |
+| X23 | unset | untranscribed on import; not in CIM |
+| LeadLag | unset | untranscribed on import; not in CIM |
+| Core | unset | untranscribed on import; not in CIM |
+| RdcOhms | unset | untranscribed on import; not in CIM |
+| Seasons | unset | untranscribed on import; not in CIM |
+| Ratings | unset | untranscribed on import; not in CIM |
+| normamps | unset | untranscribed on import; not in CIM |
+| emergamps | unset | untranscribed on import; not in CIM |
+| faultrate | unset | untranscribed on import; not in CIM |
+| pct_perm | unset | untranscribed on import; not in CIM |
+| repair | unset | untranscribed on import; not in CIM |
+| basefreq | unset | untranscribed on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**Xfmrcode** (`exporter/xfmrcode.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the XfmrCode namespace |
+| phases | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| windings | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| wdg | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| conn | not mapped | the active-winding form; the arrays carry every winding |
+| kV | not mapped | the active-winding form; the arrays carry every winding |
+| kVA | not mapped | the active-winding form; the arrays carry every winding |
+| tap | not mapped | the active-winding form; the arrays carry every winding |
+| pct_R | not mapped | the active-winding form; the arrays carry every winding |
+| Rneut | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| Xneut | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| conns | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| kVs | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| kVAs | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| taps | not mapped | a tap is the instance's |
+| Xhl | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| Xht | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| Xlt | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| Xscarray | not mapped | more than 3 windings raise |
+| thermal | unset | untranscribed on import; not in CIM |
+| n | unset | untranscribed on import; not in CIM |
+| m | unset | untranscribed on import; not in CIM |
+| flrise | unset | untranscribed on import; not in CIM |
+| hsrise | unset | untranscribed on import; not in CIM |
+| pct_loadloss | not mapped | %Rs carries the winding r |
+| pct_noloadloss | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| normhkVA | unset | untranscribed on import (D9) |
+| emerghkVA | unset | untranscribed (D9) |
+| MaxTap | not mapped | a tap is the instance's |
+| MinTap | not mapped | a tap is the instance's |
+| NumTaps | not mapped | a tap is the instance's |
+| pct_imag | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| ppm_antifloat | unset | untranscribed on import; not in CIM |
+| pct_Rs | rule | as the Transformer's (windings.py), read through the first unit; every unit must give the same; unset r -> 0 |
+| X12 | unset | untranscribed on import; not in CIM |
+| X13 | unset | untranscribed on import; not in CIM |
+| X23 | unset | untranscribed on import; not in CIM |
+| RdcOhms | unset | untranscribed on import; not in CIM |
+| Seasons | unset | untranscribed on import; not in CIM |
+| Ratings | unset | untranscribed on import; not in CIM |
+| like | not mapped | the writer never writes like= |
+
+**Regcontrol** (`exporter/regcontrol.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the RegControl namespace |
+| transformer | written | the DSS Transformer of the tap's unit (one unit) |
+| winding | written | the winding whose end holds the RatioTapChanger |
+| vreg | written | targetValue (V) / ptRatio (primary_to_secondary) |
+| band | written | targetDeadband (V) / ptRatio (primary_to_secondary); unset -> not written, the engine's default |
+| ptratio | written | ptRatio, the tap's and the control's agreed; unset raises |
+| CTprim | written | ctRating (A); unset -> not written, and a line drop then raises |
+| R | written | lineDropR (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
+| X | written | lineDropX (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
+| bus | not mapped | the control must monitor its tap end's Terminal (remote sensing raises) |
+| delay | written | initialDelay (s); unset -> not written |
+| reversible | written | TapChangerControl.reversible |
+| revvreg | written | reverseTargetValue (V) / ptRatio (primary_to_secondary); unset -> not written, the engine's default |
+| revband | written | reverseTargetDeadband (V) / ptRatio (primary_to_secondary); unset -> not written, the engine's default |
+| revR | written | reverseLineDropR (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
+| revX | written | reverseLineDropX (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
+| tapdelay | written | subsequentDelay (s); unset -> not written |
+| debugtrace | unset | untranscribed or raising on import; not in CIM |
+| maxtapchange | unset | untranscribed or raising on import; not in CIM |
+| inversetime | unset | untranscribed or raising on import; not in CIM |
+| tapwinding | not mapped | the tap winding is the monitored one |
+| vlimit | not mapped | maxLimitVoltage raises (untranscribed on import) |
+| PTphase | written | 1-based place of monitoredPhase among the winding's phase conductors |
+| revThreshold | written | reversingPowerThreshold (kW) |
+| revDelay | written | reversingDelay (s) |
+| revNeutral | written | reverseToNeutral |
+| EventLog | unset | untranscribed or raising on import; not in CIM |
+| RemotePTRatio | unset | untranscribed or raising on import; not in CIM |
+| TapNum | unset | untranscribed or raising on import; not in CIM |
+| Reset | unset | untranscribed or raising on import; not in CIM |
+| LDC_Z | unset | untranscribed or raising on import; not in CIM |
+| rev_Z | unset | untranscribed or raising on import; not in CIM |
+| Cogen | unset | untranscribed or raising on import; not in CIM |
+| idle | unset | untranscribed or raising on import; not in CIM |
+| idleReverse | unset | untranscribed or raising on import; not in CIM |
+| idleForward | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | the control's enabled; the tap's controlEnabled must agree |
+| like | not mapped | the writer never writes like= |

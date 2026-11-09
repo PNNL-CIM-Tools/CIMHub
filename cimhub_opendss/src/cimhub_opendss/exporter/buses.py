@@ -12,11 +12,12 @@ _NODE = {
 }
 
 
-def bus_ref(node, phases: tuple[cim.SinglePhaseKind, ...], names: Names) -> str:
-    """``<bus>.<n>...``: the phase conductors in their order, A/B/C as 1/2/3 and s1/s2 as 1/2, never bare. A neutral
-    raises until the windings bring its grounding rule (S6c)."""
-    unknown = [phase for phase in phases if phase not in _NODE]
+def bus_ref(node, phases: tuple[cim.SinglePhaseKind, ...], names: Names, *, neutral: int | None = None) -> str:
+    """``<bus>.<n>...``: the conductors in their order, A/B/C as 1/2/3 and s1/s2 as 1/2, never bare. A neutral is
+    written on node ``neutral``, which only a winding gives (its grounding rule, E7/T6); without one it raises."""
+    nodes = {**_NODE, cim.SinglePhaseKind.N: neutral} if neutral is not None else _NODE
+    unknown = [phase for phase in phases if phase not in nodes]
     if unknown or not phases:
-        raise ValueError(f"bus {node.mRID!r}: phases {[phase.value for phase in phases]} have no DSS node yet "
-                         "(a neutral comes with the windings, S6c)")
-    return ".".join([names.bus(node), *(str(_NODE[phase]) for phase in phases)])
+        raise ValueError(f"bus {node.mRID!r}: phases {[phase.value for phase in phases]} have no DSS node here "
+                         "(only a winding places a neutral)")
+    return ".".join([names.bus(node), *(str(nodes[phase]) for phase in phases)])

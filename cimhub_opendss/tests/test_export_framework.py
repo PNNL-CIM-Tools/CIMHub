@@ -65,7 +65,8 @@ def test_bus_ref_writes_phase_conductors_and_never_bare():
     assert bus_ref(node, (A, B, C), names) == "650.1.2.3"
     assert bus_ref(node, (C, B), names) == "650.3.2"
     assert bus_ref(node, (S1, S2), names) == "650.1.2"
-    with pytest.raises(ValueError, match="have no DSS node yet"):
+    assert bus_ref(node, (N, S2), names, neutral=0) == "650.0.2"
+    with pytest.raises(ValueError, match="have no DSS node here"):
         bus_ref(node, (A, N), names)
 
 

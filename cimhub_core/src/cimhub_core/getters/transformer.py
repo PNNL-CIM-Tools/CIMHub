@@ -11,7 +11,9 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   the ``PowerTransformerEnd`` by ``endNumber``), a mesh between windings, the tank's ``noLoadLoss`` and
   ``percentMagnetizingCurrent``.
 - BY_TANK_ENDS: the tank's ``TankConfiguration``, one winding per ``TransformerTankEnd``; template end n is instance
-  end n, and connection and grounding set on both must agree.
+  end n, and connection and grounding set on both must agree. The kinds agree up to the grounding (Y and Yn), which
+  is the instance's, so the instance's kind wins. A coil's phases are its instance end's ``TransformerPhaseEnd``s in
+  ``sequenceNumber`` order when it has them (a 1-phase coil's direction), else the end's terminal phases.
 - BY_LUGS: the configuration's windings run lug to lug, and a lug's ``sequenceNumber`` names the instance
   ``TransformerPhaseEnd`` it lands on (a centre tap).
 
@@ -46,6 +48,8 @@ class TransformerForm(Enum):
 
 
 END_FORMS = (TransformerForm.BY_ENDS, TransformerForm.AUTO)
+#: a grounded kind -> its kind without the grounding, which is the instance's (BY_TANK_ENDS)
+_UNGROUNDED = {cim.WindingConnection.Yn: cim.WindingConnection.Y, cim.WindingConnection.Zn: cim.WindingConnection.Z}
 
 
 class Winding(NamedTuple):
@@ -216,7 +220,20 @@ def _tank_end_coil(winding: cim.TransformerWinding, ends: dict[int, cim.PowerTra
     if not isinstance(tank_end, cim.TransformerTankEnd):
         raise ValueError(f"{describe(winding)}: has no TransformerTankEnd (FromTransformerEnd)")
     end = _end(ends, _end_number(tank_end), winding)
-    return _Coil((end.endNumber,), winding, end, _terminal_phases(end), (end, tank_end))
+    return _Coil((end.endNumber,), winding, end, _ordered_phases(end), (end, tank_end))
+
+
+def _ordered_phases(end: cim.PowerTransformerEnd) -> tuple[cim.SinglePhaseKind, ...]:
+    """The end's TransformerPhaseEnds in sequenceNumber order (a coil's From -> To), else its terminal phases."""
+    phase_ends = _instance_phase_ends([end])
+    phases = _terminal_phases(end)
+    if not phase_ends:
+        return phases
+    ordered = tuple(phase_ends[number].phase for number in sorted(phase_ends))
+    if sorted(phase.value for phase in ordered) != sorted(phase.value for phase in phases):
+        raise ValueError(f"{describe(end)}: its TransformerPhaseEnds {[phase.value for phase in ordered]} are not "
+                         f"its terminal's phases {[phase.value for phase in phases]}")
+    return ordered
 
 
 def _lug_phase_end(winding: cim.TransformerWinding, attribute: str,
@@ -258,7 +275,7 @@ def _winding(number: int, coil: _Coil, r: float | None, voltage_unit: str, power
         number=number,
         end=coil.end,
         phases=coil.phases,
-        connection=_agreed(coil.settings, "connectionKind", lambda obj: getattr(obj, "connectionKind", None)),
+        connection=_connection(coil.settings),
         grounded=_agreed(coil.settings, "grounded", lambda obj: obj.grounded),
         rground=_agreed(coil.settings, "rground", lambda obj: get_qty(obj, "rground", "ohm")),
         xground=_agreed(coil.settings, "xground", lambda obj: get_qty(obj, "xground", "ohm")),
@@ -343,6 +360,17 @@ def _agreed(objects: tuple, what: str, read):
             raise ValueError(f"{describe(first_obj)} and {describe(obj)}: {what} {first} and {value} differ")
     return found[0][1] if found else None
 
+
+
+def _connection(objects: tuple) -> cim.WindingConnection | None:
+    """The first setter's connectionKind (the instance end); the others must agree up to the grounding."""
+    found = [(obj, kind) for obj in objects if (kind := getattr(obj, "connectionKind", None)) is not None]
+    for obj, kind in found[1:]:
+        first_obj, first = found[0]
+        if _UNGROUNDED.get(kind, kind) is not _UNGROUNDED.get(first, first):
+            raise ValueError(f"{describe(first_obj)} and {describe(obj)}: connectionKind {first.value} and "
+                             f"{kind.value} differ")
+    return found[0][1] if found else None
 
 
 def _has(obj, attribute: str) -> bool:

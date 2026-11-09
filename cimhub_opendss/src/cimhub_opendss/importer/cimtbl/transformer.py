@@ -482,17 +482,33 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
 
 def _map_by_template(xf, xf_id: str, windings: list[Winding], ends: list[End], phases: int,
                      buses: Mapping[str, BusSystem], rows: _Tables) -> None:
-    """An instance by XfmrCode: a tank on the code's template and one PowerTransformerEnd per bus; by a lug
-    template also one TransformerPhaseEnd per phase of each terminal, on the end's Terminal (S3b)."""
+    """An instance by XfmrCode: a tank on the code's template and one PowerTransformerEnd per bus. A 1-phase
+    instance also gets one TransformerPhaseEnd per phase of each terminal, on the end's Terminal: by a lug template
+    in terminal order, as the lugs name them (S3b); by a TankEnd template in the coil's node order, which is the
+    coil's direction (S6c T3: a PhaseCode has none, so ``tert.3.1`` would come back ``tert.1.3``)."""
     rows.template_tanks.append(Row([f"{xf_id}_tank", xf_id, mrid("xc_", xf.XfmrCode, lowercase=True)]))
     for end in ends:
         kind, grounded = end_kind(end, phases, xf, len(windings))
         rows.phase_end_ends.append(Row([f"{xf_id}_{end.number}", xf_id, end.bus, "".join(end.phases),
                                         str(end.number), kind, cell(grounded), buses[end.bus].base_voltage]))
-    if is_center_tap(phases, windings, ends):
-        for (number, _), (sequence, phase) in phase_end_numbers(ends).items():
-            rows.template_phase_ends.append(Row([f"{xf_id}_{number}_{phase}", str(number), str(sequence), phase,
-                                                 f"{xf_id}_T{number}"]))
+    if phases != 1:
+        return
+    numbers = phase_end_numbers(ends) if is_center_tap(phases, windings, ends) else coil_phase_end_numbers(ends)
+    for (number, _), (sequence, phase) in numbers.items():
+        rows.template_phase_ends.append(Row([f"{xf_id}_{number}_{phase}", str(number), str(sequence), phase,
+                                             f"{xf_id}_T{number}"]))
+
+
+def coil_phase_end_numbers(ends: list[End]) -> dict[tuple[int, int], tuple[int, str]]:
+    """``{(end number, node): (sequenceNumber, phase)}`` of a 1-phase instance whose ends each hold one coil: numbered
+    across the transformer, end 1 first, in the coil's node order (From -> To)."""
+    numbers, sequence = {}, 0
+    for end in ends:
+        [coil] = end.windings
+        for node in coil.nodes:
+            sequence += 1
+            numbers[(end.number, node)] = (sequence, end.phase_of_node[node])
+    return numbers
 
 
 def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> Document:
@@ -559,8 +575,8 @@ def _statements(rows: _Tables) -> list[Table]:
          "by template: the XfmrCode's TransformerTankConfiguration (xfmrcode.cimtbl)"),
         ("TransformerPhaseEnd", ["mRID", "endNumber", "sequenceNumber", "phase", "Terminal"],
          rows.template_phase_ends,
-         "by a lug template: one per phase of each terminal; a template lug's sequenceNumber names the one it "
-         "lands on"),
+         "1-phase by template: one per phase of each terminal; a template lug's sequenceNumber names the one it "
+         "lands on, and by tank ends their order is the coil's"),
         ("TransformerTank", ["mRID", "PowerTransformer", ("percentMagnetizingCurrent", "percent"),
                              ("noLoadLoss", "kW")], rows.tanks,
          "derived: noLoadLoss = pct_noloadloss / 100 x winding 1 kVA"),

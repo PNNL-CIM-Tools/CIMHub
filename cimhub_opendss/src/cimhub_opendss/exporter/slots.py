@@ -30,6 +30,11 @@ def check_slots(slots: dict[str, Slot], native_class: type) -> None:
         raise ValueError(f"{native_class.__name__} SLOTS: unknown kinds {bad}")
 
 
+def with_default(native_class: type, written: dict[str, Slot], other: Slot) -> dict[str, Slot]:
+    """``written`` and every other slot of ``native_class`` as ``other``, in the schema's order."""
+    return {f.name: written.get(f.name, other) for f in fields(native_class)}
+
+
 def slots_table(slots: dict[str, Slot]) -> str:
     """The spec's markdown table of ``slots``."""
     rows = ["| DSS slot | kind | from / why |", "|---|---|---|"]

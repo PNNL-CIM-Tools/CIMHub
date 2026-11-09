@@ -28,6 +28,7 @@ exporter) may ask for signature changes before anything is frozen.
 | G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
 | G6d | `get_inverter_rating`, `get_inverter_unit`, `get_photovoltaic_unit`, `get_battery_unit`, `get_machine_rating`, `get_machine_impedance` (`getters/der.py`); `getters.required_qty` shared | **done 2026-11-08**, 15 tests |
 | S6b | `get_wire_info`, `get_configuration_wires` (`getters/wire.py`), `get_asset_info_current_limits`, `get_phase_impedance_code`/`get_sequence_impedance_code`, `derived/capacitance.py` (`b_from_c`, `c_from_b`) | **done 2026-11-09** with the DSS S6b exporter (`cimhub_opendss/docs/EXPORT_MAPPING.md`) |
+| S6c | `get_transformer_model`: a template Y and an instance Yn agree, and the instance's kind wins (T2); a BY_TANK_ENDS coil's phases follow its instance phase ends (T3); `derived/regulator.py` (`secondary_to_primary`, `primary_to_secondary`, `line_drop_ohms`, `line_drop_volts`) | **done 2026-11-09** with the DSS S6c exporter |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)

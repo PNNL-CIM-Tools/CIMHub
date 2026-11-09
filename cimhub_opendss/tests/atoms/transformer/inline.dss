@@ -1,0 +1,22 @@
+// Inline transformers on one circuit for the export (EXPORT_MAPPING.md S6c): sub3 (3-winding delta-wye-wye, winding
+// 2's neutral on node 4 through Rneut + jXneut), xfm1 (wye-wye), ct_ab (center tap, phase-to-phase primary, after
+// IEEE13_CDPSM CT5), ct_bn (center tap, phase-to-neutral primary), svc (EPRI J1 1-phase 240 V service), ug (an
+// ungrounded wye secondary on node 4) and dd (delta-delta).
+Clear
+New Circuit.atom basekv=115 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Transformer.Sub3 Phases=3 Windings=3   XHL=0.01 XHT=0.025 XLT=0.025 LeadLag=Lag
+~ wdg=1 bus=SourceBus  conn=delta  kv=115  kva=5000   %r=(.5 1000 /)
+~ wdg=2 bus=650.1.2.3.4 Rneut=0 Xneut=0.4 conn=wye    kv=4.16 kva=5000   %r=(.5 1000 /)
+~ wdg=3 bus=650z       conn=wye    kv=13.2 kva=1000   %r=(.5 1000 /)
+New Transformer.XFM1  Phases=3   Windings=2  XHL=2
+~ wdg=1 bus=650 conn=Wye kv=4.16    kva=500    %r=.55
+~ wdg=2 bus=634 conn=Wye kv=0.480   kva=500    %r=.55
+New Transformer.ct_ab phases=1 windings=3 buses=[650z.1.2 house.1.0 house.0.2] kVs=[13.2 0.12 0.12] kVAs=[5 5 5]
+~ %Rs=[0.6 1.2 1.2] XHL=2.04 XHT=2.04 XLT=1.36 %imag=0.5 %noloadloss=0.2
+New Transformer.ct_bn phases=1 windings=3 buses=[650.2.0 house2.1.0 house2.0.2] kVs=[2.4 0.12 0.12] kVAs=[25 25 25]
+~ %Rs=[0.6 1.2 1.2] XHL=2.04 XHT=2.04 XLT=1.36
+New Transformer.svc phases=1 wdg=1 bus=650.3 kv=2.4 kVA=40 wdg=2 bus=svc.1 kv=0.24 kVA=40 %loadloss=0.7221
+~ %noloadloss=.2423 XHL=1.5158 normhkva=40 emerghkva=56
+New Transformer.ug phases=3 windings=2 buses=[634 ug.1.2.3.4] conns=[wye wye] kVs=[0.48 0.208] kVAs=[150 150] XHL=3
+New Transformer.dd phases=3 windings=2 buses=[650 dd] conns=[delta delta] kVs=[4.16 4.16] kVAs=[1000 1000] XHL=4
+~ %Rs=[0.4 0.4] %imag=0.3 %noloadloss=0.05

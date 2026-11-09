@@ -570,7 +570,9 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
 **Instances** (`transformer.cimtbl`): `PowerTransformer` `xf_<name>`, plus `TransformerTank` `xf_<name>_tank` with
 `TankConfiguration` = `xc_<code>`, plus the ends above. A lug template's instance phase ends reference their end's
 generated Terminal (`xf_<name>_T<n>`), which is their link to the PowerTransformer, since the instance has no
-windings. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
+windings. **Amended 2026-11-09 (DSS S6c, T3):** a 1-phase instance of a TankEnd template gets them too, numbered in
+its coil's node order, end 1 first. That order is the coil's direction, which a PhaseCode cannot hold. Without it,
+IEEE4 YYD's `tert.3.1` came back `tert.1.3`, and in the engine the 3-can bank's voltages moved by 1.6 kV. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
 (the template must be the one source), except the untranscribed ones. A regulated instance keeps S3a's rule: it
 takes its code's values, because CIM has no AutoTransformer template.
 

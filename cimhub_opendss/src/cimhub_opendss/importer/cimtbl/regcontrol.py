@@ -15,6 +15,7 @@ from typing import NamedTuple
 from cimtables.document import Column, Document, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.derived.regulator import line_drop_ohms, secondary_to_primary
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import transformer as transformer_mapper
 from cimhub_opendss.schema import opendss_schema as schema
@@ -87,16 +88,6 @@ _PROVENANCE = """OpenDSS RegControl -> TapChangerControl + RatioTapChanger on th
 Settings on the 120 V PT secondary are primary volts (x ptratio); line drop ohms = volts x ptratio / CTprim.
 Source table: RegControl (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#regcontrol"""
-
-
-def secondary_to_primary(volts: float, ptratio: float) -> float:
-    """A setting in volts on the PT secondary as primary volts."""
-    return volts * ptratio
-
-
-def line_drop_ohms(volts: float, ptratio: float, ct_primary: float) -> float:
-    """A line drop compensator setting in volts (at rated CT current) as primary ohms."""
-    return volts * ptratio / ct_primary
 
 
 def ct_ratio(ct_primary: float) -> float:

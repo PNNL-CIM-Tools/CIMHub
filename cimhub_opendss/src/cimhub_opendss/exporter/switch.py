@@ -10,8 +10,6 @@ either state. The class is lossy on the way back: every class but Fuse and Reclo
 
 from __future__ import annotations
 
-from dataclasses import fields
-
 import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
@@ -20,7 +18,7 @@ from cimhub_core.getters.switch_state import get_switch_state
 from cimhub_core.getters.terminals import get_conductor_phases
 from cimhub_opendss.exporter.line import terminal_buses, ratings
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_opendss.exporter.slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.Switch, cim.AirBreakSwitch, cim.Breaker, cim.Cut, cim.DisconnectingCircuitBreaker, cim.Disconnector,
@@ -41,13 +39,8 @@ _PROTECTION = "protection setting; untranscribed on import (DSS-11)"
 _NO_HOME = "no home on a Switch (untranscribed on import)"
 
 
-def _slots(native_class: type, written: dict[str, Slot], other: Slot) -> dict[str, Slot]:
-    """``written`` and every other slot of ``native_class`` as ``other``."""
-    return {f.name: written.get(f.name, other) for f in fields(native_class)}
-
-
 SLOTS = {
-    schema.Line: _slots(schema.Line, {
+    schema.Line: with_default(schema.Line, {
         "name": Slot("written", "Names, the Line namespace (shared with ACLineSegments)"),
         "bus1": Slot("written", "bus_ref, as a Line"), "bus2": Slot("written", "bus_ref, as a Line"),
         "phases": Slot("written", "the phase conductors"),
@@ -58,7 +51,7 @@ SLOTS = {
         "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", "a switch has no other line data (DSS-8)")),
-    schema.Fuse: _slots(schema.Fuse, {
+    schema.Fuse: with_default(schema.Fuse, {
         "name": Slot("written", "Names, the switch's"),
         "MonitoredObj": Slot("written", "Line.<the switch's Line name>"),
         "SwitchedObj": Slot("not mapped", "the engine takes MonitoredObj"),
@@ -67,14 +60,14 @@ SLOTS = {
         **_FUSE_STATE,
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", _NO_HOME)),
-    schema.Recloser: _slots(schema.Recloser, {
+    schema.Recloser: with_default(schema.Recloser, {
         "name": Slot("written", "Names, the switch's"),
         "MonitoredObj": Slot("written", "Line.<the switch's Line name>"),
         "SwitchedObj": Slot("not mapped", "the engine takes MonitoredObj"),
         **_STATE,
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", _PROTECTION)),
-    schema.Swtcontrol: _slots(schema.Swtcontrol, {
+    schema.Swtcontrol: with_default(schema.Swtcontrol, {
         "name": Slot("written", "Names, the switch's"),
         "SwitchedObj": Slot("written", "Line.<the switch's Line name>"),
         **_STATE,

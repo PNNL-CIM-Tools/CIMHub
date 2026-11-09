@@ -45,8 +45,6 @@ def test_matches_golden(regulators):
 
 
 def test_derived_settings():
-    assert regcontrol.secondary_to_primary(122, 20) == 2440
-    assert regcontrol.line_drop_ohms(3, 20, 700) == pytest.approx(0.085714, rel=1e-5)
     assert regcontrol.ct_ratio(700) == pytest.approx(3500)
     assert regcontrol.tap_range(1.0625, 1.1, 0.9, 32, name="t") == (-16, 16, 10, 0.625)
     with pytest.raises(ValueError, match="tap 0.625 is not a whole tap step"):

@@ -1,0 +1,15 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=115 pu=1 angle=0 R1=0.160376682055275 X1=0.641506728221101 R0=0.179603583012336 X0=0.538810749037007
+new Transformer.xf_coded phases=1 windings=2 buses=[sub.3.0 rc.3.0] conns=[wye wye] kVs=[7.2 7.2] kVAs=[1666 1666] taps=[1 1] XHL=0.1 MaxTap=1.1 MinTap=0.9 NumTaps=32 %Rs=[0.0005 0.0005]
+new Transformer.xf_gang phases=3 windings=2 buses=[sub.1.2.3 rgang.1.2.3] conns=[wye wye] kVs=[12.47 12.47] kVAs=[5000 5000] taps=[1 1] XHL=0.01 MaxTap=1.1 MinTap=0.9 NumTaps=32 %Rs=[0.001 0.001]
+new Transformer.xf_ltc phases=3 windings=2 buses=[sourcebus.1.2.3 sub.1.2.3] conns=[delta wye] kVs=[115 12.47] kVAs=[20000 20000] taps=[1 1.0125] XHL=8 MaxTap=1.1 MinTap=0.9 NumTaps=32 %Rs=[0.5 0.5]
+new Transformer.xf_reg1 phases=1 windings=2 buses=[sub.1.0 rg.1.0] conns=[wye wye] kVs=[7.2 7.2] kVAs=[1666 1666] taps=[1 1.0625] XHL=0.01 MaxTap=1.1 MinTap=0.9 NumTaps=32 %Rs=[0.005 0.005]
+new Transformer.xf_vr_ll phases=1 windings=2 buses=[sub.1.2 rl.1.2] conns=[delta delta] kVs=[12.47 12.47] kVAs=[2000 2000] taps=[1 1] XHL=0.01 MaxTap=1.1 MinTap=0.9 NumTaps=32 %Rs=[5e-06 5e-06]
+new Regcontrol.rc_coded transformer=xf_coded winding=2 vreg=125 band=2 ptratio=60 CTprim=300 delay=15 reversible=Yes revvreg=125 revband=2 tapdelay=2 PTphase=1 revThreshold=50 revDelay=60 revNeutral=No enabled=Yes
+new Regcontrol.rc_gang transformer=xf_gang winding=2 vreg=123 band=2 ptratio=60 CTprim=300 delay=30 reversible=No revvreg=120 revband=3 tapdelay=5 PTphase=2 revThreshold=100 revDelay=60 revNeutral=No enabled=Yes
+new Regcontrol.rc_ltc transformer=xf_ltc winding=2 vreg=124 band=2 ptratio=60 CTprim=300 delay=15 reversible=No revvreg=120 revband=3 tapdelay=2 PTphase=1 revThreshold=100 revDelay=60 revNeutral=No enabled=Yes
+new Regcontrol.rc_reg1 transformer=xf_reg1 winding=2 vreg=122 band=2 ptratio=60 CTprim=700 R=3 X=9 delay=15 reversible=No revvreg=120 revband=3 revR=0 revX=0 tapdelay=2 PTphase=1 revThreshold=100 revDelay=60 revNeutral=No enabled=Yes
+new Regcontrol.rc_vr_ll transformer=xf_vr_ll winding=2 vreg=122 band=2 ptratio=104 CTprim=350 R=1.5 X=0.75 delay=15 reversible=No revvreg=120 revband=3 revR=0 revX=0 tapdelay=2 PTphase=1 revThreshold=100 revDelay=60 revNeutral=No enabled=Yes
+Set voltagebases=[12.47 115]
+CalcVoltageBases
