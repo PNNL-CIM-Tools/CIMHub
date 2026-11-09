@@ -1,5 +1,6 @@
 # PSS/E RAW Generator -> RegulatingControl per plant (bus I); SynchronousMachine + GeneratingUnit (WMOD 0)
-# or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1), each with its ControlArea membership.
+# or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1), each with its ControlArea membership; an implicit
+# step-up transformer (PowerTransformer, internal TopologicalNode, fixed RatioTapChanger) per machine with RT + jXT.
 # Source table: Generator (records: 5)
 # Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3
 
@@ -28,7 +29,7 @@ Table ControlAreaGeneratingUnit: mRID, name, ControlArea, GeneratingUnit
     cagu_8_1, 8_1, ca_1, gu_8_1
 
 # WMOD 0
-# untranscribed: zx, gtap, o1, o2, o3, o4, f1, f2, f3, f4, wpf
+# untranscribed: zx, o1, o2, o3, o4, f1, f2, f3, f4, wpf
 Table SynchronousMachine: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), r (ohm), qPercent, referencePriority, inService, controlEnabled, RegulatingControl, GeneratingUnit, BaseVoltage, EquipmentContainer
     # defaulted: wmod=0, nreg=0
     sm_1_1, 1_1, 1, -232.392, 16.549,  0.0,  0.0,   615.0, 0.0, 100.0, 1, true, true, gc_1, gu_1_1, bv_138kv, sub_1

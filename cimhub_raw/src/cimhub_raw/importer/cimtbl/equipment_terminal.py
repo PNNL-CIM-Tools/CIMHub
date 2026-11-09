@@ -90,7 +90,9 @@ def _terminals(record, form: str, key: str | None, written: set[str], record_id:
         return [f"{_one([(f'{fixed_shunt.PREFIX}{bus}_{key}', 1)], written, 'fixed shunt', record_id)[0]}_T1"]
     if form == "machine":
         prefixes = (generator.MACHINE_PREFIXES[0], generator.CONVERTER_PREFIXES[0])
-        return [f"{_one([(f'{prefix}{bus}_{key}', 1) for prefix in prefixes], written, 'machine', record_id)[0]}_T1"]
+        machine = _one([(f"{prefix}{bus}_{key}", 1) for prefix in prefixes], written, "machine", record_id)[0]
+        step_up = f"{machine}_xf"  # the machine sits on its internal node, behind its step-up (R3b-5)
+        return [f"{step_up if step_up in written else machine}_T1"]
     if form == "branch":
         return _branch_terminals(record, key, written, record_id)
     if form == "three-winding transformer":

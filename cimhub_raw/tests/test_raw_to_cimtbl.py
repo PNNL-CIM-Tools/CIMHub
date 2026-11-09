@@ -589,7 +589,6 @@ def test_generator_atom_comments():
 @pytest.mark.parametrize(("key", "changes", "error", "message"), [
     ("2_G", {"wmod": 2}, NotImplementedError, "WMOD 2 .renewable, Q limits from WPF"),
     ("2_G", {"wmod": 4}, NotImplementedError, "WMOD 4 .infeed"),
-    ("2_G", {"xt": 0.1}, NotImplementedError, "an implicit step-up transformer"),
     ("2_G", {"nreg": 2}, ValueError, r"disagree on \(IREG, NREG, VS, RMPCT\)"),  # NREG is a plant quantity
     ("2_PV", {"regulated_voltage_setpoint": 1.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
     ("2_PV", {"rmpct": 50.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
@@ -604,6 +603,83 @@ def test_a_generator_outside_r3_raises(key, changes, error, message):
     _replace_record(native, schema.GeneratorRecord, key, **changes)
     with pytest.raises(error, match=message):
         RawImporter("atom").to_cimtbl(native)
+
+
+# -- R3b: implicit step-up transformers ------------------------------------------------------------------------
+
+STEP_UP_ATOM = GENERATOR_ATOMS / "step_up.raw"
+
+
+@pytest.fixture(scope="module")
+def step_up_network():
+    return _network(STEP_UP_ATOM)
+
+
+def test_r3b_machine_behind_its_step_up(step_up_network):
+    """The machine sits on its internal node behind a 2-winding transformer from bus I (R3b-1); both ends at bus
+    I's base and MBASE; r, x = RT, XT on MBASE in ohm on end 1 (R3b-2)."""
+    machine = _objects(step_up_network, "SynchronousMachine")["sm_1_1"]
+    internal = machine.Terminals[0].TopologicalNode
+    assert (internal.mRID, internal.BaseVoltage.nominalVoltage.to("kV")) == ("sm_1_1_int", pytest.approx(230.0))
+    assert internal.ConnectivityNodeContainer.mRID == _objects(step_up_network, "TopologicalNode")[
+        "1"].ConnectivityNodeContainer.mRID
+    transformer = _objects(step_up_network, "PowerTransformer")["sm_1_1_xf"]
+    ends = sorted(transformer.PowerTransformerEnd, key=lambda end: end.endNumber)
+    assert [end.Terminal.TopologicalNode.mRID for end in ends] == ["1", "sm_1_1_int"]
+    assert [end.ratedU.to("kV") for end in ends] == [pytest.approx(230.0)] * 2
+    assert [end.ratedS.to("MVA") for end in ends] == [pytest.approx(200.0)] * 2
+    assert (ends[0].r.to("ohm"), ends[0].x.to("ohm")) == (pytest.approx(0.002 * 230.0 ** 2 / 200.0),
+                                                          pytest.approx(0.12 * 230.0 ** 2 / 200.0))
+    assert transformer.inService is True and not ends[0].RatioTapChanger  # GTAP 1: no tap
+    assert machine.r.to("ohm") == pytest.approx(0.003 * 230.0 ** 2 / 200.0)  # ZR as R3
+    assert machine.p.to("MW") == pytest.approx(-150.0)  # PG as written (R3b-3)
+
+
+def test_r3b_off_nominal_gtap_and_the_plant(step_up_network):
+    """GTAP != 1 is a fixed tap on end 1 (R4b-4); the plant control stays on the regulated bus (R3b-3); a converter
+    and a machine without a step-up share the plant."""
+    machines = _objects(step_up_network, "SynchronousMachine")
+    end = next(end for end in _objects(step_up_network, "PowerTransformer")["sm_2_G1_xf"].PowerTransformerEnd
+               if end.endNumber == 1)
+    tap = end.RatioTapChanger
+    assert (tap.mRID, tap.step, tap.neutralStep, tap.ltcFlag) == ("sm_2_G1_xf_tap1", 1, 1, False)
+    assert tap.neutralU.to("kV") == pytest.approx(1.025 * 115.0)
+    converter = _objects(step_up_network, "PowerElectronicsConnection")["pec_2_PV"]
+    assert converter.Terminals[0].TopologicalNode.mRID == "pec_2_PV_int"
+    assert machines["sm_2_G2"].Terminals[0].TopologicalNode.mRID == "2"  # no step-up
+    plant = _objects(step_up_network, "RegulatingControl")["gc_2"]
+    assert plant.Terminal.mRID == "bb_3_T1"
+    assert all(equipment.RegulatingControl is plant for equipment in (machines["sm_2_G1"], machines["sm_2_G2"],
+                                                                      converter))
+
+
+def test_r3b_resistance_only_step_up_of_a_machine_out_of_service(step_up_network):
+    machine = _objects(step_up_network, "SynchronousMachine")["sm_4_1"]
+    transformer = _objects(step_up_network, "PowerTransformer")["sm_4_1_xf"]
+    end = next(end for end in transformer.PowerTransformerEnd if end.endNumber == 1)
+    assert (end.r.to("ohm"), end.x.to("ohm")) == (pytest.approx(0.01 * 115.0 ** 2 / 12.0), 0.0)
+    assert (machine.inService, transformer.inService) == (False, True)  # the step-up has no status of its own
+
+
+def test_r3b_comments():
+    """GTAP without a step-up is listed (R3b-4)."""
+    document = next(part for part in RawImporter("atom").to_cimtbl(Raw34Reader(STEP_UP_ATOM).read_all()).parts
+                    if part.name == "generator")
+    rows = {row.cells[0]: row for statement in document.statements for row in statement.rows}
+    assert rows["sm_2_G2"].comment == "untranscribed: gtap=1.02"
+    assert rows["sm_2_G1"].comment is None
+    assert {statement.cim_class for statement in document.statements} >= {
+        "TopologicalNode", "PowerTransformer", "PowerTransformerEnd", "RatioTapChanger"}
+
+
+def test_r3b_node_breaker_places_the_step_up_terminal():
+    """An equipment terminal record naming a machine with a step-up places the transformer's end-1 terminal
+    (R3b-5)."""
+    native = Raw34Reader(FORMS_ATOM).read_all()
+    _replace_record(native, schema.GeneratorRecord, "1_G", xt=0.1)
+    placements = _placements(raw_to_cim(native, name="forms"))
+    assert placements["sm_1_G_xf_T1"] == "sub_s10_n2"
+    assert "sm_1_G_T1" not in placements
 
 
 # -- R4: transformers --------------------------------------------------------------------------------------

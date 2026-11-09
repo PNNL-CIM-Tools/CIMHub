@@ -1,8 +1,11 @@
 """RAW Generator -> ``generator.cimtbl``: one ``RegulatingControl`` per plant (bus I), and per record a
 ``SynchronousMachine`` + ``GeneratingUnit`` (WMOD 0) or a ``PowerElectronicsConnection`` + ``PowerElectronicsUnit``
-(WMOD 1), each unit in its bus's ``ControlArea``.
+(WMOD 1), each unit in its bus's ``ControlArea``. A machine with an implicit step-up transformer (RT + jXT != 0) sits
+on an internal ``TopologicalNode`` behind a 2-winding ``PowerTransformer`` (R3b; the core shape
+``behind_transformer.cimtbl``, plan C8).
 
-Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3``.
+Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3`` and
+``#generator-the-implicit-step-up-transformer-r3b``.
 """
 
 from __future__ import annotations
@@ -13,8 +16,8 @@ from cimtopology.core.voltage import base_voltage_mrid
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
 from cimhub_raw.importer.cimtbl.area_interchange import area_mrid, control_area_numbers
-from cimhub_raw.importer.cimtbl.derived import generation_p_q, ohms_from_per_unit, volts_from_per_unit
-from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.cimtbl.derived import generation_p_q, kv_from_per_unit, ohms_from_per_unit, volts_from_per_unit
+from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, listed_off_default, raw_defaults
 from cimhub_raw.importer.node_breaker import NodeBreaker
 
 NATIVE_CLASS = schema.GeneratorRecord
@@ -68,10 +71,13 @@ FIELDS = {
                                 "(defaulted)"),
     "zx": Field("untranscribed", note="ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile "
                                       "extension, RAW-23)"),
-    "rt": Field("structural", note="RT: the implicit step-up transformer; nonzero raises until a case has one "
-                                   "(RAW-25); blank: 0 (defaulted)"),
-    "xt": Field("structural", note="XT: as RT"),
-    "gtap": Field("untranscribed", note="GTAP: used only when RT + jXT is nonzero, which raises"),
+    "rt": Field("derived", note="RT (pu on MBASE): RT + jXT != 0 is an implicit step-up transformer <machine>_xf, "
+                                "the machine on its internal node <machine>_int (R3b-1); end 1 r (ohm) = RT x "
+                                "BASKV^2 / MBASE (ohms_from_per_unit); blank: 0 (defaulted)"),
+    "xt": Field("derived", note="XT (pu on MBASE): as RT, end 1 x (ohm)"),
+    "gtap": Field("derived", note="GTAP: with a step-up, a fixed RatioTapChanger <machine>_xf_tap1 on end 1, neutralU "
+                                  "= GTAP x BASKV (R3b-1, R4b-4), none at 1; without one, PSS/E ignores it and it is "
+                                  "listed on the machine row when not 1 (R3b-4); blank: 1.0 (defaulted)"),
     "status": Field("mapped", note="STAT: inService = (STAT == 1); blank: 1 (defaulted)"),
     "rmpct": Field("copied", (("SynchronousMachine", "qPercent", None),),
                    note=f"RMPCT, on every SynchronousMachine of the plant; a PowerElectronicsConnection has no "
@@ -92,18 +98,73 @@ FIELDS = {
 }
 
 _PROVENANCE = """PSS/E RAW Generator -> RegulatingControl per plant (bus I); SynchronousMachine + GeneratingUnit (WMOD 0)
-or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1), each with its ControlArea membership.
+or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1), each with its ControlArea membership; an implicit
+step-up transformer (PowerTransformer, internal TopologicalNode, fixed RatioTapChanger) per machine with RT + jXT.
 Source table: Generator (records: {count})
 Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3"""
+
+
+def has_step_up(generator) -> bool:
+    """RT + jXT != 0: the record carries an implicit step-up transformer (R3b)."""
+    return bool(generator.rt or generator.xt)
+
+
+class StepUpRows:
+    """The implicit step-up transformers (R3b-1): an internal node, a 2-winding transformer and, off GTAP 1, a fixed
+    tap, per machine. RAW gives no terminal kV, so both ends keep bus I's base (R3b-2)."""
+
+    def __init__(self):
+        self.nodes, self.transformers, self.ends, self.taps = [], [], [], []
+
+    def add(self, machine: str, generator, kv: float, container: str) -> str:
+        """The rows of ``machine``'s step-up; returns its internal node, the machine's bus."""
+        name, bus = generator.ID, generator.bus_number
+        transformer, internal, base = f"{machine}_xf", f"{machine}_int", base_voltage_mrid(kv)
+        mva = generator.rated_mva
+        self.nodes.append(Row([internal, f"{name} terminal", base, container]))
+        self.transformers.append(Row([transformer, f"{name} step-up", "true", container]))
+        self.ends += [
+            Row([f"{transformer}_1", f"{name}_1", str(bus), "1", cell(kv), cell(mva),
+                 cell(ohms_from_per_unit(generator.rt, kv, mva)), cell(ohms_from_per_unit(generator.xt, kv, mva)),
+                 base, transformer]),
+            Row([f"{transformer}_2", f"{name}_2", internal, "2", cell(kv), cell(mva), None, None, base, transformer]),
+        ]
+        if generator.gtap != 1.0:
+            self.taps.append(Row([f"{transformer}_tap1", f"{name}_1", "1", "1", "1",
+                                  cell(kv_from_per_unit(generator.gtap, kv)), "1", "false", "false",
+                                  f"{transformer}_1"]))
+        return internal
+
+    def tables(self) -> list[Table]:
+        if not self.transformers:
+            return []
+        tables = [
+            Table("TopologicalNode", [Column("mRID"), Column("name"), Column("BaseVoltage"),
+                                      Column("ConnectivityNodeContainer")], self.nodes,
+                  comment="each step-up machine's internal node (behind_transformer, plan C8): no RAW bus; bus I's "
+                          "base, since RAW gives no terminal kV (R3b-2)"),
+            Table("PowerTransformer", [Column("mRID"), Column("name"), Column("inService"),
+                                       Column("EquipmentContainer")], self.transformers,
+                  comment="each implicit step-up transformer (RT + jXT != 0, R3b-1); always in service"),
+            Table("PowerTransformerEnd", [Column("mRID"), Column("name"), Column("bus"), Column("endNumber"),
+                                          Column("ratedU", "kV"), Column("ratedS", "MVA"), Column("r", "ohm"),
+                                          Column("x", "ohm"), Column("BaseVoltage"), Column("PowerTransformer")],
+                  self.ends, comment="end 1 at bus I, end 2 at the internal node, both ratedU = BASKV and ratedS = "
+                                     "MBASE; r, x = RT, XT x BASKV^2 / MBASE on end 1"),
+        ]
+        if self.taps:
+            tables.append(Table(
+                "RatioTapChanger", [Column("mRID"), Column("name"), Column("lowStep"), Column("highStep"),
+                                    Column("neutralStep"), Column("neutralU", "kV"), Column("step"),
+                                    Column("ltcFlag"), Column("controlEnabled"), Column("TransformerEnd")],
+                self.taps, comment="GTAP != 1: a fixed tap at the high-voltage bus, neutralU = GTAP x BASKV (R4b-4)"))
+        return tables
 
 
 def _check_record(generator, record_id: str) -> None:
     """The forms R3 does not map raise."""
     if generator.wmod in UNMAPPED_WMOD:
         raise NotImplementedError(f"{record_id}: WMOD {generator.wmod} ({UNMAPPED_WMOD[generator.wmod]})")
-    if generator.rt or generator.xt:
-        raise NotImplementedError(f"{record_id}: RT + jXT = {generator.rt} + j{generator.xt}, an implicit step-up "
-                                  "transformer (RAW-25: no case has one yet)")
 
 
 def _plant_key(generator) -> tuple[int, int, float, float]:
@@ -141,7 +202,9 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
     if not records:
         return Document(name="generator", statements=[], profile=CIM_PROFILE)
     control_areas = control_area_numbers(native)
-    plants = _plants(records, {**raw_defaults(NATIVE_CLASS), "rated_mva": base_mva})
+    defaults = {**raw_defaults(NATIVE_CLASS), "rated_mva": base_mva}
+    plants = _plants(records, defaults)
+    step_ups = StepUpRows()
 
     control_rows, unit_rows, machine_area_rows, machine_rows = [], [], [], []
     converter_rows, converter_unit_rows, converter_area_rows = [], [], []
@@ -170,32 +233,37 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
         kv, container, area = base_kv_of[bus], substations_by_bus[bus], area_mrid(bus_area[bus])
         for generator, defaulted in members:
             record_id = generator.ID
+            listed = None if has_step_up(generator) else listed_off_default(generator, ("gtap",), defaults)
+            comment = "; ".join(note for note in (defaulted, listed) if note) or None
             p, q = generation_p_q(generator)
             in_service = cell(lookup(IN_SERVICE, generator.status, slot="status", record_id=record_id))
             limits = [cell(generator.max_q_output), cell(generator.min_q_output), cell(generator.rated_mva)]
             if lookup(CONVERTER, generator.wmod, slot="wmod", record_id=record_id):
                 connection, unit, membership = (mrid(prefix, record_id) for prefix in CONVERTER_PREFIXES)
-                converter_rows.append(Row([connection, record_id, str(bus), cell(p), cell(q), *limits, in_service,
-                                           enabled, control, base_voltage_mrid(kv), container], comment=defaulted))
+                node = step_ups.add(connection, generator, kv, container) if has_step_up(generator) else str(bus)
+                converter_rows.append(Row([connection, record_id, node, cell(p), cell(q), *limits, in_service,
+                                           enabled, control, base_voltage_mrid(kv), container], comment=comment))
                 converter_unit_rows.append(Row([unit, record_id, cell(generator.max_p_output),
                                                 cell(generator.min_p_output), connection, container]))
                 converter_area_rows.append(Row([membership, record_id, area, unit]))
             else:
                 machine, unit, membership = (mrid(prefix, record_id) for prefix in MACHINE_PREFIXES)
+                node = step_ups.add(machine, generator, kv, container) if has_step_up(generator) else str(bus)
                 unit_rows.append(Row([unit, record_id, cell(generator.max_p_output), cell(generator.min_p_output),
                                       container]))
                 machine_area_rows.append(Row([membership, record_id, area, unit]))
                 machine_rows.append(Row([
-                    machine, record_id, str(bus), cell(p), cell(q), *limits,
+                    machine, record_id, node, cell(p), cell(q), *limits,
                     cell(ohms_from_per_unit(generator.zr, kv, generator.rated_mva)), cell(generator.rmpct),
                     cell(1 if swing else None), in_service, enabled, control, unit, base_voltage_mrid(kv),
-                    container], comment=defaulted))
+                    container], comment=comment))
 
     untranscribed = untranscribed_names(FIELDS)
     statements = [Table("RegulatingControl",
                         [Column(name) for name in ("mRID", "name", "mode", "discrete", "enabled", "targetValue",
                                                    "Terminal")],
                         control_rows, comment="one per plant (bus I); targetValue in V")]
+    statements += step_ups.tables()  # the internal nodes before the machines that sit on them
     if machine_rows:
         statements += [
             Table("GeneratingUnit", [Column("mRID"), Column("name"), Column("maxOperatingP", "MW"),

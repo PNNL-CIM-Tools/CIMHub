@@ -171,7 +171,7 @@ wheels = [
 
 [[package]]
 name = "cim-graph"
-version = "0.6.0a1"
+version = "0.6.0"
 source = { editable = "../CIM-Graph" }
 dependencies = [
     { name = "cimprofiles" },

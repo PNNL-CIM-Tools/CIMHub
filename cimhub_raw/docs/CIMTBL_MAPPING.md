@@ -11,7 +11,7 @@ devices, equipment terminals, regulated nodes) approved and implemented 2026-11-
 atoms in `tests/atoms/substation/`. R4b (the transformer forms R4 raised on: fixed phase shifts, phase shifters,
 impedance correction tables, fixed ratios, one winding out, CONT 0 and negative, load-drop compensation) approved
 and implemented 2026-11-09; atom `tests/atoms/transformer/forms_r4b.raw`. P2a (shunt FACTS devices, VSC DC lines)
-and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
+and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. R3b's implicit step-up transformers approved and implemented 2026-11-09; atom `tests/atoms/generator/step_up.raw`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
 `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
@@ -700,7 +700,7 @@ Table ControlAreaGeneratingUnit: mRID, name, ControlArea, GeneratingUnit
     cagu_1032_C,  1032_C,  ca_1, gu_1032_C
     ...
 # WMOD 0
-# untranscribed: zx, gtap, o1, o2, o3, o4, f1, f2, f3, f4, wpf
+# untranscribed: zx, o1, o2, o3, o4, f1, f2, f3, f4, wpf
 Table SynchronousMachine: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), r (ohm), qPercent, referencePriority, inService, controlEnabled, RegulatingControl, GeneratingUnit, BaseVoltage, EquipmentContainer
     # defaulted: wmod=0, nreg=0
     sm_1032_C,  1032_C,  1032, -712.0,    3.332,    200.0,  -200.0,  873.0,   0.0, 100.0, ,  true,  true,  gc_1032, gu_1032_C,  bv_20kv, sub_1032
@@ -708,7 +708,7 @@ Table SynchronousMachine: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (
     sm_3933_CG, 3933_CG, 3933, -404.88,   -88.652,  363.0,  -82.0,   865.0,   0.0, 100.0, 1, true,  true,  gc_3933, gu_3933_CG, bv_20kv, sub_3903
     ...
 # WMOD 1; untranscribed here also: zr, rmpct (no qPercent)
-# untranscribed: zx, gtap, o1, o2, o3, o4, f1, f2, f3, f4, wpf
+# untranscribed: zx, o1, o2, o3, o4, f1, f2, f3, f4, wpf
 Table PowerElectronicsConnection: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), inService, controlEnabled, RegulatingControl, BaseVoltage, EquipmentContainer
     pec_1032_S,  1032_S,  1032, -520.0,   3.332,    360.0,  -360.0,  638.0,  true, true, gc_1032, bv_20kv, sub_1032
     ...
@@ -763,18 +763,17 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
     canonical saturated `satDirect*X` were never in it). It stays untranscribed until the extension lands. The
     exporter writes the default 1.0 meanwhile, an expected difference for WECC240 (0.2);
   - on a `PowerElectronicsConnection`, both are untranscribed: a converter has no ZSORCE in CIM.
-- **Step-up transformer (RAW-25):** RT + jXT ≠ 0 (an implicit GSU) raises `NotImplementedError` until a case has
-  one. Both cases model their GSUs as transformer branches (RT = XT = 0), and GTAP is used only then, so it is
-  untranscribed. The physical form is a generator-with-step-up-transformer builder shape: a `PowerTransformer` to
-  an internal node. That is a common need beyond RAW, so it is a TODO for an owner to take (plan §7, C8).
-- **Untranscribed:** GTAP, WPF (used only by WMOD 2/3), ZX (TODO extension), O1..F4 (ownership, CIM 18 gap).
+- **Step-up transformer (RAW-25, superseded by R3b below):** RT + jXT ≠ 0 (an implicit GSU) raised
+  `NotImplementedError` until a case had one; both public cases model their GSUs as transformer branches (RT = XT =
+  0). R3b maps it with the core shape `behind_transformer.cimtbl` (plan C8).
+- **Untranscribed:** WPF (used only by WMOD 2/3), ZX (TODO extension), O1..F4 (ownership, CIM 18 gap).
 - **Atom** `tests/atoms/generator/generators.raw`:
   - a plant of one WMOD 0 machine and one WMOD 1 connection regulating a remote bus, with one member out of service;
   - a swing plant;
   - a machine on an IDE 1 bus (control disabled);
   - a record with every optional field blank (all defaulted, MBASE = SBASE).
   
-  Raise tests: plant records that disagree on VS, IREG, NREG or RMPCT; RT/XT ≠ 0; WMOD 2, 3 and 4; a remote IREG
+  Raise tests: plant records that disagree on VS, IREG, NREG or RMPCT; RT/XT ≠ 0 (until R3b); WMOD 2, 3 and 4; a remote IREG
   from a swing bus; an IREG that is no bus; a swing bus with only WMOD 1 records.
 - **Checks:** all 151 records bind (IEEE14 5 machines; WECC240 109 machines and 37 connections). In SI, each p =
   −PG in W, each target = VS × BASKV in V, and each unit reaches its bus's `ControlArea`. Each plant has one
@@ -793,9 +792,9 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE; blank: SBASE (defaulted) |
 | `zr` | `Optional[float]` | `0.0` | derived | ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE (ohms_from_per_unit); untranscribed on a PowerElectronicsConnection; blank: 0 (defaulted) |
 | `zx` | `Optional[float]` | `0.2` | untranscribed | ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile extension, RAW-23) |
-| `rt` | `Optional[float]` | `0.0` | structural | RT: the implicit step-up transformer; nonzero raises until a case has one (RAW-25); blank: 0 (defaulted) |
-| `xt` | `Optional[float]` | `0.0` | structural | XT: as RT |
-| `gtap` | `Optional[float]` | `1.0` | untranscribed | GTAP: used only when RT + jXT is nonzero, which raises |
+| `rt` | `Optional[float]` | `0.0` | derived | RT (pu on MBASE): RT + jXT != 0 is an implicit step-up transformer <machine>_xf, the machine on its internal node <machine>_int (R3b-1); end 1 r (ohm) = RT x BASKV^2 / MBASE (ohms_from_per_unit); blank: 0 (defaulted) |
+| `xt` | `Optional[float]` | `0.0` | derived | XT (pu on MBASE): as RT, end 1 x (ohm) |
+| `gtap` | `Optional[float]` | `1.0` | derived | GTAP: with a step-up, a fixed RatioTapChanger <machine>_xf_tap1 on end 1, neutralU = GTAP x BASKV (R3b-1, R4b-4), none at 1; without one, PSS/E ignores it and it is listed on the machine row when not 1 (R3b-4); blank: 1.0 (defaulted) |
 | `status` | `Optional[int]` | `1`, `0` | mapped | STAT: inService = (STAT == 1); blank: 1 (defaulted) |
 | `rmpct` | `Optional[float]` | `100.0` | copied | `SynchronousMachine.qPercent`; RMPCT, on every SynchronousMachine of the plant; a PowerElectronicsConnection has no qPercent (CIM 18 gap); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 100 (defaulted) |
 | `max_p_output` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `GeneratingUnit.maxOperatingP` (MW), `PowerElectronicsUnit.maxP` (MW); PT, by WMOD; blank: 9999 (defaulted) |
@@ -811,6 +810,73 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `wmod` | `Optional[int]` | `1` | mapped | WMOD: the class (RAW-24), 0 conventional a SynchronousMachine + GeneratingUnit, 1 renewable with QT/QB limits a PowerElectronicsConnection + PowerElectronicsUnit; 2, 3 and 4 raise until a case has one; blank: 0 (defaulted) |
 | `wpf` | `Optional[float]` | `1.0` | untranscribed | WPF: used only by WMOD 2 and 3, which raise |
 | `nreg` | `Optional[int]` |  | structural | NREG: a node of bus IREG; nonzero: the plant control's Terminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
+
+## Generator: the implicit step-up transformer (R3b)
+
+**Approved 2026-11-09 (user: "bus I's base", "on the machine as written", "approve, implement") and implemented.** Extends R3 (RAW-25). Mapper: `generator.py`; the core shape `behind_transformer.cimtbl`
+(plan C8), already followed by the converter transformer (P2-5). The local case set (29 cases of one network, never
+committed, counted only) has 213 generators with RT + jXT ≠ 0 in every case: 212 WMOD 0 and 1 WMOD 1, 80 in
+service, 8 with GTAP ≠ 1, 1 with XT = 0 (RT alone), 13 regulating a remote bus, up to 4 machines a bus. None sits in
+a node-breaker substation. WMOD 2/3 (50 a case) is the other half of R3b and is not in this spec.
+
+### The form (decision R3b-1)
+
+The format document's figure of the implicit method puts the ideal ratio GTAP : 1 at the high-voltage bus I and
+XTRAN (pu on MBASE) between it and the machine. That is an R4 2-winding transformer with CW 1, CZ 2, SBASE1-2 =
+MBASE, WINDV1 = GTAP, WINDV2 = 1 and COD 0, so the step-up maps the way R4 would map that record:
+
+- **Internal node:** `TopologicalNode` `<machine>_int` (`sm_` or `pec_<I>_<ID>_int`), named `<I>_<ID> terminal`,
+  with no busNumber, in bus I's substation. The machine (`SynchronousMachine` or `PowerElectronicsConnection`) sits
+  on it.
+- **Transformer:** `PowerTransformer` `<machine>_xf`, named `<I>_<ID> step-up`, in bus I's substation, always in
+  service (it has no status of its own in RAW, as P2-5).
+  - End 1 `<machine>_xf_1` on bus I: ratedU = BASKV(I), ratedS = MBASE, r, x = RT, XT × BASKV(I)² / MBASE (ohm;
+    `ohms_from_per_unit`, R4's CZ 2).
+  - End 2 `<machine>_xf_2` on the internal node: ratedU = BASKV(I), ratedS = MBASE. No magnetizing branch.
+- **GTAP ≠ 1:** a fixed `RatioTapChanger` `<machine>_xf_tap1` on end 1 (R4b-4: one step, neutralU = GTAP × BASKV(I)
+  in kV, no control). GTAP = 1 has none (205 of 213).
+
+### The internal node's voltage (decision R3b-2)
+
+RAW does not give the machine's terminal voltage: XTRAN and GTAP are in per unit, on MBASE and the system base. So
+the internal node, end 2 and the machine keep bus I's BaseVoltage, a per-unit equivalent. No BaseVoltage is added,
+and ZR keeps its R3 conversion on BASKV(I). The machine's terminal kV is missing from RAW, not from CIM.
+The exporter gets the record back: RT, XT = r, x × ratedS / ratedU1², GTAP = neutralU / ratedU1 (1 without a tap).
+
+### Power, limits and control stay on the machine (decision R3b-3)
+
+PG, QG, QT, QB, PT, PB and MBASE map as R3, on the machine and its unit. The plant control `gc_<I>` stays on bus
+I's busbar (`bb_<I>_T1`, or IREG's): the format document makes bus I the regulated bus of the implicit method.
+PSS/E's power flow injects PG + jQG at bus I and uses XTRAN only in fault analysis and dynamics. A CIM solve that
+includes the step-up sees its losses (I²X of Mvar), an expected solve difference; the round trip is exact.
+
+### GTAP without a step-up (decision R3b-4)
+
+GTAP is used only when RT + jXT ≠ 0. 11 generators a case have GTAP ≠ 1 without one; PSS/E ignores it. It is listed
+on the machine row (`untranscribed: gtap=…`) so the exporter can write it back.
+
+### Node-breaker terminals (decision R3b-5)
+
+An equipment terminal record (R6) naming a machine with a step-up places the transformer's end-1 terminal
+`<machine>_xf_T1` on its node: the machine's own terminal is on the internal node. None in the set; the atom tests
+it.
+
+### Atom `tests/atoms/generator/step_up.raw` (hand-built)
+
+The `generators.raw` frame (230 kV and 13.8 kV buses) with: a machine behind a step-up at GTAP 1; one at GTAP
+1.025; an RT-only step-up; a WMOD 1 connection behind a step-up; a plant of two machines, one with a step-up and one
+without, regulating a remote bus; a machine without a step-up with GTAP 1.02 (listed). Raise tests: none new (a
+step-up no longer raises); the node-breaker placement is tested on a GSU added to `node_breaker_forms.raw` in memory.
+
+### CIM 18 gaps
+
+None new: the step-up is ordinary CIM. The machine's terminal kV is absent from RAW itself.
+
+### Results
+
+All 29 local cases map their 213 step-ups (8 with a fixed tap). One case binds whole in 66 s with only WMOD 2/3
+and the R1b/R2b records set aside: its 7653 `PowerTransformer`s are 7402 transformer records, 38 converter
+transformers and 213 step-ups, and its 18172 `TopologicalNode`s are 17921 buses and 251 internal nodes.
 
 ## Transformer (R4)
 
@@ -2090,8 +2156,11 @@ RAW, not CIM: R6 adds a `BusbarSection` only where a control regulates a node.
   zone)); RAW-10 (a switched shunt's blocks as one `LinearShuntCompensator` each, under one `RegulatingControl`).
 - **R3** (user, 2026-11-08): RAW-7 (one `RegulatingControl` per plant), RAW-23
   (`referencePriority` and `qPercent` added to the profile; ZX a TODO extension), RAW-24 (WMOD 0 a
-  `SynchronousMachine`, WMOD 1 a `PowerElectronicsConnection`), RAW-25 (an implicit step-up transformer raises; the
+  `SynchronousMachine`, WMOD 1 a `PowerElectronicsConnection`), RAW-25 (an implicit step-up transformer raised; the
   builder shape a TODO for an owner).
+- **R3b** (user, 2026-11-09): R3b-1..R3b-5 (an implicit step-up is the core shape `behind_transformer.cimtbl`: the
+  machine on an internal node at bus I's base behind an R4-form 2-winding transformer, GTAP a fixed tap on end 1; PG
+  and QG as written on the machine).
 - **R4** (user, 2026-11-08): RAW-5 (every CZ/CM code derived to ohm/S; a 2-winding r/x/g/b on end 1; a 3-winding
   unit's Z12/Z23/Z31 as `TransformerMeshImpedance` rows with g/b on end 1, no star conversion; cim18v17 has no
   `TransformerStarImpedance`/`TransformerStarAdmittance`); RAW-6 (a `RatioTapChanger` per tapped winding over steps
