@@ -19,9 +19,9 @@ exporter) may ask for signature changes before anything is frozen.
 | # | getters | status |
 |---|---|---|
 | G1 | `get_line_sequence_impedance` steps 1-3 (lumped, sequence code × length, phase matrix reduced), `ImpedanceSource`, `SequenceImpedance` | **done 2026-11-08**, 17 tests |
-| G2 | Kron reduction of neutral conductors in step 3 (raises today) | next |
-| G3 | `get_line_sequence_impedance_per_length`, `get_line_phase_impedance_matrix` | |
-| G4 | wide fan-out: `get_terminal_nodes`, `get_conductor_phases`, `get_base_voltage`, `get_switch_state(which=)`, `get_current_limits` | |
+| G2 | Kron reduction of neutral conductors in step 3: series Z by `derived/kron.py`, shunt b/g by the phase block (V_n = 0); s1/s2 still raise | **done 2026-11-08**, 24 getter + Kron tests (Kersting Example 4.1) |
+| G3 | `get_line_sequence_impedance_per_length` (steps 2-3 per length), `get_line_phase_impedance_matrix` (`PhaseMatrix`, stored code; sequence code expanded only with `expand_sequence=True`) | **done 2026-11-08**, 31 getter tests |
+| G4 | wide fan-out: `get_terminal_nodes`, `get_conductor_phases`, `get_base_voltage`, `get_switch_state(which=)`, `get_current_limits` | next |
 | G5 | `get_spacing_xy` / `get_spacing_distances` | |
 | G6 | transformers, tap changers, shunts, loads, source, DER (reference.md §3) | |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
@@ -40,3 +40,10 @@ exporter) may ask for signature changes before anything is frozen.
   `DISAGREEMENT_REL_TOL = 1e-6`, relative only, so a lumped 0 against a tiny derived b raises. The tolerance is
   reference.md §3's open question.
 - `base_power` is ignored for `'ohm'`.
+
+## G3 open point
+
+- **Capacitance.** GLM (`c11` …, nF/mile) and DSS (`C1`/`C0`, `cmatrix`, nF per length) want capacitance; CIM
+  and the getters give susceptance. C = b / (2πf) needs a frequency, either the code's `calculatedFrequency` or
+  `network.base_frequency` (semantic rule 7). Not built: decide the frequency source with the first GLM/DSS
+  exporter, then add one named function (in `derived/`, or a `get_qty` capacitance unit upstream).

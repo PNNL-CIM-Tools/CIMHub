@@ -1,4 +1,4 @@
-"""cimhub_core.getters.line_impedance: get_line_sequence_impedance on the line shapes and inline atoms.
+"""cimhub_core.getters.line_impedance: the sequence and phase-matrix getters on the line shapes and inline atoms.
 
 Expected values are hand-computed from the shape text, not from the getter.
 """
@@ -11,7 +11,15 @@ from cimtables import BusBranchModel, load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.derived.sequence import phase_matrix
-from cimhub_core.getters.line_impedance import ImpedanceSource, get_line_sequence_impedance
+from cimhub_core.getters.line_impedance import (
+    ImpedanceSource,
+    MatrixSource,
+    get_line_phase_impedance_matrix,
+    get_line_sequence_impedance,
+    get_line_sequence_impedance_per_length,
+)
+
+A, B, C, N = cim.SinglePhaseKind.A, cim.SinglePhaseKind.B, cim.SinglePhaseKind.C, cim.SinglePhaseKind.N
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
 FEET_PER_MILE = 5280
@@ -148,9 +156,28 @@ def test_reduction_inverts_derived_phase_matrix(tmp_path):
     assert (z.r, z.r0, z.x, z.x0) == pytest.approx((0.30, 0.90, 0.60, 1.80))
 
 
-def test_neutral_conductor_raises(tmp_path):
-    network = _matrix_atom(tmp_path, "AN", [(1, 1, 1, 1, 1), (2, 1, 0.1, 0.1, 0), (2, 2, 1, 1, 1)])
-    with pytest.raises(ValueError, match="Kron reduction"):
+def test_kersting_example_4_1_neutral_is_kron_reduced(tmp_path):
+    # Kersting, Distribution System Modeling, Example 4.1: the 4-wire primitive matrix (ohm/mi). His published
+    # sequence values are z1 = 0.3061 + j0.6270 and z0 = 0.7735 + j1.9373 ohm/mi.
+    network = _matrix_atom(tmp_path, "ABCN", [
+        (1, 1, 0.4013, 1.4133, 0), (2, 1, 0.0953, 0.8515, 0), (2, 2, 0.4013, 1.4133, 0),
+        (3, 1, 0.0953, 0.7266, 0), (3, 2, 0.0953, 0.7802, 0), (3, 3, 0.4013, 1.4133, 0),
+        (4, 1, 0.0953, 0.7524, 0), (4, 2, 0.0953, 0.7865, 0), (4, 3, 0.0953, 0.7674, 0), (4, 4, 0.6873, 1.5465, 0)])
+    z = get_line_sequence_impedance(_line(network, "ln"), derive=ImpedanceSource.MATRIX_REDUCED)
+    assert (z.r, z.x, z.r0, z.x0) == pytest.approx((0.3061, 0.6270, 0.7735, 1.9373), abs=2e-4)
+
+
+def test_neutral_shunt_keeps_the_phase_block(tmp_path):
+    # V_n = 0: the reduced C is the phase block of C, so the neutral's b entries drop out
+    network = _matrix_atom(tmp_path, "ABN", [(1, 1, 1, 1, 6), (2, 1, 0.1, 0.1, -2), (2, 2, 1, 1, 6),
+                                             (3, 1, 0.1, 0.1, -1), (3, 2, 0.1, 0.1, -1), (3, 3, 1, 1, 5)])
+    z = get_line_sequence_impedance(_line(network, "ln"), derive=ImpedanceSource.MATRIX_REDUCED)
+    assert (z.b, z.b0) == pytest.approx((8e-6, 2e-6))
+
+
+def test_split_phase_conductors_raise(tmp_path):
+    network = _matrix_atom(tmp_path, "s1s2", [(1, 1, 1, 1, 1), (2, 1, 0.1, 0.1, 0), (2, 2, 1, 1, 1)])
+    with pytest.raises(ValueError, match=r"conductors \['s1', 's2'\] have no sequence values"):
         get_line_sequence_impedance(_line(network, "ln"), derive=ImpedanceSource.MATRIX_REDUCED)
 
 
@@ -198,3 +225,110 @@ def test_geometry_is_not_built_yet():
 def test_unknown_unit_raises(bus_branch):
     with pytest.raises(ValueError, match="unit must be one of"):
         get_line_sequence_impedance(_line(bus_branch, "ln_1_2_1"), "ohm/mi")
+
+
+# get_line_sequence_impedance_per_length ------------------------------------------------------------------------
+
+
+def test_per_length_sequence_code_in_its_own_units(by_impedance):
+    z = get_line_sequence_impedance_per_length(_line(by_impedance, "ln_l2"), "ohm/km", "nS/km")
+    assert (z.r, z.x, z.r0, z.x0) == pytest.approx((0.3489, 0.426198, 0.588811, 1.29612))
+    assert (z.b, z.b0, z.g, z.g0) == (pytest.approx(3932.35), pytest.approx(1690.81), None, None)
+    assert z.source is ImpedanceSource.PER_LENGTH_SEQ
+
+
+def test_per_length_times_length_is_the_whole_line(by_impedance):
+    line = _line(by_impedance, "ln_l2")
+    per_metre = get_line_sequence_impedance_per_length(line)
+    whole = get_line_sequence_impedance(line, derive=ImpedanceSource.PER_LENGTH_SEQ)
+    assert (whole.r, whole.b0) == pytest.approx((per_metre.r * 152.4, per_metre.b0 * 152.4))
+
+
+def test_per_length_matrix_needs_derive_matrix_reduced(by_impedance):
+    line = _line(by_impedance, "ln_l1")
+    with pytest.raises(ValueError, match="within derive=PER_LENGTH_SEQ"):
+        get_line_sequence_impedance_per_length(line, "ohm/mi", "nS/mi")
+    z = get_line_sequence_impedance_per_length(line, "ohm/mi", "nS/mi", derive=ImpedanceSource.MATRIX_REDUCED)
+    assert (z.r, z.x, z.r0) == pytest.approx((1.3266 - 0.2066, 1.352 - 0.4591, 1.3266 + 2 * 0.2066))
+    assert z.b == pytest.approx(4628.095 + 899.07)
+
+
+def test_per_length_has_no_lumped_step(by_impedance):
+    with pytest.raises(ValueError, match="start at derive=PER_LENGTH_SEQ, not LUMPED"):
+        get_line_sequence_impedance_per_length(_line(by_impedance, "ln_l2"), derive=ImpedanceSource.LUMPED)
+
+
+def test_per_length_on_a_lumped_line_raises(bus_branch):
+    with pytest.raises(ValueError, match="lumped r/x: set, PerLengthImpedance: none"):
+        get_line_sequence_impedance_per_length(_line(bus_branch, "ln_1_2_1"))
+
+
+# get_line_phase_impedance_matrix -------------------------------------------------------------------------------
+
+
+def test_phase_code_as_stored_in_conductor_order(by_impedance):
+    m = get_line_phase_impedance_matrix(_line(by_impedance, "ln_l1"), "ohm/mi", "nS/mi")
+    assert m.phases == (C, B)
+    assert m.r == pytest.approx({(1, 1): 1.3238, (2, 1): 0.2066, (2, 2): 1.3294})
+    assert m.x == pytest.approx({(1, 1): 1.3569, (2, 1): 0.4591, (2, 2): 1.3471})
+    assert m.b == pytest.approx({(1, 1): 4710.84, (2, 1): -899.07, (2, 2): 4545.35})
+    assert m.g is None
+    assert m.source is MatrixSource.PHASE_CODE
+
+
+def test_phase_code_keeps_neutral_and_split_phase_conductors(tmp_path):
+    rows = [(1, 1, 1.0, 2.0, 3.0), (2, 1, 0.1, 0.2, -0.3), (2, 2, 1.1, 2.1, 3.1)]
+    m = get_line_phase_impedance_matrix(_line(_matrix_atom(tmp_path, "s1s2", rows), "ln"), "ohm/mi", "uS/mi")
+    assert m.phases == (cim.SinglePhaseKind.s1, cim.SinglePhaseKind.s2)
+    assert m.r == pytest.approx({(1, 1): 1.0, (2, 1): 0.1, (2, 2): 1.1})
+
+    network = _matrix_atom(tmp_path, "AN", rows)
+    assert get_line_phase_impedance_matrix(_line(network, "ln"), "ohm/mi", "uS/mi").phases == (A, N)
+
+
+def test_sequence_code_expands_only_when_asked(by_impedance):
+    line = _line(by_impedance, "ln_l2")
+    with pytest.raises(ValueError, match="pass expand_sequence=True"):
+        get_line_phase_impedance_matrix(line)
+    m = get_line_phase_impedance_matrix(line, "ohm/km", "nS/km", expand_sequence=True)
+    r_self, r_mutual = (2 * 0.3489 + 0.588811) / 3, (0.588811 - 0.3489) / 3
+    b_self, b_mutual = (2 * 3932.35 + 1690.81) / 3, (1690.81 - 3932.35) / 3
+    assert m.phases == (A, B, C)
+    assert m.r == pytest.approx({(1, 1): r_self, (2, 1): r_mutual, (2, 2): r_self,
+                                 (3, 1): r_mutual, (3, 2): r_mutual, (3, 3): r_self})
+    assert m.b[3, 3] == pytest.approx(b_self) and m.b[2, 1] == pytest.approx(b_mutual)
+    assert m.g is None
+    assert m.source is MatrixSource.SEQUENCE_EXPANDED
+
+
+def _sequence_atom(tmp_path, phases, zero_sequence):
+    return _load_atom(tmp_path, f"""
+Object PerLengthSequenceImpedance: mRID=seq, r (ohm/km)=0.3, x (ohm/km)=0.6{zero_sequence}
+Object ACLineSegment: mRID=ln, node1=a, node2=b, phases={phases}, length (km)=1, PerLengthImpedance=seq, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr
+""")
+
+
+def test_one_phase_expansion_is_the_positive_sequence(tmp_path):
+    m = get_line_phase_impedance_matrix(_line(_sequence_atom(tmp_path, "B", ""), "ln"), "ohm/km",
+                                        expand_sequence=True)
+    assert (m.phases, m.r, m.x) == ((B,), {(1, 1): pytest.approx(0.3)}, {(1, 1): pytest.approx(0.6)})
+
+
+def test_two_phase_expansion_needs_the_zero_sequence(tmp_path):
+    with pytest.raises(ValueError, match="2 conductors need r0 to expand r"):
+        get_line_phase_impedance_matrix(_line(_sequence_atom(tmp_path, "AC", ""), "ln"), expand_sequence=True)
+    network = _sequence_atom(tmp_path, "AC", ", r0 (ohm/km)=0.9, x0 (ohm/km)=1.8")
+    m = get_line_phase_impedance_matrix(_line(network, "ln"), "ohm/km", expand_sequence=True)
+    assert m.r == pytest.approx(phase_matrix(0.3, 0.9, 2))
+
+
+def test_matrix_of_a_geometry_line_raises():
+    network = load_model(SHAPES / "line_by_wire_configuration.cimtbl")
+    line = next(iter(network.graph[cim.ACLineSegment].values()))
+    with pytest.raises(ValueError, match="export its geometry"):
+        get_line_phase_impedance_matrix(line)
+
+
+def test_matrix_of_a_lumped_line_raises(bus_branch):
+    with pytest.raises(ValueError, match="has no PerLengthImpedance"):
+        get_line_phase_impedance_matrix(_line(bus_branch, "ln_1_2_1"))

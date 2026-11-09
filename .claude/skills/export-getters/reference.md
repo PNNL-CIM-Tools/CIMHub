@@ -17,8 +17,17 @@ class SequenceImpedance(NamedTuple):   # None: unset in CIM (SKILL.md semantic r
 
 def get_line_sequence_impedance(line, unit="ohm", *, base_power=None,
                                 derive=ImpedanceSource.LUMPED) -> SequenceImpedance
-def get_line_sequence_impedance_per_length(line, unit="ohm/m") -> SequenceImpedance
-def get_line_phase_impedance_matrix(line, unit="ohm/m") -> PhaseMatrix      # conductor order
+def get_line_sequence_impedance_per_length(line, impedance_unit="ohm/m", admittance_unit="S/m", *,
+                                           derive=ImpedanceSource.PER_LENGTH_SEQ) -> SequenceImpedance
+
+class MatrixSource(Enum):   # PHASE_CODE (stored) | SEQUENCE_EXPANDED (assumes a transposed line)
+class PhaseMatrix(NamedTuple):   # lower triangles {(row, column): value}, 1-based, conductor order
+    phases: tuple[SinglePhaseKind, ...]   # N, s1, s2 included as stored
+    r: dict; x: dict; b: dict | None; g: dict | None
+    source: MatrixSource
+
+def get_line_phase_impedance_matrix(line, impedance_unit="ohm/m", admittance_unit="S/m", *,
+                                    expand_sequence=False) -> PhaseMatrix   # geometry-only line raises
 def get_spacing_xy(spacing, unit="m", *, height=None) -> tuple[ConductorXY, ...]
 def get_spacing_distances(spacing, unit="m") -> SpacingDistances           # pairwise + heights
 def get_terminal_nodes(equipment) -> tuple[Node, ...]                      # Terminal.sequenceNumber order
