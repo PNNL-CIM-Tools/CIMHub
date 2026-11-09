@@ -16,7 +16,7 @@ from typing import NamedTuple
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_names
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_names
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl.transformer import parse_bus
 from cimhub_opendss.schema import opendss_schema as schema
@@ -191,7 +191,7 @@ def map_vsource(native, buses: Mapping[str, BusSystem], container: str) -> Docum
             raise ValueError(f"Vsource {source.name}: no bus voltage for {bus}")
         z = thevenin(source, group)
         rows.append(Row([
-            mrid(PREFIX, source.name, lowercase=True), str(source.name), bus, phases, cell(source.basekv),
+            mrid(PREFIX, source.name, lowercase=True), str(source.name), bus, phases_cell(phases), cell(source.basekv),
             cell(source.basekv * source.pu), cell(source.angle), cell(z.r1), cell(z.x1), cell(z.r0), cell(z.x0),
             cell(source.enabled), buses[bus].base_voltage,
         ], comment=_comment(group, original, defaulted)))

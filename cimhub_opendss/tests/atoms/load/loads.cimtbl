@@ -21,13 +21,13 @@ Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW
     # untranscribed: Vminpu=0.88
     ld_house, house, house, s1s2, Y, true,  5.0,    3.0987216920155114,  1, zip_constant_pq, true,  bv_240v
     # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
-    ld_kva,   kva,   b1,    ABC,  Y, true,  250.4,  -187.79999999999995, 1, zip_constant_pq, true,  bv_4p16kv
+    ld_kva,   kva,   b1,    ,     Y, true,  250.4,  -187.79999999999995, 1, zip_constant_pq, true,  bv_4p16kv
     # defaulted: model=ConstantPQ, conn=wye, enabled=true
     # untranscribed: status=Fixed
     ld_leg2,  leg2,  house, s2,   Y, true,  2.0,    0.5,                 3, zip_constant_pq, true,  bv_240v
     # defaulted: pf=0.88, model=ConstantPQ, conn=wye, NumCust=1
     ld_off,   off,   b1,    C,    Y, true,  10.0,   5.397428221380871,   1, zip_constant_pq, false, bv_4p16kv
     # defaulted: conn=wye, NumCust=1, enabled=true
-    ld_pq,    pq,    b1,    ABC,  Y, true,  1155.0, 660.0,               1, zip_constant_pq, true,  bv_4p16kv
+    ld_pq,    pq,    b1,    ,     Y, true,  1155.0, 660.0,               1, zip_constant_pq, true,  bv_4p16kv
     # defaulted: NumCust=1, enabled=true
     ld_z,     z,     b1,    BC,   D, false, 170.0,  125.0,               1, zip_constant_z,  true,  bv_4p16kv

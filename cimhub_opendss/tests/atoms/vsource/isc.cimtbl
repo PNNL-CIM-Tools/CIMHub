@@ -7,4 +7,4 @@ Profile = cim18v17
 # untranscribed: frequency, ScanType, Sequence, Yearly, Daily, Duty, Model, puZideal, spectrum, basefreq, like
 Table EnergySource: mRID, name, node, phases, nominalVoltage (kV), voltageMagnitude (kV), voltageAngle (deg), r (ohm), x (ohm), r0 (ohm), x0 (ohm), normallyInService, BaseVoltage, EquipmentContainer=sub_atom
     # derived from Isc3=1000000.0, Isc1=1100000.0; defaulted: pu=1.0, angle=0.0, phases=3, x1r1=4.0, x0r0=3.0
-    src_source, source, b1, ABC, 69.0, 69.0, 0.0, 0.009661932579793269, 0.038647730319173075, 0.00918173182161891, 0.02754519546485673, , bv_69kv
+    src_source, source, b1, , 69.0, 69.0, 0.0, 0.009661932579793269, 0.038647730319173075, 0.00918173182161891, 0.02754519546485673, , bv_69kv

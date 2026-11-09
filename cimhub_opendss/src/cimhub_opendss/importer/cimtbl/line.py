@@ -17,7 +17,7 @@ from cimprofiles.units import units
 from cimtables.document import Column, Document, ObjectStatement, Row, Table
 from cimtopology.core import BusSystem, System
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, phases_cell, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import geometry as geometry_mapper
 from cimhub_opendss.importer.cimtbl import linecode as linecode_mapper
@@ -416,7 +416,7 @@ def _switch_row(line, phases: str, bus1: str, bus2: str, control: SwitchControl,
     normal_open = control.normal_open if control.normal_open is not None else is_open
     dropped = [f"{slot}={cell(getattr(line, slot)) if not isinstance(getattr(line, slot), list) else getattr(line, slot)}"
                for slot in _SWITCH_DROPPED if getattr(line, slot) not in (None, [])]
-    cells = [mrid(SWITCH_PREFIX, line.name, lowercase=True), str(line.name), bus1, bus2, phases]
+    cells = [mrid(SWITCH_PREFIX, line.name, lowercase=True), str(line.name), bus1, bus2, phases_cell(phases)]
     if control.cim_class == "Fuse":
         cells.append(cell(control.rated_current))
     cells += [cell(is_open), cell(normal_open), buses[bus1].base_voltage, cell(line.enabled)]

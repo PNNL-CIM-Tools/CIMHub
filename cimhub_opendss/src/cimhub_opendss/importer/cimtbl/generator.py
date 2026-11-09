@@ -1,7 +1,8 @@
 """OpenDSS ``Generator`` -> ``generator.cimtbl``: one ``SynchronousMachine`` per generator (shape
 ``synchronous_machine``).
 
-p = -kW and q = -kvar, the load sign (S4b-1); q from kvar or pf (``injection.generated_kvar``). A model 3 (PV
+p = -kW and q = -kvar, the load sign (S4b-1). kvar is the engine's: it keeps kvar as a power factor, so the
+mapper replays the deck's kW, pf and kvar assignments in order (``dispatched_kvar``, S4b-8). A model 3 (PV
 bus) machine regulates its own terminal: a ``RegulatingControl`` ``gen_<name>_ctrl`` after the machine, then an
 ``Update`` giving the machine its control (S4a's own-terminal form). SynchronousMachine has no phaseConnection, so
 delta is ``earthing=false`` (S4b-5). The ``phases`` column gives one RotatingMachinePhase per phase.
@@ -11,15 +12,16 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#generator``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import math
+from collections.abc import Iterable, Mapping
 
 from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
-from cimhub_opendss.importer.cimtbl.injection import device_terminal, generated_kvar, is_delta, line_kv
+from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, line_kv, reactive_power
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Generator
@@ -45,9 +47,11 @@ FIELDS = {
     "bus1": Field("structural", note="node and phases, by the S4 shared phase rule"),
     "kv": Field("derived", note="ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47"),
     "kW": Field("derived", note="p (kW) = -kW (the load sign); default 1000"),
-    "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar "
-                                "they must agree (S4b-2); default 0.88"),
-    "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign)"),
+    "pf": Field("derived", note="q (kVAr) = -kvar, kvar replayed from the kW, pf and kvar assignments in deck order "
+                                "(dispatched_kvar, S4b-8): each kW or pf recomputes kvar = kW x tan(acos abs(pf)); "
+                                "default 0.88"),
+    "kvar": Field("derived", note="sets the pf, kW / kVA with kvar's sign, at the kW of that moment; a pf of 0 (kvar "
+                                  "at kW 0) leaves kvar as set (dispatched_kvar, S4b-8)"),
     "model": Field("structural", note="1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4, 5, 6 "
                                       "raise; default 1"),
     "Vminpu": Field("untranscribed", note="below it the engine models the machine as constant Z; a power-flow "
@@ -106,6 +110,34 @@ Source table: Generator (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#generator"""
 
 
+#: The engine's kW, pf and kvar of a bare ``New Generator`` (its readback): where a replay starts.
+ENGINE_START = (1000.0, 0.88, 60.0)
+
+
+def dispatched_kvar(assignments: Iterable[tuple[str, object]]) -> float:
+    """The kvar the engine dispatches a Generator at, from its ``(slot, value)`` assignments in deck order (S4b-8).
+
+    The engine keeps kvar as a power factor: assigning kvar sets pf = kW / sqrt(kW^2 + kvar^2), with kvar's sign, at
+    the kW of that moment; assigning kW or pf recomputes kvar = kW x tan(acos abs(pf)). A pf of 0 (kvar assigned at
+    kW 0) leaves kvar as assigned. So ``kW=620 kvar=30`` then ``kW=0`` is 0 kvar, and ``kvar=30 kW=100`` is 3.
+    """
+    kw, pf, kvar = ENGINE_START
+    for slot, value in assignments:
+        if slot == "kvar":
+            kvar = float(value)
+            apparent = math.hypot(kw, kvar)
+            if apparent:
+                pf = math.copysign(kw / apparent, kvar)
+        elif slot in ("kW", "pf"):
+            if slot == "kW":
+                kw = float(value)
+            else:
+                pf = float(value)
+            if pf != 0:
+                kvar = reactive_power(kw, pf)
+    return kvar
+
+
 def model_name(model) -> str:
     return str(getattr(model, "text", model))
 
@@ -137,8 +169,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         delta = is_delta(generator.conn)
         terminal = device_terminal(label, generator.bus1, int(generator.phases), delta, buses)
         kw = float(generator.kW)
-        kvar = generated_kvar(label, kw, pf=float(generator.pf), kvar=generator.kvar,
-                              pf_given=original.pf is not None)
+        kvar = dispatched_kvar(native.assignments(original))
         kva = float(generator.kVA) if generator.kVA is not None else KVA_PER_KW * kw
         rated_kv = line_kv(float(generator.kv), terminal)
         machine = mrid(PREFIX, generator.name, lowercase=True)
@@ -156,7 +187,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
                  "kVA defaulted to 1.2 x kW" if generator.kVA is None else None, defaulted,
                  untranscribed_values(FIELDS, generator)]
         machines.append(Row([
-            machine, str(generator.name), terminal.bus, terminal.phases, cell(kva), cell(rated_kv), cell(-kw + 0.0),
+            machine, str(generator.name), terminal.bus, phases_cell(terminal.phases), cell(kva), cell(rated_kv), cell(-kw + 0.0),
             cell(-kvar + 0.0), cell(max_q), cell(min_q), cell(not delta), cell(generator.enabled),
             terminal.system.base_voltage,
         ], comment="\n".join(note for note in notes if note) or None))

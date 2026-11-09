@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_values
 from cimhub_core.load_response import ZIP_CONSTANT_I, ZIP_CONSTANT_PQ, ZIP_CONSTANT_Z
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, rated_phase_kv, reactive_power
@@ -181,7 +181,7 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
             exponents[response] = (float(load.CVRwatts), float(load.CVRvars))
         kw, kvar = _power(original, load)
         rows.append(Row([
-            mrid(PREFIX, load.name, lowercase=True), str(load.name), terminal.bus, terminal.phases,
+            mrid(PREFIX, load.name, lowercase=True), str(load.name), terminal.bus, phases_cell(terminal.phases),
             terminal.connection, cell(terminal.grounded), cell(kw), cell(kvar), cell(int(load.NumCust)), response,
             cell(load.enabled), terminal.system.base_voltage,
         ], comment="\n".join(part for part in (defaulted, untranscribed_values(FIELDS, load)) if part) or None))

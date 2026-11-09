@@ -11,12 +11,10 @@ Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x
     # defaulted: Parallel=false, enabled=true
     rx_r1,           r1,           b1,        b3, 0.5, 2.0,                0.5, 2.0,                true, bv_4p16kv
 
-# SeriesCompensator has no per-phase class: its generated Terminals get their phases here
+# SeriesCompensator has no per-phase class: a reactor of fewer than three phases gives its generated Terminals their phases here
 Update Table Terminal: mRID, phases
-    rx_hvmv_sub_hsb_T1, ABC
-    rx_hvmv_sub_hsb_T2, ABC
-    rx_r1_T1,           B
-    rx_r1_T2,           B
+    rx_r1_T1, B
+    rx_r1_T2, B
 
 Table OperationalLimitSet: mRID, Equipment
     rx_hvmv_sub_hsb_limits, rx_hvmv_sub_hsb

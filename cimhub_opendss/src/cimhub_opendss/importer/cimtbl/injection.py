@@ -105,19 +105,6 @@ def reactive_power(kw: float, pf: float) -> float:
     return math.copysign(kw * math.tan(math.acos(abs(pf))), pf)
 
 
-def generated_kvar(label: str, kw: float, *, pf: float, kvar, pf_given: bool) -> float:
-    """The kvar a PVSystem or Generator is dispatched at: ``kvar`` when set, else from ``pf`` (its default filled).
-    The engine keeps whichever of the two comes last and the record keeps no order, so both set raises unless
-    they agree (S4b-2)."""
-    from_pf = reactive_power(kw, pf)
-    if kvar is None:
-        return from_pf
-    if pf_given and not math.isclose(from_pf, float(kvar), rel_tol=1e-9, abs_tol=1e-9):
-        raise ValueError(f"{label}: pf={pf} gives {from_pf:.6g} kvar but kvar={kvar}; the engine keeps whichever "
-                         "comes last, and the record keeps no order")
-    return float(kvar)
-
-
 def inverter_power(label: str, available_kw: float, kvar: float, kva: float) -> float:
     """The kW an inverter gives: ``available_kw`` cut to fit ``kva`` with ``kvar`` kept (the engine's default
     var priority)."""

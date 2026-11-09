@@ -15,7 +15,7 @@ from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta
 from cimhub_opendss.schema import opendss_schema as schema
@@ -98,7 +98,7 @@ def map_capacitor(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         kvar, kv = float(capacitor.kvar[0]), float(capacitor.kv)
         closed = sum(int(state) for state in capacitor.states) if capacitor.states else 1
         rows.append(Row([
-            mrid(PREFIX, capacitor.name, lowercase=True), str(capacitor.name), terminal.bus, terminal.phases,
+            mrid(PREFIX, capacitor.name, lowercase=True), str(capacitor.name), terminal.bus, phases_cell(terminal.phases),
             terminal.connection, cell(terminal.grounded), cell(kvar), cell(kv), cell(b_per_section(kvar, kv)),
             "1", cell(closed), cell(closed), cell(capacitor.enabled), terminal.system.base_voltage,
         ], comment="\n".join(part for part in (defaulted, untranscribed_values(FIELDS, capacitor)) if part)

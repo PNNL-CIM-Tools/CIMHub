@@ -1,7 +1,8 @@
 """OpenDSS ``PVSystem`` -> ``pvsystem.cimtbl``: a ``PowerElectronicsConnection`` and its ``PhotoVoltaicUnit``.
 
 p is the engine's snapshot dispatch at rated voltage: Pmpp x irradiance x %Pmpp, off below %Cutout of kVA, and
-cut to fit kVA with q kept (``pv_power``). q comes from kvar or pf (``injection.generated_kvar``). The load sign:
+cut to fit kVA with q kept (``pv_power``). q is kvar or comes from pf, whichever the deck assigned last (the
+engine's rule; S4b-8). The load sign:
 generation is negative p, q = -kvar (S4b-1).
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#pvsystem``.
@@ -17,7 +18,7 @@ from cimtopology.core import BusSystem
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
-from cimhub_opendss.importer.cimtbl.injection import device_terminal, generated_kvar, inverter_power, is_delta
+from cimhub_opendss.importer.cimtbl.injection import device_terminal, inverter_power, is_delta, reactive_power
 from cimhub_opendss.importer.cimtbl.inverter import CONNECTION, connection_columns, connection_row, unit_id
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -40,10 +41,10 @@ FIELDS = {
     "Pmpp": Field("copied", ((_UNIT, "maxP", "kW"),), "also p (pv_power); default 500"),
     "pct_Pmpp": Field("derived", note="p (pv_power); default 100"),
     "Temperature": Field("untranscribed", note="acts only through a P-TCurve, which raises"),
-    "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar "
-                                "they must agree (S4b-2); default 1"),
+    "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it "
+                                "(the last of the two wins, S4b-8); default 1"),
     "conn": Field("mapped", ((CONNECTION, "phaseConnection", None),), "wye -> Y, delta -> D; default wye"),
-    "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign)"),
+    "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign), unless pf was assigned after it"),
     "kVA": Field("copied", ((CONNECTION, "ratedS", "kVA"),), "also caps p (var priority); default 500"),
     "pct_Cutin": Field("untranscribed", note="acts only after the inverter turns off; the snapshot state uses "
                                              "%Cutout"),
@@ -110,13 +111,13 @@ class PvPower(NamedTuple):
 
 
 def pv_power(label: str, *, pmpp: float, irradiance: float, pct_pmpp: float, kva: float, pct_cutout: float,
-             pf: float, kvar, pf_given: bool) -> PvPower:
+             pf: float, kvar: float | None) -> PvPower:
     """The engine's snapshot output of a PV (generator sign): off below %Cutout of kVA, else the available
-    power with its kvar, cut to fit kVA (var priority)."""
+    power with its kvar (``kvar``, or from ``pf`` when it is ``None``), cut to fit kVA (var priority)."""
     available = pmpp * irradiance * pct_pmpp / 100
     if available < pct_cutout / 100 * kva:
         return PvPower(0.0, 0.0, True)
-    q = generated_kvar(label, available, pf=pf, kvar=kvar, pf_given=pf_given)
+    q = float(kvar) if kvar is not None else reactive_power(available, pf)
     return PvPower(inverter_power(label, available, q, kva), q, False)
 
 
@@ -149,8 +150,8 @@ def map_pvsystem(native, buses: Mapping[str, BusSystem], container: str) -> Docu
         terminal = device_terminal(label, pv.bus1, int(pv.phases), is_delta(pv.conn), buses)
         kva = float(pv.kVA)
         power = pv_power(label, pmpp=float(pv.Pmpp), irradiance=float(pv.irradiance), pct_pmpp=float(pv.pct_Pmpp),
-                         kva=kva, pct_cutout=float(pv.pct_Cutout), pf=float(pv.pf), kvar=pv.kvar,
-                         pf_given=original.pf is not None)
+                         kva=kva, pct_cutout=float(pv.pct_Cutout), pf=float(pv.pf),
+                         kvar=pv.kvar if native.last_of(original, "pf", "kvar") == "kvar" else None)
         notes = ["off: below %Cutout of kVA" if power.off else None, defaulted, untranscribed_values(FIELDS, pv)]
         connections.append(connection_row(PREFIX, pv, terminal, kva=kva, p=-power.kw, q=-power.kvar,
                                           comment="\n".join(note for note in notes if note) or None))

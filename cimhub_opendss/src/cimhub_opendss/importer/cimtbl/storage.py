@@ -1,7 +1,8 @@
 """OpenDSS ``Storage`` -> ``storage.cimtbl``: a ``PowerElectronicsConnection`` and its ``BatteryUnit``.
 
-The state and p are the engine's snapshot dispatch (``battery_dispatch``, S4b-3): ``kW`` decides when set (every
-deck gives it after ``state=``, and the engine keeps the last), else ``State``; capped at kVA. An idling battery
+The state and p are the engine's snapshot dispatch, replayed from the deck's assignments in order
+(``battery_dispatch``, S4b-8): a kW sets the discharge (> 0) or charge (< 0) setpoint and the state, 0 idles, and
+``State`` picks which setpoint runs; capped at kVA. An idling battery
 draws its idling losses. The load sign: discharge is negative p, charging positive (S4b-1). q is 0.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#storage``.
@@ -9,7 +10,7 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#storage``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import NamedTuple
 
 from cimtables.document import Column, Document, Row, Table
@@ -36,8 +37,8 @@ FIELDS = {
     "bus1": Field("structural", note="node and phases, by the S4 shared phase rule"),
     "kv": Field("derived", note="ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47"),
     "conn": Field("mapped", ((CONNECTION, "phaseConnection", None),), "wye -> Y, delta -> D; default wye"),
-    "kW": Field("derived", note="decides the state when set (S4b-3): > 0 discharging, < 0 charging, 0 waiting; "
-                                "p = -kW, capped at kVA (battery_dispatch)"),
+    "kW": Field("derived", note="replayed in deck order (battery_dispatch, S4b-8): > 0 sets the discharge setpoint "
+                                "and discharging, < 0 the charge setpoint and charging, 0 waiting; capped at kVA"),
     "kvar": Field("structural", note="raises when nonzero: " + _NOT_MAPPED + " (q = 0)"),
     "pf": Field("structural", note="1 only; another raises (the engine caps q by a kvarMax left from the default "
                                    "kVA); default 1"),
@@ -55,17 +56,17 @@ FIELDS = {
     "kWrated": Field("copied", ((_UNIT, "maxP", "kW"),), "minP = -kWrated; also p by State; default 25"),
     "pct_kWrated": Field("untranscribed", note="the kW limit of the dispatch modes, which raise"),
     "kWhrated": Field("copied", ((_UNIT, "ratedE", "kWh"),), "default 50"),
-    "kWhstored": Field("copied", ((_UNIT, "storedE", "kWh"),), "with %stored raises (the engine keeps the last)"),
-    "pct_stored": Field("derived", note="storedE (kWh) = %stored x kWhrated / 100 when kWhstored is unset; "
-                                        "default 100"),
+    "kWhstored": Field("copied", ((_UNIT, "storedE", "kWh"),), "unless %stored was assigned after it (the last wins)"),
+    "pct_stored": Field("derived", note="storedE (kWh) = %stored x kWhrated / 100 unless kWhstored was assigned after "
+                                        "it; default 100"),
     "pct_reserve": Field("derived", note="minimumE (kWh) = %reserve x kWhrated / 100; default 20"),
     "State": Field("mapped", ((_UNIT, "batteryState", None),),
                    "charging, discharging, idling -> waiting (by the first letter, as the engine reads it: the decks' "
-                   "charge); kW decides when set "
-                   "(S4b-3); default idling"),
-    "pct_Discharge": Field("derived", note="p = -kWrated x %Discharge / 100 when discharging by State; default "
-                                           "100"),
-    "pct_Charge": Field("derived", note="p = kWrated x %Charge / 100 when charging by State; default 100"),
+                   "charge); picks the setpoint that runs, replayed with kW (S4b-8); default idling"),
+    "pct_Discharge": Field("derived", note="the discharge setpoint kWrated x %Discharge / 100 until a kW > 0 sets it; "
+                                           "default 100"),
+    "pct_Charge": Field("derived", note="the charge setpoint kWrated x %Charge / 100 until a kW < 0 sets it; default "
+                                        "100"),
     "pct_EffCharge": Field("copied", ((_UNIT, "chargingEfficiency", "percent"),), "default 90"),
     "pct_EffDischarge": Field("copied", ((_UNIT, "dischargingEfficiency", "percent"),), "default 90"),
     "pct_IdlingkW": Field("derived", note="idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1"),
@@ -111,6 +112,8 @@ _UNMAPPED = ("EffCurve", "DynaDLL", "DynaData", "UserModel", "UserData")
 _YES_UNMAPPED = ("Balanced", "LimitCurrent", "WattPriority", "PFPriority")
 _NONZERO_UNMAPPED = ("pct_PminNoVars", "pct_PminkvarMax", "kvar")
 _STATES = {"charging": "charging", "discharging": "discharging", "idling": "waiting"}
+#: The slots that give the stored energy and its limits.
+_ENERGY = ("kWhstored", "pct_stored", "kWhrated", "pct_reserve")
 
 _PROVENANCE = """OpenDSS Storage -> PowerElectronicsConnection + BatteryUnit on its bus: the snapshot dispatch (kW when set,
 else State), in the load sign (discharge is negative p).
@@ -136,16 +139,40 @@ def engine_state(text, *, name: str) -> str:
     raise ValueError(f"Storage {name}: State={text} names none of {', '.join(_STATES)}")
 
 
-def battery_dispatch(name: str, *, kw, state: str, kw_rated: float, kva: float, pct_charge: float,
-                     pct_discharge: float, idling_kw: float, stored: float, minimum: float, rated: float) -> Dispatch:
-    """The engine's snapshot state and p (load sign) of a battery (S4b-3). ``kw`` is the deck's, or ``None``."""
-    note = None
-    if kw is not None:
-        kw = float(kw)
-        by_kw = "discharging" if kw > 0 else "charging" if kw < 0 else "idling"
-        if by_kw != state:
-            note = f"kW={kw:g} after State={state}: {by_kw}"
-        state = by_kw
+def battery_dispatch(name: str, assignments: Iterable[tuple[str, object]], *, kw_rated: float, kva: float,
+                     pct_charge: float, pct_discharge: float, idling_kw: float, stored: float, minimum: float,
+                     rated: float) -> Dispatch:
+    """The engine's snapshot state and p (load sign) of a battery, from its ``(slot, value)`` assignments in deck
+    order (S4b-8). The engine keeps a discharge and a charge setpoint: a kW > 0 sets the first and discharges, a
+    kW < 0 the second and charges, 0 idles; ``State`` picks which runs; a ``%Discharge``/``%Charge`` puts its
+    setpoint back to the rating's share. So ``state=charge kW=150`` discharges at 150 kW.
+
+    The engine checks the stored energy against full and the reserve when the state is assigned, with the energy of
+    that moment, so an energy assigned after the last State or kW raises (no deck in the sweep does it)."""
+    state, discharge, charge, note, energy_after = "idling", None, None, None, None
+    for slot, value in assignments:
+        if slot in _ENERGY:
+            energy_after = slot
+        if slot in ("kW", "State"):
+            energy_after = None
+        if slot == "kW":
+            kw = float(value)
+            by_kw = "discharging" if kw > 0 else "charging" if kw < 0 else "idling"
+            if kw > 0:
+                discharge = kw
+            elif kw < 0:
+                charge = -kw
+            note = f"kW={kw:g} after State={state}: {by_kw}" if by_kw != state else note
+            state = by_kw
+        elif slot == "State":
+            state, note = engine_state(value, name=name), None
+        elif slot == "pct_Discharge":
+            discharge = None
+        elif slot == "pct_Charge":
+            charge = None
+    if energy_after and state != "idling":
+        raise ValueError(f"Storage {name}: {energy_after} is assigned after its last State or kW; the engine checks "
+                         "the stored energy when the state is assigned, which is not mapped")
     if state == "charging" and stored >= rated:
         raise ValueError(f"Storage {name}: charging with {stored:g} of {rated:g} kWh stored; the engine idles a "
                          "full battery, which is not mapped")
@@ -155,8 +182,9 @@ def battery_dispatch(name: str, *, kw, state: str, kw_rated: float, kva: float, 
     if state == "idling":
         return Dispatch("waiting", idling_kw, note)
     if state == "charging":
-        return Dispatch("charging", min(-kw if kw is not None else kw_rated * pct_charge / 100, kva), note)
-    return Dispatch("discharging", -min(kw if kw is not None else kw_rated * pct_discharge / 100, kva), note)
+        return Dispatch("charging", min(charge if charge is not None else kw_rated * pct_charge / 100, kva), note)
+    return Dispatch("discharging", -min(discharge if discharge is not None else kw_rated * pct_discharge / 100, kva),
+                    note)
 
 
 def _check(storage) -> None:
@@ -175,9 +203,6 @@ def _check(storage) -> None:
                          "them)")
     if storage.model is not None and int(storage.model) != 1:
         raise ValueError(f"Storage {storage.name}: model={storage.model} is not mapped (model 1 is)")
-    if storage.kWhstored is not None and storage.pct_stored is not None:
-        raise ValueError(f"Storage {storage.name}: kWhstored with %stored; the engine keeps whichever comes last, "
-                         "and the record keeps no order")
 
 
 def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Document:
@@ -189,19 +214,19 @@ def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Docum
     connections, units = [], []
     for original in batteries:
         _check(original)
-        unused = {"pct_stored"} if original.kWhstored is not None else set()
+        by_energy = native.last_of(original, "kWhstored", "pct_stored") == "kWhstored"
+        unused = {"pct_stored"} if by_energy else set()
         battery, defaulted = fill_defaults(FIELDS, original, {k: v for k, v in defaults.items() if k not in unused})
         terminal = device_terminal(f"Storage {battery.name}", battery.bus1, int(battery.phases),
                                    is_delta(battery.conn), buses)
         kw_rated, rated = float(battery.kWrated), float(battery.kWhrated)
         kva = float(battery.kVA) if battery.kVA is not None else kw_rated
-        stored = float(battery.kWhstored) if battery.kWhstored is not None else float(battery.pct_stored) * rated / 100
+        stored = float(battery.kWhstored) if by_energy else float(battery.pct_stored) * rated / 100
         minimum = float(battery.pct_reserve) * rated / 100
         idling_kw = float(battery.pct_IdlingkW) * kw_rated / 100
-        dispatch = battery_dispatch(battery.name, kw=original.kW, state=engine_state(battery.State, name=battery.name),
-                                    kw_rated=kw_rated, kva=kva, pct_charge=float(battery.pct_Charge),
-                                    pct_discharge=float(battery.pct_Discharge), idling_kw=idling_kw, stored=stored,
-                                    minimum=minimum, rated=rated)
+        dispatch = battery_dispatch(battery.name, native.assignments(original), kw_rated=kw_rated, kva=kva,
+                                    pct_charge=float(battery.pct_Charge), pct_discharge=float(battery.pct_Discharge),
+                                    idling_kw=idling_kw, stored=stored, minimum=minimum, rated=rated)
         notes = [dispatch.note, "kVA defaulted to kWrated" if battery.kVA is None else None, defaulted,
                  untranscribed_values(FIELDS, battery)]
         row = connection_row(PREFIX, battery, terminal, kva=kva, p=dispatch.kw, q=0.0,

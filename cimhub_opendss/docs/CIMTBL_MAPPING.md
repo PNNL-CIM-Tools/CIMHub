@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b approved and implemented 2026-11-08** (PVSystem, Storage, Generator, Reactor), with one open item (S4b-8). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b done 2026-11-08** (PVSystem, Storage, Generator, Reactor). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -1397,7 +1397,7 @@ On the atoms and the engine decks, as in S3:
 
 ### S4b
 
-The S4b spec is its own section below, [S4b](#s4b-approved-2026-11-08-implemented-s4b-8-open).
+The S4b spec is its own section below, [S4b](#s4b-approved-and-done-2026-11-08).
 
 ### Decisions for S4 (approved 2026-11-08)
 
@@ -1419,15 +1419,15 @@ The S4b spec is its own section below, [S4b](#s4b-approved-2026-11-08-implemente
 - **S4-8:** `cc_<name>` for a CapControl.
 - **S4-9:** disabled loads and capacitors are written with `normallyInService=false`, as lines are.
 
-## S4b (approved 2026-11-08; implemented, S4b-8 open)
+## S4b (approved and done 2026-11-08)
 
 **Result (2026-11-08).**
 - 22 of 31 sweep decks bind, as expected: S3's six stops, the two `ieee9500` copies (`Mode=7`) and
   IEEE123_test_harness (`Battery5`).
 - Engine checks pass on the three atoms and the engine decks for every PV (kW, kvar, kVA, Pmpp, kV), every battery
   (kW, state, kVA, kWrated, kWhrated, kWhstored, kV), every series reactor (R, X, buses, ratings) and every
-  machine's ratings and PV-bus settings, with one exception, S4b-8: PNNL IEEE9500's `Diesel620` and `LNGengine100`
-  give kvar and then have their kW edited later (`protection.dss`).
+  machine's kW, kvar, ratings and PV-bus settings, including PNNL IEEE9500's `Diesel620` and `LNGengine100`,
+  whose kW is edited after their kvar (S4b-8).
 - The IEEE13_CDPSM artifact directory is the golden (D6), all 13 files.
 
 **Changes from the proposal, found while building it:**
@@ -1442,26 +1442,42 @@ The S4b spec is its own section below, [S4b](#s4b-approved-2026-11-08-implemente
 - **SeriesCompensator has no per-phase class,** so cimtables refuses a `phases` column on it. The mapper writes
   `Update Table Terminal: mRID, phases` for the generated `rx_<name>_T1`/`_T2`. A request for the shorthand (set
   `Terminal.phases` only, as a TransformerEnd's) is U9 in `UPSTREAM_REQUESTS.md`.
+- **A balanced three-phase device leaves `phases` blank** (S4b-9, the user's review): cimtables writes a
+  `<Class>Phase` child per token, but in CIM, and in the engine's export (`if NPhases = 3 then exit`), per-phase
+  children mean a per-phase device. `cimhub_core.cimtbl.phases_cell` blanks `ABC` for loads, capacitors, sources,
+  switches, PVs, batteries, machines and series reactors. This also changes the S1, S3 and S4a artifacts. Lines keep
+  `phases` (their ACLineSegmentPhases are the conductor order), and the engine writes them for 3-phase lines too. The
+  Terminals of a balanced device lose `phases=ABC` until CIM-Tables can tell balanced from three single phases (U10).
 - Line's ratings code is now `line.rating_rows`/`rating_tables`, shared with the reactor. `line_phases` takes a
   `label` for its errors.
 - Wrong schema ranges fixed in passing: the curve references (`EffCurve`, `P-TCurve`) → string, and the
   `WattPriority`/`PFPriority`/`LimitCurrent` switches → boolean, so `yes` reads as true.
 
-**Open: S4b-8, a Generator's kvar is a power factor in the engine.** The engine turns `kvar` into a pf using the kW it
-has when kvar is set, and every later kW edit keeps that pf:
-- `kW=100 kvar=30`, then `Generator.x.kW=50`, gives 15 kvar;
-- `kvar=30 kW=100` on one line gives 3 kvar (the pf came from the default kW of 1000);
-- `kW=100 kvar=30`, then `kvar=10`, gives 10.
+**S4b-8: the deck's assignment order is replayed (approved 2026-11-08).** For some properties the engine's value
+depends on the order of assignment, and a record keeps only each slot's last value. The engine rules, pinned with
+probes:
+- **Generator:** the engine keeps kvar as a power factor. Assigning kvar sets pf = kW / √(kW² + kvar²), with kvar's
+  sign, at the kW of that moment; assigning kW or pf recomputes kvar = kW·tan(acos |pf|). A pf of 0 (kvar at kW 0)
+  leaves kvar as assigned. So `kW=620 kvar=30` then `kW=0` is 0 kvar (IEEE9500's `Diesel620`), `kvar=30 kW=100` is 3
+  (the pf came from the default kW of 1000), and `kW=100 kvar=30` then `kW=50` is 15. A bare New is kW 1000, pf 0.88,
+  kvar 60.
+- **PVSystem:** pf and kvar: the last assigned wins; kvar stays absolute.
+- **Storage:** the engine keeps a discharge and a charge setpoint. A kW > 0 sets the first and discharges, a kW < 0
+  the second and charges, 0 idles; `State` picks which runs (`kW=40`, `State=idling`, `State=discharging` discharges
+  at 40); `%Discharge`/`%Charge` put the setpoint back to the rating's share. `kWhstored` and `%stored`: the last
+  wins.
+- **The engine checks a battery's stored energy when its state is assigned,** with the energy of that moment: a
+  `%stored` assigned after `State=discharging` does not wake a battery that idled at its reserve. No deck in the sweep
+  assigns the energy after the state, so that order raises.
 
-The reader applies edits in deck order but keeps only the last value of each slot. So the mapper sees IEEE9500's
-`Diesel620` as kW 0, kvar 30 (−30 kvar in CIM), where the engine has 0. A PVSystem's kvar stays absolute; only the
-pf/kvar order matters there. Proposed fix, for approval:
-- the reader keeps each record's assignment order (the slots in the order the deck last set them);
-- the mappers replay the order-dependent pairs as the engine does: a Generator's kW, kvar and pf; a PVSystem's and a
-  Storage's pf/kvar; State/kW; kWhstored/%stored; and S4a's kW/kVA/xfkVA on a Load.
+How: `DssReader.read_all()` returns a `DssModel`, a `GraphModel` that also keeps each record's assignment history:
+every `(slot, value)` in deck order, from `New`, edits, `BatchEdit`, and the slots `like=` copies (first).
+`DssModel.assignments(record)` and `last_of(record, *slots)` read it, and the mappers replay it
+(`generator.dispatched_kvar`, `storage.battery_dispatch`, PVSystem's `last_of(pf, kvar)`). Only the history replaces
+order guesses; the records stay verbatim.
 
-That would replace S4b-2 and S4b-3 (and S4-3) with the engine's rule, rather than raising or assuming an order. Until it
-is decided, the generator check fails on PNNL IEEE9500 for those two machines.
+Not replayed: a Load's kW/kVA/xfkVA (S4-3 stays). kVA last takes the pf that kvar implied (`kW=10 kvar=3` then
+`kVA=20` is 19.2 kW), which needs its own replay, and only K1 reaches it, after DSS-10.
 
 S4b maps the rest of the injections and the series reactor: PVSystem and Storage (shape `der`), Generator (new
 shape `synchronous_machine`) and Reactor (new shape `series_compensator`). Its exit is the full IEEE13_CDPSM artifact
@@ -1533,7 +1549,7 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
   tier-3 comparison lists that difference. ratedU is not checked against the bus: a 240 V inverter on 120 V legs
   stays 240 V.
 - **Sign:** p and q are the load sign: generation and discharge are negative, q = −kvar (S4b-1).
-- **pf with kvar** (S4b-2): both set raises unless they give the same q. IEEE9500's `kW=0 pf=0.98 kvar=0` passes.
+- **pf with kvar:** the deck's assignment order decides, as in the engine (S4b-8, which replaced S4b-2's raise).
 - **Inverter cap** (PVSystem and Storage): `inverter_power(available, q, kva)`, the engine's var-priority cut.
 - `enabled=false` gives `normallyInService=false` (S4-9).
 
@@ -1560,8 +1576,7 @@ prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
 - `model` other than 1;
 - `EffCurve` or `P-TCurve` (both change the snapshot power);
 - `WattPriority` or `PFPriority` set to yes; a nonzero `%PminNoVars` or `%PminkvarMax`;
-- `UserModel`/`UserData`; `ControlMode=GFM`; `Balanced` or `LimitCurrent` set to yes;
-- pf with a disagreeing kvar.
+- `UserModel`/`UserData`; `ControlMode=GFM`; `Balanced` or `LimitCurrent` set to yes.
 
 **Untranscribed:**
 - the Yearly/Daily/Duty and T-curves, which are time series that a snapshot does not use;
@@ -1590,16 +1605,14 @@ Mapper `importer/cimtbl/storage.py` (`map_storage`). Artifact `storage.cimtbl`; 
   - `maxP` = kWrated, `minP` = −kWrated;
   - `chargingEfficiency` = %EffCharge and `dischargingEfficiency` = %EffDischarge (percent);
   - `idlingP` = %IdlingkW × kWrated / 100.
-- **State and p** (derived, `battery_dispatch`; S4b-3):
-  - `kW` decides when it is set, as in every deck (state first, then kW): > 0 `discharging` with p = −min(kW, kVA);
-    < 0 `charging` with p = min(|kW|, kVA); 0 `waiting` with p = idlingP.
-  - Otherwise `State` decides: charging p = min(kWrated × %Charge / 100, kVA); discharging p = −min(kWrated ×
-    %Discharge / 100, kVA); idling `waiting`, p = idlingP.
-  - The row comment names the source, for example "kW=150 after State=charge: discharging".
+- **State and p** (derived, `battery_dispatch`; S4b-8): the deck's kW, State, %Discharge and %Charge assignments
+  replayed in order (above). Discharging p = −min(setpoint, kVA), charging p = min(setpoint, kVA), idling `waiting`
+  with p = idlingP. A setpoint is the last kW of its sign, else kWrated × %Discharge (or %Charge) / 100.
+  - The row comment names an override, for example "kW=150 after State=charging: discharging".
 
 **What raises:**
 - a battery that the engine would idle instead: charging when full, or discharging at or below `%reserve`;
-- `kWhstored` with `%stored`;
+- `kWhstored`, `%stored`, `kWhrated` or `%reserve` assigned after the last State or kW (above);
 - pf ≠ 1 or kvar ≠ 0 (because of the engine's kvarMax quirk above; no deck has one);
 - `DispMode` other than default;
 - `model` other than 1;
@@ -1641,7 +1654,6 @@ Model 7 maps as model 1, with a row note: below Vminpu it limits current, which 
 
 **What raises:**
 - models 2, 4, 5 and 6; `UserModel`/`ShaftModel`;
-- pf with a disagreeing kvar;
 - `Maxkvar`/`Minkvar` on a model other than 3.
 
 **Untranscribed:**
@@ -1716,9 +1728,9 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
 | `pct_Pmpp` | `Optional[float]` |  | derived | p (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
-| `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar they must agree (S4b-2); default 1 |
+| `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
-| `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign) |
+| `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
 | `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
 | `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; default 20 |
@@ -1771,7 +1783,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `bus1` | `Optional[str]` | `634`, `House.1.2`, `m2001-ESS1` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.48`, `0.208`, `2.4` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
-| `kW` | `Optional[float]` | `150.0`, `-0.0`, `0.0` | derived | decides the state when set (S4b-3): > 0 discharging, < 0 charging, 0 waiting; p = -kW, capped at kVA (battery_dispatch) |
+| `kW` | `Optional[float]` | `150.0`, `-0.0`, `0.0` | derived | replayed in deck order (battery_dispatch, S4b-8): > 0 sets the discharge setpoint and discharging, < 0 the charge setpoint and charging, 0 waiting; capped at kVA |
 | `kvar` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one (q = 0) |
 | `pf` | `Optional[float]` | `1.0` | structural | 1 only; another raises (the engine caps q by a kvarMax left from the default kVA); default 1 |
 | `kVA` | `Optional[float]` | `250.0`, `125.0`, `200.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p; default kWrated |
@@ -1788,12 +1800,12 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `kWrated` | `Optional[float]` | `100.0`, `5.0`, `250.0` | copied | `BatteryUnit.maxP` (kW); minP = -kWrated; also p by State; default 25 |
 | `pct_kWrated` | `Optional[float]` |  | untranscribed | the kW limit of the dispatch modes, which raise |
 | `kWhrated` | `Optional[float]` | `200.0`, `13.5`, `500.0` | copied | `BatteryUnit.ratedE` (kWh); default 50 |
-| `kWhstored` | `Optional[float]` | `100.0`, `5.0`, `135.0` | copied | `BatteryUnit.storedE` (kWh); with %stored raises (the engine keeps the last) |
-| `pct_stored` | `Optional[float]` | `60.0`, `40.0`, `35.0` | derived | storedE (kWh) = %stored x kWhrated / 100 when kWhstored is unset; default 100 |
+| `kWhstored` | `Optional[float]` | `100.0`, `5.0`, `135.0` | copied | `BatteryUnit.storedE` (kWh); unless %stored was assigned after it (the last wins) |
+| `pct_stored` | `Optional[float]` | `60.0`, `40.0`, `35.0` | derived | storedE (kWh) = %stored x kWhrated / 100 unless kWhstored was assigned after it; default 100 |
 | `pct_reserve` | `Optional[float]` | `30.0` | derived | minimumE (kWh) = %reserve x kWhrated / 100; default 20 |
-| `State` | `Optional[str]` | `idling`, `charging`, `discharging` | mapped | `BatteryUnit.batteryState`; charging, discharging, idling -> waiting (by the first letter, as the engine reads it: the decks' charge); kW decides when set (S4b-3); default idling |
-| `pct_Discharge` | `Optional[float]` |  | derived | p = -kWrated x %Discharge / 100 when discharging by State; default 100 |
-| `pct_Charge` | `Optional[float]` |  | derived | p = kWrated x %Charge / 100 when charging by State; default 100 |
+| `State` | `Optional[str]` | `idling`, `charging`, `discharging` | mapped | `BatteryUnit.batteryState`; charging, discharging, idling -> waiting (by the first letter, as the engine reads it: the decks' charge); picks the setpoint that runs, replayed with kW (S4b-8); default idling |
+| `pct_Discharge` | `Optional[float]` |  | derived | the discharge setpoint kWrated x %Discharge / 100 until a kW > 0 sets it; default 100 |
+| `pct_Charge` | `Optional[float]` |  | derived | the charge setpoint kWrated x %Charge / 100 until a kW < 0 sets it; default 100 |
 | `pct_EffCharge` | `Optional[float]` |  | copied | `BatteryUnit.chargingEfficiency` (percent); default 90 |
 | `pct_EffDischarge` | `Optional[float]` |  | copied | `BatteryUnit.dischargingEfficiency` (percent); default 90 |
 | `pct_IdlingkW` | `Optional[float]` |  | derived | idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1 |
@@ -1840,8 +1852,8 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `bus1` | `Optional[str]` | `m1089-DIES1`, `m1209-DIES1`, `M1142-LNG1` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47 |
 | `kW` | `Optional[float]` | `0.0`, `50.0`, `100.0` | derived | p (kW) = -kW (the load sign); default 1000 |
-| `pf` | `Optional[float]` | `0.95`, `0.98` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar they must agree (S4b-2); default 0.88 |
-| `kvar` | `Optional[float]` | `15.0`, `30.0`, `5.0` | derived | q (kVAr) = -kvar (the load sign) |
+| `pf` | `Optional[float]` | `0.95`, `0.98` | derived | q (kVAr) = -kvar, kvar replayed from the kW, pf and kvar assignments in deck order (dispatched_kvar, S4b-8): each kW or pf recomputes kvar = kW x tan(acos abs(pf)); default 0.88 |
+| `kvar` | `Optional[float]` | `15.0`, `30.0`, `5.0` | derived | sets the pf, kW / kVA with kvar's sign, at the kW of that moment; a pf of 0 (kvar at kW 0) leaves kvar as set (dispatched_kvar, S4b-8) |
 | `model` | `Union[str, ForwardRef('GeneratorModel'), NoneType]` | `CurrentLimited`, `ConstantPQ`, `ConstantPV` | structural | 1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4, 5, 6 raise; default 1 |
 | `Vminpu` | `Optional[float]` |  | untranscribed | below it the engine models the machine as constant Z; a power-flow setting |
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the machine as constant Z; a power-flow setting |
@@ -1924,11 +1936,9 @@ added that cim18v17's `RotatingMachinePhase` names a 1-phase machine's phase.
 
 - **S4b-1:** p and q follow the load sign for everything, PowerElectronicsConnection and SynchronousMachine (−kW for
   generation), as cim18v17 documents. The engine's export writes +kW on machines; the exporter negates.
-- **S4b-2:** pf with kvar (PVSystem, Generator) raises unless both give the same q. The record keeps no order, and
-  the engine keeps the last.
-- **S4b-3:** a Storage's `kW` decides its state when set, because every deck gives it after `state=`. So IEEE9500's
-  `state=charge kW=150` maps as discharging at 150 kW, which is what the engine does; the row comment says so. The
-  alternative is raising when they disagree, which stops every IEEE9500 copy.
+- **S4b-2 (replaced by S4b-8):** pf with kvar raised unless both gave the same q.
+- **S4b-3 (replaced by S4b-8):** a Storage's `kW` decided its state when set. The replay gives the same result on
+  every deck (IEEE9500's `state=charge kW=150` still discharges at 150 kW).
 - **S4b-4:** `ratedU` is line to line, as the engine exports it: the deck's kV, × √3 for 1-phase wye. It is not
   checked against the bus.
 - **S4b-5:** a delta generator is `earthing=false`, because SynchronousMachine has no `phaseConnection`. In DSS a wye
@@ -1938,5 +1948,7 @@ added that cim18v17's `RotatingMachinePhase` names a 1-phase machine's phase.
   deck is wrong (it looks like a 3-phase battery written as `phases=1`), and a guess would put it across A–B.
 - **S4b-7:** shape names `synchronous_machine` and `series_compensator`, shared with RAW (its C2), in place of the
   DSS plan's `machine`.
-- **S4b-8 (open):** keep each record's assignment order in the reader, and replay the order-dependent pairs as the
-  engine does (above).
+- **S4b-9:** a balanced three-phase device (phases `ABC`) has a blank `phases` cell, so no per-phase children
+  and no `Terminal.phases` (above); U10 asks CIM-Tables for the balanced form.
+- **S4b-8 (approved 2026-11-08):** the reader keeps each record's assignment history (`DssModel`), and the Generator,
+  PVSystem and Storage mappers replay it as the engine does (above). The Load keeps S4-3.

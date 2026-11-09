@@ -27,7 +27,7 @@ Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW
     # defaulted: NumCust=1, enabled=true
     ld_670c,  670c,  670,   C,    Y, true,  117.0,  68.0,               1, zip_constant_pq, true, bv_4p16kv
     # defaulted: NumCust=1, enabled=true
-    ld_671,   671,   671,   ABC,  D, false, 1155.0, 660.0,              1, zip_constant_pq, true, bv_4p16kv
+    ld_671,   671,   671,   ,     D, false, 1155.0, 660.0,              1, zip_constant_pq, true, bv_4p16kv
     # defaulted: NumCust=1, enabled=true
     ld_675a,  675a,  675,   A,    Y, true,  485.0,  190.0,              1, zip_constant_pq, true, bv_4p16kv
     # defaulted: NumCust=1, enabled=true

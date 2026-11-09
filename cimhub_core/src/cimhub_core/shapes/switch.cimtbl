@@ -1,16 +1,17 @@
 # Shape: switching devices. Every Switch subclass shares the sw_ prefix, so changing the class keeps the mRID.
+# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default.
 
 Profile = cim18v17
 
 Import common.cimtbl
 
 Table Breaker: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
-    sw_brkr, brkr, sourcebus, n0, ABC, false, false
+    sw_brkr, brkr, sourcebus, n0,    , false, false
 Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
     sw_f1, f1, n3, n6, C, 65, false, false
 Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
-    sw_s1, s1, n4, n7, ABC, true, true
+    sw_s1, s1, n4, n7,    , true, true
 Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
-    sw_r1, r1, n5, n8, ABC, false, false
+    sw_r1, r1, n5, n8,    , false, false
 Table Disconnector: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
     sw_d1, d1, n6, n9, C, false, false

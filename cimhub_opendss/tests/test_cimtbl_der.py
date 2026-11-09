@@ -50,20 +50,21 @@ def test_matches_golden(der):
 
 
 def test_derived_dispatch():
-    power = pvsystem.pv_power("pv", pmpp=10, irradiance=1, pct_pmpp=100, kva=10, pct_cutout=20, pf=0.9, kvar=None,
-                              pf_given=True)
+    power = pvsystem.pv_power("pv", pmpp=10, irradiance=1, pct_pmpp=100, kva=10, pct_cutout=20, pf=0.9, kvar=None)
     assert power == pytest.approx((8.748898, 4.843221, False), rel=1e-6)
-    assert pvsystem.pv_power("pv", pmpp=10, irradiance=0.1, pct_pmpp=100, kva=12, pct_cutout=20, pf=1, kvar=None,
-                             pf_given=False).off
+    assert pvsystem.pv_power("pv", pmpp=10, irradiance=0.1, pct_pmpp=100, kva=12, pct_cutout=20, pf=1, kvar=None).off
     assert injection.line_kv(2.4, injection.DeviceTerminal("b", "C", 1, False, None)) == pytest.approx(4.156922)
     assert storage.engine_state("charge", name="x") == "charging"
     common = dict(kw_rated=250, kva=250, pct_charge=100, pct_discharge=100, idling_kw=2.5, stored=500, minimum=150,
                   rated=500)
-    assert storage.battery_dispatch("x", kw=150, state="charging", **common) == (
+    assert storage.battery_dispatch("x", [("State", "charge"), ("kW", 150.0)], **common) == (
         "discharging", -150, "kW=150 after State=charging: discharging")
-    assert storage.battery_dispatch("x", kw=-0.0, state="charging", **common).state == "waiting"
+    assert storage.battery_dispatch("x", [("State", "charge"), ("kW", -0.0)], **common).state == "waiting"
+    kept = [("kW", 40.0), ("State", "idling"), ("State", "discharging")]
+    assert storage.battery_dispatch("x", kept, **common).kw == -40
+    assert storage.battery_dispatch("x", [("kW", 40.0), ("State", "charging")], **common | {"stored": 200}).kw == 250
     with pytest.raises(ValueError, match="charging with 500 of 500 kWh stored"):
-        storage.battery_dispatch("x", kw=None, state="charging", **common)
+        storage.battery_dispatch("x", [("State", "charging")], **common)
 
 
 def test_der_binds(der):
@@ -71,7 +72,7 @@ def test_der_binds(der):
     assert_base_voltages_agree(network)
     cim = network.cim
     connections = {pec.mRID: pec for pec in network.graph[cim.PowerElectronicsConnection].values()}
-    assert len(connections) == 15
+    assert len(connections) == 20
     house = connections["pv_house"]
     assert house.Terminals[0].phases.value == "s12" and float(house.p.to("kW")) == pytest.approx(-4)
     assert house.PowerElectronicsUnit[0].mRID == "pv_house_unit"
@@ -85,12 +86,12 @@ def test_der_binds(der):
 @pytest.mark.parametrize("text, message", [
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 model=2\n", "model=2 is not mapped"),
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 EffCurve=eff\n", "EffCurve not mapped"),
-    ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 kVA=12 pf=0.9 kvar=3\n", "pf=0.9 gives"),
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 kVA=12 WattPriority=yes\n", "WattPriority not mapped"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 State=charging\n", "charging with 200 of 200"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 %stored=10 State=discharging\n", "at or below"),
-    ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 kWhstored=50 %stored=60\n", "kWhstored with %stored"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 pf=0.9\n", "pf=0.9 not mapped"),
+    ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 State=discharging %stored=60\n",
+     "pct_stored is assigned after its last State or kW"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 DispMode=follow\n", "DispMode=follow"),
     ("New Storage.x phases=1 bus1=b2.1.2.3 kv=0.48 kWrated=100 kWhrated=200\n", "more nodes than its 2"),
 ])

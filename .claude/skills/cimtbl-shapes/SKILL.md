@@ -38,6 +38,11 @@ Read the example before writing the mapper: it is the spec, the table below is t
 - **No `*Info` network templates.** `WireSpacingInfo` is gone; `TransformerTankInfo`/`TransformerEndInfo`/
   `ShortCircuitTest` are asset-only.
 - **`TapChanger.step` is a tap position,** never a turns ratio.
+- **A balanced three-phase device leaves `phases` blank** (`cimhub_core.cimtbl.phases_cell`): a load, shunt, source,
+  machine, inverter, switch or series compensator on ABC gets no per-phase children and no `Terminal.phases`, CIM's
+  three-phase default and the OpenDSS CIM export's rule. Per-phase children mean the device is not balanced
+  three-phase. A line keeps `phases` (its `ACLineSegmentPhase`s are the conductor order), and so does a transformer
+  end (its phases go on its Terminal only). U10 asks CIM-Tables for a balanced form that keeps `Terminal.phases`.
 
 ## Shapes
 
@@ -64,7 +69,7 @@ Columns: **required** / *optional*.
 | source | `source.cimtbl` | `EnergySource` (`src_`) | **node**, **phases**, **nominalVoltage**, **voltageMagnitude** (kV), *voltageAngle (deg)*, *r/x/r0/x0 (ohm)*, **BaseVoltage** | DSS Vsource/Circuit, GLM swing node |
 | inverter-based DER | `der.cimtbl` | `PowerElectronicsConnection` (`pv_`, `storage_`), `PhotoVoltaicUnit` / `BatteryUnit` (`<pec>_unit`) | Connection: **node**, **phases**, **ratedS** (kVA), **ratedU** (LL: a 1-phase wye unit's kV x sqrt 3), **p**, **q** (load sign: generation and discharge negative), **BaseVoltage**, *phaseConnection* (no grounded), *maxQ/minQ* (kVAr), *maxIFault* (pu of rated current). PV: *maxP*, *minP*. Battery: *ratedE*, *storedE*, *minimumE* (kWh), *maxP/minP*, *chargingEfficiency/dischargingEfficiency* (percent), *idlingP*, *batteryState* (p follows it) | DSS PVSystem/Storage, GLM inverter + solar/battery |
 | synchronous machine (distribution) | `synchronous_machine.cimtbl` | `SynchronousMachine` (`gen_`), `RotatingMachinePhase` (generated from `phases`), PV bus: `RegulatingControl` (`<gen>_ctrl`) then `Update SynchronousMachine` | **node**, **phases**, **ratedS** (kVA), **ratedU** (kV, LL), **p**, **q** (load sign: generation negative), **BaseVoltage**, *type*, *operatingMode*, *earthing*, *maxQ/minQ* (kVAr). Control: **mode**=voltage, **Terminal** (own `<gen>_T1`), **targetValue** (V, LL), *targetDeadband*; Update: *RegulatingControl*, *controlEnabled*. Bus-branch form with `GeneratingUnit`: the transmission waves | DSS Generator |
-| series compensator | `series_compensator.cimtbl` | `SeriesCompensator` (`rx_`), `Update Terminal` (phases), `OperationalLimitSet` (`<rx>_limits`) + `CurrentLimit` | **node1**, **node2**, **r**, **x**, *r0*, *x0* (ohm, per phase), **BaseVoltage**. No per-phase class: terminal phases by `Update Table Terminal: mRID, phases` on the generated `<rx>_T1`/`_T2` | DSS series Reactor |
+| series compensator | `series_compensator.cimtbl` | `SeriesCompensator` (`rx_`), `Update Terminal` (phases), `OperationalLimitSet` (`<rx>_limits`) + `CurrentLimit` | **node1**, **node2**, **r**, **x**, *r0*, *x0* (ohm, per phase), **BaseVoltage**. No per-phase class: balanced three-phase has no terminal phases; fewer phases by `Update Table Terminal: mRID, phases` on the generated `<rx>_T1`/`_T2` | DSS series Reactor |
 
 ## Not yet catalogued
 

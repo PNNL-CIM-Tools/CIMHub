@@ -2,7 +2,8 @@
 // s1s2 PV at 0.208 kV on a center-tap secondary; a 1-phase leg; a 1-phase wye PV on the primary (ratedU x sqrt 3);
 // a delta PV; a kVA-capped PV (Pmpp 1200 on 1000 kVA); one below %Cutout; a negative pf; kvar. Batteries charging,
 // discharging and idling (State), state=charge kW=150 (it discharges) and state=charge kW=-0.0 (it idles), a
-// kVA-capped battery, %stored, delta.
+// kVA-capped battery, %stored, delta. Order (S4b-8): pf then kvar and kvar then pf on a PV; a battery's setpoint
+// kept across State edits, %Discharge after kW, and kWhstored then %stored by an edit.
 Clear
 New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
 New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
@@ -28,3 +29,12 @@ New Storage.b123 phases=1 bus1=b1.1 kVA=125 kV=2.4
 ~ kWrated=125 kWHrated=500 %reserve=30 %stored=60
 ~ state=charge kW=-0.0 PF=1
 New Storage.capped bus1=b2 kv=0.48 kWrated=100 kVA=80 kWhrated=200 State=discharging
+New PVSystem.kvarlast bus1=b2 kv=0.48 kVA=12 Pmpp=10 pf=0.9 kvar=3
+New PVSystem.pflast bus1=b2 kv=0.48 kVA=12 Pmpp=10 kvar=3 pf=0.9
+New Storage.setpoint bus1=b2 kv=0.48 kWrated=100 kWhrated=200 %stored=50 kW=40
+Storage.setpoint.State=idling
+Storage.setpoint.State=discharging
+New Storage.share bus1=b2 kv=0.48 kWrated=100 kWhrated=200 %stored=50 kW=40 %discharge=50 State=discharging
+New Storage.restored bus1=b2 kv=0.48 kWrated=100 kWhrated=200 kWhstored=30
+Storage.restored.%stored=60
+Storage.restored.State=discharging

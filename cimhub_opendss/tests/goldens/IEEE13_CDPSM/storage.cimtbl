@@ -10,7 +10,7 @@ Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, rat
     # kVA defaulted to kWrated
     # defaulted: conn=wye, pf=1.0, pct_reserve=20.0, pct_Discharge=100.0, pct_Charge=100.0, pct_EffCharge=90.0,
     # pct_EffDischarge=90.0, pct_IdlingkW=1.0, model=1, Vminpu=0.9, DispMode=default, enabled=true
-    storage_batidle, BatIdle, 634,   ABC,  Y, 100.0, 0.48,  1.0,    0.0, 100.0, -100.0, 1.1111111111111112, true, bv_480v
+    storage_batidle, BatIdle, 634,   ,     Y, 100.0, 0.48,  1.0,    0.0, 100.0, -100.0, 1.1111111111111112, true, bv_480v
     # kVA defaulted to kWrated
     # defaulted: pf=1.0, pct_reserve=20.0, pct_Discharge=100.0, pct_Charge=100.0, pct_EffCharge=90.0,
     # pct_EffDischarge=90.0, pct_IdlingkW=1.0, model=1, Vminpu=0.9, DispMode=default, enabled=true
@@ -18,7 +18,7 @@ Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, rat
     # kVA defaulted to kWrated
     # defaulted: conn=wye, pf=1.0, pct_reserve=20.0, pct_Discharge=100.0, pct_Charge=100.0, pct_EffCharge=90.0,
     # pct_EffDischarge=90.0, pct_IdlingkW=1.0, model=1, Vminpu=0.9, DispMode=default, enabled=true
-    storage_school,  School,  634,   ABC,  Y, 100.0, 0.48,  -100.0, 0.0, 100.0, -100.0, 1.1111111111111112, true, bv_480v
+    storage_school,  School,  634,   ,     Y, 100.0, 0.48,  -100.0, 0.0, 100.0, -100.0, 1.1111111111111112, true, bv_480v
 
 # derived: storedE = kWhstored or %stored x kWhrated; minimumE = %reserve x kWhrated; idlingP = %IdlingkW x kWrated
 Table BatteryUnit: mRID, ratedE (kWh), storedE (kWh), minimumE (kWh), maxP (kW), minP (kW), chargingEfficiency (percent), dischargingEfficiency (percent), idlingP (kW), batteryState, PowerElectronicsConnection, EquipmentContainer=fdr_ieee13nodeckt

@@ -16,7 +16,7 @@ from cimtables.connectivity import parse_phases, phase_code
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import line as line_mapper
 from cimhub_opendss.importer.cimtbl.transformer import parse_bus
@@ -102,8 +102,9 @@ def map_reactor(native, buses: Mapping[str, BusSystem], container: str) -> Docum
                          cell(reactor.enabled), buses[bus1].base_voltage],
                         comment="\n".join(part for part in (defaulted, untranscribed_values(FIELDS, reactor)) if part)
                         or None))
-        code = phase_code(parse_phases(phases))
-        terminals += [Row([f"{compensator}_T1", code]), Row([f"{compensator}_T2", code])]
+        if phases_cell(phases) is not None:  # a balanced three-phase reactor's Terminals keep CIM's default
+            code = phase_code(parse_phases(phases))
+            terminals += [Row([f"{compensator}_T1", code]), Row([f"{compensator}_T2", code])]
         amps = {slot: float(getattr(reactor, slot)) for slot in ("normamps", "emergamps")
                 if getattr(reactor, slot) is not None}
         if amps:
@@ -115,8 +116,9 @@ def map_reactor(native, buses: Mapping[str, BusSystem], container: str) -> Docum
                Column("BaseVoltage"), Column("EquipmentContainer", default=container)]
     statements = [
         Table(_SERIES, columns, rows, comment="r0 = r, x0 = x: no mutual coupling (the engine's CIM export)"),
-        Table("Terminal", [Column("mRID"), Column("phases")], terminals, update=True,
-              comment="SeriesCompensator has no per-phase class: its generated Terminals get their phases here"),
+        *([Table("Terminal", [Column("mRID"), Column("phases")], terminals, update=True,
+                 comment="SeriesCompensator has no per-phase class: a reactor of fewer than three phases gives its "
+                         "generated Terminals their phases here")] if terminals else []),
         *line_mapper.rating_tables(limit_sets, limits),
     ]
     return Document(name="reactor", statements=statements, profile=CIM_PROFILE,

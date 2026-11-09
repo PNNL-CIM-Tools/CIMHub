@@ -20,7 +20,7 @@ from __future__ import annotations
 import functools
 import logging
 import re
-from dataclasses import dataclass, fields as dc_fields, is_dataclass, replace
+from dataclasses import dataclass, field, fields as dc_fields, is_dataclass, replace
 from pathlib import Path
 from typing import Any, Iterator, Union, get_args, get_origin
 
@@ -143,6 +143,32 @@ def _resolve_file_case_insensitive(path: Path) -> Path:
     return path
 
 
+@dataclass
+class DssModel(GraphModel):
+    """The records of a deck, and each record's assignment history.
+
+    The engine applies a deck's assignments in order, and for some properties the order decides the value: a
+    Generator keeps ``kvar`` as a power factor taken at the kW of that moment, and a Storage's ``State`` picks one of
+    the setpoints that ``kW`` sets. A record keeps only the last value of each slot, so the history keeps every
+    ``(slot, value)`` the deck assigned, in deck order (``New``, edits, ``BatchEdit``, and the slots ``like=`` copies,
+    first). Mappers replay it where the order matters (CIMTBL_MAPPING.md S4b-8).
+    """
+
+    history: dict[tuple[type, str], list[tuple[str, Any]]] = field(default_factory=dict, repr=False)
+
+    def assignments(self, record) -> list[tuple[str, Any]]:
+        """``(slot, value)`` in the order the deck assigned them to ``record``."""
+        return self.history.get((type(record), str(record.name).lower()), [])
+
+    def last_of(self, record, *slots: str) -> str | None:
+        """Which of ``slots`` the deck assigned last to ``record`` (``None`` when it assigned none)."""
+        last = None
+        for slot, _ in self.assignments(record):
+            if slot in slots:
+                last = slot
+        return last
+
+
 class DssReader(FormatReader):
     """Parse OpenDSS files into LinkML dataclass instances.
 
@@ -156,7 +182,7 @@ class DssReader(FormatReader):
         """Bind *source* (a Master.dss path) without parsing it."""
         self.source = source
         self._commands: list[DssCommand] | None = None
-        self._model: GraphModel | None = None
+        self._model: DssModel | None = None
         # BusCoords CSV paths encountered during file traversal (in encounter order).
         self._buscoords_paths: list[Path] = []
         # LatLongCoords CSV paths — same format but (lat, long) → stored as (x=long, y=lat).
@@ -166,7 +192,7 @@ class DssReader(FormatReader):
     # Public API  (FormatReader interface)
     # -----------------------------------------------------------------------
 
-    def read_all(self) -> GraphModel:
+    def read_all(self) -> DssModel:
         """Parse the bound source and return every object found.
 
         Includes ``Buscoords`` rows from any ``BusCoords`` / ``LatLongCoords``
@@ -237,7 +263,7 @@ class DssReader(FormatReader):
             if cmd is not None:
                 self._commands.append(cmd)
 
-    def _build_graph(self) -> GraphModel:
+    def _build_graph(self) -> DssModel:
         """Apply the commands in deck order, as DSS does.
 
         - ``New`` creates the object. ``like=`` first copies every slot the command leaves unset from the
@@ -262,9 +288,10 @@ class DssReader(FormatReader):
         spelled: dict[tuple[type, str], str] = {}  # (class, lowered name) -> name as first written
         redefined: set[tuple[type, str]] = set()
         options: dict[str, Any] = {}
+        history: dict[tuple[type, str], list[tuple[str, Any]]] = {}
         for cmd in self._commands:
             if cmd.cmd == "clear":
-                graph, spelled, redefined, options = {}, {}, set(), {}
+                graph, spelled, redefined, options, history = {}, {}, set(), {}, {}
                 continue
             try:
                 if cmd.cmd == "set":
@@ -281,15 +308,18 @@ class DssReader(FormatReader):
                 bucket = graph.setdefault(schema_class, {})
                 values = self._values(cmd, schema_class)
                 if cmd.cmd == "batchedit":
-                    _batch_edit(bucket, cmd.element_name, values)
+                    for obj in _batch_edit(bucket, cmd.element_name, values):
+                        history[(schema_class, str(obj.name).lower())].extend(values.items())
                     continue
                 key = (schema_class, cmd.element_name.lower())
                 if cmd.cmd == "new" and key not in spelled:
                     obj = schema_class(name=cmd.element_name, **values)
+                    inherited = []
                     if getattr(obj, "like", None):
-                        _inherit(obj, bucket.get(spelled.get((schema_class, str(obj.like).lower()), "")))
+                        inherited = _inherit(obj, bucket.get(spelled.get((schema_class, str(obj.like).lower()), "")))
                     bucket[cmd.element_name] = obj
                     spelled[key] = cmd.element_name
+                    history[key] = [*inherited, *values.items()]
                     continue
                 if key not in spelled:
                     raise ValueError("Edit of an object no New defines")
@@ -300,6 +330,7 @@ class DssReader(FormatReader):
                 obj = bucket[spelled[key]]
                 for field_name, value in values.items():
                     setattr(obj, field_name, value)
+                history[key].extend(values.items())
             except (ValueError, TypeError) as e:
                 raise DssParseError(f"{cmd.element_type}.{cmd.element_name}: {e}",
                                     cmd.source_file, cmd.line_number) from e
@@ -308,7 +339,7 @@ class DssReader(FormatReader):
             graph[dss_schema.Options] = {"options": dss_schema.Options(name="options", **options)}
         for bc in self._read_buscoords():
             graph.setdefault(dss_schema.Buscoords, {})[str(bc.name)] = bc
-        return GraphModel(graph=graph)
+        return DssModel(graph=graph, history=history)
 
     @staticmethod
     def _circuit(cmd: DssCommand, options: dict[str, Any]) -> DssCommand:
@@ -1061,13 +1092,19 @@ def _read_array_file(path: Path) -> str:
     return "[" + " ".join(values) + "]"
 
 
-def _inherit(obj: Any, source: Any) -> None:
-    """``like=``: copy every slot ``obj`` leaves unset from ``source``, defined earlier in the deck."""
+def _inherit(obj: Any, source: Any) -> list[tuple[str, Any]]:
+    """``like=``: copy every slot ``obj`` leaves unset from ``source``, defined earlier in the deck; the
+    ``(slot, value)`` pairs copied, for the history."""
     if source is None:
         raise ValueError(f"like={obj.like!r}: no object of that name is defined before it")
-    for field in dc_fields(obj):
-        if field.name not in ("name", "like") and getattr(obj, field.name) in _UNSET:
-            setattr(obj, field.name, getattr(source, field.name))
+    copied = []
+    for slot in dc_fields(obj):
+        if slot.name not in ("name", "like") and getattr(obj, slot.name) in _UNSET:
+            value = getattr(source, slot.name)
+            setattr(obj, slot.name, value)
+            if value not in _UNSET:
+                copied.append((slot.name, value))
+    return copied
 
 
 def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
@@ -1084,8 +1121,8 @@ def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
         opened.remove(terminal)
 
 
-def _batch_edit(bucket: dict[str, Any], pattern: str, values: dict[str, Any]) -> None:
-    """``BatchEdit``: set ``values`` on every object whose name ``pattern`` matches."""
+def _batch_edit(bucket: dict[str, Any], pattern: str, values: dict[str, Any]) -> list[Any]:
+    """``BatchEdit``: set ``values`` on every object whose name ``pattern`` matches; the objects changed."""
     regex = re.compile(pattern, re.IGNORECASE)
     matched = [obj for name, obj in bucket.items() if regex.search(name)]
     if not matched:
@@ -1093,6 +1130,8 @@ def _batch_edit(bucket: dict[str, Any], pattern: str, values: dict[str, Any]) ->
     for obj in matched:
         for field_name, value in values.items():
             setattr(obj, field_name, value)
+    return matched
+
 
 def _eval_rpn(expr: str) -> float:
     """Evaluate an OpenDSS RPN expression string and return a float.

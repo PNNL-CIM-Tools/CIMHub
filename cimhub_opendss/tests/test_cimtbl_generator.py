@@ -46,11 +46,19 @@ def test_matches_golden(gens):
     assert_matches_golden(generator.map_generator(gens, site.buses, site.feeder), ATOMS / "gens.cimtbl")
 
 
+def test_kvar_replays_the_deck_order():
+    assert generator.dispatched_kvar([("kW", 620.0), ("kvar", 30.0), ("kW", 0.0)]) == 0
+    assert generator.dispatched_kvar([("kvar", 30.0), ("kW", 100.0)]) == pytest.approx(3.0, rel=1e-3)
+    assert generator.dispatched_kvar([("kW", 0.0), ("kvar", 30.0), ("kW", 50.0)]) == 30
+    assert generator.dispatched_kvar([("kW", 100.0)]) == pytest.approx(53.974282)
+    assert generator.dispatched_kvar([]) == 60
+
+
 def test_machines_bind(gens):
     network = dss_to_cim(gens, name="atom")
     assert_base_voltages_agree(network)
     machines = {machine.name: machine for machine in network.graph[network.cim.SynchronousMachine].values()}
-    assert len(machines) == 8
+    assert len(machines) == 12
     assert float(machines["pq"].p.to("kW")) == -100 and machines["pq"].type.value == "generator"
     assert machines["delta"].earthing is False and machines["pq"].earthing is True
     steam = machines["steam"]
@@ -65,7 +73,6 @@ def test_machines_bind(gens):
 
 @pytest.mark.parametrize("text, message", [
     ("New Generator.x bus1=b1 kv=4.16 kW=100 model=2\n", "model ConstantZ is not mapped"),
-    ("New Generator.x bus1=b1 kv=4.16 kW=100 pf=0.95 kvar=10\n", "pf=0.95 gives"),
     ("New Generator.x bus1=b1 kv=4.16 kW=100 maxkvar=50\n", "Maxkvar/Minkvar on model ConstantPQ"),
     ("New Generator.x bus1=b1 kv=4.16 kW=100 MVA=1\n", "MVA not mapped"),
     ("New Generator.x bus1=b1.1.2 phases=1 kv=2.4 kW=100\n", "wye neutral on node 2"),

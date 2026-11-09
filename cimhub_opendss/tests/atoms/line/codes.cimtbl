@@ -50,15 +50,15 @@ Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimi
 
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
-    sw_fuse1, fuse1, n1, n4, ABC, 100.0, false, false, bv_4p16kv,
+    sw_fuse1, fuse1, n1, n4, , 100.0, false, false, bv_4p16kv,
 
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
-    sw_rec1, rec1, n1, n5, ABC, false, false, bv_4p16kv,
+    sw_rec1, rec1, n1, n5, , false, false, bv_4p16kv,
 
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
-    sw_sect, sect, n1, n7, ABC, true,  true,  bv_4p16kv,
+    sw_sect, sect, n1, n7, ,  true,  true,  bv_4p16kv,
     # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
-    sw_sw1,  sw1,  n1, n3, ABC, false, false, bv_4p16kv,
-    sw_tie,  tie,  n2, n6, C,   true,  true,  bv_4p16kv,
+    sw_sw1,  sw1,  n1, n3, ,  false, false, bv_4p16kv,
+    sw_tie,  tie,  n2, n6, C, true,  true,  bv_4p16kv,

@@ -300,6 +300,14 @@ def test_fill_defaults_fills_unset_read_slots_only():
     assert record.rated_kva is None  # the original is not changed
 
 
+def test_fill_defaults_keeps_attributes_outside_the_fields():
+    """A reader's composite ``record.ID`` is no dataclass field, so ``dataclasses.replace`` alone would drop it."""
+    record = NativeRecord("T1", None)
+    record.ID = "T1_1"
+    filled, _ = fill_defaults(FIELDS, record, {"rated_kva": 500.0})
+    assert filled.ID == "T1_1"
+
+
 def test_fill_defaults_with_nothing_to_fill():
     record = NativeRecord("T1", 500.0)
     assert fill_defaults(FIELDS, record, {"rated_kva": 1.0}) == (record, None)

@@ -58,18 +58,18 @@ Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimi
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_ieee13nodeckt, normallyInService
     # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
-    sw_fuse1, Fuse1, 633, xf1, ABC, 100.0, false, false, bv_4p16kv,
+    sw_fuse1, Fuse1, 633, xf1, , 100.0, false, false, bv_4p16kv,
 
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_ieee13nodeckt, normallyInService
     # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
-    sw_rec1, Rec1, 632, mid, ABC, false, false, bv_4p16kv,
+    sw_rec1, Rec1, 632, mid, , false, false, bv_4p16kv,
 
 # open: an Open command or the control's State; normalOpen: the control's Normal, else open
 Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_ieee13nodeckt, normallyInService
     # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
-    sw_671692, 671692, 671, 692,  ABC, false, false, bv_4p16kv,
+    sw_671692, 671692, 671, 692,  ,  false, false, bv_4p16kv,
     # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
-    sw_brkr1,  Brkr1,  650, brkr, ABC, false, false, bv_4p16kv,
+    sw_brkr1,  Brkr1,  650, brkr, ,  false, false, bv_4p16kv,
     # untranscribed (a switch): rmatrix=[0.0001], xmatrix=[0.0], cmatrix=[0.0]
-    sw_sect1,  Sect1,  684, tap,  C,   false, false, bv_4p16kv,
+    sw_sect1,  Sect1,  684, tap,  C, false, false, bv_4p16kv,

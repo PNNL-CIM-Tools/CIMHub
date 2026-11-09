@@ -88,6 +88,18 @@ def cell(value) -> str | None:
     raise TypeError(f"no .cimtbl cell text for {type(value).__name__} {value!r}; map it in the mapper")
 
 
+#: A balanced three-phase device's phases: CIM's default when a device has no per-phase children.
+BALANCED_PHASES = "ABC"
+
+
+def phases_cell(phases: str) -> str | None:
+    """The ``phases`` cell of a device that is balanced when three-phase (a load, shunt, source, machine, inverter,
+    switch): blank for ``ABC``, so cimtables writes no per-phase children and no ``Terminal.phases`` (the OpenDSS CIM
+    export's rule), else ``phases``. A line keeps its phases: its ACLineSegmentPhases are the conductor order.
+    UPSTREAM_REQUESTS U10 asks CIM-Tables for a balanced form that keeps ``Terminal.phases``."""
+    return None if phases == BALANCED_PHASES else phases
+
+
 def mrid(prefix: str, native_id, *, lowercase: bool = False) -> str:
     """The mRID of an imported object: ``prefix`` + the native ID as written (plan D3).
 
@@ -246,15 +258,22 @@ def fill_defaults(fields: dict[str, Field], record, defaults: dict[str, object])
     """``(record, comment)``: the record with every unset slot the mapper reads filled from ``defaults``.
 
     Untranscribed slots are left alone. The record is a copy (``dataclasses.replace``, so the schema's
-    ``__post_init__`` types the defaults); the original is not changed. ``comment`` is
-    ``defaulted: slot=value, ...`` for the row comment, or ``None`` when nothing was filled.
+    ``__post_init__`` types the defaults); the original is not changed. Attributes set on the record outside its
+    fields (a reader's composite ``record.ID``, which ``GraphModel`` keys on) are carried over, because
+    ``dataclasses.replace`` drops them. ``comment`` is ``defaulted: slot=value, ...`` for the row comment, or
+    ``None`` when nothing was filled.
     """
     filled = {slot: defaults[slot] for slot, field in fields.items()
               if field.kind != "untranscribed" and slot in defaults and _is_unset(getattr(record, slot))}
     if not filled:
         return record, None
     items = [f"{slot}={_comment_text(value)}" for slot, value in filled.items()]
-    return dataclasses.replace(record, **filled), _wrapped(items, "defaulted")
+    copy = dataclasses.replace(record, **filled)
+    field_names_of_record = {field.name for field in dataclasses.fields(record)}
+    for name, value in vars(record).items():
+        if name not in field_names_of_record:
+            setattr(copy, name, value)
+    return copy, _wrapped(items, "defaulted")
 
 
 def field_names(native_cls: type) -> list[str]:

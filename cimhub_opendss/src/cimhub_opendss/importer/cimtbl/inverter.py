@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from cimtables.document import Column, Row
 
-from cimhub_core.cimtbl import cell, mrid
+from cimhub_core.cimtbl import cell, mrid, phases_cell
 from cimhub_opendss.importer.cimtbl.injection import DeviceTerminal, line_kv
 
 CONNECTION = "PowerElectronicsConnection"
@@ -36,7 +36,7 @@ def connection_row(prefix: str, device, terminal: DeviceTerminal, *, kva: float,
     kvar_max = float(device.kvarMax) if device.kvarMax is not None else kva
     kvar_max_abs = float(device.kvarMaxAbs) if device.kvarMaxAbs is not None else kva
     return Row([
-        mrid(prefix, device.name, lowercase=True), str(device.name), terminal.bus, terminal.phases,
+        mrid(prefix, device.name, lowercase=True), str(device.name), terminal.bus, phases_cell(terminal.phases),
         terminal.connection, cell(kva), cell(line_kv(float(device.kv), terminal)), cell(p + 0.0), cell(q + 0.0),
         cell(kvar_max), cell(-kvar_max_abs), cell(max_fault_current(float(device.Vminpu))), cell(device.enabled),
         terminal.system.base_voltage,

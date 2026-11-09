@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+import pytest
 
 from cimhub_core import GraphModel
 
@@ -44,19 +45,17 @@ def test_from_objects_accepts_a_generator():
     assert len(model.list_by_class(Bus)) == 3
 
 
-def test_from_objects_drops_duplicate_identifiers(caplog):
-    """Identifier collisions keep the first object and warn — they lose data.
+def test_from_objects_raises_on_a_duplicate_identifier():
+    """An identifier seeds the mRID, so a collision within a class raises instead of losing data
+    (e.g. the distopf CapacitorRecord case, where same-bus banks shared an id)."""
+    with pytest.raises(ValueError, match="Bus identifier 'b1' is already in the model"):
+        GraphModel.from_objects([Bus("b1", kv=12.47), Bus("b1", kv=4.16)])
 
-    Callers building a model from a flat list need to know this happens; see the
-    distopf CapacitorRecord case where same-bus banks share an id.
-    """
-    first, dupe = Bus("b1", kv=12.47), Bus("b1", kv=4.16)
 
-    model = GraphModel.from_objects([first, dupe])
-
-    assert len(model.list_by_class(Bus)) == 1
-    assert model.list_by_class(Bus)[0].kv == 12.47
-    assert "already in graph" in caplog.text
+def test_two_classes_may_share_an_identifier():
+    """Native formats scope names by class (OpenDSS Line.l1 and Load.l1)."""
+    model = GraphModel.from_objects([Bus("x"), Branch("x")])
+    assert (len(model.list_by_class(Bus)), len(model.list_by_class(Branch))) == (1, 1)
 
 
 def test_list_by_class_sorted_by_identifier():

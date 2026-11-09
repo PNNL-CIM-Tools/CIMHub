@@ -1,17 +1,19 @@
 # Shape: series compensator (an OpenDSS series Reactor) between two nodes. r and x are per phase in ohm; with no
-# mutual coupling the zero-sequence values equal them. SeriesCompensator has no per-phase class, so an Update
-# gives its generated Terminals their phases. Its ratings are an OperationalLimitSet, as a line's.
+# mutual coupling the zero-sequence values equal them. SeriesCompensator has no per-phase class: a balanced
+# three-phase one leaves its Terminals' phases unset (CIM's default), and an Update gives a 1-phase one's Terminals
+# their phases. Its ratings are an OperationalLimitSet, as a line's.
 
 Profile = cim18v17
 
 Import common.cimtbl
 
 Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=fdr_shapes
-    rx_hsb, hsb, n0, n1, 0, 14.798307, 0, 14.798307, bv_4p16kv
+    rx_hsb, hsb, n0, n1, 0,   14.798307, 0,   14.798307, bv_4p16kv
+    rx_r1,  r1,  n1, n3, 0.5, 2,         0.5, 2,         bv_4p16kv
 
 Update Table Terminal: mRID, phases
-    rx_hsb_T1, ABC
-    rx_hsb_T2, ABC
+    rx_r1_T1, B
+    rx_r1_T2, B
 
 Object OperationalLimitSet: mRID=rx_hsb_limits, Equipment=rx_hsb
 Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet

@@ -117,20 +117,18 @@ class GraphModel:
     def add_to_graph(self, obj: object) -> None:
         """Insert *obj* into the graph, keyed by its identifier.
 
-        On an identifier collision the first object wins and a warning is
-        logged. Dropping a duplicate silently loses data — usually a duplicate
-        declaration in the source file, or an identifier scheme too coarse to
-        tell two records apart (see ``composite_id`` in cimhub_raw).
+        An identifier is unique within its class in the model, because it seeds
+        the object's mRID, so a collision raises ``ValueError``. It is usually a
+        duplicate declaration in the source file, or an identifier scheme too
+        coarse to tell two records apart (see ``composite_id`` in cimhub_raw).
+        Native formats scope names by class (an OpenDSS ``Line.l1`` and
+        ``Load.l1``), so two classes may share one.
         """
         key = _get_identifier(obj)
         bucket = self.graph[type(obj)]
         if key in bucket:
-            _log.warning(
-                "%s identifier %r already in graph; keeping first, dropping duplicate",
-                type(obj).__name__,
-                key,
-            )
-            return
+            raise ValueError(f"{type(obj).__name__} identifier {key!r} is already in the model; identifiers are "
+                             "unique within a class (they seed the mRID)")
         bucket[key] = obj
 
     # -- Retrieve -----------------------------------------------------------

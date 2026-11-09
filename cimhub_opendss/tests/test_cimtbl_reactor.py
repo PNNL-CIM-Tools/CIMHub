@@ -50,7 +50,7 @@ def test_reactors_bind(reactors):
     assert_base_voltages_agree(network)
     compensators = {item.name: item for item in network.graph[network.cim.SeriesCompensator].values()}
     hsb = compensators["HVMV_Sub_HSB"]
-    assert [terminal.phases.value for terminal in hsb.Terminals] == ["ABC", "ABC"]
+    assert [terminal.phases for terminal in hsb.Terminals] == [None, None]  # balanced: CIM's default
     assert float(hsb.x0.to("ohm")) == pytest.approx(14.798306633595042)
     limits = {limit.mRID: float(limit.normalValue.to("A")) for limit_set in hsb.OperationalLimitSet
               for limit in limit_set.OperationalLimitValue}

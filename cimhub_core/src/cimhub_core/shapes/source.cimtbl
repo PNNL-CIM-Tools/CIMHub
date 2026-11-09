@@ -1,7 +1,8 @@
 # Shape: source. EnergySource on its node; Thevenin r/x/r0/x0 in ohm as computed or written by the source.
+# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default.
 
 Profile = cim18v17
 
 Import common.cimtbl
 
-Object EnergySource: mRID=src_source, name=source, node=sourcebus, phases=ABC, nominalVoltage (kV)=115, voltageMagnitude (kV)=115, voltageAngle (deg)=30, r (ohm)=0.160377, x (ohm)=0.641507, r0 (ohm)=0.179604, x0 (ohm)=0.538811, BaseVoltage=bv_115kv, EquipmentContainer=sub_shapes
+Object EnergySource: mRID=src_source, name=source, node=sourcebus, nominalVoltage (kV)=115, voltageMagnitude (kV)=115, voltageAngle (deg)=30, r (ohm)=0.160377, x (ohm)=0.641507, r0 (ohm)=0.179604, x0 (ohm)=0.538811, BaseVoltage=bv_115kv, EquipmentContainer=sub_shapes

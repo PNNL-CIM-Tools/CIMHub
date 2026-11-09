@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08 except S4b-8 (open).
+**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -36,7 +36,7 @@ replaces them).
 | CapControl | 28 | 6 | done (S4a) | 3 in IEEE13_OCHRE/IEEE13_Assets monitor their own capacitor (recounted 2026-11-08); CIM-Tables' `Update` form writes them (U3 closed) |
 | LoadShape | 16 | 4 | not mapped | DSS-11 |
 | Vsource | 14 | 14 | S1 | `New Circuit` is read as Vsource `source` |
-| Generator | 13 | 2 | S4 | done (S4b), shape `synchronous_machine`; S4b-8 open |
+| Generator | 13 | 2 | S4 | done (S4b), shape `synchronous_machine`; kvar replayed in deck order (S4b-8) |
 | Storage | 6 | 3 | S4 | done (S4b) |
 | EnergyMeter | 6 | 6 | not mapped | DSS-11 |
 | CNData, TSData | 3, 1 | 3, 1 | S2 | |
@@ -173,6 +173,7 @@ The reader is the spoke's own code. It now applies the commands in deck order, a
 | `BatchEdit Class..<regex>` was misread as an edit | applied to every matching object; matching none raises |
 | `vreg=(122)`, `npts='1,'`, `mult=(file=shape.csv)` failed | RPN of one number; a trailing comma is a delimiter; `file=` arrays read from the deck directory |
 | ~~blanks around `=`, numeric bus names as floats, quoted arrays~~ | done in CIMHub_2_0 |
+| a record kept only each slot's last value, so an order-dependent engine value was lost | `read_all()` returns a `DssModel`: a `GraphModel` with each record's assignment history (`(slot, value)` in deck order); the S4b mappers replay it (S4b-8, 2026-11-08) |
 | `New Circuit` dropped the circuit name and wrote `bus1=sourcebus` into the parameters (S1) | the name is kept on `Options.circuit`; the default comes from the schema; a second `New Circuit` raises |
 | `Clear` was skipped (S1) | discards everything defined before it, as DSS does |
 | an unknown command verb was skipped silently (S2) | raises. `DSS_COMMANDS` is the engine's 125 commands (a test checks them); a word is the first command it abbreviates (`CalcV`), as in the engine. `SKIPPED_COMMANDS` (solve, report, plot, export, `setkvbase`, ...) are skipped; any other command not read (`Disable`, `Remove`, `Select`, `var`, ...) raises. The balanced IEEE9500 master's `Reditect Switches.dss` typo, which loaded no switches (2 buses walked), is fixed in the local deck (5297 buses) |
@@ -207,7 +208,7 @@ Each slice delivers its mapper(s), atoms with goldens (`tests/atoms/<class>/`), 
 | S3a | network: Line (impedance, geometry, switch, synthesized templates, ratings), Transformer in the orchestrator, VoltageRegulator / LTC, RegControl; reader fixes (§3.4) | **done 2026-11-08:** IEEE13_CDPSM, IEEE123 and IEEE8500 bind with every line, switch, transformer and regulator (XfmrCode instances counted on the master); 25 of 31 sweep decks bind (stops: DSS-10 in J1, K1, M1, IEEE13_OCHRE; the two balanced IEEE9500 copies the engine rejects too); lines (ratings, z, b, switch states) and regulators (settings, tap range, nameplate, mesh) equal the engine's on the 8 engine decks. Found: the engine's rating copies, a matrix code's default C, the inline default C per kft |
 | S3b | XfmrCode templates and their instances | **done 2026-11-08:** TankEnd templates (3-phase, IEEE4 YYD) and center-tap lug templates (IEEE8500, IEEE9500, IEEE123_PV, IEEE13_CDPSM); 25 of 31 sweep decks bind (the S3a stops only); every template equals the engine's transformer of each instance. AutoTrans waits for a deck (S3b-1). Multi-can tank templating and bank lug sequencing wait for CYME's form |
 | S4a | Load, Capacitor + CapControl (shapes `load`, `shunt`; core `zip_fractions.cimtbl`) | **done 2026-11-08:** 25 of 31 sweep decks bind (S3's stops only); every load's p, q and model and every capacitor and CapControl setting equal the engine's on the atoms and the 8 engine decks. Own-terminal controls by `Update` (U3 closed) |
-| S4b | PVSystem, Storage, Generator, Reactor; the two new shapes (`synchronous_machine`, `series_compensator`, shared with RAW C2) added to the catalog first; approved and implemented 2026-11-08 (CIMTBL_MAPPING.md S4b); open: S4b-8, reader assignment order for a Generator's kvar | done: 22 of 31 decks bind (S3 six + two `ieee9500` copies with an engine-invalid PV `Mode=7` + IEEE123_test_harness `Battery5`); full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
+| S4b | PVSystem, Storage, Generator, Reactor; the two new shapes (`synchronous_machine`, `series_compensator`, shared with RAW C2) added to the catalog first; approved and done 2026-11-08 (CIMTBL_MAPPING.md S4b); the reader keeps each record's assignment history (`DssModel`, S4b-8) | done: 22 of 31 decks bind (S3 six + two `ieee9500` copies with an engine-invalid PV `Mode=7` + IEEE123_test_harness `Battery5`); full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
 | S5 | Buscoords (Location shape added to the catalog first); deck sweep to green or listed stops; G7 numbers on ieee9500 | sweep table in `CIMTBL_MAPPING.md` |
 | S6 | exporter `cim_to_dss` ported to cim18v17 on the core getters (master plan §4 Phase 5 step 3, exporter assessment E0-E6), tested from the `.cimtbl` atoms | tier 2 per class; roundtrip and power flow parity (§5) |
 | S7 | delete the old importer, the Python atoms and every cimhub_2026 import in the spoke; update conformance tests and `README` | the spoke imports cim18v17 only |
