@@ -25,13 +25,16 @@ from cimhub_raw.importer.cimtbl import (
     bus,
     case_identification,
     facts_device,
+    fixed_shunt,
     gne_device,
     impedance_correction,
     induction_machine,
+    load,
     multi_section_line,
     multi_terminal_dc,
     owner,
     switch,
+    switched_shunt,
     two_terminal_dc,
     vsc_dc,
     zone,
@@ -44,14 +47,16 @@ AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
 
 
 class Site:
-    """What the orchestrator computes once and hands to the mappers: case values, region, zones, base voltages and
-    substations."""
+    """What the orchestrator computes once and hands to the mappers: case values, region, bus zones, areas and base
+    voltages, and substations."""
 
     def __init__(self, native, name: str):
         self.values = case_identification.case_values(native)
         self.region = mrid("rgn_", name, lowercase=True)
         self.zones = zone.bus_zones(native)
-        self.base_kv = {record.bus_number: record.base_voltage for record, _ in bus.filled_buses(native)}
+        buses = [record for record, _ in bus.filled_buses(native)]
+        self.base_kv = {record.bus_number: record.base_voltage for record in buses}
+        self.areas = {record.bus_number: int(record.area) for record in buses}
         self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold)
         self.substation_of = bus.substation_of(self.substations)
 
@@ -69,6 +74,12 @@ MAPPING_ORDER = (
                                                                  site.values.branch_ratings_in_current)),
     (multi_section_line.NATIVE_CLASS, lambda native, site: multi_section_line.map_multi_section_line(native,
                                                                                                     site.zones)),
+    (load.NATIVE_CLASS, lambda native, site: load.map_load(native, site.substation_of, site.base_kv, site.areas,
+                                                           site.zones)),
+    (fixed_shunt.NATIVE_CLASS, lambda native, site: fixed_shunt.map_fixed_shunt(native, site.substation_of,
+                                                                                site.base_kv, site.values.base_mva)),
+    (switched_shunt.NATIVE_CLASS, lambda native, site: switched_shunt.map_switched_shunt(
+        native, site.substation_of, site.base_kv, site.values.base_mva)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),

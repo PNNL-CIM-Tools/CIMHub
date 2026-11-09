@@ -2,7 +2,8 @@
 
 **Status:** R0 approved 2026-11-08 and implemented (master, zone, area, bus with substations, busbars, voltage
 limits and solved voltages; owner). R1 (branch, system switching device, multi-section line, rating
-sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. R2 (load, fixed shunt, switched
+shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -27,9 +28,12 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 4 | Branch | `branch.cimtbl` | `line_bus_branch`: `ACLineSegment` (`ln_`), `SeriesCompensator` (`sc_`, X < 0), ratings on terminals, line shunts (R1) | 3 |
 | 5 | System switching device | `switch.cimtbl` | `switch` with `bus1`/`bus2` (R1) | 3 |
 | 6 | Multi-section line | `multi_section_line.cimtbl` | `Line` + `Update` rows on its sections (R1) | 4 |
+| 7 | Load | `load.cimtbl` | `load` with `bus`: `LoadArea` ⊃ `SubLoadArea` ⊃ load groups, ZIP `LoadResponseCharacteristic`s, `ConformLoad` / `NonConformLoad` (R2) | 2, 3 |
+| 8 | Fixed shunt | `fixed_shunt.cimtbl` | `shunt` with `bus`: `LinearShuntCompensator` (R2) | 3 |
+| 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Later slices append to this order: load and shunts (R2); generator (R3); transformer (R4); inter-area transfer
+Later slices append to this order: generator (R3); transformer (R4); inter-area transfer
 (R5); substation (R6).
 
 ## Master
@@ -401,7 +405,229 @@ Update Table ACLineSegment: mRID, EquipmentContainer
 | `dum8` | `Optional[int]` |  | structural | as DUM1 |
 | `dum9` | `Optional[int]` |  | structural | as DUM1 |
 
+## Load (R2)
+
+Mapper: `importer/cimtbl/load.py` (`map_load`). Shape: `load` with `bus` in place of `node` (C2). One row per
+load, in key order, after the area hierarchy and the ZIP models it names (IEEE14):
+
+```
+Table LoadArea: mRID, name, ControlArea
+    la_1, 1, ca_1
+Table SubLoadArea: mRID, name, LoadArea
+    sla_1_1, 1_1, la_1
+Table ConformLoadGroup: mRID, name, SubLoadArea
+    clg_1_1, 1_1, sla_1_1
+# ZIP fractions: PL, IP, YP over p; QL, IQ, -YQ over q (zip_mix)
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_1_0_0_1_0_0, false, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0
+# untranscribed: owner, interruptible, dgenp, dgenq, dgenf
+Table ConformLoad: mRID, name, bus, p (MW), q (MVAr), inService, LoadResponse, LoadGroup, BaseVoltage, EquipmentContainer
+    ld_2_1,  2_1,  2,  21.7, 12.7, true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_2
+    ...
+```
+
+- **p, q (RAW-8):** `p (MW)` = PL + IP + YP and `q (MVAr)` = QL + IQ − YQ, the load at 1 pu voltage, CIM's
+  nominal. Derived by `load_p_q`. YQ enters with a minus sign because RAW makes YQ negative for an inductive
+  load. WECC240 has 118 loads with YQ < 0 and 16 with YQ > 0; the 16 have q < 0.
+- **ZIP mix:** the fractions are PL/p, IP/p, YP/p and QL/q, IQ/q, −YQ/q, derived by `zip_mix`.
+  - Each distinct mix is one shared row, `zip_` + its six fractions (`zip_0.5_0.3_0.2_0.25_0.25_0.5`), written
+    before the loads.
+  - A side whose components are all 0 counts as constant power. WECC240's mixes are `zip_0_1_0_0_0_1` and, for
+    its 5 loads with q = 0, `zip_0_1_0_1_0_0`.
+  - A side whose components cancel (total 0 from nonzero parts) raises.
+  - The exporter recovers PL..YQ as p or q × fraction, so a mixed load can differ in the last digit (expected
+    difference).
+  - *Interim:* core's shared `zip_constant_pq` / `_i` / `_z` (`cimhub_core.load_response`, on `rc_1` only) take
+    over the pure mixes once `raw-v34` takes `rc_1`.
+- **Class from SCALE:** SCALE = 1 (scalable, the default) → `ConformLoad` in a `ConformLoadGroup`. SCALE = 0
+  (fixed) → `NonConformLoad` in a `NonConformLoadGroup`. These are CIM's own "follows the system load pattern"
+  split.
+- **Area and zone:** the hierarchy is RAW's own totalling groups. It uses `SubLoadArea.LoadArea`, added to the
+  profile 2026-11-08 by the user. Before that there was no list of sub-areas, and `ControlArea.EnergyArea` is
+  0..1.
+  - Each area that has loads gets one `LoadArea` `la_<area>`, with `ControlArea` = `ca_<area>`; it is the
+    area's single `EnergyArea`.
+  - Each (area, zone) pair with loads gets a `SubLoadArea` `sla_<area>_<zone>` in its `LoadArea`.
+  - The `SubLoadArea` holds a `ConformLoadGroup` `clg_<area>_<zone>` and/or a `NonConformLoadGroup`
+    `nclg_<area>_<zone>`.
+  - WECC240 has 4 load areas and 14 sub-areas; IEEE14 has 1 and 1. The prefixes are requested (C3).
+  - The load's own AREA and ZONE pick its group, so a load assigned elsewhere than its bus keeps both.
+  - An AREA with no area-interchange record raises.
+  - Blank AREA or ZONE: the bus's, defaulted (the spec's default).
+  - The zone is still not an association: a `SubLoadArea` has no link to the `SubGeographicalRegion`. So the
+    exporter reads a load's ZONE from its bus's substation `Region`. A load whose ZONE differs from its bus's
+    sits in its own zone's sub-area, and is also listed on its row as
+    `# untranscribed: zone=2 (bus 2 is in zone 1)` (CIM 18 gap, "zone of equipment"). Neither public case has
+    one.
+  - Not used: a `SubLoadArea` naming the `ControlArea` directly. cimtables binds a second one without error and
+    overwrites the 0..1 inverse (request U-RAW-2).
+- **Status:** `inService` = STATUS == 1.
+- **Name:** the key `I_ID` (a v34 load has no NAME).
+- **Untranscribed:** OWNER (CIM 18 gap); INTRPT; DGENP/DGENQ/DGENM. The distributed generation behind a load is
+  zero in both public cases.
+- **Atom:** `tests/atoms/load/loads.raw` covers a ZIP mix, SCALE 0, an area and zone other than the bus's, and
+  blank AREA/ZONE.
+
+| LoadRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `bus_number` | `int` | `10`, `11`, `12` | structural | I: bus; BaseVoltage = bus I's bv_<BASKV>; EquipmentContainer = bus I's substation |
+| `load_id` | `Optional[str]` | `1` | structural | ID: with I the key, mRID ld_<I>_<ID>, name I_ID |
+| `status` | `Optional[int]` | `1` | mapped | STATUS: inService = (STATUS == 1); blank: 1 (defaulted) |
+| `area` | `Optional[int]` | `1`, `4`, `2` | structural | AREA: the LoadArea la_<AREA> (ControlArea ca_<AREA>) of the load's group; an AREA with no area-interchange record raises; blank: the bus's (defaulted) |
+| `zone` | `Optional[int]` | `1`, `3`, `10` | structural | ZONE: the SubLoadArea sla_<AREA>_<ZONE> of the load's group; the exporter reads ZONE from the bus's substation Region, so a ZONE other than the bus's is also listed untranscribed on the row (CIM 18 gap); blank: the bus's (defaulted) |
+| `constant_real_power` | `Optional[float]` | `9.0`, `3.5`, `6.1` | derived | PL: constant power; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `constant_imag_power` | `Optional[float]` | `5.8`, `1.8`, `1.6` | derived | QL: constant power; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `constant_current_real_power` | `Optional[float]` | `0.0`, `223.71`, `2212.664` | derived | IP: constant current; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `constant_current_imag_power` | `Optional[float]` | `0.0` | derived | IQ: constant current; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `constant_admittance_real_power` | `Optional[float]` | `0.0` | derived | YP: constant admittance; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `constant_admittance_imag_power` | `Optional[float]` | `0.0`, `583.546`, `-387.354` | derived | YQ: constant admittance, negative for an inductive load, so it enters q as -YQ; the sum is p (MW) / q (MVAr) at 1 pu (load_p_q) and its share a ZIP fraction (zip_mix) |
+| `owner` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `scale` | `Optional[int]` | `1` | mapped | SCALE: the class, 1 ConformLoad (scalable) in a ConformLoadGroup clg_<AREA>_<ZONE>, 0 NonConformLoad (fixed) in a NonConformLoadGroup nclg_<AREA>_<ZONE>; blank: 1 (defaulted) |
+| `interruptible` | `Optional[int]` | `0` | untranscribed | INTRPT: no CIM home |
+| `dgenp` | `Optional[float]` | `0.0` | untranscribed | DGENP: distributed generation behind the load, no CIM home |
+| `dgenq` | `Optional[float]` | `0.0` | untranscribed | DGENQ: as DGENP |
+| `dgenf` | `Optional[int]` | `0` | untranscribed | DGENM: as DGENP |
+
+## Fixed shunt (R2)
+
+Mapper: `importer/cimtbl/fixed_shunt.py` (`map_fixed_shunt`). Shape: `shunt` with `bus` and no control, like the
+line shunts of R1 (IEEE14):
+
+```
+Table LinearShuntCompensator: mRID, name, bus, gPerSection (pu system), bPerSection (pu system), nomU (kV), maximumSections, normalSections, sections, inService, BaseVoltage, EquipmentContainer
+    cap_9_1, 9_1, 9, 0.0, 0.19, 138.0, 1, 1, 1, true, bv_138kv, sub_4
+```
+
+- **G, B:** GL and BL are MW and Mvar at 1 pu voltage, so `gPerSection` / `bPerSection (pu system)` =
+  GL / SBASE and BL / SBASE, derived by `per_unit_from_mva`.
+  - cimtables converts them to siemens on `nomU` = the bus's BASKV and SBASE.
+  - BL > 0 is a capacitor in RAW and in CIM, so the sign is unchanged.
+  - IEEE14 has one shunt (bus 9, BL = 19.0); WECC240 has none.
+- One section, always in: maximumSections = normalSections = sections = 1.
+- **Status:** `inService` = STATUS == 1.
+- **Container:** the bus's substation.
+- **Name:** the key `I_ID`. The ID is trimmed, so IEEE14's `' 1'` gives `cap_9_1`.
+- **Atom:** `tests/atoms/shunt/fixed_shunts.raw`: two shunts on one bus, a reactor out of service.
+
+| FixedShuntRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `bus_number` | `int` | `9` | structural | I: bus; nomU (kV) = bus I's BASKV, the (pu system) base; BaseVoltage = bus I's bv_<BASKV>; EquipmentContainer = bus I's substation |
+| `shunt_id` | `Optional[str]` | ` 1` | structural | ID: with I the key, mRID cap_<I>_<ID>, name I_ID |
+| `status` | `Optional[int]` | `1` | mapped | STATUS: inService = (STATUS == 1); blank: 1 (defaulted) |
+| `gl` | `Optional[float]` | `0.0` | derived | GL (MW at 1 pu): gPerSection (pu system) = GL / SBASE (per_unit_from_mva); blank: 0 (defaulted) |
+| `bl` | `Optional[float]` | `19.0` | derived | BL (Mvar at 1 pu, > 0 a capacitor in RAW and CIM): bPerSection (pu system) = BL / SBASE (per_unit_from_mva); blank: 0 (defaulted) |
+
+## Switched shunt (R2)
+
+Mapper: `importer/cimtbl/switched_shunt.py` (`map_switched_shunt`). Shape: `shunt` with `bus`.
+- **What a record is:** every switched bank at one bus under one controller, as up to 8 blocks of Ni identical
+  steps of Bi Mvar (Bi < 0 a reactor; reactor blocks first).
+- **Per block:** to match how the banks are wired and switched (user 2026-11-08), each block is its own
+  `LinearShuntCompensator`, and all of them name one `RegulatingControl`.
+- **Order:** the control comes first. Its terminal is a busbar's from `bus.cimtbl`, so no `Update` is needed.
+
+WECC240:
+
+```
+# untranscribed: adjm, rmpct, rmidnt
+# targetValue and targetDeadband in V
+Table RegulatingControl: mRID, name, mode, discrete, enabled, targetValue, targetDeadband, Terminal
+    # defaulted: nreg=0
+    cc_4001, 4001, voltage, true, true, 500000.0, 500000.0, bb_4001_T1
+    ...
+# one per block: Ni sections of Bi; sections split from BINIT (block_sections)
+Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV), maximumSections, sections, inService, controlEnabled, RegulatingControl, BaseVoltage, EquipmentContainer
+    swsh_4001_b1, 4001_b1, 4001, 2.0, 500.0, 5, 3.0, true, true, cc_4001, bv_500kv, sub_4001
+    ...
+```
+
+- **mRIDs:**
+  - each block is `swsh_<I>_b<k>`, in input order (prefix requested, C3);
+  - the control is `cc_<I>`, the shunt shape's prefix;
+  - the key is the bus, since a v34 switched shunt has no ID.
+- **Blocks (RAW-10):** one `LinearShuntCompensator` per block, up to the first Ni or Bi that is 0 or blank (RAW's
+  end of blocks):
+  - maximumSections = Ni and `bPerSection (pu system)` = Bi / SBASE, derived by `per_unit_from_mva`;
+  - `nomU` = the bus's BASKV;
+  - the bus's substation as the container;
+  - a block after the first zero raises.
+
+  The block slots are never defaulted: a missing Ni/Bi is the end of blocks, not a value. All 7 WECC240 shunts
+  have one block. `NonlinearShuntCompensator` is not used: its points hold one sequence of totals with no
+  interpolation (`sections` must be one of the points), so it can say neither which bank is in nor a continuous
+  state.
+- **Sections:** RAW gives only the total in service, BINIT (Mvar at 1 pu). `block_sections` splits it in RAW's
+  switching order (ADJM = 0):
+  - BINIT < 0 fills the reactor blocks in input order, and BINIT > 0 the capacitor blocks;
+  - each block in turn takes up to its Ni steps;
+  - the block where BINIT runs out takes the rest as a fraction of a step (CIM allows a non-integer `sections`:
+    MODSW 2, or an ADJM = 1 combination with the same total);
+  - BINIT beyond the blocks' total raises;
+  - `normalSections` is blank: RAW has no normal state apart from BINIT.
+
+  The exporter's BINIT = Σ sections × Bi is exact either way. WECC240's sections are 3, 0, 4, 0, 6, 3, 1.
+- **ADJM:** untranscribed: CIM has no switching-order method. The order is kept by `_b<k>`.
+- **Control (MODSW).** The control is always written, so the blocks stay grouped even when locked:
+
+  | MODSW | CIM |
+  |---|---|
+  | 0 locked | `enabled = false`, every block `controlEnabled = false`, `discrete` blank; the VSWHI/VSWLO target as read (unused) |
+  | 1 discrete, voltage | `mode = voltage`, `discrete = true` |
+  | 2 continuous, voltage | `mode = voltage`, `discrete = false` |
+  | 3 plant Q, 5 another shunt's admittance | raise `NotImplementedError`: no case has one yet |
+  | 4 VSC converter Q, 6 FACTS shunt Q | raise `NotImplementedError`: phase 2 (VSC DC, FACTS) |
+
+  - **Regulated point:** `Terminal` = `bb_<SWREG>_T1`, or `bb_<I>_T1` when SWREG is 0 (RAW-11). NREG ≠ 0 (a node
+    in a substation) raises until R6.
+  - **Target:** `targetValue` = (VSWHI + VSWLO)/2 × the regulated bus's BASKV, and `targetDeadband` =
+    (VSWHI − VSWLO) × BASKV. Both are in V, as the core shape writes them for mode voltage (deadband =
+    the full band, target ± deadband/2). They are derived by `volts_from_per_unit`, which goes through the
+    units library.
+  - The subtraction can leave a last-digit float residue: the atom's 1.04 − 0.98 gives `6900.0000000000055`.
+    The value is written as computed, never rounded, and the exporter's VSWHI/VSWLO can differ in the last digit
+    (expected difference).
+  - A cimtables `targetValue (kV)` column binds without error but drops the unit (request U-RAW-3).
+  - WECC240's 1.5/0.5 pu bands give target = BASKV and deadband = BASKV.
+- **Status:** `inService` = STATUS == 1 on every block.
+- **Untranscribed:**
+  - RMPCT: CIM has no participation share for a shunt (`SynchronousMachine.qPercent` covers only machines);
+    CIM 18 gap; 100 everywhere in both cases;
+  - RMIDNT: only used by MODSW 4 and 6, which raise.
+- **Atom:** `tests/atoms/shunt/switched_shunts.raw` covers reactor + capacitor blocks with remote regulation,
+  continuous mode with 2.5 steps, and a locked shunt (10 × 1.0 and 5 × 1.5 Mvar, BINIT 13 → 10 and 2 steps).
+
+| SwitchedShuntRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `bus_number` | `int` | `4001`, `4005`, `6104` | structural | I: the key (a v34 switched shunt has no ID); every block's bus, nomU (kV) = its BASKV, BaseVoltage and EquipmentContainer (its substation) |
+| `modsw` | `Optional[int]` | `1` | mapped | MODSW: 0 locked (control enabled = false), 1 voltage discrete, 2 voltage continuous; 3 and 5 raise (no case), 4 and 6 raise (phase 2); blank: 1 (defaulted) |
+| `adjm` | `Optional[int]` | `0` | untranscribed | ADJM: the switching-order method has no CIM home; the block order is kept by _b<i> |
+| `status` | `Optional[int]` | `1` | mapped | STATUS: inService = (STATUS == 1) on every block; blank: 1 (defaulted) |
+| `vswhi` | `Optional[float]` | `1.5` | derived | VSWHI (pu): targetValue = (VSWHI + VSWLO) / 2 and targetDeadband = VSWHI - VSWLO, x the regulated bus's BASKV, in V (volts_from_per_unit); blank: 1.0 (defaulted) |
+| `vswlo` | `Optional[float]` | `0.5` | derived | VSWLO (pu): as VSWHI |
+| `swreg` | `Optional[int]` | `4001`, `4005`, `6104` | structural | SWREG: the regulated bus; the control's Terminal = bb_<SWREG>_T1, or bb_<I>_T1 when 0 (RAW-11); blank: 0 (defaulted) |
+| `rmpct` | `Optional[float]` | `100.0` | untranscribed | RMPCT: CIM has no participation share for a shunt (CIM 18 gap) |
+| `rmidnt` | `Optional[str]` |  | untranscribed | RMIDNT: only MODSW 4 and 6 use it, which raise |
+| `binit` | `Optional[float]` | `600.0`, `0.0`, `400.0` | derived | BINIT (Mvar at 1 pu): split into each block's sections in RAW's switching order (block_sections); beyond the blocks' total raises; blank: 0 (defaulted) |
+| `n1` | `Optional[int]` | `5`, `6` | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b1` | `Optional[float]` | `200.0`, `100.0` | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n2` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b2` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n3` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b3` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n4` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b4` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n5` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b5` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n6` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b6` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n7` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b7` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `n8` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `b8` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
+| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus SWREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+
 ## Owner
+
 
 No artifact. The Owner table and every owner field on other records (bus OWNER, O1/F1..O4/F4) are untranscribed:
 CIM keeps ownership in asset management (CIM 18 gap). The master comment counts the owners.
@@ -422,6 +648,8 @@ IDE and IC are checked in the mapper (above). They are not CIM enums.
 | 3 disconnect switch | `Disconnector` |
 | blank or other | raises |
 
+MODSW (R2): the table in [Switched shunt](#switched-shunt-r2).
+
 ## CIM 18 gaps
 
 Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md`) and in the plan's §6a:
@@ -430,10 +658,11 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 |---|---|---|
 | zone membership of a bus | ZONE | substations never span two zones |
 | a bus's own control area, and the area slack (equipment is covered: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea`, `TieFlow`) | bus AREA, area ISW | untranscribed |
-| the load-area hierarchy (`SubLoadArea` → `LoadArea` missing); area/zone of machines and DC equipment | induction machine, MTDC bus AREA/ZONE | loads per (area, zone) `SubLoadArea` (R2); the rest untranscribed |
+| area/zone of machines and DC equipment; zone of a load (the `SubLoadArea` → `LoadArea` hierarchy was added to the profile 2026-11-08) | induction machine, MTDC bus AREA/ZONE; load ZONE ≠ bus ZONE | loads in `LoadArea` ⊃ `SubLoadArea` per (area, zone) (R2); the rest untranscribed |
 | ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
 | the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET | untranscribed |
 | a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
+| a shunt's share of a coordinated voltage control (R2) | switched shunt RMPCT | untranscribed |
 
 Not gaps: a bus's voltage limits and its regulation sit on its `BusbarSection`'s terminal. CIM puts limits and
 regulating controls on terminals by design (RAW-11, RAW-19).
@@ -448,6 +677,8 @@ regulating controls on terminals by design (RAW-11, RAW-19).
 - **R1** (user, 2026-11-08): RAW-9 (rating sets, NXFRAT), RAW-12 (multi-section `Line` with `Update` rows),
   RAW-13 (line shunts as ordinary shunts), RAW-20 (one rating set on terminal 1), RAW-21 (LEN in km), RAW-22
   (MET untranscribed, a gap).
+- **R2** (user, 2026-11-08): RAW-8 (loads: SCALE → Conform/NonConformLoad; `LoadArea` ⊃ `SubLoadArea` per (area,
+  zone)); RAW-10 (a switched shunt's blocks as one `LinearShuntCompensator` each, under one `RegulatingControl`).
 
 ## Reference model and expected differences
 

@@ -83,10 +83,12 @@ def test_reads_every_record(case, counts):
     assert {cls: model.count(cls) for cls in counts} == counts
 
 
-BRANCH_ATOMS = Path(__file__).parent / "atoms" / "branch"
+ATOMS = Path(__file__).parent / "atoms"
+#: the hand-built atoms of R1 and R2 (the substation atom is NODE_BREAKER)
+SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt") for path in (ATOMS / folder).glob("*.raw"))
 
 
-@pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER, *sorted(BRANCH_ATOMS.glob("*.raw"))],
+@pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER, *SLICE_ATOMS],
                          ids=lambda case: case.stem)
 def test_read_write_read_is_lossless(case, tmp_path):
     model = Raw34Reader(case).read_all()

@@ -1,0 +1,33 @@
+# PSS/E RAW Load -> ConformLoad / NonConformLoad (by SCALE), LoadResponseCharacteristic (ZIP), LoadArea,
+# SubLoadArea, ConformLoadGroup / NonConformLoadGroup (AREA, ZONE).
+# Source table: Load (records: 11)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#load
+
+Profile = cim18v17
+
+Table LoadArea: mRID, name, ControlArea
+    la_1, 1, ca_1
+
+Table SubLoadArea: mRID, name, LoadArea
+    sla_1_1, 1_1, la_1
+
+Table ConformLoadGroup: mRID, name, SubLoadArea
+    clg_1_1, 1_1, sla_1_1
+
+# ZIP fractions: PL, IP, YP over p; QL, IQ, -YQ over q (zip_mix)
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_1_0_0_1_0_0, false, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0
+
+# untranscribed: owner, interruptible, dgenp, dgenq, dgenf
+Table ConformLoad: mRID, name, bus, p (MW), q (MVAr), inService, LoadResponse, LoadGroup, BaseVoltage, EquipmentContainer
+    ld_2_1,  2_1,  2,  21.7, 12.7, true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_2
+    ld_3_1,  3_1,  3,  94.2, 19.0, true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_3
+    ld_4_1,  4_1,  4,  47.8, -3.9, true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_4
+    ld_5_1,  5_1,  5,  7.6,  1.6,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_5
+    ld_6_1,  6_1,  6,  11.2, 7.5,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_5
+    ld_9_1,  9_1,  9,  29.5, 16.6, true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_4
+    ld_10_1, 10_1, 10, 9.0,  5.8,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_10
+    ld_11_1, 11_1, 11, 3.5,  1.8,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_11
+    ld_12_1, 12_1, 12, 6.1,  1.6,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_12
+    ld_13_1, 13_1, 13, 13.5, 5.8,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_13
+    ld_14_1, 14_1, 14, 14.9, 5.0,  true, zip_1_0_0_1_0_0, clg_1_1, bv_138kv, sub_14

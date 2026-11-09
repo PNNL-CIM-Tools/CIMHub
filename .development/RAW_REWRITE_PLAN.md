@@ -15,7 +15,8 @@ substations, BusbarSections, voltage limits (kV) and SvVoltage, through `RawImpo
 - IEEE14 goldens are committed under `tests/goldens/IEEE14/`.
 - IEEE14 (11 substations), WECC240 (134) and the node-breaker atom bind.
 - Every WECC240 limit and solved voltage in SI equals pu × BASKV; 64 tests.
-- **R1 done 2026-11-08** (81 tests; atoms `cimhub_raw/tests/atoms/branch/`; R2 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
+- **R1 done 2026-11-08** (81 tests; atoms `cimhub_raw/tests/atoms/branch/`). **R2 done 2026-11-08** (112 tests; atoms
+`tests/atoms/load/`, `tests/atoms/shunt/`; R3 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
 with the DSS wave on branch `raw-v34`, in a worktree that sits beside the repo checkout (and so beside the `CIM-*`
 checkouts, which the root `../CIM-*` path sources need).
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (its F3 wave for `cimhub_raw`). **Pattern:**
@@ -159,8 +160,8 @@ with every bus in `nodes`, so a bus on no merge equipment is its own substation.
 - Prefixes the `cimtbl-translate` table lacks, for generators, areas and switched shunts, are requested from its
   owners (RAW-7, RAW-2). None is invented here.
 - `name` = the record's `NAME` when it is not blank, else the key.
-- A duplicate key raises in the reader, with both line numbers. Core's `GraphModel.add_to_graph` still warns and
-  drops on a collision; that fix is a core request (§7, C1).
+- A duplicate key raises in the reader, with both line numbers. Core's `GraphModel.add_to_graph` raises too on
+  `rc_1` (C1, 2026-11-08), so no reader can drop one.
 
 ### 3.4 Defaults (RAW-3, decided 2026-11-08)
 
@@ -301,17 +302,16 @@ Each decision has a recommendation; the slice's spec section settles it.
   - The `synchronous_machine` shape and its prefixes are core and translate-skill requests (C2, C3).
   - Area membership: one `ControlAreaGeneratingUnit` per unit, in the `ControlArea` of the generator's bus
     (cim18v17 profile of 2026-11-08).
-- **RAW-8. Loads.**
-  - One `EnergyConsumer` per load, with p = PL + IP + YP and q = QL + IQ − YQ (YQ is positive for a capacitive
-    admittance load, so it enters q with a minus sign).
-  - A derived `LoadResponseCharacteristic` per distinct fraction mix gives the constant-power, current and
-    impedance fractions. Its function is a U4 candidate.
-  - SCALE, INTRPT, DGENP/Q/M and LOADTYPE: untranscribed unless a home is found.
-  - Area and zone: the load's own AREA and ZONE (which may differ from its bus's). Each load is a
-    `ConformLoad` in a `ConformLoadGroup`, one group per (area, zone) pair. Each group is in a `SubLoadArea`
-    for that pair, which as an `EnergyArea` names `ControlArea` ca_<area>. `LoadArea` stays out, because
-    cim18v17 has no `SubLoadArea` → `LoadArea` link (§6a). `ConformLoad` rather than `NonConformLoad`:
-    RAW does not say whether a load follows the system load curve. *To settle in R2.*
+- **RAW-8. Loads.** *Decided 2026-11-08 (user, with the R2 spec; `CIMTBL_MAPPING.md#load-r2`).*
+  - p = PL + IP + YP, q = QL + IQ − YQ (`load_p_q`; YQ < 0 is inductive, checked against the v34 data format).
+  - ZIP fractions by `zip_mix`: one shared `zip_<six fractions>` row per distinct mix. Core's
+    `zip_constant_pq`/`_i`/`_z` take over the pure mixes once `raw-v34` takes `rc_1` (its core has no
+    `load_response` yet).
+  - SCALE 1 → `ConformLoad`, 0 → `NonConformLoad`: CIM's own load-pattern split, so SCALE is mapped.
+  - `LoadArea` `la_<area>` (→ `ca_<area>`) ⊃ `SubLoadArea` `sla_<area>_<zone>` ⊃ `clg_`/`nclg_<area>_<zone>`,
+    through `SubLoadArea.LoadArea` (added to the profile by the user 2026-11-08). The zone of a load is still
+    read from its bus's substation; a load ZONE ≠ its bus's is also listed as untranscribed (gap).
+  - INTRPT, DGENP/Q/M, OWNER untranscribed.
 - **RAW-9. Ratings.** *Decided 2026-11-08 (with the R1 spec).*
   - RATE1..12 are MVA, so each becomes an `ApparentPowerLimit` (`normalValue (MVA)`, copied) on the
     `OperationalLimitSet` on the equipment's first terminal (RAW-20).
@@ -320,9 +320,16 @@ Each decision has a recommendation; the slice's spec section settles it.
   - A zero rating is no limit (PSS/E's meaning), so it writes no row.
   - NXFRAT > 0 (XFRRAT for transformers, R4): a current expressed as MVA, so a `CurrentLimit` with
     `normalValue (kA)` = RATEn / (√3 × BASKV), derived by `current_from_rating`. Blank: MVA, defaulted.
-- **RAW-10. Switched shunts.** Blocks Ni × Bi become a `NonlinearShuntCompensator` with one point per cumulative
-  step, or a `LinearShuntCompensator` when there is one block. MODSW → `RegulatingControl` mode;
-  VSWHI/VSWLO → the target value and deadband.
+- **RAW-10. Switched shunts.** *Decided 2026-11-08; one shunt per block per the user ("match physical reality
+  of how they are wired and switched").*
+  - Each block becomes a `LinearShuntCompensator` `swsh_<I>_b<k>` (Ni sections of Bi / SBASE pu), and all of
+    them name one `RegulatingControl` `cc_<I>`, which is always written (disabled when MODSW = 0).
+  - BINIT is split across the blocks in RAW's switching order (`block_sections`).
+  - MODSW 1/2 → voltage, discrete/continuous. Target and deadband are in V from VSWHI/VSWLO on the regulated
+    bus's BASKV.
+  - MODSW 3/5 raise (no case); MODSW 4/6 are phase 2.
+  - ADJM and RMPCT are untranscribed.
+  - `NonlinearShuntCompensator` is not used: one sequence of totals cannot say which bank is in.
 - **RAW-11. Remote regulation.** *Decided 2026-11-08 (user).* `RegulatingControl.Terminal` names a terminal by
   design, never a node: "the terminal could connect into either a topological node or a connectivity node.
   Sometimes it is useful to model regulation at a terminal of a bus bar object" (CIM UML). So a control
@@ -388,9 +395,10 @@ Each decision has a recommendation; the slice's spec section settles it.
 | Ownership of network equipment: CIM puts ownership in asset management (`AssetOwner` / `Ownership` on an `Asset`), not on a `PowerSystemResource` | Owner table (I, OWNAME); O1/F1..O4/F4 on loads, generators, branches, transformers, switched shunts, FACTS, VSC; bus OWNER | untranscribed | here and in the mapping spec; also to the shared CIM 18 gap register (`CIMTBL-Models/distribution/CIM18_GAPS.md`) |
 | Zone membership of a bus: a node reaches a region only through its container, so all the buses of a substation share one zone | Zone table, bus ZONE | substations split at zone boundaries (§3.2) | here and in the shared register |
 | A bus's own control area, and the area slack bus. Equipment is covered since the 2026-11-08 profile: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea` (an `EnergyArea`) → `ControlArea`, `TieFlow` on terminals. A node or `BusbarSection` still has no area | bus AREA, area ISW | equipment memberships written (R2, R3, R5); bus AREA and ISW untranscribed | here and in the shared register |
-| The load-area hierarchy (`SubLoadArea` → `LoadArea` is missing), and the area/zone of machines and DC equipment | induction machine and multi-terminal DC bus AREA/ZONE | loads in a `SubLoadArea` per (area, zone), no `LoadArea`; machine and DC AREA/ZONE untranscribed | here and in the shared register |
+| ~~The load-area hierarchy (`SubLoadArea` → `LoadArea`)~~ added to the profile 2026-11-08 (user). Still open: the area/zone of machines and DC equipment, and a zone association for equipment | induction machine and multi-terminal DC bus AREA/ZONE; load ZONE ≠ bus ZONE | loads in `LoadArea` ⊃ `SubLoadArea` per (area, zone); machine and DC AREA/ZONE untranscribed | here and in the shared register |
 | The metered (loss-allocation) end of a branch | branch, switch, multi-section line MET | untranscribed (RAW-22) | here and in the shared register |
 | A shunt switched with its line, in a bus-branch model (a node-breaker model says it by placement) | branch GI/BI/GJ/BJ | an ordinary `LinearShuntCompensator` per end, linked by mRID only (RAW-13) | here and in the shared register |
+| A shunt's share of a coordinated voltage control (`SynchronousMachine.qPercent` exists only for machines) | switched shunt RMPCT | untranscribed (R2) | here and in the shared register |
 
 Not gaps (by design, user 2026-11-08): limits and regulation always sit on a terminal. A bus's voltage limits and
 its regulation use the Terminal of its `BusbarSection` (RAW-11, RAW-19).
@@ -402,13 +410,15 @@ in the root `pyproject.toml` / `uv.lock`. Requests to the core owner:
 
 | # | ask | blocks |
 |---|---|---|
-| C1 | `GraphModel.add_to_graph` raises on a duplicate key instead of warning and dropping (I8) | nothing (the RAW reader checks first) |
+| C1 | ~~`GraphModel.add_to_graph` raises on a duplicate key instead of warning and dropping (I8)~~ done on `rc_1` 2026-11-08 (uncommitted): `GraphModel.add_to_graph` raises `ValueError` on an identifier already in its class (user: the new API shape; identifiers seed mRIDs, unique at least within the local model). The RAW reader keeps its own earlier raise, which names both line numbers | nothing (the RAW reader checks first) |
 | C2 | `line_bus_branch` with a `BusbarSection` per bus, and its node mRID made bare (RAW-18); the voltage `OperationalLimitType`s with `direction` high and low (normal and emergency) in `common.cimtbl`; shapes `control_area` (ControlArea, ControlAreaGeneratingUnit, ConformLoadGroup, SubLoadArea, TieFlow), `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example | R0–R6 |
-| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, NonlinearShuntCompensator, the multi-section `Line` (`msl_`) in the `cimtbl-translate` table (its owners) | R0–R3 |
+| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, the switched-shunt block (`swsh_`), LoadArea (`la_`), SubLoadArea (`sla_`), ConformLoadGroup (`clg_`), NonConformLoadGroup (`nclg_`), the multi-section `Line` (`msl_`) in the `cimtbl-translate` table (its owners) | R0–R3 |
 | C4 | the ZIP fraction function and the CZ/CM derivations as U4 candidates | nothing |
 | C5 | `scripts/leak-gate.sh`: `--exclude-dir=.git` does not skip a worktree's `.git` *file*, so the gate always fails in a worktree; add `--exclude=.git` | a clean gate on this branch |
-| C6 | `cimhub_core.cimtbl.fill_defaults` keeps attributes `dataclasses.replace` drops: the reader's composite `record.ID`. `cimhub_raw` wraps it (`importer/cimtbl/records.py`) until then | R1 |
-| C7 | `cimhub_core.cimtbl_testing._keyed_records` (the golden diff, run only on a mismatch) raises `AttributeError: 'ImportRecord' object has no attribute 'cim_class'` on a master with `Import`s, so a changed master golden reports a crash instead of its differences | R1 |
+| C6 | ~~`cimhub_core.cimtbl.fill_defaults` keeps attributes `dataclasses.replace` drops (the reader's composite `record.ID`)~~ done on `rc_1` 2026-11-08 (uncommitted), with a test. `importer/cimtbl/records.py`'s `fill_keyed_defaults` goes once `raw-v34` takes `rc_1`; so do the pure `zip_` rows in `load.py` (core's `zip_fractions.cimtbl` replaces them) | R1, R2 |
+| C7 | ~~the golden diff (`cimtbl_testing._keyed_records`) crashes on a master's `Import` records~~ already fixed on `rc_1` (it keys them as `("Import", path)`); `raw-v34` predates the fix | R1 |
+| U-RAW-2 | cimtables: a second `SubLoadArea` naming one `ControlArea` binds without error and overwrites the 0..1 inverse `ControlArea.EnergyArea`; it should raise (I8) | nothing (R2 hangs sub-areas on a `LoadArea`) |
+| U-RAW-3 | cimtables: a unit on a unitless float column (`RegulatingControl.targetValue (kV)`) is silently dropped; it should raise | nothing (R2 writes V) |
 | ~~U-RAW-1~~ | withdrawn 2026-11-08: bus voltage limits and solved voltages are written in kV, derived as pu × BASKV (RAW-14, RAW-19) | |
 
 ## 8. Oracle
