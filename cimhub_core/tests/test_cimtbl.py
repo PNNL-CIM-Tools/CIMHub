@@ -6,8 +6,9 @@ import dataclasses
 import math
 from typing import Optional
 
+import cimtables
 import pytest
-from cimtables.document import Column, Document, DocumentSet, Import, ObjectStatement, Row, Table
+from cimtables.document import Column, Document, DocumentSet, Import, Row, Table
 from pydantic import BaseModel
 
 from cimhub_core import CimtblImporter
@@ -19,7 +20,6 @@ from cimhub_core.cimtbl import (
     check_fields,
     cimtbl_to_cim,
     copied_columns,
-    document_terminals,
     field_names,
     fill_defaults,
     fields_stub,
@@ -261,6 +261,44 @@ def test_cimtbl_importer(cim18_scope, tmp_path):
     assert (tmp_path / "atom.cimtbl").exists()
 
 
+def _naming_part(network) -> Document:
+    """A part mapped from the bound network: a name for every BaseVoltage it holds."""
+    rows = [Row([bv.mRID, f"{float(bv.nominalVoltage.to('kV'))} kV"])
+            for bv in network.graph[network.cim.BaseVoltage].values()]
+    return Document(name="names", profile=CIM_PROFILE,
+                    statements=[Table("BaseVoltage", [Column("mRID"), Column("name")], rows, update=True)])
+
+
+def test_bound_parts_bind_last_and_the_directory_reloads(cim18_scope, tmp_path):
+    seen = []
+
+    def bound_parts(network):
+        seen.append(_nominal_kv(network))  # the to_cimtbl documents have bound
+        return [_naming_part(network), Document(name="empty", profile=CIM_PROFILE, statements=[])]
+
+    network = cimtbl_to_cim(_documents(), artifact_dir=tmp_path, bound_parts=bound_parts)
+    assert seen == [[0.48, 4.16]]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["atom.cimtbl", "base_voltage.cimtbl", "names.cimtbl"]
+    imports = [line for line in (tmp_path / "atom.cimtbl").read_text().splitlines() if line.startswith("Import")]
+    assert imports == ["Import base_voltage.cimtbl", "Import names.cimtbl"]
+    names = {bv.uri(): bv.name for bv in network.graph[network.cim.BaseVoltage].values()}
+    assert sorted(names.values()) == ["0.48 kV", "4.16 kV"]
+    reloaded = cimtables.load_model(tmp_path / "atom.cimtbl")
+    assert {bv.uri(): bv.name for bv in reloaded.graph[reloaded.cim.BaseVoltage].values()} == names
+
+
+def test_cimtbl_importer_bound_parts(cim18_scope):
+    class AtomImporter(CimtblImporter):
+        def to_cimtbl(self, model):
+            return _documents()
+
+        def bound_parts(self, model, network):
+            return [_naming_part(network)]
+
+    network = AtomImporter().to_cim(None)
+    assert sorted(bv.name for bv in network.graph[network.cim.BaseVoltage].values()) == ["0.48 kV", "4.16 kV"]
+
+
 # --- untranscribed (D5) -------------------------------------------------------
 
 def test_untranscribed_values_lists_non_empty_values():
@@ -333,30 +371,3 @@ def test_record_diff():
         "BaseVoltage bv_1.nominalVoltage (kV): expected '4.16', got '<no column>'",
         "BaseVoltage bv_1.nominalVoltage (V): expected '<no column>', got '4160'",
     ]
-
-
-# --- document_terminals -----------------------------------------------------
-
-def test_document_terminals_follow_the_connectivity_columns():
-    container = Column("EquipmentContainer", default="fdr")
-    lines = Table("ACLineSegment", [Column("mRID"), Column("name"), Column("node1"), Column("node2"), container],
-                  [Row(["ln_a", "a", "n1", "n2"]), Row(["ln_b", "b", "n2", "n3", "other"])])
-    transformer = Table("PowerTransformer", [Column("mRID"), Column("name")], [Row(["xf_t", "T"])])
-    ends = Table("PowerTransformerEnd", [Column("mRID"), Column("PowerTransformer"), Column("node"),
-                                         Column("endNumber")],
-                 [Row(["xf_t_2", "xf_t", "n4", "2"]), Row(["xf_t_1", "xf_t", "n3", "1"])])
-    source = ObjectStatement("EnergySource", [(Column("mRID"), "src"), (Column("node"), "n0")])
-    update = Table("Terminal", [Column("mRID"), Column("phases")], [Row(["ln_a_T1", "A"])], update=True)
-    documents = [Document("one", [source, lines]), Document("two", [transformer, ends, update])]
-    assert [tuple(item) for item in document_terminals(documents)] == [
-        ("src", None, {1: "n0"}),
-        ("ln_a", "a", {1: "n1", 2: "n2"}),
-        ("ln_b", "b", {1: "n2", 2: "n3"}),
-        ("xf_t", "T", {1: "n3", 2: "n4"}),
-    ]
-
-
-def test_document_terminals_reject_an_end_with_no_transformer():
-    ends = Table("TransformerTankEnd", [Column("mRID"), Column("node"), Column("endNumber")], [Row(["e", "n1", "1"])])
-    with pytest.raises(ValueError, match="names no PowerTransformer or AutoTransformer"):
-        document_terminals([Document("one", [ends])])

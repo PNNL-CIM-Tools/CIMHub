@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from cimhub_opendss import DssReader, DssWriter
+from cimhub_opendss.dss_writer import format_float
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import deck
@@ -27,10 +28,21 @@ WRITER_DECKS = [
 
 
 def _records(model) -> dict:
-    """``{class: {lowered name: slots}}`` of every class, ``history`` excluded. ``like`` is dropped: the reader has
-    resolved it into the slots, and the writer does not write it."""
-    return {cls: {str(obj.name).lower(): {**vars(obj), "like": None} for obj in model.list_by_class(cls)}
+    """``{class: {lowered name: slots}}`` of every class, ``history`` excluded, floats at the writer's precision
+    (``FLOAT_DIGITS``: IEEE8500's ``X=14.798306633595042`` is written ``14.798306633595``). ``like`` is dropped: the
+    reader has resolved it into the slots, and the writer does not write it."""
+    return {cls: {str(obj.name).lower(): {name: _at_writer_precision(value)
+                                          for name, value in {**vars(obj), "like": None}.items()}
+                  for obj in model.list_by_class(cls)}
             for cls in model.graph}
+
+
+def _at_writer_precision(value):
+    if isinstance(value, float):
+        return float(format_float(value))
+    if isinstance(value, list):
+        return [_at_writer_precision(item) for item in value]
+    return value
 
 
 def _round_trip(source: Path, tmp_path: Path) -> tuple[Path, object, object]:
@@ -62,7 +74,7 @@ def test_deck_layout(tmp_path):
     written = tmp_path / "deck.dss"
     DssWriter().write(model, written)
     lines = written.read_text().splitlines()
-    assert lines[:2] == ["Clear", "Set defaultbasefreq=50.0"]
+    assert lines[:2] == ["Clear", "Set defaultbasefreq=50"]
     assert lines[2].startswith("New Circuit.atom ")
     assert lines[-4:] == ["Set voltagebases=[4.16 0.208]", "CalcVoltageBases", "Open Line.l1 1",
                           "Buscoords deck_buscoords.csv"]

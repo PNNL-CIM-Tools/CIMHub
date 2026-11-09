@@ -1,0 +1,16 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=2.09861225631438e-05 X1=8.39444902525753e-05 R0=2.35020625041835e-05 X0=7.05061875125506e-05
+new Wiredata.wire_acsr_1/0 Rdc=0.000695935734908136 Rac=0.000709854449606299 Runits=m GMRac=0.001359408 GMRunits=m radius=0.0050546 radunits=m normamps=230 emergamps=345
+new Wiredata.wire_cu_1/0 Rac=0.000377172313688062 Runits=m GMRac=0.003392424 GMRunits=m radius=0.0046736 radunits=m normamps=100 emergamps=150
+new Cndata.cn_cn_250 k=13 DiaStrand=0.00162814 GmrStrand=0.000633984 Rstrand=0.00924115664519208 InsLayer=0.005588 DiaIns=0.026924 DiaCable=0.032766 Rac=0.000254762188817307 Runits=m GMRac=0.00521208 GMRunits=m radius=0.0072009 radunits=m normamps=260 emergamps=390
+new Tsdata.ts_ts_1/0 DiaShield=0.022352 TapeLayer=0.000127 TapeLap=20 InsLayer=0.005588 DiaIns=0.020828 DiaCable=0.026924 Rac=0.000602730056470214 Runits=m GMRac=0.00338328 GMRunits=m radius=0.0046736 radunits=m normamps=165 emergamps=247.5
+new Linegeometry.wc_606 nconds=3 nphases=3 reduce=Yes cond=1 cncable=cn_cn_250 x=-0.1524 h=-1.2192 units=m cond=2 cncable=cn_cn_250 x=0 h=-1.2192 units=m cond=3 cncable=cn_cn_250 x=0.1524 h=-1.2192 units=m
+new Linegeometry.wc_607 nconds=2 nphases=1 reduce=Yes cond=1 tscable=ts_ts_1/0 x=0 h=-1.2192 units=m cond=2 wire=wire_cu_1/0 x=0.0762 h=-1.2192 units=m
+new Linecode.lc_3-1/0c_2/0cn_t nphases=3 r1=0.0003489 x1=0.000426198 r0=0.000588811 x0=0.00129612 C1=0.0104308823411236 C0=0.00448501282215346 units=m baseFreq=60
+new Linecode.lc_mtx601 nphases=3 units=m rmatrix=[0.000215305118110236 |9.69339059890241e-05 0.0002097127773801 |9.81766483734988e-05 9.53804780084308e-05 0.000212136125029826] xmatrix=[0.000632493736578382 |0.00031174192714547 0.000651072735226279 |0.000263212837031735 0.00023916577189215 0.000642994909727193] cmatrix=[0.00173983933826454 |-0.0003728227153424 0.00173983933826454 |-0.0003728227153424 -0.0003728227153424 0.00173983933826454] baseFreq=60
+new Line.ln_c606 geometry=wc_606 phases=3 bus1=sourcebus.1.2.3 bus2=n1.1.2.3 length=152.4 units=m normamps=260 emergamps=390
+new Line.ln_c607 geometry=wc_607 phases=1 bus1=n1.2 bus2=n2.2 length=91.44 units=m normamps=165 emergamps=247.5
+new Line.ln_s3 linecode=lc_3-1/0c_2/0cn_t phases=3 bus1=n1.1.2.3 bus2=n3.1.2.3 length=500 units=m normamps=310 emergamps=310
+Set voltagebases=[4.16]
+CalcVoltageBases

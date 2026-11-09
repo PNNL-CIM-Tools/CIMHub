@@ -25,8 +25,8 @@ Table Location: mRID, name, CoordinateSystem=crs_bus
     sw_brkr1_loc,        Brkr1_Loc
     sw_sect1_loc,        Sect1_Loc
     xf_sub3_loc,         Sub3_Loc
-    xf_tpoletop_loc,     Tpoletop_Loc
     xf_xfm1_loc,         XFM1_Loc
+    xf_tpoletop_loc,     Tpoletop_Loc
     xf_reg1_loc,         Reg1_Loc
     xf_reg2_loc,         Reg2_Loc
     xf_reg3_loc,         Reg3_Loc
@@ -92,10 +92,10 @@ Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
     xf_sub3_loc_1,         xf_sub3_loc,         1, 200.0, 400.0
     xf_sub3_loc_2,         xf_sub3_loc,         2, 200.0, 350.0
     xf_sub3_loc_3,         xf_sub3_loc,         3, 205.0, 350.0
-    xf_tpoletop_loc_1,     xf_tpoletop_loc,     1, 200.0, 200.0
-    xf_tpoletop_loc_2,     xf_tpoletop_loc,     2, 200.0, 190.0
     xf_xfm1_loc_1,         xf_xfm1_loc,         1, 390.0, 250.0
     xf_xfm1_loc_2,         xf_xfm1_loc,         2, 400.0, 250.0
+    xf_tpoletop_loc_1,     xf_tpoletop_loc,     1, 200.0, 200.0
+    xf_tpoletop_loc_2,     xf_tpoletop_loc,     2, 200.0, 190.0
     xf_reg1_loc_1,         xf_reg1_loc,         1, 200.0, 325.0
     xf_reg1_loc_2,         xf_reg1_loc,         2, 200.0, 300.0
     xf_reg2_loc_1,         xf_reg2_loc,         1, 200.0, 325.0
@@ -145,8 +145,8 @@ Update Table PowerSystemResource: mRID, Location
     sw_brkr1,        sw_brkr1_loc
     sw_sect1,        sw_sect1_loc
     xf_sub3,         xf_sub3_loc
-    xf_tpoletop,     xf_tpoletop_loc
     xf_xfm1,         xf_xfm1_loc
+    xf_tpoletop,     xf_tpoletop_loc
     xf_reg1,         xf_reg1_loc
     xf_reg2,         xf_reg2_loc
     xf_reg3,         xf_reg3_loc

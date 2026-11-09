@@ -9,7 +9,7 @@ from pathlib import Path
 import opendssdirect as dss
 import pytest
 
-from cimhub_core.cimtbl import check_fields
+from cimhub_core.cimtbl import check_fields, cimtbl_to_cim
 from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
 from cimhub_opendss import dss_to_cim
 from cimhub_opendss.dss_reader import DssReader
@@ -28,8 +28,9 @@ def _cim_scope():
 
 
 def _part(path: Path):
-    parts = DssImporter("atom").to_cimtbl(DssReader(path).read_all()).parts
-    return next(part for part in parts if part.name == "buscoords")
+    """``buscoords.cimtbl`` mapped from the network the deck's other parts bind."""
+    native = DssReader(path).read_all()
+    return buscoords.map_buscoords(native, cimtbl_to_cim(DssImporter("atom").to_cimtbl(native)))
 
 
 def test_classification_is_complete():

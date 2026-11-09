@@ -1,0 +1,10 @@
+// Switch states for the export (EXPORT_MAPPING.md S6b, E6): an open Fuse, an open Recloser, and a SwtControl that is
+// normally open but closed now. A Fuse state is per phase: `State=open` on 3 phases would open phase 1 only.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=200000 MVAsc1=210000
+New Line.f_open bus1=sourcebus bus2=n1 Switch=y
+New Fuse.f_open MonitoredObj=Line.f_open RatedCurrent=65 Normal=[open open open] State=[open open open]
+New Line.r_open bus1=sourcebus bus2=n2 Switch=y
+New Recloser.r_open MonitoredObj=Line.r_open Normal=open State=open
+New Line.n_open bus1=sourcebus bus2=n3 Switch=y
+New SwtControl.n_open SwitchedObj=Line.n_open Normal=open State=closed

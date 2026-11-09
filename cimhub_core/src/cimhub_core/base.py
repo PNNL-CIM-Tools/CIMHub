@@ -21,7 +21,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from cimgraph.models import GraphModel as CIMGraphModel
-from cimtables.document import DocumentSet
+from cimtables.document import Document, DocumentSet
 
 from cimhub_core.cimtbl import cimtbl_to_cim
 from cimhub_core.graph_model import GraphModel as SpokeGraphModel
@@ -185,8 +185,9 @@ class FormatImporter(ABC):
 class CimtblImporter(FormatImporter):
     """Convert a native model to CIM through ``.cimtbl`` documents.
 
-    The spoke implements only :meth:`to_cimtbl`, a pure mapping from native
-    records to documents. :meth:`to_cim` writes those documents and builds CIM
+    The spoke implements :meth:`to_cimtbl`, a pure mapping from native
+    records to documents, and :meth:`bound_parts` only for a part that reads
+    the bound Terminals. :meth:`to_cim` writes those documents and builds CIM
     from the written text, so the artifact a reviewer reads is exactly what the
     model was built from::
 
@@ -211,8 +212,19 @@ class CimtblImporter(FormatImporter):
         """
         ...
 
+    def bound_parts(self, model: SpokeGraphModel, network: CIMGraphModel) -> list[Document]:
+        """The parts mapped from what binding made, not from the native records alone: a part that needs the
+        Terminals of the other parts' equipment (a coordinates part locates each piece at its Terminals' buses).
+
+        Called with the network the ``to_cimtbl`` documents bound; ``to_cim`` adds these parts to the artifact,
+        imported last, and binds them onto the same network. Reads the network, never constructs on it (plan I5).
+        Terminals are what binding makes, so this is where they are read: CIM-Tables declined a text-level
+        inverse of its connectivity columns (UPSTREAM_REQUESTS U11). None by default.
+        """
+        return []
+
     def to_cim(self, model: SpokeGraphModel, *, network=None, artifact_dir=None) -> CIMGraphModel:
-        """``to_cimtbl``, then write the documents and load them (see ``cimtbl_to_cim``).
+        """``to_cimtbl``, then write the documents and load them, then the ``bound_parts`` (see ``cimtbl_to_cim``).
 
         Args:
             model: The native model from the format's ``FormatReader.read_all()``.
@@ -221,8 +233,8 @@ class CimtblImporter(FormatImporter):
             artifact_dir: Where the ``.cimtbl`` files go. If ``None``, a
                 temporary directory, removed after loading.
         """
-        return cimtbl_to_cim(self.to_cimtbl(model), model_cls=self.model_cls,
-                             network=network, artifact_dir=artifact_dir)
+        return cimtbl_to_cim(self.to_cimtbl(model), model_cls=self.model_cls, network=network,
+                             artifact_dir=artifact_dir, bound_parts=lambda bound: self.bound_parts(model, bound))
 
 
 class FormatExporter(ABC):

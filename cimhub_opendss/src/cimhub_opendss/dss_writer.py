@@ -36,6 +36,16 @@ _MEANING_INT_RE = re.compile(r'\.(\d+)$')
 _DSS_UNSAFE_RE = re.compile(r'[\s"\'<>\[\]{}(),=~|]+')
 
 
+#: significant digits of a written float: enough for every deck value, and it clips the binary tails a unit
+#: conversion leaves (0.0018000000000000002 -> 0.0018), which are 1e-16 relative
+FLOAT_DIGITS = 15
+
+
+def format_float(value: float) -> str:
+    """``value`` to ``FLOAT_DIGITS`` significant digits, the shortest form (``60``, ``0.0018``, ``1e-05``)."""
+    return f"{value:.{FLOAT_DIGITS}g}"
+
+
 def dss_safe_name(name: str) -> str:
     """Return *name* with characters OpenDSS cannot parse replaced by "_".
 
@@ -182,7 +192,7 @@ class DssWriter(FormatWriter):
             kind = kinds.get(str(name).lower())
             if kind is None:
                 raise ValueError(f"DssWriter: LineGeometry {geometry.name}: conductor {name!r} is in no wire catalog")
-            block = f"cond={number} {kind}={dss_safe_name(str(name))} x={x!r} h={h!r}"
+            block = f"cond={number} {kind}={dss_safe_name(str(name))} x={format_float(x)} h={format_float(h)}"
             parts.append(block + (f" units={geometry.units}" if geometry.units else ""))
         return " ".join(parts)
 
@@ -273,7 +283,7 @@ class DssWriter(FormatWriter):
             # Members are often object names (wires=[...], conns=[...]), so
             # they need the same sanitizing a bare name reference gets.
             return '[' + ' '.join(
-                dss_safe_name(v) if isinstance(v, str) else str(v) for v in value
+                dss_safe_name(v) if isinstance(v, str) else DssWriter._format_value(v) for v in value
             ) + ']'
 
         # Nested dataclass -> reference by name
@@ -291,6 +301,8 @@ class DssWriter(FormatWriter):
         if isinstance(value, str) and field_annots.get('dss_format') != 'matrix':
             return dss_safe_name(value)
 
+        if isinstance(value, float):
+            return format_float(value)
         return str(value)
 
     @staticmethod
@@ -304,7 +316,7 @@ class DssWriter(FormatWriter):
         parts = []
         idx = 0
         for row in range(1, n + 1):
-            row_vals = [repr(float(values[idx + col])) for col in range(row)]  # full precision: a round trip is exact
+            row_vals = [format_float(float(values[idx + col])) for col in range(row)]
             parts.append(' '.join(row_vals))
             idx += row
         return '[' + ' |'.join(parts) + ']'

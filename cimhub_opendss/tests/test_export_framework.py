@@ -10,8 +10,9 @@ import pytest
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.buses import bus_ref
-from cimhub_opendss.exporter.cim_to_dss import DssExporter
+from cimhub_opendss.exporter.cim_to_dss import EXPORT_ORDER, DssExporter
 from cimhub_opendss.exporter.naming import Names
+from cimhub_opendss.exporter.slots import check_slots
 from cimhub_opendss.schema import opendss_schema as schema
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -68,6 +69,12 @@ def test_bus_ref_writes_phase_conductors_and_never_bare():
         bus_ref(node, (A, N), names)
 
 
+@pytest.mark.parametrize("module", EXPORT_ORDER, ids=lambda module: module.__name__.rsplit(".", 1)[-1])
+def test_slots_are_complete(module):
+    for native_class, slots in module.SLOTS.items():
+        check_slots(slots, native_class)
+
+
 def test_options_carry_circuit_frequency_and_voltage_bases():
     model = DssExporter().to_model(_network("vsource/mvasc.dss"), name_source="name")
     [options] = model.list_by_class(schema.Options)
@@ -75,7 +82,7 @@ def test_options_carry_circuit_frequency_and_voltage_bases():
 
 
 def test_unexported_equipment_raises():
-    with pytest.raises(ValueError, match=r"no DSS export yet for \{'ACLineSegment': 1, 'EnergyConsumer': 9"):
+    with pytest.raises(ValueError, match=r"no DSS export yet for \{'EnergyConsumer': 9"):
         DssExporter().to_model(_network("load/loads.dss"))
 
 

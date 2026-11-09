@@ -26,7 +26,7 @@ NATIVE_CLASS = schema.Vsource
 _GROUP = "not written: the ohms or the MVAsc group carries the same impedance"
 _NOT_IN_CIM = "not in CIM (untranscribed on import)"
 
-SLOTS = {
+VSOURCE_SLOTS = {
     "name": Slot("written", "Names; the circuit's source is always `source`"),
     "bus1": Slot("written", "bus_ref(get_terminal_nodes, get_source.phases)"),
     "basekv": Slot("written", "get_source.nominal_u (kV)"),
@@ -57,11 +57,18 @@ SLOTS = {
     "like": Slot("not mapped", "the writer never writes like="),
 }
 
+SLOTS = {NATIVE_CLASS: VSOURCE_SLOTS}
+
 _REL_TOL = 1e-6
 
 
-def export(source: cim.EnergySource, context) -> list[schema.Vsource]:
-    """One Vsource; the circuit's source is named ``source`` (``context.circuit_source``)."""
+def export(context) -> list[schema.Vsource]:
+    """One Vsource per EnergySource."""
+    return [_vsource(source, context) for source in context.objects(*CIM_CLASSES)]
+
+
+def _vsource(source: cim.EnergySource, context) -> schema.Vsource:
+    """The circuit's source is named ``source`` (``context.circuit_source``)."""
     values = get_source(source, angle_unit="deg", voltage_unit="kV", impedance_unit="ohm")
     impedance = values.impedance
     unset = [name for name in ("r", "x", "r0", "x0") if getattr(impedance, name) is None]
@@ -82,7 +89,7 @@ def export(source: cim.EnergySource, context) -> list[schema.Vsource]:
     else:
         group = dict(zip(("MVAsc3", "MVAsc1", "x1r1", "x0r0"),
                          short_circuit_from_thevenin(source, values.nominal_u, *impedance[:4])))
-    return [NATIVE_CLASS(
+    return NATIVE_CLASS(
         name=name,
         bus1=bus_ref(node, values.phases, names),
         phases=len(values.phases),
@@ -91,7 +98,7 @@ def export(source: cim.EnergySource, context) -> list[schema.Vsource]:
         angle=0.0 if values.angle is None else values.angle,  # unset: the reference angle
         enabled=get_in_service(source, which="normal"),
         **group,
-    )]
+    )
 
 
 def short_circuit_from_thevenin(source, kv: float, r1: float, x1: float, r0: float,

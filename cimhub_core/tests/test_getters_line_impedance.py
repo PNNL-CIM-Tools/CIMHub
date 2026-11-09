@@ -17,6 +17,8 @@ from cimhub_core.getters.line_impedance import (
     get_line_phase_impedance_matrix,
     get_line_sequence_impedance,
     get_line_sequence_impedance_per_length,
+    get_phase_impedance_code,
+    get_sequence_impedance_code,
 )
 
 A, B, C, N = cim.SinglePhaseKind.A, cim.SinglePhaseKind.B, cim.SinglePhaseKind.C, cim.SinglePhaseKind.N
@@ -332,3 +334,34 @@ def test_matrix_of_a_geometry_line_raises():
 def test_matrix_of_a_lumped_line_raises(bus_branch):
     with pytest.raises(ValueError, match="has no PerLengthImpedance"):
         get_line_phase_impedance_matrix(_line(bus_branch, "ln_1_2_1"))
+
+
+# code-level getters --------------------------------------------------------------------------------------------
+
+
+def test_phase_code_on_its_own(by_impedance):
+    code = _line(by_impedance, "ln_l1").PerLengthImpedance
+    m = get_phase_impedance_code(code, "ohm/mi", "nS/mi")
+    assert m.conductor_count == 2
+    assert m.r == pytest.approx({(1, 1): 1.3238, (2, 1): 0.2066, (2, 2): 1.3294})
+    assert m.b == pytest.approx({(1, 1): 4710.84, (2, 1): -899.07, (2, 2): 4545.35})
+    assert m.g is None
+
+
+def test_phase_code_entries_must_fit_its_conductor_count(by_impedance):
+    code = _line(by_impedance, "ln_l1").PerLengthImpedance
+    code.conductorCount = 3
+    with pytest.raises(ValueError, match="not the lower triangle of its conductorCount 3"):
+        get_phase_impedance_code(code)
+    code.conductorCount = None
+    with pytest.raises(ValueError, match="conductorCount is unset"):
+        get_phase_impedance_code(code)
+
+
+def test_sequence_code_on_its_own(by_impedance):
+    code = _line(by_impedance, "ln_l2").PerLengthImpedance
+    z = get_sequence_impedance_code(code, "ohm/km", "nS/km")
+    assert (z.r, z.x, z.r0, z.x0, z.b) == pytest.approx((0.3489, 0.426198, 0.588811, 1.29612, 3932.35))
+    assert z.source is ImpedanceSource.PER_LENGTH_SEQ
+    with pytest.raises(ValueError, match="is not a PerLengthPhaseImpedance"):
+        get_phase_impedance_code(code)

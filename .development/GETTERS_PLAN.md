@@ -27,6 +27,7 @@ exporter) may ask for signature changes before anything is frozen.
 | G6b | `get_tap_steps`/`get_tap_ratio`, `get_shunt_reactive_power`, `get_phase_loads`/`get_load_response`, `get_source`, `get_der_output` (+ `phase_power.device_power`) | **done 2026-11-08**, 46 tests |
 | G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
 | G6d | `get_inverter_rating`, `get_inverter_unit`, `get_photovoltaic_unit`, `get_battery_unit`, `get_machine_rating`, `get_machine_impedance` (`getters/der.py`); `getters.required_qty` shared | **done 2026-11-08**, 15 tests |
+| S6b | `get_wire_info`, `get_configuration_wires` (`getters/wire.py`), `get_asset_info_current_limits`, `get_phase_impedance_code`/`get_sequence_impedance_code`, `derived/capacitance.py` (`b_from_c`, `c_from_b`) | **done 2026-11-09** with the DSS S6b exporter (`cimhub_opendss/docs/EXPORT_MAPPING.md`) |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)
@@ -48,8 +49,9 @@ exporter) may ask for signature changes before anything is frozen.
 
 - **Capacitance.** GLM (`c11` …, nF/mile) and DSS (`C1`/`C0`, `cmatrix`, nF per length) want capacitance; CIM
   and the getters give susceptance. C = b / (2πf) needs a frequency, either the code's `calculatedFrequency` or
-  `network.base_frequency` (semantic rule 7). Not built: decide the frequency source with the first GLM/DSS
-  exporter, then add one named function (in `derived/`, or a `get_qty` capacitance unit upstream).
+  `network.base_frequency` (semantic rule 7). **Closed 2026-11-09 (DSS S6b, plan E5):** f =
+  `network.base_frequency`; the DSS spoke raises on a code whose `calculatedFrequency` differs.
+  `derived/capacitance.c_from_b` (b in nS, f in Hz -> C in nF).
 
 ## G4 decisions and open points
 

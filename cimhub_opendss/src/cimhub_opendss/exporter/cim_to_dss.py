@@ -14,12 +14,14 @@ from cimhub_core.base import FormatExporter
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
-from cimhub_opendss.exporter import vsource
+from cimhub_opendss.exporter import line, linecode, linegeometry, switch, vsource, wire
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
 
-#: Modules in export order; each has ``CIM_CLASSES``, ``NATIVE_CLASS``, ``SLOTS`` and ``export(obj, context)``.
-EXPORT_ORDER = (vsource,)
+#: Modules in export order. Each has ``CIM_CLASSES`` (what it exports), ``SLOTS`` (``{DSS class: {slot: Slot}}``)
+#: and ``export(context) -> list[record]`` over the whole network: a LineGeometry is one per (WireConfiguration,
+#: offset) over the lines, so a module cannot work object by object.
+EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch)
 
 __all__ = ["DssExporter", "EXPORT_ORDER", "cim_to_dss"]
 
@@ -28,6 +30,10 @@ class ExportContext(NamedTuple):
     network: object
     names: Names
     circuit_source: cim.EnergySource
+
+    def objects(self, *cim_classes: type) -> list:
+        """The network's objects of ``cim_classes``, class by class in the order given."""
+        return [obj for cim_class in cim_classes for obj in self.network.graph.get(cim_class, {}).values()]
 
 
 class DssExporter(FormatExporter):
@@ -44,11 +50,9 @@ class DssExporter(FormatExporter):
         context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source))
         model = DssModel()
         for module in EXPORT_ORDER:
-            for cim_class in module.CIM_CLASSES:
-                for obj in network.graph.get(cim_class, {}).values():
-                    for record in module.export(obj, context):
-                        model.add_to_graph(record)
-        model.add_to_graph(options_record(network, names))
+            for record in module.export(context):
+                model.add_to_graph(record)
+        model.add_to_graph(options_record(network, names, switch.open_terminals(context)))
         return model
 
 

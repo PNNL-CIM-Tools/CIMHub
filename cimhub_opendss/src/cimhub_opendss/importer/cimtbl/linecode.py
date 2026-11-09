@@ -12,13 +12,13 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode``.
 from __future__ import annotations
 
 import dataclasses
-import math
 import statistics
 from typing import NamedTuple
 
 from cimtables.document import Column, Document, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, copied_columns, lookup, mrid, untranscribed_values
+from cimhub_core.derived.capacitance import b_from_c
 from cimhub_core.derived.sequence import balanced_matrix, phase_matrix
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.schema import opendss_schema as schema
@@ -84,11 +84,6 @@ LENGTH_UNIT = {"mi": "mi", "kft": "kft", "km": "km", "m": "m", "ft": "ft", "in":
 _PROVENANCE = """OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
 Source table: LineCode (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode"""
-
-
-def b_from_c(c: float, frequency: float) -> float:
-    """Susceptance from capacitance: b = 2 pi f C. C in nF and f in Hz give b in nS."""
-    return 2 * math.pi * frequency * c
 
 
 def lower_triangle(values: list[float], order: int, *, name: str, slot: str) -> dict[tuple[int, int], float]:

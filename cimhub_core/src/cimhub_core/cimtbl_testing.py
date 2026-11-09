@@ -27,7 +27,7 @@ from cimtables.records import ImportRecord
 
 from cimhub_core.cimtbl import CIM_PROFILE
 
-__all__ = ["cim_scope", "atom_documents", "record_diff", "assert_matches_golden"]
+__all__ = ["cim_scope", "atom_documents", "record_diff", "assert_matches_golden", "assert_text_matches_golden"]
 
 UPDATE_GOLDENS = "CIMHUB_UPDATE_GOLDENS"
 
@@ -106,8 +106,13 @@ def record_diff(expected_text: str, actual_text: str) -> list[str]:
 
 def assert_matches_golden(document: Document, golden_path: str | Path) -> None:
     """Raise ``AssertionError`` unless ``format_document(document)`` equals the golden file's text."""
+    assert_text_matches_golden(format_document(document), golden_path)
+
+
+def assert_text_matches_golden(actual: str, golden_path: str | Path) -> None:
+    """Raise ``AssertionError`` unless ``actual`` (``.cimtbl`` text, e.g. a written artifact file) equals the golden
+    file's text."""
     golden_path = Path(golden_path)
-    actual = format_document(document)
     if os.environ.get(UPDATE_GOLDENS) == "1":
         golden_path.write_text(actual)
         return

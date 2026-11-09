@@ -161,6 +161,7 @@ class SwitchControl(NamedTuple):
     rated_current: float | None
     normal_open: bool | None
     open: bool | None
+    fuse_phase_states: int | None = None  # how many per-phase values a Fuse's Normal/State give (engine: per phase)
 
 
 def _switched_line(control, target) -> str:
@@ -203,14 +204,26 @@ def switch_controls(native) -> dict[str, SwitchControl]:
                 raise ValueError(f"{native_class.__name__} {control.name}: switches no object")
             key = _switched_line(control, target)
             old = result.get(key, SwitchControl("LoadBreakSwitch", None, None, None))
+            states = _fuse_phase_states(control) if native_class is schema.Fuse else None
             cim_class = classes.get(native_class)
             if cim_class and old.cim_class != "LoadBreakSwitch" and old.cim_class != cim_class:
                 raise ValueError(f"Line {key}: switched by a {old.cim_class} and a {cim_class}")
             rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent else None
             result[key] = SwitchControl(cim_class or old.cim_class, _merged(key, "ratedCurrent", old.rated_current, rated),
                                         _merged(key, "Normal", old.normal_open, _is_open(control, "Normal")),
-                                        _merged(key, "State", old.open, _is_open(control, "State")))
+                                        _merged(key, "State", old.open, _is_open(control, "State")),
+                                        _merged(key, "Fuse Normal/State values", old.fuse_phase_states, states))
     return result
+
+
+def _fuse_phase_states(fuse) -> int | None:
+    """How many per-phase values the Fuse's Normal and State give (they must agree), or None when neither is set.
+    The engine sets a Fuse's state phase by phase: ``State=open`` on a 3-phase line opens phase 1 only."""
+    counts = {len(value) if isinstance(value, list) else 1
+              for value in (fuse.Normal, fuse.State) if value not in (None, [])}
+    if len(counts) > 1:
+        raise ValueError(f"Fuse {fuse.name}: Normal={fuse.Normal} and State={fuse.State} give different phase counts")
+    return counts.pop() if counts else None
 
 
 def opened_lines(native) -> set[str]:
@@ -468,6 +481,10 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
             phases = line.phases if line.phases is not None else 3
             bus1, bus2, letters = line_phases(line, phases, buses)
             control = controls.get(key, SwitchControl("LoadBreakSwitch", None, None, None))
+            if control.fuse_phase_states not in (None, phases):
+                raise ValueError(f"Line {line.name}: its Fuse's Normal/State give {control.fuse_phase_states} values "
+                                 f"for {phases} phases; the engine sets a fuse phase by phase, and CIM's state is the "
+                                 "whole switch's")
             document.switches.setdefault(control.cim_class, []).append(
                 _switch_row(line, letters, bus1, bus2, control, key in opened, buses, container))
             continue
