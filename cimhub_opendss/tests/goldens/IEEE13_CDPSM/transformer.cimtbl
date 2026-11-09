@@ -37,7 +37,7 @@ Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, conn
 Table TransformerTank: mRID, PowerTransformer, TankConfiguration
     xf_tpoletop_tank, xf_tpoletop, xc_ct5
 
-# by a lug template: one per phase of each terminal; a template lug's sequenceNumber names the one it lands on
+# 1-phase by template: one per phase of each terminal; a template lug's sequenceNumber names the one it lands on, and by tank ends their order is the coil's
 Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
     xf_tpoletop_1_B,  1, 1, B,  xf_tpoletop_T1
     xf_tpoletop_1_N,  1, 2, N,  xf_tpoletop_T1

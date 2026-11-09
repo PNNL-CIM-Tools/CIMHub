@@ -93,6 +93,11 @@ def test_geometry_binds():
     ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 Rg=0.01\n", "Rg not mapped"),
     ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 Seasons=2 Ratings=[400 300]\n", "Seasons, Ratings not mapped"),
     ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Fuse.f MonitoredObj=Transformer.t\n", "only a Line"),
+    # the engine sets a fuse's state per phase: State=open on a 3-phase line opens phase 1 only
+    ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Fuse.f MonitoredObj=Line.a State=open\n",
+     "give 1 values for 3 phases"),
+    ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Fuse.f MonitoredObj=Line.a State=[open open open] Normal=open\n",
+     "different phase counts"),
 ])
 def test_unmapped_lines_fail_fast(tmp_path, text, message):
     with pytest.raises(ValueError, match=message):

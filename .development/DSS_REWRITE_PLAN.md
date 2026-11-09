@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is planned in §8, approved 2026-11-09; S6a (framework, writer, Vsource) done 2026-11-09; S6b next.
+**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is planned in §8, approved 2026-11-09; S6a (framework, writer, Vsource) done 2026-11-09; S6b (lines, wire catalogs, switches) done 2026-11-09; S6c (transformers, XfmrCode, regulators, RegControl) done 2026-11-09; S6d (Load, Capacitor, CapControl) done 2026-11-09; S6e next.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -71,7 +71,7 @@ One file per native class (D4). The master imports them in this order, which is 
 | 13 | `pvsystem.cimtbl`, `storage.cimtbl` | PVSystem, Storage | `der` | 0 |
 | 14 | `generator.cimtbl` | Generator | `synchronous_machine` | 0 |
 | 15 | `reactor.cimtbl` | Reactor | `series_compensator` | 0 |
-| 16 | `buscoords.cimtbl` | Buscoords | `location` (CoordinateSystem, Location, PositionPoint, `Update` of PowerSystemResource) | every equipment file (their Terminals, S5-2) |
+| 16 | `buscoords.cimtbl` | Buscoords | `location` (CoordinateSystem, Location, PositionPoint, `Update` of PowerSystemResource) | every equipment file (their bound Terminals: `bound_parts`, S5-2) |
 
 CapControl comes before Capacitor. In the `shunt` shape the compensator names its control
 (`RegulatingControl` column), and the control names the monitored Terminal, which here is always a line's
@@ -287,9 +287,9 @@ Each one has its own spec section in `cimhub_opendss/docs/EXPORT_MAPPING.md`, ap
 | # | content | getters needed (new in **bold**) |
 |---|---|---|
 | S6a (**done 2026-11-09**) | framework: `DssExporter`, `EXPORT_ORDER`, naming (E1), bus references `bus.1.2.3` from terminals (E7), `Options` (circuit, `defaultbasefreq`, `voltagebases`); writer fixes (§8.2); Vsource; the per-atom harness (§8.3) | `get_source`, `get_terminal_nodes`, `get_terminal_phases`, `get_base_voltage` |
-| S6b | lines: WireData/CNData/TSData, LineSpacing, LineGeometry, LineCode, Line, switches (Line `switch=y` + Fuse/Recloser/SwtControl, `Open`), ratings | **`get_wire_info`**, **b → C** (`derived/`), `get_spacing_xy`, `get_line_conductor_xy`, `get_line_*_impedance*`, `get_switch_state`, `get_current_limits` |
-| S6c | transformers: inline Transformer (every form), XfmrCode from a `TransformerTankConfiguration`, center taps, VoltageRegulator/LTC + RegControl | `get_transformer_units`, `get_transformer_model`, `get_tap_steps`, `get_tap_changer_control` |
-| S6d | Load, Capacitor, CapControl | `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`, `get_regulating_control`, `get_equipment_control` |
+| S6b (**done 2026-11-09**) | lines: WireData/CNData/TSData, LineSpacing, LineGeometry, LineCode, Line, switches (Line `switch=y` + Fuse/Recloser/SwtControl, `Open`), ratings | **`get_wire_info`**, **b → C** (`derived/`), `get_spacing_xy`, `get_line_conductor_xy`, `get_line_*_impedance*`, `get_switch_state`, `get_current_limits` |
+| S6c (**done 2026-11-09**) | transformers: inline Transformer (every form), XfmrCode from a `TransformerTankConfiguration`, center taps, VoltageRegulator/LTC + RegControl | `get_transformer_units`, `get_transformer_model`, `get_tap_steps`, `get_tap_changer_control` |
+| S6d (**done 2026-11-09**) | Load, Capacitor, CapControl; whole-deck elements and settings on IEEE13_original, IEEE123, IEEE37, IEEE13_Assets (IEEE13_CDPSM waits for S6e: PVSystem, Storage) | `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`, `get_regulating_control`, `get_equipment_control` |
 | S6e | PVSystem, Storage, Generator, Reactor | `get_der_output`, G6d rating getters, **`get_series_compensator`** |
 | S6f | Buscoords; whole-deck power flow parity on the engine decks; the idempotence sweep | **`get_location_coordinates`** |
 

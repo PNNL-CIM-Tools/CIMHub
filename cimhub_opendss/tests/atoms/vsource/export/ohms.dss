@@ -1,5 +1,5 @@
 Clear
-Set defaultbasefreq=60.0
-New Circuit.fdr_ieee123 phases=3 bus1=150.1.2.3 basekv=4.16 pu=1.0 angle=0.0 R1=0.0 X1=0.0001 R0=0.0 X0=0.0001
+Set defaultbasefreq=60
+New Circuit.fdr_ieee123 phases=3 bus1=150.1.2.3 basekv=4.16 pu=1 angle=0 R1=0 X1=0.0001 R0=0 X0=0.0001
 Set voltagebases=[4.16]
 CalcVoltageBases

@@ -9,7 +9,6 @@ import pytest
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_opendss.exporter import vsource
-from cimhub_opendss.exporter.slots import check_slots
 
 from conftest import compile_deck
 from engine_compare import assert_same_engine_state
@@ -30,10 +29,6 @@ def _source_properties(path: Path) -> dict[str, float]:
     compile_deck(path)
     dss.Circuit.SetActiveElement("Vsource.source")
     return {slot: float(dss.Properties.Value(slot)) for slot in PROPERTIES}
-
-
-def test_slots_are_complete():
-    check_slots(vsource.SLOTS, vsource.NATIVE_CLASS)
 
 
 @pytest.mark.parametrize("case", CASES)
@@ -62,7 +57,7 @@ def test_export_matches_golden(case, tmp_path):
 
 def test_fifty_hz_deck_keeps_its_frequency(tmp_path):
     written = export_atom(ATOMS / "fifty_hz.dss", tmp_path, name_source="mrid")
-    assert "Set defaultbasefreq=50.0" in written.read_text().splitlines()
+    assert "Set defaultbasefreq=50" in written.read_text().splitlines()
 
 
 def test_short_circuit_from_thevenin_inverts_the_importer():

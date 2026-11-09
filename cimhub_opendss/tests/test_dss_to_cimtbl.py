@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
+from cimhub_core.cimtbl_testing import assert_text_matches_golden, cim_scope
 from cimhub_opendss import DssImporter, DssReader, dss_to_cim
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.dss_to_cimtbl import MAPPING_ORDER
@@ -51,18 +51,20 @@ def documents(ieee13):
     return DssImporter("IEEE13_CDPSM").to_cimtbl(ieee13)
 
 
-def test_artifact_directory_matches_golden(documents):
-    """The whole IEEE13_CDPSM artifact directory is the reference golden (D6): the master and every part."""
-    written = {f"{part.name}.cimtbl": part for part in documents.parts} | {"IEEE13_CDPSM.cimtbl": documents.master}
-    for file_name, document in written.items():
-        assert_matches_golden(document, GOLDENS / file_name)
-    assert sorted(path.name for path in GOLDENS.glob("*.cimtbl")) == sorted(written)
+def test_artifact_directory_matches_golden(ieee13, tmp_path):
+    """The whole IEEE13_CDPSM artifact directory is the reference golden (D6): the master and every part,
+    ``buscoords.cimtbl`` (a ``bound_parts`` part) included."""
+    dss_to_cim(ieee13, name="IEEE13_CDPSM", artifact_dir=tmp_path)
+    written = sorted(path.name for path in tmp_path.glob("*.cimtbl"))
+    for file_name in written:
+        assert_text_matches_golden((tmp_path / file_name).read_text(), GOLDENS / file_name)
+    assert sorted(path.name for path in GOLDENS.glob("*.cimtbl")) == written
 
 
 def test_parts_follow_the_mapping_order(documents):
     assert [part.name for part in documents.parts] == ["bus", "zip_fractions", "linecode", "xfmrcode", "vsource",
                                                        "line", "transformer", "regcontrol", "load", "capacitor",
-                                                       "pvsystem", "storage", "buscoords"]
+                                                       "pvsystem", "storage"]
     assert len(MAPPING_ORDER) == len({native_class for native_class, _ in MAPPING_ORDER})
 
 

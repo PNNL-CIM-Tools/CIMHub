@@ -267,3 +267,51 @@ def test_unrated_winding_1_raises():
     _get(network, cim.PowerTransformerEnd, "xf_sub_1").ratedS = None
     with pytest.raises(ValueError, match="PowerTransformerEnd 'xf_sub_1': ratedS is unset"):
         get_transformer_model(_get(network, cim.PowerTransformer, "xf_sub"))
+
+
+# S6c: a template's kind without grounding (T2), and a 1-phase TankEnd coil's direction (T3) -----------------------
+
+# 1-phase delta-delta TankEnd template; the instance's end 2 runs C -> A (DSS tert.3.1), told by its phase ends
+COIL_TEMPLATE = """Profile = cim18v17
+Object TransformerTankConfiguration: mRID=xc_d, name=d
+Table TransformerTankEnd: mRID, endNumber, connectionKind, TankConfiguration=xc_d
+    xc_d_end_1, 1, Y
+    xc_d_end_2, 2, D
+Table TransformerWinding: mRID, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), FromTransformerEnd, TankConfiguration=xc_d
+    xc_d_wdg_1, 12.47, 7.2, 333, 333, xc_d_end_1
+    xc_d_wdg_2, 2.4,   2.4, 333, 333, xc_d_end_2
+Object TransformerMeshImpedance: mRID=xc_d_mesh_12, FromWinding=xc_d_wdg_1, ToWinding=xc_d_wdg_2, x (percent)=3
+Object PowerTransformer: mRID=xf_c, name=c
+Object TransformerTank: mRID=xf_c_tank, PowerTransformer=xf_c, TankConfiguration=xc_d
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, PowerTransformer=xf_c
+    xf_c_1, hv,   CN, 1, Yn, true
+    xf_c_2, tert, AC, 2, D,  false
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_c_1_C, 1, 1, C, xf_c_T1
+    xf_c_1_N, 1, 2, N, xf_c_T1
+    xf_c_2_C, 2, 3, C, xf_c_T2
+    xf_c_2_A, 2, 4, A, xf_c_T2
+"""
+
+
+def _coil_template(tmp_path):
+    path = tmp_path / "coil.cimtbl"
+    path.write_text(COIL_TEMPLATE)
+    return load_model(path)
+
+
+def test_template_wye_agrees_with_a_grounded_instance(tmp_path):
+    model = _model(_coil_template(tmp_path), "xf_c")
+    assert [winding.connection for winding in model.windings] == [cim.WindingConnection.Yn, cim.WindingConnection.D]
+
+
+def test_tank_end_coil_runs_in_its_phase_end_order(tmp_path):
+    model = _model(_coil_template(tmp_path), "xf_c")
+    assert [winding.phases for winding in model.windings] == [(cim.SinglePhaseKind.C, N), (cim.SinglePhaseKind.C, A)]
+
+
+def test_tank_end_phase_ends_other_than_the_terminal_raise(tmp_path):
+    network = _coil_template(tmp_path)
+    _get(network, cim.TransformerPhaseEnd, "xf_c_2_A").phase = B
+    with pytest.raises(ValueError, match=r"its TransformerPhaseEnds \['C', 'B'\] are not its terminal's phases"):
+        _model(network, "xf_c")

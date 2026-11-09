@@ -14,7 +14,6 @@ commit once it is verified from this repo.
 | U8 | CIM-Profiles (CIM WG13) | `RotatingMachine.phaseConnection` (`PhaseShuntConnectionKind`), as `EnergyConsumer` and `PowerElectronicsConnection` have. SynchronousMachine has none, so a delta OpenDSS Generator is written as `earthing=false` (S4b-5), which an ungrounded wye would also be. | DSS exporter: a delta machine back to `conn=delta` without relying on DSS having no ungrounded-wye machine |
 | U9 | CIM-Tables | A `phases` column on a class with no `<Class>Phase` child (SeriesCompensator) should set `Terminal.phases` only, as on a TransformerEnd, instead of raising. Today `reactor.cimtbl` writes `Update Table Terminal: mRID, phases` for the generated Terminals. | nothing; the Update works |
 | U10 | CIM-Tables | Tell a balanced three-phase device from three separate A, B, C phases. Today `phases=ABC` always writes three `<Class>Phase` children, which in CIM (and the OpenDSS CIM export) means a per-phase device; a balanced one has none. CIMHub writes a blank `phases` cell for balanced ABC (`cimhub_core.cimtbl.phases_cell`), so its Terminals lose `phases=ABC`. Ask: a spelling (a column or a value) that sets `Terminal.phases` without children; U9 (SeriesCompensator) would fall out of it. | nothing; Terminal.phases of balanced devices is unset until then |
-| U11 | CIM-Tables | The Terminals a set of documents makes, without binding: the inverse of the connectivity columns (`node`/`node1`/`node2` → Terminal 1/2 of the row; a TransformerEnd's `node` → Terminal `endNumber` of its transformer), part of the planned "connectivity inverse". A spoke's coordinates part needs each piece of equipment's Terminal buses (DSS S5-2). Until then `cimhub_core.cimtbl.document_terminals` does it on `CONNECTIVITY_COLUMNS`; delete it once this lands. | nothing; core's stand-in works |
 | U12 | CIM-Tables | `get_qty` on a declared power base: a transformer percent read on another S at the From winding's own voltage (e.g. `get_qty(mesh, "x", "percent", power_base=...)`). DSS and GLM put every percent on winding 1's kVA and RAW on the system MVA, while CIM stores each on its From winding's `baseU²/baseS`. Until then `getters/transformer.py` moves the stored percent itself, z × S_new/S_old and y × S_old/S_new (powers only, no local `z_base`; getters G6). | nothing; the getter's power ratio works |
 | U13 | CIM-Profiles (CIM WG13) | A positive-sequence (subtransient/transient/synchronous) reactance on SynchronousMachine. cim18v17 has r, r0/x0, r2/x2 and no x (CIM16's `satDirectSubtransX` and the like are gone), so RAW ZX and DSS Xd/Xdp/Xdpp have no home and `getters.der.MachineImpedance` has no x. | RAW generator ZSORCE round trip; DSS Generator Xd |
 
@@ -31,15 +30,7 @@ From CIM-Tables, 2026-11-09, `rc1`, uncommitted at the time of writing. Verify, 
 - **U9, declined: follows from U10.** A balanced SeriesCompensator leaves `phases` blank. `phases` still
   raises on a class with no `<Class>Phase` child, so per-phase information is never silently dropped. A
   non-ABC one keeps today's form: its Terminals' phases written literally (`Update Table Terminal: mRID,
-  phases`), or the Terminals as their own rows (see U11).
-- **U11, declined: no text-level Terminal inverse.** What a `.cimtbl` means is what binding makes, so
-  CIM-Tables won't add a second reading of the connectivity columns over documents. For each piece of
-  equipment's Terminal buses, either load the documents and read the Terminals from the model, or write the
-  Terminals as their own rows, which already binds:
-  `Table Terminal: mRID, ConductingEquipment, ConnectivityNode, sequenceNumber, phases` after the equipment,
-  or Terminal rows first plus `Update Table Terminal: mRID, ConductingEquipment` once the equipment exists
-  (tests in CIM-Tables `tests/test_update.py`). `document_terminals` is then CIMHub's own decision to keep or
-  replace.
+  phases`), or the Terminals as their own rows (U11, closed).
 - **U12, done.** `graph_write.get_qty(obj, attr, unit, ..., power_base=...)` takes a CIMUnit, a `Qty` or a
   number in VA. It replaces only S. U comes from the usual rule (the From winding's `baseU` for a mesh
   impedance, the BaseVoltage for an unrated class), so z × S_new/S_old and y × S_old/S_new fall out:
@@ -56,6 +47,14 @@ From CIM-Tables, 2026-11-09, `rc1`, uncommitted at the time of writing. Verify, 
 
 ## Closed (verified from this repo, 2026-11-07)
 
+- U11 (2026-11-09): declined by CIM-Tables, closed. A `.cimtbl` means what binding makes, so there is no
+  text-level inverse of the connectivity columns; explicit Terminal rows bind (CIM-Tables `rc1` `f8718d3`,
+  `tests/test_update.py`, 12 pass). CIMHub reads the Terminals from the bound network instead:
+  `CimtblImporter.bound_parts(model, network)` maps the parts that need them, and `cimtbl_to_cim(bound_parts=)`
+  writes them beside the rest, imports them last and binds them onto the same network (one bind). DSS
+  `buscoords.cimtbl` is the one such part; core's stand-in `document_terminals` is deleted. Before deleting it, the
+  bound Terminals were checked equal to its output on IEEE13_CDPSM (46 equipment), IEEE8500 (6,082) and IEEE9500
+  unbal (8,072).
 - U14 (2026-11-09): CIM-Graph `GraphModel.set_default_bases` takes `base_frequency` from the graph's
   `BaseFrequency` (a shared `_graph_base` with BasePower). Several that disagree, or one against an explicit base,
   raise. CIM-Graph tests 177 pass; a 50 Hz DSS deck now imports with `network.base_frequency` 50 Hz. Uncommitted

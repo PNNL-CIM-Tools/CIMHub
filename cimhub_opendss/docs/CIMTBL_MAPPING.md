@@ -32,7 +32,7 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der` | the master, `bus.cimtbl` |
 | `Generator` | `generator.cimtbl` | `synchronous_machine` | the master, `bus.cimtbl` |
 | `Reactor` | `reactor.cimtbl` | `series_compensator` | the master, `bus.cimtbl` |
-| `Buscoords` (BusCoords / LatLongCoords files) | `buscoords.cimtbl` (last) | `location` | every equipment part (their Terminals, S5-2) |
+| `Buscoords` (BusCoords / LatLongCoords files) | `buscoords.cimtbl` (last) | `location` | every equipment part (their bound Terminals: `bound_parts`, S5-2) |
 
 ## Master
 
@@ -570,7 +570,9 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
 **Instances** (`transformer.cimtbl`): `PowerTransformer` `xf_<name>`, plus `TransformerTank` `xf_<name>_tank` with
 `TankConfiguration` = `xc_<code>`, plus the ends above. A lug template's instance phase ends reference their end's
 generated Terminal (`xf_<name>_T<n>`), which is their link to the PowerTransformer, since the instance has no
-windings. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
+windings. **Amended 2026-11-09 (DSS S6c, T3):** a 1-phase instance of a TankEnd template gets them too, numbered in
+its coil's node order, end 1 first. That order is the coil's direction, which a PhaseCode cannot hold. Without it,
+IEEE4 YYD's `tert.3.1` came back `tert.1.3`, and in the engine the 3-can bank's voltages moved by 1.6 kV. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
 (the template must be the one source), except the untranscribed ones. A regulated instance keeps S3a's rule: it
 takes its code's values, because CIM has no AutoTransformer template.
 
@@ -832,7 +834,9 @@ control whose line no `New` defines. In the sweep, every Fuse and Recloser switc
 - `open`: an `Open` command on either terminal (`Options.open_terminals`), or a SwtControl with `State=Open`.
 - `normalOpen`: the SwtControl's `Normal`, else the same as `open`.
 
-An `Open` command and a SwtControl `State` that disagree raise. So does an `Open` on a line that is not a switch:
+An `Open` command and a SwtControl `State` that disagree raise. A Fuse whose `Normal`/`State` give a value count other than its line's
+phases raises (found by the S6b export, 2026-11-09). The engine sets a fuse phase by phase, so `State=open` on a
+3-phase line opens phase 1 only, and CIM's `open` is the whole switch's. No sweep deck sets a Fuse state. So does an `Open` on a line that is not a switch:
 `Terminal.connected` would be its home, but no deck needs it.
 - **Sweep:** 33 SwtControls are Open with `Normal` = `State` on every one. ieee9500 has 9 `Open` commands and
   IEEE123_test_harness 2, all on switch lines.
@@ -1984,8 +1988,8 @@ form (the catalog lists that as not yet catalogued). The decisions stand as reco
 **Changes from the proposal:**
 - A center-tap transformer gets two points, not three. Its secondary is one Terminal (`s1s2N`), because the windings
   land on lugs (DSS-2). The engine writes a point for each of its 3 windings, but two of them are the same bus.
-- `document_terminals` checks a `TransformerEnd` row against the cim18v17 classes. A `node` on any end other than a
-  `PowerTransformerEnd` or `AutoTransformerEnd` raises.
+- The Terminals come from the bound network, not from the document text (S5-2, revised 2026-11-09 when CIM-Tables
+  declined U11). So a TransformerEnd's Terminal is whatever binding made of it; no separate end-class check.
 
 
 S5 adds bus coordinates (`buscoords.cimtbl`), turns the throwaway deck sweep into a test, and records the G7
@@ -2028,24 +2032,21 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
 
 ### Buscoords
 
-- **Mapper:** `importer/cimtbl/buscoords.py`, `map_buscoords(native, parts)`. It runs after every equipment part, so
-  it is the last `Import` (DSS_REWRITE_PLAN.md §2, row 16), and it reads those parts.
-- **Finding the equipment (S5-2):** the mapper reads the Terminals from the documents the other mappers wrote, not
-  from the DSS records. That way no mapper's mRID or bus rules are written twice. It follows cimtables' own
-  connectivity rule (`cimtables.synthetic.CONNECTIVITY_COLUMNS`):
-  - a row with `node`/`node1`/`node2` puts Terminals 1 and 2 on that row's equipment;
-  - a `TransformerEnd` row's `node` puts Terminal `endNumber` on its transformer (`PowerTransformer` or
-    `AutoTransformer` column).
-
-  This goes in core as `cimhub_core.cimtbl.document_terminals(documents) -> {equipment mRID: [(sequenceNumber,
-  node)]}`, because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). U11 asks CIM-Tables to
-  provide it, since it is the inverse of its own connectivity columns (the "connectivity inverse" in its writer
-  plan). Core's version is then deleted.
+- **Mapper:** `importer/cimtbl/buscoords.py`, `map_buscoords(native, network)`. It is `DssImporter.bound_parts`:
+  core binds every other part first, calls it with that network, writes `buscoords.cimtbl` beside them as the last
+  `Import` (DSS_REWRITE_PLAN.md §2, row 16) and binds it onto the same network.
+- **Finding the equipment (S5-2, revised 2026-11-09):** the mapper reads each piece of equipment's Terminals from the
+  bound network (`terminal_buses`), not from the DSS records, so no mapper's mRID or bus rules are written twice; the
+  circuit's buses are the network's ConnectivityNodes. The first version re-read the connectivity columns of the
+  written documents (core's `document_terminals`) and asked CIM-Tables for that inverse (U11). CIM-Tables declined:
+  a `.cimtbl` means what binding makes. The hook (`CimtblImporter.bound_parts`, `cimtbl_to_cim(bound_parts=)`) is in
+  core because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). The bound Terminals equalled
+  the stand-in's on IEEE13_CDPSM, IEEE8500 and IEEE9500 unbal before it was deleted.
 - **Identity:**
   - Location: `<equipment mRID>_loc`, named `<equipment name>_Loc` (the engine's name);
   - PositionPoint: `<location>_<n>`;
   - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords).
-- **Order:** documents in `Import` order, rows in document order, points by `sequenceNumber`.
+- **Order:** equipment in the order its first Terminal binds, points by `sequenceNumber`.
 - **`sequenceNumber` (S5-5):** the Terminal's `sequenceNumber`, 1-based, as the engine writes it. cim18v17 gives the
   attribute no description, and CIM16's "zero-relative" text is gone.
 - **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so they
@@ -2131,8 +2132,8 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
 
 - **S5-1:** coordinates go on each piece of equipment's Location (one PositionPoint per Terminal), not on a Junction
   per bus. The CIM17 form (`PositionPoint.Location`) stays, not cim18v17's `Geometry` (the user's review).
-- **S5-2:** the mapper finds the Terminals from the written documents, through core's `document_terminals`, until
-  U11 (CIM-Tables) provides it.
+- **S5-2:** the mapper finds the Terminals on the bound network (`CimtblImporter.bound_parts`); revised 2026-11-09
+  from a re-read of the written documents (`document_terminals`) when CIM-Tables declined U11.
 - **S5-3:** no Location for equipment with a Terminal bus that has no coordinates; the file comment counts them.
 - **S5-4:** `crsUrn` is `OpenDSSLocalBusCoordinates` for BusCoords and CRS84 for LatLongCoords.
 - **S5-5:** `sequenceNumber` is the Terminal number, 1-based.

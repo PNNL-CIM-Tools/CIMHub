@@ -9,9 +9,10 @@ from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.schema import opendss_schema as schema
 
 
-def options_record(network, names: Names) -> schema.Options:
+def options_record(network, names: Names, open_terminals: list[str]) -> schema.Options:
     """``circuit`` = the one Feeder's name, ``defaultbasefreq`` = the network's base frequency (Hz), ``voltagebases``
-    = the distinct BaseVoltage nominal voltages (kV), ascending. ``earthmodel`` is not in CIM (engine default)."""
+    = the distinct BaseVoltage nominal voltages (kV), ascending, and the switches' ``open_terminals``
+    (``Class.name terminal``). ``earthmodel`` is not in CIM (engine default)."""
     feeders = list(network.graph.get(cim.Feeder, {}).values())
     if len(feeders) != 1:
         raise ValueError(f"the model has {len(feeders)} Feeders; a DSS deck is one circuit, so one is exported")
@@ -19,4 +20,5 @@ def options_record(network, names: Names) -> schema.Options:
     if None in bases:
         raise ValueError("a BaseVoltage has no nominalVoltage")
     return schema.Options(name="options", circuit=names.name(feeders[0], "Circuit"),
-                          defaultbasefreq=network.base_frequency.to("Hz"), voltagebases=sorted(bases))
+                          defaultbasefreq=network.base_frequency.to("Hz"), voltagebases=sorted(bases),
+                          open_terminals=open_terminals or None)

@@ -4,8 +4,9 @@ The topology walk runs once (``site``); the master holds the containers, BaseFre
 ``bus.cimtbl`` gives every bus its ``ConnectivityNode`` and BaseVoltage; the core ``zip_fractions.cimtbl``
 (DSS-7) is always written. ``MAPPING_ORDER`` is the ``Import``
 order of the class parts (DSS_REWRITE_PLAN.md section 2): catalogs before the instances that use them. Each slice
-adds its mappers here. ``buscoords.cimtbl`` comes last: it reads the Terminals of every other part (S5-2). A DSS
-class nothing reads is listed by count on the master's comment (DSS-11), so nothing disappears silently.
+adds its mappers here. ``buscoords.cimtbl`` is the one ``bound_parts`` part, imported last: it reads the bound
+Terminals of every other part's equipment (S5-2). A DSS class nothing reads is listed by count on the master's
+comment (DSS-11), so nothing disappears silently.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#master`` and ``#buses``.
 """
@@ -175,10 +176,14 @@ class DssImporter(CimtblImporter):
     def to_cimtbl(self, model) -> DocumentSet:
         walked = site(model, self.length_unit)
         documents = [map_buses(walked), zip_fractions(), *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
-        documents.append(buscoords.map_buscoords(model, documents, walked.buses))
         parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, name=self.name, authority=self.authority),
                            parts=parts)
+
+
+    def bound_parts(self, model, network) -> list[Document]:
+        """``buscoords.cimtbl``: each piece of equipment located at its bound Terminals' buses (S5-2)."""
+        return [buscoords.map_buscoords(model, network)]
 
 
 def dss_to_cim(model, *, name: str, authority: str = AUTHORITY, length_unit: str | None = None, network=None,

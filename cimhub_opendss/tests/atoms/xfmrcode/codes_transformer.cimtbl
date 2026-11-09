@@ -48,15 +48,33 @@ Table TransformerTank: mRID, PowerTransformer, TankConfiguration
     xf_yydb_tank, xf_yydb, xc_yyd
     xf_yydc_tank, xf_yydc, xc_yyd
 
-# by a lug template: one per phase of each terminal; a template lug's sequenceNumber names the one it lands on
+# 1-phase by template: one per phase of each terminal; a template lug's sequenceNumber names the one it lands on, and by tank ends their order is the coil's
 Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
-    xf_t1_1_A,  1, 1, A,  xf_t1_T1
-    xf_t1_1_N,  1, 2, N,  xf_t1_T1
-    xf_t1_2_s1, 2, 3, s1, xf_t1_T2
-    xf_t1_2_s2, 2, 4, s2, xf_t1_T2
-    xf_t1_2_N,  2, 5, N,  xf_t1_T2
-    xf_t2_1_B,  1, 1, B,  xf_t2_T1
-    xf_t2_1_N,  1, 2, N,  xf_t2_T1
-    xf_t2_2_s1, 2, 3, s1, xf_t2_T2
-    xf_t2_2_s2, 2, 4, s2, xf_t2_T2
-    xf_t2_2_N,  2, 5, N,  xf_t2_T2
+    xf_t1_1_A,   1, 1, A,  xf_t1_T1
+    xf_t1_1_N,   1, 2, N,  xf_t1_T1
+    xf_t1_2_s1,  2, 3, s1, xf_t1_T2
+    xf_t1_2_s2,  2, 4, s2, xf_t1_T2
+    xf_t1_2_N,   2, 5, N,  xf_t1_T2
+    xf_t2_1_B,   1, 1, B,  xf_t2_T1
+    xf_t2_1_N,   1, 2, N,  xf_t2_T1
+    xf_t2_2_s1,  2, 3, s1, xf_t2_T2
+    xf_t2_2_s2,  2, 4, s2, xf_t2_T2
+    xf_t2_2_N,   2, 5, N,  xf_t2_T2
+    xf_yyda_1_A, 1, 1, A,  xf_yyda_T1
+    xf_yyda_1_N, 1, 2, N,  xf_yyda_T1
+    xf_yyda_2_A, 2, 3, A,  xf_yyda_T2
+    xf_yyda_2_N, 2, 4, N,  xf_yyda_T2
+    xf_yyda_3_A, 3, 5, A,  xf_yyda_T3
+    xf_yyda_3_B, 3, 6, B,  xf_yyda_T3
+    xf_yydb_1_B, 1, 1, B,  xf_yydb_T1
+    xf_yydb_1_N, 1, 2, N,  xf_yydb_T1
+    xf_yydb_2_B, 2, 3, B,  xf_yydb_T2
+    xf_yydb_2_N, 2, 4, N,  xf_yydb_T2
+    xf_yydb_3_B, 3, 5, B,  xf_yydb_T3
+    xf_yydb_3_C, 3, 6, C,  xf_yydb_T3
+    xf_yydc_1_C, 1, 1, C,  xf_yydc_T1
+    xf_yydc_1_N, 1, 2, N,  xf_yydc_T1
+    xf_yydc_2_C, 2, 3, C,  xf_yydc_T2
+    xf_yydc_2_N, 2, 4, N,  xf_yydc_T2
+    xf_yydc_3_C, 3, 5, C,  xf_yydc_T3
+    xf_yydc_3_A, 3, 6, A,  xf_yydc_T3

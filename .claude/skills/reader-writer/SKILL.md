@@ -24,7 +24,7 @@ converter bug from a writer bug. The ABCs are in `cimhub_core/src/cimhub_core/ba
 |---|---|---|---|---|
 | `FormatReader` | `__init__(source)`, `read_all()` | source bound once at construction | native `GraphModel` | reads |
 | `FormatWriter` | `write(model, destination)`, `serialize(obj)` | the same native `GraphModel` | `None` / `str` | writes |
-| `CimtblImporter` | `to_cimtbl(model)` (abstract), `to_cim(model, *, network=None, artifact_dir=None)` | native `GraphModel` | `DocumentSet` / cim18v17 cimgraph model | none in `to_cimtbl` |
+| `CimtblImporter` | `to_cimtbl(model)` (abstract), `bound_parts(model, network)`, `to_cim(model, *, network=None, artifact_dir=None)` | native `GraphModel` | `DocumentSet` / cim18v17 cimgraph model | none in `to_cimtbl` |
 | `FormatExporter` | `to_model(network, **opts)` | cimgraph model | native `GraphModel` | none |
 
 Rules:

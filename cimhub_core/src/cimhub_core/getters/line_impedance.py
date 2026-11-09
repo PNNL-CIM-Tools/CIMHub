@@ -77,6 +77,17 @@ class PhaseMatrix(NamedTuple):
     source: MatrixSource
 
 
+class CodeMatrix(NamedTuple):
+    """A PerLengthPhaseImpedance read on its own (a catalog): per-length lower triangles ``{(row, column): value}``,
+    1-based by the code's own rows. ``b``/``g`` are ``None`` when unset."""
+
+    conductor_count: int
+    r: dict[tuple[int, int], float]
+    x: dict[tuple[int, int], float]
+    b: dict[tuple[int, int], float] | None
+    g: dict[tuple[int, int], float] | None
+
+
 # the admittance unit that goes with each whole-line impedance unit a caller may ask for
 ADMITTANCE_UNIT = {"ohm": "S", "pu": "pu"}
 IMPEDANCE_FIELDS = ("r", "x", "r0", "x0")
@@ -146,15 +157,9 @@ def get_line_phase_impedance_matrix(
     code = line.PerLengthImpedance
     phases = get_conductor_phases(line)
     if isinstance(code, cim.PerLengthPhaseImpedance):
-        entries = _matrix_entries(line, code, len(phases))
-        r = _entry_values(code, entries, "r", impedance_unit)
-        x = _entry_values(code, entries, "x", impedance_unit)
-        if r is None or x is None:
-            raise ValueError(f"{describe(code)}: r and x must be set")
-        return PhaseMatrix(phases=phases, r=r, x=x,
-                           b=_entry_values(code, entries, "b", admittance_unit),
-                           g=_entry_values(code, entries, "g", admittance_unit),
-                           source=MatrixSource.PHASE_CODE)
+        entries = _matrix_entries(code, len(phases), f"the {len(phases)} conductors of {describe(line)}")
+        r, x, b, g = _matrix_values(code, entries, impedance_unit, admittance_unit)
+        return PhaseMatrix(phases=phases, r=r, x=x, b=b, g=g, source=MatrixSource.PHASE_CODE)
     if isinstance(code, cim.PerLengthSequenceImpedance):
         if not expand_sequence:
             raise ValueError(f"{describe(line)}: its PerLengthSequenceImpedance becomes a phase matrix only by "
@@ -164,6 +169,28 @@ def get_line_phase_impedance_matrix(
         raise ValueError(f"{describe(line)}: has a WireConfiguration and no PerLengthImpedance; export its "
                          f"geometry through the spacing getters, never a computed matrix")
     raise ValueError(f"{describe(line)}: has no PerLengthImpedance")
+
+
+def get_phase_impedance_code(code: cim.PerLengthPhaseImpedance, impedance_unit: str = "ohm/m",
+                             admittance_unit: str = "S/m") -> CodeMatrix:
+    """The code's per-length matrices, whether or not a line uses it. ``conductorCount`` is required and the entries
+    must be its lower triangle."""
+    if not isinstance(code, cim.PerLengthPhaseImpedance):
+        raise ValueError(f"{describe(code)}: is not a PerLengthPhaseImpedance")
+    count = code.conductorCount
+    if count is None:
+        raise ValueError(f"{describe(code)}: conductorCount is unset")
+    entries = _matrix_entries(code, count, f"its conductorCount {count}")
+    return CodeMatrix(count, *_matrix_values(code, entries, impedance_unit, admittance_unit))
+
+
+def get_sequence_impedance_code(code: cim.PerLengthSequenceImpedance, impedance_unit: str = "ohm/m",
+                                admittance_unit: str = "S/m") -> SequenceImpedance:
+    """The code's per-length sequence values, whether or not a line uses it; r and x are required."""
+    if not isinstance(code, cim.PerLengthSequenceImpedance):
+        raise ValueError(f"{describe(code)}: is not a PerLengthSequenceImpedance")
+    return SequenceImpedance(**_sequence_code_values(code, impedance_unit, admittance_unit),
+                             source=ImpedanceSource.PER_LENGTH_SEQ)
 
 
 def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance | None:
@@ -261,7 +288,7 @@ def _phase_code_sequence_values(line: cim.ACLineSegment, code: cim.PerLengthPhas
         raise ValueError(f"{describe(line)}: no phase conductor, only neutrals")
 
     count = len(phases)
-    entries = _matrix_entries(line, code, count)
+    entries = _matrix_entries(code, count, f"the {count} conductors of {describe(line)}")
     r = _entry_values(code, entries, "r", impedance_unit)
     x = _entry_values(code, entries, "x", impedance_unit)
     if r is None or x is None:
@@ -310,14 +337,24 @@ def _require_phase_conductors(line: cim.ACLineSegment, phases: tuple[cim.SingleP
         raise ValueError(f"{describe(line)}: conductors {unsupported} have no sequence values")
 
 
-def _matrix_entries(line: cim.ACLineSegment, code: cim.PerLengthPhaseImpedance, count: int) -> dict:
-    """``{(row, column): PhaseImpedanceData}``, lower triangle; it must cover exactly ``count`` conductors."""
+def _matrix_entries(code: cim.PerLengthPhaseImpedance, count: int, whose: str) -> dict:
+    """``{(row, column): PhaseImpedanceData}``, lower triangle; it must cover exactly ``count`` conductors
+    (``whose`` names them in the error)."""
     entries = {(max(data.row, data.column), min(data.row, data.column)): data for data in code.PhaseImpedanceData}
     expected = {(row, column) for row in range(1, count + 1) for column in range(1, row + 1)}
     if set(entries) != expected:
-        raise ValueError(f"{describe(code)}: entries {sorted(entries)} are not the lower triangle of the "
-                         f"{count} conductors of {describe(line)}")
+        raise ValueError(f"{describe(code)}: entries {sorted(entries)} are not the lower triangle of {whose}")
     return entries
+
+
+def _matrix_values(code: cim.PerLengthPhaseImpedance, entries: dict, impedance_unit: str,
+                   admittance_unit: str) -> tuple[dict, dict, dict | None, dict | None]:
+    """r, x (required), b, g of the entries."""
+    r = _entry_values(code, entries, "r", impedance_unit)
+    x = _entry_values(code, entries, "x", impedance_unit)
+    if r is None or x is None:
+        raise ValueError(f"{describe(code)}: r and x must be set")
+    return r, x, _entry_values(code, entries, "b", admittance_unit), _entry_values(code, entries, "g", admittance_unit)
 
 
 def _entry_values(code: cim.PerLengthPhaseImpedance, entries: dict, attribute: str, unit: str) -> dict | None:

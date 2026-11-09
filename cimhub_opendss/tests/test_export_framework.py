@@ -10,8 +10,9 @@ import pytest
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.buses import bus_ref
-from cimhub_opendss.exporter.cim_to_dss import DssExporter
+from cimhub_opendss.exporter.cim_to_dss import EXPORT_ORDER, DssExporter
 from cimhub_opendss.exporter.naming import Names
+from cimhub_opendss.exporter.slots import check_slots
 from cimhub_opendss.schema import opendss_schema as schema
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -64,8 +65,15 @@ def test_bus_ref_writes_phase_conductors_and_never_bare():
     assert bus_ref(node, (A, B, C), names) == "650.1.2.3"
     assert bus_ref(node, (C, B), names) == "650.3.2"
     assert bus_ref(node, (S1, S2), names) == "650.1.2"
-    with pytest.raises(ValueError, match="have no DSS node yet"):
+    assert bus_ref(node, (N, S2), names, neutral=0) == "650.0.2"
+    with pytest.raises(ValueError, match="have no DSS node here"):
         bus_ref(node, (A, N), names)
+
+
+@pytest.mark.parametrize("module", EXPORT_ORDER, ids=lambda module: module.__name__.rsplit(".", 1)[-1])
+def test_slots_are_complete(module):
+    for native_class, slots in module.SLOTS.items():
+        check_slots(slots, native_class)
 
 
 def test_options_carry_circuit_frequency_and_voltage_bases():
@@ -75,8 +83,8 @@ def test_options_carry_circuit_frequency_and_voltage_bases():
 
 
 def test_unexported_equipment_raises():
-    with pytest.raises(ValueError, match=r"no DSS export yet for \{'ACLineSegment': 1, 'EnergyConsumer': 9"):
-        DssExporter().to_model(_network("load/loads.dss"))
+    with pytest.raises(ValueError, match=r"no DSS export yet for \{'PowerElectronicsConnection': 20"):
+        DssExporter().to_model(_network("der/der.dss"))
 
 
 def test_several_sources_need_the_circuit_source_named():

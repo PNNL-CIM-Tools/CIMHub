@@ -1,0 +1,24 @@
+// Cable and sequence-code lines for the export (EXPORT_MAPPING.md S6b): the CN and TS geometries 606 and 607 of
+// IEEE13_Assets (tests/decks/IEEE/IEEE13_assets), the IEEE8500 sequence code 3-1/0C_2/0CN_T, and an unused wire
+// (ACSR_1/0) and code (mtx601), which are exported all the same.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=200000 MVAsc1=210000
+new WireData.ACSR_1/0 NormAmps=230 DIAM=0.398  GMRac=0.05352 Rdc=0.212121212 Runits=kft Radunits=in gmrunits=in
+new WireData.CU_1/0   NormAmps=100 DIAM=0.368  GMRac=0.13356 Rac=0.607 Runits=mi Radunits=in gmrunits=in
+new TSData.TS_1/0     NormAmps=165 DIAM=0.368  GMRac=0.13320 Rac=0.97  Runits=mi Radunits=in gmrunits=in
+~                     EpsR=2.3 Ins=0.220 DiaIns=0.82 DiaCable=1.06 DiaShield=0.88 TapeLayer=0.005 TapeLap=20
+new CNData.CN_250     NormAmps=260 DIAM=0.567  GMRac=0.20520 Rac=0.41  Runits=mi Radunits=in gmrunits=in
+~                     EpsR=2.3 Ins=0.220 DiaIns=1.06 DiaCable=1.29 k=13 DiaStrand=0.0641 GmrStrand=0.02496 Rstrand=14.8722
+new LineGeometry.606 nconds=3 nphases=3 reduce=y
+~ cond=1 cncable=CN_250 x=-0.5 h=-4 units=ft
+~ cond=2 cncable=CN_250 x= 0.0 h=-4 units=ft
+~ cond=3 cncable=CN_250 x= 0.5 h=-4 units=ft
+new LineGeometry.607 nconds=2 nphases=1 reduce=y
+~ cond=1 tscable=TS_1/0 x= 0.0000 h=-4 units=ft
+~ cond=2 wire   =CU_1/0 x= 0.2500 h=-4 units=ft
+New Linecode.3-1/0C_2/0CN_T nphases=3 r1=0.3489 x1=0.426198 r0=0.588811 x0=1.29612 c1=10.4308823411236 c0=4.48501282215346 units=km baseFreq=60 normamps=310 emergamps=310
+New Linecode.mtx601 nphases=3 BaseFreq=60 units=mi
+~ rmatrix=(0.3465 | 0.1560 0.3375 | 0.1580 0.1535 0.3414) xmatrix=(1.0179 | 0.5017 1.0478 | 0.4236 0.3849 1.0348)
+New Line.c606 bus1=sourcebus bus2=n1 geometry=606 length=500 units=ft
+New Line.c607 bus1=n1.2 bus2=n2.2 phases=1 geometry=607 length=300 units=ft
+New Line.s3 bus1=n1 bus2=n3 linecode=3-1/0C_2/0CN_T length=0.5 units=km
