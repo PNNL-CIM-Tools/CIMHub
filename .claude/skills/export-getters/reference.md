@@ -42,6 +42,32 @@ class CurrentLimits(NamedTuple):   # by OperationalLimitType.durationKind; None 
     normal: float | None; short_term: float | None; emergency: float | None
 
 def get_current_limits(equipment, unit="A", *, season=None) -> CurrentLimits   # sets on the equipment and its terminals
+
+class TransformerForm(Enum):   # BY_ENDS | AUTO | BY_PHASE_ENDS | BY_TANK_ENDS | BY_LUGS
+class Winding(NamedTuple):   # number, end (instance end), phases (a coil's two, else the end's terminal),
+    # connection, grounded, rground, xground (ohm), rated_u, rated_s, base_u, base_s, r (on base_power)
+class MeshImpedance(NamedTuple): r: float | None; x: float
+class CoreAdmittance(NamedTuple): g: float | None; b: float | None
+class TransformerModel(NamedTuple):
+    form: TransformerForm; windings: tuple[Winding, ...]; mesh: dict   # {(i, j): MeshImpedance}
+    core: CoreAdmittance; base_power: float                            # power_unit; what every percent is on
+
+def get_transformer_units(transformer) -> tuple   # a PowerTransformer's tanks, else the transformer
+def get_transformer_model(unit, impedance_unit="percent", *, base_power=None, voltage_unit="V",
+                          power_unit="VA") -> TransformerModel   # 'percent' | 'pu'; base: winding 1's ratedS
+
+def get_tap_steps(tap, voltage_unit="V") -> TapSteps   # low, high, neutral, normal, step (positions), increment %, neutral_u
+def get_tap_ratio(tap, *, which) -> float              # 'actual' | 'normal' | 'low' | 'high'
+def get_shunt_reactive_power(shunt, unit="VAr", *, sections, voltage, voltage_unit="V") -> ShuntReactivePower
+    # sections 'actual' | 'normal' | 'maximum'; voltage 'nominal' (nomU) | 'base'; total + per_phase, capacitor positive
+class PhasePower(NamedTuple): p: float; q: float
+def get_phase_loads(consumer, active_unit="W", reactive_unit="VAr") -> PhaseLoads   # total, per_phase, split
+def get_load_response(consumer) -> LoadResponse        # ZIP fractions (sum to 1) or exponents
+def get_source(source, *, angle_unit, voltage_unit="V", impedance_unit="ohm", base_power=None) -> Source
+def get_der_output(equipment, active_unit="W", reactive_unit="VAr", *, sign) -> DerOutput   # 'load' | 'generation'
+def get_regulating_control(control, unit=None) -> RegulatingSettings   # targets in unit (mode's SI), terminal, phases
+def get_tap_changer_control(tap, *, unit=None, time_unit="s", voltage_unit="V", power_unit="W") -> TapChangerSettings
+def get_equipment_control(equipment, *, unit=None, time_unit="s") -> EquipmentControl | None   # shunt aVRDelay
 ```
 
 A RAW branch then reads:
@@ -75,12 +101,16 @@ rated_kv = get_qty(end, "ratedU", "kV")
 | line impedance | lumped `ACLineSegment.r/x/bch/gch/r0/x0/b0ch/g0ch`; `ACLineSegment.PerLengthImpedance` → `PerLengthSequenceImpedance` or `PerLengthPhaseImpedance` + `PhaseImpedanceData` (`row`, `column`, `r`, `x`, `b`) |
 | catalog transformer | `TransformerTank.TankConfiguration` → `TransformerTankConfiguration` → `TransformerTankEnd` / `TransformerPhaseEnd`, `TransformerWinding`, `TransformerCore`, `TransformerMeshImpedance` |
 | balanced transformer | `PowerTransformer` → `PowerTransformerEnd` (`ratedU`, `ratedS`, `r`, `connectionKind`) + `TransformerMeshImpedance` (`FromTransformerEnd`, `ToTransformerEnd`) |
+| centre-tap template | `TransformerWinding.FromTransformerLug`/`ToTransformerLug` → `TransformerLug.sequenceNumber` = the instance `TransformerPhaseEnd.sequenceNumber` (phase ends on the instance ends' Terminals) |
+| transformer by phase ends | `TransformerTank.TransformerWindings` → `FromTransformerEnd`/`ToTransformerEnd` (`TransformerPhaseEnd`: `endNumber`, `sequenceNumber`, `phase`); the tank's `noLoadLoss`, `percentMagnetizingCurrent` |
+| auto-transformer | `AutoTransformer` (`VoltageRegulator`) → `AutoTransformerEnd` (`baseU`, `ratedS`) + `TransformerMeshImpedance` between ends |
 | terminals | `ConductingEquipment.Terminals` → `Terminal` (`sequenceNumber`, `phases`, `ConnectivityNode`) |
 | switch | `Switch.open`, `Switch.normalOpen` |
 | ratings | `Equipment.OperationalLimitSet` and `Terminal.OperationalLimitSet` → `CurrentLimit` (`normalValue`, `OperationalLimitType.durationKind`, `.season`) |
 | base voltage | `VoltageLevel.BaseVoltage` for contents of a VoltageLevel; else `ConnectivityNode.BaseVoltage`, `ConductingEquipment.BaseVoltage`, `TopologicalNode.BaseVoltage`, `TransformerEnd.BaseVoltage` |
 | per-phase load | `EnergyConsumer.EnergyConsumerPhase` |
 | tap changer | `RatioTapChanger.step` is a **tap position**, never a turns ratio |
+| controls | `TapChanger.TapChangerControl`, `RegulatingCondEq.RegulatingControl` → `RegulatingControl` (`mode`, `targetValue` × `targetValueUnitMultiplier`, `Terminal`, `monitoredPhase`) |
 | system bases | `network.base_power`, `network.base_frequency` |
 
 Removed in CIM 18 (never read): `WireSpacingInfo`, `WirePosition`, the electrical use of `TransformerTankInfo`,
@@ -99,14 +129,14 @@ base-frequency, operational-limit, shunt and tap-changer reads.
 | `get_line_phase_impedance_matrix` | GLM, DSS, DistOPF, GDM | matrix order and susceptance units |
 | `get_spacing_xy` / `get_spacing_distances` | GLM, DSS, GDM (DistOPF needs the geometry engine) | GLM wants distances, DSS wants XY |
 | `get_base_voltage(obj, unit, form='LL'/'LN')` | GLM, DistOPF, GDM, RAW, MATPOWER | one lookup path, not five fallback chains |
-| `get_phase_loads(ec, unit)` + `get_zip_fractions(ec)` | GLM, DSS, RAW, GDM, DistOPF | per-phase vs total ÷ n; ZIP zeros stay zeros |
-| `get_shunt_reactive_power(sh, unit, per_phase=)` | DSS, DistOPF, RAW, MATPOWER, GDM | voltage base and `sections` explicit |
-| `get_tap_ratio(rtc)` / `get_tap_range(rtc)` | GLM, DSS, DistOPF, RAW, MATPOWER | position vs ratio |
-| `get_xfmr_impedance(xfmr, unit, base=)` | GLM, DSS, DistOPF, RAW, MATPOWER, GDM | the base is declared |
-| `get_winding_connection(end)` | GLM, DSS, GDM | unknown pairs raise, no per-format default |
+| `get_phase_loads(ec, ...)` + `get_load_response(ec)` (done, G6b) | GLM, DSS, RAW, GDM, DistOPF | per-phase vs total ÷ n; ZIP zeros stay zeros |
+| `get_shunt_reactive_power(sh, unit, sections=, voltage=)` (done, G6b) | DSS, DistOPF, RAW, MATPOWER, GDM | voltage base and `sections` explicit |
+| `get_tap_ratio(rtc, which=)` / `get_tap_steps(rtc)` (done, G6b) | GLM, DSS, DistOPF, RAW, MATPOWER | position vs ratio |
+| `get_transformer_model(unit, impedance_unit, base_power=)` (done, G6a) | GLM, DSS, DistOPF, RAW, MATPOWER, GDM | the base is declared; one model for five CIM forms; connections agree or raise |
 | `get_apparent_power_limits(eq, type, unit)` | RAW, MATPOWER | MVA vs amps |
-| `get_source(es)`: voltage (pu/kV, angle) + sequence impedance | DSS, GDM, DistOPF | the angle unit is explicit |
-| `get_der_output(unit, sign=)` | GLM, DSS, GDM, DistOPF, RAW, MATPOWER | the sign convention is explicit |
+| `get_source(es, angle_unit=)` (done, G6b): voltage (pu/kV, angle) + sequence impedance | DSS, GDM, DistOPF | the angle unit is explicit |
+| `get_der_output(eq, sign=)` (done, G6b) | GLM, DSS, GDM, DistOPF, RAW, MATPOWER | the sign convention is explicit |
+| `get_regulating_control` / `get_tap_changer_control` / `get_equipment_control` (done, G6c) | DSS, GLM, GDM, RAW | target units by mode; pt/ct ratio on tap and control agree |
 | bus numbering context | RAW, MATPOWER | numbering never written back into CIM |
 
 `get_terminal_nodes` returns ConnectivityNodes, or TopologicalNodes with `topological=True` (a `BusBranchModel`'s
@@ -125,6 +155,10 @@ A spacing's positions are in its own frame; a line's heights above ground are it
 (user, 2026-11-08: one crossarm design, the pole height on the line). A ConductorDistanceSpacing's earth distances
 are heights above ground, so an offset on its line raises. DSS `h=` and GLM `distance_AE` are per line: an exporter
 writes one native spacing per (spacing, offset).
+
+A transformer is read per unit (tank, tankless PowerTransformer, AutoTransformer) into one `TransformerModel`
+whatever the form. Every percent comes out on `base_power`, else winding 1's `ratedS`. The stored percent is on its
+From winding's `baseU²/baseS` and is moved by the power ratio only (U12). A winding's `baseS` is per phase.
 
 Open: the tolerance at which lumped and per-length values "disagree"; a split-phase leg's 'LN' voltage (raises today).
 

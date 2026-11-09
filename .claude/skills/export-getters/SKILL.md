@@ -72,11 +72,14 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
 ## Semantic rules the getters settle (one documented rule each)
 
 1. **Switch state:** `get_switch_state(switch, which='actual'|'normal')`; `which` has no default (`open` vs `normalOpen`).
-2. **Generator sign:** CIM terminal `p` is positive into equipment; generation is negative `p`. The getter returns CIM
-   sign; the spoke negates where its format wants positive generation, and says so.
-3. **Per-phase load:** `EnergyConsumerPhase` values when present, else the total split evenly.
-4. **Shunt Q:** one formula with an explicit voltage base (`nomU`, LL vs LN) and an explicit `sections` factor.
-5. **Transformer per-unit base:** `get_xfmr_impedance(..., base=...)` declares the base; no format picks its own.
+2. **Generator sign:** CIM terminal `p` is positive into equipment; generation is negative `p`.
+   `get_der_output(eq, sign='load'|'generation')` takes the sign as an argument, so no spoke negates on its own.
+3. **Per-phase load:** `EnergyConsumerPhase` values when every child has them, else the total split evenly over the
+   phase conductors (`phase_power.device_power`, also DER).
+4. **Shunt Q:** one formula, Q = bPerSection × V² × sections, with `voltage=` (`nomU` or the BaseVoltage, LN for one
+   phase conductor) and `sections=` both required (`get_shunt_reactive_power`).
+5. **Transformer per-unit base:** `get_transformer_model(unit, impedance_unit, base_power=...)` puts every percent
+   on one declared power base (default winding 1's `ratedS`, DSS/GLM's); no format picks or rebases its own.
 6. **Raw floats:** an attribute that is not a CIMUnit fails fast (`get_qty` raises); never guess kV vs V.
 7. **Frequency:** from the network (`network.base_frequency`, set by cimgraph's `set_default_bases`), never a
    hard-coded 60 Hz in a getter or spoke.

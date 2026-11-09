@@ -1,7 +1,7 @@
 # Export getters
 
 **Status:** started 2026-11-08 in a worktree, moved onto `rc_1` the same day once the DSS importer was done.
-Design: skill `export-getters` (SKILL.md + reference.md). G1-G3 committed; G4-G5 uncommitted.
+Design: skill `export-getters` (SKILL.md + reference.md). G1-G5 committed (230fd8a); G6a-G6c uncommitted.
 
 **Decision change (user, 2026-11-08):** `REWRITE_PLAN.md` F1 said getters are built on demand, each landing with its
 first consumer in the DSS wave. The getters started ahead of DSS S6. Each getter is still tested against
@@ -23,7 +23,10 @@ exporter) may ask for signature changes before anything is frozen.
 | G3 | `get_line_sequence_impedance_per_length` (steps 2-3 per length), `get_line_phase_impedance_matrix` (`PhaseMatrix`, stored code; sequence code expanded only with `expand_sequence=True`) | **done 2026-11-08**, 31 getter tests |
 | G4 | wide fan-out: `get_terminal_nodes`, `get_conductor_phases` (+ `get_terminal_phases`), `get_base_voltage`, `get_switch_state(which=)`, `get_current_limits` | **done 2026-11-08**, 37 tests |
 | G5 | `get_spacing_xy` / `get_spacing_distances` (XYSpacing and ConductorDistanceSpacing), `get_line_conductor_xy` (`spacingYOffset`), `derived/spacing.py` | **done 2026-11-08**, 24 tests |
-| G6 | transformers, tap changers, shunts, loads, source, DER (reference.md §3) | next |
+| G6a | `get_transformer_units`, `get_transformer_model` (`TransformerModel`: windings, mesh, core on one declared power base; five CIM forms) | **done 2026-11-08**, 23 tests |
+| G6b | `get_tap_steps`/`get_tap_ratio`, `get_shunt_reactive_power`, `get_phase_loads`/`get_load_response`, `get_source`, `get_der_output` (+ `phase_power.device_power`) | **done 2026-11-08**, 46 tests |
+| G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
+| G6d | DER ratings and units (`ratedS`, q limits, `PhotoVoltaicUnit`, `BatteryUnit`), machine data | next, when DSS S6 asks |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)
@@ -89,3 +92,60 @@ exporter) may ask for signature changes before anything is frozen.
   spacing is `ACLineSegment.WireSpacing` or `WireConfiguration.WireSpacing`, and both set must be the same one.
   DSS `h=` and GLM `distance_AE` are therefore per line: one native spacing per (spacing, offset).
 - **Open:** `DISTANCE_REL_TOL = 1e-4` (GLM writes 6 digits).
+
+## G6a decisions and open points
+
+- **User, 2026-11-08:** one normalized model for every CIM form; one result per transformer unit (a
+  `TransformerTank`, a `PowerTransformer` without tanks, an `AutoTransformer`); the caller declares the power base.
+- Forms (`TransformerForm`): BY_ENDS, AUTO, BY_PHASE_ENDS (tank windings between instance `TransformerPhaseEnd`s,
+  matched to the `PowerTransformerEnd` by `endNumber`), BY_TANK_ENDS (template end n = instance end n), BY_LUGS
+  (a lug's `sequenceNumber` names the instance phase end on the ends' Terminals).
+- Winding order: end number, then a coil's lowest phase-end `sequenceNumber` (H, X1-X2, X2-X3).
+- **Base:** every percent/pu is on `base_power` (e.g. `network.base_power`), else winding 1's `ratedS`, the base DSS
+  (`%R`, `XHL`, `%noloadloss`, `%imag`) and GLM put everything on. The stored percent is read on its From winding with
+  `get_qty`, then moved by the power ratio only (UPSTREAM_REQUESTS U12). A winding's `baseS` is per phase, so its
+  whole-unit power is winding 1's `ratedS` × baseS / baseS₁. `'ohm'` is not offered: ohms differ by form (a coil's on a
+  TransformerWinding, the wye equivalent on a PowerTransformerEnd) and no consumer wants them.
+- **Core:** BY_ENDS reads `g`/`b` of the one end that holds them; tank forms read `noLoadLoss` (g = P/S) and
+  `percentMagnetizingCurrent` (b, on winding 1's rating) from the tank or its configuration, and both setting one
+  raises. `TransformerCore.g/b` set raises (not read). AUTO has no core.
+- Connection and grounding: the instance end's; on BY_TANK_ENDS also the TankEnd's, and two that are set must agree.
+  `TransformerWinding.connection` (GridAPPS-D) is not read; a coil's phases show phase-to-phase vs phase-to-neutral.
+- Raise: a PowerTransformer with tanks passed whole, a tank with both its own windings and a configuration, a bank
+  of template tanks (which phases each serves is open until the multi-can form is settled), a coil across two ends,
+  a star `PowerTransformerEnd.x`, an unset mesh `x`, an unrated winding 1.
+- **Open:** mesh `r0`/`x0` and zero-sequence data are not read; `percentImpedance`/`loadLoss` (test summaries) are
+  not checked against the mesh; template banks.
+
+## G6b decisions and open points
+
+- **Tap changer:** positions as stored; ratio = 1 + (position − neutralStep) × stepVoltageIncrement / 100 at
+  `which` = `'actual'` (step) | `'normal'` | `'low'` | `'high'`, no default (as switch state). No default
+  increment (the old 0.625 % fallback is gone). RatioTapChanger only; PhaseTapChanger not read.
+- **Shunt:** Q = bPerSection × V² × sections; `sections` (`'actual'`/`'normal'`/`'maximum'`) and `voltage`
+  (`'nominal'` = nomU, or `'base'` = the BaseVoltage, LN for one phase conductor else LL) are both required. `nomQ`
+  is not read; a set `gPerSection` or per-phase `bPerSection` raises (no producer writes one; the CIM per-phase
+  voltage is wye LN / delta LL, decide with the first one). The old nomU → BaseVoltage fallback is gone.
+- **Per phase** (loads and DER, `phase_power.device_power`): the `<Class>Phase` children's p/q when every child has
+  them (they must be the conductors and sum to the total, rel 1e-6), else the total split evenly over the phase
+  conductors; the neutral carries none. `split` says which. Children without values (cimtables' U10 per-phase rows)
+  count as none.
+- **Load response:** ZIP fractions as stored, each three summing to 1 (rel 1e-6); or exponents. No response raises.
+- **Source:** voltageMagnitude and nominalVoltage required, `magnitude_pu` on nominalVoltage; `angle_unit` required;
+  r/x/r0/x0/r2/x2 in ohm or pu on BaseVoltage + `base_power`; unset is None.
+- **DER sign:** `sign='load'` (CIM) or `'generation'` (negated, a zero stays 0.0); RotatingMachine phases hold no p/q,
+  so a machine's total is split; a machine has no connection (U8).
+
+## G6c decisions and open points
+
+- **Targets:** `targetValue`, `targetDeadband`, the allowed min/max and the reverse target/band are plain floats in
+  primary units of the mode (V, A, W, VAr) × `targetValueUnitMultiplier`; returned in the caller's `unit` (default
+  the mode's SI unit) through the CIMUnit classes, never a local factor. powerFactor, timeScheduled, admittance and
+  temperature are returned as stored (`unit` None); a unit or multiplier for them raises.
+- **Both sides:** `ptRatio`/`ctRatio` on a TapChanger and its TapChangerControl must agree when both are set; the
+  result carries the agreed value in `control.pt_ratio`/`ct_ratio`. The tap side adds `controlEnabled`, `ltcFlag`,
+  `ctRating` (A, a plain float), the delays; the control side the line drop (primary ohm), reverse settings and
+  voltage limits. A regulated device adds `controlEnabled` and, on a ShuntCompensator, `aVRDelay`.
+- A control must monitor a Terminal and have a mode and a target; no control is `None` (tap: `control=None`).
+- `monitoredPhase` is parsed to SinglePhaseKind tokens (`terminals.phase_code_tokens`). `ptPhase`/`ctPhase` and
+  `TapChanger.ptPhase` are not read (the DSS importer writes none).

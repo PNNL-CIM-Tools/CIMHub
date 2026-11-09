@@ -57,12 +57,16 @@ def get_terminal_phases(terminal: cim.Terminal) -> tuple[cim.SinglePhaseKind, ..
     """One terminal's conductors in PhaseCode order (A, B, C, s1, s2, N); a blank PhaseCode is ABC."""
     if terminal.phases is None:
         return BALANCED_THREE_PHASE
-    written = terminal.phases.value.replace("s12", "s1s2")  # the inverse of cimtables.connectivity.phase_code
+    return phase_code_tokens(terminal.phases, terminal)
+
+
+def phase_code_tokens(code: cim.PhaseCode, owner) -> tuple[cim.SinglePhaseKind, ...]:
+    """A PhaseCode's conductors in PhaseCode order; ``owner`` names the holder in the error."""
+    written = code.value.replace("s12", "s1s2")  # the inverse of cimtables.connectivity.phase_code
     try:
         tokens = parse_phases(written)
     except ValueError as error:
-        raise ValueError(f"{describe(terminal)}: phases {terminal.phases.value!r} are not conductors "
-                         f"A, B, C, s1, s2, N") from error
+        raise ValueError(f"{describe(owner)}: phases {code.value!r} are not conductors A, B, C, s1, s2, N") from error
     return tuple(cim.SinglePhaseKind(token) for token in tokens)
 
 
