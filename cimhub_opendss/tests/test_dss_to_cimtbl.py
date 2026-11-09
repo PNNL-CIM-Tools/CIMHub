@@ -51,18 +51,18 @@ def documents(ieee13):
     return DssImporter("IEEE13_CDPSM").to_cimtbl(ieee13)
 
 
-def test_master_matches_golden(documents):
-    assert_matches_golden(documents.master, GOLDENS / "IEEE13_CDPSM.cimtbl")
-
-
-def test_bus_matches_golden(documents):
-    [bus] = [part for part in documents.parts if part.name == "bus"]
-    assert_matches_golden(bus, GOLDENS / "bus.cimtbl")
+def test_artifact_directory_matches_golden(documents):
+    """The whole IEEE13_CDPSM artifact directory is the reference golden (D6): the master and every part."""
+    written = {f"{part.name}.cimtbl": part for part in documents.parts} | {"IEEE13_CDPSM.cimtbl": documents.master}
+    for file_name, document in written.items():
+        assert_matches_golden(document, GOLDENS / file_name)
+    assert sorted(path.name for path in GOLDENS.glob("*.cimtbl")) == sorted(written)
 
 
 def test_parts_follow_the_mapping_order(documents):
     assert [part.name for part in documents.parts] == ["bus", "zip_fractions", "linecode", "xfmrcode", "vsource",
-                                                       "line", "transformer", "regcontrol", "load", "capacitor"]
+                                                       "line", "transformer", "regcontrol", "load", "capacitor",
+                                                       "pvsystem", "storage"]
     assert len(MAPPING_ORDER) == len({native_class for native_class, _ in MAPPING_ORDER})
 
 
@@ -92,15 +92,16 @@ def test_ieee13_binds_under_cim18v17(ieee13, tmp_path):
     network = dss_to_cim(ieee13, name="IEEE13_CDPSM", artifact_dir=tmp_path)
     assert sorted(path.name for path in tmp_path.iterdir()) == [
         "IEEE13_CDPSM.cimtbl", "bus.cimtbl", "capacitor.cimtbl", "line.cimtbl", "linecode.cimtbl", "load.cimtbl",
-        "regcontrol.cimtbl", "transformer.cimtbl", "vsource.cimtbl", "xfmrcode.cimtbl", "zip_fractions.cimtbl"]
+        "pvsystem.cimtbl", "regcontrol.cimtbl", "storage.cimtbl", "transformer.cimtbl", "vsource.cimtbl",
+        "xfmrcode.cimtbl", "zip_fractions.cimtbl"]
     assert_base_voltages_agree(network)
     cim = network.cim
     counts = {cls: len(network.graph.get(getattr(cim, cls), {})) for cls in (
         "ACLineSegment", "LoadBreakSwitch", "Fuse", "Recloser", "PowerTransformer", "VoltageRegulator",
-        "TapChangerControl", "EnergyConsumer", "LinearShuntCompensator")}
+        "TapChangerControl", "EnergyConsumer", "LinearShuntCompensator", "PowerElectronicsConnection", "BatteryUnit")}
     assert counts == {"ACLineSegment": 11, "LoadBreakSwitch": 3, "Fuse": 1, "Recloser": 1, "PowerTransformer": 3,
                       "VoltageRegulator": 3, "TapChangerControl": 3, "EnergyConsumer": 16,
-                      "LinearShuntCompensator": 2}
+                      "LinearShuntCompensator": 2, "PowerElectronicsConnection": 5, "BatteryUnit": 3}
     nodes = network.graph[network.cim.ConnectivityNode].values()
     assert len(nodes) == 22 and all(node.ConnectivityNodeContainer.mRID == "fdr_ieee13nodeckt" for node in nodes)
     [source] = network.graph[network.cim.EnergySource].values()

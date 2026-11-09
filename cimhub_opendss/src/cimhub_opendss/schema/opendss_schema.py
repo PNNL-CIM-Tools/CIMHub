@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T16:11:33
+# Generation date: 2026-11-08T17:27:30
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -1181,15 +1181,15 @@ class Pvsystem(YAMLRoot):
     kVA: Optional[float] = None
     pct_Cutin: Optional[float] = None
     pct_Cutout: Optional[float] = None
-    EffCurve: Optional[float] = None
-    P_TCurve: Optional[float] = None
+    EffCurve: Optional[str] = None
+    P_TCurve: Optional[str] = None
     pct_R: Optional[float] = None
     pct_X: Optional[float] = None
     model: Optional[int] = None
     Vminpu: Optional[float] = None
     Vmaxpu: Optional[float] = None
     Balanced: Optional[Union[bool, Bool]] = None
-    LimitCurrent: Optional[float] = None
+    LimitCurrent: Optional[Union[bool, Bool]] = None
     yearly: Optional[str] = None
     daily: Optional[str] = None
     duty: Optional[int] = None
@@ -1197,13 +1197,13 @@ class Pvsystem(YAMLRoot):
     Tdaily: Optional[str] = None
     Tduty: Optional[int] = None
     class_class: Optional[int] = None
-    UserModel: Optional[float] = None
+    UserModel: Optional[str] = None
     UserData: Optional[str] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     VarFollowInverter: Optional[Union[bool, Bool]] = None
     DutyStart: Optional[str] = None
-    WattPriority: Optional[str] = None
-    PFPriority: Optional[str] = None
+    WattPriority: Optional[Union[bool, Bool]] = None
+    PFPriority: Optional[Union[bool, Bool]] = None
     pct_PminNoVars: Optional[float] = None
     pct_PminkvarMax: Optional[float] = None
     kvarMax: Optional[float] = None
@@ -1268,11 +1268,11 @@ class Pvsystem(YAMLRoot):
         if self.pct_Cutout is not None and not isinstance(self.pct_Cutout, float):
             self.pct_Cutout = float(self.pct_Cutout)
 
-        if self.EffCurve is not None and not isinstance(self.EffCurve, float):
-            self.EffCurve = float(self.EffCurve)
+        if self.EffCurve is not None and not isinstance(self.EffCurve, str):
+            self.EffCurve = str(self.EffCurve)
 
-        if self.P_TCurve is not None and not isinstance(self.P_TCurve, float):
-            self.P_TCurve = float(self.P_TCurve)
+        if self.P_TCurve is not None and not isinstance(self.P_TCurve, str):
+            self.P_TCurve = str(self.P_TCurve)
 
         if self.pct_R is not None and not isinstance(self.pct_R, float):
             self.pct_R = float(self.pct_R)
@@ -1292,8 +1292,8 @@ class Pvsystem(YAMLRoot):
         if self.Balanced is not None and not isinstance(self.Balanced, Bool):
             self.Balanced = Bool(self.Balanced)
 
-        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, float):
-            self.LimitCurrent = float(self.LimitCurrent)
+        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, Bool):
+            self.LimitCurrent = Bool(self.LimitCurrent)
 
         if self.yearly is not None and not isinstance(self.yearly, str):
             self.yearly = str(self.yearly)
@@ -1316,8 +1316,8 @@ class Pvsystem(YAMLRoot):
         if self.class_class is not None and not isinstance(self.class_class, int):
             self.class_class = int(self.class_class)
 
-        if self.UserModel is not None and not isinstance(self.UserModel, float):
-            self.UserModel = float(self.UserModel)
+        if self.UserModel is not None and not isinstance(self.UserModel, str):
+            self.UserModel = str(self.UserModel)
 
         if self.UserData is not None and not isinstance(self.UserData, str):
             self.UserData = str(self.UserData)
@@ -1331,11 +1331,11 @@ class Pvsystem(YAMLRoot):
         if self.DutyStart is not None and not isinstance(self.DutyStart, str):
             self.DutyStart = str(self.DutyStart)
 
-        if self.WattPriority is not None and not isinstance(self.WattPriority, str):
-            self.WattPriority = str(self.WattPriority)
+        if self.WattPriority is not None and not isinstance(self.WattPriority, Bool):
+            self.WattPriority = Bool(self.WattPriority)
 
-        if self.PFPriority is not None and not isinstance(self.PFPriority, str):
-            self.PFPriority = str(self.PFPriority)
+        if self.PFPriority is not None and not isinstance(self.PFPriority, Bool):
+            self.PFPriority = Bool(self.PFPriority)
 
         if self.pct_PminNoVars is not None and not isinstance(self.pct_PminNoVars, float):
             self.pct_PminNoVars = float(self.pct_PminNoVars)
@@ -1417,12 +1417,12 @@ class Storage(YAMLRoot):
     kVA: Optional[float] = None
     pct_Cutin: Optional[float] = None
     pct_Cutout: Optional[float] = None
-    EffCurve: Optional[float] = None
+    EffCurve: Optional[str] = None
     VarFollowInverter: Optional[Union[bool, Bool]] = None
     kvarMax: Optional[float] = None
     kvarMaxAbs: Optional[float] = None
-    WattPriority: Optional[str] = None
-    PFPriority: Optional[float] = None
+    WattPriority: Optional[Union[bool, Bool]] = None
+    PFPriority: Optional[Union[bool, Bool]] = None
     pct_PminNoVars: Optional[float] = None
     pct_PminkvarMax: Optional[float] = None
     kWrated: Optional[float] = None
@@ -1437,25 +1437,25 @@ class Storage(YAMLRoot):
     pct_EffCharge: Optional[float] = None
     pct_EffDischarge: Optional[float] = None
     pct_IdlingkW: Optional[float] = None
-    pct_Idlingkvar: Optional[str] = None
+    pct_Idlingkvar: Optional[float] = None
     pct_R: Optional[float] = None
     pct_X: Optional[float] = None
     model: Optional[int] = None
     Vminpu: Optional[float] = None
     Vmaxpu: Optional[float] = None
     Balanced: Optional[Union[bool, Bool]] = None
-    LimitCurrent: Optional[float] = None
+    LimitCurrent: Optional[Union[bool, Bool]] = None
     yearly: Optional[str] = None
     daily: Optional[str] = None
     duty: Optional[int] = None
-    DispMode: Optional[float] = None
+    DispMode: Optional[str] = None
     DischargeTrigger: Optional[str] = None
     ChargeTrigger: Optional[str] = None
     TimeChargeTrig: Optional[str] = None
     class_class: Optional[int] = None
-    DynaDLL: Optional[float] = None
+    DynaDLL: Optional[str] = None
     DynaData: Optional[str] = None
-    UserModel: Optional[float] = None
+    UserModel: Optional[str] = None
     UserData: Optional[str] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     kVDC: Optional[float] = None
@@ -1509,8 +1509,8 @@ class Storage(YAMLRoot):
         if self.pct_Cutout is not None and not isinstance(self.pct_Cutout, float):
             self.pct_Cutout = float(self.pct_Cutout)
 
-        if self.EffCurve is not None and not isinstance(self.EffCurve, float):
-            self.EffCurve = float(self.EffCurve)
+        if self.EffCurve is not None and not isinstance(self.EffCurve, str):
+            self.EffCurve = str(self.EffCurve)
 
         if self.VarFollowInverter is not None and not isinstance(self.VarFollowInverter, Bool):
             self.VarFollowInverter = Bool(self.VarFollowInverter)
@@ -1521,11 +1521,11 @@ class Storage(YAMLRoot):
         if self.kvarMaxAbs is not None and not isinstance(self.kvarMaxAbs, float):
             self.kvarMaxAbs = float(self.kvarMaxAbs)
 
-        if self.WattPriority is not None and not isinstance(self.WattPriority, str):
-            self.WattPriority = str(self.WattPriority)
+        if self.WattPriority is not None and not isinstance(self.WattPriority, Bool):
+            self.WattPriority = Bool(self.WattPriority)
 
-        if self.PFPriority is not None and not isinstance(self.PFPriority, float):
-            self.PFPriority = float(self.PFPriority)
+        if self.PFPriority is not None and not isinstance(self.PFPriority, Bool):
+            self.PFPriority = Bool(self.PFPriority)
 
         if self.pct_PminNoVars is not None and not isinstance(self.pct_PminNoVars, float):
             self.pct_PminNoVars = float(self.pct_PminNoVars)
@@ -1569,8 +1569,8 @@ class Storage(YAMLRoot):
         if self.pct_IdlingkW is not None and not isinstance(self.pct_IdlingkW, float):
             self.pct_IdlingkW = float(self.pct_IdlingkW)
 
-        if self.pct_Idlingkvar is not None and not isinstance(self.pct_Idlingkvar, str):
-            self.pct_Idlingkvar = str(self.pct_Idlingkvar)
+        if self.pct_Idlingkvar is not None and not isinstance(self.pct_Idlingkvar, float):
+            self.pct_Idlingkvar = float(self.pct_Idlingkvar)
 
         if self.pct_R is not None and not isinstance(self.pct_R, float):
             self.pct_R = float(self.pct_R)
@@ -1590,8 +1590,8 @@ class Storage(YAMLRoot):
         if self.Balanced is not None and not isinstance(self.Balanced, Bool):
             self.Balanced = Bool(self.Balanced)
 
-        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, float):
-            self.LimitCurrent = float(self.LimitCurrent)
+        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, Bool):
+            self.LimitCurrent = Bool(self.LimitCurrent)
 
         if self.yearly is not None and not isinstance(self.yearly, str):
             self.yearly = str(self.yearly)
@@ -1602,8 +1602,8 @@ class Storage(YAMLRoot):
         if self.duty is not None and not isinstance(self.duty, int):
             self.duty = int(self.duty)
 
-        if self.DispMode is not None and not isinstance(self.DispMode, float):
-            self.DispMode = float(self.DispMode)
+        if self.DispMode is not None and not isinstance(self.DispMode, str):
+            self.DispMode = str(self.DispMode)
 
         if self.DischargeTrigger is not None and not isinstance(self.DischargeTrigger, str):
             self.DischargeTrigger = str(self.DischargeTrigger)
@@ -1617,14 +1617,14 @@ class Storage(YAMLRoot):
         if self.class_class is not None and not isinstance(self.class_class, int):
             self.class_class = int(self.class_class)
 
-        if self.DynaDLL is not None and not isinstance(self.DynaDLL, float):
-            self.DynaDLL = float(self.DynaDLL)
+        if self.DynaDLL is not None and not isinstance(self.DynaDLL, str):
+            self.DynaDLL = str(self.DynaDLL)
 
         if self.DynaData is not None and not isinstance(self.DynaData, str):
             self.DynaData = str(self.DynaData)
 
-        if self.UserModel is not None and not isinstance(self.UserModel, float):
-            self.UserModel = float(self.UserModel)
+        if self.UserModel is not None and not isinstance(self.UserModel, str):
+            self.UserModel = str(self.UserModel)
 
         if self.UserData is not None and not isinstance(self.UserData, str):
             self.UserData = str(self.UserData)
@@ -8028,10 +8028,10 @@ slots.pvsystem__pct_Cutout = Slot(uri=DSS.pct_Cutout, name="pvsystem__pct_Cutout
                    model_uri=DSS.pvsystem__pct_Cutout, domain=None, range=Optional[float])
 
 slots.pvsystem__EffCurve = Slot(uri=DSS.EffCurve, name="pvsystem__EffCurve", curie=DSS.curie('EffCurve'),
-                   model_uri=DSS.pvsystem__EffCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__EffCurve, domain=None, range=Optional[str])
 
 slots.pvsystem__P_TCurve = Slot(uri=DSS.P_TCurve, name="pvsystem__P_TCurve", curie=DSS.curie('P_TCurve'),
-                   model_uri=DSS.pvsystem__P_TCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__P_TCurve, domain=None, range=Optional[str])
 
 slots.pvsystem__pct_R = Slot(uri=DSS.pct_R, name="pvsystem__pct_R", curie=DSS.curie('pct_R'),
                    model_uri=DSS.pvsystem__pct_R, domain=None, range=Optional[float])
@@ -8052,7 +8052,7 @@ slots.pvsystem__Balanced = Slot(uri=DSS.Balanced, name="pvsystem__Balanced", cur
                    model_uri=DSS.pvsystem__Balanced, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__LimitCurrent = Slot(uri=DSS.LimitCurrent, name="pvsystem__LimitCurrent", curie=DSS.curie('LimitCurrent'),
-                   model_uri=DSS.pvsystem__LimitCurrent, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__LimitCurrent, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__yearly = Slot(uri=DSS.yearly, name="pvsystem__yearly", curie=DSS.curie('yearly'),
                    model_uri=DSS.pvsystem__yearly, domain=None, range=Optional[str])
@@ -8076,7 +8076,7 @@ slots.pvsystem__class_class = Slot(uri=DSS.class_class, name="pvsystem__class_cl
                    model_uri=DSS.pvsystem__class_class, domain=None, range=Optional[int])
 
 slots.pvsystem__UserModel = Slot(uri=DSS.UserModel, name="pvsystem__UserModel", curie=DSS.curie('UserModel'),
-                   model_uri=DSS.pvsystem__UserModel, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__UserModel, domain=None, range=Optional[str])
 
 slots.pvsystem__UserData = Slot(uri=DSS.UserData, name="pvsystem__UserData", curie=DSS.curie('UserData'),
                    model_uri=DSS.pvsystem__UserData, domain=None, range=Optional[str])
@@ -8091,10 +8091,10 @@ slots.pvsystem__DutyStart = Slot(uri=DSS.DutyStart, name="pvsystem__DutyStart", 
                    model_uri=DSS.pvsystem__DutyStart, domain=None, range=Optional[str])
 
 slots.pvsystem__WattPriority = Slot(uri=DSS.WattPriority, name="pvsystem__WattPriority", curie=DSS.curie('WattPriority'),
-                   model_uri=DSS.pvsystem__WattPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.pvsystem__WattPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__PFPriority = Slot(uri=DSS.PFPriority, name="pvsystem__PFPriority", curie=DSS.curie('PFPriority'),
-                   model_uri=DSS.pvsystem__PFPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.pvsystem__PFPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__pct_PminNoVars = Slot(uri=DSS.pct_PminNoVars, name="pvsystem__pct_PminNoVars", curie=DSS.curie('pct_PminNoVars'),
                    model_uri=DSS.pvsystem__pct_PminNoVars, domain=None, range=Optional[float])
@@ -8184,7 +8184,7 @@ slots.storage__pct_Cutout = Slot(uri=DSS.pct_Cutout, name="storage__pct_Cutout",
                    model_uri=DSS.storage__pct_Cutout, domain=None, range=Optional[float])
 
 slots.storage__EffCurve = Slot(uri=DSS.EffCurve, name="storage__EffCurve", curie=DSS.curie('EffCurve'),
-                   model_uri=DSS.storage__EffCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__EffCurve, domain=None, range=Optional[str])
 
 slots.storage__VarFollowInverter = Slot(uri=DSS.VarFollowInverter, name="storage__VarFollowInverter", curie=DSS.curie('VarFollowInverter'),
                    model_uri=DSS.storage__VarFollowInverter, domain=None, range=Optional[Union[bool, Bool]])
@@ -8196,10 +8196,10 @@ slots.storage__kvarMaxAbs = Slot(uri=DSS.kvarMaxAbs, name="storage__kvarMaxAbs",
                    model_uri=DSS.storage__kvarMaxAbs, domain=None, range=Optional[float])
 
 slots.storage__WattPriority = Slot(uri=DSS.WattPriority, name="storage__WattPriority", curie=DSS.curie('WattPriority'),
-                   model_uri=DSS.storage__WattPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.storage__WattPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__PFPriority = Slot(uri=DSS.PFPriority, name="storage__PFPriority", curie=DSS.curie('PFPriority'),
-                   model_uri=DSS.storage__PFPriority, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__PFPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__pct_PminNoVars = Slot(uri=DSS.pct_PminNoVars, name="storage__pct_PminNoVars", curie=DSS.curie('pct_PminNoVars'),
                    model_uri=DSS.storage__pct_PminNoVars, domain=None, range=Optional[float])
@@ -8244,7 +8244,7 @@ slots.storage__pct_IdlingkW = Slot(uri=DSS.pct_IdlingkW, name="storage__pct_Idli
                    model_uri=DSS.storage__pct_IdlingkW, domain=None, range=Optional[float])
 
 slots.storage__pct_Idlingkvar = Slot(uri=DSS.pct_Idlingkvar, name="storage__pct_Idlingkvar", curie=DSS.curie('pct_Idlingkvar'),
-                   model_uri=DSS.storage__pct_Idlingkvar, domain=None, range=Optional[str])
+                   model_uri=DSS.storage__pct_Idlingkvar, domain=None, range=Optional[float])
 
 slots.storage__pct_R = Slot(uri=DSS.pct_R, name="storage__pct_R", curie=DSS.curie('pct_R'),
                    model_uri=DSS.storage__pct_R, domain=None, range=Optional[float])
@@ -8265,7 +8265,7 @@ slots.storage__Balanced = Slot(uri=DSS.Balanced, name="storage__Balanced", curie
                    model_uri=DSS.storage__Balanced, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__LimitCurrent = Slot(uri=DSS.LimitCurrent, name="storage__LimitCurrent", curie=DSS.curie('LimitCurrent'),
-                   model_uri=DSS.storage__LimitCurrent, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__LimitCurrent, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__yearly = Slot(uri=DSS.yearly, name="storage__yearly", curie=DSS.curie('yearly'),
                    model_uri=DSS.storage__yearly, domain=None, range=Optional[str])
@@ -8277,7 +8277,7 @@ slots.storage__duty = Slot(uri=DSS.duty, name="storage__duty", curie=DSS.curie('
                    model_uri=DSS.storage__duty, domain=None, range=Optional[int])
 
 slots.storage__DispMode = Slot(uri=DSS.DispMode, name="storage__DispMode", curie=DSS.curie('DispMode'),
-                   model_uri=DSS.storage__DispMode, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__DispMode, domain=None, range=Optional[str])
 
 slots.storage__DischargeTrigger = Slot(uri=DSS.DischargeTrigger, name="storage__DischargeTrigger", curie=DSS.curie('DischargeTrigger'),
                    model_uri=DSS.storage__DischargeTrigger, domain=None, range=Optional[str])
@@ -8292,13 +8292,13 @@ slots.storage__class_class = Slot(uri=DSS.class_class, name="storage__class_clas
                    model_uri=DSS.storage__class_class, domain=None, range=Optional[int])
 
 slots.storage__DynaDLL = Slot(uri=DSS.DynaDLL, name="storage__DynaDLL", curie=DSS.curie('DynaDLL'),
-                   model_uri=DSS.storage__DynaDLL, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__DynaDLL, domain=None, range=Optional[str])
 
 slots.storage__DynaData = Slot(uri=DSS.DynaData, name="storage__DynaData", curie=DSS.curie('DynaData'),
                    model_uri=DSS.storage__DynaData, domain=None, range=Optional[str])
 
 slots.storage__UserModel = Slot(uri=DSS.UserModel, name="storage__UserModel", curie=DSS.curie('UserModel'),
-                   model_uri=DSS.storage__UserModel, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__UserModel, domain=None, range=Optional[str])
 
 slots.storage__UserData = Slot(uri=DSS.UserData, name="storage__UserData", curie=DSS.curie('UserData'),
                    model_uri=DSS.storage__UserData, domain=None, range=Optional[str])

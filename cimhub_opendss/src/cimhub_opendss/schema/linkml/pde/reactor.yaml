@@ -78,6 +78,7 @@ classes:
         required: false
         annotations:
           order: 3
+          dss_default: int(3)
         comments:
           - >-
             Import: inferred from the bus1 node suffix via parse_bus_phases(); not stored
@@ -158,6 +159,7 @@ classes:
         required: false
         annotations:
           order: 9
+          dss_default: "false"
         comments:
           - "OpenDSS-only (N/A): circuit topology modifier; no CIM equivalent in the standard profile."
 
@@ -169,6 +171,7 @@ classes:
         required: false
         annotations:
           order: 10
+          dss_default: float(0.0)
         exact_mappings:
           - cim:SeriesCompensator.r
         comments:
@@ -392,6 +395,7 @@ classes:
         required: false
         annotations:
           order: 26
+          dss_default: "true"
         comments:
           - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created."
 

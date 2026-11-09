@@ -1,0 +1,30 @@
+// PVSystem and Storage (after IEEE13_CDPSM, IEEE9500, IEEE123): a 3-phase PV at irradiance 0.8 and a 2-phase
+// s1s2 PV at 0.208 kV on a center-tap secondary; a 1-phase leg; a 1-phase wye PV on the primary (ratedU x sqrt 3);
+// a delta PV; a kVA-capped PV (Pmpp 1200 on 1000 kVA); one below %Cutout; a negative pf; kvar. Batteries charging,
+// discharging and idling (State), state=charge kW=150 (it discharges) and state=charge kW=-0.0 (it idles), a
+// kVA-capped battery, %stored, delta.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Transformer.t phases=3 buses=[b1 b2] kVs=[4.16 0.48] kVAs=[2000 2000] xhl=5
+New XfmrCode.ct phases=1 windings=3 kVs=[2.4 0.12 0.12] kVAs=[25 25 25]
+New Transformer.ct XfmrCode=ct buses=[b1.2 house.1.0 house.0.2]
+New PVSystem.School phases=3 bus1=b2 kV=0.48 kVA=300 irrad=0.8 Pmpp=300 PF=1
+New PVSystem.House phases=2 bus1=house.1.2 kv=0.208 conn=wye kVA=5 irrad=0.8 Pmpp=5 PF=1
+New PVSystem.leg phases=1 bus1=house.2 kv=0.12 kVA=3.3 Pmpp=3
+New PVSystem.primary phases=1 bus1=b1.3 kv=2.4 kVA=120 Pmpp=120
+New PVSystem.dpv bus1=b2 kv=0.48 conn=delta kVA=60 Pmpp=50
+New PVSystem.farm bus1=b1 kv=4.16 kVA=1000 Pmpp=1200
+New PVSystem.dim bus1=b2 kv=0.48 kVA=12 Pmpp=10 irradiance=0.1
+New PVSystem.lead bus1=b2 kv=0.48 kVA=12 Pmpp=10 pf=-0.9
+New PVSystem.vars bus1=b2 kv=0.48 kVA=12 Pmpp=10 kvar=3
+New Storage.School phases=3 bus1=b2 kV=0.48 kWRated=100 kWhRated=200 kWhStored=100 state=discharging
+New Storage.BatIdle phases=3 bus1=b2 kV=0.48 kWRated=100 kWhRated=200 kWhStored=100 state=idling
+New Storage.House phases=2 bus1=house.1.2 kv=0.208 conn=wye kWRated=5 kWhRated=13.5 kWhStored=5 state=charging
+New Storage.ess phases=3 bus1=b2 kVA=250 kV=0.480 conn=delta
+~ kWrated=250 kWHrated=500 %reserve=30
+~ state=charge kW=150 PF=1
+New Storage.b123 phases=1 bus1=b1.1 kVA=125 kV=2.4
+~ kWrated=125 kWHrated=500 %reserve=30 %stored=60
+~ state=charge kW=-0.0 PF=1
+New Storage.capped bus1=b2 kv=0.48 kWrated=100 kVA=80 kWhrated=200 State=discharging

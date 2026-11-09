@@ -1,12 +1,22 @@
 # Shape: inverter-based DER. PowerElectronicsConnection on the node + its unit (PhotoVoltaicUnit, BatteryUnit).
-# Generation and discharge are negative p (CIM load sign).
+# CIM load sign: generation and discharge are negative p, charging is positive. ratedU is line to line (a 1-phase
+# wye unit's kV x sqrt 3); on a split-phase secondary, s1s2 wye is two 120 V legs. maxIFault is per unit of rated
+# current. A battery's p follows its state: discharging negative, charging positive, waiting its idlingP.
 
 Profile = cim18v17
 
 Import common.cimtbl
 
-Table PowerElectronicsConnection: mRID, node, phases, ratedS (kVA), ratedU (V), p (kW), q (kVAr), BaseVoltage=bv_480v, EquipmentContainer=fdr_shapes
-    pv_p1,      n2, ABC, 300, 480, -240, 0
-    storage_b1, n2, ABC, 100, 480, -100, 0
-Object PhotoVoltaicUnit: mRID=pv_p1_unit, maxP (kW)=300, PowerElectronicsConnection=pv_p1, EquipmentContainer=fdr_shapes
-Object BatteryUnit: mRID=storage_b1_unit, ratedE (kWh)=200, storedE (kWh)=100, batteryState=discharging, PowerElectronicsConnection=storage_b1, EquipmentContainer=fdr_shapes
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (kVA), ratedU (V), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), maxIFault, BaseVoltage, EquipmentContainer=fdr_shapes
+    pv_p1,      p1, n2,    ABC,  Y, 300, 480, -240, 0, 300, -300, 1.111111, bv_480v
+    pv_p2,      p2, house, s1s2, Y, 5,   208, -4,   0, 5,   -5,   1.111111, bv_240v
+    storage_b1, b1, n2,    ABC,  D, 100, 480, -100, 0, 100, -100, 1.111111, bv_480v
+    storage_b2, b2, house, s1s2, Y, 5,   208, 5,    0, 5,   -5,   1.111111, bv_240v
+
+Table PhotoVoltaicUnit: mRID, maxP (kW), minP (kW), PowerElectronicsConnection, EquipmentContainer=fdr_shapes
+    pv_p1_unit, 300, 0, pv_p1
+    pv_p2_unit, 5,   0, pv_p2
+
+Table BatteryUnit: mRID, ratedE (kWh), storedE (kWh), minimumE (kWh), maxP (kW), minP (kW), chargingEfficiency (percent), dischargingEfficiency (percent), idlingP (kW), batteryState, PowerElectronicsConnection, EquipmentContainer=fdr_shapes
+    storage_b1_unit, 200,  100, 40,  100, -100, 90, 90, 1,    discharging, storage_b1
+    storage_b2_unit, 13.5, 5,   2.7, 5,   -5,   90, 90, 0.05, charging,    storage_b2

@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b is next.
+**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08 except S4b-8 (open).
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -26,7 +26,7 @@ replaces them).
 | Load | 7,206 | 14 | done (S4a) | q from `pf` on 4,053, from `kvar` on 3,004; model 1 (3,824), 4 (2,862), 2 (28), 5 (19) |
 | Transformer | 3,945 | 14 | done (S3a inline + regulated, S3b by XfmrCode) | of the 3,853 in the 12 census decks: 2,474 by XfmrCode (2,468 single-phase 3-winding center tap) · 1,304 inline single-phase (1,278 in J1) · 28 inline in a `bank` (regulators) · 47 inline 3-phase, 10 of them with `phases` unset (default 3) |
 | LineCode | 290 | 13 | done (Phase 1) | open points DSS-3, DSS-4 |
-| PVSystem | 208 | 5 | S4 | |
+| PVSystem | 208 | 5 | S4 | done (S4b) |
 | WireData | 121 | 3 | S2 | |
 | LineGeometry | 82 | 4 | S2 | some reference a LineSpacing (`spacing=`), some CN/TS cables |
 | RegControl | 69 | 12 | done (S3a) | |
@@ -36,12 +36,12 @@ replaces them).
 | CapControl | 28 | 6 | done (S4a) | 3 in IEEE13_OCHRE/IEEE13_Assets monitor their own capacitor (recounted 2026-11-08); CIM-Tables' `Update` form writes them (U3 closed) |
 | LoadShape | 16 | 4 | not mapped | DSS-11 |
 | Vsource | 14 | 14 | S1 | `New Circuit` is read as Vsource `source` |
-| Generator | 13 | 2 | S4 | needs a synchronous machine shape (not catalogued) |
-| Storage | 6 | 3 | S4 | |
+| Generator | 13 | 2 | S4 | done (S4b), shape `synchronous_machine`; S4b-8 open |
+| Storage | 6 | 3 | S4 | done (S4b) |
 | EnergyMeter | 6 | 6 | not mapped | DSS-11 |
 | CNData, TSData | 3, 1 | 3, 1 | S2 | |
 | LineSpacing | 3 | 1 | S2 | |
-| Reactor | 3 | 3 | S4 | series (bus1 + bus2) or shunt; needs a shape |
+| Reactor | 3 | 3 | S4 | done (S4b): series only, shape `series_compensator`; shunt and neutral reactors raise |
 | Fuse, Recloser | 32, 53 | 1 (ieee9500 `Switches.dss`; IEEE13_CDPSM has one of each) | done (S3a, DSS-9) | recounted through the S0 reader (the old census saw 1 each). Every one switches a `_sw` line with `switch=True`, which also has a `SwtControl` (112) |
 | Relay | 0 | 0 | not mapped | DSS-11 |
 | AutoTrans | 0 | 0 | not mapped until a deck has one (S3b-1, 2026-11-08) | `AutoTransformer` + `AutoTransformerEnd`; the old `autotrans.py` has no deck, so an atom is the only test |
@@ -69,8 +69,8 @@ One file per native class (D4). The master imports them in this order, which is 
 | 11 | `capcontrol.cimtbl` | CapControl | `shunt` (RegulatingControl) | 7 |
 | 12 | `capacitor.cimtbl` | Capacitor | `shunt` (compensator) | 0, 11 |
 | 13 | `pvsystem.cimtbl`, `storage.cimtbl` | PVSystem, Storage | `der` | 0 |
-| 14 | `generator.cimtbl` | Generator | new: synchronous machine | 0 |
-| 15 | `reactor.cimtbl` | Reactor | new: series reactor / shunt reactor | 0 |
+| 14 | `generator.cimtbl` | Generator | `synchronous_machine` | 0 |
+| 15 | `reactor.cimtbl` | Reactor | `series_compensator` | 0 |
 | 16 | `buscoords.cimtbl` | Buscoords | new: Location + PositionPoint | every equipment file |
 
 CapControl comes before Capacitor. In the `shunt` shape the compensator names its control
@@ -207,7 +207,7 @@ Each slice delivers its mapper(s), atoms with goldens (`tests/atoms/<class>/`), 
 | S3a | network: Line (impedance, geometry, switch, synthesized templates, ratings), Transformer in the orchestrator, VoltageRegulator / LTC, RegControl; reader fixes (§3.4) | **done 2026-11-08:** IEEE13_CDPSM, IEEE123 and IEEE8500 bind with every line, switch, transformer and regulator (XfmrCode instances counted on the master); 25 of 31 sweep decks bind (stops: DSS-10 in J1, K1, M1, IEEE13_OCHRE; the two balanced IEEE9500 copies the engine rejects too); lines (ratings, z, b, switch states) and regulators (settings, tap range, nameplate, mesh) equal the engine's on the 8 engine decks. Found: the engine's rating copies, a matrix code's default C, the inline default C per kft |
 | S3b | XfmrCode templates and their instances | **done 2026-11-08:** TankEnd templates (3-phase, IEEE4 YYD) and center-tap lug templates (IEEE8500, IEEE9500, IEEE123_PV, IEEE13_CDPSM); 25 of 31 sweep decks bind (the S3a stops only); every template equals the engine's transformer of each instance. AutoTrans waits for a deck (S3b-1). Multi-can tank templating and bank lug sequencing wait for CYME's form |
 | S4a | Load, Capacitor + CapControl (shapes `load`, `shunt`; core `zip_fractions.cimtbl`) | **done 2026-11-08:** 25 of 31 sweep decks bind (S3's stops only); every load's p, q and model and every capacitor and CapControl setting equal the engine's on the atoms and the 8 engine decks. Own-terminal controls by `Update` (U3 closed) |
-| S4b | PVSystem, Storage, Generator, Reactor; the two new shapes (`machine`, `series_compensator`) added to the catalog first | full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
+| S4b | PVSystem, Storage, Generator, Reactor; the two new shapes (`synchronous_machine`, `series_compensator`, shared with RAW C2) added to the catalog first; approved and implemented 2026-11-08 (CIMTBL_MAPPING.md S4b); open: S4b-8, reader assignment order for a Generator's kvar | done: 22 of 31 decks bind (S3 six + two `ieee9500` copies with an engine-invalid PV `Mode=7` + IEEE123_test_harness `Battery5`); full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
 | S5 | Buscoords (Location shape added to the catalog first); deck sweep to green or listed stops; G7 numbers on ieee9500 | sweep table in `CIMTBL_MAPPING.md` |
 | S6 | exporter `cim_to_dss` ported to cim18v17 on the core getters (master plan §4 Phase 5 step 3, exporter assessment E0-E6), tested from the `.cimtbl` atoms | tier 2 per class; roundtrip and power flow parity (§5) |
 | S7 | delete the old importer, the Python atoms and every cimhub_2026 import in the spoke; update conformance tests and `README` | the spoke imports cim18v17 only |

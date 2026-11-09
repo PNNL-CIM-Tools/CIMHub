@@ -225,26 +225,27 @@ def opened_lines(native) -> set[str]:
     return opened
 
 
-def line_phases(line, phases: int, buses: Mapping[str, BusSystem]) -> tuple[str, str, str]:
+def line_phases(line, phases: int, buses: Mapping[str, BusSystem], *, label: str | None = None) -> tuple[str, str, str]:
     """``(bus1, bus2, phases)``: the lowered bus names and the phase of each conductor in bus order.
 
     A conductor with no node takes the DSS default (conductor k on node k). Nodes 1/2/3 are A/B/C, and 1/2 are
     s1/s2 on a split-phase island (DSS-5). A phase conductor on node 0, or bus2 nodes that differ from bus1's,
-    raise.
+    raise. ``label`` names the record in errors (default ``Line <name>``; the series reactor passes its own).
     """
+    label = label or f"Line {line.name}"
     letters = []
     for spec in (line.bus1, line.bus2):
         bus, given = parse_bus(spec)
         if bus not in buses:
-            raise ValueError(f"Line {line.name}: bus {bus} has no voltage (the topology walk did not reach it)")
+            raise ValueError(f"{label}: bus {bus} has no voltage (the topology walk did not reach it)")
         nodes = (given + tuple(range(len(given) + 1, phases + 1)))[:phases]
         names = _SPLIT_PHASE_OF_NODE if buses[bus].system is System.SPLIT_PHASE else _PHASE_OF_NODE
         unknown = [node for node in nodes if node not in names]
         if unknown:
-            raise ValueError(f"Line {line.name}: bus {spec} puts conductors on nodes {unknown}, which have no phase")
+            raise ValueError(f"{label}: bus {spec} puts conductors on nodes {unknown}, which have no phase")
         letters.append("".join(names[node] for node in nodes))
     if letters[0] != letters[1]:
-        raise ValueError(f"Line {line.name}: bus1 phases {letters[0]} and bus2 phases {letters[1]} differ "
+        raise ValueError(f"{label}: bus1 phases {letters[0]} and bus2 phases {letters[1]} differ "
                          "(a transposition is not mapped)")
     return parse_bus(line.bus1)[0], parse_bus(line.bus2)[0], letters[0]
 
@@ -353,6 +354,26 @@ def geometry_ratings(geometry, wires: Mapping[str, object]) -> dict[str, tuple[f
     return values
 
 
+def rating_rows(equipment: str, amps: dict[str, float], comment: str | None = None) -> tuple[Row, list[Row]]:
+    """The ``OperationalLimitSet`` row ``<equipment>_limits`` and its ``CurrentLimit`` rows (``_norm``,
+    ``_emerg``) for ``amps`` (``{"normamps": A, "emergamps": A}``, either may be missing). Shared with the series
+    reactor."""
+    limits = f"{equipment}_limits"
+    rows = [Row([f"{equipment}_{suffix}", cell(amps[slot]), limit_type, limits])
+            for slot, (suffix, limit_type) in (("normamps", ("norm", "olt_normal")),
+                                               ("emergamps", ("emerg", "olt_emergency"))) if slot in amps]
+    return Row([limits, equipment], comment=comment), rows
+
+
+def rating_tables(limit_sets: list[Row], limits: list[Row]) -> list[Table]:
+    """The ``OperationalLimitSet`` and ``CurrentLimit`` tables of ``rating_rows`` rows (none when empty)."""
+    if not limit_sets:
+        return []
+    return [Table("OperationalLimitSet", [Column("mRID"), Column("Equipment")], limit_sets),
+            Table("CurrentLimit", [Column("mRID"), Column("normalValue", "A"), Column("OperationalLimitType"),
+                                   Column("OperationalLimitSet")], limits)]
+
+
 def _ratings(line, borrowed: dict[str, tuple[float, str]], document: _Document, segment: str) -> None:
     """The line's ``OperationalLimitSet`` and ``CurrentLimit``s: each value the line's own (DSS keeps the last
     set, and decks give a line's ratings after its linecode/geometry), else what the line copies from its code
@@ -366,11 +387,9 @@ def _ratings(line, borrowed: dict[str, tuple[float, str]], document: _Document, 
             sources.append(f"{slot} from {source}")
     if not values:
         return
-    limits = f"{segment}_limits"
-    document.limit_sets.append(Row([limits, segment], comment=f"ratings: {', '.join(sources)}" if sources else None))
-    for slot, (suffix, limit_type) in (("normamps", ("norm", "olt_normal")), ("emergamps", ("emerg", "olt_emergency"))):
-        if slot in values:
-            document.limits.append(Row([f"{segment}_{suffix}", cell(values[slot]), limit_type, limits]))
+    limit_set, limits = rating_rows(segment, values, f"ratings: {', '.join(sources)}" if sources else None)
+    document.limit_sets.append(limit_set)
+    document.limits.extend(limits)
 
 
 def _segment(line, phases: str, bus1: str, bus2: str, reference: tuple[str, str], length_unit: str,
@@ -540,11 +559,7 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
 def _statements(document: _Document, container: str) -> list:
     statements = [*document.inline_codes, *document.configurations]
     statements += [Table("ACLineSegment", list(columns), rows) for columns, rows in document.segments.items()]
-    if document.limit_sets:
-        statements.append(Table("OperationalLimitSet", [Column("mRID"), Column("Equipment")], document.limit_sets))
-        statements.append(Table("CurrentLimit", [Column("mRID"), Column("normalValue", "A"),
-                                                 Column("OperationalLimitType"), Column("OperationalLimitSet")],
-                                document.limits))
+    statements += rating_tables(document.limit_sets, document.limits)
     for cim_class in ("Fuse", "Recloser", "LoadBreakSwitch"):
         if cim_class in document.switches:
             statements.append(Table(cim_class, _switch_columns(cim_class, container), document.switches[cim_class],

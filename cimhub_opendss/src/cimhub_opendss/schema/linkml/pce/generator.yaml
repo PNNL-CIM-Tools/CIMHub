@@ -106,6 +106,7 @@ classes:
             Export: kv = ratedU.to('kV').
         annotations:
           order: 3
+          dss_default: float(12.47)
 
       # (4) kW
       kW:
@@ -125,11 +126,12 @@ classes:
             Export: kW = -p.to('kW').
         annotations:
           order: 4
+          dss_default: float(1000.0)
 
       # (5) pf
       pf:
         description: >-
-          Generator power factor. Default is 0.80. Enter negative for leading
+          Generator power factor. Default is 0.88. Enter negative for leading
           power factor. A positive power factor signifies the generator
           produces vars.
         range: float
@@ -146,6 +148,9 @@ classes:
             (leading power factor), then combined into q the same way as an
             explicit kvar (see kvar comments). Export: pf is not recovered from
             q — the exporter always writes an explicit kvar instead.
+        annotations:
+          order: 5
+          dss_default: float(0.88)
 
       # (6) kvar
       kvar:
@@ -308,6 +313,7 @@ classes:
             otherwise conn is left unset (wye default).
         annotations:
           order: 15
+          dss_default: string(wye)
 
       # (16) Rneut
       # Removed - not used
@@ -477,7 +483,7 @@ classes:
           - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
           order: 28
-          dss_default: float(0.27)
+          dss_default: float(0.28)
 
       # (29) Xdpp
       Xdpp:

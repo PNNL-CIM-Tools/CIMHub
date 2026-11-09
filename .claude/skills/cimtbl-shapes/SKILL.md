@@ -62,13 +62,15 @@ Columns: **required** / *optional*.
 | shunt with control | `shunt.cimtbl` | `LinearShuntCompensator` (`cap_`), `RegulatingControl` (`cc_`), then `Update LinearShuntCompensator` | Compensator: **node**, **phases**, **nomQ** (kVAr), **nomU** (kV), *bPerSection (S)*, *sections*, *normalSections*, *maximumSections*, *phaseConnection*, *grounded*. Control: **mode**, **Terminal** (a line's or the compensator's own generated `<eq>_T<n>`), *targetValue/targetDeadband* (plain floats, primary units by mode), *monitoredPhase*, *ptRatio*, *ctRatio*. Update: *RegulatingControl*, *aVRDelay (s)*, *controlEnabled* (breaks the own-terminal cycle) | DSS Capacitor + CapControl, GLM capacitor |
 | switch | `switch.cimtbl` | `Breaker`, `Fuse`, `LoadBreakSwitch`, `Recloser`, `Disconnector`, `Sectionaliser` (all `sw_`) | **node1**, **node2**, **phases**, **open**, **normalOpen**, **BaseVoltage**, *ratedCurrent (A)* | every distribution format |
 | source | `source.cimtbl` | `EnergySource` (`src_`) | **node**, **phases**, **nominalVoltage**, **voltageMagnitude** (kV), *voltageAngle (deg)*, *r/x/r0/x0 (ohm)*, **BaseVoltage** | DSS Vsource/Circuit, GLM swing node |
-| inverter-based DER | `der.cimtbl` | `PowerElectronicsConnection` (`pv_`, `storage_`), `PhotoVoltaicUnit` / `BatteryUnit` (`<pec>_unit`) | Connection: **node**, **phases**, **ratedS** (kVA), **ratedU**, **p**, **q** (negative p = generation), **BaseVoltage**. PV: *maxP*. Battery: *ratedE*, *storedE* (kWh), *batteryState* | DSS PVSystem/Storage, GLM inverter + solar/battery |
+| inverter-based DER | `der.cimtbl` | `PowerElectronicsConnection` (`pv_`, `storage_`), `PhotoVoltaicUnit` / `BatteryUnit` (`<pec>_unit`) | Connection: **node**, **phases**, **ratedS** (kVA), **ratedU** (LL: a 1-phase wye unit's kV x sqrt 3), **p**, **q** (load sign: generation and discharge negative), **BaseVoltage**, *phaseConnection* (no grounded), *maxQ/minQ* (kVAr), *maxIFault* (pu of rated current). PV: *maxP*, *minP*. Battery: *ratedE*, *storedE*, *minimumE* (kWh), *maxP/minP*, *chargingEfficiency/dischargingEfficiency* (percent), *idlingP*, *batteryState* (p follows it) | DSS PVSystem/Storage, GLM inverter + solar/battery |
+| synchronous machine (distribution) | `synchronous_machine.cimtbl` | `SynchronousMachine` (`gen_`), `RotatingMachinePhase` (generated from `phases`), PV bus: `RegulatingControl` (`<gen>_ctrl`) then `Update SynchronousMachine` | **node**, **phases**, **ratedS** (kVA), **ratedU** (kV, LL), **p**, **q** (load sign: generation negative), **BaseVoltage**, *type*, *operatingMode*, *earthing*, *maxQ/minQ* (kVAr). Control: **mode**=voltage, **Terminal** (own `<gen>_T1`), **targetValue** (V, LL), *targetDeadband*; Update: *RegulatingControl*, *controlEnabled*. Bus-branch form with `GeneratingUnit`: the transmission waves | DSS Generator |
+| series compensator | `series_compensator.cimtbl` | `SeriesCompensator` (`rx_`), `Update Terminal` (phases), `OperationalLimitSet` (`<rx>_limits`) + `CurrentLimit` | **node1**, **node2**, **r**, **x**, *r0*, *x0* (ohm, per phase), **BaseVoltage**. No per-phase class: terminal phases by `Update Table Terminal: mRID, phases` on the generated `<rx>_T1`/`_T2` | DSS series Reactor |
 
 ## Not yet catalogued
 
-Added here first, by the wave that needs them: synchronous machines and their bus-branch generator form (RAW,
-MATPOWER), per-phase load and shunt rows (`EnergyConsumerPhase`, `LinearShuntCompensatorPhase`), series compensators,
-FACTS, protection beyond switches, measurements, the open-delta template (D14).
+Added here first, by the wave that needs them: the bus-branch forms of the synchronous machine (with
+`GeneratingUnit`) and the series compensator (RAW, MATPOWER), per-phase load and shunt rows (`EnergyConsumerPhase`,
+`LinearShuntCompensatorPhase`), FACTS, protection beyond switches, measurements, the open-delta template (D14).
 
 ## Adding a shape
 

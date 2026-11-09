@@ -1,0 +1,28 @@
+# OpenDSS series Reactor -> SeriesCompensator between its buses: r, x per phase, r0 = r, x0 = x.
+# Source table: Reactor (records: 2)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#reactor
+
+Profile = cim18v17
+
+# r0 = r, x0 = x: no mutual coupling (the engine's CIM export)
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: phases=3, Parallel=false, enabled=true
+    rx_hvmv_sub_hsb, HVMV_Sub_HSB, sourcebus, b0, 0.0, 14.798306633595042, 0.0, 14.798306633595042, true, bv_4p16kv
+    # defaulted: Parallel=false, enabled=true
+    rx_r1,           r1,           b1,        b3, 0.5, 2.0,                0.5, 2.0,                true, bv_4p16kv
+
+# SeriesCompensator has no per-phase class: its generated Terminals get their phases here
+Update Table Terminal: mRID, phases
+    rx_hvmv_sub_hsb_T1, ABC
+    rx_hvmv_sub_hsb_T2, ABC
+    rx_r1_T1,           B
+    rx_r1_T2,           B
+
+Table OperationalLimitSet: mRID, Equipment
+    rx_hvmv_sub_hsb_limits, rx_hvmv_sub_hsb
+    rx_r1_limits,           rx_r1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    rx_hvmv_sub_hsb_norm,  400.0, olt_normal,    rx_hvmv_sub_hsb_limits
+    rx_hvmv_sub_hsb_emerg, 400.0, olt_emergency, rx_hvmv_sub_hsb_limits
+    rx_r1_norm,            100.0, olt_normal,    rx_r1_limits

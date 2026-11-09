@@ -1,7 +1,7 @@
 # OpenDSS → `.cimtbl` mapping spec
 
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
-LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
+LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b approved and implemented 2026-11-08** (PVSystem, Storage, Generator, Reactor), with one open item (S4b-8). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
 ([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
@@ -1395,29 +1395,9 @@ On the atoms and the engine decks, as in S3:
 | `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `RegulatingControl.enabled`, `LinearShuntCompensator.controlEnabled`; default true; controlEnabled on the Update row |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
-### S4b outline (direction only; its spec section follows S4a)
+### S4b
 
-- **PVSystem → `PowerElectronicsConnection` `pv_` + `PhotoVoltaicUnit` `pv_<name>_unit`** (shape `der`).
-  - ratedS = kVA, ratedU = kV, maxP = Pmpp;
-  - p = −Pmpp × irradiance (default 1), capped at kVA, as the engine gives it with no curves; q from pf (default 1)
-    or kvar;
-  - curves and `%Cutin`/`%Cutout` untranscribed.
-  - The 531 ieee9500_2025 2-phase PVs give kV 0.24 on 120 V legs. ratedU keeps the deck's value; S4b pins what the
-    engine does with it.
-- **Storage → `PowerElectronicsConnection` `storage_` + `BatteryUnit`.**
-  - ratedS = kVA, ratedE = kWhrated, storedE from kWhstored or %stored;
-  - batteryState from `State` (charging, discharging, idling → waiting);
-  - p from kW by state (CIM sign: discharge negative).
-- **Generator → `SynchronousMachine` `gen_`** (new `machine` shape).
-  - p = −kW, q from pf or kvar, ratedS = kVA, ratedU = kV, `operatingMode=generator`;
-  - model 3 (PV bus) adds a voltage `RegulatingControl` on its own terminal, by `Update` as above;
-  - model 7 (current-limited) maps as model 1, with a note;
-  - Xdp, Xdpp and H are dynamics, so untranscribed.
-- **Reactor.**
-  - A series reactor (bus1 + bus2) becomes a `SeriesCompensator` `rx_`: r, x in ohm, with an `OperationalLimitSet`
-    for normamps/emergamps as a line's (new `series_compensator` shape).
-  - A reactor between two nodes of one bus (K1's neutral reactor) raises; K1 stops on DSS-10 first.
-- **Exit:** the full IEEE13_CDPSM artifact directory as the reference golden (D6).
+The S4b spec is its own section below, [S4b](#s4b-approved-2026-11-08-implemented-s4b-8-open).
 
 ### Decisions for S4 (approved 2026-11-08)
 
@@ -1438,3 +1418,525 @@ On the atoms and the engine decks, as in S3:
   `Update` (closes U3).
 - **S4-8:** `cc_<name>` for a CapControl.
 - **S4-9:** disabled loads and capacitors are written with `normallyInService=false`, as lines are.
+
+## S4b (approved 2026-11-08; implemented, S4b-8 open)
+
+**Result (2026-11-08).**
+- 22 of 31 sweep decks bind, as expected: S3's six stops, the two `ieee9500` copies (`Mode=7`) and
+  IEEE123_test_harness (`Battery5`).
+- Engine checks pass on the three atoms and the engine decks for every PV (kW, kvar, kVA, Pmpp, kV), every battery
+  (kW, state, kVA, kWrated, kWhrated, kWhstored, kV), every series reactor (R, X, buses, ratings) and every
+  machine's ratings and PV-bus settings, with one exception, S4b-8: PNNL IEEE9500's `Diesel620` and `LNGengine100`
+  give kvar and then have their kW edited later (`protection.dss`).
+- The IEEE13_CDPSM artifact directory is the golden (D6), all 13 files.
+
+**Changes from the proposal, found while building it:**
+- **The engine reads a Storage `State` by its first letter.** `charge` is not a prefix of `charging`, but the engine
+  takes it, so the mapper matches on the first letter as well.
+- **No voltage window in the PV check.** Right after Compile, with no solve, `PVSystems.kW()`/`kvar()` already give
+  the dispatch: cut to fit kVA, off below %Cutout, and independent of voltage. The check compares against those.
+- **The generator check reads the `kW`/`kvar` properties,** not `Generators.kvar()`. After a solve, the latter is the
+  PV bus's solved kvar (SteamGen1: −1000 at Minkvar).
+- **`RotatingMachinePhase` comes from the `phases` column.** cimtables writes one per phase for every machine (a 1-phase
+  motor's too); the mapper adds nothing.
+- **SeriesCompensator has no per-phase class,** so cimtables refuses a `phases` column on it. The mapper writes
+  `Update Table Terminal: mRID, phases` for the generated `rx_<name>_T1`/`_T2`. A request for the shorthand (set
+  `Terminal.phases` only, as a TransformerEnd's) is U9 in `UPSTREAM_REQUESTS.md`.
+- Line's ratings code is now `line.rating_rows`/`rating_tables`, shared with the reactor. `line_phases` takes a
+  `label` for its errors.
+- Wrong schema ranges fixed in passing: the curve references (`EffCurve`, `P-TCurve`) → string, and the
+  `WattPriority`/`PFPriority`/`LimitCurrent` switches → boolean, so `yes` reads as true.
+
+**Open: S4b-8, a Generator's kvar is a power factor in the engine.** The engine turns `kvar` into a pf using the kW it
+has when kvar is set, and every later kW edit keeps that pf:
+- `kW=100 kvar=30`, then `Generator.x.kW=50`, gives 15 kvar;
+- `kvar=30 kW=100` on one line gives 3 kvar (the pf came from the default kW of 1000);
+- `kW=100 kvar=30`, then `kvar=10`, gives 10.
+
+The reader applies edits in deck order but keeps only the last value of each slot. So the mapper sees IEEE9500's
+`Diesel620` as kW 0, kvar 30 (−30 kvar in CIM), where the engine has 0. A PVSystem's kvar stays absolute; only the
+pf/kvar order matters there. Proposed fix, for approval:
+- the reader keeps each record's assignment order (the slots in the order the deck last set them);
+- the mappers replay the order-dependent pairs as the engine does: a Generator's kW, kvar and pf; a PVSystem's and a
+  Storage's pf/kvar; State/kW; kWhstored/%stored; and S4a's kW/kVA/xfkVA on a Load.
+
+That would replace S4b-2 and S4b-3 (and S4-3) with the engine's rule, rather than raising or assuming an order. Until it
+is decided, the generator check fails on PNNL IEEE9500 for those two machines.
+
+S4b maps the rest of the injections and the series reactor: PVSystem and Storage (shape `der`), Generator (new
+shape `synchronous_machine`) and Reactor (new shape `series_compensator`). Its exit is the full IEEE13_CDPSM artifact
+directory as the reference golden (D6). The two new shape names are the ones RAW's plan requests from core (its C2),
+so the two waves share them. RAW adds its bus-branch variants and `GeneratingUnit` later.
+
+Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 copy stops in the reader, as in S3):
+- **PVSystem:** 950 in 7 decks. 887 are 2-phase on a split-phase secondary: 356 at kV 0.208 (the IEEE9500 copies)
+  and 531 at 0.24 (ieee9500_2025). 45 are 1-phase and 13 are 3-phase.
+  - `pf` is always 1.0, and no PV sets `kvar`.
+  - `irradiance` is 1.0 or 0.8 (IEEE13_CDPSM). Only ieee9500 sets `%Cutin`/`%Cutout`, at 0.1.
+  - 3 PVs are delta (IEEE9500's `M1047PV-3`, 3-phase).
+  - IEEE9500's `PVFarm1` has Pmpp 1200 on kVA 1000, so the inverter caps it.
+- **Storage:** 27 in 5 decks.
+  - States: 22 `charge`/`charging`, 3 `discharging` and 2 `idling`. `pf` is 1.0 wherever it is set, and no record
+    sets `kvar`.
+  - 21 set `kW`, always after `state=` (IEEE9500: `state=charge kW=150`; IEEE123: `state=charge kW=-0.0`).
+  - 6 are delta. No record sets both `kWhstored` and `%stored`.
+- **Generator:** 61 in 3 decks (ACEP_PSIL and the IEEE9500 copies), all 3-phase.
+  - Models: 41 ConstantPQ, 15 CurrentLimited (7) and 5 ConstantPV (3). 18 are delta.
+  - Every record sets `kVA`. `Xdp`/`Xdpp`/`H` are on 45. `Maxkvar`/`Minkvar` are never set.
+  - One IEEE9500 machine sets both `pf=0.98` and `kvar=0` at `kW=0`.
+- **Reactor:** 8.
+  - 7 are IEEE8500/IEEE9500's `HVMV_Sub_HSB`: series, 3-phase, X 14.798 Ω, R 0, normamps = emergamps = 400.
+  - 1 is K1's `T2_neutral`, `K_LSB.4` to `K_LSB.0` on one bus.
+
+**Engine rules** (pinned with probes in `/tmp`; the defaults are the engine's readback of a bare `New`):
+- **PVSystem.**
+  - The available power is Pmpp × irradiance × %Pmpp / 100. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
+    or from `kvar`.
+  - Over kVA, P is cut to √(kVA² − q²) (var priority, the default), so Pmpp 1200 on kVA 1000 gives 1000.
+  - The PV is off (P = 0) when the available power is below `%Cutout` × kVA / 100. The initial state uses
+    `%Cutout`, not `%Cutin`: 25 % with cut-in 30 / cut-out 5 runs, and with cut-in 5 / cut-out 30 it is off.
+  - **`pf` and `kvar` override each other in the order given** (unlike a load, where kvar always wins).
+  - Defaults: 3 phases, kV 12.47, irradiance 1, Pmpp 500, %Pmpp 100, pf 1, kVA 500, %Cutin and %Cutout 20,
+    Vminpu 0.9, wye. kvarMax and kvarMaxAbs default to kVA.
+- **Storage.**
+  - `State` and `kW` override each other in the order given. A `kW` > 0 discharges, < 0 charges, and 0 (or −0.0)
+    idles.
+  - So IEEE9500's `state=charge kW=150` discharges at 150 kW, and IEEE123's `state=charge kW=-0.0` idles.
+  - With no `kW`: charging draws kWrated × %Charge / 100, discharging gives kWrated × %Discharge / 100, and
+    idling draws %IdlingkW × kWrated / 100 (1 kW on 100). Every |P| is capped at kVA.
+  - The battery idles instead when it is told to charge while full, or to discharge at or below `%reserve`.
+  - `kWhstored` and `%stored` override each other in order.
+  - With pf ≠ 1, the engine caps q at a kvarMax left over from the default kVA (pf 0.9 on 100 kW gives 25 kvar).
+  - Defaults: kV 12.47, kWrated 25, kVA = kWrated, kWhrated 50, %stored 100, %reserve 20, State idling,
+    %Charge/%Discharge 100, %EffCharge/%EffDischarge 90, %IdlingkW 1, pf 1, wye.
+- **Generator.**
+  - q comes from `pf` or `kvar`, and the two override each other in order.
+  - Defaults: kW 1000, pf 0.88, kV 12.47, model 1, Vpu 1, kVA 1.2 × kW, Maxkvar = 2 × kvar, Minkvar = −Maxkvar.
+  - Model 3 regulates its terminal to Vpu within Maxkvar/Minkvar. Model 7 dispatches as model 1.
+- **2-phase PV at 0.24 kV on 120 V legs** (ieee9500_2025): the engine's base is 0.24/√3 = 138.6 V. The legs sit at
+  0.866 pu, below Vminpu, so it gives 92.8 % of Pmpp. At 0.208 kV it gives 100 %. This is a power-flow result, not a
+  setting; the mapping keeps the deck's kV (S4b-4).
+- **The engine's CIM export disagrees with itself on sign.** `ExportCIMXML.pas` writes `PowerElectronicsConnection.p`
+  = −kW but `RotatingMachine.p` = +kW. cim18v17 documents both as the load sign, so S4b writes −kW for both (S4b-1).
+
+**Expected sweep:** 22 of 31 decks bind. Besides S3's six, three stop:
+- CIMHub_2_0's two `ieee9500` copies: `PVFarm1 ... Mode=7` reads as `model=7`, which the engine rejects too
+  (`"7" is not a valid value`), so those decks do not compile.
+- IEEE123_test_harness: `Battery5` is `phases=1` on `108.1.2.3`, which puts its neutral on node 2. The shared phase
+  rule raises (S4b-6).
+
+### Shared rules (S4b)
+
+- **Terminal:** the S4 shared phase rule (`injection.device_terminal`) for PVSystem, Storage and Generator.
+- **`ratedU` is line to line** (S4b-4): the deck's kV, × √3 for a 1-phase wye device; the exporter inverts it. This
+  matches the engine's CIM export, which is where GridAPPS-D's files come from. CIMHub_2_0 wrote kV unchanged; the
+  tier-3 comparison lists that difference. ratedU is not checked against the bus: a 240 V inverter on 120 V legs
+  stays 240 V.
+- **Sign:** p and q are the load sign: generation and discharge are negative, q = −kvar (S4b-1).
+- **pf with kvar** (S4b-2): both set raises unless they give the same q. IEEE9500's `kW=0 pf=0.98 kvar=0` passes.
+- **Inverter cap** (PVSystem and Storage): `inverter_power(available, q, kva)`, the engine's var-priority cut.
+- `enabled=false` gives `normallyInService=false` (S4-9).
+
+### PVSystem
+
+Mapper `importer/cimtbl/pvsystem.py` (`map_pvsystem`). Artifact `pvsystem.cimtbl`; shape `der`. Atom
+`tests/atoms/der/der.dss`:
+- the IEEE13_CDPSM PVs: 3-phase at irradiance 0.8, and 2-phase `s1s2` at 0.208;
+- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, and one with kvar.
+
+**Identity.** `PowerElectronicsConnection` `pv_` + name and `PhotoVoltaicUnit` `pv_<name>_unit`, lowercased. The
+prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
+
+**Rows.**
+- **Connection:**
+  - `node`, `phases`, `phaseConnection` (cim18v17's PowerElectronicsConnection has no `grounded`);
+  - `ratedS` = kVA, `ratedU` (S4b-4);
+  - `p` = −P and `q` = −q, by the rules above (derived, `pv_power`);
+  - `maxQ` = kvarMax, `minQ` = −kvarMaxAbs, `maxIFault` = 1 / Vminpu (the engine's export convention);
+  - `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
+- **Unit:** `maxP` = Pmpp, `minP` = 0, and its connection.
+
+**What raises:**
+- `model` other than 1;
+- `EffCurve` or `P-TCurve` (both change the snapshot power);
+- `WattPriority` or `PFPriority` set to yes; a nonzero `%PminNoVars` or `%PminkvarMax`;
+- `UserModel`/`UserData`; `ControlMode=GFM`; `Balanced` or `LimitCurrent` set to yes;
+- pf with a disagreeing kvar.
+
+**Untranscribed:**
+- the Yearly/Daily/Duty and T-curves, which are time series that a snapshot does not use;
+- `%Cutin`, which only acts after the inverter turns off;
+- `%R`, `%X`, `kVDC`, `Kp`, `PITol`, `SafeVoltage`, `SafeMode`, `DynamicEq`, `DynOut`, `AmpLimit`, `AmpLimitGain`
+  (dynamics);
+- `Vmaxpu`, `Temperature` (it acts only through a P-TCurve), `VarFollowInverter` (InvControl), `class`, `spectrum`,
+  `basefreq`, `DutyStart`, `DebugTrace`.
+
+### Storage
+
+Mapper `importer/cimtbl/storage.py` (`map_storage`). Artifact `storage.cimtbl`; shape `der`. Atom
+`tests/atoms/der/der.dss`:
+- the three IEEE13_CDPSM batteries (charging, discharging, idling);
+- `state=charge kW=150` (IEEE9500) and `state=charge kW=-0.0` (IEEE123);
+- a kVA-capped battery, one with `%stored`, and a delta battery.
+
+**Identity.** `PowerElectronicsConnection` `storage_` + name, and `BatteryUnit` `storage_<name>_unit`.
+
+**Rows.**
+- **Connection:** as a PV's, with `ratedS` = kVA (default kWrated). q = 0.
+- **Unit:**
+  - `ratedE` = kWhrated;
+  - `storedE` = kWhstored, else %stored × kWhrated / 100;
+  - `minimumE` = %reserve × kWhrated / 100;
+  - `maxP` = kWrated, `minP` = −kWrated;
+  - `chargingEfficiency` = %EffCharge and `dischargingEfficiency` = %EffDischarge (percent);
+  - `idlingP` = %IdlingkW × kWrated / 100.
+- **State and p** (derived, `battery_dispatch`; S4b-3):
+  - `kW` decides when it is set, as in every deck (state first, then kW): > 0 `discharging` with p = −min(kW, kVA);
+    < 0 `charging` with p = min(|kW|, kVA); 0 `waiting` with p = idlingP.
+  - Otherwise `State` decides: charging p = min(kWrated × %Charge / 100, kVA); discharging p = −min(kWrated ×
+    %Discharge / 100, kVA); idling `waiting`, p = idlingP.
+  - The row comment names the source, for example "kW=150 after State=charge: discharging".
+
+**What raises:**
+- a battery that the engine would idle instead: charging when full, or discharging at or below `%reserve`;
+- `kWhstored` with `%stored`;
+- pf ≠ 1 or kvar ≠ 0 (because of the engine's kvarMax quirk above; no deck has one);
+- `DispMode` other than default;
+- `model` other than 1;
+- `EffCurve`, `UserModel`/`UserData`, `DynaDLL`/`DynaData`;
+- `WattPriority`/`PFPriority` set to yes, a nonzero `%PminNoVars`/`%PminkvarMax`, `Balanced`/`LimitCurrent` set to yes.
+
+**Untranscribed:** the curves, `DischargeTrigger`/`ChargeTrigger`/`TimeChargeTrig` (dispatch modes, which raise),
+`%Idlingkvar` (deprecated), `%CutIn`/`%CutOut`, `%kWRated`, `Vmaxpu`, and the dynamics slots, as for PVSystem.
+
+### Generator
+
+Mapper `importer/cimtbl/generator.py` (`map_generator`). Artifact `generator.cimtbl`; shape `synchronous_machine`.
+Atom `tests/atoms/generator/gens.dss`:
+- models 1, 3 and 7; wye and delta;
+- q from pf, from kvar, and from the default 0.88;
+- `kW=0 pf=0.98 kvar=0`; and a 1-phase machine.
+
+**Identity.** `SynchronousMachine` `gen_` + name. A model 3 control is `gen_<name>_ctrl`: the machine has no
+control of its own name, as the shape's `<cap>_ctrl` had.
+
+**Rows.**
+- `node`, `phases`;
+- `ratedS` = kVA (default 1.2 × kW), `ratedU` (S4b-4);
+- `p` = −kW, `q` = −q;
+- `type=generator`, `operatingMode=generator`;
+- `earthing` = not delta (S4b-5);
+- `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
+
+**Model 3 (PV bus):**
+- `maxQ` = Maxkvar and `minQ` = Minkvar (default ±2 × kvar);
+- a `RegulatingControl` `gen_<name>_ctrl`:
+  - `mode=voltage`, `discrete=false`, `enabled=true`;
+  - `targetValue` = Vpu × ratedU (V), `targetDeadband=0`;
+  - `Terminal=gen_<name>_T1`;
+- then `Update SynchronousMachine: mRID, RegulatingControl, controlEnabled=true`. This is S4a's own-terminal form
+  (U3).
+
+Model 7 maps as model 1, with a row note: below Vminpu it limits current, which is power-flow behaviour.
+
+**What raises:**
+- models 2, 4, 5 and 6; `UserModel`/`ShaftModel`;
+- pf with a disagreeing kvar;
+- `Maxkvar`/`Minkvar` on a model other than 3.
+
+**Untranscribed:**
+- `Xd`, `Xdp`, `Xdpp`, `H`, `D`, `XRdp` (dynamics);
+- `Vminpu`, `Vmaxpu`, `PVFactor` (a solver aid), `Status`, `DispMode`, `DispValue`, `ForceOn`;
+- the curves, the fuel slots, `class`, `spectrum`, `basefreq`.
+
+### Reactor
+
+Mapper `importer/cimtbl/reactor.py` (`map_reactor`). Artifact `reactor.cimtbl`; shape `series_compensator`. Atom
+`tests/atoms/reactor/reactors.dss`: IEEE8500's `HVMV_Sub_HSB` and a 1-phase series reactor with R.
+
+**Identity.** `SeriesCompensator` `rx_` + name.
+
+**Rows.**
+- `node1`, `node2`, `phases` (the line rule, `line_phases`);
+- `r` = R and `x` = X (Ω per phase); `r0` = R and `x0` = X, as in the engine's export (no mutual coupling);
+- `normallyInService`, `BaseVoltage` (bus1's), `EquipmentContainer`;
+- `rx_<name>_limits`, an `OperationalLimitSet` with `CurrentLimit`s `_norm`/`_emerg`. These come from the deck's own
+  normamps/emergamps only (nothing from the engine's kvar-derived defaults), as for a line. Line's ratings code is
+  shared.
+
+**What raises:**
+- no `bus2`, or `bus2` on the same bus: a shunt or neutral reactor, such as K1's `T2_neutral` (K1 stops on DSS-10
+  first);
+- X unset, or `kvar` given (X derived from kvar and kV);
+- `Rmatrix`/`Xmatrix`, `Z`/`Z1`/`Z2`/`Z0`, `LmH`, `Rp`, `Parallel=yes`, `RCurve`/`LCurve`.
+
+**Untranscribed:** `kV` (it acts only with kvar), `conn` (a series reactor has no neutral), `faultrate`/`pctperm`/
+`repair`, `basefreq`.
+
+### Artifact order, schema, shapes (S4b)
+
+- **Order:** `MAPPING_ORDER` gains reactor after line (it is a branch, and its limits use the common limit types),
+  then pvsystem, storage and generator after capcontrol.
+- **Schema (DSS-6).** The `dss_default`s of the four classes become the engine readback above. This fixes PVSystem's
+  `pf` 0.88 → 1, its `Vminpu` 0 → 0.9, and Generator's `Xdp` 0.27 → 0.28. The derived defaults (kvarMax, Storage
+  kVA, Generator kVA and Maxkvar) stay in the mapper, named.
+- **Core shapes:**
+  - `der.cimtbl`: gains `phaseConnection`, `maxQ`/`minQ`/`maxIFault`, a 2-phase `s1s2` PV, and the battery's
+    `minimumE`, efficiencies, `idlingP` and `maxP`/`minP`.
+  - New `synchronous_machine.cimtbl`: a model 1 machine, and a PV-bus machine with its `RegulatingControl` and the
+    `Update`.
+  - New `series_compensator.cimtbl`: a reactor between two nodes, with its limit set.
+  - The `cimtbl-shapes` skill rows to match.
+
+### Engine checks (S4b)
+
+On the atoms and the engine decks:
+- **PVSystem:** kVA, kV, Pmpp; p and q against the engine's dispatch (`PVSystems.kW()`/`kvar()` after Compile);
+- **Storage:** kWrated, kVA, kWhrated, kWhstored, the state, and the kW/kvar properties;
+- **Generator:** the kW and kvar properties, kVA, kV, delta, and model/Vpu/Maxkvar/Minkvar for model 3;
+- **Reactor:** R, X, both buses, normamps and emergamps.
+
+### IEEE13_CDPSM golden directory (D6)
+
+`tests/goldens/IEEE13_CDPSM/` holds every part `to_cimtbl` writes (master, bus, zip_fractions, each class's
+document), not only the master and `bus`. The orchestrator test compares the whole directory, and
+`CIMHUB_UPDATE_GOLDENS=1` rewrites it.
+
+### PVSystem, Storage, Generator and Reactor fields
+
+Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
+
+| Pvsystem field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, PvsystemName]` | `House`, `School`, `PVFarm1` | copied | `PowerElectronicsConnection.name`; mRID = pv_ + name, lowercased; the unit is <mRID>_unit |
+| `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
+| `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
+| `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | derived | p: Pmpp x irradiance x %Pmpp / 100 (pv_power); default 1 |
+| `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
+| `pct_Pmpp` | `Optional[float]` |  | derived | p (pv_power); default 100 |
+| `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
+| `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar they must agree (S4b-2); default 1 |
+| `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
+| `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign) |
+| `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
+| `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; default 20 |
+| `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
+| `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
+| `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `pct_X` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `model` | `Optional[int]` | `7`, `1` | structural | 1 (constant P, PF) only; any other raises (ieee9500's Mode=7 is model=7, which the engine rejects too); default 1 |
+| `Vminpu` | `Optional[float]` |  | derived | maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9 |
+| `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the PV as constant Z; a power-flow setting |
+| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `Tyearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `Tdaily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `Tduty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `class_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
+| `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
+| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | untranscribed | acts only with an InvControl |
+| `DutyStart` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
+| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `kvarMax` | `Optional[float]` |  | copied | `PowerElectronicsConnection.maxQ` (kVAr); default kVA |
+| `kvarMaxAbs` | `Optional[float]` |  | derived | minQ (kVAr) = -kvarMaxAbs; default kVA |
+| `kVDC` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Kp` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `PITol` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeVoltage` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeMode` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynOut` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `spectrum` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on an inverter |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `PowerElectronicsConnection.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Storage field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, StorageName]` | `BatIdle`, `House`, `School` | copied | `PowerElectronicsConnection.name`; mRID = storage_ + name, lowercased; the unit is <mRID>_unit |
+| `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the conductor count; default 3 |
+| `bus1` | `Optional[str]` | `634`, `House.1.2`, `m2001-ESS1` | structural | node and phases, by the S4 shared phase rule |
+| `kv` | `Optional[float]` | `0.48`, `0.208`, `2.4` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47 |
+| `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
+| `kW` | `Optional[float]` | `150.0`, `-0.0`, `0.0` | derived | decides the state when set (S4b-3): > 0 discharging, < 0 charging, 0 waiting; p = -kW, capped at kVA (battery_dispatch) |
+| `kvar` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one (q = 0) |
+| `pf` | `Optional[float]` | `1.0` | structural | 1 only; another raises (the engine caps q by a kvarMax left from the default kVA); default 1 |
+| `kVA` | `Optional[float]` | `250.0`, `125.0`, `200.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p; default kWrated |
+| `pct_Cutin` | `Optional[float]` |  | untranscribed | an inverter cut-in; 0 by default for storage |
+| `pct_Cutout` | `Optional[float]` |  | untranscribed | an inverter cut-out; 0 by default for storage |
+| `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
+| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | untranscribed | acts only with an InvControl |
+| `kvarMax` | `Optional[float]` |  | copied | `PowerElectronicsConnection.maxQ` (kVAr); default kVA |
+| `kvarMaxAbs` | `Optional[float]` |  | derived | minQ (kVAr) = -kvarMaxAbs; default kVA |
+| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `kWrated` | `Optional[float]` | `100.0`, `5.0`, `250.0` | copied | `BatteryUnit.maxP` (kW); minP = -kWrated; also p by State; default 25 |
+| `pct_kWrated` | `Optional[float]` |  | untranscribed | the kW limit of the dispatch modes, which raise |
+| `kWhrated` | `Optional[float]` | `200.0`, `13.5`, `500.0` | copied | `BatteryUnit.ratedE` (kWh); default 50 |
+| `kWhstored` | `Optional[float]` | `100.0`, `5.0`, `135.0` | copied | `BatteryUnit.storedE` (kWh); with %stored raises (the engine keeps the last) |
+| `pct_stored` | `Optional[float]` | `60.0`, `40.0`, `35.0` | derived | storedE (kWh) = %stored x kWhrated / 100 when kWhstored is unset; default 100 |
+| `pct_reserve` | `Optional[float]` | `30.0` | derived | minimumE (kWh) = %reserve x kWhrated / 100; default 20 |
+| `State` | `Optional[str]` | `idling`, `charging`, `discharging` | mapped | `BatteryUnit.batteryState`; charging, discharging, idling -> waiting (by the first letter, as the engine reads it: the decks' charge); kW decides when set (S4b-3); default idling |
+| `pct_Discharge` | `Optional[float]` |  | derived | p = -kWrated x %Discharge / 100 when discharging by State; default 100 |
+| `pct_Charge` | `Optional[float]` |  | derived | p = kWrated x %Charge / 100 when charging by State; default 100 |
+| `pct_EffCharge` | `Optional[float]` |  | copied | `BatteryUnit.chargingEfficiency` (percent); default 90 |
+| `pct_EffDischarge` | `Optional[float]` |  | copied | `BatteryUnit.dischargingEfficiency` (percent); default 90 |
+| `pct_IdlingkW` | `Optional[float]` |  | derived | idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1 |
+| `pct_Idlingkvar` | `Optional[float]` |  | untranscribed | deprecated in the engine |
+| `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `pct_X` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `model` | `Optional[int]` |  | structural | 1 (constant P, PF) only; any other raises; default 1 |
+| `Vminpu` | `Optional[float]` |  | derived | maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9 |
+| `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the battery as constant Z; a power-flow setting |
+| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `DispMode` | `Optional[str]` |  | structural | default only; another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `DischargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `ChargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `TimeChargeTrig` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `class_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
+| `DynaDLL` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `DynaData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
+| `kVDC` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Kp` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `PITol` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeVoltage` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeMode` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynOut` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `spectrum` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on an inverter |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `PowerElectronicsConnection.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Generator field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, GeneratorName]` | `Diesel590`, `Diesel620`, `LNGengine100` | copied | `SynchronousMachine.name`; mRID = gen_ + name, lowercased |
+| `phases` | `Optional[int]` |  | structural | the conductor count; default 3 |
+| `bus1` | `Optional[str]` | `m1089-DIES1`, `m1209-DIES1`, `M1142-LNG1` | structural | node and phases, by the S4 shared phase rule |
+| `kv` | `Optional[float]` | `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47 |
+| `kW` | `Optional[float]` | `0.0`, `50.0`, `100.0` | derived | p (kW) = -kW (the load sign); default 1000 |
+| `pf` | `Optional[float]` | `0.95`, `0.98` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset; with kvar they must agree (S4b-2); default 0.88 |
+| `kvar` | `Optional[float]` | `15.0`, `30.0`, `5.0` | derived | q (kVAr) = -kvar (the load sign) |
+| `model` | `Union[str, ForwardRef('GeneratorModel'), NoneType]` | `CurrentLimited`, `ConstantPQ`, `ConstantPV` | structural | 1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4, 5, 6 raise; default 1 |
+| `Vminpu` | `Optional[float]` |  | untranscribed | below it the engine models the machine as constant Z; a power-flow setting |
+| `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the machine as constant Z; a power-flow setting |
+| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `dispmode` | `Union[str, ForwardRef('DispatchMode'), NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
+| `dispvalue` | `Optional[float]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
+| `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `SynchronousMachine.earthing`; wye -> earthing true, delta -> false (no phaseConnection on a machine, S4b-5); default wye |
+| `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it |
+| `gen_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
+| `Vpu` | `Optional[float]` | `1.0` | derived | model 3: the control's targetValue (V) = Vpu x ratedU; default 1 |
+| `maxkvar` | `Optional[float]` |  | copied | `SynchronousMachine.maxQ` (kVAr); model 3 only (another model raises); default 2 x kvar |
+| `minkvar` | `Optional[float]` |  | copied | `SynchronousMachine.minQ` (kVAr); model 3 only (another model raises); default -2 x kvar |
+| `pvfactor` | `Optional[float]` |  | untranscribed | a convergence aid of the engine's model 3 |
+| `forceon` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
+| `kVA` | `Optional[float]` | `737.0`, `775.0`, `125.0` | copied | `SynchronousMachine.ratedS` (kVA); default 1.2 x kW |
+| `MVA` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (kVA is) |
+| `Xd` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Xdp` | `Optional[float]` | `0.27` | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Xdpp` | `Optional[float]` | `0.2` | untranscribed | a dynamics setting; no home in the network profile parts |
+| `H` | `Optional[float]` | `2.0` | untranscribed | a dynamics setting; no home in the network profile parts |
+| `D` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `ShaftModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `ShaftData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `DutyStart` | `Optional[float]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
+| `Balanced` | `Union[bool, Bool, NoneType]` |  | untranscribed | a power-flow setting of the engine's model |
+| `XRdp` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `UseFuel` | `Union[bool, Bool, NoneType]` |  | untranscribed | a fuel-limited dispatch setting; a snapshot does not use it |
+| `FuelkWh` | `Optional[float]` |  | untranscribed | a fuel-limited dispatch setting; a snapshot does not use it |
+| `pct_Fuel` | `Optional[float]` |  | untranscribed | a fuel-limited dispatch setting; a snapshot does not use it |
+| `pct_Reserve` | `Optional[float]` |  | untranscribed | a fuel-limited dispatch setting; a snapshot does not use it |
+| `Refuel` | `Union[bool, Bool, NoneType]` |  | untranscribed | a fuel-limited dispatch setting; a snapshot does not use it |
+| `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynOut` | `Union[str, list[str], NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `basefreq` | `Optional[float]` |  | untranscribed | no home on a machine |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `SynchronousMachine.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+| Reactor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, ReactorName]` | `HVMV_Sub_HSB`, `T2_neutral` | copied | `SeriesCompensator.name`; mRID = rx_ + name, lowercased |
+| `bus1` | `Optional[str]` | `SourceBus`, `sourcebus`, `K_LSB.4` | structural | node1 and the phases (the line rule) |
+| `bus2` | `Optional[str]` | `HVMV115_HSB1`, `hvmv115s1_HSB1`, `K_LSB.0` | structural | node2; unset or on bus1's bus (a shunt or neutral reactor) raises |
+| `phases` | `Optional[int]` | `1` | structural | the conductor count; default 3 |
+| `kvar` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (X from kvar and kV) |
+| `kv` | `Optional[float]` |  | untranscribed | acts only with kvar, which raises |
+| `conn` | `Optional[str]` |  | untranscribed | a series reactor has no neutral |
+| `Rmatrix` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Xmatrix` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Parallel` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `R` | `Optional[float]` | `0.0` | copied | `SeriesCompensator.r` (ohm), `SeriesCompensator.r0` (ohm); per phase; r0 = r (no mutual); default 0 |
+| `X` | `Optional[float]` | `14.798306633595042`, `0.5` | copied | `SeriesCompensator.x` (ohm), `SeriesCompensator.x0` (ohm); per phase; x0 = x (no mutual); unset raises |
+| `Rp` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a parallel R) |
+| `Z1` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Z2` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Z0` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Z` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `RCurve` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `LCurve` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `LmH` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (X from an inductance) |
+| `normamps` | `Optional[float]` | `400.0` | structural | instance OperationalLimitSet rx_<name>_limits: CurrentLimit _norm (olt_normal); nothing from the engine's kvar-derived default |
+| `emergamps` | `Optional[float]` | `400.0` | structural | CurrentLimit _emerg (olt_emergency) in rx_<name>_limits |
+| `faultrate` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `pctperm` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `repair` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `basefreq` | `Optional[float]` | `60.0` | untranscribed | no home on a compensator; x is at the model's frequency |
+| `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `SeriesCompensator.normallyInService`; default true |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+### Decisions for S4b (approved 2026-11-08)
+
+S4b-1 to S4b-4 were approved as written; S4b-5 to S4b-7 had no objection and stand as proposed. The user
+added that cim18v17's `RotatingMachinePhase` names a 1-phase machine's phase.
+
+
+- **S4b-1:** p and q follow the load sign for everything, PowerElectronicsConnection and SynchronousMachine (−kW for
+  generation), as cim18v17 documents. The engine's export writes +kW on machines; the exporter negates.
+- **S4b-2:** pf with kvar (PVSystem, Generator) raises unless both give the same q. The record keeps no order, and
+  the engine keeps the last.
+- **S4b-3:** a Storage's `kW` decides its state when set, because every deck gives it after `state=`. So IEEE9500's
+  `state=charge kW=150` maps as discharging at 150 kW, which is what the engine does; the row comment says so. The
+  alternative is raising when they disagree, which stops every IEEE9500 copy.
+- **S4b-4:** `ratedU` is line to line, as the engine exports it: the deck's kV, × √3 for 1-phase wye. It is not
+  checked against the bus.
+- **S4b-5:** a delta generator is `earthing=false`, because SynchronousMachine has no `phaseConnection`. In DSS a wye
+  machine's neutral is ground (the shared rule raises otherwise), so for DSS `earthing` is exactly "not delta".
+  A request for `RotatingMachine.phaseConnection` goes to `UPSTREAM_REQUESTS.md` as U8.
+- **S4b-6:** IEEE123_test_harness's `Battery5` (1-phase, neutral on node 2) raises under the shared phase rule. The
+  deck is wrong (it looks like a 3-phase battery written as `phases=1`), and a guess would put it across A–B.
+- **S4b-7:** shape names `synchronous_machine` and `series_compensator`, shared with RAW (its C2), in place of the
+  DSS plan's `machine`.
+- **S4b-8 (open):** keep each record's assignment order in the reader, and replay the order-dependent pairs as the
+  engine does (above).

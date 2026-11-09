@@ -11,6 +11,8 @@ commit once it is verified from this repo.
 | U5 | CIM-Builder | About 15 builder modules (`new_base_voltage`, …) still import cimhub_2023 or cim18gad. Spokes use only the cim18v17 builders until they are ported. | GDM wave, if it needs one of them |
 | U6 | CIM-Profiles | Native unit spellings that pint misreads (`sf`, `$` → `USD`) need a home in the shared unit registry. Today they are in the old core `units.py`, which is not carried over. | any spoke whose reader meets them |
 | U7 | all five | Releases of cim-graph 0.6, cimtables, cim-builder, cimprofiles and cim-topology (with `cimtopology.core`; PyPI has only the old CIM-model-bound version) to PyPI, so the path sources can become version pins. | CI on GitHub, PyPI release, going public |
+| U8 | CIM-Profiles (CIM WG13) | `RotatingMachine.phaseConnection` (`PhaseShuntConnectionKind`), as `EnergyConsumer` and `PowerElectronicsConnection` have. SynchronousMachine has none, so a delta OpenDSS Generator is written as `earthing=false` (S4b-5), which an ungrounded wye would also be. | DSS exporter: a delta machine back to `conn=delta` without relying on DSS having no ungrounded-wye machine |
+| U9 | CIM-Tables | A `phases` column on a class with no `<Class>Phase` child (SeriesCompensator) should set `Terminal.phases` only, as on a TransformerEnd, instead of raising. Today `reactor.cimtbl` writes `Update Table Terminal: mRID, phases` for the generated Terminals. | nothing; the Update works |
 
 ## Closed (verified from this repo, 2026-11-07)
 

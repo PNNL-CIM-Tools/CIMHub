@@ -1,0 +1,37 @@
+# OpenDSS Generator -> SynchronousMachine on its bus, in the load sign (generation is negative p); a model 3
+# machine regulates its own terminal (RegulatingControl, then an Update).
+# Source table: Generator (records: 8)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#generator
+
+Profile = cim18v17
+
+# p = -kW, q = -kvar (the load sign)
+Table SynchronousMachine: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), earthing, normallyInService, BaseVoltage, type=generator, operatingMode=generator, EquipmentContainer=fdr_atom
+    # defaulted: phases=3, model=ConstantPQ, Vpu=1.0, enabled=true
+    gen_delta,   delta,   b2, ABC, 250.0,  0.48,                -50.0,   -10.152933031700208, ,                   ,                    false, true, bv_480v
+    # defaulted: phases=3, model=ConstantPQ, Vpu=1.0, enabled=true
+    gen_idle,    idle,    b2, ABC, 250.0,  0.48,                0.0,     0.0,                 ,                   ,                    false, true, bv_480v
+    # model CurrentLimited: as model 1; below Vminpu the engine limits its current, a power-flow behaviour
+    # defaulted: phases=3, pf=0.88, conn=wye, Vpu=1.0, enabled=true
+    gen_limited, limited, b2, ABC, 775.0,  0.48,                0.0,     -30.0,               ,                   ,                    true,  true, bv_480v
+    # kVA defaulted to 1.2 x kW
+    # defaulted: phases=3, pf=0.88, model=ConstantPQ, conn=wye, Vpu=1.0, enabled=true
+    gen_plain,   plain,   b2, ABC, 120.0,  0.48,                -100.0,  -53.97428221380871,  ,                   ,                    true,  true, bv_480v
+    # defaulted: phases=3, model=ConstantPQ, conn=wye, Vpu=1.0, enabled=true
+    # untranscribed: Xdp=0.27, Xdpp=0.2, H=2.0
+    gen_pq,      pq,      b2, ABC, 250.0,  0.48,                -100.0,  -32.86841051788632,  ,                   ,                    true,  true, bv_480v
+    # defaulted: model=ConstantPQ, conn=wye, Vpu=1.0, enabled=true
+    gen_single,  single,  b2, A,   12.0,   0.47977807369657904, -10.0,   -3.286841051788632,  ,                   ,                    true,  true, bv_480v
+    # model ConstantPV: a PV bus: a voltage RegulatingControl
+    # defaulted: phases=3, pf=0.88, conn=wye, enabled=true
+    gen_steam,   steam,   b1, ABC, 4000.0, 4.16,                -1000.0, -539.7428221380871,  1079.4856442761743, -1079.4856442761743, true,  true, bv_4p16kv
+    # defaulted: phases=3, pf=0.88, model=ConstantPQ, conn=wye, Vpu=1.0, enabled=true
+    gen_vars,    vars,    b2, ABC, 75.0,   0.48,                -20.0,   -5.0,                ,                   ,                    true,  true, bv_480v
+
+# model 3 (PV bus): the machine regulates its own terminal
+Table RegulatingControl: mRID, targetValue, Terminal, mode=voltage, discrete=false, enabled=true, targetDeadband=0
+    # derived: targetValue (V) = Vpu=1.02 x ratedU
+    gen_steam_ctrl, 4243.2, gen_steam_T1
+
+Update Table SynchronousMachine: mRID, RegulatingControl, controlEnabled=true
+    gen_steam, gen_steam_ctrl

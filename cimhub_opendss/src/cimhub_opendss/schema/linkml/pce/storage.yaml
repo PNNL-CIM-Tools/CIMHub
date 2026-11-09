@@ -51,6 +51,7 @@ classes:
         required: false
         annotations:
           order: 1
+          dss_default: int(3)
         related_mappings:
           - cim:PowerElectronicsConnectionPhase
         comments:
@@ -80,6 +81,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 3
+          dss_default: float(12.47)
         exact_mappings:
           - cim:PowerElectronicsConnection.ratedU
         comments:
@@ -96,6 +98,7 @@ classes:
         required: false
         annotations:
           order: 4
+          dss_default: string(wye)
         related_mappings:
           - cim:PowerElectronicsConnection.description
         comments:
@@ -206,7 +209,7 @@ classes:
         description: >-
           An XYCurve object, previously defined, that describes the PER UNIT
           efficiency vs PER UNIT of rated kVA for the inverter.
-        range: float
+        range: string
         required: false
         annotations:
           order: 11
@@ -261,7 +264,7 @@ classes:
         description: >-
           {Yes/No*/True/False} Set inverter to watt priority instead of the
           default var priority.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 15
@@ -273,7 +276,7 @@ classes:
         description: >-
           If set to true, priority is given to power factor and WattPriority
           is neglected.
-        range: float
+        range: boolean
         required: false
         annotations:
           order: 16
@@ -316,6 +319,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 19
+          dss_default: float(25.0)
         exact_mappings:
           - cim:PowerElectronicsUnit.maxP
         comments:
@@ -342,6 +346,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 21
+          dss_default: float(50.0)
         exact_mappings:
           - cim:BatteryUnit.ratedE
         comments:
@@ -368,6 +373,7 @@ classes:
         required: false
         annotations:
           order: 23
+          dss_default: float(100.0)
           dss_name: "%stored"
         comments:
           - "OpenDSS-only (N/A): derived as kWhstored / kWhrated * 100; not stored on CIM separately."
@@ -381,6 +387,7 @@ classes:
         required: false
         annotations:
           order: 24
+          dss_default: float(20.0)
           dss_name: "%reserve"
         comments:
           - "OpenDSS-only (N/A): operational reserve parameter; no CIM equivalent in the standard profile."
@@ -393,6 +400,7 @@ classes:
         required: false
         annotations:
           order: 25
+          dss_default: string(idling)
         exact_mappings:
           - cim:BatteryUnit.batteryState
         comments:
@@ -409,6 +417,7 @@ classes:
         required: false
         annotations:
           order: 26
+          dss_default: float(100.0)
           dss_name: "%Discharge"
         related_mappings:
           - cim:PowerElectronicsConnection.p
@@ -428,6 +437,7 @@ classes:
         required: false
         annotations:
           order: 27
+          dss_default: float(100.0)
           dss_name: "%Charge"
         related_mappings:
           - cim:PowerElectronicsConnection.p
@@ -446,6 +456,7 @@ classes:
         required: false
         annotations:
           order: 28
+          dss_default: float(90.0)
           dss_name: "%EffCharge"
         comments:
           - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent in the standard profile."
@@ -458,6 +469,7 @@ classes:
         required: false
         annotations:
           order: 29
+          dss_default: float(90.0)
           dss_name: "%EffDischarge"
         comments:
           - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent."
@@ -470,6 +482,7 @@ classes:
         required: false
         annotations:
           order: 30
+          dss_default: float(1.0)
           dss_name: "%IdlingkW"
         comments:
           - "OpenDSS-only (N/A): standby loss parameter; no CIM equivalent."
@@ -478,7 +491,7 @@ classes:
       pct_Idlingkvar:
         description: >-
           Deprecated.
-        range: string
+        range: float
         required: false
         annotations:
           order: 31
@@ -519,6 +532,7 @@ classes:
         required: false
         annotations:
           order: 34
+          dss_default: int(1)
         comments:
           - "OpenDSS-only (N/A): DSS V/Q model selector; no direct CIM equivalent."
 
@@ -530,6 +544,7 @@ classes:
         required: false
         annotations:
           order: 35
+          dss_default: float(0.9)
         close_mappings:
           - cim:PowerElectronicsConnection.maxIFault
         comments:
@@ -546,6 +561,7 @@ classes:
         required: false
         annotations:
           order: 36
+          dss_default: float(1.1)
         comments:
           - "OpenDSS-only (N/A): overvoltage trip threshold; no direct CIM equivalent."
 
@@ -565,7 +581,7 @@ classes:
         description: >-
           Limits current magnitude to Vminpu value for both 1-phase and
           3-phase Storage similar to Generator Model 7.
-        range: float
+        range: boolean
         required: false
         annotations:
           order: 38
@@ -616,10 +632,11 @@ classes:
         description: >-
           {DEFAULT | FOLLOW | EXTERNAL | LOADLEVEL | PRICE } Default = "DEFAULT".
           Dispatch mode for the storage element.
-        range: float
+        range: string
         required: false
         annotations:
           order: 42
+          dss_default: string(default)
         comments:
           - "OpenDSS-only (N/A): dispatch control mode flag; no CIM equivalent in the standard profile."
 
@@ -674,7 +691,7 @@ classes:
         description: >-
           Name of DLL containing user-written dynamics model for Dynamics-mode
           simulations.
-        range: float
+        range: string
         required: false
         annotations:
           order: 47
@@ -697,7 +714,7 @@ classes:
         description: >-
           Name of DLL containing user-written model for both power flow and
           dynamics.
-        range: float
+        range: string
         required: false
         annotations:
           order: 49

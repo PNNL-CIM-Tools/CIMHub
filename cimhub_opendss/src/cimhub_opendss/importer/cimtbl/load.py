@@ -10,7 +10,6 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#load``.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Mapping
 
 from cimtables.document import Column, Document, Row, Table
@@ -19,7 +18,7 @@ from cimtopology.core import BusSystem
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
 from cimhub_core.load_response import ZIP_CONSTANT_I, ZIP_CONSTANT_PQ, ZIP_CONSTANT_Z
 from cimhub_opendss.dss_reader import dss_defaults
-from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, rated_phase_kv
+from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, rated_phase_kv, reactive_power
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Load
@@ -103,11 +102,6 @@ _PROVENANCE = """OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as give
 Models 1, 2, 5 name the shared zip_fractions rows; model 4 an exp_<CVRwatts>_<CVRvars> row here.
 Source table: Load (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load"""
-
-
-def reactive_power(kw: float, pf: float) -> float:
-    """kvar of a load given kW and pf: kW x tan(acos abs(pf)), with the sign of pf (negative is leading)."""
-    return math.copysign(kw * math.tan(math.acos(abs(pf))), pf)
 
 
 def power_from_kva(kva: float, pf: float) -> tuple[float, float]:

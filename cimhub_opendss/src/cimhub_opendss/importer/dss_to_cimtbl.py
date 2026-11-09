@@ -22,8 +22,9 @@ from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_core.load_response import zip_fractions
-from cimhub_opendss.importer.cimtbl import (capacitor, capcontrol, geometry, line, linecode, load, regcontrol,
-                                            transformer, vsource, wire, xfmrcode)
+from cimhub_opendss.importer.cimtbl import (capacitor, capcontrol, generator, geometry, line, linecode, load,
+                                            pvsystem, reactor, regcontrol, storage, transformer, vsource, wire,
+                                            xfmrcode)
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -55,11 +56,15 @@ MAPPING_ORDER = (
     (line.NATIVE_CLASS, lambda native, site: line.map_line(native, site.buses, site.feeder,
                                                            base_frequency=site.base_frequency,
                                                            length_unit=site.length_unit)),
+    (reactor.NATIVE_CLASS, lambda native, site: reactor.map_reactor(native, site.buses, site.feeder)),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(native, site.buses, site.feeder)),
     (regcontrol.NATIVE_CLASS, lambda native, site: regcontrol.map_regcontrol(native)),
     (load.NATIVE_CLASS, lambda native, site: load.map_load(native, site.buses, site.feeder)),
     (capacitor.NATIVE_CLASS, lambda native, site: capacitor.map_capacitor(native, site.buses, site.feeder)),
     (capcontrol.NATIVE_CLASS, lambda native, site: capcontrol.map_capcontrol(native, site.buses)),
+    (pvsystem.NATIVE_CLASS, lambda native, site: pvsystem.map_pvsystem(native, site.buses, site.feeder)),
+    (storage.NATIVE_CLASS, lambda native, site: storage.map_storage(native, site.buses, site.feeder)),
+    (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(native, site.buses, site.feeder)),
 )
 
 #: Classes a mapper of another class reads in full, so they are mapped too: the switch controls (DSS-9).
