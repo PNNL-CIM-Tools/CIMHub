@@ -13,6 +13,7 @@ from cimhub_raw.raw34_writer import Raw34Writer
 CASES = Path(__file__).parent / "cases"
 IEEE14 = CASES / "IEEE14" / "IEEE_14_bus.raw"
 WECC240 = CASES / "WECC240" / "240busWECC_2018_PSS.raw"
+IEEE118 = CASES / "IEEE118" / "IEEE118_all_hydro_25_clean_4_subs.raw"
 NODE_BREAKER = Path(__file__).parent / "atoms" / "substation" / "two_bus_node_breaker.raw"
 
 
@@ -75,8 +76,12 @@ def test_tokenize_keeps_whether_a_field_was_quoted():
         (NODE_BREAKER, {schema.BusRecord: 2, schema.BranchRecord: 2, schema.SubstationRecord: 2,
                         schema.SubstationNodeRecord: 8, schema.StationSwitchingDeviceRecord: 7,
                         schema.EquipmentTerminalRecord: 4}),
+        (IEEE118, {schema.BusRecord: 118, schema.LoadRecord: 99, schema.GeneratorRecord: 48,
+                   schema.BranchRecord: 175, schema.TransformerRecord: 11, schema.SwitchedShuntRecord: 13,
+                   schema.SubstationRecord: 4, schema.SubstationNodeRecord: 42,
+                   schema.StationSwitchingDeviceRecord: 59, schema.EquipmentTerminalRecord: 36}),
     ],
-    ids=["IEEE14", "WECC240", "node_breaker"],
+    ids=["IEEE14", "WECC240", "node_breaker", "IEEE118"],
 )
 def test_reads_every_record(case, counts):
     model = Raw34Reader(case).read_all()
@@ -84,11 +89,12 @@ def test_reads_every_record(case, counts):
 
 
 ATOMS = Path(__file__).parent / "atoms"
-#: the hand-built atoms of R1 and R2 (the substation atom is NODE_BREAKER)
-SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer", "area") for path in (ATOMS / folder).glob("*.raw"))
+#: the atoms of R1-R6 (the substation folder holds NODE_BREAKER and the hand-built forms atom)
+SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer", "area", "substation")
+                     for path in (ATOMS / folder).glob("*.raw"))
 
 
-@pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER, *SLICE_ATOMS],
+@pytest.mark.parametrize("case", [IEEE14, WECC240, IEEE118, *SLICE_ATOMS],
                          ids=lambda case: case.stem)
 def test_read_write_read_is_lossless(case, tmp_path):
     model = Raw34Reader(case).read_all()

@@ -1,8 +1,9 @@
-"""R0-R5: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
-shunt, generator and transformer documents, tie flows and inter-area transfers, and their bind under cim18v17
-(BusBranchModel).
+"""R0-R6: the master, zone, area interchange, bus, substation, branch, switch, multi-section line, load, fixed
+shunt, switched shunt, generator, transformer and equipment terminal documents, tie flows and inter-area transfers,
+and their bind under cim18v17 (BusBranchModel).
 
-Goldens: ``tests/goldens/IEEE14/`` (``CIMHUB_UPDATE_GOLDENS=1`` rewrites them; review the diff).
+Goldens: ``tests/goldens/IEEE14/``, and IEEE118's substation and equipment terminal documents in
+``tests/goldens/IEEE118/`` (``CIMHUB_UPDATE_GOLDENS=1`` rewrites them; review the diff).
 """
 
 from __future__ import annotations
@@ -20,12 +21,14 @@ from cimhub_raw.importer.cimtbl import (
     branch,
     bus,
     case_identification,
+    equipment_terminal,
     fixed_shunt,
     generator,
     interarea_transfer,
     load,
     multi_section_line,
     owner,
+    substation,
     switch,
     switched_shunt,
     transformer,
@@ -55,7 +58,9 @@ from cimhub_raw.raw34_reader import Raw34Reader
 TESTS = Path(__file__).parent
 IEEE14 = TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw"
 WECC240 = TESTS / "cases" / "WECC240" / "240busWECC_2018_PSS.raw"
+IEEE118 = TESTS / "cases" / "IEEE118" / "IEEE118_all_hydro_25_clean_4_subs.raw"
 NODE_BREAKER = TESTS / "atoms" / "substation" / "two_bus_node_breaker.raw"
+FORMS_ATOM = TESTS / "atoms" / "substation" / "node_breaker_forms.raw"
 GOLDENS = TESTS / "goldens" / "IEEE14"
 
 
@@ -80,10 +85,17 @@ def ieee14_documents():
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
                                     multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer,
-                                    interarea_transfer],
+                                    interarea_transfer, substation, equipment_terminal],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
+
+
+@pytest.mark.parametrize(("fields", "native_class"), [(substation.NODE_FIELDS, substation.NODE_CLASS),
+                                                      (substation.DEVICE_FIELDS, substation.DEVICE_CLASS)],
+                         ids=["substation_node", "substation_switching_device"])
+def test_substation_record_classification_is_complete(fields, native_class):
+    check_fields(fields, native_class)
 
 
 def test_kv_from_per_unit():
@@ -120,13 +132,14 @@ def test_import_order_is_the_mapping_order(ieee14_documents):
 
 @pytest.mark.parametrize(("case", "name", "substations", "buses"),
                          [(IEEE14, "IEEE14", 11, 14), (WECC240, "WECC240", 134, 243),
-                          (NODE_BREAKER, "node_breaker", 2, 2)],
-                         ids=["IEEE14", "WECC240", "node_breaker"])
+                          (NODE_BREAKER, "node_breaker", 2, 2), (IEEE118, "IEEE118", 108, 118),
+                          (FORMS_ATOM, "forms", 3, 5)],
+                         ids=["IEEE14", "WECC240", "node_breaker", "IEEE118", "forms"])
 def test_binds(case, name, substations, buses):
     network = raw_to_cim(Raw34Reader(case).read_all(), name=name)
     assert len(_objects(network, "Substation")) == substations
     assert len(_objects(network, "TopologicalNode")) == buses
-    assert len(_objects(network, "BusbarSection")) == buses
+    assert len([key for key in _objects(network, "BusbarSection") if not key.startswith("bb_s")]) == buses
     assert len(_objects(network, "VoltageLimit")) == 4 * buses
     assert len(_objects(network, "SvVoltage")) == buses
 
@@ -184,8 +197,7 @@ def test_a_zone_no_record_names_is_synthesized():
 def test_the_master_lists_what_is_not_mapped(ieee14_documents):
     assert "not mapped" not in ieee14_documents.master.comment  # every IEEE14 table maps since R4
     master = RawImporter("node_breaker").to_cimtbl(Raw34Reader(NODE_BREAKER).read_all()).master
-    assert ("not mapped: EquipmentTerminalRecord 4, StationSwitchingDeviceRecord 7, SubstationNodeRecord 8, "
-            "SubstationRecord 2") in master.comment  # R6
+    assert "not mapped" not in master.comment  # the SUBSTATION section maps since R6
 
 
 # -- R1: branches, switches, multi-section lines ----------------------------------------------------------
@@ -440,7 +452,7 @@ def test_switched_shunt_atom():
 @pytest.mark.parametrize(("changes", "error", "message"), [
     ({"modsw": 3}, NotImplementedError, "MODSW 3 .plant reactive power"),
     ({"modsw": 6}, NotImplementedError, "MODSW 6 .FACTS"),
-    ({"nreg": 2}, NotImplementedError, "NREG 2 names a node"),
+    ({"nreg": 2}, ValueError, "node 2 of bus 4, which has no SUBSTATION block"),
     ({"n2": None, "b2": None}, ValueError, "a block after the first zero"),
     ({"binit": 1000.0}, ValueError, "BINIT=1000.0 is beyond its blocks"),
 ])
@@ -565,7 +577,7 @@ def test_generator_atom_comments():
     ("2_G", {"wmod": 2}, NotImplementedError, "WMOD 2 .renewable, Q limits from WPF"),
     ("2_G", {"wmod": 4}, NotImplementedError, "WMOD 4 .infeed"),
     ("2_G", {"xt": 0.1}, NotImplementedError, "an implicit step-up transformer"),
-    ("2_G", {"nreg": 2}, NotImplementedError, "NREG 2 names a node"),
+    ("2_G", {"nreg": 2}, ValueError, r"disagree on \(IREG, NREG, VS, RMPCT\)"),  # NREG is a plant quantity
     ("2_PV", {"regulated_voltage_setpoint": 1.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
     ("2_PV", {"rmpct": 50.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
     ("1_1", {"regulated_bus_number": 3}, ValueError, "plant 1: a swing bus regulates remote bus 3"),
@@ -732,7 +744,7 @@ def test_transformer_atom_comments():
     ("1_2_3_1", {"tab2": 1}, NotImplementedError, "TAB2 = 1, an impedance correction table"),
     ("1_2_0_1", {"cr1": 0.01}, NotImplementedError, "CR1 = 0.01, load-drop compensation"),
     ("1_2_0_1", {"cnxa1": 30.0}, NotImplementedError, "CNXA1 = 30.0"),
-    ("1_2_0_1", {"nod1": 2}, NotImplementedError, "NOD1 = 2, a node in a substation"),
+    ("1_2_0_1", {"nod1": 2}, ValueError, "which has no SUBSTATION block"),
     ("1_2_3_1", {"status": 2}, NotImplementedError, "STAT 2 .winding 2 out"),
     ("1_2_0_1", {"cont1": -5}, NotImplementedError, "CONT1 -5 is negative"),
     ("1_2_0_1", {"cont1": 0}, ValueError, "COD1 1 controls a voltage but CONT1 is 0"),
@@ -889,3 +901,202 @@ def test_non_tie_metered_ends_are_not_checked():
     native = Raw34Reader(AREA_ATOM).read_all()
     _replace_record(native, schema.BranchRecord, "101_102_1", metered_end=3)
     RawImporter("atom").to_cimtbl(native)
+
+
+# -- node-breaker substations (R6) -------------------------------------------------------------------
+
+
+def _placements(network) -> dict[str, str]:
+    """Equipment Terminal mRID -> its ConnectivityNode, leaving out the substation switching devices' and node
+    busbars' own Terminals."""
+    return {key: terminal.ConnectivityNode.mRID for key, terminal in _objects(network, "Terminal").items()
+            if terminal.ConnectivityNode is not None and not key.startswith(("sw_s", "bb_s"))}
+
+
+def _statement(document, cim_class: str):
+    return next(statement for statement in document.statements if getattr(statement, "cim_class", None) == cim_class
+                and not statement.update)
+
+
+@pytest.fixture(scope="module")
+def ieee118():
+    with cim_scope():
+        native = Raw34Reader(IEEE118).read_all()
+        return RawImporter("IEEE118").to_cimtbl(native), raw_to_cim(native, name="IEEE118")
+
+
+@pytest.fixture(scope="module")
+def forms():
+    with cim_scope():
+        native = Raw34Reader(FORMS_ATOM).read_all()
+        return RawImporter("forms").to_cimtbl(native), raw_to_cim(native, name="forms")
+
+
+@pytest.mark.parametrize("case", [NODE_BREAKER, IEEE118, FORMS_ATOM], ids=["node_breaker", "IEEE118", "forms"])
+def test_a_node_sits_in_its_bus_and_substation(case):
+    """Every Terminal on a ConnectivityNode is on that node's TopologicalNode, and every node is in its bus's
+    substation."""
+    network = raw_to_cim(Raw34Reader(case).read_all(), name="case")
+    terminals = [terminal for terminal in _objects(network, "Terminal").values() if terminal.ConnectivityNode]
+    assert terminals
+    assert all(terminal.ConnectivityNode.TopologicalNode is terminal.TopologicalNode for terminal in terminals)
+    for node in _objects(network, "ConnectivityNode").values():
+        assert node.ConnectivityNodeContainer is node.TopologicalNode.ConnectivityNodeContainer
+
+
+def test_two_bus_node_breaker_atom():
+    network = raw_to_cim(Raw34Reader(NODE_BREAKER).read_all(), name="node_breaker")
+    assert _placements(network) == {"ln_1_2_1_T1": "sub_s1_n3", "ln_1_2_2_T1": "sub_s1_n4",
+                                    "ln_1_2_1_T2": "sub_s2_n3", "ln_1_2_2_T2": "sub_s2_n4"}
+    breakers = _objects(network, "Breaker")
+    assert len(breakers) == 7
+    assert not any(breaker.open or breaker.normalOpen for breaker in breakers.values())
+
+
+@pytest.mark.parametrize("part", ["substation", "equipment_terminal"])
+def test_ieee118_part_matches_golden(ieee118, part):
+    documents, _ = ieee118
+    document = next(doc for doc in documents.parts if doc.name == part)
+    assert_matches_golden(document, TESTS / "goldens" / "IEEE118" / f"{part}.cimtbl")
+
+
+def test_ieee118_substation_blocks(ieee118):
+    documents, network = ieee118
+    assert "not mapped" not in documents.master.comment
+    buses = _objects(network, "TopologicalNode")
+    # buses 5 and 38 have no node data: their transformers merge them into the blocks' substations
+    assert {bus: buses[bus].ConnectivityNodeContainer.mRID for bus in ("5", "8", "37", "38", "49", "100")} == {
+        "5": "sub_s8", "8": "sub_s8", "37": "sub_s37", "38": "sub_s37", "49": "sub_s49", "100": "sub_s100"}
+    assert {key: station.name for key, station in _objects(network, "Substation").items()
+            if key.startswith("sub_s")} == {"sub_s8": "STATION_8", "sub_s37": "EASTLI", "sub_s49": "PHILO",
+                                            "sub_s100": "GLEN L"}
+    assert len(_objects(network, "ConnectivityNode")) == 42
+    placements = _placements(network)
+    assert len(placements) == 36
+    assert placements["xf_38_37_0_1_T2"] == "sub_s37_n3"  # written '2' at the transformer's second winding
+    assert placements["swsh_37_b1_T1"] == "sub_s37_n7"
+    assert placements["ln_9_8_1_T2"] == "sub_s8_n3"  # the record at the line's to bus lists it first
+    assert not _objects(network, "Location")
+    assert not [key for key in _objects(network, "BusbarSection") if key.startswith("bb_s")]  # no NREG, NODk
+
+
+def test_ieee118_main_and_transfer_bus(ieee118):
+    """Block 100: the transfer bus (node 2) is out of service, its ten disconnectors and its breaker open."""
+    documents, network = ieee118
+    disconnectors = _objects(network, "Disconnector")
+    assert len(disconnectors) == 10
+    assert all(switch.open and switch.normalOpen for switch in disconnectors.values())
+    assert _objects(network, "Breaker")["sw_s100_1_2_1"].open
+    document = next(part for part in documents.parts if part.name == "substation")
+    nodes = _statement(document, "ConnectivityNode")
+    assert {row.cells[0]: row.comment for row in nodes.rows if row.comment} == {
+        "sub_s100_n2": "untranscribed: status=0"}
+    assert "no Location: blocks 8, 37, 49, 100 at LATI = LONG = 0 (the default)" in document.comment
+
+
+def test_forms_atom_placements(forms):
+    _, network = forms
+    assert _placements(network) == {
+        "sm_1_G_T1": "sub_s10_n2", "pec_1_PV_T1": "sub_s10_n2", "ln_1_3_A_T1": "sub_s10_n3",
+        "cap_1_3_A_i_T1": "sub_s10_n3", "xf_1_2_0_1_T1": "sub_s10_n4", "xf_1_2_4_T_T1": "sub_s10_n5",
+        "cap_2_1_T1": "sub_s10_n12", "ld_2_L1_T1": "sub_s10_n12", "swsh_2_b1_T1": "sub_s10_n13",
+        "ln_5_2_1_T2": "sub_s10_n14", "xf_1_2_0_1_T2": "sub_s10_n15", "xf_1_2_4_T_T2": "sub_s10_n16"}
+    terminals = _objects(network, "Terminal")
+    assert terminals["cap_1_3_A_j_T1"].ConnectivityNode is None  # the line's other end, at free bus 3
+    # free bus 4 joins the block's substation through the 3-winding transformer; its NI 0 record places nothing
+    assert _objects(network, "TopologicalNode")["4"].ConnectivityNodeContainer.mRID == "sub_s10"
+    assert terminals["xf_1_2_4_T_T3"].ConnectivityNode is None
+
+
+def test_forms_atom_regulated_nodes(forms):
+    """NREG and NOD1 name the node's busbar terminal; one busbar per regulated node (RAW-11)."""
+    _, network = forms
+    controls = {**_objects(network, "RegulatingControl"), **_objects(network, "TapChangerControl")}
+    assert {key: controls[key].Terminal.mRID for key in ("gc_1", "cc_2", "xf_1_2_0_1_ctrl1")} == {
+        "gc_1": "bb_s10_n1_T1", "cc_2": "bb_s10_n11_T1", "xf_1_2_0_1_ctrl1": "bb_s10_n11_T1"}
+    terminals = _objects(network, "Terminal")
+    assert {key: terminals[f"{key}_T1"].ConnectivityNode.mRID for key in _objects(network, "BusbarSection")
+            if key.startswith("bb_s")} == {"bb_s10_n1": "sub_s10_n1", "bb_s10_n11": "sub_s10_n11"}
+
+
+def test_forms_atom_location_and_devices(forms):
+    _, network = forms
+    location = _objects(network, "Substation")["sub_s10"].Location
+    [point] = location.PositionPoints
+    assert (point.xPosition, point.yPosition) == ("-119.1", "46.2")  # x = LONG, y = LATI
+    assert location.CoordinateSystem.crsUrn == "urn:ogc:def:crs:OGC:1.3:CRS84"
+    assert list(_objects(network, "Switch")) == ["sw_s10_1_4_1"]  # TYPE 1, a generic connector
+    breakers = _objects(network, "Breaker")
+    assert (breakers["sw_s10_11_13_1"].open, breakers["sw_s10_11_13_1"].normalOpen) == (True, True)
+    assert (breakers["sw_s10_11_14_1"].open, breakers["sw_s10_11_14_1"].normalOpen) == (False, True)
+    assert list(_objects(network, "ApparentPowerLimit")) == ["sw_s10_1_2_1_rate1"]
+
+
+def test_forms_atom_comments(forms):
+    documents, _ = forms
+    parts = {part.name: part for part in documents.parts}
+    nodes = _statement(parts["substation"], "ConnectivityNode")
+    assert {row.cells[0]: row.comment for row in nodes.rows if row.comment} == {
+        "sub_s10_n17": "untranscribed: vm=1.02, va=-2.5"}
+    assert "untranscribed: grounding_resistance" in parts["substation"].comment
+    terminals = next(statement for statement in parts["equipment_terminal"].statements)
+    assert terminals.comment == ("each named equipment terminal on its node; 1 record with NI 0 (no node-breaker "
+                                 "model) places nothing")
+    stations = _statement(parts["bus"], "Substation")
+    assert stations.rows[0].comment == "SUBSTATION block 10: buses 1, 2, 4; xf_1_2_0_1, xf_1_2_4_T"
+
+
+def _second_block(native, bus: int) -> None:
+    """Add block 20, holding one node of ``bus``."""
+    block = native.graph[schema.SubstationRecord]["10"]
+    native.graph[schema.SubstationRecord]["20"] = dataclasses.replace(block, substation_number=20)
+    node = dataclasses.replace(native.graph[schema.SubstationNodeRecord]["10_17"], substation_number=20,
+                               node_number=1, bus_number=bus)
+    node.ID = "20_1"
+    native.graph[schema.SubstationNodeRecord]["20_1"] = node
+
+
+def _system_switch_named_by_a_terminal(native) -> None:
+    """A system switching device 1-3 'Z', and the B record at bus 1 changed to name it."""
+    native.graph[schema.SwitchRecord]["1_3_Z"] = schema.SwitchRecord(from_bus_number=1, to_bus_number=3, circuit="Z",
+                                                                     stype=2)
+    native.graph[schema.SwitchRecord]["1_3_Z"].ID = "1_3_Z"
+    _replace_record(native, schema.EquipmentTerminalRecord, "10_1_B_3__A", identifier="Z")
+
+
+_LOAD_TERMINAL = "10_2_L___L1"
+
+
+@pytest.mark.parametrize(("change", "error", "message"), [
+    (lambda native: _second_block(native, 2), ValueError, "bus 2 also has nodes in block 10"),
+    (lambda native: _second_block(native, 4), ValueError, r"holding SUBSTATION blocks \[10, 20\]"),
+    (lambda native: _replace_record(native, schema.BusRecord, "2", zone=2), ValueError, r"are in zones \[1, 2\]"),
+    (lambda native: _replace_record(native, schema.StationSwitchingDeviceRecord, "10_1_2_1", to_node=1), ValueError,
+     "NI = NJ = 1"),
+    (lambda native: _replace_record(native, schema.StationSwitchingDeviceRecord, "10_1_2_1", to_node=99),
+     ValueError, "node 99 is not in SUBSTATION block 10"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, _LOAD_TERMINAL, node_number=1),
+     ValueError, "has no node 1 of bus 2"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, _LOAD_TERMINAL, identifier="L9"),
+     ValueError, "names no load"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, "10_1_M___PV", identifier="G"),
+     ValueError, "Terminal sm_1_G_T1 is already placed"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, _LOAD_TERMINAL, node_number=0),
+     ValueError, r"NI 0 \(no node-breaker model\), but bus 2 has nodes"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, _LOAD_TERMINAL, terminal_type="I"),
+     NotImplementedError, r"TYP I \(induction machine, phase 2\)"),
+    (lambda native: _replace_record(native, schema.EquipmentTerminalRecord, _LOAD_TERMINAL, terminal_type="X"),
+     ValueError, "is no equipment form"),
+    (_system_switch_named_by_a_terminal, ValueError, "names a system switching device"),
+    (lambda native: _replace_record(native, schema.SwitchedShuntRecord, "2", nreg=9), ValueError,
+     "SUBSTATION block 10 has no node 9 of bus 2"),
+    (lambda native: _replace_record(native, schema.TransformerRecord, "1_2_0_1", cont1=0), ValueError,
+     "NOD1 11 names a node, but CONT1 is 0"),
+], ids=["bus in two blocks", "two blocks in one substation", "block across zones", "NI = NJ", "node outside block",
+        "node of another bus", "unknown equipment", "placed twice", "NI 0 at a bus with nodes", "phase-2 form",
+        "unknown form", "system switching device", "NREG with no node", "NOD with CONT 0"])
+def test_a_node_breaker_form_outside_r6_raises(change, error, message):
+    native = Raw34Reader(FORMS_ATOM).read_all()
+    change(native)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)

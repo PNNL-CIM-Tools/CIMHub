@@ -14,7 +14,6 @@ from cimtopology.core.voltage import base_voltage_mrid
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, schema_defaults, untranscribed_names
-from cimhub_raw.importer.cimtbl.bus import busbar_mrid
 from cimhub_raw.importer.cimtbl.derived import (
     magnetizing_siemens,
     ratio_tap,
@@ -27,6 +26,7 @@ from cimhub_raw.importer.cimtbl.area_interchange import control_area_numbers
 from cimhub_raw.importer.cimtbl.ratings import RATING_SETS, RatingRows
 from cimhub_raw.importer.cimtbl.tie_flow import TieFlowRows, off_tie_note
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.node_breaker import NodeBreaker
 
 NATIVE_CLASS = schema.TransformerRecord
 PREFIX = "xf_"  # requested from the cimtbl-translate table owners (plan C3)
@@ -87,8 +87,9 @@ def _winding_fields(k: int) -> dict[str, Field]:
                                            "blank: 0 (defaulted)"),
         f"cx{k}": Field("structural", note=f"CX{k}: as CR{k}"),
         f"cnxa{k}": Field("structural", note=f"CNXA{k}: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted)"),
-        f"nod{k}": Field("structural", note=f"NOD{k}: a node of bus CONT{k}; nonzero raises until R6 (node-breaker); "
-                                           "blank: 0 (defaulted)"),
+        f"nod{k}": Field("structural", note=f"NOD{k}: a node of bus CONT{k}; nonzero: the TapChangerControl Terminal "
+                                           f"is that node's busbar bb_s<IS>_n<NOD>_T1 (R6, RAW-11); with CONT{k} 0 "
+                                           "it raises; blank: 0 (defaulted)"),
     }
 
 
@@ -185,6 +186,25 @@ def _buses(record) -> tuple[int, ...]:
     return (record.i, record.j, record.k) if record.k else (record.i, record.j)
 
 
+def _regulated_node(record, winding: int, record_id: str) -> tuple[int, int]:
+    """``(CONTk, NODk)``, blanks as 0; a node of no regulated bus (NODk with CONTk 0) raises."""
+    cont, node = _winding(record, "cont", winding) or 0, _winding(record, "nod", winding) or 0
+    if node and not cont:
+        raise ValueError(f"{record_id}: NOD{winding} {node} names a node, but CONT{winding} is 0 (no regulated bus)")
+    return cont, node
+
+
+def regulated_nodes(native) -> list[tuple[int, int, str]]:
+    """``(CONTk, NODk, record id)`` of every winding control that regulates a node (R6)."""
+    nodes = []
+    for record in native.list_by_class(NATIVE_CLASS):
+        for winding in _tapped_windings(record):
+            cont, node = _regulated_node(record, winding, f"transformer {record.ID}")
+            if node:
+                nodes.append((cont, node, f"transformer {record.ID} winding {winding}"))
+    return nodes
+
+
 def _check_record(record, record_id: str) -> None:
     """The forms R4 does not map raise."""
     if record.status in UNMAPPED_STATUS:
@@ -201,8 +221,7 @@ def _check_record(record, record_id: str) -> None:
         for slot, why in (("tab", "an impedance correction table (phase 2)"),
                           ("cr", "load-drop compensation (no case has one yet)"),
                           ("cx", "load-drop compensation (no case has one yet)"),
-                          ("cnxa", "an asymmetric phase shift's angle (COD 5)"),
-                          ("nod", "a node in a substation (R6)")):
+                          ("cnxa", "an asymmetric phase shift's angle (COD 5)")):
             if _winding(record, slot, winding):
                 raise NotImplementedError(f"{record_id}: {slot.upper()}{winding} = {_winding(record, slot, winding)}, "
                                           f"{why}")
@@ -218,7 +237,8 @@ def _check_record(record, record_id: str) -> None:
 
 
 def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
-                    bus_area: dict[int, int], base_mva: float, ratings_in_current: bool) -> Document:
+                    bus_area: dict[int, int], node_breaker: NodeBreaker, base_mva: float,
+                    ratings_in_current: bool) -> Document:
     records = sorted(native.list_by_class(NATIVE_CLASS),
                      key=lambda record: (record.i, record.j, record.k or 0, str(record.circuit)))
     if not records:
@@ -284,10 +304,11 @@ def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict
         for winding in _tapped_windings(transformer):
             code = _winding(transformer, "cod", winding)
             mode = lookup(CONTROL_MODE, abs(code), slot=f"cod{winding}", record_id=record_id)
-            regulated = _winding(transformer, "cont", winding)
+            regulated, node = _regulated_node(transformer, winding, record_id)
             if regulated and regulated not in base_kv_of:
                 raise ValueError(f"{record_id}: CONT{winding} {regulated} is no bus")
-            terminal = f"{busbar_mrid(regulated)}_T1" if regulated else f"{container}_T{winding}"
+            terminal = node_breaker.regulated_terminal(regulated, node, f"{record_id} winding {winding}") \
+                if regulated else f"{container}_T{winding}"
             high, low = _winding(transformer, "vma", winding), _winding(transformer, "vmi", winding)
             if mode == "voltage":
                 regulated_kv = base_kv_of[regulated or buses[winding - 1]]

@@ -6,7 +6,10 @@ sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. R2 (l
 shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. R3 (generator) approved and
 implemented 2026-11-08; atom in `tests/atoms/generator/`. R4 (transformer) approved and implemented 2026-11-08; atom in
 `tests/atoms/transformer/`. R5 (tie flows, a bus's AREA, inter-area transfer, the netInterchange sign) approved
-and implemented 2026-11-08; atom in `tests/atoms/area/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+and implemented 2026-11-08; atom in `tests/atoms/area/`. R6 (node-breaker substations: nodes, substation switching
+devices, equipment terminals, regulated nodes) approved and implemented 2026-11-09; case `tests/cases/IEEE118/`,
+atoms in `tests/atoms/substation/`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
+`tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -27,7 +30,8 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 0 | case identification + system-wide data | `<Model>.cimtbl` (master) | `common` + `line_bus_branch`'s `BasePower`: BasePower, BaseFrequency, GeographicalRegion, BaseVoltage | |
 | 1 | Zone | `zone.cimtbl` | `SubGeographicalRegion` (`srgn_<I>`) | the master |
 | 2 | Area | `area_interchange.cimtbl` | `ControlArea` (`ca_<I>`; new, C2/C3); the inter-area transfers listed on its comment (R5) | the master |
-| 3 | Bus | `bus.cimtbl` | `line_bus_branch`: `Substation`s (synthesized, §bus), `TopologicalNode`s, one `BusbarSection` per bus | 0, 1 |
+| 3 | Bus | `bus.cimtbl` | `line_bus_branch`: `Substation`s (synthesized, §bus; a SUBSTATION block's `sub_s<IS>`, R6), `TopologicalNode`s, one `BusbarSection` per bus | 0, 1 |
+| 3a | Substation (nodes, switching devices) | `substation.cimtbl` | a node-breaker `substation` (new, C2): `ConnectivityNode`s in their buses' `TopologicalNode`s, `Switch` / `Breaker` / `Disconnector` with `node1`/`node2` + `bus1`/`bus2`, a located block's `Location`, a `BusbarSection` per regulated node (R6) | 3 |
 | 4 | Branch | `branch.cimtbl` | `line_bus_branch`: `ACLineSegment` (`ln_`), `SeriesCompensator` (`sc_`, X < 0), ratings on terminals, line shunts (R1), `TieFlow`s of ties (R5) | 3 |
 | 5 | System switching device | `switch.cimtbl` | `switch` with `bus1`/`bus2` (R1), `TieFlow`s of ties (R5) | 3 |
 | 6 | Multi-section line | `multi_section_line.cimtbl` | `Line` + `Update` rows on its sections (R1) | 4 |
@@ -36,10 +40,12 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
 | 10 | Generator | `generator.cimtbl` | `synchronous_machine` (bus-branch, new, C2) and `der` with `bus`: a `RegulatingControl` per plant; `SynchronousMachine` + `GeneratingUnit` (WMOD 0) or `PowerElectronicsConnection` + `PowerElectronicsUnit` (WMOD 1), each with its control-area membership (R3) | 2, 3 |
 | 11 | Transformer | `transformer.cimtbl` | `transformer_by_ends` with `bus` (2-winding r/x/g/b on end 1, cim18v17; C2) + the `regulator` shape's `RatioTapChanger` / `TapChangerControl`: `PowerTransformer`, an end per winding, a 3-winding unit's `TransformerMeshImpedance`s, ratings per winding (R4), `TieFlow`s of ties (R5) | 3 |
+| 12 | Equipment terminal | `equipment_terminal.cimtbl` | `Update Table Terminal: mRID, ConnectivityNode` (R6) | 3a and every equipment artifact |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). Later slices append to this order:
-substation (R6).
+Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). The phase-2 stubs (two-terminal DC,
+VSC DC, impedance correction, multi-terminal DC, FACTS, GNE, induction machine) follow 11 and write nothing yet;
+`equipment_terminal.cimtbl` (12) comes after them.
 
 ## Master
 
@@ -587,8 +593,8 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
   | 3 plant Q, 5 another shunt's admittance | raise `NotImplementedError`: no case has one yet |
   | 4 VSC converter Q, 6 FACTS shunt Q | raise `NotImplementedError`: phase 2 (VSC DC, FACTS) |
 
-  - **Regulated point:** `Terminal` = `bb_<SWREG>_T1`, or `bb_<I>_T1` when SWREG is 0 (RAW-11). NREG ≠ 0 (a node
-    in a substation) raises until R6.
+  - **Regulated point:** `Terminal` = `bb_<SWREG>_T1`, or `bb_<I>_T1` when SWREG is 0 (RAW-11). NREG ≠ 0 names
+    node NREG of the regulated bus: `bb_s<IS>_n<NREG>_T1`, that node's busbar (R6).
   - **Target:** `targetValue` = (VSWHI + VSWLO)/2 × the regulated bus's BASKV, and `targetDeadband` =
     (VSWHI − VSWLO) × BASKV. Both are in V, as the core shape writes them for mode voltage (deadband =
     the full band, target ± deadband/2). They are derived by `volts_from_per_unit`, which goes through the
@@ -634,7 +640,7 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
 | `b7` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `n8` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `b8` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
-| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus SWREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus SWREG; nonzero: the control's Terminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); blank: 0 (defaulted) |
 
 ## Generator (R3)
 
@@ -731,7 +737,8 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
     enabled plant control and 1 otherwise, so IDE 1/2 round-trip;
   - the plant's records must agree on VS, IREG and RMPCT, as PSS/E requires. A disagreement raises with both IDs;
   - a remote IREG from a swing bus raises (PSS/E would silently regulate bus I instead), and so does an IREG that
-    is no bus. NREG ≠ 0 raises until R6.
+    is no bus. NREG ≠ 0 names node NREG of the regulated bus: `bb_s<IS>_n<NREG>_T1`, that node's busbar (R6).
+    NREG is a plant quantity, so the plant's records must agree on it too.
 - **RMPCT:** `qPercent` on every `SynchronousMachine` of the plant (added to the profile 2026-11-08). A
   `PowerElectronicsConnection` has none, so its row lists RMPCT untranscribed, and the exporter takes the plant's
   RMPCT from one of its machines, else 100. Gap: the shunt RMPCT gap now covers power-electronics connections too.
@@ -761,7 +768,7 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
   - a machine on an IDE 1 bus (control disabled);
   - a record with every optional field blank (all defaulted, MBASE = SBASE).
   
-  Raise tests: plant records that disagree on VS, IREG or RMPCT; RT/XT ≠ 0; WMOD 2, 3 and 4; NREG ≠ 0; a remote IREG
+  Raise tests: plant records that disagree on VS, IREG, NREG or RMPCT; RT/XT ≠ 0; WMOD 2, 3 and 4; a remote IREG
   from a swing bus; an IREG that is no bus; a swing bus with only WMOD 1 records.
 - **Checks:** all 151 records bind (IEEE14 5 machines; WECC240 109 machines and 37 connections). In SI, each p =
   −PG in W, each target = VS × BASKV in V, and each unit reaches its bus's `ControlArea`. Each plant has one
@@ -776,7 +783,7 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `max_q_output` | `Optional[float]` | `200.0`, `357.0`, `360.0` | copied | `SynchronousMachine.maxQ` (MVAr), `PowerElectronicsConnection.maxQ` (MVAr); QT, generator convention as CIM's limit; blank: 9999 (defaulted) |
 | `min_q_output` | `Optional[float]` | `-200.0`, `-357.0`, `-360.0` | copied | `SynchronousMachine.minQ` (MVAr), `PowerElectronicsConnection.minQ` (MVAr); QB; blank: -9999 (defaulted) |
 | `regulated_voltage_setpoint` | `Optional[float]` | `1.014`, `1.03`, `1.01` | derived | VS (pu): targetValue = VS x the regulated bus's BASKV, in V (volts_from_per_unit); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 1.0 (defaulted) |
-| `regulated_bus_number` | `Optional[int]` | `1002`, `1004`, `1101` | structural | IREG: the plant control's Terminal bb_<IREG>_T1, or bb_<I>_T1 when 0 (RAW-11); a remote IREG from a swing bus raises; a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
+| `regulated_bus_number` | `Optional[int]` | `1002`, `1004`, `1101` | structural | IREG: the plant control's Terminal bb_<IREG>_T1, or bb_<I>_T1 when 0 (RAW-11), or the NREG node's busbar; a remote IREG from a swing bus raises; a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
 | `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE; blank: SBASE (defaulted) |
 | `zr` | `Optional[float]` | `0.0` | derived | ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE (ohms_from_per_unit); untranscribed on a PowerElectronicsConnection; blank: 0 (defaulted) |
 | `zx` | `Optional[float]` | `0.2` | untranscribed | ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile extension, RAW-23) |
@@ -797,7 +804,7 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `f4` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
 | `wmod` | `Optional[int]` | `1` | mapped | WMOD: the class (RAW-24), 0 conventional a SynchronousMachine + GeneratingUnit, 1 renewable with QT/QB limits a PowerElectronicsConnection + PowerElectronicsUnit; 2, 3 and 4 raise until a case has one; blank: 0 (defaulted) |
 | `wpf` | `Optional[float]` | `1.0` | untranscribed | WPF: used only by WMOD 2 and 3, which raise |
-| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus IREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `nreg` | `Optional[int]` |  | structural | NREG: a node of bus IREG; nonzero: the plant control's Terminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
 
 ## Transformer (R4)
 
@@ -947,7 +954,8 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
     - COD ±1 with CONT 0 raises: PSS/E needs a controlled bus.
     - COD ±2 measures the flow through the winding, so CONT 0 is its usual form.
     - A negative CONT raises.
-    - NODk ≠ 0 (a node in a substation) raises until R6.
+    - NODk ≠ 0 names node NODk of bus CONTk: `bb_s<IS>_n<NODk>_T1`, that node's busbar (R6). NODk with CONT 0
+      raises.
   - **Target:** `discrete = true` (taps step).
     - Voltage: `targetValue` = (VMA + VMI)/2 × the regulated bus's BASKV and `targetDeadband` = (VMA − VMI) ×
       BASKV, in V (`volts_from_per_unit`, as the switched shunt).
@@ -1042,7 +1050,7 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
 | `cr1` | `Optional[float]` | `0.0` | structural | CR1: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
 | `cx1` | `Optional[float]` | `0.0` | structural | CX1: as CR1 |
 | `cnxa1` | `Optional[float]` | `0.0` | structural | CNXA1: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
-| `nod1` | `Optional[int]` | `0` | structural | NOD1: a node of bus CONT1; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `nod1` | `Optional[int]` | `0` | structural | NOD1: a node of bus CONT1; nonzero: the TapChangerControl Terminal is that node's busbar bb_s<IS>_n<NOD>_T1 (R6, RAW-11); with CONT1 0 it raises; blank: 0 (defaulted) |
 | `windv2` | `Optional[float]` | `1.0` | derived | WINDV2: the ratio, in CW units: RatioTapChanger step (ratio_tap) on winding 1, or any winding of a 3-winding unit; winding 2 of a 2-winding unit must be ratio 1 (else raises); blank: 1.0, or the bus's BASKV for CW 2 (defaulted) |
 | `nomv2` | `Optional[float]` | `0.0`, `345.0`, `230.0` | derived | NOMV2 (kV): PowerTransformerEnd ratedU, or the bus's BASKV when 0 (RAW-6); blank: 0 (defaulted) |
 | `ang2` | `Optional[float]` |  | structural | ANG2: a phase shift; nonzero raises until a case has one (a PhaseTapChanger); blank: 0 (defaulted) |
@@ -1069,7 +1077,7 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
 | `cr2` | `Optional[float]` |  | structural | CR2: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
 | `cx2` | `Optional[float]` |  | structural | CX2: as CR2 |
 | `cnxa2` | `Optional[float]` |  | structural | CNXA2: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
-| `nod2` | `Optional[int]` |  | structural | NOD2: a node of bus CONT2; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `nod2` | `Optional[int]` |  | structural | NOD2: a node of bus CONT2; nonzero: the TapChangerControl Terminal is that node's busbar bb_s<IS>_n<NOD>_T1 (R6, RAW-11); with CONT2 0 it raises; blank: 0 (defaulted) |
 | `windv3` | `Optional[float]` |  | derived | WINDV3: the ratio, in CW units: RatioTapChanger step (ratio_tap) on winding 1, or any winding of a 3-winding unit; winding 2 of a 2-winding unit must be ratio 1 (else raises); blank: 1.0, or the bus's BASKV for CW 2 (defaulted) |
 | `nomv3` | `Optional[float]` |  | derived | NOMV3 (kV): PowerTransformerEnd ratedU, or the bus's BASKV when 0 (RAW-6); blank: 0 (defaulted) |
 | `ang3` | `Optional[float]` |  | structural | ANG3: a phase shift; nonzero raises until a case has one (a PhaseTapChanger); blank: 0 (defaulted) |
@@ -1096,7 +1104,7 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
 | `cr3` | `Optional[float]` |  | structural | CR3: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
 | `cx3` | `Optional[float]` |  | structural | CX3: as CR3 |
 | `cnxa3` | `Optional[float]` |  | structural | CNXA3: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
-| `nod3` | `Optional[int]` |  | structural | NOD3: a node of bus CONT3; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `nod3` | `Optional[int]` |  | structural | NOD3: a node of bus CONT3; nonzero: the TapChangerControl Terminal is that node's busbar bb_s<IS>_n<NOD>_T1 (R6, RAW-11); with CONT3 0 it raises; blank: 0 (defaulted) |
 
 ## Areas, tie flows and inter-area transfer (R5)
 
@@ -1264,6 +1272,254 @@ Three areas:
 Also fixed: the schema's NMETR description said "metered end"; NMETR is the non-metered end code. Its default 2
 names the same end as MET's default 1.
 
+## Node-breaker substations (R6)
+
+**Approved 2026-11-09 and implemented** (drafted 2026-11-08, checked against the RAW v34 format document 2026-11-09).
+RAW-16, RAW-11 (regulated nodes), §3.2's node-breaker rule. User choices 2026-11-09: LATI = LONG = 0 writes no
+Location; a busbar only on a node a control regulates (the IEEE118 layouts give no safe busbar rule, below); node
+STATUS 0 listed on its row.
+
+Code: `importer/node_breaker.py` (`NodeBreaker`: the blocks, nodes and bus → block index, and
+`regulated_terminal`), `importer/topology.py` (block edges in `substation_groups`; substation switching devices in
+the area trace), `importer/cimtbl/substation.py`, `importer/cimtbl/equipment_terminal.py`, and `regulated_nodes` in
+`generator.py`, `switched_shunt.py` and `transformer.py`.
+
+Cases: `tests/cases/IEEE118/IEEE118_all_hydro_25_clean_4_subs.raw` (written by PSS/E 34.9 2026-11-09: IEEE 118
+with four buses expanded to node-breaker, below). Atoms: `tests/atoms/substation/` (the PSS/E-built two-bus atom,
+and the hand-built `node_breaker_forms.raw`). IEEE14 and WECC240 have no SUBSTATION data. Goldens:
+`tests/goldens/IEEE118/` (`substation.cimtbl`, `equipment_terminal.cimtbl`).
+
+### Load path (RAW-16, resolved)
+
+cimtables already loads a mixed model, so nothing is filed upstream (checked 2026-11-08 on the two-bus atom):
+- a row with `node1` and `bus1` puts one Terminal on both its `ConnectivityNode` and its `TopologicalNode`
+  (`connectivity.add_connectivity`; its docstring names PSS/E's substation node data as the case);
+- a `ConnectivityNode` row binds `TopologicalNode`, `BaseVoltage` and `ConnectivityNodeContainer` as ordinary
+  associations, and the inverses (`TopologicalNode.ConnectivityNodes`, `ConnectivityNode.Terminals`) are filled;
+- `Update Table Terminal: mRID, ConnectivityNode` adds a node to a Terminal that already has its TopologicalNode.
+
+An in-memory `BusBranchModel` and `NodeBreakerModel` behave the same (they differ only in database loading), so
+`RawImporter.model_cls` stays `BusBranchModel`. A bus outside any SUBSTATION block keeps its bare
+`TopologicalNode`; a bus inside one also gets its block's `ConnectivityNode`s.
+
+### Artifacts
+
+The SUBSTATION section's four record classes land in three places, because of bind order:
+
+| native class | artifact | position | why there |
+|---|---|---|---|
+| `SubstationRecord` | `bus.cimtbl`, its `Substation` table | 3 | the bus's `TopologicalNode` names its substation as `ConnectivityNodeContainer`, so the substation binds first |
+| `SubstationRecord` (coordinates), `SubstationNodeRecord`, `StationSwitchingDeviceRecord` | `substation.cimtbl` | 3a, after `bus.cimtbl` | a node names its bus's `TopologicalNode`; a regulated node's busbar must exist before the generator, switched shunt and transformer controls that name it |
+| `EquipmentTerminalRecord` | `equipment_terminal.cimtbl` | last, after the phase-2 stubs | `Update` rows on Terminals, which exist only once every equipment artifact is written; the mapper matches each record against the equipment those artifacts wrote |
+
+So the equipment mappers stay as they are: they still write `bus` / `bus1` / `bus2`, and the placement on a node is
+one reviewable file.
+
+### Substations: the block takes precedence (plan §3.2)
+
+`topology.substation_groups` gains the blocks (`NodeBreaker.block_of_bus`):
+- **Block edges:** every bus a block's nodes name is joined to the block's other buses, alongside the §3.2 merge
+  equipment.
+- **Identity:** a group holding a block is `sub_s<IS>` (prefix C3; `bus.block_mrid`), named the block's NAME
+  (blank: IS). Its row comment says `SUBSTATION block IS: bus(es) ...`, plus any merge equipment. A group with no
+  block keeps `sub_<lowest bus>`.
+- A free bus merged into a block's group (by a transformer) joins `sub_s<IS>`: IEEE118's buses 5 and 38.
+- **Raises:** a bus with nodes in two blocks; a group holding two blocks (merge equipment between them); a block
+  whose buses are in two zones (a `Substation` has one `Region`).
+
+```
+# synthesized: substations, buses merged across switching devices, zero-impedance branches (R = 0, |X| <= THRSHZ
+# 0.0001), series capacitors and transformers, within a zone (108 substations, 4 from SUBSTATION blocks (R6))
+Table Substation: mRID, name, Region
+    ...
+    # SUBSTATION block 8: buses 5, 8; xf_8_5_0_1
+    sub_s8,   STATION_8, srgn_1
+```
+
+**Coordinates** follow the OpenDSS spoke's `LatLongCoords` form: one `CoordinateSystem` `crs_latlong` (crsUrn
+`urn:ogc:def:crs:OGC:1.3:CRS84`, x = longitude, y = latitude), a `Location` `sub_s<IS>_loc` with one
+`PositionPoint` `sub_s<IS>_loc_1`, and `Update Table Substation: mRID, Location`. A block with LATI = LONG = 0 (the
+default, as every block of the two-bus atom and IEEE118 writes) gets no Location, and the document comment lists
+them (user, 2026-11-09). The exporter writes 0, 0 back, so the round trip holds either way.
+
+| SubstationRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `substation_number` | `Union[int, SubstationRecordSubstationNumber]` | `100`, `37`, `49` | structural | IS: the key, Substation sub_s<IS> (in bus.cimtbl, R6); the scope of its node numbers |
+| `name` | `Optional[str]` | `GLEN L`, `EASTLI`, `PHILO` | structural | NAME: the Substation's name (bus.cimtbl); blank: IS |
+| `latitude` | `Optional[float]` | `0.0`, `46.2` | copied | `PositionPoint.yPosition`; LATI (deg): the point sub_s<IS>_loc_1 of Location sub_s<IS>_loc; LATI = LONG = 0 (the default) writes no Location (user, 2026-11-09) |
+| `longitude` | `Optional[float]` | `0.0`, `-119.1` | copied | `PositionPoint.xPosition`; LONG (deg): as LATI |
+| `grounding_resistance` | `Optional[float]` | `0.1`, `0.2` | untranscribed | SGR (ohm): a substation's DC grounding resistance (GIC) has no CIM 18 home (gap) |
+
+### Nodes
+
+One `ConnectivityNode` `sub_s<IS>_n<NI>` per node, in its bus's `TopologicalNode` and its block's substation, with
+its bus's `BaseVoltage`. `NodeBreaker` raises on a node number twice in a block, a node on no bus, and a bus with
+nodes in two blocks.
+
+| SubstationNodeRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `node_number` | `int` | `1`, `10`, `11` | structural | NI: with IS the key, ConnectivityNode sub_s<IS>_n<NI>; a node number twice in one block raises |
+| `bus_number` | `int` | `100`, `37`, `49` | structural | I: TopologicalNode = I (bare), BaseVoltage = bus I's; a bus with nodes in two blocks raises |
+| `name` | `Optional[str]` | `GLEN L_100_1`, `GLEN L_100_10`, `GLEN L_100_11` | copied | `ConnectivityNode.name`; NAME; blank: <IS>_<NI> |
+| `status` | `Optional[int]` | `1`, `0` | untranscribed | STATUS: a ConnectivityNode has no in-service flag (CIM 18 gap); 0 is listed on the row |
+| `vm` | `Optional[float]` | `1.02` | untranscribed | VM (pu): SvVoltage attaches only to a TopologicalNode (the bus's VM); a VM other than the default -1.0 (not given) is listed on the row |
+| `va` | `Optional[float]` | `-2.5` | untranscribed | VA (deg): as VM; listed when not 0.0 |
+| `substation_number` | `Optional[int]` | `100`, `37`, `49` | structural | IS: the enclosing block (filled by the reader); ConnectivityNodeContainer = sub_s<IS> |
+
+STATUS has no home (a `ConnectivityNode` has no in-service flag). IEEE118's transfer bus is out of service:
+
+```
+# untranscribed: status, vm, va
+Table ConnectivityNode: mRID, name, TopologicalNode, BaseVoltage, ConnectivityNodeContainer
+    ...
+    sub_s100_n1,  GLEN L_100_1,  100, bv_138kv, sub_s100
+    # untranscribed: status=0
+    sub_s100_n2,  GLEN L_100_2,  100, bv_138kv, sub_s100
+```
+
+### Substation switching devices
+
+Each record becomes a `Switch`, `Breaker` or `Disconnector` by TYPE, with the system switching device's code tables
+(`switch.SWITCH_CLASS`, `switch.OPEN`), `node1`/`node2` on its nodes and `bus1`/`bus2` on their buses, in
+`sub_s<IS>`. A device whose nodes' buses are in two AREAs raises (a tie inside a substation: no case). The R5 area
+trace spreads across these devices like any same-area device; one between two nodes of one bus joins nothing.
+
+| StationSwitchingDeviceRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `from_node` | `int` | `1`, `2`, `3` | structural | NI: node1 = sub_s<IS>_n<NI>, bus1 = that node's bus; BaseVoltage = its bus's |
+| `to_node` | `int` | `10`, `11`, `12` | structural | NJ: node2, bus2; NI = NJ raises |
+| `device_type` | `int` | `2`, `3`, `1` | mapped | TYPE: the class, as a system switching device's STYPE: 1 Switch (generic connector), 2 Breaker, 3 Disconnector; another code raises |
+| `circuit` | `Optional[str]` | `1` | structural | CKT: with IS, NI and NJ the key, mRID sw_s<IS>_<NI>_<NJ>_<CKT>; blank: 1 (defaulted) |
+| `name` | `Optional[str]` | `SHUNT BREAKER OPEN`, `GEN BREAKER`, `LINE DISCONNECT` | copied | `Switch.name`, `Breaker.name`, `Disconnector.name`; NAME; blank: the key <IS>_<NI>_<NJ>_<CKT> |
+| `status` | `Optional[int]` | `1`, `0` | mapped | STATUS: open = (STATUS == 0); blank: 1 (defaulted) |
+| `normal_status` | `Optional[int]` | `1`, `0` | mapped | NSTAT: normalOpen = (NSTAT == 0); blank: 1 (defaulted) |
+| `reactance` | `Optional[float]` | `0.0001` | untranscribed | X: as a system switching device's (a Switch has no impedance); the exporter writes the default 0.0001 back |
+| `rate1` | `Optional[float]` | `0.0`, `250.0` | structural | RATE1..RATE3: as a system switching device's ratings (RatingRows, units by NXFRAT), the set sw_s<key>_ratings on terminal 1; zero is no limit |
+| `rate2` | `Optional[float]` | `0.0` | structural | RATE2: as RATE1 |
+| `rate3` | `Optional[float]` | `0.0` | structural | RATE3: as RATE1 |
+| `substation_number` | `Optional[int]` | `100`, `37`, `49` | structural | IS: EquipmentContainer = sub_s<IS> |
+
+```
+# untranscribed: reactance
+Table Breaker: mRID, name, node1, node2, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    ...
+    sw_s100_1_2_1,  100_1_2_1,  sub_s100_n1, sub_s100_n2,  100, 100, true,  true,  bv_138kv, sub_s100
+
+Table Disconnector: mRID, name, node1, node2, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_s100_2_3_1,  100_2_3_1,  sub_s100_n2, sub_s100_n3,  100, 100, true, true, bv_138kv, sub_s100
+    ...
+```
+
+### Regulated nodes (RAW-11: NREG, NOD1..NOD3)
+
+A nonzero generator NREG, switched-shunt NREG or transformer NODk names node NI of the regulated bus (IREG / SWREG /
+CONTk, or the device's own bus when IREG or SWREG is 0). The control's `Terminal` is `bb_s<IS>_n<NI>_T1`
+(`NodeBreaker.regulated_terminal`), the terminal of a `BusbarSection` `bb_s<IS>_n<NI>` on that node (`node` +
+`bus`, in `sub_s<IS>`, named the node's NAME). `substation.cimtbl` writes one such busbar per node some control
+names (`regulated_nodes` of the three mappers), and no others. The bus's own `bb_<I>` stays as it is, on the bus
+only, holding the limits and any bus-level regulation. NREG is a plant quantity: a plant's records must agree on it.
+**Raises:** the regulated bus has no block, the block has no node NI of that bus, or NODk ≠ 0 with CONTk = 0.
+
+**Which nodes are busbars** (user, 2026-11-09: none inferred). In IEEE118's four PSS/E-generated layouts the
+busbars are exactly the nodes with no equipment terminal (double bus double breaker 8: nodes 1, 2; breaker and a
+half 49: 1, 2; main and transfer 100: 1, 2; ring 37: none), each joined to 5-11 devices. That rule fails on a bay's
+internal node (a breaker between two disconnectors leaves a terminal-free node too), and the two-bus atom's block 2
+has two terminal-free nodes on one breaker each; a degree threshold misses block 1's two-feeder busbars (degree 2).
+
+```
+# one per node a control regulates (NREG, NODk; RAW-11); RAW does not say which nodes are busbars
+Table BusbarSection: mRID, name, node, bus, BaseVoltage, EquipmentContainer
+    bb_s10_n1,  HV BUS, sub_s10_n1,  1, bv_230kv, sub_s10
+    bb_s10_n11, LV BUS, sub_s10_n11, 2, bv_115kv, sub_s10
+```
+
+### Equipment terminals
+
+Each record puts the equipment's terminal at bus I on node `sub_s<IS>_n<NI>`, as an `Update Table Terminal: mRID,
+ConnectivityNode` row in `equipment_terminal.cimtbl`, in (IS, NI) order. The node's bus must be I, and its block
+IS. The equipment is matched against the mRIDs the earlier artifacts wrote (`written_equipment`), so the mapper
+derives no mRID rule of its own: equipment that no mapper wrote, a key that matches two, and a Terminal placed twice
+raise. A terminal with no record stays on its bus only.
+
+**NI = 0** is the format's "bus I has no node-breaker model": the record writes no row, and the table comment counts
+such records. NI = 0 at a bus that has nodes raises, as does a nonzero NI at a bus that has none.
+
+| TYP | equipment (key) | Terminal(s) updated |
+|---|---|---|
+| `L` | load (I, ID) | `ld_<I>_<ID>_T1` |
+| `F` | fixed shunt (I, ID) | `cap_<I>_<ID>_T1` |
+| `M` | generator (I, ID) | `sm_<I>_<ID>_T1` (WMOD 0) or `pec_<I>_<ID>_T1` (WMOD 1) |
+| `B` or `2` (one form) | a branch or a 2-winding transformer (I, J, CKT) | a branch: `ln_` / `sc_<key>_T1` when I is its from bus, `_T2` when its to bus, and that end's line shunt `cap_<key>_i` / `_j` on the same node (RAW-13: a node-breaker model says "switched with its line" by placement); a transformer: `xf_<key>_T1` or `_T2`, by which winding I is |
+| `3` | 3-winding transformer (I, J, K, CKT) | `xf_<key>_T<k>`, the winding at I; the buses in any order |
+| `S` | switched shunt (I; no ID in v34) | every block's `swsh_<I>_b<k>_T1` |
+| `I`, `D`, `V`, `N`, `A` | phase-2 equipment | raise (phase 2) |
+
+The key is matched in either bus order: I is the end at this record, so the record at a branch's to bus lists it
+first (IEEE118's `ln_9_8_1_T2` at block 8, the two-bus atom's SUB_2). A system switching device is no
+terminal-record form: a `B` key that matches only one raises, and the switch stays on its buses.
+
+| EquipmentTerminalRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `bus_number` | `int` | `100`, `37`, `49` | structural | I: which terminal of the equipment; node NI's bus must be I |
+| `node_number` | `int` | `3`, `4`, `5` | structural | NI: the Terminal's ConnectivityNode sub_s<IS>_n<NI> (an Update row); 0: bus I has no node-breaker model, no row |
+| `terminal_type` | `str` | `B`, `L`, `M` | structural | TYP: the equipment form, L F M B/2 3 S; B and 2 are one form (a branch or a two-winding transformer); I D V N A raise (phase 2) |
+| `j_bus` | `Optional[int]` | `101`, `103`, `104` | structural | J: the other end of a B / 2 / 3 key, in either order |
+| `k_bus` | `Optional[int]` | `4`, `1`, `2` | structural | K: the third winding of a 3 key |
+| `identifier` | `Optional[str]` | `1`, `2`, `T` | structural | ID / CKT: the rest of the key; blank: 1 for L F M I B 2 3 (defaulted) |
+| `substation_number` | `Optional[int]` | `100`, `37`, `49` | structural | IS: the block whose node NI is meant (filled by the reader) |
+
+```
+# each named equipment terminal on its node; 1 record with NI 0 (no node-breaker model) places nothing
+Update Table Terminal: mRID, ConnectivityNode
+    sm_1_G_T1,      sub_s10_n2
+    pec_1_PV_T1,    sub_s10_n2
+    ln_1_3_A_T1,    sub_s10_n3
+    cap_1_3_A_i_T1, sub_s10_n3
+    ...
+```
+
+### Cases and atoms
+
+- **`two_bus_node_breaker.raw`** (PSS/E-built, committed in R0): `sub_s1`, `sub_s2`; 8 nodes; 7 breakers; the four
+  line ends on nodes 3 and 4 of each block (`ln_1_2_1_T1` on `sub_s1_n3`, `ln_1_2_1_T2` on `sub_s2_n3`, ...).
+- **IEEE118** (PSS/E-written; the whole case mapped before R6 apart from its SUBSTATION data):
+  - block 8 (OLIVE 345 kV, double bus double breaker): 7 nodes, 10 breakers; terminals `L`, `M`, two `B`, and a
+    `2` to bus 5, which the transformer merges into `sub_s8`;
+  - block 37 (EASTLI 138 kV, ring): 7 nodes, 7 breakers; `S`, five `B`, and a `2` to bus 38 (merged into
+    `sub_s37`);
+  - block 49 (PHILO 138 kV, breaker and a half): 16 nodes, 21 breakers; `L`, `M`, twelve `B` (two pairs of
+    parallel lines);
+  - block 100 (GLEN L 138 kV, main and transfer): 12 nodes, 11 breakers (1-2 open, normally open) and 10 open
+    disconnectors to the out-of-service transfer bus (node 2, STATUS 0); `L`, `M`, eight `B`.
+
+  No NREG, NODk, `F` or `3`; every block at 0, 0. 36 terminals placed, 42 nodes, 108 substations.
+- **`node_breaker_forms.raw`** (hand-built, its content in the folder's README): one block 10 at 46.2 N, 119.1 W
+  holding buses 1 (230 kV) and 2 (115 kV), every TYPE, open and normally-open devices, a rated device, an unnamed
+  node with VM/VA; terminal records for `L`, `F`, `M` (WMOD 0 and 1), `B` (a line with its line shunt), `2` (a
+  transformer, and a line written as `2`), `3` (once with its buses reordered), `S`, and one with NI = 0 at the free
+  bus 4, which the 3-winding transformer merges into `sub_s10`; a generator NREG, a switched-shunt NREG and a
+  transformer NOD1 (two controls on one node, so one busbar each for nodes 1 and 11).
+
+  Raise tests on it: a bus in two blocks, two blocks in one substation, a block across zones, NI = NJ, a device
+  node outside its block, a terminal on another bus's node, unknown equipment, a Terminal placed twice, NI 0 at a
+  bus with nodes, a phase-2 and an unknown TYP, a `B` record naming a system switching device, an NREG with no node,
+  NOD1 with CONT1 0.
+
+**Exit (met 2026-11-09; 216 tests):**
+- IEEE118 and both atoms bind; every placed Terminal's `ConnectivityNode.TopologicalNode` is its own
+  `TopologicalNode`, and every node is in its bus's substation;
+- the master lists nothing as not mapped for any of them;
+- IEEE14 and WECC240 output is unchanged (their goldens and counts pass as before);
+- NREG / NODk no longer raise, except as above;
+- IEEE118 and the forms atom read → write → read losslessly.
+
+### Expected export differences
+
+SGR comes back as the default 0.1; a node's STATUS 0 as 1, and its VM/VA as the defaults (-1.0, 0.0); a terminal
+record with NI = 0 is not written back (it places nothing); a `B`/`2` record comes back as `2` for a transformer and
+`B` for a branch; a substation switching device's X as 0.0001; a block at 0, 0 as 0, 0. A free bus merged into a
+block's substation (by a transformer) stays outside the block's node data, as it was.
+
 ## Owner
 
 
@@ -1302,13 +1558,17 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
 | the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET; transformer NMETR (R4) | on a tie, recorded by its TieFlows' terminal (R5); elsewhere, and multi-section line MET, untranscribed |
 | a scheduled transfer between two control areas (R5; cim17v40's `InterchangeSchedule` is gone, `TieCorridor` has no schedule) | inter-area transfer ARFROM, ARTO, TRID, PTRAN | listed on the `ControlArea` table comment |
-| a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
+| a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only; in a node-breaker substation it sits on its line end's node (R6) |
+| a node's in-service status (R6; a `ConnectivityNode` has no `inService`) | substation node STATUS | 0 listed on the node row (`untranscribed: status=0`) |
+| a substation's DC grounding resistance, for GIC studies (R6) | substation SGR | untranscribed |
+| a solved voltage per node of a split bus (R6; `SvVoltage` attaches only to a `TopologicalNode`) | substation node VM, VA | listed on the node row when given |
 | a shunt's or converter's share of a coordinated voltage control (R2, R3) | switched shunt RMPCT; generator RMPCT on WMOD 1 | untranscribed |
 | the kind of a renewable bus-branch generator: PV, wind, or an induction machine (R3) | generator WMOD 1 | a `PowerElectronicsConnection` + `PowerElectronicsUnit` (no kind) |
 | a machine's positive-sequence reactance: TODO, a profile extension (R3) | generator ZX | untranscribed |
 
 Not gaps: a bus's voltage limits and its regulation sit on its `BusbarSection`'s terminal. CIM puts limits and
-regulating controls on terminals by design (RAW-11, RAW-19).
+regulating controls on terminals by design (RAW-11, RAW-19). RAW not saying which nodes are busbars is a gap in
+RAW, not CIM: R6 adds a `BusbarSection` only where a control regulates a node.
 
 ## Decisions this spec applies
 
@@ -1334,6 +1594,10 @@ regulating controls on terminals by design (RAW-11, RAW-19).
 - **R5** (user, 2026-11-08): RAW-2's open part (a bus's AREA traced on export from generating units and tie flows;
   no profile extension); tie flows as a pair on each tie's metered terminal; inter-area transfers listed
   untranscribed (no profile class); netInterchange = -PDES.
+- **R6** (user, 2026-11-09): RAW-16 (a mixed model loads through cimtables as it is: `node1` + `bus1`, and
+  `Update` rows on Terminals); a SUBSTATION block's substation takes precedence over the §3.2 merge; LATI = LONG = 0
+  writes no Location; a `BusbarSection` only on a node a control regulates (RAW-11), none inferred from the layout;
+  node STATUS 0 listed on its row; `B` and `2` one terminal form, as the format document has it.
 
 ## Reference model and expected differences
 
@@ -1349,3 +1613,7 @@ Expected export differences from R5:
 - MET, METERED and NMETR of a device inside one area come back as their defaults (1, 1, 2);
 - a bus the trace cannot reach (listed `untranscribed: area=`) needs the exporter's rule (slice E);
 - inter-area transfers and ISW are lost.
+
+Expected export differences from R6: SGR comes back as 0.1; a node's STATUS 0 as 1 and its VM/VA as the defaults;
+an equipment terminal record with NI = 0 is not written back; a `B`/`2` record comes back as `2` for a transformer
+and `B` for a branch; a substation switching device's X as 0.0001.

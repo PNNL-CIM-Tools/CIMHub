@@ -1,0 +1,44 @@
+# PSS/E RAW Equipment terminal data -> each named Terminal on its ConnectivityNode (Update rows).
+# Source table: Equipment terminal (records: 36)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#equipment-terminals
+
+Profile = cim18v17
+
+# each named equipment terminal on its node
+Update Table Terminal: mRID, ConnectivityNode
+    ln_9_8_1_T2,     sub_s8_n3
+    ln_8_30_1_T1,    sub_s8_n4
+    xf_8_5_0_1_T1,   sub_s8_n5
+    ld_8_1_T1,       sub_s8_n6
+    sm_8_1_T1,       sub_s8_n7
+    ln_37_39_1_T1,   sub_s37_n1
+    ln_37_40_1_T1,   sub_s37_n2
+    xf_38_37_0_1_T2, sub_s37_n3
+    ln_37_33_1_T1,   sub_s37_n4
+    ln_37_34_1_T1,   sub_s37_n5
+    ln_37_35_1_T1,   sub_s37_n6
+    swsh_37_b1_T1,   sub_s37_n7
+    ln_49_50_1_T1,   sub_s49_n3
+    ln_51_49_1_T2,   sub_s49_n4
+    ln_49_54_1_T1,   sub_s49_n5
+    ln_49_54_2_T1,   sub_s49_n6
+    ln_66_49_1_T2,   sub_s49_n7
+    ln_66_49_2_T2,   sub_s49_n8
+    ln_49_69_1_T1,   sub_s49_n9
+    ln_42_49_1_T2,   sub_s49_n10
+    ln_42_49_2_T2,   sub_s49_n11
+    ln_45_49_1_T2,   sub_s49_n12
+    ln_47_49_1_T2,   sub_s49_n13
+    ln_49_48_1_T1,   sub_s49_n14
+    ld_49_1_T1,      sub_s49_n15
+    sm_49_1_T1,      sub_s49_n16
+    ln_100_101_1_T1, sub_s100_n3
+    ln_103_100_1_T2, sub_s100_n4
+    ln_100_104_1_T1, sub_s100_n5
+    ln_106_100_1_T2, sub_s100_n6
+    ln_100_92_1_T1,  sub_s100_n7
+    ln_100_94_1_T1,  sub_s100_n8
+    ln_98_100_1_T2,  sub_s100_n9
+    ln_100_99_1_T1,  sub_s100_n10
+    ld_100_1_T1,     sub_s100_n11
+    sm_100_1_T1,     sub_s100_n12

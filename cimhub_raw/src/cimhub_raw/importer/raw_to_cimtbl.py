@@ -1,4 +1,5 @@
-"""PSS/E RAW v34 -> ``.cimtbl`` documents -> cim18v17 (``BusBranchModel``).
+"""PSS/E RAW v34 -> ``.cimtbl`` documents -> cim18v17 (``BusBranchModel``; a SUBSTATION block's buses also get
+``ConnectivityNode``s, R6).
 
 Usage::
 
@@ -24,6 +25,7 @@ from cimhub_raw.importer.cimtbl import (
     branch,
     bus,
     case_identification,
+    equipment_terminal,
     facts_device,
     fixed_shunt,
     generator,
@@ -35,6 +37,7 @@ from cimhub_raw.importer.cimtbl import (
     multi_section_line,
     multi_terminal_dc,
     owner,
+    substation,
     switch,
     switched_shunt,
     transformer,
@@ -43,6 +46,7 @@ from cimhub_raw.importer.cimtbl import (
     zone,
 )
 from cimhub_raw.importer.cimtbl.ratings import rating_type_table
+from cimhub_raw.importer.node_breaker import NodeBreaker
 from cimhub_raw.importer.topology import substation_groups, untraced_area_buses
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -51,7 +55,7 @@ AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
 
 class Site:
     """What the orchestrator computes once and hands to the mappers: case values, region, bus zones, areas, types and
-    base voltages, and substations."""
+    base voltages, the SUBSTATION blocks, and substations."""
 
     def __init__(self, native, name: str):
         self.values = case_identification.case_values(native)
@@ -61,18 +65,30 @@ class Site:
         self.base_kv = {record.bus_number: record.base_voltage for record in buses}
         self.areas = {record.bus_number: int(record.area) for record in buses}
         self.bus_types = {record.bus_number: record.bus_type for record in buses}
-        self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold)
+        self.node_breaker = NodeBreaker(native, self.base_kv)
+        self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold,
+                                             self.node_breaker.block_of_bus)
         self.substation_of = bus.substation_of(self.substations)
-        self.untraced = untraced_area_buses(native, self.areas)
+        node_bus = {key: node.bus_number for key, node in self.node_breaker.nodes.items()}
+        self.untraced = untraced_area_buses(native, self.areas, node_bus)
+
+
+def _regulated_nodes(native) -> list[tuple[int, int, str]]:
+    """Every control that regulates a substation node (NREG, NODk): its busbar is in ``substation.cimtbl``."""
+    return generator.regulated_nodes(native) + switched_shunt.regulated_nodes(native) + \
+        transformer.regulated_nodes(native)
 
 
 #: ``(native class, mapper(native, site))`` in ``Import`` order. The phase-2 stubs return an empty document, or
-#: raise when their table has records (plan 4.2).
+#: raise when their table has records (plan 4.2). ``equipment_terminal.cimtbl`` follows them all (R6).
 MAPPING_ORDER = (
     (zone.NATIVE_CLASS, lambda native, site: zone.map_zone(native, site.region)),
     (area_interchange.NATIVE_CLASS, lambda native, site: area_interchange.map_area_interchange(native)),
     (bus.NATIVE_CLASS, lambda native, site: bus.map_bus(native, site.substations,
                                                         site.values.zero_impedance_threshold, site.untraced)),
+    (substation.NATIVE_CLASS, lambda native, site: substation.map_substation(
+        native, site.node_breaker, site.base_kv, site.areas, site.values.branch_ratings_in_current,
+        _regulated_nodes(native))),
     (branch.NATIVE_CLASS, lambda native, site: branch.map_branch(native, site.substation_of, site.base_kv, site.areas,
                                                                  site.values.branch_ratings_in_current)),
     (switch.NATIVE_CLASS, lambda native, site: switch.map_switch(native, site.substation_of, site.base_kv, site.areas,
@@ -84,11 +100,11 @@ MAPPING_ORDER = (
     (fixed_shunt.NATIVE_CLASS, lambda native, site: fixed_shunt.map_fixed_shunt(native, site.substation_of,
                                                                                 site.base_kv, site.values.base_mva)),
     (switched_shunt.NATIVE_CLASS, lambda native, site: switched_shunt.map_switched_shunt(
-        native, site.substation_of, site.base_kv, site.values.base_mva)),
+        native, site.substation_of, site.base_kv, site.node_breaker, site.values.base_mva)),
     (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
-        native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.values.base_mva)),
+        native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.node_breaker, site.values.base_mva)),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(
-        native, site.substation_of, site.base_kv, site.areas, site.values.base_mva,
+        native, site.substation_of, site.base_kv, site.areas, site.node_breaker, site.values.base_mva,
         site.values.transformer_ratings_in_current)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
@@ -99,9 +115,10 @@ MAPPING_ORDER = (
     (induction_machine.NATIVE_CLASS, lambda native, site: induction_machine.map_induction_machine(native)),
 )
 
-#: Classes the master reads, or that have no artifact by design (Owner: CIM 18 gap; inter-area transfers, listed on
-#: the ControlArea table: CIM 18 gap).
-_HANDLED = {case_identification.NATIVE_CLASS, owner.NATIVE_CLASS, interarea_transfer.NATIVE_CLASS} | \
+#: Classes the master reads, that have no artifact by design (Owner: CIM 18 gap; inter-area transfers, listed on
+#: the ControlArea table: CIM 18 gap), or that share another's artifact (the SUBSTATION section's records).
+_HANDLED = {case_identification.NATIVE_CLASS, owner.NATIVE_CLASS, interarea_transfer.NATIVE_CLASS,
+            substation.NODE_CLASS, substation.DEVICE_CLASS, equipment_terminal.NATIVE_CLASS} | \
     {cls for cls, _ in MAPPING_ORDER}
 
 #: The voltage-limit types of the busbars' limit sets: direction high/low x durationKind normal/emergency (RAW-19).
@@ -177,6 +194,9 @@ class RawImporter(CimtblImporter):
     def to_cimtbl(self, model) -> DocumentSet:
         site = Site(model, self.name)
         parts = [part for part in (mapper(model, site) for _, mapper in MAPPING_ORDER) if part.statements]
+        terminals = equipment_terminal.map_equipment_terminal(model, site.node_breaker, parts)
+        if terminals.statements:
+            parts.append(terminals)
         return DocumentSet(master=map_master(model, parts, site, name=self.name, authority=self.authority),
                            parts=parts)
 

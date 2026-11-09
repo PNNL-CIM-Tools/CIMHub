@@ -20,6 +20,7 @@ from cimhub_raw.importer.topology import SubstationGroup
 NATIVE_CLASS = schema.BusRecord
 BUSBAR_PREFIX = "bb_"  # requested from the cimtbl-translate table owners (plan C3)
 SUBSTATION_PREFIX = "sub_"
+BLOCK_PREFIX = "sub_s"  # a SUBSTATION block's substation (R6; plan C3)
 
 _LIMIT = "(pu): home VoltageLimit bb_<I>_{code} on the BusbarSection terminal's set bb_<I>_limits (RAW-19); " \
          "normalValue (kV) = pu x BASKV (kv_from_per_unit)"
@@ -68,8 +69,13 @@ def busbar_mrid(bus_number: int) -> str:
     return mrid(BUSBAR_PREFIX, bus_number)
 
 
+def block_mrid(block: int) -> str:
+    return mrid(BLOCK_PREFIX, block)
+
+
 def substation_mrid(group: SubstationGroup) -> str:
-    return mrid(SUBSTATION_PREFIX, group.buses[0])
+    """``sub_s<IS>`` for a group holding a SUBSTATION block (R6), else ``sub_<lowest bus>``."""
+    return block_mrid(group.block) if group.block is not None else mrid(SUBSTATION_PREFIX, group.buses[0])
 
 
 def substation_of(groups: list[SubstationGroup]) -> dict[int, str]:
@@ -109,19 +115,26 @@ def map_bus(native, groups: list[SubstationGroup], threshold: float, untraced: s
     by_number = {bus.bus_number: bus for bus, _ in buses}
     substations_by_bus = substation_of(groups)
 
+    blocks = {record.substation_number: record for record in native.list_by_class(schema.SubstationRecord)}
     substation_rows = []
     for group in groups:
         first = by_number[group.buses[0]]
-        note = None
-        if len(group.buses) > 1:
-            note = f"buses {', '.join(map(str, group.buses))}; {', '.join(group.merged_by)}"
-        substation_rows.append(Row([substation_mrid(group), cell(first.name or str(first.bus_number)),
-                                    zone_mrid(first.zone)], comment=note))
+        listed = ", ".join(map(str, group.buses))
+        notes = [f"SUBSTATION block {group.block}: bus{'es' if len(group.buses) > 1 else ''} {listed}"
+                 if group.block is not None
+                 else f"buses {listed}" if len(group.buses) > 1 else None,
+                 ", ".join(group.merged_by) or None]
+        name = (blocks[group.block].name or str(group.block)) if group.block is not None \
+            else first.name or str(first.bus_number)
+        substation_rows.append(Row([substation_mrid(group), cell(name), zone_mrid(first.zone)],
+                                   comment="; ".join(filter(None, notes)) or None))
+    from_blocks = sum(group.block is not None for group in groups)
+    precedence = f", {from_blocks} from SUBSTATION blocks (R6)" if from_blocks else ""
     substations = Table("Substation", [Column("mRID"), Column("name"), Column("Region")], substation_rows,
                         comment=textwrap.fill(f"synthesized: substations, buses merged across switching devices, "
                                               f"zero-impedance branches (R = 0, |X| <= THRSHZ {cell(threshold)}), "
                                               f"series capacitors and transformers, within a zone ({len(groups)} "
-                                              f"substations)", width=116))
+                                              f"substations{precedence})", width=116))
 
     node_rows, busbar_rows, set_rows, limit_rows, voltage_rows = [], [], [], [], []
     for bus, defaulted in buses:

@@ -13,9 +13,9 @@ from cimtopology.core.voltage import base_voltage_mrid
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
 from cimhub_raw.importer.cimtbl.area_interchange import area_mrid, control_area_numbers
-from cimhub_raw.importer.cimtbl.bus import busbar_mrid
 from cimhub_raw.importer.cimtbl.derived import generation_p_q, ohms_from_per_unit, volts_from_per_unit
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.node_breaker import NodeBreaker
 
 NATIVE_CLASS = schema.GeneratorRecord
 #: prefixes requested from the cimtbl-translate table owners (plan C3)
@@ -57,7 +57,8 @@ FIELDS = {
     "regulated_voltage_setpoint": Field("derived", note=f"VS (pu): targetValue = VS x the regulated bus's BASKV, in V "
                                                         f"(volts_from_per_unit); {_PLANT}; blank: 1.0 (defaulted)"),
     "regulated_bus_number": Field("structural", note=f"IREG: the plant control's Terminal bb_<IREG>_T1, or "
-                                                     f"bb_<I>_T1 when 0 (RAW-11); a remote IREG from a swing bus "
+                                                     f"bb_<I>_T1 when 0 (RAW-11), or the NREG node's busbar; a "
+                                                     f"remote IREG from a swing bus "
                                                      f"raises; {_PLANT}; blank: 0 (defaulted)"),
     "rated_mva": Field("copied", (("SynchronousMachine", "ratedS", "MVA"),
                                   ("PowerElectronicsConnection", "ratedS", "MVA")),
@@ -85,8 +86,9 @@ FIELDS = {
                                  "renewable with QT/QB limits a PowerElectronicsConnection + PowerElectronicsUnit; 2, "
                                  "3 and 4 raise until a case has one; blank: 0 (defaulted)"),
     "wpf": Field("untranscribed", note="WPF: used only by WMOD 2 and 3, which raise"),
-    "nreg": Field("structural", note="NREG: a node of bus IREG; nonzero raises until R6 (node-breaker); blank: 0 "
-                                     "(defaulted)"),
+    "nreg": Field("structural", note=f"NREG: a node of bus IREG; nonzero: the plant control's Terminal is that "
+                                     f"node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); {_PLANT}; blank: 0 "
+                                     f"(defaulted)"),
 }
 
 _PROVENANCE = """PSS/E RAW Generator -> RegulatingControl per plant (bus I); SynchronousMachine + GeneratingUnit (WMOD 0)
@@ -102,14 +104,18 @@ def _check_record(generator, record_id: str) -> None:
     if generator.rt or generator.xt:
         raise NotImplementedError(f"{record_id}: RT + jXT = {generator.rt} + j{generator.xt}, an implicit step-up "
                                   "transformer (RAW-25: no case has one yet)")
-    if generator.nreg:
-        raise NotImplementedError(f"{record_id}: NREG {generator.nreg} names a node in a substation (R6)")
 
 
-def _plant_key(generator) -> tuple[int, float, float]:
-    """(regulated bus, VS, RMPCT): what every record of one plant must share."""
-    return generator.regulated_bus_number or generator.bus_number, generator.regulated_voltage_setpoint, \
-        generator.rmpct
+def _plant_key(generator) -> tuple[int, int, float, float]:
+    """(regulated bus, NREG, VS, RMPCT): what every record of one plant must share."""
+    return generator.regulated_bus_number or generator.bus_number, generator.nreg, \
+        generator.regulated_voltage_setpoint, generator.rmpct
+
+
+def regulated_nodes(native) -> list[tuple[int, int, str]]:
+    """``(regulated bus, NREG, record id)`` of every generator whose control regulates a node (R6)."""
+    return [(generator.regulated_bus_number or generator.bus_number, generator.nreg, f"generator {generator.ID}")
+            for generator in native.list_by_class(NATIVE_CLASS) if generator.nreg]
 
 
 def _plants(records, defaults: dict) -> dict[int, list[tuple[object, str | None]]]:
@@ -121,14 +127,15 @@ def _plants(records, defaults: dict) -> dict[int, list[tuple[object, str | None]
         members = plants.setdefault(generator.bus_number, [])
         if members and _plant_key(members[0][0]) != _plant_key(generator):
             raise ValueError(f"plant {generator.bus_number}: generators {members[0][0].ID} and {generator.ID} "
-                             f"disagree on (IREG, VS, RMPCT): {_plant_key(members[0][0])} vs "
+                             f"disagree on (IREG, NREG, VS, RMPCT): {_plant_key(members[0][0])} vs "
                              f"{_plant_key(generator)}; PSS/E treats them as plant quantities")
         members.append((generator, defaulted))
     return plants
 
 
 def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
-                  bus_area: dict[int, int], bus_type: dict[int, int], base_mva: float) -> Document:
+                  bus_area: dict[int, int], bus_type: dict[int, int], node_breaker: NodeBreaker,
+                  base_mva: float) -> Document:
     records = sorted(native.list_by_class(NATIVE_CLASS), key=lambda generator: (generator.bus_number,
                                                                                str(generator.gen_id)))
     if not records:
@@ -140,7 +147,7 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
     converter_rows, converter_unit_rows, converter_area_rows = [], [], []
     for bus, members in plants.items():
         plant_id = f"plant {bus}"
-        regulated, setpoint, _ = _plant_key(members[0][0])
+        regulated, node, setpoint, _ = _plant_key(members[0][0])
         if regulated not in base_kv_of:
             raise ValueError(f"{plant_id}: IREG {regulated} is no bus")
         swing = bus_type[bus] == SWING
@@ -158,7 +165,7 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
         enabled = cell(bus_type[bus] in REGULATING_BUS_TYPES)
         control_rows.append(Row([control, str(bus), "voltage", "false", enabled,
                                  cell(volts_from_per_unit(setpoint, base_kv_of[regulated])),
-                                 f"{busbar_mrid(regulated)}_T1"]))
+                                 node_breaker.regulated_terminal(regulated, node, plant_id)]))
 
         kv, container, area = base_kv_of[bus], substations_by_bus[bus], area_mrid(bus_area[bus])
         for generator, defaulted in members:
