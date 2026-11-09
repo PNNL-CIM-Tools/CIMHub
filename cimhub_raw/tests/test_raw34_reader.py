@@ -85,7 +85,7 @@ def test_reads_every_record(case, counts):
 
 ATOMS = Path(__file__).parent / "atoms"
 #: the hand-built atoms of R1 and R2 (the substation atom is NODE_BREAKER)
-SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer") for path in (ATOMS / folder).glob("*.raw"))
+SLICE_ATOMS = sorted(path for folder in ("branch", "load", "shunt", "generator", "transformer", "area") for path in (ATOMS / folder).glob("*.raw"))
 
 
 @pytest.mark.parametrize("case", [IEEE14, WECC240, NODE_BREAKER, *SLICE_ATOMS],

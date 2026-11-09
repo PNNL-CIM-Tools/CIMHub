@@ -54,19 +54,52 @@ def _merge_edges(native, threshold: float) -> list[tuple[str, int, int]]:
     return edges
 
 
-def substation_groups(native, zones: dict[int, int], threshold: float) -> list[SubstationGroup]:
-    """The case's substations, ordered by their lowest bus number."""
-    edges = [edge for edge in _merge_edges(native, threshold) if zones[edge[1]] == zones[edge[2]]]
+def _islands(buses, edges: list[tuple[str, int, int]]) -> list[list[int]]:
+    """The bus groups joined by ``edges``, each in ascending order; a bus on no edge is its own group."""
     # cimtopology wants unique equipment names; a 3-winding transformer gives two edges
-    network = Network(sources=(), transformers=(), nodes=tuple(str(bus) for bus in sorted(zones)),
+    network = Network(sources=(), transformers=(), nodes=tuple(str(bus) for bus in sorted(buses)),
                       branches=tuple(Branch(f"{name}#{index}", str(first), str(second))
                                      for index, (name, first, second) in enumerate(edges)))
     members: dict[str, list[int]] = {}
     for bus, root in Topology(network).islands().items():
         members.setdefault(root, []).append(int(bus))
+    return [sorted(group) for group in members.values()]
+
+
+def substation_groups(native, zones: dict[int, int], threshold: float) -> list[SubstationGroup]:
+    """The case's substations, ordered by their lowest bus number."""
+    edges = [edge for edge in _merge_edges(native, threshold) if zones[edge[1]] == zones[edge[2]]]
     groups = []
-    for buses in members.values():
+    for buses in _islands(zones, edges):
         inside = set(buses)
         merged_by = sorted({name for name, first, _ in edges if first in inside})
-        groups.append(SubstationGroup(tuple(sorted(buses)), tuple(merged_by)))
+        groups.append(SubstationGroup(tuple(buses), tuple(merged_by)))
     return sorted(groups, key=lambda group: group.buses[0])
+
+
+def _devices(native) -> list[tuple[str, tuple[int, ...]]]:
+    """``(record ID, its terminals' buses)`` of every branch, switching device and transformer."""
+    devices = [(switch.ID, (switch.from_bus_number, switch.to_bus_number))
+               for switch in native.list_by_class(schema.SwitchRecord)]
+    devices += [(branch.ID, (branch.from_bus_number, branch.to_bus_number))
+                for branch in native.list_by_class(schema.BranchRecord)]
+    devices += [(transformer.ID, (transformer.i, transformer.j) + ((transformer.k,) if transformer.k else ()))
+                for transformer in native.list_by_class(schema.TransformerRecord)]
+    return devices
+
+
+def untraced_area_buses(native, bus_area: dict[int, int]) -> set[int]:
+    """The buses whose AREA the export trace cannot recover (R5, RAW-2).
+
+    The trace seeds a generator's bus and every bus of a tie (a device whose buses are in more than one AREA: its
+    TieFlows name them), then spreads across the devices whose buses share one AREA. A group of buses with no seed
+    is untraced. Loads are no seed: a load's AREA is its own (R2).
+    """
+    seeds = {generator.bus_number for generator in native.list_by_class(schema.GeneratorRecord)}
+    edges = []
+    for record_id, buses in _devices(native):
+        if len({bus_area[bus] for bus in buses}) > 1:
+            seeds.update(buses)
+        else:
+            edges.extend((record_id, buses[0], bus) for bus in buses[1:])
+    return {bus for group in _islands(bus_area, edges) if not seeds.intersection(group) for bus in group}

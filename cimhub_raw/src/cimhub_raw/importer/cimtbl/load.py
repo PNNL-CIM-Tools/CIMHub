@@ -11,7 +11,7 @@ from cimtopology.core.voltage import base_voltage_mrid
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
-from cimhub_raw.importer.cimtbl.area_interchange import area_mrid
+from cimhub_raw.importer.cimtbl.area_interchange import area_mrid, control_area_numbers
 from cimhub_raw.importer.cimtbl.derived import load_p_q, zip_mix
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
 
@@ -83,7 +83,7 @@ def map_load(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, f
     records = sorted(native.list_by_class(NATIVE_CLASS), key=lambda load: (load.bus_number, str(load.load_id)))
     if not records:
         return Document(name="load", statements=[], profile=CIM_PROFILE)
-    control_areas = {area.area_number for area in native.list_by_class(schema.AreaInterchangeRecord)}
+    control_areas = control_area_numbers(native)
     defaults = raw_defaults(NATIVE_CLASS)
     load_rows: dict[str, list[Row]] = {}
     zip_rows: dict[str, Row] = {}

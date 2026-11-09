@@ -5,7 +5,8 @@ limits and solved voltages; owner). R1 (branch, system switching device, multi-s
 sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. R2 (load, fixed shunt, switched
 shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. R3 (generator) approved and
 implemented 2026-11-08; atom in `tests/atoms/generator/`. R4 (transformer) approved and implemented 2026-11-08; atom in
-`tests/atoms/transformer/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+`tests/atoms/transformer/`. R5 (tie flows, a bus's AREA, inter-area transfer, the netInterchange sign) approved
+and implemented 2026-11-08; atom in `tests/atoms/area/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -25,19 +26,20 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 |---|---|---|---|---|
 | 0 | case identification + system-wide data | `<Model>.cimtbl` (master) | `common` + `line_bus_branch`'s `BasePower`: BasePower, BaseFrequency, GeographicalRegion, BaseVoltage | |
 | 1 | Zone | `zone.cimtbl` | `SubGeographicalRegion` (`srgn_<I>`) | the master |
-| 2 | Area | `area_interchange.cimtbl` | `ControlArea` (`ca_<I>`; new, C2/C3) | the master |
+| 2 | Area | `area_interchange.cimtbl` | `ControlArea` (`ca_<I>`; new, C2/C3); the inter-area transfers listed on its comment (R5) | the master |
 | 3 | Bus | `bus.cimtbl` | `line_bus_branch`: `Substation`s (synthesized, §bus), `TopologicalNode`s, one `BusbarSection` per bus | 0, 1 |
-| 4 | Branch | `branch.cimtbl` | `line_bus_branch`: `ACLineSegment` (`ln_`), `SeriesCompensator` (`sc_`, X < 0), ratings on terminals, line shunts (R1) | 3 |
-| 5 | System switching device | `switch.cimtbl` | `switch` with `bus1`/`bus2` (R1) | 3 |
+| 4 | Branch | `branch.cimtbl` | `line_bus_branch`: `ACLineSegment` (`ln_`), `SeriesCompensator` (`sc_`, X < 0), ratings on terminals, line shunts (R1), `TieFlow`s of ties (R5) | 3 |
+| 5 | System switching device | `switch.cimtbl` | `switch` with `bus1`/`bus2` (R1), `TieFlow`s of ties (R5) | 3 |
 | 6 | Multi-section line | `multi_section_line.cimtbl` | `Line` + `Update` rows on its sections (R1) | 4 |
 | 7 | Load | `load.cimtbl` | `load` with `bus`: `LoadArea` ⊃ `SubLoadArea` ⊃ load groups, ZIP `LoadResponseCharacteristic`s, `ConformLoad` / `NonConformLoad` (R2) | 2, 3 |
 | 8 | Fixed shunt | `fixed_shunt.cimtbl` | `shunt` with `bus`: `LinearShuntCompensator` (R2) | 3 |
 | 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
 | 10 | Generator | `generator.cimtbl` | `synchronous_machine` (bus-branch, new, C2) and `der` with `bus`: a `RegulatingControl` per plant; `SynchronousMachine` + `GeneratingUnit` (WMOD 0) or `PowerElectronicsConnection` + `PowerElectronicsUnit` (WMOD 1), each with its control-area membership (R3) | 2, 3 |
-| 11 | Transformer | `transformer.cimtbl` | `transformer_by_ends` with `bus` (2-winding r/x/g/b on end 1, cim18v17; C2) + the `regulator` shape's `RatioTapChanger` / `TapChangerControl`: `PowerTransformer`, an end per winding, a 3-winding unit's `TransformerMeshImpedance`s, ratings per winding (R4) | 3 |
+| 11 | Transformer | `transformer.cimtbl` | `transformer_by_ends` with `bus` (2-winding r/x/g/b on end 1, cim18v17; C2) + the `regulator` shape's `RatioTapChanger` / `TapChangerControl`: `PowerTransformer`, an end per winding, a 3-winding unit's `TransformerMeshImpedance`s, ratings per winding (R4), `TieFlow`s of ties (R5) | 3 |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Later slices append to this order: inter-area transfer (R5); substation (R6).
+Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). Later slices append to this order:
+substation (R6).
 
 ## Master
 
@@ -133,14 +135,17 @@ Table SubGeographicalRegion: mRID, name, Region=rgn_ieee14
 Mapper: `importer/cimtbl/area_interchange.py` (`map_area_interchange`). One `ControlArea` per area:
 
 ```
+# untranscribed: bus_number
+# derived: netInterchange = -PDES (net_import)
 Table ControlArea: mRID, name, netInterchange (MW), pTolerance (MW)
     ca_1, IEEE14, 0.0, 999.99
 ```
 
 - Members come from the equipment (cim18v17 profile of 2026-11-08): generating units through
   `ControlAreaGeneratingUnit` (R3), loads through `ConformLoadGroup` → `SubLoadArea` → `ControlArea` (R2), and
-  terminals of branches between areas through `TieFlow` (R5). A bus's own AREA and the slack bus ISW have no home
-  (CIM 18 gap).
+  the metered terminals of ties through `TieFlow` (R5). A bus's own AREA is traced from them on export, and the
+  slack bus ISW has no home (CIM 18 gap; [R5](#areas-tie-flows-and-inter-area-transfer-r5)).
+- netInterchange = -PDES (R5): PDES is an export, netInterchange an import.
 - `type` (`ControlAreaTypeKind`) is left unset: RAW does not say whether an area is used for AGC or for
   interchange.
 - The `ca_` prefix and a `control_area` shape are requests C2/C3. Until then this section is the shape.
@@ -149,7 +154,7 @@ Table ControlArea: mRID, name, netInterchange (MW), pTolerance (MW)
 |---|---|---|---|---|
 | `area_number` | `Union[int, AreaInterchangeRecordAreaNumber]` | `1`, `2`, `3` | structural | I: mRID = ca_ + I (prefix requested, C3); the name when ARNAME is blank |
 | `bus_number` | `Optional[int]` | `2`, `0` | untranscribed | ISW, the area slack bus: no ControlArea slack association (CIM 18 gap) |
-| `pdes` | `Optional[float]` | `0.0` | copied | `ControlArea.netInterchange` (MW); PDES; blank: 0 (defaulted) |
+| `pdes` | `Optional[float]` | `0.0` | derived | PDES (MW, the desired net export): ControlArea.netInterchange (MW, positive into the area) = -PDES (net_import, R5); blank: 0 (defaulted) |
 | `ptol` | `Optional[float]` | `999.99`, `5.0` | copied | `ControlArea.pTolerance` (MW); PTOL; blank: 10 (defaulted) |
 | `name` | `Optional[str]` | `IEEE14`, `SOUTH`, `CALIFORNIA` | copied | `ControlArea.name`; ARNAME; blank: the area number |
 
@@ -230,7 +235,7 @@ Table BusbarSection: mRID, name, bus, BaseVoltage, EquipmentContainer
 | `name` | `Optional[str]` | `BUS 1`, `BUS 10`, `BUS 11` | copied | `TopologicalNode.name`, `BusbarSection.name`; NAME; blank: the bus number |
 | `base_voltage` | `Optional[float]` | `138.0`, `500.0`, `345.0` | structural | BASKV: the node's and the busbar's BaseVoltage bv_<kv>; the master writes one BaseVoltage per distinct BASKV, nominalVoltage (kV) copied; the base of every pu voltage of the bus |
 | `bus_type` | `Optional[int]` | `3`, `1`, `2` | structural | IDE: 1 and 2 add nothing (the equipment says it); 3 (swing) is the angle reference, written with R3 (SynchronousMachine.referencePriority); 4 (isolated) is listed on the table comment |
-| `area` | `Optional[int]` | `1`, `4`, `2` | untranscribed | AREA: a node or BusbarSection has no ControlArea association (CIM 18 gap); the bus's generators, loads and tie terminals carry the area (R2, R3, R5) |
+| `area` | `Optional[int]` | `1`, `4`, `2` | untranscribed | AREA: a node or BusbarSection has no ControlArea association (CIM 18 gap); the export traces it from generating units and tie flows across devices inside one area (R5); a bus the trace cannot reach (untraced_area_buses) lists untranscribed: area=AREA on its TopologicalNode row |
 | `zone` | `Optional[int]` | `1`, `3`, `10` | structural | ZONE: the Region of the node's Substation (srgn_<zone>), and a substation boundary (plan 3.2) |
 | `owner` | `Optional[int]` | `1` | untranscribed | OWNER: ownership is an asset concept (CIM 18 gap) |
 | `voltage_magnitude` | `Optional[float]` | `1.06`, `1.05099`, `1.05691` | derived | VM (pu): SvVoltage.v (kV) = VM x BASKV (kv_from_per_unit; RAW-14) |
@@ -246,7 +251,8 @@ Mapper: `importer/cimtbl/branch.py` (`map_branch`). Shape: `line_bus_branch` (`r
 `BaseVoltage` and the master's `BasePower`). One row per branch, in key order:
 
 ```
-# untranscribed: metered_end, o1, f1, o2, f2, o3, f3, o4, f4
+# untranscribed: o1, f1, o2, f2, o3, f3, o4, f4
+# untranscribed off a tie: MET (a tie's TieFlows record it; CIM 18 gap, RAW-22)
 Table ACLineSegment: mRID, name, bus1, bus2, r (pu system), x (pu system), bch (pu system), length (km), inService, BaseVoltage, EquipmentContainer
     ln_1_2_1,   1_2_1,   1,  2,  0.01938, 0.05917, 0.0528, , true, bv_138kv,
     ...
@@ -313,7 +319,7 @@ Table SeriesCompensator: mRID, name, bus1, bus2, compensatorType, r (pu system),
 | `g_to` | `Optional[float]` | `0.0` | structural | GJ: with BJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
 | `b_to` | `Optional[float]` | `0.0` | structural | BJ: with GJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
 | `status` | `Optional[int]` | `1`, `0` | mapped | ST: inService = (ST == 1), also on the line shunts; blank: 1 (defaulted) |
-| `metered_end` | `Optional[int]` | `1`, `2` | untranscribed | MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
+| `metered_end` | `Optional[int]` | `1`, `2` | structural | MET: on a tie (I and J in two AREAs) the home end is the non-metered one (1: J, 2: I), and both TieFlows sit on the metered terminal (R5); another code on a tie raises; elsewhere untranscribed, the loss-allocation end has no CIM home (CIM 18 gap, RAW-22); blank: 1 (defaulted) |
 | `length` | `Optional[float]` | `0.0` | copied | `ACLineSegment.length` (km); LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series capacitor with LEN != 0 raises (SeriesCompensator is no Conductor) |
 | `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
 | `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
@@ -331,7 +337,8 @@ buses into one substation (§3.2), which is its container. Neither public case h
 `tests/atoms/branch/switches.raw` has one of each STYPE, one open and one normally open.
 
 ```
-# untranscribed: x, metered_end
+# untranscribed: x
+# untranscribed off a tie: METERED (a tie's TieFlows record it; CIM 18 gap, RAW-22)
 Table Switch: mRID, name, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
     sw_101_102_1, CONNECTOR, 101, 102, false, false, bv_138kv, sub_101
 
@@ -363,7 +370,7 @@ Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue
 | `ratings` | `Union[float, list[float], NoneType]` | `[200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,...`, `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...` | structural | RATE1..RATE12: as a branch's, the set sw_<key>_ratings on sw_<key>_T1 (RAW-9, RAW-20) |
 | `status` | `Optional[int]` | `1`, `0` | mapped | STATUS: open = (STATUS == 0); blank: 1 (defaulted) |
 | `nstat` | `Optional[int]` | `1`, `0` | mapped | NSTATUS: normalOpen = (NSTATUS == 0); blank: 1 (defaulted) |
-| `metered_end` | `Optional[int]` | `1`, `2` | untranscribed | METERED: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
+| `metered_end` | `Optional[int]` | `1`, `2` | structural | METERED: as a branch's MET, the TieFlows of a tie on its metered terminal (R5); elsewhere untranscribed (CIM 18 gap, RAW-22); blank: 1 (defaulted) |
 | `stype` | `Optional[int]` | `1`, `2`, `3` | mapped | STYPE: the class, 1 Switch (generic connector), 2 Breaker, 3 Disconnector; blank or another code raises (the spec gives no default) |
 | `name` | `Optional[str]` | `CONNECTOR`, `BREAKER`, `DISCONNECT` | copied | `Switch.name`, `Breaker.name`, `Disconnector.name`; NAME; blank: the key I_J_CKT |
 
@@ -816,7 +823,8 @@ plus the `regulator` shape's `RatioTapChanger` + `TapChangerControl`. The core s
 WECC240 (1001-1002: a fixed tap at ratio 1; 6103-6104: one of its two voltage controls):
 
 ```
-# untranscribed: nmetr, o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar
+# untranscribed: o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar
+# untranscribed off a tie: NMETR (a tie's TieFlows record it; CIM 18 gap, RAW-22)
 Table PowerTransformer: mRID, name, vectorGroup, inService, EquipmentContainer
     xf_1001_1002_0_1, 1001_1002_0_1, , true, sub_1001
     xf_6103_6104_0_1, 6103_6104_0_1, , true, sub_6103
@@ -954,7 +962,7 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
   (RAW-20, through `RatingRows`). They are `ApparentPowerLimit`s in MVA, or `CurrentLimit`s in kA when XFRRAT > 0
   (RAW-9; blank → MVA). WECC240 has 42 units with RATE1-3.
 - **Untranscribed:**
-  - NMETR: the metered end, a CIM 18 gap, as branch MET (RAW-22);
+  - NMETR off a tie: the non-metered end, a CIM 18 gap as branch MET (RAW-22); on a tie its TieFlows record it (R5);
   - O1..F4: ownership (CIM 18 gap);
   - ZCOD: the zero-sequence data is in the sequence file, not the RAW;
   - VMSTAR/ANSTAR: the solved voltage of the star point, which the Delta model omits;
@@ -985,7 +993,7 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
 | `cm` | `Optional[int]` | `1` | mapped | CM: the code of MAG1/MAG2 (magnetizing_siemens); the exporter writes CM 1; blank: 1 (defaulted) |
 | `mag1` | `Optional[float]` | `0.0` | derived | MAG1: end 1's g (S) (magnetizing_siemens, by CM); blank: 0 (defaulted) |
 | `mag2` | `Optional[float]` | `0.0` | derived | MAG2: end 1's b (S), negative inductive; blank: 0 (defaulted) |
-| `nmetr` | `Optional[int]` | `2` | untranscribed | NMETR: the metered end, a CIM 18 gap as branch MET (RAW-22) |
+| `nmetr` | `Optional[int]` | `2` | structural | NMETR: the non-metered (home) winding; on a tie (windings' buses in two or more AREAs) each other winding outside the home area carries both TieFlows on its terminal (R5); a code outside 1..windings on a tie raises; elsewhere untranscribed, as branch MET (CIM 18 gap, RAW-22); blank: 2 (defaulted) |
 | `name` | `Optional[str]` |  | copied | `PowerTransformer.name`; NAME; blank: the key I_J_K_CKT |
 | `status` | `Optional[int]` | `1` | mapped | STAT: inService = (STAT == 1); 2, 3 and 4 (one winding out) raise until a case has one; blank: 1 (defaulted) |
 | `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
@@ -1090,6 +1098,172 @@ uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutr
 | `cnxa3` | `Optional[float]` |  | structural | CNXA3: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
 | `nod3` | `Optional[int]` |  | structural | NOD3: a node of bus CONT3; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
 
+## Areas, tie flows and inter-area transfer (R5)
+
+**Approved 2026-11-08 and implemented.** RAW-2 (the open part: how a bus's AREA is recorded). Atom:
+`tests/atoms/area/`. User choices 2026-11-08: a bus's AREA traced on export (no profile extension); inter-area
+transfers listed untranscribed (no profile class).
+
+Code: `importer/cimtbl/tie_flow.py` (`TieFlowRows`, used by `branch.py`, `switch.py` and `transformer.py`),
+`importer/topology.py` (`untraced_area_buses`), `importer/cimtbl/interarea_transfer.py` (`transfer_lines`) and
+`derived.net_import`.
+
+There is no new artifact. Each device's tie flows go in its own artifact, because MET and NMETR are its fields.
+The transfers have no CIM home, so they are listed on `area_interchange.cimtbl`.
+
+### netInterchange sign (an R0 fix)
+
+PDES is the area's desired net **export**. CIM's `ControlArea.netInterchange` is positive **into** the area
+(ControlArea's rule 1: import positive). So `netInterchange = -PDES` (`net_import`, written `0.0 - PDES` so that 0
+stays `0.0`). Both public cases have PDES 0, so no golden value changes. The field becomes derived.
+
+cim18v17 marks `netInterchange`, `pTolerance` and `type` *ToBeDeleted*. Their successor, `AreaInterchangeController`,
+carries only `pTolerance` and an `enabled` that RAW does not give (area interchange control is a solution option).
+So both values stay on `ControlArea` until the profile has a home for the scheduled interchange.
+
+### Tie flows
+
+A **tie** is a branch, switching device or transformer whose terminals' buses are in more than one AREA.
+- **Its home end** is the non-metered end, whose area PSS/E charges with the device's losses:
+  - branch MET or switch METERED 1 (bus I metered): J;
+  - MET 2: I;
+  - a transformer's NMETR names the home winding directly (1, 2 or 3; default 2).
+  On a tie, any other value raises. Elsewhere, MET and NMETR stay untranscribed, as before (RAW-22).
+- **At each terminal whose bus is not in the home area**, two `TieFlow`s sit on that terminal:
+  - one for the bus's own area, `positiveFlowIn = false` (flow into the terminal leaves that area);
+  - one for the home area, `positiveFlowIn = true`.
+
+  They sum to zero, as ControlArea's rule 3 asks of a tie seen from both areas. A 3-winding transformer with two
+  windings outside its home area has two pairs.
+- **mRID** `tf_<AREA>_<terminal>`, name `<AREA>_<key>_T<k>` (prefix requested, C3). The `TieFlow` table comes last
+  in the device's artifact. It refers back to the terminal and to `ca_<AREA>`; an AREA with no area-interchange
+  record raises, as it does for loads and generators.
+- **What it recovers:** a tie's metered end (the terminal holding the pair). That narrows the MET/NMETR gap to
+  devices inside one area.
+
+WECC240: 23 tie branches give 46 TieFlows. No transformer or switch there spans two areas, and IEEE14 has one area
+and no tie flows. Branch 1002-6506 has MET 2; branch 1201-2901 has MET 1:
+
+```
+# tie flows: two TieFlows on each tie's metered terminal, positiveFlowIn = false for the terminal's bus's area and true for the home (non-metered) end's area (MET)
+Table TieFlow: mRID, name, positiveFlowIn, ControlArea, Terminal
+    tf_3_ln_1002_6506_1_T2, 3_1002_6506_1_T2, false, ca_3, ln_1002_6506_1_T2
+    tf_1_ln_1002_6506_1_T2, 1_1002_6506_1_T2, true,  ca_1, ln_1002_6506_1_T2
+    ...
+    tf_1_ln_1201_2901_1_T1, 1_1201_2901_1_T1, false, ca_1, ln_1201_2901_1_T1
+    tf_2_ln_1201_2901_1_T1, 2_1201_2901_1_T1, true,  ca_2, ln_1201_2901_1_T1
+```
+
+The atom's 3-winding tie 101-202-302 has NMETR 3, so winding 3 (area 3) is home and windings 1 and 2 are metered:
+
+```
+Table TieFlow: mRID, name, positiveFlowIn, ControlArea, Terminal
+    tf_1_xf_101_202_302_1_T1, 1_101_202_302_1_T1, false, ca_1, xf_101_202_302_1_T1
+    tf_3_xf_101_202_302_1_T1, 3_101_202_302_1_T1, true,  ca_3, xf_101_202_302_1_T1
+    tf_2_xf_101_202_302_1_T2, 2_101_202_302_1_T2, false, ca_2, xf_101_202_302_1_T2
+    tf_3_xf_101_202_302_1_T2, 3_101_202_302_1_T2, true,  ca_3, xf_101_202_302_1_T2
+```
+
+The device tables now say where MET/NMETR are still untranscribed:
+
+```
+# untranscribed: o1, f1, o2, f2, o3, f3, o4, f4
+# untranscribed off a tie: MET (a tie's TieFlows record it; CIM 18 gap, RAW-22)
+Table ACLineSegment: ...
+```
+
+### A bus's AREA (RAW-2)
+
+A node or `BusbarSection` has no `ControlArea` association (CIM 18 gap). The area is recorded by what CIM already
+places in an area: generating units (R3) and tie flows. On export the bus's AREA is traced:
+- **Seeds:**
+  - a generator's bus has its unit's `ControlArea`;
+  - a tie terminal's bus has its pair's `false` area;
+  - each other terminal of a tie has the home area.
+- **Propagation:** across every device whose ends are in one area (branch, switch, transformer).
+
+Loads are not seeds, since a load's AREA is its own (R2). The importer runs the same trace on the RAW records. Any
+bus the trace cannot reach (a component with no generator and no tie) gets `untranscribed: area=<AREA>` on its
+`TopologicalNode` row. In IEEE14 and WECC240, every bus is reached. In the atom, isolated bus 303 is not:
+
+```
+    # untranscribed: area=3 (no generator or tie reaches it)
+    303, NORTH ISOL, 303, bv_115kv, sub_303
+```
+
+### Area slack bus (ISW)
+
+Unchanged: untranscribed (CIM 18 gap). `SynchronousMachine.referencePriority` is the angle reference (R3), not an
+area's interchange slack.
+
+### Inter-area transfer
+
+Mapper: `importer/cimtbl/interarea_transfer.py` (`transfer_lines`). It writes no artifact.
+- **No home:** cim18v17 has no scheduled-transfer class. cim17v40's `InterchangeSchedule` and its market classes are
+  gone, and `TieCorridor` / `PowerTransferCorridor` group ties but carry no schedule.
+- **What is written:** each record is listed verbatim on the `ControlArea` table comment of
+  `area_interchange.cimtbl`, so the master no longer lists the table as not mapped.
+- **Checks:** ARFROM and ARTO must have area-interchange records, else it raises.
+- **Recorded as a CIM 18 gap,** with a profile extension as the candidate (the user's).
+
+The atom:
+
+```
+# untranscribed: bus_number
+# derived: netInterchange = -PDES (net_import)
+# untranscribed: inter-area transfers (CIM 18 gap): 1 -> 2 '1' 30.0 MW; 1 -> 2 'A' 20.0 MW; 3 -> 2 '1' 0.0 MW
+# (defaulted: transfer_id, power_transfer)
+Table ControlArea: mRID, name, netInterchange (MW), pTolerance (MW)
+    ca_1, WEST, -50.0, 5.0
+    # defaulted: ptol=10.0
+    ca_2, EAST, 50.0,  10.0
+    # defaulted: name=
+    ca_3, 3,    0.0,   0.0
+```
+
+| InterareaTransferRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `from_area` | `int` |  | untranscribed | ARFROM: listed on area_interchange.cimtbl's ControlArea comment (no scheduled-transfer class, CIM 18 gap); with no area-interchange record raises |
+| `to_area` | `int` |  | untranscribed | ARTO: as ARFROM |
+| `transfer_id` | `Optional[str]` |  | untranscribed | TRID: as ARFROM; blank: 1 (defaulted) |
+| `power_transfer` | `Optional[float]` |  | untranscribed | PTRAN (MW, positive = ARFROM selling to ARTO): as ARFROM; blank: 0 (defaulted) |
+
+### Atom `tests/atoms/area/areas.raw`
+
+Three areas:
+
+| area | name | ISW | PDES | PTOL |
+|---|---|---|---|---|
+| 1 | WEST | 101 | 50 | 5 |
+| 2 | EAST | 0 | -50 | blank |
+| 3 | blank | 0 | 0 | 0 |
+
+**Buses:** 101 (swing, generator) and 102 in area 1; 201 (generator) and 202 (load) in area 2; 301 (generator), 302
+(115 kV) and 303 (115 kV, isolated, no equipment: the untraced bus) in area 3.
+
+**Ties:**
+- branch 102-201 circuit 1, MET 1 (pair at T1);
+- branch 102-201 circuit 2, MET 2 (pair at T2);
+- branch 202-301, MET blank (defaults to 1);
+- switch 102-301, METERED 2;
+- 2-winding transformer 202-302, NMETR 1 (pair at T2);
+- 3-winding transformer 101-202-302, NMETR 3 (pairs at T1 and T2).
+
+**Inside one area:** branch 101-102 with MET 2 (stays untranscribed) and transformer 301-302.
+
+**Transfers:** 1→2 '1' 30 MW, 1→2 'A' 20 MW, and 3→2 with TRID and PTRAN blank.
+
+**Exit (met 2026-11-08; 181 tests):**
+- the atom binds;
+- each tie's two flows sit on one terminal with opposite signs;
+- MET and NMETR on a tie are recovered from the pair's terminal;
+- in IEEE14, WECC240 and the atom, the trace over the bound CIM gives every bus's RAW AREA, except bus 303,
+  which carries the comment (the test's `_traced_areas` is the export rule's first draft);
+- the master lists nothing as not mapped.
+
+Also fixed: the schema's NMETR description said "metered end"; NMETR is the non-metered end code. Its default 2
+names the same end as MET's default 1.
+
 ## Owner
 
 
@@ -1123,10 +1297,11 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | gap | RAW fields | R0 approximation |
 |---|---|---|
 | zone membership of a bus | ZONE | substations never span two zones |
-| a bus's own control area, and the area slack (equipment is covered: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea`, `TieFlow`) | bus AREA, area ISW | untranscribed |
+| a bus's own control area, and the area slack (equipment is covered: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea`, `TieFlow`) | bus AREA, area ISW | bus AREA traced on export from generating units and tie flows (R5), a bus the trace cannot reach listed `untranscribed: area=`; ISW untranscribed |
 | area/zone of machines and DC equipment; zone of a load (the `SubLoadArea` → `LoadArea` hierarchy was added to the profile 2026-11-08) | induction machine, MTDC bus AREA/ZONE; load ZONE ≠ bus ZONE | loads in `LoadArea` ⊃ `SubLoadArea` per (area, zone) (R2); the rest untranscribed |
 | ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
-| the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET; transformer NMETR (R4) | untranscribed |
+| the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET; transformer NMETR (R4) | on a tie, recorded by its TieFlows' terminal (R5); elsewhere, and multi-section line MET, untranscribed |
+| a scheduled transfer between two control areas (R5; cim17v40's `InterchangeSchedule` is gone, `TieCorridor` has no schedule) | inter-area transfer ARFROM, ARTO, TRID, PTRAN | listed on the `ControlArea` table comment |
 | a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
 | a shunt's or converter's share of a coordinated voltage control (R2, R3) | switched shunt RMPCT; generator RMPCT on WMOD 1 | untranscribed |
 | the kind of a renewable bus-branch generator: PV, wind, or an induction machine (R3) | generator WMOD 1 | a `PowerElectronicsConnection` + `PowerElectronicsUnit` (no kind) |
@@ -1156,6 +1331,9 @@ regulating controls on terminals by design (RAW-11, RAW-19).
   `TransformerStarImpedance`/`TransformerStarAdmittance`); RAW-6 (a `RatioTapChanger` per tapped winding over steps
   1..NTP, neutralStep nearest ratio 1 at an exact neutralU; COD 0/±1/±2 mapped, ±3/±4/±5 raise; CONT 0 names the
   winding's own terminal).
+- **R5** (user, 2026-11-08): RAW-2's open part (a bus's AREA traced on export from generating units and tie flows;
+  no profile extension); tie flows as a pair on each tie's metered terminal; inter-area transfers listed
+  untranscribed (no profile class); netInterchange = -PDES.
 
 ## Reference model and expected differences
 
@@ -1166,3 +1344,8 @@ There is no hand translation to differ from. CIMHub_2_0's old converter differs 
 - it made one `VoltageLevel` per bus;
 - it read none of the transformer controls past RATE1-12, and replaced them with schema defaults (§reader);
 - it lost 1e-7 values on writing.
+
+Expected export differences from R5:
+- MET, METERED and NMETR of a device inside one area come back as their defaults (1, 1, 2);
+- a bus the trace cannot reach (listed `untranscribed: area=`) needs the exporter's rule (slice E);
+- inter-area transfers and ISW are lost.

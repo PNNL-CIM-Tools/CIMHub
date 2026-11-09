@@ -23,7 +23,9 @@ from cimhub_raw.importer.cimtbl.derived import (
     volts_from_per_unit,
     winding_unit_kv,
 )
+from cimhub_raw.importer.cimtbl.area_interchange import control_area_numbers
 from cimhub_raw.importer.cimtbl.ratings import RATING_SETS, RatingRows
+from cimhub_raw.importer.cimtbl.tie_flow import TieFlowRows, off_tie_note
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
 
 NATIVE_CLASS = schema.TransformerRecord
@@ -119,7 +121,10 @@ FIELDS = {
                                "(defaulted)"),
     "mag1": Field("derived", note="MAG1: end 1's g (S) (magnetizing_siemens, by CM); blank: 0 (defaulted)"),
     "mag2": Field("derived", note="MAG2: end 1's b (S), negative inductive; blank: 0 (defaulted)"),
-    "nmetr": Field("untranscribed", note="NMETR: the metered end, a CIM 18 gap as branch MET (RAW-22)"),
+    "nmetr": Field("structural", note="NMETR: the non-metered (home) winding; on a tie (windings' buses in two or "
+                                      "more AREAs) each other winding outside the home area carries both TieFlows "
+                                      "on its terminal (R5); a code outside 1..windings on a tie raises; elsewhere "
+                                      "untranscribed, as branch MET (CIM 18 gap, RAW-22); blank: 2 (defaulted)"),
     "name": Field("copied", (("PowerTransformer", "name", None),), note="NAME; blank: the key I_J_K_CKT"),
     "status": Field("mapped", note="STAT: inService = (STAT == 1); 2, 3 and 4 (one winding out) raise until a case "
                                    "has one; blank: 1 (defaulted)"),
@@ -212,14 +217,15 @@ def _check_record(record, record_id: str) -> None:
                                  f"COD{winding} {code})")
 
 
-def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float], base_mva: float,
-                    ratings_in_current: bool) -> Document:
+def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
+                    bus_area: dict[int, int], base_mva: float, ratings_in_current: bool) -> Document:
     records = sorted(native.list_by_class(NATIVE_CLASS),
                      key=lambda record: (record.i, record.j, record.k or 0, str(record.circuit)))
     if not records:
         return Document(name="transformer", statements=[], profile=CIM_PROFILE)
     static = raw_defaults(NATIVE_CLASS)
     ratings = RatingRows(ratings_in_current, "XFRRAT", "one set per rated winding, on its terminal xf_<key>_T<k>")
+    ties = TieFlowRows(bus_area, control_area_numbers(native))
     transformer_rows, end_rows, mesh_rows, control_rows, tap_rows = [], [], [], [], []
     for record in records:
         record_id = f"transformer {record.ID}"
@@ -269,6 +275,12 @@ def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict
                 ratings.add(end, [getattr(transformer, f"rate{winding}_{n}") for n in range(1, RATING_SETS + 1)],
                             kv[winding - 1], terminal=f"{container}_T{winding}")
 
+        if ties.is_tie(buses):
+            if transformer.nmetr not in range(1, len(buses) + 1):
+                raise ValueError(f"{record_id}: NMETR {transformer.nmetr} names no winding of a {len(buses)}-winding "
+                                 "tie")
+            ties.add(container, key, buses, transformer.nmetr, record_id)
+
         for winding in _tapped_windings(transformer):
             code = _winding(transformer, "cod", winding)
             mode = lookup(CONTROL_MODE, abs(code), slot=f"cod{winding}", record_id=record_id)
@@ -298,7 +310,7 @@ def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict
     statements = [
         Table("PowerTransformer", [Column(name) for name in ("mRID", "name", "vectorGroup", "inService",
                                                              "EquipmentContainer")],
-              transformer_rows, comment=untranscribed_names(FIELDS)),
+              transformer_rows, comment=off_tie_note(untranscribed_names(FIELDS), "NMETR")),
         Table("PowerTransformerEnd",
               [Column("mRID"), Column("name"), Column("bus"), Column("endNumber"), Column("ratedU", "kV"),
                Column("ratedS", "MVA"), Column("r", "ohm"), Column("x", "ohm"), Column("g", "S"), Column("b", "S"),
@@ -325,6 +337,7 @@ def map_transformer(native, substations_by_bus: dict[int, str], base_kv_of: dict
               tap_rows, comment="steps 1..NTP from RMI to RMA; neutralStep nearest ratio 1 at neutralU; "
                                 "stepVoltageIncrement in percent of ratedU (ratio_tap)"),
         *ratings.tables(),
+        *ties.tables("NMETR"),
     ]
     return Document(name="transformer", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(records)))

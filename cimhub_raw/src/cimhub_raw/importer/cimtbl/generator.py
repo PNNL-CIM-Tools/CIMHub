@@ -12,7 +12,7 @@ from cimtopology.core.voltage import base_voltage_mrid
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
-from cimhub_raw.importer.cimtbl.area_interchange import area_mrid
+from cimhub_raw.importer.cimtbl.area_interchange import area_mrid, control_area_numbers
 from cimhub_raw.importer.cimtbl.bus import busbar_mrid
 from cimhub_raw.importer.cimtbl.derived import generation_p_q, ohms_from_per_unit, volts_from_per_unit
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
@@ -133,7 +133,7 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
                                                                                str(generator.gen_id)))
     if not records:
         return Document(name="generator", statements=[], profile=CIM_PROFILE)
-    control_areas = {area.area_number for area in native.list_by_class(schema.AreaInterchangeRecord)}
+    control_areas = control_area_numbers(native)
     plants = _plants(records, {**raw_defaults(NATIVE_CLASS), "rated_mva": base_mva})
 
     control_rows, unit_rows, machine_area_rows, machine_rows = [], [], [], []

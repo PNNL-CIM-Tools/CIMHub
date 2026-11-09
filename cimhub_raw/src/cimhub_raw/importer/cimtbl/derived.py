@@ -166,6 +166,12 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     )
 
 
+def net_import(pdes: float) -> float:
+    """``ControlArea.netInterchange`` (MW, positive into the area) from PDES (MW, the desired net export): -PDES,
+    written ``0.0 - PDES`` so that 0 stays ``0.0`` (R5)."""
+    return 0.0 - pdes
+
+
 def generation_p_q(record) -> tuple[float, float]:
     """A generator's (p, q) under the CIM load sign convention: (-PG, -QG), with 0 kept 0.0, not -0.0 (R3)."""
     return 0.0 - record.p_output, 0.0 - record.q_output

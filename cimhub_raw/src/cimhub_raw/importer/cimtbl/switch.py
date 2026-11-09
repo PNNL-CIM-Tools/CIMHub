@@ -11,8 +11,10 @@ from cimtopology.core.voltage import base_voltage_mrid
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
+from cimhub_raw.importer.cimtbl.area_interchange import control_area_numbers
 from cimhub_raw.importer.cimtbl.ratings import RatingRows
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.cimtbl.tie_flow import TieFlowRows, branch_home_end, off_tie_note
 
 NATIVE_CLASS = schema.SwitchRecord
 PREFIX = "sw_"  # shared by every Switch subclass, so a change of class keeps the mRID
@@ -33,7 +35,9 @@ FIELDS = {
                                         "RAW-20)"),
     "status": Field("mapped", note="STATUS: open = (STATUS == 0); blank: 1 (defaulted)"),
     "nstat": Field("mapped", note="NSTATUS: normalOpen = (NSTATUS == 0); blank: 1 (defaulted)"),
-    "metered_end": Field("untranscribed", note="METERED: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22)"),
+    "metered_end": Field("structural", note="METERED: as a branch's MET, the TieFlows of a tie on its metered "
+                                            "terminal (R5); elsewhere untranscribed (CIM 18 gap, RAW-22); blank: 1 "
+                                            "(defaulted)"),
     "stype": Field("mapped", note="STYPE: the class, 1 Switch (generic connector), 2 Breaker, 3 Disconnector; blank "
                                   "or another code raises (the spec gives no default)"),
     "name": Field("copied", (("Switch", "name", None), ("Breaker", "name", None), ("Disconnector", "name", None)),
@@ -46,13 +50,14 @@ Source table: System switching device (records: {count})
 Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#system-switching-device"""
 
 
-def map_switch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
+def map_switch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float], bus_area: dict[int, int],
                ratings_in_current: bool) -> Document:
     defaults = raw_defaults(NATIVE_CLASS)
     records = sorted(native.list_by_class(NATIVE_CLASS),
                      key=lambda switch: (switch.from_bus_number, switch.to_bus_number, str(switch.circuit)))
     rows_by_class: dict[str, list[Row]] = {name: [] for name in SWITCH_CLASS.values()}
     ratings = RatingRows(ratings_in_current)
+    ties = TieFlowRows(bus_area, control_area_numbers(native))
     for record in records:
         switch, defaulted = fill_keyed_defaults(FIELDS, record, defaults)
         record_id = f"switch {switch.ID}"
@@ -65,12 +70,16 @@ def map_switch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
             cell(lookup(OPEN, switch.nstat, slot="nstat", record_id=record_id)),
             base_voltage_mrid(base_kv), substations_by_bus[switch.from_bus_number]], comment=defaulted))
         ratings.add(equipment, switch.ratings, base_kv)
+        buses = (switch.from_bus_number, switch.to_bus_number)
+        if ties.is_tie(buses):
+            ties.add(equipment, switch.ID, buses, branch_home_end(switch.metered_end, record_id), record_id)
 
     columns = [Column("mRID"), Column("name"), Column("bus1"), Column("bus2"), Column("open"), Column("normalOpen"),
                Column("BaseVoltage"), Column("EquipmentContainer")]
     statements = [Table(name, columns, rows) for name, rows in rows_by_class.items() if rows]
     if statements:
-        statements[0].comment = untranscribed_names(FIELDS)
+        statements[0].comment = off_tie_note(untranscribed_names(FIELDS), "METERED")
     statements.extend(ratings.tables())
+    statements.extend(ties.tables("METERED"))
     return Document(name="switch", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(records)))

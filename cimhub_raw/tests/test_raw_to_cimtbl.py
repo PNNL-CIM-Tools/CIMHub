@@ -1,5 +1,6 @@
-"""R0-R4: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
-shunt, generator and transformer documents, and their bind under cim18v17 (BusBranchModel).
+"""R0-R5: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
+shunt, generator and transformer documents, tie flows and inter-area transfers, and their bind under cim18v17
+(BusBranchModel).
 
 Goldens: ``tests/goldens/IEEE14/`` (``CIMHUB_UPDATE_GOLDENS=1`` rewrites them; review the diff).
 """
@@ -21,6 +22,7 @@ from cimhub_raw.importer.cimtbl import (
     case_identification,
     fixed_shunt,
     generator,
+    interarea_transfer,
     load,
     multi_section_line,
     owner,
@@ -36,6 +38,7 @@ from cimhub_raw.importer.cimtbl.derived import (
     kv_from_per_unit,
     load_p_q,
     magnetizing_siemens,
+    net_import,
     ohms_from_per_unit,
     per_unit_from_mva,
     ratio_tap,
@@ -76,7 +79,8 @@ def ieee14_documents():
 
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
-                                    multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer],
+                                    multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer,
+                                    interarea_transfer],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
@@ -715,8 +719,9 @@ def test_transformer_atom_comments():
     assert rows["xf_6_7_4_2"].comment.startswith("defaulted: nomv1=0.0, ang1=0.0")
     assert "cod3=0" in rows["xf_6_7_4_2"].comment
     assert rows["xf_1_2_0_1"].comment is None  # a 2-winding unit's 3-winding slots are never defaulted
-    assert document.statements[0].comment == ("untranscribed: nmetr, o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, "
-                                              "anstar")
+    assert document.statements[0].comment == ("untranscribed: o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar\n"
+                                              "untranscribed off a tie: NMETR (a tie's TieFlows record it; CIM 18 "
+                                              "gap, RAW-22)")
 
 
 @pytest.mark.parametrize(("key", "changes", "error", "message"), [
@@ -744,3 +749,143 @@ def test_a_transformer_outside_r4_raises(key, changes, error, message):
     _replace_record(native, schema.TransformerRecord, key, **changes)
     with pytest.raises(error, match=message):
         RawImporter("atom").to_cimtbl(native)
+
+
+# -- R5: areas, tie flows and inter-area transfer ----------------------------------------------------------------
+
+AREA_ATOM = TESTS / "atoms" / "area" / "areas.raw"
+
+
+def test_net_import():
+    """PDES is a desired export; netInterchange is positive into the area. 0 stays 0.0, not -0.0."""
+    assert net_import(50.0) == -50.0
+    assert net_import(-50.0) == 50.0
+    assert str(net_import(0.0)) == "0.0"
+
+
+def _traced_areas(network) -> dict[str, str]:
+    """TopologicalNode mRID -> ControlArea mRID by the export rule (R5): seeds from generating units and tie flows,
+    spread across devices with no tie flow."""
+    areas: dict[str, str] = {}
+    for membership in _objects(network, "ControlAreaGeneratingUnit").values():
+        for machine in membership.GeneratingUnit.RotatingMachine:
+            areas[machine.Terminals[0].TopologicalNode.mRID] = membership.ControlArea.mRID
+    for membership in _objects(network, "ControlAreaPowerElectronicsUnit").values():
+        connection = membership.PowerElectronicsUnit.PowerElectronicsConnection
+        areas[connection.Terminals[0].TopologicalNode.mRID] = membership.ControlArea.mRID
+    devices: dict[str, list] = {}
+    for terminal in _objects(network, "Terminal").values():
+        devices.setdefault(terminal.ConductingEquipment.mRID, []).append(terminal)
+    neighbours: dict[str, set[str]] = {}
+    for terminals in devices.values():
+        flows = [flow for terminal in terminals for flow in terminal.TieFlow]
+        if flows:
+            home = next(flow.ControlArea.mRID for flow in flows if flow.positiveFlowIn)
+            for terminal in terminals:
+                outside = [flow for flow in terminal.TieFlow if not flow.positiveFlowIn]
+                areas[terminal.TopologicalNode.mRID] = outside[0].ControlArea.mRID if outside else home
+        elif len(terminals) > 1:
+            nodes = {terminal.TopologicalNode.mRID for terminal in terminals}
+            for node in nodes:
+                neighbours.setdefault(node, set()).update(nodes - {node})
+    stack = list(areas)
+    while stack:
+        node = stack.pop()
+        for neighbour in neighbours.get(node, ()):
+            if neighbour not in areas:
+                areas[neighbour] = areas[node]
+                stack.append(neighbour)
+    return areas
+
+
+@pytest.mark.parametrize(("case", "untraced"), [(IEEE14, set()), (WECC240, set()), (AREA_ATOM, {303})],
+                         ids=["IEEE14", "WECC240", "areas"])
+def test_the_trace_recovers_every_bus_area(case, untraced):
+    """The export rule gives each bus its RAW AREA, except the buses the importer lists as untraced."""
+    native = Raw34Reader(case).read_all()
+    traced = _traced_areas(raw_to_cim(native, name="case"))
+    expected = {str(record.bus_number): f"ca_{record.area}" for record in native.list_by_class(schema.BusRecord)
+                if record.bus_number not in untraced}
+    assert traced == expected
+    node_rows = {row.cells[0]: row for part in RawImporter("case").to_cimtbl(native).parts if part.name == "bus"
+                 for statement in part.statements if statement.cim_class == "TopologicalNode" for row in statement.rows}
+    listed = {int(node) for node, row in node_rows.items() if "untranscribed: area=" in (row.comment or "")}
+    assert listed == untraced
+
+
+def _tie_pairs(network) -> dict[str, list[tuple[str, bool]]]:
+    """Terminal mRID -> its tie flows as (ControlArea mRID, positiveFlowIn)."""
+    pairs: dict[str, list[tuple[str, bool]]] = {}
+    for flow in _objects(network, "TieFlow").values():
+        pairs.setdefault(flow.Terminal.mRID, []).append((flow.ControlArea.mRID, flow.positiveFlowIn))
+    return {terminal: sorted(flows) for terminal, flows in pairs.items()}
+
+
+def test_wecc240_tie_flows(wecc240):
+    """Each tie branch has its pair on the metered terminal (MET), the bus's area out and the other end's in."""
+    native, network = wecc240
+    area = {record.bus_number: record.area for record in native.list_by_class(schema.BusRecord)}
+    expected = {}
+    for record in native.list_by_class(schema.BranchRecord):
+        buses = (record.from_bus_number, record.to_bus_number)
+        if area[buses[0]] != area[buses[1]]:
+            metered = record.metered_end
+            expected[f"ln_{record.ID}_T{metered}"] = sorted([(f"ca_{area[buses[metered - 1]]}", False),
+                                                             (f"ca_{area[buses[2 - metered]]}", True)])
+    assert len(expected) == 23
+    assert _tie_pairs(network) == expected
+
+
+def test_area_atom():
+    network = _network(AREA_ATOM)
+    assert _tie_pairs(network) == {
+        "ln_102_201_1_T1": [("ca_1", False), ("ca_2", True)],  # MET 1: bus I metered, J home
+        "ln_102_201_2_T2": [("ca_1", True), ("ca_2", False)],  # MET 2
+        "ln_202_301_1_T1": [("ca_2", False), ("ca_3", True)],  # MET blank: 1
+        "sw_102_301_1_T2": [("ca_1", True), ("ca_3", False)],  # METERED 2
+        "xf_202_302_0_1_T2": [("ca_2", True), ("ca_3", False)],  # NMETR 1: winding 1 home
+        "xf_101_202_302_1_T1": [("ca_1", False), ("ca_3", True)],  # NMETR 3: windings 1 and 2 metered
+        "xf_101_202_302_1_T2": [("ca_2", False), ("ca_3", True)],
+    }
+    areas = _objects(network, "ControlArea")
+    assert {mrid: area.netInterchange.to("MW") for mrid, area in areas.items()} == {"ca_1": -50.0, "ca_2": 50.0,
+                                                                                    "ca_3": 0.0}
+    assert len(areas["ca_1"].TieFlow) == 4  # ln_102_201_1, ln_102_201_2, sw_102_301_1, xf_101_202_302_1
+
+
+def test_area_atom_comments():
+    documents = RawImporter("atom").to_cimtbl(Raw34Reader(AREA_ATOM).read_all())
+    assert "not mapped" not in documents.master.comment
+    control_areas = next(part for part in documents.parts if part.name == "area_interchange").statements[0]
+    assert control_areas.comment == (
+        "untranscribed: bus_number\nderived: netInterchange = -PDES (net_import)\nuntranscribed: inter-area "
+        "transfers (CIM 18 gap): 1 -> 2 '1' 30.0 MW; 1 -> 2 'A' 20.0 MW; 3 -> 2 '1' 0.0 MW\n(defaulted: "
+        "transfer_id, power_transfer)")
+
+
+@pytest.mark.parametrize(("cls", "key", "changes", "message"), [
+    (schema.BranchRecord, "102_201_1", {"metered_end": 3}, "metered_end"),
+    (schema.SwitchRecord, "102_301_1", {"metered_end": 0}, "metered_end"),
+    (schema.TransformerRecord, "202_302_0_1", {"nmetr": 3}, "NMETR 3 names no winding of a 2-winding tie"),
+    (schema.InterareaTransferRecord, None, {"to_area": 9}, "to_area 9 has no area-interchange record"),
+])
+def test_an_area_form_outside_r5_raises(cls, key, changes, message):
+    native = Raw34Reader(AREA_ATOM).read_all()
+    key = key or next(iter(native.graph[cls]))
+    _replace_record(native, cls, key, **changes)
+    with pytest.raises(ValueError, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+def test_a_tie_to_an_area_with_no_record_raises():
+    native = Raw34Reader(AREA_ATOM).read_all()
+    _replace_record(native, schema.BusRecord, "302", area=9)
+    with pytest.raises(ValueError, match="AREA 9 has no area-interchange record"):
+        RawImporter("atom").to_cimtbl(native)
+
+
+def test_non_tie_metered_ends_are_not_checked():
+    """MET is read only on a tie: an internal branch's MET 3 maps (and stays untranscribed)."""
+    native = Raw34Reader(AREA_ATOM).read_all()
+    _replace_record(native, schema.BranchRecord, "101_102_1", metered_end=3)
+    RawImporter("atom").to_cimtbl(native)

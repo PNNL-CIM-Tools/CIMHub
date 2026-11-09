@@ -11,8 +11,10 @@ from cimtopology.core.voltage import base_voltage_mrid
 
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
+from cimhub_raw.importer.cimtbl.area_interchange import control_area_numbers
 from cimhub_raw.importer.cimtbl.ratings import RatingRows
 from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.cimtbl.tie_flow import TieFlowRows, branch_home_end, off_tie_note
 
 NATIVE_CLASS = schema.BranchRecord
 LINE_PREFIX = "ln_"
@@ -47,7 +49,11 @@ FIELDS = {
     "g_to": Field("structural", note=_SHUNT.format(name="GJ", pair="BJ", end="j", bus="J", column="gPerSection")),
     "b_to": Field("structural", note=_SHUNT.format(name="BJ", pair="GJ", end="j", bus="J", column="bPerSection")),
     "status": Field("mapped", note="ST: inService = (ST == 1), also on the line shunts; blank: 1 (defaulted)"),
-    "metered_end": Field("untranscribed", note="MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22)"),
+    "metered_end": Field("structural", note="MET: on a tie (I and J in two AREAs) the home end is the non-metered one "
+                                            "(1: J, 2: I), and both TieFlows sit on the metered terminal (R5); "
+                                            "another code on a tie raises; elsewhere untranscribed, the loss-"
+                                            "allocation end has no CIM home (CIM 18 gap, RAW-22); blank: 1 "
+                                            "(defaulted)"),
     "length": Field("copied", (("ACLineSegment", "length", "km"),),
                     note="LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series "
                          "capacitor with LEN != 0 raises (SeriesCompensator is no Conductor)"),
@@ -97,11 +103,12 @@ def _check_series_capacitor(record) -> None:
                          "SeriesCompensator has no length")
 
 
-def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float],
+def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float], bus_area: dict[int, int],
                ratings_in_current: bool) -> Document:
     branches = filled_branches(native)
     line_rows, capacitor_rows, shunt_rows = [], [], []
     ratings = RatingRows(ratings_in_current)
+    ties = TieFlowRows(bus_area, control_area_numbers(native))
     for branch, defaulted in branches:
         base_kv = _base_kv(branch, base_kv_of)
         voltage = base_voltage_mrid(base_kv)
@@ -118,6 +125,10 @@ def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
             line_values = [cell(branch.r), cell(branch.x), cell(branch.b), cell(branch.length or None)]
             line_rows.append(Row([*common, *line_values, cell(in_service), voltage, container], comment=defaulted))
         ratings.add(equipment, branch.ratings, base_kv)
+        buses = (branch.from_bus_number, branch.to_bus_number)
+        if ties.is_tie(buses):
+            record_id = f"branch {branch.ID}"
+            ties.add(equipment, branch.ID, buses, branch_home_end(branch.metered_end, record_id), record_id)
         for end, bus, g, b in (("i", branch.from_bus_number, branch.g_from, branch.b_from),
                                ("j", branch.to_bus_number, branch.g_to, branch.b_to)):
             if g or b:
@@ -126,7 +137,7 @@ def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
                                        substations_by_bus[bus]]))
 
     statements = []
-    untranscribed = untranscribed_names(FIELDS)
+    untranscribed = off_tie_note(untranscribed_names(FIELDS), "MET")
     if line_rows:
         statements.append(Table(
             "ACLineSegment",
@@ -151,5 +162,6 @@ def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
             shunt_rows, comment="line shunts GI + jBI, GJ + jBJ, switched with their line (RAW-13); linked to it by "
                                 "the mRID only (CIM 18 gap)"))
     statements.extend(ratings.tables())
+    statements.extend(ties.tables("MET"))
     return Document(name="branch", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(branches)))

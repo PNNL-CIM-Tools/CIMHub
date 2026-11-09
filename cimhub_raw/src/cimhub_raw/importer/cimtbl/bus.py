@@ -36,7 +36,9 @@ FIELDS = {
                                          "reference, written with R3 (SynchronousMachine.referencePriority); 4 "
                                          "(isolated) is listed on the table comment"),
     "area": Field("untranscribed", note="AREA: a node or BusbarSection has no ControlArea association (CIM 18 gap); "
-                                        "the bus's generators, loads and tie terminals carry the area (R2, R3, R5)"),
+                                        "the export traces it from generating units and tie flows across devices "
+                                        "inside one area (R5); a bus the trace cannot reach (untraced_area_buses) "
+                                        "lists untranscribed: area=AREA on its TopologicalNode row"),
     "zone": Field("structural", note="ZONE: the Region of the node's Substation (srgn_<zone>), and a substation "
                                      "boundary (plan 3.2)"),
     "owner": Field("untranscribed", note="OWNER: ownership is an asset concept (CIM 18 gap)"),
@@ -101,7 +103,8 @@ def base_voltages(native) -> dict[str, float]:
     return dict(sorted(by_mrid.items(), key=lambda item: -item[1]))
 
 
-def map_bus(native, groups: list[SubstationGroup], threshold: float) -> Document:
+def map_bus(native, groups: list[SubstationGroup], threshold: float, untraced: set[int]) -> Document:
+    """``untraced``: the buses whose AREA the export trace cannot reach (``untraced_area_buses``)."""
     buses = filled_buses(native)
     by_number = {bus.bus_number: bus for bus, _ in buses}
     substations_by_bus = substation_of(groups)
@@ -125,7 +128,10 @@ def map_bus(native, groups: list[SubstationGroup], threshold: float) -> Document
         number = bus.bus_number
         name = cell(bus.name or str(number))
         voltage = base_voltage_mrid(bus.base_voltage)
-        node_rows.append(Row([str(number), name, str(number), voltage, substations_by_bus[number]], comment=defaulted))
+        comments = [defaulted, f"untranscribed: area={bus.area} (no generator or tie reaches it)" if number in untraced
+                    else None]
+        node_rows.append(Row([str(number), name, str(number), voltage, substations_by_bus[number]],
+                             comment="\n".join(filter(None, comments)) or None))
         busbar_rows.append(Row([busbar_mrid(number), name, str(number), voltage, substations_by_bus[number]]))
         set_rows.append(Row([f"{busbar_mrid(number)}_limits", f"{busbar_mrid(number)}_T1"]))
         for slot, suffix, limit_type in VOLTAGE_LIMITS:

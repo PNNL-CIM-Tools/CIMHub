@@ -5,7 +5,8 @@
 
 Profile = cim18v17
 
-# untranscribed: nmetr, o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar
+# untranscribed: o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar
+# untranscribed off a tie: NMETR (a tie's TieFlows record it; CIM 18 gap, RAW-22)
 Table PowerTransformer: mRID, name, vectorGroup, inService, EquipmentContainer
     xf_4_7_0_1, 4_7_0_1, , true, sub_4
     xf_4_9_0_1, 4_9_0_1, , true, sub_4

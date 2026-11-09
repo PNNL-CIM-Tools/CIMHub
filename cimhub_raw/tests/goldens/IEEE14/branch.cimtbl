@@ -5,7 +5,8 @@
 
 Profile = cim18v17
 
-# untranscribed: metered_end, o1, f1, o2, f2, o3, f3, o4, f4
+# untranscribed: o1, f1, o2, f2, o3, f3, o4, f4
+# untranscribed off a tie: MET (a tie's TieFlows record it; CIM 18 gap, RAW-22)
 Table ACLineSegment: mRID, name, bus1, bus2, r (pu system), x (pu system), bch (pu system), length (km), inService, BaseVoltage, EquipmentContainer
     ln_1_2_1,   1_2_1,   1,  2,  0.01938, 0.05917, 0.0528, , true, bv_138kv,
     ln_1_5_1,   1_5_1,   1,  5,  0.05403, 0.22304, 0.0492, , true, bv_138kv,

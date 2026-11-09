@@ -132,7 +132,7 @@ classes:
           raw_default: 0.0
 
       nmetr:
-        description: NMETR - Metered end flag (1, 2, or 3)
+        description: NMETR - Non-metered end code (1, 2, or 3; the winding whose bus is not metered)
         range: integer
         required: false
         annotations:

@@ -27,6 +27,7 @@ from cimhub_raw.importer.cimtbl import (
     facts_device,
     fixed_shunt,
     generator,
+    interarea_transfer,
     gne_device,
     impedance_correction,
     induction_machine,
@@ -42,7 +43,7 @@ from cimhub_raw.importer.cimtbl import (
     zone,
 )
 from cimhub_raw.importer.cimtbl.ratings import rating_type_table
-from cimhub_raw.importer.topology import substation_groups
+from cimhub_raw.importer.topology import substation_groups, untraced_area_buses
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
 AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
@@ -62,6 +63,7 @@ class Site:
         self.bus_types = {record.bus_number: record.bus_type for record in buses}
         self.substations = substation_groups(native, self.zones, self.values.zero_impedance_threshold)
         self.substation_of = bus.substation_of(self.substations)
+        self.untraced = untraced_area_buses(native, self.areas)
 
 
 #: ``(native class, mapper(native, site))`` in ``Import`` order. The phase-2 stubs return an empty document, or
@@ -70,10 +72,10 @@ MAPPING_ORDER = (
     (zone.NATIVE_CLASS, lambda native, site: zone.map_zone(native, site.region)),
     (area_interchange.NATIVE_CLASS, lambda native, site: area_interchange.map_area_interchange(native)),
     (bus.NATIVE_CLASS, lambda native, site: bus.map_bus(native, site.substations,
-                                                        site.values.zero_impedance_threshold)),
-    (branch.NATIVE_CLASS, lambda native, site: branch.map_branch(native, site.substation_of, site.base_kv,
+                                                        site.values.zero_impedance_threshold, site.untraced)),
+    (branch.NATIVE_CLASS, lambda native, site: branch.map_branch(native, site.substation_of, site.base_kv, site.areas,
                                                                  site.values.branch_ratings_in_current)),
-    (switch.NATIVE_CLASS, lambda native, site: switch.map_switch(native, site.substation_of, site.base_kv,
+    (switch.NATIVE_CLASS, lambda native, site: switch.map_switch(native, site.substation_of, site.base_kv, site.areas,
                                                                  site.values.branch_ratings_in_current)),
     (multi_section_line.NATIVE_CLASS, lambda native, site: multi_section_line.map_multi_section_line(native,
                                                                                                     site.zones)),
@@ -86,7 +88,8 @@ MAPPING_ORDER = (
     (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
         native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.values.base_mva)),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(
-        native, site.substation_of, site.base_kv, site.values.base_mva, site.values.transformer_ratings_in_current)),
+        native, site.substation_of, site.base_kv, site.areas, site.values.base_mva,
+        site.values.transformer_ratings_in_current)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),
@@ -96,8 +99,10 @@ MAPPING_ORDER = (
     (induction_machine.NATIVE_CLASS, lambda native, site: induction_machine.map_induction_machine(native)),
 )
 
-#: Classes the master reads, or that have no artifact by design (Owner: CIM 18 gap).
-_HANDLED = {case_identification.NATIVE_CLASS, owner.NATIVE_CLASS} | {cls for cls, _ in MAPPING_ORDER}
+#: Classes the master reads, or that have no artifact by design (Owner: CIM 18 gap; inter-area transfers, listed on
+#: the ControlArea table: CIM 18 gap).
+_HANDLED = {case_identification.NATIVE_CLASS, owner.NATIVE_CLASS, interarea_transfer.NATIVE_CLASS} | \
+    {cls for cls, _ in MAPPING_ORDER}
 
 #: The voltage-limit types of the busbars' limit sets: direction high/low x durationKind normal/emergency (RAW-19).
 _VOLTAGE_LIMIT_TYPES = (
