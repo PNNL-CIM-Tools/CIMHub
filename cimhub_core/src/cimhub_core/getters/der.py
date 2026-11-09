@@ -11,20 +11,27 @@ producer that wrote the load sign). ``BatteryUnit.idlingP`` is a loss, "consumed
 stored in either sign.
 
 ``ratedU`` is line to line, as stored (the DSS importer writes a 1-phase wye device's kV x sqrt 3; its exporter
-undoes that). ``ratedS`` and ``ratedU`` are required. One connection has one PowerElectronicsUnit
-(``get_inverter_unit``); a wind unit, an AsynchronousMachine and a machine's short-circuit data (``ikk``, ``mu``,
-star point earthing), voltage limits and capability curves are not read.
+undoes that). ``ratedS`` and ``ratedU`` are required.
+
+CIM lets several PowerElectronicsUnits share one connection (a PV array and a battery behind one inverter); a
+format with one DC device per inverter takes each unit's share of it (``get_inverter_units``, the GDM exporter's
+rule): the share is the unit's maxP over the units' total, and the connection's ratedS, q and q limits are split by
+it. A unit's p is its own (cim18v17's ``PowerElectronicsUnit.p``) when every unit has one, else its share of the
+connection's p. ``get_inverter_unit`` is the strict form, one unit only. A wind unit, an AsynchronousMachine and a
+machine's short-circuit data (``ikk``, ``mu``, star point earthing), voltage limits and capability curves are not
+read.
 """
 
 from __future__ import annotations
 
+import math
 from typing import NamedTuple
 
 import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
 from cimhub_core.getters import describe, required_qty
-from cimhub_core.getters.phase_power import PhasePower, device_power
+from cimhub_core.getters.phase_power import SUM_REL_TOL, PhasePower, device_power
 
 SIGNS = ("load", "generation")
 IMPEDANCE_UNITS = ("ohm", "pu")
@@ -45,6 +52,13 @@ class InverterRating(NamedTuple):
     min_q: float | None  # reactive_unit, in the caller's sign
     max_q: float | None
     max_fault_current: float | None  # pu of rated current (maxIFault)
+
+
+class InverterUnitShare(NamedTuple):
+    unit: cim.PowerElectronicsUnit
+    share: float  # of the connection's ratedS, q and q limits: the unit's maxP / the units' total (1 for one unit)
+    p: float  # active_unit, in the caller's sign: the unit's own p, else share x the connection's p
+    q: float  # reactive_unit, in the caller's sign: share x the connection's q (a unit has no q)
 
 
 class PhotoVoltaicRating(NamedTuple):
@@ -131,6 +145,36 @@ def get_inverter_unit(connection: cim.PowerElectronicsConnection) -> cim.PowerEl
     if len(units) != 1:
         raise ValueError(f"{describe(connection)}: has {len(units)} PowerElectronicsUnits; one is read")
     return units[0]
+
+
+def get_inverter_units(connection: cim.PowerElectronicsConnection, active_unit: str = "W",
+                       reactive_unit: str = "VAr", *, sign: str) -> tuple[InverterUnitShare, ...]:
+    """Each PowerElectronicsUnit's share of its connection, in the connection's order. One unit is the whole
+    connection (its own p, when set, must be the connection's). Several each need a positive maxP (the share), and
+    either every unit has its own p, summing to the connection's, or none has (each takes its share of it)."""
+    output = get_der_output(connection, active_unit, reactive_unit, sign=sign)
+    units = connection.PowerElectronicsUnit
+    if not units:
+        raise ValueError(f"{describe(connection)}: has no PowerElectronicsUnit")
+    if len(units) == 1:
+        shares = [1.0]
+    else:
+        max_ps = [get_qty(unit, "maxP", active_unit) for unit in units]
+        if any(max_p is None or max_p <= 0 for max_p in max_ps):
+            raise ValueError(f"{describe(connection)}: its units' maxP {max_ps}; sharing it between several units "
+                             f"needs each unit's maxP above 0")
+        shares = [max_p / sum(max_ps) for max_p in max_ps]
+    own = [get_qty(unit, "p", active_unit) for unit in units]
+    if all(p is None for p in own):
+        powers = [share * output.total.p for share in shares]
+    elif any(p is None for p in own):
+        raise ValueError(f"{describe(connection)}: some of its units have p and some do not")
+    else:
+        powers = own if sign == "load" else [_negated(p) for p in own]
+        if not math.isclose(sum(powers), output.total.p, rel_tol=SUM_REL_TOL):
+            raise ValueError(f"{describe(connection)}: its units' p sum to {sum(powers)}, not its {output.total.p}")
+    return tuple(InverterUnitShare(unit, share, p + 0.0, share * output.total.q + 0.0)
+                 for unit, share, p in zip(units, shares, powers))
 
 
 def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", *, sign: str) -> PhotoVoltaicRating:

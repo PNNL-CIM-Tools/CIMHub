@@ -2,7 +2,8 @@
 
 Per element its buses and YPrim, then the solved node voltages, with controls off and a tight tolerance: solution
 settings (``Set controlmode``) are not part of the model, and the tolerance makes both decks converge to one answer
-from their different starting points.
+from their different starting points. ``engine_settings`` reads named properties after Compile, for the settings a
+YPrim does not show (a control's, a battery's).
 """
 from __future__ import annotations
 
@@ -10,8 +11,23 @@ from pathlib import Path
 
 import numpy as np
 import opendssdirect as dss
+import pytest
 
 from conftest import compile_deck
+
+
+def engine_buses(path: Path) -> dict[str, tuple]:
+    """``{element: (bus names, node order)}`` after Compile, without a solve (for a deck that does not converge)."""
+    compile_deck(path)
+    found = {}
+    for name in dss.Circuit.AllElementNames():
+        dss.Circuit.SetActiveElement(name)
+        if not dss.CktElement.Enabled():  # no nodes, as in _engine_state
+            found[name.lower()] = ("disabled",)
+            continue
+        found[name.lower()] = (tuple(bus.split(".")[0].lower() for bus in dss.CktElement.BusNames()),
+                               tuple(dss.CktElement.NodeOrder()))
+    return found
 
 
 def _engine_state(path: Path) -> tuple[dict[str, tuple], dict[str, complex]]:
@@ -69,3 +85,41 @@ def _assert_same_elements(elements: dict, written_elements: dict, yprim_differs:
 def _renamed(node: str, bus_names: dict[str, str]) -> str:
     bus, _, conductor = node.partition(".")
     return f"{bus_names[bus]}.{conductor}"
+
+
+def engine_settings(path: Path, properties: dict[str, tuple[str, ...]]) -> dict[str, dict[str, object]]:
+    """``{element: {property: value}}`` after Compile for every element of a class in ``properties`` (``{'Load':
+    ('kW', ...)}``); numbers as floats, text lowercased."""
+    compile_deck(path)
+    found = {}
+    for name in dss.Circuit.AllElementNames():
+        kind = name.split(".")[0]
+        if kind in properties:
+            dss.Circuit.SetActiveElement(name)
+            found[name.lower()] = {prop: _value(dss.Properties.Value(prop)) for prop in properties[kind]}
+    return found
+
+
+def assert_same_settings(expected: dict, actual: dict, *, tolerance: dict[str, float] | None = None,
+                         differs: frozenset[tuple[str, str]] = frozenset()) -> None:
+    """The same elements, each property alike: text exactly, numbers to rel 1e-9 or ``tolerance[property]``. The
+    listed ``differs`` (``(element, property)``) are not compared."""
+    tolerance = tolerance or {}
+    assert actual.keys() == expected.keys()
+    for element, values in expected.items():
+        for name, value in values.items():
+            if (element, name) in differs:
+                continue
+            if isinstance(value, str):
+                assert actual[element][name] == value, f"{element}.{name}"
+            else:
+                assert actual[element][name] == pytest.approx(value, rel=tolerance.get(name, 1e-9), abs=1e-12), \
+                    f"{element}.{name}"
+
+
+def _value(text: str) -> object:
+    text = text.strip().lower()
+    try:
+        return float(text)
+    except ValueError:
+        return text

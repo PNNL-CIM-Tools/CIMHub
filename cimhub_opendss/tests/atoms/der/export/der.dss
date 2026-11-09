@@ -1,0 +1,30 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
+new Linecode.ln_l1_lc nphases=3 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m baseFreq=60
+new Xfmrcode.xc_ct phases=1 windings=3 conns=[wye wye wye] kVs=[2.4 0.12 0.12] kVAs=[25 25 25] Xhl=2.04 Xht=2.04 Xlt=1.36 %Rs=[0.6 1.2 1.2]
+new Line.ln_l1 linecode=ln_l1_lc phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 units=m
+new Transformer.xf_ct XfmrCode=xc_ct buses=[b1.2.0 house.1.0 house.0.2]
+new Transformer.xf_t phases=3 windings=2 buses=[b1.1.2.3 b2.1.2.3] conns=[wye wye] kVs=[4.16 0.48] kVAs=[2000 2000] XHL=5 %Rs=[0.2 0.2]
+new Pvsystem.pv_dim phases=3 bus1=b2.1.2.3 kv=0.48 irrad=0 Pmpp=10 conn=wye kvar=0 kVA=12 Vminpu=0.9 kvarMax=12 kvarMaxAbs=12 enabled=Yes
+new Pvsystem.pv_dpv phases=3 bus1=b2.1.2.3 kv=0.48 irrad=1 Pmpp=50 conn=delta kvar=0 kVA=60 Vminpu=0.9 kvarMax=60 kvarMaxAbs=60 enabled=Yes
+new Pvsystem.pv_farm phases=3 bus1=b1.1.2.3 kv=4.16 irrad=0.833333333333333 Pmpp=1200 conn=wye kvar=0 kVA=1000 Vminpu=0.9 kvarMax=1000 kvarMaxAbs=1000 enabled=Yes
+new Pvsystem.pv_house phases=2 bus1=house.1.2 kv=0.208 irrad=0.8 Pmpp=5 conn=wye kvar=0 kVA=5 Vminpu=0.9 kvarMax=5 kvarMaxAbs=5 enabled=Yes
+new Pvsystem.pv_kvarlast phases=3 bus1=b2.1.2.3 kv=0.48 irrad=1 Pmpp=10 conn=wye kvar=3 kVA=12 Vminpu=0.9 kvarMax=12 kvarMaxAbs=12 enabled=Yes
+new Pvsystem.pv_lead phases=3 bus1=b2.1.2.3 kv=0.48 irrad=1 Pmpp=10 conn=wye kvar=-4.84322104837853 kVA=12 Vminpu=0.9 kvarMax=12 kvarMaxAbs=12 enabled=Yes
+new Pvsystem.pv_leg phases=1 bus1=house.2 kv=0.12 irrad=1 Pmpp=3 conn=wye kvar=0 kVA=3.3 Vminpu=0.9 kvarMax=3.3 kvarMaxAbs=3.3 enabled=Yes
+new Pvsystem.pv_pflast phases=3 bus1=b2.1.2.3 kv=0.48 irrad=1 Pmpp=10 conn=wye kvar=4.84322104837853 kVA=12 Vminpu=0.9 kvarMax=12 kvarMaxAbs=12 enabled=Yes
+new Pvsystem.pv_primary phases=1 bus1=b1.3 kv=2.4 irrad=1 Pmpp=120 conn=wye kvar=0 kVA=120 Vminpu=0.9 kvarMax=120 kvarMaxAbs=120 enabled=Yes
+new Pvsystem.pv_school phases=3 bus1=b2.1.2.3 kv=0.48 irrad=0.8 Pmpp=300 conn=wye kvar=0 kVA=300 Vminpu=0.9 kvarMax=300 kvarMaxAbs=300 enabled=Yes
+new Pvsystem.pv_vars phases=3 bus1=b2.1.2.3 kv=0.48 irrad=1 Pmpp=10 conn=wye kvar=3 kVA=12 Vminpu=0.9 kvarMax=12 kvarMaxAbs=12 enabled=Yes
+new Storage.storage_b123 phases=1 bus1=b1.1 kv=2.4 conn=wye kVA=125 kvarMax=125 kvarMaxAbs=125 kWrated=125 kWhrated=500 kWhstored=300 %reserve=30 State=idling %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_batidle phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=100 kvarMax=100 kvarMaxAbs=100 kWrated=100 kWhrated=200 kWhstored=100 %reserve=20 State=idling %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_capped phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=80 kvarMax=80 kvarMaxAbs=80 kWrated=100 kWhrated=200 kWhstored=200 %reserve=20 State=discharging %Discharge=80 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_ess phases=3 bus1=b2.1.2.3 kv=0.48 conn=delta kVA=250 kvarMax=250 kvarMaxAbs=250 kWrated=250 kWhrated=500 kWhstored=500 %reserve=30 State=discharging %Discharge=60 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_house phases=2 bus1=house.1.2 kv=0.208 conn=wye kVA=5 kvarMax=5 kvarMaxAbs=5 kWrated=5 kWhrated=13.5 kWhstored=5 %reserve=20 State=charging %Charge=100 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_restored phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=100 kvarMax=100 kvarMaxAbs=100 kWrated=100 kWhrated=200 kWhstored=120 %reserve=20 State=discharging %Discharge=100 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_school phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=100 kvarMax=100 kvarMaxAbs=100 kWrated=100 kWhrated=200 kWhstored=100 %reserve=20 State=discharging %Discharge=100 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_setpoint phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=100 kvarMax=100 kvarMaxAbs=100 kWrated=100 kWhrated=200 kWhstored=100 %reserve=20 State=discharging %Discharge=40 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+new Storage.storage_share phases=3 bus1=b2.1.2.3 kv=0.48 conn=wye kVA=100 kvarMax=100 kvarMaxAbs=100 kWrated=100 kWhrated=200 kWhstored=100 %reserve=20 State=discharging %Discharge=50 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 enabled=Yes
+Set voltagebases=[0.24 0.48 4.16]
+CalcVoltageBases

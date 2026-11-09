@@ -215,10 +215,10 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cim-graph"
-version = "0.6.0a1"
+version = "0.6.0"
 source = { editable = "../CIM-Graph" }
 dependencies = [
-    { name = "cimprofiles" },
+    { name = "cim-profiles" },
     { name = "defusedxml" },
     { name = "requests" },
 ]
@@ -226,7 +226,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", extras = ["sparql", "neo4j", "mysql", "gridappsd", "rdflib"], marker = "extra == 'all'" },
-    { name = "cimprofiles", editable = "../CIM-Profiles" },
+    { name = "cim-profiles", specifier = ">=0.1.0a2,<0.2" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "gridappsd-python", marker = "extra == 'gridappsd'", specifier = ">=2026.2.1" },
     { name = "mysql-connector-python", marker = "extra == 'mysql'", specifier = ">=9.2.0" },
@@ -247,18 +247,36 @@ dev = [
 ]
 
 [[package]]
+name = "cim-profiles"
+version = "0.1.0"
+source = { editable = "../CIM-Profiles" }
+dependencies = [
+    { name = "pint", version = "0.25.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "pint", version = "0.26.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pint", specifier = ">=0.24.4" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
+
+[[package]]
 name = "cim-topology"
 version = "0.0.1a0"
 source = { editable = "../CIM-Graph-Topology-Processor" }
 dependencies = [
     { name = "cim-graph" },
-    { name = "cimprofiles" },
+    { name = "cim-profiles" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", editable = "../CIM-Graph" },
-    { name = "cimprofiles", editable = "../CIM-Profiles" },
+    { name = "cim-profiles", specifier = ">=0.1.0a4,<0.2" },
     { name = "cimtables", marker = "extra == 'dev'", editable = "../CIM-Tables" },
     { name = "gridappsd-python", marker = "extra == 'gridappsd'" },
     { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.25.1" },
@@ -310,8 +328,8 @@ version = "3.0.0a0"
 source = { editable = "cimhub_core" }
 dependencies = [
     { name = "cim-graph" },
+    { name = "cim-profiles" },
     { name = "cim-topology" },
-    { name = "cimprofiles" },
     { name = "cimtables" },
     { name = "linkml-runtime" },
     { name = "pyyaml" },
@@ -321,8 +339,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", editable = "../CIM-Graph" },
+    { name = "cim-profiles", editable = "../CIM-Profiles" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
-    { name = "cimprofiles", editable = "../CIM-Profiles" },
     { name = "cimtables", editable = "../CIM-Tables" },
     { name = "linkml-runtime", specifier = "~=1.9.5" },
     { name = "pyyaml" },
