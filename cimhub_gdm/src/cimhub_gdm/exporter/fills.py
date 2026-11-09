@@ -32,6 +32,12 @@ FUSE_DELAY = Time(0, "second")
 #: an exponent load ignores them (ditto writes Model=4); constant power is what the importer's own atoms write.
 ZIP_UNDER_EXPONENTS = (0.0, 0.0, 1.0, 0.0, 0.0, 1.0)
 
+#: A regulator's impedance in percent on its rating, r both windings' together, when CIM holds none: the importer has
+#: no home for it (no AutoTransformer configuration in cim18v17). A zero impedance is singular, so OpenDSS (through
+#: ditto) aborts; this is the near-ideal step regulator of the IEEE test feeders (IEEE13: XHL=0.01, %LoadLoss=0.01).
+REGULATOR_RESISTANCE = 0.01
+REGULATOR_REACTANCE = 0.01
+
 #: Fields whose fill is placeholder protection, named in the WARNING (decision X5).
 PROTECTION_FIELDS = ("MatrixImpedanceFuseEquipment.tcc_curve", "MatrixImpedanceRecloser.controller")
 

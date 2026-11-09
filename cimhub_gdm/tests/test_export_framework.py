@@ -146,3 +146,74 @@ def test_capacitor_targets_invert_the_import():
     [controller] = system.get_component(gdm_atoms.DistributionCapacitor, "vc").controllers
     assert (controller.on_voltage.to("volt").magnitude, controller.off_voltage.to("volt").magnitude,
             controller.pt_ratio, controller.delay_on.to("second").magnitude) == pytest.approx((115, 125, 20, 15))
+
+
+def _only_transformer(name):
+    """The transformer golden with one PowerTransformer, ``name``, left to export."""
+    network = _golden("transformer", "transformers")
+    transformers = network.graph[network.cim.PowerTransformer]
+    for key in [key for key, transformer in transformers.items() if transformer.name != name]:
+        del transformers[key]
+    return network
+
+
+def test_a_transformer_under_tap_control_has_no_export_yet():
+    network = _only_transformer("t_ln")
+    control = network.cim.TapChangerControl(mRID="ltc", name="ltc")
+    network.add_to_graph(control)
+    [tap] = [tap for tap in network.graph[network.cim.RatioTapChanger].values()
+             if tap.TransformerEnd.PowerTransformer.name == "t_ln"]
+    tap.TapChangerControl = control
+    with pytest.raises(ValueError, match="no GDM export yet for a PowerTransformer under tap control"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")
+
+
+def test_a_bank_of_tanks_has_no_export_yet():
+    network = _only_transformer("t_ln")
+    transformer = _named(network, network.cim.PowerTransformer, "t_ln")
+    transformer.TransformerTanks.append(network.cim.TransformerTank(mRID="second_tank"))
+    with pytest.raises(ValueError, match="no GDM export yet for a bank of 2 tanks"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")
+
+
+def test_a_three_phase_regulator_has_no_export_yet():
+    network = _golden("regulator", "regulators")
+    for end in _named(network, network.cim.VoltageRegulator, "r1").AutoTransformerEnd:
+        end.Terminal.phases = network.cim.PhaseCode.ABCN
+    with pytest.raises(ValueError, match="no GDM export yet for a VoltageRegulator but a single-phase unit"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")
+
+
+def _regulator_controller(network, name):
+    system = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    return system.get_component(gdm_atoms.DistributionRegulator, name).controllers
+
+
+def test_regulator_settings_invert_the_import():
+    """r1: 2440 V band 40 V on a PT of 20, line drop 0.0857 + j0.257 ohm on a 700 A CT, taps -16..16."""
+    [controller] = _regulator_controller(_golden("regulator", "regulators"), "r1")
+    volts = [getattr(controller, slot).to("volt").magnitude
+             for slot in ("v_setpoint", "bandwidth", "min_v_limit", "max_v_limit", "ldc_R", "ldc_X")]
+    assert volts == pytest.approx([122, 2, 110, 130, 3, 9])
+    assert (controller.name, controller.tapped_winding, controller.max_step, controller.controlled_phase.value,
+            controller.controlled_bus.name) == ("r1", 2, 32, "A", "b3")
+
+
+def test_unset_regulator_limits_and_line_drop():
+    """No limit is the setpoint over the whole tap range (122 V x 0.9 and x 1.1; GDM needs one above 0 V); no line
+    drop is 0 V, which ditto 0.1.8 needs to write a RegControl."""
+    network = _golden("regulator", "regulators")
+    control = _named(network, network.cim.TapChangerControl, "rb_a")
+    control.minLimitVoltage = control.maxLimitVoltage = None
+    [controller] = _regulator_controller(network, "rb_a")
+    volts = [getattr(controller, slot).to("volt").magnitude for slot in ("min_v_limit", "max_v_limit", "ldc_R",
+                                                                       "ldc_X")]
+    assert volts == pytest.approx([109.8, 134.2, 0, 0])
+
+
+def test_a_regulator_without_an_enabled_control_raises():
+    """GDM requires a controller per phase."""
+    network = _golden("regulator", "regulators")
+    _named(network, network.cim.RatioTapChanger, "r1").controlEnabled = False
+    with pytest.raises(ValueError, match="VoltageRegulator 'vr_r1': no enabled TapChangerControl"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")

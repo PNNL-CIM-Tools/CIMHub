@@ -1,12 +1,21 @@
 # CIM → GDM exporter: plan
 
-**Status:** plan approved by the user 2026-11-09 (X4, X5 and X11 as the user decided them). Both built 2026-11-09,
-for review ([`EXPORT_MAPPING.md`](EXPORT_MAPPING.md)):
+**Status:** plan approved by the user 2026-11-09 (X4, X5 and X11 as the user decided them). Built 2026-11-09, for
+review ([`EXPORT_MAPPING.md`](EXPORT_MAPPING.md)):
 - X1;
-- X2, built at the user's request so that ditto gets what it needs, without the geometry lines (X4).
+- X2, built at the user's request so that ditto gets what it needs, without the geometry lines (X4);
+- X3, at the user's "continue to next phase".
 
 ditto changed two decisions in X2: X6 (buses line to ground) and the §3.1 switch matrices (OpenDSS's 1 mΩ switch).
-X3 is next. Branch `gdm-exporter`, made from `rc_1` at `7cbcf0c`, in the `~/CIMHub-gdm` worktree.
+In X3 it set four rules:
+- a transformer's taps go on its catalog;
+- a 1-phase wye coil lists no N;
+- each regulator unit is its own GDM regulator;
+- unset line drop is 0 V.
+
+The X3 catalog-transformer tests are conditional xfails until rc_1's transformer getter agrees template Y with
+instance Yn: the DSS session's S6c fix, in progress. X4 waits for DSS S6b and S6e on rc_1 (X11). Branch
+`gdm-exporter`, made from `rc_1` at `7cbcf0c`, in the `~/CIMHub-gdm` worktree.
 
 `GdmExporter(FormatExporter).to_model(network) -> DistributionSystem` is written fresh in `cimhub_gdm/exporter/`,
 with one module per GDM component family. It reads every value through the core getters (`export-getters` skill)
@@ -61,7 +70,7 @@ them is X11.
 |---|---|---|
 | X1 | API and system name | `to_model(network, *, name_source=None, system_name=None) -> DistributionSystem`, created with `auto_add_composed_components=True`. The system's name is `system_name`, else the one Feeder's export name (as DSS's circuit name, E1), else it raises, naming the feeders. The importer's `Model` header has no CIM object in the graph to read it from. |
 | X2 | Names | The shared switch (`cimhub_core.names.export_name`, `name`/`mrid`/`uri`, default `mrid`, DSS E1), unchanged. There is no GDM sanitizer, since a GDM name is free text. Two objects of one GDM class on one name raise, naming both, because `get_component(cls, name)` would see only one. Inline GDM equipment (load, capacitor, source, switch, solar, inverter and battery equipment) is named after its instance, or after its AssetInfo (`inv_`, `batt_`) when it has one. Each per-phase child is named `<parent>_<phase>`. Round-trip tests run with `name_source="name"`, so a reimport gives the same mRIDs. |
-| X3 | Catalogs | Keep CIM's sharing. PerLengthPhaseImpedance → MatrixImpedanceBranchEquipment. PerLengthSequenceImpedance → SequenceImpedanceBranchEquipment. WireInfo → BareConductorEquipment or ConcentricCableEquipment. WireConfiguration → GeometryBranchEquipment. TransformerTankConfiguration → DistributionTransformerEquipment. GDM puts some instance values on the shared equipment (a line's `ampacity`; GDM geometry heights carry the line's `spacingYOffset`). So one GDM equipment is made per (catalog, those values). The first values seen are named `<catalog>`, and later ones `<catalog>_2`, `_3` in export order (X2 as built: no pre-pass). A balanced transformer (PowerTransformerEnd + mesh, no TankConfiguration; DSS-origin) gets its own DistributionTransformerEquipment, named after it. |
+| X3 | Catalogs | Keep CIM's sharing. PerLengthPhaseImpedance → MatrixImpedanceBranchEquipment. PerLengthSequenceImpedance → SequenceImpedanceBranchEquipment. WireInfo → BareConductorEquipment or ConcentricCableEquipment. WireConfiguration → GeometryBranchEquipment. TransformerTankConfiguration → DistributionTransformerEquipment. GDM puts some instance values on the shared equipment (a line's `ampacity`; GDM geometry heights carry the line's `spacingYOffset`). So one GDM equipment is made per (catalog, those values). The first values seen are named `<catalog>`, and later ones `<catalog>_2`, `_3` in export order (X2 as built: no pre-pass). X3 as built keys on all of the equipment's values (`shared.shared_equipment`), so a transformer's taps, which go on its catalog for ditto, split it too. A regulator's equipment is its tap changer's TapChangerInfo (B17). A balanced transformer (PowerTransformerEnd + mesh, no TankConfiguration; DSS-origin) gets its own DistributionTransformerEquipment, named after it. |
 | X4 | Required GDM fields CIM cannot hold (§3.1) | **Decided (user, 2026-11-09):** one named constant per field in `exporter/fills.py`, each with a comment saying why it is neutral. They are written only when the field is required, and each export logs one WARNING naming each filled field and its count (the importer's I8 pattern). A getter value never goes through a fill, and a fill never replaces a getter's `None` for a value CIM can hold: that raises, or follows the slot's written rule. |
 | X5 | Switch class, fuses and reclosers | The importer's decision 14, inverted: LoadBreakSwitch, Breaker, Disconnector and GroundDisconnector → MatrixImpedanceSwitch with Matrix / CircuitBreaker / Disconnector / EarthingSwitch equipment. Fuse → MatrixImpedanceFuse, Recloser → MatrixImpedanceRecloser. Sectionaliser and Jumper raise until a sample needs them. **Decided (user, 2026-11-09): placeholder protection.** A fuse needs a `TimeCurrentCurve` and a recloser a full `DistributionRecloserController` (four curves, shots, intervals, reset time); CIM 18 holds none of it (`GDM_MAPPING.md` §10). They are X4 fills (§3.1): GDM's own `TimeCurrentCurve.example()` and `DistributionRecloserController.example()` values, so the numbers are GDM's and not ours. The curve is named `<fuse>_tcc_placeholder`; the controller and its equipment are named `<recloser>_ctrl_placeholder` (not the example's vendor model name). They are not scaled to the device's rating, and the X4 WARNING says the protection is a placeholder. |
 | X6 | Bus phases and voltage | A bus's `phases` are the union of the phase conductors on its terminals, in A, B, C, S1, S2, N order. A balanced terminal (`phases=None`, G3) counts as ABC. **Revised in X2 for ditto:** `rated_voltage` is line to ground, with `voltage_type = line-to-ground`: the BaseVoltage / √3 (`get_base_voltage(form="LN")`), or / 2 on a split-phase bus. ditto's DSS reader writes buses this way, and its capacitor and solar writers read every bus rating as line to ground. With line-to-line buses, a 3-phase capacitor on 4.16 kV was written at 7.2 kV. A GDM line-to-line rating therefore comes back as its line-to-ground equivalent: equal in value, listed as a GDM-level difference. |
@@ -86,6 +95,7 @@ Required in GDM 2.4.1, untranscribed on import (found by walking the importer's 
 | SolarEquipment `resistance`, `reactance` | 0 %, 0 % | no CIM home |
 | InverterEquipment `cutin_percent`, `cutout_percent`, `dc_to_ac_efficiency`; `rise_limit`, `fall_limit` | 0 %, 0 %, 100 %; None, None (the field is required but takes None) | no CIM home |
 | BatteryEquipment `idling_efficiency` | 100 % | no CIM home |
+| regulator `winding_reactances`, winding `resistance` (no mesh: the importer has no AutoTransformer configuration to put them on) | x 0.01 %, r 0.01 % (r / 2 a winding) | the near-ideal step regulator of the IEEE test feeders (IEEE13: XHL=0.01, %LoadLoss=0.01); a zero impedance is singular in OpenDSS |
 | RegulatorController `max_step` (steps per control iteration) | `highStep − lowStep` from `get_tap_steps` | a rule, not a constant: the full range means no limit per iteration, which is what CIM's silence says (DSS `MaxTapChange` defaults to 16) |
 | MatrixImpedanceFuseEquipment `tcc_curve`, `delay`; `length` on MatrixImpedanceFuse | GDM's `TimeCurrentCurve.example()`; 0 s; 1 m | placeholder protection (X5); `ampacity` comes from the fuse's `ratedCurrent` |
 | MatrixImpedanceRecloser `controller` (+ its RecloserControllerEquipment); `length` | GDM's `DistributionRecloserController.example()` values; 1 m | placeholder protection (X5) |

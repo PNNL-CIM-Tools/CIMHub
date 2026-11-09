@@ -7,7 +7,11 @@ Each expected difference is a loss the plan lists:
 - A source has one angle (positive sequence) and line-to-line voltages.
 - A switch class comes from its CIM class.
 - A capacitor's rating, state and controllers are held as CIM holds them.
+- A transformer's taps are its catalog's, and its couplings 0-based (X3, for ditto).
+- A regulator is one GDM regulator per CIM unit, and its impedance a fill (X3).
 """
+
+from uuid import uuid4
 
 import cimtables
 import gdm_atoms
@@ -76,8 +80,44 @@ CAPACITOR_DIFFERENCES = [
     "DistributionCapacitor vc.controllers: [, , ] -> [vc]",
 ]
 
-X2_FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_loads,
-               gdm_atoms.add_capacitors)
+#: The transformers put an N on b2, b4 and b5 (t_dy's and t3w's ABCN, the center tap's s1 s2 N) and come back with
+#: their taps on the catalog: t_ln's instance tap moves to ln1. ln1's 1-based couplings come back 0-based, and dy's
+#: vector group has no neutral mark (CIM holds the connections, not the group).
+TRANSFORMER_DIFFERENCES = [
+    *_without(SHELL_DIFFERENCES, *(f"DistributionBus {bus}.phases: [A, B, C] -> []" for bus in ("b1", "b2", "b4")),
+              "DistributionBus b5.phases: [S1, S2] -> []", "DistributionBus b5.rated_voltage: 0.12 kV -> 0.138564 kV"),
+    "DistributionBus b2.phases: [A, B, C] -> [A, B, C, N]",
+    "DistributionBus b4.phases: [A, B, C] -> [A, B, C, N]",
+    "DistributionBus b5.phases: [S1, S2] -> [S1, S2, N]",
+    "DistributionBus b8.rated_voltage: 0.24 kV -> 0.138564 kV",
+    "DistributionBus b8.voltage_type: line-to-line -> line-to-ground",
+    "DistributionTransformer t_ln.tap_positions[1][0]: 1.025 -> 1.0",
+    "DistributionTransformerEquipment ln1.coupling_sequences[0][0]: 1 -> 0",
+    "DistributionTransformerEquipment ln1.coupling_sequences[0][1]: 2 -> 1",
+    "DistributionTransformerEquipment ln1.windings[1].tap_positions[0]: 1.0 -> 1.025",
+    "PowerTransformerEquipment dy.vector_group: Dyn1 -> Dy1",
+]
+
+#: Each regulator unit is a GDM regulator: the rb bank comes back as rb_a, rb_b, rb_c, each 1-phase on its share of
+#: reg3. CIM holds no regulator impedance, so it is the fill (r 0.01 %, x 0.01 %; reg1666's matched it). The <phase> N
+#: ends put an N on b1 and b3.
+REGULATOR_DIFFERENCES = [
+    *_without(SHELL_DIFFERENCES, *(f"DistributionBus {bus}.phases: [A, B, C] -> []" for bus in ("b1", "b3"))),
+    "DistributionBus b1.phases: [A, B, C] -> [A, B, C, N]",
+    "DistributionBus b3.phases: [A, B, C] -> [A, B, C, N]",
+    "DistributionRegulator rb: not exported",
+    *(f"DistributionRegulator rb_{phase}: only in the export" for phase in "abc"),
+    "DistributionTransformerEquipment reg1666.pct_full_load_loss: 0.0 -> 0.01",
+    "DistributionTransformerEquipment reg3.pct_full_load_loss: 0.0 -> 0.01",
+    *(line for winding in (0, 1) for line in (
+        f"DistributionTransformerEquipment reg3.windings[{winding}].num_phases: 3 -> 1",
+        f"DistributionTransformerEquipment reg3.windings[{winding}].rated_power: 5000 kva -> 1666.67 kva",
+        f"DistributionTransformerEquipment reg3.windings[{winding}].resistance: 0.001 -> 0.005",
+        f"DistributionTransformerEquipment reg3.windings[{winding}].tap_positions: [1.0, 1.0, 1.0] -> [1.0]")),
+]
+
+FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_loads,
+            gdm_atoms.add_capacitors, gdm_atoms.add_transformers, gdm_atoms.add_regulators)
 
 
 def _export(system):
@@ -122,6 +162,30 @@ def test_capacitor_differences_are_the_listed_losses():
     assert gdm_differences(system, _export(system)) == sorted(CAPACITOR_DIFFERENCES)
 
 
+@gdm_atoms.needs_yn_getter
+def test_transformer_differences_are_the_listed_losses():
+    system = _system(gdm_atoms.add_transformers)
+    assert gdm_differences(system, _export(system)) == sorted(TRANSFORMER_DIFFERENCES)
+
+
+def test_regulator_differences_are_the_listed_losses():
+    system = _system(gdm_atoms.add_regulators)
+    assert gdm_differences(system, _export(system)) == sorted(REGULATOR_DIFFERENCES)
+
+
+@gdm_atoms.needs_yn_getter
+def test_a_catalog_splits_by_tap():
+    """Two transformers on one catalog at different taps: the second tap is <catalog>_2 (X3)."""
+    system = _system(gdm_atoms.add_transformers)
+    t_ln = system.get_component(gdm_atoms.DistributionTransformer, "t_ln")
+    system.add_component(t_ln.model_copy(update={"name": "t_ln2", "uuid": uuid4(), "tap_positions": None}))
+    exported = _export(system)
+    taps = {name: (exported.get_component(gdm_atoms.DistributionTransformer, name).equipment.name,
+                   exported.get_component(gdm_atoms.DistributionTransformer, name).equipment.windings[1].tap_positions)
+            for name in ("t_ln", "t_ln2")}
+    assert taps == {"t_ln": ("ln1", [1.025]), "t_ln2": ("ln1_2", [1.0])}
+
+
 def test_matrix_and_sequence_lines_reimport_unchanged():
     """The CIM fixed point for the lines X2 exports; the line golden also holds geometry (X4)."""
     system = _system(gdm_atoms.add_lines)
@@ -140,14 +204,16 @@ def test_lines_share_one_catalog_per_ampacity():
     assert by_line == {"mtx3": ("mtx601", 730.0), "mtx3b": ("mtx601_2", 600.0), "mtx1": ("mtx1ph", 200.0)}
 
 
+@gdm_atoms.needs_yn_getter
 def test_a_second_export_changes_nothing():
-    exported = _export(_system(*X2_FAMILIES))
+    exported = _export(_system(*FAMILIES))
     assert gdm_differences(exported, _export(exported)) == []
 
 
+@gdm_atoms.needs_yn_getter
 def test_json_round_trip(tmp_path):
-    exported = _export(_system(*X2_FAMILIES))
-    path = tmp_path / "x2.json"
+    exported = _export(_system(*FAMILIES))
+    path = tmp_path / "export.json"
     write_gdm(exported, str(path))
     assert gdm_differences(exported, read_gdm(str(path))) == []
 

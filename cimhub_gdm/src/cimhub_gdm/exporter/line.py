@@ -24,7 +24,7 @@ from gdm.systems.distribution.components import MatrixImpedanceBranch, SequenceI
 from gdm.systems.distribution.equipment import MatrixImpedanceBranchEquipment, SequenceImpedanceBranchEquipment
 from infrasys.quantities import Current, Distance
 
-from cimhub_gdm.exporter.shared import ExportContext, containers, gdm_phases, in_service
+from cimhub_gdm.exporter.shared import ExportContext, containers, gdm_phases, in_service, shared_equipment
 from cimhub_gdm.exporter.slots import UUID, Slot
 from cimhub_gdm.importer.shared import FREQUENCY_HZ
 
@@ -102,21 +102,16 @@ def export(line: cim.ACLineSegment, context: ExportContext):
 
 
 def catalog(line: cim.ACLineSegment, code, context: ExportContext):
-    """The GDM equipment for the line's catalog and normal current limit, made the first time it is needed."""
+    """The shared GDM equipment for the line's catalog and normal current limit (shared_equipment)."""
     ampacity = get_current_limits(line, "A").normal
     if ampacity is None:
         raise ValueError(f"{describe(line)}: has no normal current limit; GDM needs the catalog's ampacity")
-    key = (code.uri(), ampacity)
-    if key not in context.catalogs:
-        variant = 1 + sum(1 for code_uri, _ in context.catalogs if code_uri == code.uri())
-        if isinstance(code, cim.PerLengthPhaseImpedance):
-            equipment_class, values = MatrixImpedanceBranchEquipment, matrix_values(line)
-        else:
-            equipment_class, values = SequenceImpedanceBranchEquipment, sequence_values(line)
-        suffix = "" if variant == 1 else f"_{variant}"
-        context.catalogs[key] = equipment_class(name=context.names.name(code, equipment_class, suffix=suffix),
-                                                ampacity=Current(ampacity, "ampere"), **values)
-    return context.catalogs[key]
+    if isinstance(code, cim.PerLengthPhaseImpedance):
+        equipment_class, values = MatrixImpedanceBranchEquipment, matrix_values(line)
+    else:
+        equipment_class, values = SequenceImpedanceBranchEquipment, sequence_values(line)
+    equipment = equipment_class(name=code.mRID, ampacity=Current(ampacity, "ampere"), **values)
+    return shared_equipment(context, code, equipment)
 
 
 def matrix_values(line: cim.ACLineSegment) -> dict:

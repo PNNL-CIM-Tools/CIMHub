@@ -1,10 +1,10 @@
 """DistributionRegulator → VoltageRegulator per phase, with its tap changer and control (GDM_MAPPING.md §19).
 
 Each regulated phase is one single-phase step-voltage regulator, as CIMTBL-Models ``regulator_example.cimtbl`` writes
-it (OPEN_DECISIONS 7, DSS-13): a VoltageRegulator ``vr_<name>[_<phase>]`` with two AutoTransformerEnds (end 1 the S
-side on bus 1, end 2 the L side on bus 2), lugs S, L, SL and one series winding S→SL tapped at L. The
-RatioTapChanger ``<vr>_tap`` sits on the AutoTransformerEnd of the controller's ``tapped_winding``; its
-TapChangerControl ``<vr>_ctrl`` (GDM has one controller per phase) regulates the end on the controlled bus. A
+it (OPEN_DECISIONS 7, DSS-13): a VoltageRegulator ``vr_<name>[_<phase>]``, named ``<name>[_<phase>]``, with two
+AutoTransformerEnds (end 1 the S side on bus 1, end 2 the L side on bus 2), lugs S, L, SL and one series winding S→SL
+tapped at L. The RatioTapChanger ``<vr>_tap`` sits on the AutoTransformerEnd of the controller's ``tapped_winding``;
+its TapChangerControl ``<vr>_ctrl`` (GDM has one controller per phase) regulates the end on the controlled bus. A
 regulator coil is single-phase, so its ends are ``<phase>N``; the builder's AutoTransformerEnd has no ``grounded``
 keyword, so a winding's ``is_grounded`` is untranscribed for regulators (B27). The regulator's catalog data is a
 TapChangerInfo ``tci_<equipment>`` (B17), each tap changer's AssetDatasheet. cim18v17 has no AutoTransformer
@@ -85,7 +85,7 @@ def add_regulator(network, component, naming: Naming) -> None:
     require_in_service(component)
     label = f"DistributionRegulator {component.name!r}"
     check_regulator(component, label)
-    phases = [Phase(p) for p in component.winding_phases[0] if Phase(p) is not Phase.N]
+    phases = regulated_phases(component)
     base = object_mrid(PREFIX, component, "VoltageRegulator", naming)
     units = {phase: (base if len(phases) == 1 else f"{base}_{PHASE[phase].lower()}") for phase in phases}
 
@@ -103,7 +103,7 @@ def add_unit(network, component, unit: str, phase: Phase, naming: Naming) -> lis
     equipment = component.equipment
     winding = equipment.windings[0]
     builder = VoltageRegulatorBuilder(network, network.container)
-    regulator = builder.create(mRID=unit, name=component.name)
+    regulator = builder.create(mRID=unit, name=unit_name(component, phase))
     builder.add_connectivity(regulator, EquipmentContainer=container_mrid(component, naming))
     terminals, ends = [], []
     for number, bus in enumerate(component.buses, start=1):
@@ -148,7 +148,7 @@ def add_control(network, controller, owner: str, component, terminals: dict, lab
     terminal = terminals[phase][bus_names.index(controller.controlled_bus.name)]
     target, deadband, low, high = regulator_targets(controller)
     builder = TapChangerControlBuilder(network, network.container)
-    control = builder.create(mRID=f"{owner}_ctrl", name=component.name)
+    control = builder.create(mRID=f"{owner}_ctrl", name=unit_name(component, phase))
     builder.add_regulating_control(
         control, Terminal=terminal.mRID, mode="voltage", targetValue=target, targetDeadband=deadband,
         monitoredPhase=PHASE[phase], discrete=True, enabled=True,
@@ -169,7 +169,7 @@ def add_tap_changer(network, component, unit: str, index: int, control: str, inf
     tap = regulator_tap(component, tapped - 1, index)
     high, low, increment, step = tap_step(tap, winding.total_taps, winding.min_tap_pu, winding.max_tap_pu, label)
     builder = RatioTapChangerBuilder(network, network.container)
-    tap_changer = builder.create(mRID=f"{unit}_tap", name=component.name)
+    tap_changer = builder.create(mRID=f"{unit}_tap", name=unit_name(component, regulated_phases(component)[index]))
     builder.add_connectivity(tap_changer, TransformerEnd=f"{unit}_end{tapped}")
     builder.add_electrical(tap_changer, highStep=high, lowStep=low, normalStep=0, stepVoltageIncrement=increment)
     builder.add_regulating_control(
@@ -184,8 +184,21 @@ def add_tap_changer(network, component, unit: str, index: int, control: str, inf
 
 def _controller_for(component, index: int):
     """The controller on the regulator's ``index``-th phase."""
-    phase = [Phase(p) for p in component.winding_phases[0] if Phase(p) is not Phase.N][index]
+    phase = regulated_phases(component)[index]
     return next(c for c in component.controllers if Phase(c.controlled_phase) is phase)
+
+
+def regulated_phases(component) -> list[Phase]:
+    """The regulator's phase conductors, one unit each."""
+    return [Phase(p) for p in component.winding_phases[0] if Phase(p) is not Phase.N]
+
+
+def unit_name(component, phase: Phase) -> str:
+    """A unit's name: the regulator's, with the phase for a unit of a bank (``rb_a``), so that each unit, which
+    exports as its own GDM regulator, has a name of its own."""
+    if len(regulated_phases(component)) == 1:
+        return component.name
+    return f"{component.name}_{PHASE[phase].lower()}"
 
 
 def regulator_tap(component, winding: int, phase_index: int) -> float:

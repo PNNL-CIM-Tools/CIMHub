@@ -2,7 +2,7 @@
 
 Top-level components are matched by class and name. Each field is compared unless the importer's ``FIELDS`` marks it
 ``untranscribed`` (CIM never held it), or it is the uuid. An inline component is compared field by field; any other
-referenced component by name. Quantities are compared in the original's unit at rel 1e-9.
+referenced component by name. Quantities (in the original's unit) and floats are compared at rel 1e-9.
 """
 
 from __future__ import annotations
@@ -57,6 +57,9 @@ def _compare_value(before, after, path: str, found: list[str]) -> None:
     elif isinstance(before, Quantity):
         if not isinstance(after, Quantity) or not np.allclose(after.to(before.units).magnitude, before.magnitude,
                                                               rtol=REL_TOL, atol=0):
+            found.append(f"{path}: {_text(before)} -> {_text(after)}")
+    elif isinstance(before, float) and isinstance(after, float):
+        if not np.isclose(after, before, rtol=REL_TOL, atol=0):
             found.append(f"{path}: {_text(before)} -> {_text(after)}")
     elif before != after:
         found.append(f"{path}: {_text(before)} -> {_text(after)}")

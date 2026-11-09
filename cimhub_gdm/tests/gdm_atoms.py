@@ -8,8 +8,10 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
+import cimhub_core.getters.transformer as transformer_getter
 import cimtables
 import numpy as np
+import pytest
 from cimtables.diff import diff_models
 from gdm.systems.distribution import DistributionSystem
 from gdm.systems.distribution.common import SequencePair, TimeCurrentCurve
@@ -601,6 +603,14 @@ def type_limit_durations(network):
     for limit_type in network.graph.get(network.cim.OperationalLimitType, {}).values():
         limit_type.durationKind = network.cim.LimitDurationKind(limit_type.name)
     return network
+
+
+#: The core transformer getter agrees a template TransformerTankEnd's Y with an instance end's Yn: the DSS S6c fix,
+#: in progress on rc_1. Until it lands, a catalog transformer with its neutral brought out raises; remove this, and
+#: ``needs_yn_getter``, when rc_1 is merged.
+GETTER_AGREES_YN = hasattr(transformer_getter, "_UNGROUNDED")
+needs_yn_getter = pytest.mark.xfail(not GETTER_AGREES_YN, raises=ValueError, strict=True,
+                                    reason="the core transformer getter rejects template Y with instance Yn")
 
 
 # --- the Phase 5 reference system (tests/atoms/e2e/reference.cimtbl) -----------------------------------------------

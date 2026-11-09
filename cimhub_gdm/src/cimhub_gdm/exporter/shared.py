@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import Counter
 from typing import NamedTuple
 
@@ -27,7 +28,7 @@ class ExportContext(NamedTuple):
     network: object
     names: Names
     made: dict  # CIM uri() -> the GDM component exported from it
-    catalogs: dict  # (CIM catalog uri(), instance values) -> the shared GDM equipment made for it (X3)
+    catalogs: dict  # (CIM catalog uri(), the equipment's values) -> the shared GDM equipment made for it (X3)
     filled: Counter  # 'GdmClass.field' -> how many times a fill was written (X4)
 
     def fill(self, field: str, value):
@@ -82,3 +83,31 @@ def containers(container, context: ExportContext) -> dict:
     if isinstance(container, cim.Substation):
         return {"feeder": None, "substation": context.gdm(container)}
     raise ValueError(f"{describe(container)}: no GDM feeder or substation for this container class")
+
+
+def shared_equipment(context: ExportContext, catalog, equipment):
+    """The shared GDM equipment of the CIM ``catalog`` with ``equipment``'s values (decision X3).
+
+    GDM puts some instance values on its equipment (a line's ampacity, a transformer's taps), so one GDM equipment is
+    made per (catalog, values): the first is named ``<catalog>``, each later one ``<catalog>_<n>``, in export order.
+    ``equipment`` is built with any name; an equal one already made is returned instead.
+    """
+    key = (catalog.uri(), _values(equipment))
+    if key not in context.catalogs:
+        variant = 1 + sum(1 for catalog_uri, _ in context.catalogs if catalog_uri == catalog.uri())
+        suffix = "" if variant == 1 else f"_{variant}"
+        name = context.names.name(catalog, type(equipment), suffix=suffix)
+        context.catalogs[key] = equipment.model_copy(update={"name": name})
+    return context.catalogs[key]
+
+
+def _values(equipment) -> str:
+    """Every field of ``equipment`` but its name and the uuids, as comparable text."""
+    def without_uuids(value):
+        if isinstance(value, dict):
+            return {key: without_uuids(item) for key, item in value.items() if key != "uuid"}
+        if isinstance(value, list):
+            return [without_uuids(item) for item in value]
+        return value
+
+    return json.dumps(without_uuids(equipment.model_dump(mode="json", exclude={"name"})), sort_keys=True)

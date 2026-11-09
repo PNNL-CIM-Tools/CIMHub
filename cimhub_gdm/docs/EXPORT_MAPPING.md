@@ -7,6 +7,15 @@
   because ditto needs them:
   - buses are now rated line to ground (X6);
   - the switch matrices are OpenDSS's 1 mΩ switch, not zero.
+- X3 (transformers, center taps, regulators and their controllers) built 2026-11-09, at the user's "continue to next
+  phase", for review. ditto drove four of its rules:
+  - taps go on the catalog winding;
+  - a 1-phase wye coil lists no N;
+  - each regulator unit is its own GDM regulator;
+  - unset line drop R and X are 0 V.
+
+  The catalog-transformer tests are conditional xfails until rc_1's transformer getter agrees template Y with
+  instance Yn (the DSS S6c fix, in progress); a scratch patch of the same semantics passes them all.
 
 One section per phase ([`EXPORT_PLAN.md`](EXPORT_PLAN.md) §2). The slot tables are generated from each module's
 `SLOTS` (`exporter/slots.py` `slots_table`), and a test fails on a GDM field with no slot.
@@ -20,6 +29,9 @@ One section per phase ([`EXPORT_PLAN.md`](EXPORT_PLAN.md) §2). The slot tables 
   the CIM object's `uri()`, so a later module finds it with `context.gdm(obj)`. Asking for one not yet exported raises.
 - `ExportContext` carries the network, the `Names`, the exported components (`made`), the shared catalogs
   (`catalogs`, X3) and the fill counts (`filled`, X4).
+- `shared.shared_equipment(context, catalog, equipment)` is the X3 catalog rule for every family: one GDM equipment
+  per (CIM catalog, the equipment's values, uuids and name aside). The first is named `<catalog>`, each later one
+  `<catalog>_<n>`, in export order.
 - Slot kinds:
   - `written`: from a getter or the CIM structure;
   - `rule`: a CIM `None` or shape GDM needs, by the rule in the note;
@@ -43,6 +55,8 @@ raise, naming both mRIDs.
 - A per-phase child takes `<instance>_<phase>` (`src_A`).
 - Placeholder protection takes `<fuse>_tcc_placeholder` or `<recloser>_ctrl_placeholder` (X5).
 - A shared catalog takes the catalog's name, or `<catalog>_<n>` for its n-th instance value (X3).
+- A transformer with no TankConfiguration, and a regulator with no TapChangerInfo, has its own equipment, named after
+  it.
 - The system's name is `system_name=`, else the one Feeder's exported name. Several Feeders raise.
 
 ## Shell
@@ -600,16 +614,197 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 | on_power | rule | (target − deadband / 2) (VAr) |
 | off_power | rule | (target + deadband / 2) (VAr) |
 
+## Transformers
+
+Decision X3. `PowerTransformer` → `DistributionTransformer` on a `DistributionTransformerEquipment`:
+- **Model.** `get_transformer_model` reads the transformer's one unit, in kV and kVA: its tank, or the transformer
+  itself by ends. It reads any CIM form (by ends, by phase ends, by template tank ends, by template lugs).
+  - Each winding is a `WindingEquipment` on the bus its end lands on.
+  - The mesh gives `coupling_sequences`, 0-based (as ditto writes and requires them), and `winding_reactances`, in
+    % on winding 1's ratedS.
+  - The core's g and b are `pct_no_load_loss` (unset 0) and `magnetizing_current_pct` (unset None).
+- **Catalog.** A tank on a TransformerTankConfiguration shares one GDM equipment per (configuration, values), named
+  after the configuration. Any other transformer (DSS by ends or by phase ends) gets its own, named after it.
+  - A CoolingInfo AssetDatasheet makes it a `PowerTransformerEquipment`, with `cooling_class` its typeOfCooling.
+  - Its `vector_group` is made from the connections, as the importer checks it, with no neutral mark: `Dyn1` comes
+    back `Dy1`.
+- **Winding.**
+  - `rated_voltage` is the coil: baseU, else ratedU (over √3 on a wye). It is line to line on a delta and line to
+    ground on a wye, as ditto's DSS reader writes it.
+  - `rated_power` is ratedS, but a center-tap half is 2 × ratedS, its baseS (DSS-2).
+  - `resistance` is the winding's r moved to its own rated_power.
+  - `num_phases` is 3 for a winding on A, B and C, else 1 (a 1-phase delta spans two conductors).
+  - `connection_type`: Y, Yn and I (a center tap's split end) are STAR, and D is DELTA; others raise.
+  - `is_grounded` is `grounded`. Unset is False on a delta and raises on a wye.
+- **Taps.** Each winding's actual ratio from its end's RatioTapChanger (`get_tap_ratio`) goes on the catalog winding,
+  one per phase. The range is highStep − lowStep and the low and high ratios; with no tap changer it is GDM's default.
+  The instance's `tap_positions` is left unset. ditto 0.1.8's OpenDSS Transformer has no `Tap_wdg`, so an instance
+  tap never reaches OpenDSS; on the catalog it does. Instances on different taps therefore split the catalog
+  (`ln1_2`). The importer takes either (G4).
+- **Phases.** `winding_phases` are each winding's phases, but a 1-phase wye coil on A, B or C lists no N. ditto 0.1.8
+  writes `Phases` as the length of winding 1's list, so `[B, N]` would be a 2-phase unit. The importer adds the N
+  back. A center tap's halves keep theirs (`[S1, N]`, `[N, S2]`).
+- **Center tap.** Three windings, the last two on one end (DSS-2).
+- **Full-load loss.** `loadLoss` on the tank or its configuration, as % of winding 1's ratedS. Unset, it is windings 1
+  and 2's r summed: OpenDSS's %loadloss, which a by-ends transformer from DSS holds as r.
+- **Fail fast.**
+  - A bank of several tanks raises `no GDM export yet`: GDM holds one equipment per transformer.
+  - A transformer whose RatioTapChanger has a TapChangerControl (an LTC) raises `no GDM export yet`.
+  - An unset ratedS or r raises.
+
+Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIONS.md`](TAP_ASSUMPTIONS.md).
+
+**DistributionTransformer**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | Names (X2) |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| buses | written | each winding's end's ConnectivityNode, in winding order (a center tap's halves share one) |
+| winding_phases | rule | each winding's phases from get_transformer_model (its end's terminal, or a coil's two phase ends), a 1-phase wye coil without its N (ditto 0.1.8 counts the list as Phases) |
+| tap_positions | unset | the taps are the equipment's (ditto 0.1.8 writes no instance tap) |
+| equipment | written | the DistributionTransformerEquipment (or PowerTransformerEquipment) made for it |
+
+**DistributionTransformerEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the TankConfiguration's name, <configuration>_<n> for its n-th values (X3); else the transformer's |
+| mounting | unset | untranscribed on import: no CIM home; GDM's default |
+| pct_no_load_loss | rule | get_transformer_model core g (% on winding 1's ratedS); unset is 0 |
+| pct_full_load_loss | rule | loadLoss on the tank or its configuration, % of winding 1's ratedS; unset is windings 1 and 2's r summed (OpenDSS's %loadloss) |
+| windings | written | one WindingEquipment per get_transformer_model winding |
+| coupling_sequences | written | the mesh pairs, 0-based (as ditto writes them) |
+| winding_reactances | written | the mesh x, % on winding 1's ratedS |
+| is_center_tapped | rule | three windings, the last two on one end (DSS-2) |
+| magnetizing_current_pct | written | get_transformer_model core b (% on winding 1's ratedS); unset is None |
+
+**PowerTransformerEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the TankConfiguration's name, <configuration>_<n> for its n-th values (X3); else the transformer's |
+| mounting | unset | untranscribed on import: no CIM home; GDM's default |
+| pct_no_load_loss | rule | get_transformer_model core g (% on winding 1's ratedS); unset is 0 |
+| pct_full_load_loss | rule | loadLoss on the tank or its configuration, % of winding 1's ratedS; unset is windings 1 and 2's r summed (OpenDSS's %loadloss) |
+| windings | written | one WindingEquipment per get_transformer_model winding |
+| coupling_sequences | written | the mesh pairs, 0-based (as ditto writes them) |
+| winding_reactances | written | the mesh x, % on winding 1's ratedS |
+| is_center_tapped | rule | three windings, the last two on one end (DSS-2) |
+| magnetizing_current_pct | written | get_transformer_model core b (% on winding 1's ratedS); unset is None |
+| vector_group | rule | made from the windings' connections, ANSI phasing, no neutral marks (the importer's vector_group) |
+| cooling_class | written | typeOfCooling of the unit's CoolingInfo AssetDatasheet; one is what makes it a PowerTransformerEquipment |
+| fluid_type | unset | untranscribed on import: no Specification builder |
+
+**WindingEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | unset | untranscribed on import: inline, no CIM object of its own |
+| resistance | written | the winding's r, moved to its own rated_power; unset raises (a regulator: half the mesh r) |
+| is_grounded | rule | grounded; unset is False on a delta and raises on a wye (a regulator: unset is False, B27) |
+| rated_voltage | rule | the coil: baseU, else ratedU (/ √3 on a wye) |
+| voltage_type | rule | line-to-line on a delta, line-to-ground on a wye |
+| rated_power | rule | ratedS (kVA); a center tap half 2 × ratedS (its baseS) |
+| num_phases | rule | 3 when the winding's phases hold A, B and C, else 1 |
+| connection_type | written | connectionKind: Y, Yn and I (a center tap's split end) → STAR, D → DELTA; others raise (a regulator: STAR) |
+| tap_positions | rule | get_tap_ratio(which='actual') of the end's RatioTapChanger, one per phase; none is 1.0 (a regulator's are 1.0: its tap is the instance's) |
+| total_taps | rule | highStep − lowStep from the end's RatioTapChanger (get_tap_steps, get_tap_ratio); none: GDM's default |
+| min_tap_pu | rule | get_tap_ratio(which='low') from the end's RatioTapChanger (get_tap_steps, get_tap_ratio); none: GDM's default |
+| max_tap_pu | rule | get_tap_ratio(which='high') from the end's RatioTapChanger (get_tap_steps, get_tap_ratio); none: GDM's default |
+
+## Regulators
+
+Decisions X3, X8. `VoltageRegulator` → `DistributionRegulator`, one per CIM unit, with one `RegulatorController`:
+- **One per unit.** ditto 0.1.8 writes a GDM regulator as one OpenDSS Transformer, whose RegControls then gang its
+  phases. A bank of single-phase units exported as one 3-phase regulator would lose each unit's own tap, so each unit
+  is its own GDM regulator. The importer names a bank's units `<regulator>_<phase>` (`rb_a`), so each has a name of its
+  own and a reimport gives the same mRIDs. Only a single-phase unit of two ends is exported; anything else raises
+  `no GDM export yet`.
+- **Windings.** The two AutoTransformerEnds (`get_transformer_model`, form AUTO). Each is wye, on baseU line to ground,
+  rated ratedS, ungrounded when `grounded` is unset (B27: the importer can't write it). A winding's phases have no N,
+  as a transformer's 1-phase wye coil.
+- **Impedance.** A mesh between the ends (DSS-origin, the engine's stand-in) gives x, r / 2 on each winding, and
+  `pct_full_load_loss` r. The importer has no home for a GDM regulator's impedance (no AutoTransformer configuration in
+  cim18v17), so without a mesh it is an X4 fill: r 0.01 %, x 0.01 %, the near-ideal step regulator of the IEEE test
+  feeders. A zero impedance is singular in OpenDSS. There is no core.
+- **Equipment.** The tap changer's TapChangerInfo, shared and named after it (B17), else the regulator's own. The taps
+  on it are nominal; the tap is the instance's (`tap_positions`, `get_tap_ratio(which='actual')` on the tapped
+  winding), as a controller's state.
+- **Controller.** From `get_tap_changer_control`, the importer's inverse:
+  - The PT-secondary settings are the primary values / ptRatio: `v_setpoint`, `bandwidth`, `min_v_limit`,
+    `max_v_limit`. An unset ptRatio is 1.
+  - Line drop: `ldc_R`, `ldc_X` = ohms × ctRating / ptRatio, in volts. An unset one is 0 V, because ditto 0.1.8 writes
+    no RegControl without them.
+  - An unset limit is the setpoint over the whole tap range (setpoint × the low and high ratios), because GDM needs a
+    limit above 0 V. It never acts before the taps run out.
+  - `max_step` is the X4 rule highStep − lowStep.
+  - `tapped_winding` is the tapped end's number. `controlled_bus` is the monitored terminal's bus, and
+    `controlled_phase` the monitored phase (unset, the regulator's).
+  - GDM requires one controller per phase, so no TapChangerControl, or a disabled one, raises. A mode other than
+    voltage raises.
+- **ditto.** ditto 0.1.8 writes every RegControl with `Bus=<controlled bus>`, which in OpenDSS replaces line drop
+  compensation, and it drops the regulator's initial tap. On IEEE13 the taps then settle at 2 instead of 9, 6 and 9
+  (an upstream report).
+
+Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIONS.md`](TAP_ASSUMPTIONS.md).
+
+**DistributionRegulator**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | Names (X2): one per VoltageRegulator unit |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| buses | written | each AutoTransformerEnd's ConnectivityNode, end 1 (S) first |
+| winding_phases | rule | each end's phase conductor, without the N its coil returns to (as a transformer's 1-phase wye coil) |
+| tap_positions | rule | get_tap_ratio(which='actual') on the tapped winding, 1.0 on the other |
+| equipment | written | the DistributionTransformerEquipment of the tap changer's TapChangerInfo (shared, X3), else the regulator's own |
+| controllers | written | one RegulatorController from get_tap_changer_control; GDM requires one per phase, so no control or a disabled one (enabled or controlEnabled false) raises |
+
+**RegulatorController**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| name | written | the regulator's name (X2) |
+| tapped_winding | written | the endNumber of the end the RatioTapChanger is on |
+| delay | written | initialDelay (s); unset is None |
+| v_setpoint | rule | targetValue / pt_ratio (V) |
+| min_v_limit | rule | minLimitVoltage / pt_ratio (V); unset (GDM needs > 0) is v_setpoint × min_tap_pu, the tap range's reach, so it never acts first |
+| max_v_limit | rule | maxLimitVoltage / pt_ratio (V); unset is v_setpoint × max_tap_pu |
+| pt_ratio | rule | ptRatio (tap changer and control agreed); unset is 1, the targets as stored |
+| use_ldc | rule | lineDropCompensation; unset is False |
+| is_reversible | rule | reversible; unset is False |
+| ldc_R | rule | lineDropR × ctRating / pt_ratio (V); unset is 0 V (ditto 0.1.8 needs a value) |
+| ldc_X | rule | lineDropX × ctRating / pt_ratio (V); unset is 0 V (ditto 0.1.8 needs a value) |
+| ct_primary | written | ctRating (A); unset is None |
+| max_step | fill | highStep − lowStep: no limit per iteration (§3.1) |
+| bandwidth | rule | targetDeadband / pt_ratio (V); unset is 0 |
+| controlled_bus | written | the bus of the monitored Terminal |
+| controlled_phase | rule | monitoredPhase; unset is the regulator's phase |
+
 ## Tests
 
 - `test_export_round_trip.py`: every importer golden is loaded, exported with CIM names, imported again, and must
-  match itself (`assert_import_matches`). Families not exported yet must raise `no GDM export yet`. The line golden
-  still raises, because it holds geometry lines (X4). The `EXPORTED` set grows phase by phase.
+  match itself. The exceptions:
+  - Families not exported yet must raise `no GDM export yet`. The line golden still raises, because it holds geometry
+    lines (X4). The `EXPORTED` set grows phase by phase.
+  - The regulator golden lists its differences (`CIM_DIFFERENCES`). Its catalog TransformerTankConfigurations, which
+    no regulator links, are rebuilt from the per-unit equipment and the impedance fill.
 - `test_export_gdm_level.py`: the export against the atom system it came from (`gdm_compare.gdm_differences`), one
   test per family, every difference listed with its reason. The X2 tests drop the geometry lines and catalogs
   (`gdm_atoms.without_geometry`). It also checks:
   - the matrix and sequence lines' CIM fixed point;
-  - a split of a catalog by ampacity;
+  - a split of a catalog by ampacity, and of a transformer catalog by tap;
   - that a second export changes nothing;
   - the JSON round trip;
   - that the loaded golden and the built model export alike.
@@ -617,11 +812,17 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
   - slot coverage, the naming switch, a name clash, the system name, unset source impedance, `phase_angle`;
   - the fills WARNING, the placeholder names, the switch controller rule;
   - fail-fast: a fuse's differing normal state, a Sectionaliser, a geometry line, a control on another terminal;
-  - a disabled control, and the capacitor targets.
+  - a disabled control, and the capacitor targets;
+  - a transformer under tap control, a bank of tanks, a 3-phase regulator and a regulator without an enabled control
+    (all raise);
+  - the regulator settings, and the unset limits and line drop.
 - `test_export_ditto.py`: the export through ditto's OpenDSS writer and the OpenDSS engine.
   - It writes, compiles and solves.
   - Without capacitors, it solves to the original's node voltages within 1e-4 pu. ditto misrates the original's
     capacitors, whose buses are line to line.
-  - With capacitors, it still solves.
+  - The comparison includes the transformers, but not t_ln: ditto can't write the original's 1-based couplings or
+    its instance tap.
+  - With capacitors and t_ln, it still solves.
+  - An exported regulator bank (rb alone) holds its band, 121–123 V on its PT.
   - A strict xfail pins ditto 0.1.8's missing CircuitBreaker and Disconnector equipment writers. ditto writes their
     lines with no LineCode, and OpenDSS stops.
