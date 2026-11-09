@@ -4,7 +4,8 @@
 limits and solved voltages; owner). R1 (branch, system switching device, multi-section line, rating
 sets) approved and implemented 2026-11-08; atoms in `tests/atoms/branch/`. R2 (load, fixed shunt, switched
 shunt) approved and implemented 2026-11-08; atoms in `tests/atoms/load/`, `tests/atoms/shunt/`. R3 (generator) approved and
-implemented 2026-11-08; atom in `tests/atoms/generator/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+implemented 2026-11-08; atom in `tests/atoms/generator/`. R4 (transformer) approved and implemented 2026-11-08; atom in
+`tests/atoms/transformer/`. Goldens: `tests/goldens/IEEE14/`; tests: `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 
@@ -33,10 +34,10 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 8 | Fixed shunt | `fixed_shunt.cimtbl` | `shunt` with `bus`: `LinearShuntCompensator` (R2) | 3 |
 | 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
 | 10 | Generator | `generator.cimtbl` | `synchronous_machine` (bus-branch, new, C2) and `der` with `bus`: a `RegulatingControl` per plant; `SynchronousMachine` + `GeneratingUnit` (WMOD 0) or `PowerElectronicsConnection` + `PowerElectronicsUnit` (WMOD 1), each with its control-area membership (R3) | 2, 3 |
+| 11 | Transformer | `transformer.cimtbl` | `transformer_by_ends` with `bus` (2-winding r/x/g/b on end 1, cim18v17; C2) + the `regulator` shape's `RatioTapChanger` / `TapChangerControl`: `PowerTransformer`, an end per winding, a 3-winding unit's `TransformerMeshImpedance`s, ratings per winding (R4) | 3 |
 | – | Owner | none | untranscribed (CIM 18 gap) | |
 
-Later slices append to this order: transformer (R4); inter-area transfer
-(R5); substation (R6).
+Later slices append to this order: inter-area transfer (R5); substation (R6).
 
 ## Master
 
@@ -791,6 +792,304 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `wpf` | `Optional[float]` | `1.0` | untranscribed | WPF: used only by WMOD 2 and 3, which raise |
 | `nreg` | `Optional[int]` |  | structural | NREG: a node of bus IREG; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
 
+## Transformer (R4)
+
+**Approved 2026-11-08 and implemented.** RAW-5, RAW-6. Atom: `tests/atoms/transformer/`.
+User choices 2026-11-08: impedances and admittances in ohm and S; COD 0, ±1, ±2 now; a control with CONT 0 names
+the tapped winding's own terminal.
+
+Mapper: `importer/cimtbl/transformer.py` (`map_transformer`). Shape: `transformer_by_ends` with `bus` on each end,
+plus the `regulator` shape's `RatioTapChanger` + `TapChangerControl`. The core shape still puts a 2-winding x on a
+`TransformerMeshImpedance`. cim18v17 no longer does that (below), so the shape needs an update (request C2).
+- **What a record is:** one transformer with two windings (K = 0), or three (K ≠ 0), in one substation (§3.2).
+- **cim18v17's transformer model** (user, 2026-11-08). `TransformerStarImpedance` and `TransformerStarAdmittance`
+  are deleted. `TransformerCore` and `TransformerWinding` are for tanks, not for a balanced bus-branch unit:
+  - **2-winding:** end 1 carries r, x, g and b, in ohm and S on its ratedU. End 2 is zero (`PowerTransformerEnd`'s
+    own rule), so it carries only its ratings.
+  - **3-winding:** PSS/E gives Z12, Z23 and Z31, which is already a mesh (Delta model). So three
+    `TransformerMeshImpedance` rows, From 1 To 2, From 2 To 3 and From 1 To 3, each r and x in ohm seen from its
+    From end. There is no star conversion and no star node. g and b go on end 1, and the ends' r and x stay blank.
+- **Order:** `PowerTransformer`, `PowerTransformerEnd`, `TransformerMeshImpedance`, `TapChangerControl`,
+  `RatioTapChanger`, then the rating sets. A control may name a transformer terminal, which exists only after its
+  end, so the controls come after the ends. Every reference points backwards, so no `Update` is needed.
+
+WECC240 (1001-1002: a fixed tap at ratio 1; 6103-6104: one of its two voltage controls):
+
+```
+# untranscribed: nmetr, o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, anstar
+Table PowerTransformer: mRID, name, vectorGroup, inService, EquipmentContainer
+    xf_1001_1002_0_1, 1001_1002_0_1, , true, sub_1001
+    xf_6103_6104_0_1, 6103_6104_0_1, , true, sub_6103
+    ...
+# r, x, g, b on the end's ratedU (transformer_ohms, magnetizing_siemens): a 2-winding unit's all on end 1, end 2 zero; a 3-winding unit's g, b on end 1, r, x on its mesh
+Table PowerTransformerEnd: mRID, name, bus, endNumber, ratedU (kV), ratedS (MVA), r (ohm), x (ohm), g (S), b (S), BaseVoltage, PowerTransformer
+    xf_1001_1002_0_1_1, 1001_1002_0_1_1, 1001, 1, 500.0, 100.0, 0.00025,  27.5,      0.0, 0.0, bv_500kv, xf_1001_1002_0_1
+    xf_1001_1002_0_1_2, 1001_1002_0_1_2, 1002, 2, 345.0, 100.0, 0.0,      0.0,       0.0, 0.0, bv_345kv, xf_1001_1002_0_1
+    xf_6103_6104_0_1_1, 6103_6104_0_1_1, 6103, 1, 345.0, 100.0, 0.357075, 21.543525, 0.0, 0.0, bv_345kv, xf_6103_6104_0_1
+    xf_6103_6104_0_1_2, 6103_6104_0_1_2, 6104, 2, 230.0, 100.0, 0.0,      0.0,       0.0, 0.0, bv_230kv, xf_6103_6104_0_1
+    ...
+# targetValue and targetDeadband in V (voltage) or VAr (reactivePower); COD 0 keeps its control, disabled
+Table TapChangerControl: mRID, name, mode, discrete, enabled, targetValue, targetDeadband, Terminal
+    xf_1001_1002_0_1_ctrl1, 1001_1002_0_1_1, voltage, true, false, 500000.0,           100000.00000000003, bb_1001_T1
+    xf_6103_6104_0_1_ctrl1, 6103_6104_0_1_1, voltage, true, true,  235749.99999999997, 34500.00000000003,  bb_6104_T1
+    ...
+# steps 1..NTP from RMI to RMA; neutralStep nearest ratio 1 at neutralU; stepVoltageIncrement in percent of ratedU (ratio_tap)
+Table RatioTapChanger: mRID, name, lowStep, highStep, neutralStep, neutralU (kV), stepVoltageIncrement, step, ltcFlag, controlEnabled, TapChangerControl, TransformerEnd
+    xf_1001_1002_0_1_tap1, 1001_1002_0_1_1, 1, 989, 495, 500.0,             0.020242914979757092, 495.0,              false, false, xf_1001_1002_0_1_ctrl1, xf_1001_1002_0_1_1
+    xf_6103_6104_0_1_tap1, 6103_6104_0_1_1, 1, 30,  15,  343.8103448275862, 0.6896551724137934,   16.000249999999976, true,  true,  xf_6103_6104_0_1_ctrl1, xf_6103_6104_0_1_1
+    ...
+# ratings: one set per rated winding, on its terminal xf_<key>_T<k>; a zero RATEn is no limit (RAW-9, RAW-20)
+Table OperationalLimitSet: mRID, Terminal
+    xf_1002_1003_0_1_1_ratings, xf_1002_1003_0_1_T1
+    ...
+Table ApparentPowerLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue (MVA)
+    xf_1002_1003_0_1_1_rate3, xf_1002_1003_0_1_1_ratings, olt_rate3, 430.0
+    ...
+```
+
+The atom's 3-winding unit D (`tests/atoms/transformer/`) gives the Delta model:
+
+```
+# 3-winding Z12, Z23, Z31 (Delta model): r, x seen from the From end
+Table TransformerMeshImpedance: mRID, name, FromTransformerEnd, ToTransformerEnd, r (ohm), x (ohm)
+    xf_1_2_3_1_mesh_12, 1_2_3_1_12, xf_1_2_3_1_1, xf_1_2_3_1_2, 1.19025,  59.5125
+    xf_1_2_3_1_mesh_23, 1_2_3_1_23, xf_1_2_3_1_2, xf_1_2_3_1_3, 1.058,    21.16
+    xf_1_2_3_1_mesh_13, 1_2_3_1_13, xf_1_2_3_1_1, xf_1_2_3_1_3, 1.785375, 83.3175
+```
+
+IEEE14 4-7 has CONT 0, so its disabled control names the transformer's own terminal `xf_4_7_0_1_T1`. Its target
+uses bus 4's BASKV: 138690.0 V, deadband 136620.0 V. Its tap: steps 1-159, neutral 79 at 137.825 kV, step 75.69.
+
+- **mRIDs** (prefixes requested, C3). The key is `<I>_<J>_<K>_<CKT>`:
+  - the transformer is `xf_<key>`;
+  - its ends are `xf_<key>_<k>`;
+  - its mesh rows are `xf_<key>_mesh_<ij>` (12, 23, 13);
+  - winding k's tap changer is `xf_<key>_tap<k>` and its control `xf_<key>_ctrl<k>`;
+  - cimtables generates the terminals `xf_<key>_T<k>` (sequenceNumber = endNumber).
+  - NAME is the transformer's name; a blank NAME gives the key, as for a branch. An end, tap changer or control is
+    named `<key>_<k>`.
+- **Ends:**
+  - `bus` is winding k's bus (I, J, K), and `BaseVoltage` is its BASKV's.
+  - `ratedU` = NOMVk, or the bus's BASKV when NOMVk is 0 (RAW-6). Every public transformer has NOMV = BASKV,
+    except IEEE14's NOMV 0. The exporter writes NOMV = ratedU back, so IEEE14's NOMV 0 comes back as 138.0
+    (expected difference, the same value to PSS/E).
+  - `ratedS`: on a 2-winding unit, SBASE1-2 on both ends. A 3-winding unit's SBASE1-2, 2-3 and 3-1 are bases of
+    winding pairs, so no end can hold them. They enter the CZ 2/3 derivations below and are not kept otherwise.
+    The exporter writes SBASE (expected difference).
+  - `PowerTransformer.vectorGroup` = VECGRP when not blank (blank in both cases). `connectionKind` stays blank: a
+    positive-sequence case has no winding connections.
+- **Impedance (RAW-5, ohm):** one derivation, `transformer_ohms`, for each pair ij, seen from winding i:
+
+  | CZ | RAW gives | r, x (ohm) |
+  |---|---|---|
+  | 1 | R, X in pu on SBASE and bus BASKVi | R, X × BASKVi² / SBASE |
+  | 2 | R, X in pu on SBASEij and NOMVi | R, X × NOMVi² / SBASEij |
+  | 3 | R = load loss in W, X = \|Z\| in pu on SBASEij and NOMVi | r = loss / SBASEij in pu; x = √(\|Z\|² − r²); both × NOMVi² / SBASEij |
+
+  - PSS/E's own conversion between the codes keeps these ohms the same. So the result is one physical impedance,
+    referred to winding i at its ratedU.
+  - CZ 3 with \|Z\| < r raises.
+  - The exporter writes CZ 1 back, so the CZ 2/3 atoms come back as CZ 1 (expected difference, the same impedance).
+- **Magnetizing (RAW-5, S, end 1):** `magnetizing_siemens`, at winding 1's bus:
+
+  | CM | RAW gives | g, b (S) |
+  |---|---|---|
+  | 1 | MAG1, MAG2: G, B in pu on SBASE and BASKV1 | G, B × SBASE / BASKV1² |
+  | 2 | MAG1 = no-load loss in W, MAG2 = exciting current in pu on SBASE1-2 and NOMV1 | g = loss / SBASE1-2 in pu; b = −√(I² − g²); both × SBASE1-2 / NOMV1² |
+
+  - The sign is kept: a magnetizing B is negative (inductive), and CIM's b allows either sign.
+  - CM 2 with I < g raises.
+  - The exporter writes CM 1 back (expected difference).
+- **Turns ratio and taps (RAW-6).** A winding that has COD data gets a `RatioTapChanger` on its end: winding 1 of
+  a 2-winding unit, and every winding of a 3-winding one. That covers every public transformer: WECC240 carries
+  NTP, RMA and RMI even with COD 0, and IEEE14's WINDV1 is off-nominal.
+  - **Winding units:** CW gives WINDV, RMA and RMI in pu of the bus's BASKV (1), in kV (2), or in pu of NOMV (3).
+    `winding_kv` turns each into kV, and dividing by ratedU gives pu of the end's rating. CIM holds no CW, so the
+    exporter writes CW 1 (expected difference).
+  - **Steps:** lowStep = 1 and highStep = NTP, from RMI to RMA in equal steps, so `stepVoltageIncrement` =
+    (RMA − RMI)/(NTP − 1), in percent of ratedU. NTP < 2 raises.
+  - **Neutral:** neutralStep is the step nearest ratio 1 (a tie takes the upper), and `neutralU` = ratedU × the
+    ratio at that step.
+    - CIM's neutralStep is an integer, and PSS/E's ratio 1 often falls between steps: WECC240 6103-6104's RMI
+      0.9, RMA 1.1 and NTP 30 put it at step 15.5.
+    - A neutralU ≠ ratedU keeps it exact, and the profile allows that. A consumer that assumes neutralU =
+      ratedU is off by at most half a step.
+  - **Position:** `step` = neutralStep + (WINDV − the neutral ratio) / the step size. It is a float: CIM allows a
+    non-integer step, and PSS/E's WINDV need not sit on a step (IEEE14's do not).
+    - A WINDV outside RMI..RMA raises (CIM: lowStep ≤ step ≤ highStep).
+    - The exporter's WINDV = neutralU/ratedU + (step − neutralStep) × increment, and its RMI/RMA come from
+      lowStep/highStep. Each can differ in the last digit (expected difference).
+  - **Winding 2 of a 2-winding unit** has only WINDV2. A ratio other than 1 (in winding units) raises until a case
+    has one. The public cases all have 1.
+- **Control (COD).** A tapped winding always gets its control, so VMA, VMI and CONT survive even when the tap is
+  fixed (R2's locked-shunt pattern):
+
+  | COD | RatioTapChanger | TapChangerControl |
+  |---|---|---|
+  | 0 fixed | `ltcFlag = false`, `controlEnabled = false` | `mode = voltage`, `enabled = false`; the target as read (unused by PSS/E) |
+  | 1 / −1 voltage | `ltcFlag = true`, `controlEnabled = (COD > 0)` | `mode = voltage`, `enabled = (COD > 0)` |
+  | 2 / −2 reactive power | as ±1 | `mode = reactivePower`, `enabled = (COD > 0)` |
+  | ±3 phase shift, ±5 asymmetric phase shift | raise `NotImplementedError`: no case has one yet (a `PhaseTapChanger`) | |
+  | ±4 DC line control | raise `NotImplementedError`: phase 2 (two-terminal DC) | |
+
+  - **The exporter's COD:** 0 when `ltcFlag` is false; otherwise ±1 or ±2 by mode, signed by `enabled`. That makes
+    it a round trip.
+  - **Regulated point:** `Terminal` = `bb_<CONT>_T1` (RAW-11). CONT 0 names the tapped winding's own terminal
+    `xf_<key>_T<k>` (user 2026-11-08). The exporter writes CONT 0 back for an own terminal.
+    - COD ±1 with CONT 0 raises: PSS/E needs a controlled bus.
+    - COD ±2 measures the flow through the winding, so CONT 0 is its usual form.
+    - A negative CONT raises.
+    - NODk ≠ 0 (a node in a substation) raises until R6.
+  - **Target:** `discrete = true` (taps step).
+    - Voltage: `targetValue` = (VMA + VMI)/2 × the regulated bus's BASKV and `targetDeadband` = (VMA − VMI) ×
+      BASKV, in V (`volts_from_per_unit`, as the switched shunt).
+    - Reactive power: the same, in VAr from Mvar, through the units library.
+    - CONT 0 uses the winding's own bus's BASKV.
+  - **Raise until a case has one:** CRk/CXk ≠ 0 (load-drop compensation, which `TapChangerControl.lineDropR/X`
+    could take) and CNXAk ≠ 0 (only COD ±5 uses it).
+  - TABk ≠ 0 (an impedance correction table) raises until phase 2.
+- **Status:** STAT 1 → `inService = true` and 0 → false. STAT 2, 3 and 4 (one winding of a 3-winding unit out)
+  raise until a case has one.
+- **Ratings:** each winding's nonzero RATEk-n go on terminal `xf_<key>_T<k>`, in the set `xf_<key>_<k>_ratings`
+  (RAW-20, through `RatingRows`). They are `ApparentPowerLimit`s in MVA, or `CurrentLimit`s in kA when XFRRAT > 0
+  (RAW-9; blank → MVA). WECC240 has 42 units with RATE1-3.
+- **Untranscribed:**
+  - NMETR: the metered end, a CIM 18 gap, as branch MET (RAW-22);
+  - O1..F4: ownership (CIM 18 gap);
+  - ZCOD: the zero-sequence data is in the sequence file, not the RAW;
+  - VMSTAR/ANSTAR: the solved voltage of the star point, which the Delta model omits;
+  - CW, CZ, CM: unit codes, applied above; the exporter writes 1.
+- **Defaults:** RAW's rules apply per record. SBASEij defaults to SBASE. WINDV defaults to 1.0, or to the bus's
+  BASKV under CW 2. RMA/RMI default to 1.1/0.9 under CW 1 or 3 when \|COD\| is not 3 or 5. VMA/VMI default to
+  1.1/0.9 when \|COD\| is 1, and the mapper applies the same to COD 0, whose band PSS/E ignores. A blank with no
+  default raises. A 2-winding unit's 3-winding slots (the schema's `serialize_if: k != 0`) are never defaulted.
+- **Atom:** `tests/atoms/transformer/transformers.raw` holds five units:
+  - A: CW 2 + CZ 2 + CM 2, with NOMV1 340 on a 345 kV bus, COD 1 on a remote bus, and two ratings;
+  - B: CW 3 + CZ 3, with COD −1;
+  - C: COD 2 with CONT 0;
+  - D: 3-winding with CZ 1 + CM 1, COD 1 on winding 2, and ratings on windings 1 and 3;
+  - E: 3-winding with CZ 2 on pair bases, every winding's tap data defaulted.
+
+  It survives a RAW read → write → read with nothing lost, and binds. Every value is checked in SI against PSS/E's
+  conversion. Nineteen raise cases are tested; R0's substation merge already rejects a winding bus that is no bus.
+
+| TransformerRecord field | type | samples | kind | target |
+|---|---|---|---|---|
+| `i` | `int` | `4`, `5`, `1001` | structural | I: winding 1's bus (end 1's bus and BaseVoltage); the transformer's EquipmentContainer is its substation |
+| `j` | `int` | `7`, `9`, `6` | structural | J: winding 2's bus |
+| `x1_2` | `float` | `0.20912`, `0.55618`, `0.25202` | derived | X1-2: as R1-2, x (ohm) |
+| `k` | `Optional[int]` | `0` | structural | K: winding 3's bus; 0 is a 2-winding unit; blank: 0 (defaulted) |
+| `circuit` | `Optional[str]` | `1`, `2`, `3` | structural | CKT: with I, J and K the key, mRID xf_<I>_<J>_<K>_<CKT>; blank: 1 (defaulted) |
+| `cw` | `Optional[int]` | `1` | mapped | CW: the unit of WINDV, RMA and RMI (winding_unit_kv); CIM keeps kV, so the exporter writes CW 1; blank: 1 (defaulted) |
+| `cz` | `Optional[int]` | `1` | mapped | CZ: the code of R/X (transformer_ohms); CIM keeps ohm, so the exporter writes CZ 1; blank: 1 (defaulted) |
+| `cm` | `Optional[int]` | `1` | mapped | CM: the code of MAG1/MAG2 (magnetizing_siemens); the exporter writes CM 1; blank: 1 (defaulted) |
+| `mag1` | `Optional[float]` | `0.0` | derived | MAG1: end 1's g (S) (magnetizing_siemens, by CM); blank: 0 (defaulted) |
+| `mag2` | `Optional[float]` | `0.0` | derived | MAG2: end 1's b (S), negative inductive; blank: 0 (defaulted) |
+| `nmetr` | `Optional[int]` | `2` | untranscribed | NMETR: the metered end, a CIM 18 gap as branch MET (RAW-22) |
+| `name` | `Optional[str]` |  | copied | `PowerTransformer.name`; NAME; blank: the key I_J_K_CKT |
+| `status` | `Optional[int]` | `1` | mapped | STAT: inService = (STAT == 1); 2, 3 and 4 (one winding out) raise until a case has one; blank: 1 (defaulted) |
+| `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o2` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f2` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o3` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f3` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `o4` | `Optional[int]` | `0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `f4` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
+| `vecgrp` | `Optional[str]` |  | copied | `PowerTransformer.vectorGroup`; VECGRP; blank: none |
+| `zcod` | `Optional[int]` |  | untranscribed | ZCOD: zero-sequence data is in the sequence file, not the RAW |
+| `r1_2` | `Optional[float]` | `0.0`, `1e-07`, `0.00028` | derived | R1-2: with X1-2, r (ohm) seen from winding 1 (transformer_ohms, by CZ); 2-winding: on end 1, 3-winding: on the mesh row; blank: 0 (defaulted) |
+| `sbase1_2` | `Optional[float]` | `100.0` | derived | SBASE1-2 (MVA): the pair's base for CZ 2 and 3 (and CM 2 on 1-2); a 2-winding unit's SBASE1-2 is also both ends' ratedS; a 3-winding unit's pair bases have no end to go on; blank: SBASE (defaulted) |
+| `r2_3` | `Optional[float]` |  | derived | R2-3: with X2-3, r (ohm) seen from winding 2 (transformer_ohms, by CZ); 2-winding: on end 1, 3-winding: on the mesh row; blank: 0 (defaulted) |
+| `x2_3` | `Optional[float]` |  | derived | X2-3: as R2-3, x (ohm) |
+| `sbase2_3` | `Optional[float]` |  | derived | SBASE2-3 (MVA): the pair's base for CZ 2 and 3 (and CM 2 on 1-2); a 2-winding unit's SBASE1-2 is also both ends' ratedS; a 3-winding unit's pair bases have no end to go on; blank: SBASE (defaulted) |
+| `r3_1` | `Optional[float]` |  | derived | R3-1: with X3-1, r (ohm) seen from winding 1 (transformer_ohms, by CZ); 2-winding: on end 1, 3-winding: on the mesh row; blank: 0 (defaulted) |
+| `x3_1` | `Optional[float]` |  | derived | X3-1: as R3-1, x (ohm) |
+| `sbase3_1` | `Optional[float]` |  | derived | SBASE3-1 (MVA): the pair's base for CZ 2 and 3 (and CM 2 on 1-2); a 2-winding unit's SBASE1-2 is also both ends' ratedS; a 3-winding unit's pair bases have no end to go on; blank: SBASE (defaulted) |
+| `vmstar` | `Optional[float]` |  | untranscribed | VMSTAR: the solved voltage of the star point, which the Delta model omits |
+| `anstar` | `Optional[float]` |  | untranscribed | ANSTAR: as VMSTAR |
+| `windv1` | `Optional[float]` | `0.978`, `0.969`, `0.932` | derived | WINDV1: the ratio, in CW units: RatioTapChanger step (ratio_tap) on winding 1, or any winding of a 3-winding unit; winding 2 of a 2-winding unit must be ratio 1 (else raises); blank: 1.0, or the bus's BASKV for CW 2 (defaulted) |
+| `nomv1` | `Optional[float]` | `0.0`, `500.0`, `345.0` | derived | NOMV1 (kV): PowerTransformerEnd ratedU, or the bus's BASKV when 0 (RAW-6); blank: 0 (defaulted) |
+| `ang1` | `Optional[float]` | `0.0` | structural | ANG1: a phase shift; nonzero raises until a case has one (a PhaseTapChanger); blank: 0 (defaulted) |
+| `rate1_1` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_2` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_3` | `Optional[float]` | `0.0`, `430.0`, `2000.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_4` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_5` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_6` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_7` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_8` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_9` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_10` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_11` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate1_12` | `Optional[float]` | `0.0` | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `cod1` | `Optional[int]` | `0`, `1` | mapped | COD1: 0 ltcFlag false, control disabled; +-1 voltage, +-2 reactivePower, ltcFlag true, controlEnabled and enabled = (COD > 0); +-3, +-5 raise (no case), +-4 raises (phase 2); blank: 0 (defaulted) |
+| `cont1` | `Optional[int]` | `0`, `1001`, `1002` | structural | CONT1: the TapChangerControl Terminal bb_<CONT>_T1, or the winding's own xf_<key>_T<k> when 0 (user 2026-11-08); COD +-1 with 0, or a negative CONT, raises; blank: 0 (defaulted) |
+| `rma1` | `Optional[float]` | `1.5`, `1.1` | derived | RMA1: highStep's ratio, in CW units (ratio_tap: steps 1..NTP from RMI to RMA, stepVoltageIncrement); blank: 1.1 for CW 1 or 3 (defaulted), else raises |
+| `rmi1` | `Optional[float]` | `0.51`, `0.9` | derived | RMI1: lowStep's ratio; as RMA1; blank: 0.9 for CW 1 or 3 (defaulted) |
+| `vma1` | `Optional[float]` | `1.5`, `1.1` | derived | VMA1: targetValue = (VMA + VMI) / 2 and targetDeadband = VMA - VMI, in V x the regulated bus's BASKV (volts_from_per_unit) for voltage, in VAr from Mvar (vars_from_mvar) for reactivePower; blank: 1.1 for COD 0 or +-1 (defaulted), else raises |
+| `vmi1` | `Optional[float]` | `0.51`, `0.9`, `0.95` | derived | VMI1: as VMA1; blank: 0.9 for COD 0 or +-1 (defaulted) |
+| `ntp1` | `Optional[int]` | `159`, `989`, `30` | derived | NTP1: highStep = NTP, lowStep = 1; below 2 raises; blank: 33 (defaulted) |
+| `tab1` | `Optional[int]` | `0` | structural | TAB1: an impedance correction table; nonzero raises until phase 2; blank: 0 (defaulted) |
+| `cr1` | `Optional[float]` | `0.0` | structural | CR1: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
+| `cx1` | `Optional[float]` | `0.0` | structural | CX1: as CR1 |
+| `cnxa1` | `Optional[float]` | `0.0` | structural | CNXA1: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
+| `nod1` | `Optional[int]` | `0` | structural | NOD1: a node of bus CONT1; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `windv2` | `Optional[float]` | `1.0` | derived | WINDV2: the ratio, in CW units: RatioTapChanger step (ratio_tap) on winding 1, or any winding of a 3-winding unit; winding 2 of a 2-winding unit must be ratio 1 (else raises); blank: 1.0, or the bus's BASKV for CW 2 (defaulted) |
+| `nomv2` | `Optional[float]` | `0.0`, `345.0`, `230.0` | derived | NOMV2 (kV): PowerTransformerEnd ratedU, or the bus's BASKV when 0 (RAW-6); blank: 0 (defaulted) |
+| `ang2` | `Optional[float]` |  | structural | ANG2: a phase shift; nonzero raises until a case has one (a PhaseTapChanger); blank: 0 (defaulted) |
+| `rate2_1` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_2` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_3` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_4` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_5` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_6` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_7` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_8` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_9` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_10` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_11` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate2_12` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `cod2` | `Optional[int]` |  | mapped | COD2: 0 ltcFlag false, control disabled; +-1 voltage, +-2 reactivePower, ltcFlag true, controlEnabled and enabled = (COD > 0); +-3, +-5 raise (no case), +-4 raises (phase 2); blank: 0 (defaulted) |
+| `cont2` | `Optional[int]` |  | structural | CONT2: the TapChangerControl Terminal bb_<CONT>_T1, or the winding's own xf_<key>_T<k> when 0 (user 2026-11-08); COD +-1 with 0, or a negative CONT, raises; blank: 0 (defaulted) |
+| `rma2` | `Optional[float]` |  | derived | RMA2: highStep's ratio, in CW units (ratio_tap: steps 1..NTP from RMI to RMA, stepVoltageIncrement); blank: 1.1 for CW 1 or 3 (defaulted), else raises |
+| `rmi2` | `Optional[float]` |  | derived | RMI2: lowStep's ratio; as RMA2; blank: 0.9 for CW 1 or 3 (defaulted) |
+| `vma2` | `Optional[float]` |  | derived | VMA2: targetValue = (VMA + VMI) / 2 and targetDeadband = VMA - VMI, in V x the regulated bus's BASKV (volts_from_per_unit) for voltage, in VAr from Mvar (vars_from_mvar) for reactivePower; blank: 1.1 for COD 0 or +-1 (defaulted), else raises |
+| `vmi2` | `Optional[float]` |  | derived | VMI2: as VMA2; blank: 0.9 for COD 0 or +-1 (defaulted) |
+| `ntp2` | `Optional[int]` |  | derived | NTP2: highStep = NTP, lowStep = 1; below 2 raises; blank: 33 (defaulted) |
+| `tab2` | `Optional[int]` |  | structural | TAB2: an impedance correction table; nonzero raises until phase 2; blank: 0 (defaulted) |
+| `cr2` | `Optional[float]` |  | structural | CR2: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
+| `cx2` | `Optional[float]` |  | structural | CX2: as CR2 |
+| `cnxa2` | `Optional[float]` |  | structural | CNXA2: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
+| `nod2` | `Optional[int]` |  | structural | NOD2: a node of bus CONT2; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+| `windv3` | `Optional[float]` |  | derived | WINDV3: the ratio, in CW units: RatioTapChanger step (ratio_tap) on winding 1, or any winding of a 3-winding unit; winding 2 of a 2-winding unit must be ratio 1 (else raises); blank: 1.0, or the bus's BASKV for CW 2 (defaulted) |
+| `nomv3` | `Optional[float]` |  | derived | NOMV3 (kV): PowerTransformerEnd ratedU, or the bus's BASKV when 0 (RAW-6); blank: 0 (defaulted) |
+| `ang3` | `Optional[float]` |  | structural | ANG3: a phase shift; nonzero raises until a case has one (a PhaseTapChanger); blank: 0 (defaulted) |
+| `rate3_1` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_2` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_3` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_4` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_5` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_6` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_7` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_8` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_9` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_10` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_11` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `rate3_12` | `Optional[float]` |  | structural | RATEk-n: winding k's ratings, an ApparentPowerLimit (MVA) or CurrentLimit (kA, XFRRAT > 0) xf_<key>_<k>_rate<n> in the set xf_<key>_<k>_ratings on terminal xf_<key>_T<k>; 0 is no limit, no row; blank: 0 (defaulted) |
+| `cod3` | `Optional[int]` |  | mapped | COD3: 0 ltcFlag false, control disabled; +-1 voltage, +-2 reactivePower, ltcFlag true, controlEnabled and enabled = (COD > 0); +-3, +-5 raise (no case), +-4 raises (phase 2); blank: 0 (defaulted) |
+| `cont3` | `Optional[int]` |  | structural | CONT3: the TapChangerControl Terminal bb_<CONT>_T1, or the winding's own xf_<key>_T<k> when 0 (user 2026-11-08); COD +-1 with 0, or a negative CONT, raises; blank: 0 (defaulted) |
+| `rma3` | `Optional[float]` |  | derived | RMA3: highStep's ratio, in CW units (ratio_tap: steps 1..NTP from RMI to RMA, stepVoltageIncrement); blank: 1.1 for CW 1 or 3 (defaulted), else raises |
+| `rmi3` | `Optional[float]` |  | derived | RMI3: lowStep's ratio; as RMA3; blank: 0.9 for CW 1 or 3 (defaulted) |
+| `vma3` | `Optional[float]` |  | derived | VMA3: targetValue = (VMA + VMI) / 2 and targetDeadband = VMA - VMI, in V x the regulated bus's BASKV (volts_from_per_unit) for voltage, in VAr from Mvar (vars_from_mvar) for reactivePower; blank: 1.1 for COD 0 or +-1 (defaulted), else raises |
+| `vmi3` | `Optional[float]` |  | derived | VMI3: as VMA3; blank: 0.9 for COD 0 or +-1 (defaulted) |
+| `ntp3` | `Optional[int]` |  | derived | NTP3: highStep = NTP, lowStep = 1; below 2 raises; blank: 33 (defaulted) |
+| `tab3` | `Optional[int]` |  | structural | TAB3: an impedance correction table; nonzero raises until phase 2; blank: 0 (defaulted) |
+| `cr3` | `Optional[float]` |  | structural | CR3: load-drop compensation; nonzero raises until a case has one; blank: 0 (defaulted) |
+| `cx3` | `Optional[float]` |  | structural | CX3: as CR3 |
+| `cnxa3` | `Optional[float]` |  | structural | CNXA3: only COD +-5 uses it; nonzero raises; blank: 0 (defaulted) |
+| `nod3` | `Optional[int]` |  | structural | NOD3: a node of bus CONT3; nonzero raises until R6 (node-breaker); blank: 0 (defaulted) |
+
 ## Owner
 
 
@@ -814,7 +1113,8 @@ IDE and IC are checked in the mapper (above). They are not CIM enums.
 | blank or other | raises |
 
 MODSW (R2): the table in [Switched shunt](#switched-shunt-r2). WMOD (R3): the table in
-[Generator](#generator-r3).
+[Generator](#generator-r3). CZ, CM and COD (R4): the tables in [Transformer](#transformer-r4); CW is
+`winding_unit_kv` (1 pu of BASKV, 2 kV, 3 pu of NOMV).
 
 ## CIM 18 gaps
 
@@ -826,7 +1126,7 @@ Each is logged in the shared register (`CIMTBL-Models/distribution/CIM18_GAPS.md
 | a bus's own control area, and the area slack (equipment is covered: `ControlAreaGeneratingUnit`, `LoadGroup` → `SubLoadArea`, `TieFlow`) | bus AREA, area ISW | untranscribed |
 | area/zone of machines and DC equipment; zone of a load (the `SubLoadArea` → `LoadArea` hierarchy was added to the profile 2026-11-08) | induction machine, MTDC bus AREA/ZONE; load ZONE ≠ bus ZONE | loads in `LoadArea` ⊃ `SubLoadArea` per (area, zone) (R2); the rest untranscribed |
 | ownership of network equipment | Owner, OWNER, O1..F4 | untranscribed |
-| the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET | untranscribed |
+| the metered (loss-allocation) end of a branch (R1) | branch, switch and multi-section line MET; transformer NMETR (R4) | untranscribed |
 | a shunt switched with its line, in a bus-branch model (R1) | branch GI/BI/GJ/BJ | a `LinearShuntCompensator` per end, linked by its mRID only |
 | a shunt's or converter's share of a coordinated voltage control (R2, R3) | switched shunt RMPCT; generator RMPCT on WMOD 1 | untranscribed |
 | the kind of a renewable bus-branch generator: PV, wind, or an induction machine (R3) | generator WMOD 1 | a `PowerElectronicsConnection` + `PowerElectronicsUnit` (no kind) |
@@ -851,6 +1151,11 @@ regulating controls on terminals by design (RAW-11, RAW-19).
   (`referencePriority` and `qPercent` added to the profile; ZX a TODO extension), RAW-24 (WMOD 0 a
   `SynchronousMachine`, WMOD 1 a `PowerElectronicsConnection`), RAW-25 (an implicit step-up transformer raises; the
   builder shape a TODO for an owner).
+- **R4** (user, 2026-11-08): RAW-5 (every CZ/CM code derived to ohm/S; a 2-winding r/x/g/b on end 1; a 3-winding
+  unit's Z12/Z23/Z31 as `TransformerMeshImpedance` rows with g/b on end 1, no star conversion; cim18v17 has no
+  `TransformerStarImpedance`/`TransformerStarAdmittance`); RAW-6 (a `RatioTapChanger` per tapped winding over steps
+  1..NTP, neutralStep nearest ratio 1 at an exact neutralU; COD 0/±1/±2 mapped, ±3/±4/±5 raise; CONT 0 names the
+  winding's own terminal).
 
 ## Reference model and expected differences
 

@@ -16,7 +16,8 @@ substations, BusbarSections, voltage limits (kV) and SvVoltage, through `RawImpo
 - IEEE14 (11 substations), WECC240 (134) and the node-breaker atom bind.
 - Every WECC240 limit and solved voltage in SI equals pu × BASKV; 64 tests.
 - **R1 done 2026-11-08** (81 tests; atoms `cimhub_raw/tests/atoms/branch/`). **R2 done 2026-11-08** (112 tests; atoms
-`tests/atoms/load/`, `tests/atoms/shunt/`). **R3 done 2026-11-08** (130 tests; atom `tests/atoms/generator/`; RAW-7, RAW-23..25; R4 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
+`tests/atoms/load/`, `tests/atoms/shunt/`). **R3 done 2026-11-08** (130 tests; atom `tests/atoms/generator/`; RAW-7, RAW-23..25). **R4 done 2026-11-08** (166
+tests; atom `tests/atoms/transformer/`; RAW-5, RAW-6; R5 next) (`cimhub_raw/docs/CIMTBL_MAPPING.md`, RAW-9/12/13/20/21/22). Runs in parallel
 with the DSS wave on branch `raw-v34`, in a worktree that sits beside the repo checkout (and so beside the `CIM-*`
 checkouts, which the root `../CIM-*` path sources need).
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (its F3 wave for `cimhub_raw`). **Pattern:**
@@ -72,8 +73,10 @@ Read 2026-11-08 with the old reader, which is the seed:
 | Impedance correction | 0 | 0 | 2 |
 | Substation (node-breaker, v34) | 0 | 0 | 1, slice R6 (hand-built atom: 2 substations, 4 + 4 nodes, 4 + 3 breakers, 4 terminals) |
 
-- **Every public transformer has the same form:** 2-winding, CW = CZ = CM = 1, COD1 = 0 (no control).
-  Three-winding units, CW 2/3, CZ 2/3, CM 2 and tap controls appear only in hand-written atoms.
+- **Every public transformer has the same form:** 2-winding, CW = CZ = CM = 1, ANG = 0, MAG = 0. COD1 = 0
+  except two WECC240 voltage controls (6103-6104, 6302-6304: COD1 = 1, CONT on the 230 kV side; corrected
+  2026-11-08, the seed reader never read COD). Every unit carries NTP/RMA/RMI, and IEEE14's WINDV1 is off-nominal
+  with CONT 0. Three-winding units, CW 2/3, CZ 2/3 and CM 2 appear only in hand-written atoms.
 - **Extended bus names.** The node-breaker atom refers to buses as `'TOPO_BUS_1  115.00'` (12-character name plus
   base kV) rather than by number, in every record that names a bus. The seed reader fails on it (R0).
 - **Substations under the §3.2 rule:** IEEE14 has 11 (largest 3 buses); WECC240 has 131 (largest 7), with 9 series
@@ -185,7 +188,7 @@ Each slice delivers its mappers, atoms with goldens (`tests/atoms/<table>/`), it
 | R1 | Branch (+ ratings, line shunts RAW-13, series capacitors RAW-15), system switching device, multi-section line | IEEE14 + WECC240 branches bind; every z in ohms equals R·BASKV²/SBASE |
 | R2 | Load, fixed shunt, switched shunt | values in SI equal hand formulas; WECC240's 7 switched shunts bind |
 | R3 | Generator (new `synchronous_machine` shape, core request C2) | 151 machines bind; p sign = load convention |
-| R4 | Transformer: 2- and 3-winding, CW 1/2/3, CZ 1/2/3, CM 1/2, taps and controls COD ±1/±2/±3 (RAW-5, RAW-6) | one atom per code combination; z in ohms equals the PSS/E conversion; IEEE14 + WECC240 bind whole |
+| R4 | Transformer: 2- and 3-winding, CW 1/2/3, CZ 1/2/3, CM 1/2, taps and controls COD 0/±1/±2 (RAW-5, RAW-6; ±3/±5 phase shifters raise until a case has one, user 2026-11-08) | one atom per code combination; z in ohms equals the PSS/E conversion; IEEE14 + WECC240 bind whole |
 | R5 | Area interchange values (ControlArea), inter-area transfer, how a bus's AREA is recorded (RAW-2) | the whole public cases bind with nothing listed as not mapped |
 | R6 | Node-breaker: SUBSTATION blocks → `Substation`, `ConnectivityNode`s in their bus's `TopologicalNode`, substation switching devices (TYPE → `Breaker`/`Disconnector`, STATUS/NSTAT → `open`/`normalOpen`), equipment terminals placed on nodes. Needs a mixed bus-branch/node-breaker load path in cimtables (request) | the two-bus atom binds; each branch terminal sits on the node the terminal record names |
 | E | Exporter `cim_to_raw` on the core getters; tiers 2 and 3 | IEEE14 + WECC240 round-trip RAW → cimtbl → CIM → RAW, equal field by field minus untranscribed fields |
@@ -279,14 +282,18 @@ Each decision has a recommendation; the slice's spec section settles it.
 - **RAW-3. Defaults** mapped from the v34 specification, in a `raw_default` annotation; the mapper fills them and lists them (§3.4). *Decided 2026-11-08.*
 - **RAW-4. Identity** per §3.3. *Recommended.* The bus number I also goes to `TopologicalNode.busNumber`, which
   cim18v17 has.
-- **RAW-5. Transformer impedance codes.**
+- **RAW-5. Transformer impedance codes.** *Decided 2026-11-08 (user, with the R4 spec; `CIMTBL_MAPPING.md#transformer-r4`):*
+  every code is derived to ohm/S (`transformer_ohms`, `magnetizing_siemens`); the pu bullets below were the first proposal.
   - CZ 1 → `r/x (pu system)` on the end's BaseVoltage and SBASE.
   - CZ 2 → `(pu)` on the winding's SBASE and NOMV, or the bus BASKV when NOMV = 0.
   - CZ 3 → derived (load loss in W plus \|Z\| in pu), by a named function.
   - CM 1 → MAG1/MAG2 `g/b (pu system)`; CM 2 → derived (no-load loss in W plus exciting current in pu).
   - Three-winding Z12/Z23/Z31 go directly onto three `TransformerMeshImpedance` rows, with no star conversion.
-  - The base cimtables uses for a mesh row in `(pu system)` is checked in R4, before the spec is approved.
-- **RAW-6. Turns ratio and taps.**
+  - *Checked 2026-11-08:* cimtables cannot base a mesh row in `(pu system)` (no `BaseVoltage` on the row). The user
+    chose ohm/S for every code (2026-11-08), so the R4 draft derives `transformer_ohms` / `magnetizing_siemens`.
+  - *cim18v17 (user 2026-11-08):* no `TransformerStarImpedance`/`TransformerStarAdmittance`; a 2-winding r/x/g/b on
+    end 1; a mesh-given 3-winding as `TransformerMeshImpedance` rows with g/b on the end (Delta model).
+- **RAW-6. Turns ratio and taps.** *Decided 2026-11-08 (user, with the R4 spec).*
   - `ratedU` = NOMV, or BASKV when NOMV = 0.
   - WINDV (per CW) is an off-nominal ratio. It becomes a `RatioTapChanger`, never a raw ratio in `step`
     (`TapChanger.step` is a tap position).
@@ -295,6 +302,8 @@ Each decision has a recommendation; the slice's spec section settles it.
   - COD 0 with WINDV ≠ 1 still needs a tap changer (fixed, no control). COD ±1/±2/±3 add a `TapChangerControl`
     (voltage, reactive power, active power), and a negative COD sets the control out of service.
   - This is the riskiest mapping in the wave; R4's spec section works it out on atoms first.
+  - *R4 draft 2026-11-08* (`CIMTBL_MAPPING.md#transformer-r4`): steps 1..NTP, neutralStep nearest ratio 1 with
+    neutralU exact; COD 0/±1/±2 mapped, ±3/±4/±5 raise; CONT 0 names the winding's own terminal (user).
 - **RAW-7. Generators.** *Decided 2026-11-08 (user, with the R3 spec; `CIMTBL_MAPPING.md#generator-r3`).*
   - Per record, by WMOD (RAW-24): `SynchronousMachine` `sm_` + `GeneratingUnit` `gu_` + `ControlAreaGeneratingUnit`
     `cagu_`, or `PowerElectronicsConnection` `pec_` + `PowerElectronicsUnit` `pecu_` +
@@ -425,8 +434,8 @@ in the root `pyproject.toml` / `uv.lock`. Requests to the core owner:
 | # | ask | blocks |
 |---|---|---|
 | C1 | ~~`GraphModel.add_to_graph` raises on a duplicate key instead of warning and dropping (I8)~~ done on `rc_1` 2026-11-08 (uncommitted): `GraphModel.add_to_graph` raises `ValueError` on an identifier already in its class (user: the new API shape; identifiers seed mRIDs, unique at least within the local model). The RAW reader keeps its own earlier raise, which names both line numbers | nothing (the RAW reader checks first) |
-| C2 | `line_bus_branch` with a `BusbarSection` per bus, and its node mRID made bare (RAW-18); the voltage `OperationalLimitType`s with `direction` high and low (normal and emergency) in `common.cimtbl`; shapes `control_area` (ControlArea, ControlAreaGeneratingUnit, ConformLoadGroup, SubLoadArea, TieFlow), `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example | R0–R6 |
-| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, the switched-shunt block (`swsh_`), LoadArea (`la_`), SubLoadArea (`sla_`), ConformLoadGroup (`clg_`), NonConformLoadGroup (`nclg_`), the multi-section `Line` (`msl_`), SynchronousMachine (`sm_`), GeneratingUnit (`gu_`), ControlAreaGeneratingUnit (`cagu_`), the plant control (`gc_`), a kindless PowerElectronicsConnection (`pec_`), PowerElectronicsUnit (`pecu_`), ControlAreaPowerElectronicsUnit (`capu_`) in the `cimtbl-translate` table (its owners) | R0–R3 |
+| C2 | `line_bus_branch` with a `BusbarSection` per bus, and its node mRID made bare (RAW-18); the voltage `OperationalLimitType`s with `direction` high and low (normal and emergency) in `common.cimtbl`; shapes `control_area` (ControlArea, ControlAreaGeneratingUnit, ConformLoadGroup, SubLoadArea, TieFlow), `synchronous_machine` (bus-branch), `series_compensator`, a node-breaker `substation` (ConnectivityNodes in TopologicalNodes), and bus-branch variants of `load`, `shunt`, `switch` and `transformer_by_ends` (`bus` in place of `node`), each with a loading example; `transformer_by_ends` itself to cim18v17's model (user 2026-11-08: a 2-winding r/x/g/b on end 1, end 2 zero, no mesh row; a mesh only where the source gives one, R4) | R0–R6 |
+| C3 | prefixes for BusbarSection, SynchronousMachine, GeneratingUnit, ControlArea, ControlAreaGeneratingUnit, SubLoadArea, ConformLoadGroup, TieFlow, SeriesCompensator, the switched-shunt block (`swsh_`), LoadArea (`la_`), SubLoadArea (`sla_`), ConformLoadGroup (`clg_`), NonConformLoadGroup (`nclg_`), the multi-section `Line` (`msl_`), SynchronousMachine (`sm_`), GeneratingUnit (`gu_`), ControlAreaGeneratingUnit (`cagu_`), the plant control (`gc_`), a kindless PowerElectronicsConnection (`pec_`), PowerElectronicsUnit (`pecu_`), ControlAreaPowerElectronicsUnit (`capu_`), the transformer (`xf_`, ends `xf_<key>_<k>`, `_mesh_<ij>`, `_tap<k>`, `_ctrl<k>`, the regulator shape's suffixes) in the `cimtbl-translate` table (its owners) | R0–R4 |
 | C4 | the ZIP fraction function and the CZ/CM derivations as U4 candidates | nothing |
 | C5 | `scripts/leak-gate.sh`: `--exclude-dir=.git` does not skip a worktree's `.git` *file*, so the gate always fails in a worktree; add `--exclude=.git` | a clean gate on this branch |
 | C6 | ~~`cimhub_core.cimtbl.fill_defaults` keeps attributes `dataclasses.replace` drops (the reader's composite `record.ID`)~~ done on `rc_1` 2026-11-08 (uncommitted), with a test. `importer/cimtbl/records.py`'s `fill_keyed_defaults` goes once `raw-v34` takes `rc_1`; so do the pure `zip_` rows in `load.py` (core's `zip_fractions.cimtbl` replaces them) | R1, R2 |

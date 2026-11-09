@@ -20,8 +20,9 @@ FIELDS = {
                                               "case is not a model"),
     "system_base_mva": Field("copied", (("BasePower", "basePower", "MVA"),), note="SBASE; blank: 100 (defaulted)"),
     "revision": Field("structural", note="REV: the reader reads 34 only"),
-    "transformer_ratings_units": Field("mapped", note="XFRRAT: selects what transformer RATEn-k are (<= 0 MVA; > 0 "
-                                                      "current as MVA at 1 pu voltage); read by R4"),
+    "transformer_ratings_units": Field("mapped", note="XFRRAT: what transformer RATEk-n are: <= 0 MVA "
+                                                      "(ApparentPowerLimit), > 0 current as MVA (CurrentLimit, kA; "
+                                                      "R4); blank: MVA (defaulted)"),
     "branch_ratings_units": Field("mapped", note="NXFRAT: what branch and switch RATEn are: <= 0 MVA "
                                                  "(ApparentPowerLimit), > 0 current as MVA (CurrentLimit, kA); "
                                                  "blank: MVA (defaulted; the spec's 'present option setting')"),
@@ -56,6 +57,8 @@ class CaseValues(NamedTuple):
     zero_impedance_threshold_defaulted: bool
     branch_ratings_in_current: bool  # NXFRAT > 0: branch and switch RATEn are a current expressed as MVA
     branch_ratings_units_defaulted: bool
+    transformer_ratings_in_current: bool  # XFRRAT > 0: transformer RATEk-n are a current expressed as MVA
+    transformer_ratings_units_defaulted: bool
 
 
 def case_record(native) -> schema.CaseIdentificationRecord:
@@ -79,7 +82,7 @@ def _system_wide_value(text: str | None, keyword: str) -> float | None:
 
 
 def case_values(native) -> CaseValues:
-    """SBASE, BASFRQ, THRSHZ and NXFRAT, each with whether it was defaulted."""
+    """SBASE, BASFRQ, THRSHZ, NXFRAT and XFRRAT, each with whether it was defaulted."""
     case = case_record(native)
     base_mva = case.system_base_mva
     if base_mva is None:
@@ -91,4 +94,6 @@ def case_values(native) -> CaseValues:
         float(frequency if frequency is not None else DEFAULT_BASE_FREQUENCY), frequency is None,
         threshold if threshold is not None else DEFAULT_ZERO_IMPEDANCE_THRESHOLD, threshold is None,
         case.branch_ratings_units is not None and case.branch_ratings_units > 0, case.branch_ratings_units is None,
+        case.transformer_ratings_units is not None and case.transformer_ratings_units > 0,
+        case.transformer_ratings_units is None,
     )

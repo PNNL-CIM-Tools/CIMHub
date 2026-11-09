@@ -8,6 +8,7 @@ the source states a current as a power.
 from __future__ import annotations
 
 import math
+from typing import NamedTuple
 
 from cimprofiles.units.units import ureg
 
@@ -48,6 +49,121 @@ def ohms_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> floa
     Generator ZR, in pu on the machine's MBASE and its bus's BASKV (R3).
     """
     return per_unit * base_kv ** 2 / base_mva
+
+
+def siemens_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> float:
+    """An admittance in S from pu on a base kV and MVA: S = pu x MVA / kV^2 (MVA / kV^2 is exactly S).
+
+    Transformer MAG1/MAG2 (CM 1, R4).
+    """
+    return per_unit * base_mva / base_kv ** 2
+
+
+def vars_from_mvar(value_mvar: float) -> float:
+    """A reactive power in VAr from Mvar, through the units library: a ``TapChangerControl`` target in mode
+    reactivePower (transformer COD 2 VMA/VMI, R4)."""
+    return ureg.Quantity(value_mvar, "MVAr").to("VAr").magnitude
+
+
+def _per_unit_from_watts(watts: float, base_mva: float) -> float:
+    """A loss in W as pu of a base in MVA."""
+    return ureg.Quantity(watts, "W").to("MW").magnitude / base_mva
+
+
+def transformer_ohms(r: float, x: float, cz: int, *, base_kv: float, nominal_kv: float, pair_mva: float,
+                     system_mva: float, record_id) -> tuple[float, float]:
+    """A transformer winding pair's (r, x) in ohm, seen from winding i, from RAW's R/X under impedance code CZ (R4):
+
+    - CZ 1: pu on SBASE and bus i's BASKV;
+    - CZ 2: pu on the pair's SBASEij and NOMVi (``nominal_kv``: NOMVi, or BASKV when 0);
+    - CZ 3: R = the load loss in W, X = |Z| in pu on SBASEij and NOMVi; r = loss / SBASEij, x = sqrt(|Z|^2 - r^2).
+
+    PSS/E's own conversion between the codes keeps these ohms the same. CZ 3 with |Z| < r raises.
+    """
+    if cz == 1:
+        return ohms_from_per_unit(r, base_kv, system_mva), ohms_from_per_unit(x, base_kv, system_mva)
+    if cz == 2:
+        return ohms_from_per_unit(r, nominal_kv, pair_mva), ohms_from_per_unit(x, nominal_kv, pair_mva)
+    if cz == 3:
+        r_per_unit = _per_unit_from_watts(r, pair_mva)
+        if x < r_per_unit:
+            raise ValueError(f"{record_id}: CZ 3 |Z| = {x} pu is less than its load-loss r = {r_per_unit} pu")
+        x_per_unit = math.sqrt(x ** 2 - r_per_unit ** 2)
+        return ohms_from_per_unit(r_per_unit, nominal_kv, pair_mva), ohms_from_per_unit(x_per_unit, nominal_kv, pair_mva)
+    raise ValueError(f"{record_id}: CZ {cz} is not an impedance code (1, 2, 3)")
+
+
+def magnetizing_siemens(mag1: float, mag2: float, cm: int, *, base_kv: float, nominal_kv: float, pair_mva: float,
+                        system_mva: float, record_id) -> tuple[float, float]:
+    """A transformer's magnetizing (g, b) in S at winding 1, from RAW's MAG1/MAG2 under admittance code CM (R4):
+
+    - CM 1: G, B in pu on SBASE and bus 1's BASKV;
+    - CM 2: MAG1 = the no-load loss in W, MAG2 = the exciting current I in pu on SBASE1-2 and NOMV1; g = loss /
+      SBASE1-2, b = -sqrt(I^2 - g^2) (inductive).
+
+    The sign of a CM 1 B is kept: CIM's b allows either. CM 2 with I < g raises.
+    """
+    if cm == 1:
+        return siemens_from_per_unit(mag1, base_kv, system_mva), siemens_from_per_unit(mag2, base_kv, system_mva)
+    if cm == 2:
+        g_per_unit = _per_unit_from_watts(mag1, pair_mva)
+        if mag2 < g_per_unit:
+            raise ValueError(f"{record_id}: CM 2 exciting current {mag2} pu is less than its no-load-loss g = "
+                             f"{g_per_unit} pu")
+        b_per_unit = 0.0 - math.sqrt(mag2 ** 2 - g_per_unit ** 2)
+        return siemens_from_per_unit(g_per_unit, nominal_kv, pair_mva), siemens_from_per_unit(b_per_unit, nominal_kv,
+                                                                                              pair_mva)
+    raise ValueError(f"{record_id}: CM {cm} is not a magnetizing code (1, 2)")
+
+
+def winding_unit_kv(cw: int, base_kv: float, nominal_kv: float, record_id) -> float:
+    """The kV of one unit of a winding's WINDV, RMA and RMI under winding code CW (R4): pu of the bus's BASKV (1),
+    kV (2), or pu of NOMV (3; ``nominal_kv``: NOMV, or BASKV when 0)."""
+    units = {1: base_kv, 2: 1.0, 3: nominal_kv}
+    if cw not in units:
+        raise ValueError(f"{record_id}: CW {cw} is not a winding code (1, 2, 3)")
+    return units[cw]
+
+
+class TapPosition(NamedTuple):
+    """A ``RatioTapChanger``'s neutral and position over steps 1..NTP (``ratio_tap``)."""
+
+    neutral_step: int
+    neutral_kv: float
+    increment_percent: float
+    step: float
+
+
+def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float, rated_kv: float,
+              record_id) -> TapPosition:
+    """A winding's tap over steps 1..NTP, from RMI (step 1) to RMA (step NTP) in equal steps (R4, RAW-6).
+
+    WINDV, RMA and RMI are in winding units of ``unit_kv`` kV (``winding_unit_kv``):
+
+    - stepVoltageIncrement = (RMA - RMI) / (NTP - 1), in percent of ratedU;
+    - neutralStep = the step nearest ratio 1 (WINDV x unit = ratedU; a tie takes the upper), and neutralU = the
+      voltage at that step: CIM's neutralStep is an integer, and RAW's ratio 1 often falls between steps;
+    - step = neutralStep + (WINDV - the neutral ratio) / the step size, a float (CIM allows a non-integer
+      step); measured from the neutral, so a WINDV at ratio 1 is exactly neutralStep.
+
+    NTP < 2, RMA <= RMI, or a WINDV outside RMI..RMA (CIM: lowStep <= step <= highStep) raises.
+    """
+    if ntp < 2:
+        raise ValueError(f"{record_id}: NTP {ntp} gives no tap range (at least 2 positions)")
+    if rma <= rmi:
+        raise ValueError(f"{record_id}: RMA {rma} is not above RMI {rmi}")
+    if not rmi <= windv <= rma:
+        raise ValueError(f"{record_id}: WINDV {windv} is outside RMI..RMA ({rmi}..{rma})")
+    step_size = (rma - rmi) / (ntp - 1)
+    nearest = math.floor((rated_kv / unit_kv - rmi) / step_size + 0.5)
+    neutral_offset = min(max(nearest, 0), ntp - 1)
+    neutral = rmi + step_size * neutral_offset
+    return TapPosition(
+        neutral_step=1 + neutral_offset,
+        neutral_kv=neutral * unit_kv,
+        increment_percent=ureg.Quantity(step_size * unit_kv / rated_kv, "").to("percent").magnitude,
+        step=1 + neutral_offset + (windv - neutral) / step_size,
+    )
 
 
 def generation_p_q(record) -> tuple[float, float]:

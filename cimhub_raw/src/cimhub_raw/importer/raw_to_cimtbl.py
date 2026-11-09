@@ -36,6 +36,7 @@ from cimhub_raw.importer.cimtbl import (
     owner,
     switch,
     switched_shunt,
+    transformer,
     two_terminal_dc,
     vsc_dc,
     zone,
@@ -84,6 +85,8 @@ MAPPING_ORDER = (
         native, site.substation_of, site.base_kv, site.values.base_mva)),
     (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
         native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.values.base_mva)),
+    (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(
+        native, site.substation_of, site.base_kv, site.values.base_mva, site.values.transformer_ratings_in_current)),
     (two_terminal_dc.NATIVE_CLASS, lambda native, site: two_terminal_dc.map_two_terminal_dc(native)),
     (vsc_dc.NATIVE_CLASS, lambda native, site: vsc_dc.map_vsc_dc(native)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(native)),
@@ -115,6 +118,8 @@ def _master_comment(native, site: Site, name: str) -> str:
         lines.append(f"untranscribed: {', '.join(options)} (solution options)")
     if site.values.branch_ratings_units_defaulted:
         lines.append("defaulted: NXFRAT=0 (branch and switch ratings in MVA; the spec's 'present option setting')")
+    if site.values.transformer_ratings_units_defaulted:
+        lines.append("defaulted: XFRRAT=0 (transformer ratings in MVA; the spec's 'present option setting')")
     owners = native.count(owner.NATIVE_CLASS)
     if owners:
         lines.append(f"untranscribed: Owner {owners} (ownership is a CIM 18 gap)")

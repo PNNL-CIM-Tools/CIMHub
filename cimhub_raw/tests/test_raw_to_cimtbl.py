@@ -1,5 +1,5 @@
-"""R0-R3: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
-shunt and generator documents, and their bind under cim18v17 (BusBranchModel).
+"""R0-R4: the master, zone, area interchange, bus, branch, switch, multi-section line, load, fixed shunt, switched
+shunt, generator and transformer documents, and their bind under cim18v17 (BusBranchModel).
 
 Goldens: ``tests/goldens/IEEE14/`` (``CIMHUB_UPDATE_GOLDENS=1`` rewrites them; review the diff).
 """
@@ -26,6 +26,7 @@ from cimhub_raw.importer.cimtbl import (
     owner,
     switch,
     switched_shunt,
+    transformer,
     zone,
 )
 from cimhub_raw.importer.cimtbl.derived import (
@@ -34,9 +35,15 @@ from cimhub_raw.importer.cimtbl.derived import (
     ka_from_rating,
     kv_from_per_unit,
     load_p_q,
+    magnetizing_siemens,
     ohms_from_per_unit,
     per_unit_from_mva,
+    ratio_tap,
+    siemens_from_per_unit,
+    transformer_ohms,
+    vars_from_mvar,
     volts_from_per_unit,
+    winding_unit_kv,
     zip_mix,
 )
 from cimhub_raw.importer.raw_to_cimtbl import RawImporter, raw_to_cim
@@ -69,7 +76,7 @@ def ieee14_documents():
 
 
 @pytest.mark.parametrize("module", [case_identification, zone, area_interchange, bus, owner, branch, switch,
-                                    multi_section_line, load, fixed_shunt, switched_shunt, generator],
+                                    multi_section_line, load, fixed_shunt, switched_shunt, generator, transformer],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_classification_is_complete(module):
     check_fields(module.FIELDS, module.NATIVE_CLASS)
@@ -92,7 +99,8 @@ def test_master_matches_golden(ieee14_documents):
     assert_matches_golden(ieee14_documents.master, GOLDENS / "IEEE14.cimtbl")
 
 
-@pytest.mark.parametrize("part", ["zone", "area_interchange", "bus", "branch", "load", "fixed_shunt", "generator"])
+@pytest.mark.parametrize("part", ["zone", "area_interchange", "bus", "branch", "load", "fixed_shunt", "generator",
+                                  "transformer"])
 def test_part_matches_golden(ieee14_documents, part):
     document = next(doc for doc in ieee14_documents.parts if doc.name == part)
     assert_matches_golden(document, GOLDENS / f"{part}.cimtbl")
@@ -100,7 +108,7 @@ def test_part_matches_golden(ieee14_documents, part):
 
 def test_import_order_is_the_mapping_order(ieee14_documents):
     assert [part.name for part in ieee14_documents.parts] == ["zone", "area_interchange", "bus", "branch", "load",
-                                                              "fixed_shunt", "generator"]
+                                                              "fixed_shunt", "generator", "transformer"]
 
 
 # -- the bound networks ------------------------------------------------------------------------------
@@ -170,7 +178,10 @@ def test_a_zone_no_record_names_is_synthesized():
 
 
 def test_the_master_lists_what_is_not_mapped(ieee14_documents):
-    assert "not mapped: TransformerRecord 3" in ieee14_documents.master.comment
+    assert "not mapped" not in ieee14_documents.master.comment  # every IEEE14 table maps since R4
+    master = RawImporter("node_breaker").to_cimtbl(Raw34Reader(NODE_BREAKER).read_all()).master
+    assert ("not mapped: EquipmentTerminalRecord 4, StationSwitchingDeviceRecord 7, SubstationNodeRecord 8, "
+            "SubstationRecord 2") in master.comment  # R6
 
 
 # -- R1: branches, switches, multi-section lines ----------------------------------------------------------
@@ -205,7 +216,7 @@ def test_wecc240_branches_in_ohms(wecc240):
 def test_wecc240_ratings_on_terminal_1(wecc240):
     native, network = wecc240
     limits = _objects(network, "ApparentPowerLimit")
-    assert len(limits) == 281
+    assert len([mrid for mrid in limits if not mrid.startswith("xf_")]) == 281  # and 42 transformers' (R4)
     limit = limits["ln_2000_2202_1_rate2"]
     assert limit.normalValue.to("MVA") == pytest.approx(986.0)
     assert limit.OperationalLimitType.mRID == "olt_rate2"
@@ -562,5 +573,174 @@ def test_a_generator_outside_r3_raises(key, changes, error, message):
     if key == "2_G" and "regulated_bus_number" in changes:  # a plant's records agree, so change both
         _replace_record(native, schema.GeneratorRecord, "2_PV", **changes)
     _replace_record(native, schema.GeneratorRecord, key, **changes)
+    with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+# -- R4: transformers --------------------------------------------------------------------------------------
+
+TRANSFORMER_ATOMS = TESTS / "atoms" / "transformer"
+
+
+def test_transformer_ohms_by_impedance_code():
+    """CZ 1 on SBASE and BASKV; CZ 2 on the pair's SBASE and NOMV; CZ 3 a load loss in W and |Z|."""
+    bases = dict(base_kv=345.0, nominal_kv=340.0, pair_mva=200.0, system_mva=100.0, record_id="x")
+    assert transformer_ohms(0.001, 0.05, 1, **bases) == (pytest.approx(1.19025), pytest.approx(59.5125))
+    assert transformer_ohms(0.002, 0.08, 2, **bases) == (pytest.approx(1.156), pytest.approx(46.24))
+    r, x = transformer_ohms(400000.0, 0.1, 3, **bases)  # 0.4 MW on 200 MVA is r = 0.002 pu
+    assert (r, x) == (pytest.approx(1.156), pytest.approx(0.1 * 0.99980 * 578.0, rel=1e-5))
+    with pytest.raises(ValueError, match="CZ 3 .Z. = 0.001 pu is less than its load-loss r"):
+        transformer_ohms(400000.0, 0.001, 3, **bases)
+
+
+def test_magnetizing_siemens_by_admittance_code():
+    bases = dict(base_kv=230.0, nominal_kv=220.0, pair_mva=50.0, system_mva=100.0, record_id="x")
+    assert magnetizing_siemens(0.001, -0.003, 1, **bases) == (pytest.approx(0.1 / 230.0 ** 2),
+                                                              pytest.approx(-0.3 / 230.0 ** 2))
+    g, b = magnetizing_siemens(30000.0, 0.005, 2, **bases)  # 0.03 MW on 50 MVA is g = 0.0006 pu
+    assert (g, b) == (pytest.approx(0.0006 * 50.0 / 220.0 ** 2), pytest.approx(-0.0049639 * 50.0 / 220.0 ** 2,
+                                                                                rel=1e-5))
+    with pytest.raises(ValueError, match="CM 2 exciting current 0.0001 pu is less than"):
+        magnetizing_siemens(30000.0, 0.0001, 2, **bases)
+    assert (siemens_from_per_unit(1.0, 10.0, 100.0), vars_from_mvar(-2.5)) == (1.0, -2500000.0)
+
+
+def test_winding_unit_kv():
+    assert [winding_unit_kv(cw, 345.0, 340.0, "x") for cw in (1, 2, 3)] == [345.0, 1.0, 340.0]
+
+
+@pytest.mark.parametrize(("windv", "rma", "rmi", "ntp", "units", "expected"), [
+    (1.0, 1.1, 0.9, 989, (500.0, 500.0), (495, 1.0, 0.2 / 988 * 100, 495.0)),  # WECC240: ratio 1 on a step
+    (1.00345, 1.1, 0.9, 30, (345.0, 345.0), (15, 0.9 + 14 * 0.2 / 29, 0.2 / 29 * 100, 16.00025)),  # ratio 1 at 15.5
+    (0.978, 1.5, 0.51, 159, (138.0, 138.0), (79, 0.51 + 78 * 0.99 / 158, 0.99 / 158 * 100, 75.6909091)),  # IEEE14
+    (345.0, 360.0, 320.0, 33, (1.0, 340.0), (17, 340.0, 1.25 / 340 * 100, 21.0)),  # CW 2, NOMV 340: kV units
+    (1.2, 1.3, 1.1, 5, (1.0, 1.0), (1, 1.1, 5.0, 3.0)),  # ratio 1 below RMI: the neutral is step 1
+])
+def test_ratio_tap(windv, rma, rmi, ntp, units, expected):
+    unit_kv, rated_kv = units
+    tap = ratio_tap(windv, rma, rmi, ntp, unit_kv=unit_kv, rated_kv=rated_kv, record_id="x")
+    neutral_step, neutral, increment, step = expected
+    assert tap.neutral_step == neutral_step
+    assert tap.neutral_kv == pytest.approx(neutral * unit_kv)
+    assert (tap.increment_percent, tap.step) == (pytest.approx(increment), pytest.approx(step))
+
+
+@pytest.mark.parametrize(("windv", "rma", "rmi", "ntp", "message"), [
+    (1.0, 1.1, 0.9, 1, "NTP 1 gives no tap range"),
+    (1.0, 0.9, 1.1, 33, "RMA 0.9 is not above RMI 1.1"),
+    (1.2, 1.1, 0.9, 33, "WINDV 1.2 is outside RMI..RMA"),
+])
+def test_ratio_tap_raises(windv, rma, rmi, ntp, message):
+    with pytest.raises(ValueError, match=message):
+        ratio_tap(windv, rma, rmi, ntp, unit_kv=1.0, rated_kv=1.0, record_id="x")
+
+
+def test_wecc240_transformers(wecc240):
+    """End 1 in ohm equals pu x BASKV^2 / SBASE, end 2 zero; the tap gives back WINDV, RMA and RMI; COD gives the
+    control's state; CONT its terminal; RATE1-3 a limit on terminal 1."""
+    native, network = wecc240
+    base_kv = {record.bus_number: record.base_voltage for record in native.list_by_class(schema.BusRecord)}
+    transformers = _objects(network, "PowerTransformer")
+    rated = 0
+    for record in native.list_by_class(schema.TransformerRecord):
+        equipment = transformers[f"xf_{record.ID}"]
+        ends = sorted(equipment.PowerTransformerEnd, key=lambda end: end.endNumber)
+        z_base = base_kv[record.i] ** 2 / 100.0
+        assert ends[0].r.to("ohm") == pytest.approx(record.r1_2 * z_base)
+        assert ends[0].x.to("ohm") == pytest.approx(record.x1_2 * z_base)
+        assert (float(ends[1].r), float(ends[1].x), float(ends[0].b)) == (0.0, 0.0, 0.0)
+        assert [end.ratedU.to("kV") for end in ends] == [record.nomv1, record.nomv2]
+        assert [end.Terminal.TopologicalNode.busNumber for end in ends] == [record.i, record.j]
+        tap = ends[0].RatioTapChanger
+        rated_kv = ends[0].ratedU.to("kV")
+        increment = float(tap.stepVoltageIncrement) / 100
+        neutral = tap.neutralU.to("kV") / rated_kv
+        assert neutral + (tap.step - tap.neutralStep) * increment == pytest.approx(record.windv1)
+        assert neutral + (tap.highStep - tap.neutralStep) * increment == pytest.approx(record.rma1)
+        assert neutral + (tap.lowStep - tap.neutralStep) * increment == pytest.approx(record.rmi1)
+        control = tap.TapChangerControl
+        assert (tap.ltcFlag, tap.controlEnabled, control.enabled) == ((record.cod1 != 0,) + (record.cod1 > 0,) * 2)
+        assert control.Terminal.mRID == f"bb_{record.cont1}_T1"
+        assert control.targetValue == pytest.approx((record.vma1 + record.vmi1) / 2 * base_kv[record.cont1] * 1000)
+        limit_sets = equipment.Terminals[0].OperationalLimitSet if record.rate1_3 else []
+        rated += bool(limit_sets)
+        assert [limit.normalValue.to("MVA") for limit_set in limit_sets for limit in limit_set.OperationalLimitValue] == \
+            ([pytest.approx(record.rate1_3)] if record.rate1_3 else [])
+    assert (len(transformers), rated) == (122, 42)
+    controlled = [mrid for mrid, control in _objects(network, "TapChangerControl").items() if control.enabled]
+    assert sorted(controlled) == ["xf_6103_6104_0_1_ctrl1", "xf_6302_6304_0_1_ctrl1"]
+
+
+def test_ieee14_transformer_with_cont_0():
+    """CONT 0 names the winding's own terminal; NOMV 0 rates the end at BASKV; WINDV off a step is a float step."""
+    tap = _objects(_network(IEEE14, "IEEE14"), "RatioTapChanger")["xf_4_7_0_1_tap1"]
+    assert tap.TapChangerControl.Terminal.mRID == "xf_4_7_0_1_T1"
+    assert (tap.TapChangerControl.enabled, tap.ltcFlag) == (False, False)
+    assert tap.TransformerEnd.ratedU.to("kV") == 138.0
+    assert (tap.neutralStep, tap.step) == (79, pytest.approx(75.6909091))
+
+
+def test_transformer_atom():
+    network = _network(TRANSFORMER_ATOMS / "transformers.raw")
+    ends = _objects(network, "PowerTransformerEnd")
+    controls = _objects(network, "TapChangerControl")
+    a = ends["xf_1_2_0_1_1"]  # CW 2, CZ 2, CM 2, NOMV1 340 on a 345 kV bus
+    assert (a.ratedU.to("kV"), a.BaseVoltage.mRID, a.r.to("ohm")) == (340.0, "bv_345kv", pytest.approx(1.156))
+    assert a.b.to("S") == pytest.approx(-(0.005 ** 2 - 0.00075 ** 2) ** 0.5 * 200.0 / 340.0 ** 2)
+    assert (a.RatioTapChanger.neutralStep, a.RatioTapChanger.step) == (17, 21.0)
+    assert (a.PowerTransformer.vectorGroup, controls["xf_1_2_0_1_ctrl1"].Terminal.mRID) == ("YNd1", "bb_5_T1")
+    b = controls["xf_2_6_0_1_ctrl1"]  # COD -1: the tap changes under load, its control out of service
+    assert (b.enabled, b.TapChanger[0].ltcFlag, b.TapChanger[0].controlEnabled) == (False, True, False)
+    c = controls["xf_6_7_0_1_ctrl1"]  # COD 2: a Mvar band through its own winding
+    assert (c.mode.name, c.Terminal.mRID, c.targetValue, c.targetDeadband) == ("reactivePower", "xf_6_7_0_1_T1",
+                                                                               5.0e6, 30.0e6)
+    mesh = _objects(network, "TransformerMeshImpedance")
+    assert sorted(mesh) == [f"xf_{key}_mesh_{pair}" for key in ("1_2_3_1", "6_7_4_2") for pair in ("12", "13", "23")]
+    assert mesh["xf_1_2_3_1_mesh_13"].FromTransformerEnd is ends["xf_1_2_3_1_1"]
+    assert mesh["xf_1_2_3_1_mesh_23"].r.to("ohm") == pytest.approx(0.002 * 230.0 ** 2 / 100.0)  # from end 2
+    assert mesh["xf_6_7_4_2_mesh_23"].x.to("ohm") == pytest.approx(0.07 * 34.5 ** 2 / 30.0)  # CZ 2 on SBASE2-3
+    d = ends["xf_1_2_3_1_1"]
+    assert (d.r, d.ratedS, d.g.to("S")) == (None, None, pytest.approx(0.0005 * 100.0 / 345.0 ** 2))
+    assert controls["xf_1_2_3_1_ctrl2"].targetValue == pytest.approx(1.01 * 230000.0)
+    limits = {limit.mRID: limit.normalValue.to("MVA") for limit in _objects(network, "ApparentPowerLimit").values()}
+    assert limits == {"xf_1_2_0_1_1_rate1": 250.0, "xf_1_2_0_1_1_rate2": 300.0, "xf_1_2_3_1_1_rate1": 400.0,
+                      "xf_1_2_3_1_3_rate1": 80.0, "xf_6_7_0_1_1_rate1": 60.0}
+    assert _objects(network, "OperationalLimitSet")["xf_1_2_3_1_3_ratings"].Terminal.mRID == "xf_1_2_3_1_T3"
+
+
+def test_transformer_atom_comments():
+    document = next(part for part in RawImporter("atom").to_cimtbl(
+        Raw34Reader(TRANSFORMER_ATOMS / "transformers.raw").read_all()).parts if part.name == "transformer")
+    rows = {row.cells[0]: row for statement in document.statements for row in statement.rows}
+    assert rows["xf_6_7_4_2"].comment.startswith("defaulted: nomv1=0.0, ang1=0.0")
+    assert "cod3=0" in rows["xf_6_7_4_2"].comment
+    assert rows["xf_1_2_0_1"].comment is None  # a 2-winding unit's 3-winding slots are never defaulted
+    assert document.statements[0].comment == ("untranscribed: nmetr, o1, o2, o3, o4, f1, f2, f3, f4, zcod, vmstar, "
+                                              "anstar")
+
+
+@pytest.mark.parametrize(("key", "changes", "error", "message"), [
+    ("1_2_0_1", {"cod1": 3}, NotImplementedError, "COD1 3 .phase shift"),
+    ("1_2_0_1", {"cod1": -5}, NotImplementedError, "COD1 -5 .asymmetric phase shift"),
+    ("1_2_0_1", {"cod1": 4}, NotImplementedError, "COD1 4 .DC line control: phase 2"),
+    ("1_2_0_1", {"ang1": 30.0}, NotImplementedError, "ANG1 = 30.0, a phase shift"),
+    ("1_2_3_1", {"tab2": 1}, NotImplementedError, "TAB2 = 1, an impedance correction table"),
+    ("1_2_0_1", {"cr1": 0.01}, NotImplementedError, "CR1 = 0.01, load-drop compensation"),
+    ("1_2_0_1", {"cnxa1": 30.0}, NotImplementedError, "CNXA1 = 30.0"),
+    ("1_2_0_1", {"nod1": 2}, NotImplementedError, "NOD1 = 2, a node in a substation"),
+    ("1_2_3_1", {"status": 2}, NotImplementedError, "STAT 2 .winding 2 out"),
+    ("1_2_0_1", {"cont1": -5}, NotImplementedError, "CONT1 -5 is negative"),
+    ("1_2_0_1", {"cont1": 0}, ValueError, "COD1 1 controls a voltage but CONT1 is 0"),
+    ("1_2_0_1", {"cont1": 99}, ValueError, "CONT1 99 is no bus"),
+    ("1_2_0_1", {"windv2": 231.0}, NotImplementedError, "an off-nominal winding 2"),
+    ("1_2_0_1", {"windv1": 361.0}, ValueError, "WINDV 361.0 is outside RMI..RMA"),
+    ("1_2_0_1", {"ntp1": 1}, ValueError, "NTP 1 gives no tap range"),
+    ("1_2_0_1", {"rma1": None}, ValueError, "RMA1 is blank and has no default .CW 2, COD1 1"),
+    ("6_7_0_1", {"vma1": None}, ValueError, "VMA1 is blank and has no default .CW 1, COD1 2"),
+    ("2_6_0_1", {"x1_2": 0.0001}, ValueError, "CZ 3 .Z. = 0.0001 pu is less than its load-loss r"),
+])
+def test_a_transformer_outside_r4_raises(key, changes, error, message):
+    native = Raw34Reader(TRANSFORMER_ATOMS / "transformers.raw").read_all()
+    _replace_record(native, schema.TransformerRecord, key, **changes)
     with pytest.raises(error, match=message):
         RawImporter("atom").to_cimtbl(native)
