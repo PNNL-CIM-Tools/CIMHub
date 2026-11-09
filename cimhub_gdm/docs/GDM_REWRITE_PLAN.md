@@ -2,7 +2,8 @@
 
 **Status:** moved here 2026-11-08 from the predecessor repo, where it was planned 2026-11-06 for an in-place
 replacement. Rewritten for the fresh start: the importer is written new, so nothing is ported or deleted family by
-family. Branch `gdm-builder`, in a worktree beside the repo checkout (like `raw-v34`). **Phase 0 drafted 2026-11-08** ([`GDM_MAPPING.md`](GDM_MAPPING.md)), waiting for approval and G1-G6. No code yet.
+family. Branch `gdm-builder`, in a worktree beside the repo checkout (like `raw-v34`). **Phases 0-4 done and committed; Phase 5 (close-out) built 2026-11-09, for review** ([`PHASES.md`](PHASES.md)).
+DSS/GDM parity is written on rc_1 after the merge.
 **Master plan:** [`REWRITE_PLAN.md`](../../.development/REWRITE_PLAN.md), wave F2' (builder-native, D11).
 **Contract:** the `cimtbl-import-contract` skill, reference §9 (builder-native spokes).
 **Mapping rules:** [`GDM_MAPPING.md`](GDM_MAPPING.md), the Phase 0 deliverable.

@@ -126,6 +126,10 @@ builder owner on 2026-11-08.
   ActivePower in kVA; the importer takes an apparent unit there as the same active one, with a WARNING
   (`der.panel_power`), rather than stopping p5r. Every other power keeps the §4 guard.
 
+- **DSS/GDM parity.** **Decided (user, 2026-11-09):** written on rc_1 after `gdm-builder` merges, in root
+  `tests/cross_format/`, against rc_1's DSS importer. This branch's scope stops at `cimhub_gdm/`, and its
+  `cimhub_opendss` is behind rc_1's.
+
 ## Open
 
 - **12, the rest:** see 12 above. Inverter controllers stay `PENDING` (no `function_block_control` builder).

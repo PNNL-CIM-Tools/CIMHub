@@ -337,7 +337,7 @@ def load(system, name, bus_name, phases, phase_loads, connection=ConnectionType.
     return DistributionLoad(name=name, bus=bus(system, bus_name), phases=phases,
                             equipment=LoadEquipment(name=f"{name}_eq", phase_loads=phase_loads,
                                                     connection_type=connection),
-                            feeder=feeder(system, "atom"))
+                            feeder=bus(system, bus_name).feeder)
 
 
 Z_ONLY, I_ONLY = (1, 0, 0, 1, 0, 0), (0, 1, 0, 0, 1, 0)
@@ -382,7 +382,7 @@ def capacitor(system, name, bus_name, phases, kvar, rated_voltage, voltage_type,
         phase_capacitors=[PhaseCapacitorEquipment(name="", rated_reactive_power=ReactivePower(kvar, "kilovar"),
                                                   num_banks=banks, num_banks_on=banks_on) for _ in phases])
     return DistributionCapacitor(name=name, bus=bus(system, bus_name), phases=phases, equipment=equipment,
-                                 state=list(state), controllers=list(controllers), feeder=feeder(system, "atom"))
+                                 state=list(state), controllers=list(controllers), feeder=bus(system, bus_name).feeder)
 
 
 def add_capacitors(system) -> None:
@@ -576,3 +576,127 @@ def add_reactors(system) -> None:
             equipment=ReactorEquipment(name=f"{name}_eq", resistance=Resistance(r_ohm, "ohm"),
                                        reactance=Reactance(x_ohm, "ohm")),
             feeder=fdr))
+
+
+# --- the Phase 5 reference system (tests/atoms/e2e/reference.cimtbl) -----------------------------------------------
+
+#: IEEE13 configurations 602, 603 and 605 (ohm/mile, from the vendored deck's IEEELineCodes.dss); C in nF/mile from
+#: Kersting's shunt admittances (b / 2 pi 60), rounded.
+MTX602 = ([[0.7526, 0.1580, 0.1560], [0.1580, 0.7475, 0.1535], [0.1560, 0.1535, 0.7436]],
+          [[1.1814, 0.4236, 0.5017], [0.4236, 1.1983, 0.3849], [0.5017, 0.3849, 1.2112]],
+          [[15.12, -2.869, -4.484], [-2.869, 13.74, -1.748], [-4.484, -1.748, 14.39]])
+MTX603 = ([[1.3238, 0.2066], [0.2066, 1.3294]], [[1.3569, 0.4591], [0.4591, 1.3471]], [[12.49, -2.387], [-2.387, 12.38]])
+MTX605 = ([[1.3292]], [[1.3475]], [[11.99]])
+
+
+def reference_system():
+    """An IEEE13-like system: every family together on one feeder, from the vendored IEEE13 deck where it has the
+    data (TEST_DESIGN.md, Phase 5). 670 and its spot loads are dropped (632 → 671 is one line); one PV and one
+    battery are added.
+
+    | element | GDM | buses | notes |
+    |---|---|---|---|
+    | source | DistributionVoltageSource | sourcebus | 66.3953 kV LG per phase, angles 30/150/270 |
+    | sub | DistributionTransformer | sourcebus → 650 | 5000 kVA D 115 kV / Y g 2.4018 kV LG |
+    | reg1, reg2, reg3 | DistributionRegulator | 650 → rg60 | one per phase, sharing reg1666; taps 10, 8, 11 steps |
+    | 650632 ... 684652 | MatrixImpedanceBranch | | mtx601, mtx602, mtx603 (twice, and as 604), mtx605 (twice) |
+    | 692675 | GeometryBranch | 692 → 675 | ug606: cn_250 x3 |
+    | 671692 | MatrixImpedanceSwitch | 671 → 692 | sw600, closed |
+    | xfm1 | DistributionTransformer | 633 → 634 | 500 kVA Y g 2.4018 LG / Y g 0.27713 LG |
+    | 671 ... 652 | DistributionLoad | | IEEE13's connections and models (delta, wye; PQ, Z, I) |
+    | cap1, cap2 | DistributionCapacitor | 675, 611 | 3 x 200 kvar; 100 kvar on C |
+    | pv680 | DistributionSolar | 680 | 400 kW panel, 500 kVA inverter, P 300 |
+    | bat634 | DistributionBattery | 634 | 250 kWh / 100 kW, 100 kVA inverter, P 50 (discharging) |
+    """
+    system = DistributionSystem(name="ieee13", auto_add_composed_components=True)
+    fdr = DistributionFeeder(name="ieee13")
+    substation = DistributionSubstation(name="sub", feeders=[fdr])
+    system.add_components(fdr, substation)
+    a, b, c = Phase.A, Phase.B, Phase.C
+    bus_rows = [("sourcebus", 115, ABC), ("650", 4.16, ABC), ("rg60", 4.16, ABC), ("632", 4.16, ABC),
+                ("633", 4.16, ABC), ("634", 0.48, ABC), ("645", 4.16, [b, c]), ("646", 4.16, [b, c]),
+                ("671", 4.16, ABC), ("680", 4.16, ABC), ("684", 4.16, [a, c]), ("611", 4.16, [c]),
+                ("652", 4.16, [a]), ("692", 4.16, ABC), ("675", 4.16, ABC)]
+    for name, kv, phases in bus_rows:
+        system.add_component(DistributionBus(name=name, rated_voltage=Voltage(kv, "kilovolt"), voltage_type=LL,
+                                             phases=phases, feeder=fdr, substation=substation))
+
+    sources = [PhaseVoltageSourceEquipment(name=f"vs_{p.value}", r0=Resistance(0.179604, "ohm"),
+                                           r1=Resistance(0.160377, "ohm"), x0=Reactance(0.538811, "ohm"),
+                                           x1=Reactance(0.641507, "ohm"), voltage=Voltage(66.3953, "kilovolt"),
+                                           voltage_type=LG, angle=Angle(angle, "degree"))
+               for p, angle in zip(ABC, (30.0, 150.0, 270.0))]
+    system.add_component(DistributionVoltageSource(name="source", bus=bus(system, "sourcebus"), phases=ABC,
+                                                   equipment=VoltageSourceEquipment(name="vs", sources=sources),
+                                                   feeder=fdr))
+
+    sub5000 = transformer_catalog("sub5000", [winding(115, LL, 5000, 0.0005, ConnectionType.DELTA),
+                                              winding(2.4018, LG, 5000, 0.0005, grounded=True)],
+                                  [(0, 1)], [0.008], full_load=0.001)
+    xfm500 = transformer_catalog("xfm500", [winding(2.4018, LG, 500, 0.55, grounded=True),
+                                            winding(0.27713, LG, 500, 0.55, grounded=True)],
+                                 [(0, 1)], [2.0], full_load=1.1)
+    for name, catalog, buses in [("sub", sub5000, ["sourcebus", "650"]), ("xfm1", xfm500, ["633", "634"])]:
+        system.add_component(DistributionTransformer(name=name, buses=[bus(system, n) for n in buses],
+                                                     winding_phases=[ABC, ABC], equipment=catalog, feeder=fdr))
+
+    reg1666 = transformer_catalog("reg1666", [winding(2.4018, LG, 1666, 0.005, phases=1),
+                                              winding(2.4018, LG, 1666, 0.005, phases=1)], [(0, 1)], [0.01])
+    for name, phase, tap in [("reg1", a, 1.0625), ("reg2", b, 1.05), ("reg3", c, 1.06875)]:
+        system.add_component(DistributionRegulator(
+            name=name, buses=[bus(system, "650"), bus(system, "rg60")], winding_phases=[[phase], [phase]],
+            tap_positions=[[1.0], [tap]], equipment=reg1666, feeder=fdr,
+            controllers=[regulator_controller(phase, ldc=True, bus_name="rg60", system=system)]))
+
+    mtx601 = matrix_catalog("mtx601", MTX601_R, MTX601_X, MTX601_C, "mile", 730)
+    mtx602 = matrix_catalog("mtx602", *MTX602, "mile", 340)
+    mtx603 = matrix_catalog("mtx603", *MTX603, "mile", 230)
+    mtx605 = matrix_catalog("mtx605", *MTX605, "mile", 230)
+    line_rows = [("650632", "rg60", "632", ABC, 2000, mtx601), ("632671", "632", "671", ABC, 2000, mtx601),
+                 ("671680", "671", "680", ABC, 1000, mtx601), ("632633", "632", "633", [c, a, b], 500, mtx602),
+                 ("632645", "632", "645", [c, b], 500, mtx603), ("645646", "645", "646", [c, b], 300, mtx603),
+                 ("671684", "671", "684", [a, c], 300, mtx603), ("684611", "684", "611", [c], 300, mtx605),
+                 ("684652", "684", "652", [a], 800, mtx605)]
+    for name, bus1, bus2, phases, feet, catalog in line_rows:
+        system.add_component(MatrixImpedanceBranch(name=name, buses=[bus(system, bus1), bus(system, bus2)],
+                                                   phases=phases, length=Distance(feet, "foot"), equipment=catalog,
+                                                   feeder=fdr))
+    cable = cn_250()
+    ug606 = GeometryBranchEquipment(name="ug606", conductors=[cable, cable, cable],
+                                    horizontal_positions=Distance(np.array([-0.5, 0.0, 0.5]), "foot"),
+                                    vertical_positions=Distance(np.array([-4.0, -4.0, -4.0]), "foot"))
+    system.add_component(GeometryBranch(name="692675", buses=[bus(system, "692"), bus(system, "675")], phases=ABC,
+                                        length=Distance(500, "foot"), equipment=ug606, feeder=fdr))
+    system.add_component(MatrixImpedanceSwitch(
+        name="671692", buses=[bus(system, "671"), bus(system, "692")], phases=ABC, is_closed=[True] * 3,
+        length=Distance(1, "meter"), feeder=fdr,
+        equipment=MatrixImpedanceSwitchEquipment(name="sw600", ampacity=Current(600, "ampere"), **_matrices(3))))
+
+    delta = ConnectionType.DELTA
+    system.add_components(
+        load(system, "671", "671", ABC, [phase_load(385, 220) for _ in ABC], delta),
+        load(system, "634", "634", ABC, [phase_load(160, 110), phase_load(120, 90), phase_load(120, 90)]),
+        load(system, "645", "645", [b], [phase_load(170, 125)]),
+        load(system, "646", "646", [b, c], [phase_load(115, 66, Z_ONLY), phase_load(115, 66, Z_ONLY)], delta),
+        load(system, "692", "692", [c, a], [phase_load(85, 75.5, I_ONLY), phase_load(85, 75.5, I_ONLY)], delta),
+        load(system, "675", "675", ABC, [phase_load(485, 190), phase_load(68, 60), phase_load(290, 212)]),
+        load(system, "611", "611", [c], [phase_load(170, 80, I_ONLY)]),
+        load(system, "652", "652", [a], [phase_load(128, 86, Z_ONLY)]),
+        capacitor(system, "cap1", "675", ABC, 200, 4.16, LL),
+        capacitor(system, "cap2", "611", [c], 100, 2.4, LG),
+    )
+
+    system.add_component(DistributionSolar(
+        name="pv680", bus=bus(system, "680"), phases=ABC, irradiance=Irradiance(1.0, "kilowatt/meter**2"),
+        active_power=ActivePower(300, "kilowatt"), reactive_power=ReactivePower(0, "kilovar"),
+        inverter=inverter("inv500", 500), feeder=fdr,
+        equipment=SolarEquipment(name="panel400", rated_power=ActivePower(400, "kilowatt"), resistance=0.5,
+                                 reactance=5, rated_voltage=Voltage(4.16, "kilovolt"), voltage_type=LL)))
+    system.add_component(DistributionBattery(
+        name="bat634", bus=bus(system, "634"), phases=ABC, active_power=ActivePower(50, "kilowatt"),
+        reactive_power=ReactivePower(0, "kilovar"), inverter=inverter("inv100", 100), feeder=fdr,
+        equipment=BatteryEquipment(name="bess250", rated_energy=EnergyDC(250, "kilowatthour"),
+                                   rated_power=ActivePower(100, "kilowatt"), charging_efficiency=95,
+                                   discharging_efficiency=95, idling_efficiency=99,
+                                   rated_voltage=Voltage(0.48, "kilovolt"), voltage_type=LL)))
+    return system

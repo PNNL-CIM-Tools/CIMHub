@@ -18,7 +18,7 @@ def test_shell_only_matches_golden():
 
 def test_every_golden_master_has_the_shell_header():
     for golden in gdm_atoms.ATOMS.rglob("*.cimtbl"):
-        if golden.parent.name == "prereqs":
+        if golden.parent.name in ("prereqs", "e2e"):  # e2e goldens are self-contained, with their own Model
             continue
         settings = "".join(line + "\n" for line in golden.read_text().splitlines()
                            if line.startswith(("Profile", "Authority", "Model")))

@@ -1,8 +1,8 @@
 # GDM → cim18v17 mapping rules
 
-**Status:** Phase 0 approved 2026-11-08; Phase 1 (shell, buses, sources, switches) built; Phase 2 (lines, loads,
-capacitors, §15-§17) built 2026-11-08, for review; Phase 3 (transformers, regulators, §18-§19) built 2026-11-08,
-for review; Phase 4 (DER, reactors, §20-§21) built 2026-11-08, for review. Cross-cutting rules only. Each family adds its own section
+**Status:** Phase 0 approved 2026-11-08; Phases 1-4 (shell, buses, sources, switches; lines, loads, capacitors,
+§15-§17; transformers, regulators, §18-§19; DER, reactors, §20-§21) built and committed; Phase 5 (the reference
+system, the XML round trip) built 2026-11-09, for review. Cross-cutting rules only. Each family adds its own section
 (field table generated from `FIELDS`, derived values, fail-fast list, atoms) when it lands, approved before its code.
 **Plan:** [`GDM_REWRITE_PLAN.md`](GDM_REWRITE_PLAN.md); decisions: [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); targets:
 [`CLASS_TARGETS.md`](CLASS_TARGETS.md). Contract: `cimtbl-import-contract` skill, reference §9 (builder-native).
@@ -228,14 +228,16 @@ One golden per row in `tests/atoms/<family>/`, each on the shared shell ([`TEST_
 | regulator | `single_phase_ldc`, `bank` (built: `regulators.cimtbl`) | per-phase VoltageRegulator, TapChangerInfo (B17), tap step, LDC ohms | |
 | der | `pv_3ph` (two sharing an inverter), `pv_split_phase` (an unnamed inverter), `pv_one_phase` (absorbing vars), `battery_discharging`, `battery_charging` (built: `der.cimtbl`) | sign, PEC + unit, InverterInfo / BatteryInfo (B20), ratedU line-to-line | B20 |
 | reactor | `three_phase`, `one_phase` (built: `reactors.cimtbl`) | SeriesCompensator, Terminal phases, r0 = r | `SeriesCompensatorBuilder` (§14) |
-| e2e | `reference` (Phase 5) | an IEEE13-like system end to end | all |
+| e2e | `reference` (built: `e2e/reference.cimtbl`, self-contained, `Model = ieee13`) | an IEEE13-like system end to end: every family on one feeder, catalogs shared across instances | all |
 
 **Sweep** (not atoms, nothing committed): ditto converts each vendored public deck that it can read, and `to_cim`
 must either import it or stop with a listed reason (a `PENDING` class or a §11 fail-fast). This is the GDM equivalent
 of the DSS deck sweep. An opt-in second sweep runs the same check over the gdmloader systems (network, never in CI).
-From Phase 5, the **DSS/GDM parity** test imports the same deck through the DSS spoke and
-through ditto + `to_cim`, and compares the two models with `diff_models`. It is matched by topology, not mRID (tier 4,
-root `tests/cross_format/`), with ditto's known losses (regulators, angle sign) as listed expected differences.
+The **XML round trip** (`test_xml_round_trip.py`) writes every atom family in one system to cim18v17 XML,
+reloads it, and expects `diff_models` to find nothing. The **DSS/GDM parity** test imports the same deck through the
+DSS spoke and through ditto + `to_cim`, and compares the two models with `diff_models`. It is matched by topology,
+not mRID (tier 4, root `tests/cross_format/`), with ditto's known losses (regulators, angle sign, grounding) as listed
+expected differences. It is written on rc_1 after this branch merges (user, 2026-11-09; `PHASES.md` Phase 5).
 
 ## 13. Open points for approval
 
