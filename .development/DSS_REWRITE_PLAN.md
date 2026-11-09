@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is next.
+**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is planned in §8, approved 2026-11-09; S6a (framework, writer, Vsource) done 2026-11-09; S6b next.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -269,3 +269,69 @@ on a LineCode, untranscribed; a wire's `normamps` is `WireInfo.ratedCurrent`) ap
 | user | D14 open-delta template | DSS open-delta banks; none were seen in the census, so they fail fast |
 
 Closed 2026-11-07 (see `UPSTREAM_REQUESTS.md`): R10 (`#` in an mRID), R12 (type-hint cache), R7 (`get_qty`).
+
+## 8. S6: the exporter (plan 2026-11-09, approved by the user 2026-11-09 with E1, E4 and E8 amended)
+
+`DssExporter(FormatExporter).to_model(network) -> DssModel`, written fresh in `cimhub_opendss/exporter/`, one module
+per DSS class. It reads every value through the core getters (`export-getters` skill), and the `DssModel` it
+returns has the same shape `DssReader.read_all()` returns: schema dataclasses, one `Options`, `Buscoords` rows. So
+`DssWriter().write(model, path)` gives a deck the reader reads back. The old exporter (CIMHub_2_0, 4,600 lines,
+cimhub_2026) is only the oracle. `dss_to_cim` already runs on the new importer here, so the "flip together" of §4
+reduces to S7's clean-up.
+
+### 8.1 Sub-slices
+
+Each one has its own spec section in `cimhub_opendss/docs/EXPORT_MAPPING.md`, approved before its code
+(DSS-12). Each one's exit is the per-atom check of §8.3 on its atoms.
+
+| # | content | getters needed (new in **bold**) |
+|---|---|---|
+| S6a (**done 2026-11-09**) | framework: `DssExporter`, `EXPORT_ORDER`, naming (E1), bus references `bus.1.2.3` from terminals (E7), `Options` (circuit, `defaultbasefreq`, `voltagebases`); writer fixes (§8.2); Vsource; the per-atom harness (§8.3) | `get_source`, `get_terminal_nodes`, `get_terminal_phases`, `get_base_voltage` |
+| S6b | lines: WireData/CNData/TSData, LineSpacing, LineGeometry, LineCode, Line, switches (Line `switch=y` + Fuse/Recloser/SwtControl, `Open`), ratings | **`get_wire_info`**, **b → C** (`derived/`), `get_spacing_xy`, `get_line_conductor_xy`, `get_line_*_impedance*`, `get_switch_state`, `get_current_limits` |
+| S6c | transformers: inline Transformer (every form), XfmrCode from a `TransformerTankConfiguration`, center taps, VoltageRegulator/LTC + RegControl | `get_transformer_units`, `get_transformer_model`, `get_tap_steps`, `get_tap_changer_control` |
+| S6d | Load, Capacitor, CapControl | `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`, `get_regulating_control`, `get_equipment_control` |
+| S6e | PVSystem, Storage, Generator, Reactor | `get_der_output`, G6d rating getters, **`get_series_compensator`** |
+| S6f | Buscoords; whole-deck power flow parity on the engine decks; the idempotence sweep | **`get_location_coordinates`** |
+
+### 8.2 Writer fixes (S6a)
+
+The writer is seed code that only ever wrote `new Class.name ...` lines in `iter_all()` order. To give a deck the
+engine and the reader accept, it needs:
+- **Class order** as a class-level list (`WRITE_ORDER`, reader-writer skill). Each class comes after everything it
+  references: catalogs, Line, then Fuse/Recloser/SwtControl; Transformer, then RegControl; **Capacitor, then
+  CapControl**. That is the reverse of the importer's order, which suits the cimtbl and not the engine.
+- **The circuit:** `Clear`, then `Set defaultbasefreq=` (before the circuit, as the engine needs), then
+  `New Circuit.<Options.circuit>` carrying the slots of Vsource `source`, which is not also written as a Vsource.
+- **After the objects:** `Set voltagebases=[...]`, `CalcVoltageBases`, one `Open Class.name terminal` per
+  `Options.open_terminals`, and `Buscoords <stem>_buscoords.csv` (`LatLongCoords` for geographic rows), with the
+  CSV written next to the deck.
+- **One file** (`destination` is the `.dss` path) plus the coordinates CSV. Splitting into per-class files is
+  layout only (the `to_model` docstring of the old exporter), so it is not done.
+
+### 8.3 Tests
+
+- **Per atom (tier 2, every sub-slice):** atom deck → `DssImporter.to_cim` → `to_model` → writer → engine,
+  compared with the original atom in the engine. Per element: the class, the buses, `YPrim` (rel 1e-6), and the
+  properties the importer's engine checks already read (load p/q/model, regulator and capacitor settings, ...).
+  Then the bus voltages after `Solve` (rel 1e-6 on an atom). An exported golden `.dss` per atom is committed beside
+  it (D6) so a diff shows what changed.
+- **Idempotence (S6f):** export(import(export(import(deck)))) is the same text as export(import(deck)) on every
+  sweep deck that binds. A second pass must be a fixed point. Without the engine it catches lost or drifting values
+  cheaply.
+- **Power flow parity (S6f, §5):** bus voltages within 0.1 % of the original deck on the engine decks
+  (`powerflow_harness.py`).
+
+### 8.4 Decisions (approved 2026-11-09)
+
+| # | question | recommendation |
+|---|---|---|
+| E1 | Names (amended by the user) | **One naming switch shared by every exporter:** written from the CIM `name`, the `mRID` or `uri()` (the fixed-length UUID; the third option added by the user 2026-11-09). It is chosen by the exporter option `name_source=` (`"name"`, `"mrid"` or `"uri"`), else the `CIMHUB_NAME_SOURCE` environment variable, else `"mrid"`. One core function, `cimhub_core.names.export_name(obj, source)`, returns the text, and an unset one raises. Each spoke sanitizes it with its own rule: DSS `dss_safe_name` (whitespace, quotes, brackets, `=` ...). Every name a spoke writes (equipment, catalogs, buses) goes through it. Two objects of one DSS class that land on the same sanitized name (lowercased, as DSS compares names) raise, naming both. `mrid` is the default because it is unique by construction: the importers compile it from the native name (`ln_632633` for Line `632633`), so the deck is unique but not byte identical. GLM users asked for it too. The circuit name is the one Feeder's, by the same switch; several Feeders raise |
+| E2 | The circuit's source | With one EnergySource, it is the circuit. With several, the option `circuit_source=` (default `"source"`, the DSS importer's name) names the one written as `New Circuit`; the others are Vsources |
+| E3 | Catalogs or inline | Keep CIM's structure. Every PerLengthImpedance is a LineCode. Every WireInfo is a WireData/CNData/TSData. A WireConfiguration is a LineGeometry, one per (WireConfiguration, `spacingYOffset`) (G5: DSS `h=` is per line), named `<config>` at offset 0 and `<config>_<offset m>` otherwise; a bare XYSpacing is a LineSpacing. A TransformerTankConfiguration is an XfmrCode. Everything else is inline. The importer's synthesized templates (`ln_<line>_lc`) come back as LineCodes, a listed difference that is equal in the engine |
+| E4 | Values CIM leaves unset (amended by the user) | This is about a value that is `None` in CIM but that DSS needs. It is not about the LinkML `dss_default`s, which the exporter never reads. Every value the getters give is written. A getter's `None` for a slot DSS needs follows the spoke's written rule, with a comment (skill rule 8: `C1=0`/`C0=0` when b is unset, so the engine's 3.4/1.6 nF never applies). A slot CIM cannot hold (Generator `Xd`, U13; untranscribed values) is left unset and listed in `EXPORT_MAPPING.md` as engine-defaulted |
+| E5 | Capacitance | C = b / (2π f), with f = `network.base_frequency`: one named function in `derived/`, converted through `cim.Capacitance(...).to('nF')`, never a factor. The deck sets `defaultbasefreq` and every LineCode `baseFreq` to that frequency. This closes the G3 open point |
+| E6 | Switch state | Both of CIM's states go back: `normalOpen` → the control's `Normal`, `open` → `State` and an `Open` command (the importer's `_STATE` rule inverted). A switch with no Fuse/Recloser class gets a SwtControl only when it is open in either state |
+| E7 | Bus references | A terminal's phases in conductor order: A/B/C → `.1.2.3`, s1/s2 → `.1.2` (DSS-5). A wye winding (the transformer mapper's `_neutral`, inverted): grounded solidly → its neutral on `.0`; grounded through `rground`/`xground` → `Rneut`/`Xneut` with the neutral left on the engine's own node; ungrounded → `.4`. A balanced 3-phase terminal is written `.1.2.3` and never left bare |
+| E8 | Per-phase values (amended by the user) | Equal per-phase p/q (or none, `split` True) give one DSS object. When the per-phase values differ (rel 1e-6), each phase gets its own 1-phase DSS object with that phase's p/q, named `<name>_<phase>` (`ld_x_a`), for loads and DER. A delta device with unequal phases raises until a producer writes one, because a CIM phase on a delta load names a branch (orderedPhases gap) |
+| E9 | Element kV | From `get_base_voltage`: LL for polyphase and delta, LN for a 1-phase wye device, LL for a split-phase load (DSS-5). It is undone exactly as the importer's `injection.line_kv` did it |
+| E10 | Options | Only `Set defaultbasefreq` and `voltagebases` (the distinct nominal BaseVoltages, in kV) are written. `earthmodel` is not in CIM and is engine-defaulted |

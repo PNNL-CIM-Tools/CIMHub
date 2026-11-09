@@ -1,0 +1,5 @@
+Clear
+Set defaultbasefreq=50.0
+New Circuit.fdr_f50 phases=3 bus1=src.1.2.3 basekv=11.0 pu=1.03 angle=0.0 R1=0.05869362125879258 X1=0.23477448503517032 R0=0.1341330967951722 X0=0.40239929038551664
+Set voltagebases=[11.0]
+CalcVoltageBases

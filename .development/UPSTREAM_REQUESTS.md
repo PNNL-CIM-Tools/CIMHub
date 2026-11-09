@@ -18,8 +18,48 @@ commit once it is verified from this repo.
 | U12 | CIM-Tables | `get_qty` on a declared power base: a transformer percent read on another S at the From winding's own voltage (e.g. `get_qty(mesh, "x", "percent", power_base=...)`). DSS and GLM put every percent on winding 1's kVA and RAW on the system MVA, while CIM stores each on its From winding's `baseU²/baseS`. Until then `getters/transformer.py` moves the stored percent itself, z × S_new/S_old and y × S_old/S_new (powers only, no local `z_base`; getters G6). | nothing; the getter's power ratio works |
 | U13 | CIM-Profiles (CIM WG13) | A positive-sequence (subtransient/transient/synchronous) reactance on SynchronousMachine. cim18v17 has r, r0/x0, r2/x2 and no x (CIM16's `satDirectSubtransX` and the like are gone), so RAW ZX and DSS Xd/Xdp/Xdpp have no home and `getters.der.MachineImpedance` has no x. | RAW generator ZSORCE round trip; DSS Generator Xd |
 
+## Upstream responses (not yet verified from this repo)
+
+From CIM-Tables, 2026-11-09, `rc1`, uncommitted at the time of writing. Verify, then close or reopen.
+
+- **U10, declined: a blank `phases` is the balanced three-phase spelling.** No new column or value. A blank (or
+  absent) `phases` cell makes no `<Class>Phase` children and leaves `Terminal.phases` unset, which CIM defines
+  as ABC (`Terminal.phases`: "If the attribute is missing, three phases (ABC) shall be assumed"). `phases=ABC`
+  means a per-phase device with three children. So `cimhub_core.cimtbl.phases_cell` is the intended form, not a
+  stand-in. A consumer that wants every Terminal's phases explicit fills the missing ones as ABC after loading (a
+  topology-processor step). Documented in CIM-Tables `docs/CIMTBL_DESIGN.md`, Phases.
+- **U9, declined: follows from U10.** A balanced SeriesCompensator leaves `phases` blank. `phases` still
+  raises on a class with no `<Class>Phase` child, so per-phase information is never silently dropped. A
+  non-ABC one keeps today's form: its Terminals' phases written literally (`Update Table Terminal: mRID,
+  phases`), or the Terminals as their own rows (see U11).
+- **U11, declined: no text-level Terminal inverse.** What a `.cimtbl` means is what binding makes, so
+  CIM-Tables won't add a second reading of the connectivity columns over documents. For each piece of
+  equipment's Terminal buses, either load the documents and read the Terminals from the model, or write the
+  Terminals as their own rows, which already binds:
+  `Table Terminal: mRID, ConductingEquipment, ConnectivityNode, sequenceNumber, phases` after the equipment,
+  or Terminal rows first plus `Update Table Terminal: mRID, ConductingEquipment` once the equipment exists
+  (tests in CIM-Tables `tests/test_update.py`). `document_terminals` is then CIMHub's own decision to keep or
+  replace.
+- **U12, done.** `graph_write.get_qty(obj, attr, unit, ..., power_base=...)` takes a CIMUnit, a `Qty` or a
+  number in VA. It replaces only S. U comes from the usual rule (the From winding's `baseU` for a mesh
+  impedance, the BaseVoltage for an unrated class), so z × S_new/S_old and y × S_old/S_new fall out:
+  `get_qty(mesh, "x", "percent", power_base=Qty(1500, "kVA"))`. It is read-only; `set_attr` has no
+  `power_base`. `getters/transformer.py` can drop its power ratio.
+- **U4, CIM-Tables declines; CIM-Builder is the better home.** cimtables is the file format; its only math is
+  unit and base conversion (`impedance.z_base`). Star↔mesh, Kron, sequence → phase matrices, ZIPV and
+  conductor positions are engineering derivations for the builders.
+- **U7, cimtables.** `0.1.0a1` is ready to publish once cim-graph 0.6 and a cimprofiles alpha with what it needs
+  are on PyPI (its pins: `cim-graph>=0.6.0a0,<0.7`, `cimprofiles>=0.1.0a4,<0.2`).
+- **Heads-up (not a request):** cim-graph `45822b4` makes `XMLFile` raise on a missing file. A test that builds
+  a model over `XMLFile(filename=tempfile.mktemp(...))` as a dummy connection now fails. Use `connection=None`
+  (in memory), as CIM-Tables' tests now do. No CIMHub or CIM-Builder test does this today.
+
 ## Closed (verified from this repo, 2026-11-07)
 
+- U14 (2026-11-09): CIM-Graph `GraphModel.set_default_bases` takes `base_frequency` from the graph's
+  `BaseFrequency` (a shared `_graph_base` with BasePower). Several that disagree, or one against an explicit base,
+  raise. CIM-Graph tests 177 pass; a 50 Hz DSS deck now imports with `network.base_frequency` 50 Hz. Uncommitted
+  in `~/CIM-Graph` (branch `cimprofiles-0.6`).
 - U3 (2026-11-08): own-terminal control. CIM-Tables' additive `Update` breaks the cycle: the compensator row,
   then the control naming its generated `cap_<name>_T1`, then `Update LinearShuntCompensator: mRID=...,
   RegulatingControl=...`; `RegulatingControl.RegulatingCondEq` binds as the compensator (S4a CapControl).

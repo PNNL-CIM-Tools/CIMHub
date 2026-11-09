@@ -1,7 +1,7 @@
-"""OpenDSS format serializer.
+"""OpenDSS writer: a ``DssModel`` (the shape ``DssReader.read_all()`` returns) as one deck.
 
-Converts LinkML-generated dataclass instances into OpenDSS command strings
-that can be passed to ``opendssdirect.Text.Command()``.
+``serialize`` gives one ``new`` command; ``write`` gives the whole deck the engine compiles and the reader reads
+back (``DSS_REWRITE_PLAN.md`` section 8.2).
 """
 from __future__ import annotations
 
@@ -9,10 +9,12 @@ import math
 import re
 from dataclasses import fields, is_dataclass
 from enum import IntEnum
+from pathlib import Path
 
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatWriter
 from cimhub_core.serialization import get_schema_annotations
+from cimhub_opendss.schema import opendss_schema as schema
 
 
 # Regex to extract trailing integer from a meaning URI like
@@ -45,8 +47,55 @@ def dss_safe_name(name: str) -> str:
     return _DSS_UNSAFE_RE.sub('_', name)
 
 
+#: The deck's classes in definition order: each after everything it references (catalogs before their users, a
+#: Line before the Fuse/Recloser/SwtControl that switches it, a Transformer before its RegControl, a Capacitor
+#: before its CapControl). A class in the model and not here raises.
+WRITE_ORDER = (
+    schema.Wiredata, schema.Cndata, schema.Tsdata, schema.Linespacing, schema.Linegeometry, schema.Linecode,
+    schema.Xfmrcode, schema.Vsource, schema.Line, schema.Relay, schema.Fuse, schema.Recloser, schema.Swtcontrol,
+    schema.Transformer, schema.Regcontrol, schema.Load, schema.Capacitor, schema.Capcontrol, schema.Pvsystem,
+    schema.Storage, schema.Generator, schema.Reactor,
+)
+
+#: Records that are not ``New`` commands; ``write`` places them (``Options`` as ``Set``/``Open``, ``Buscoords`` as a
+#: coordinates file).
+_DECK_RECORDS = (schema.Options, schema.Buscoords)
+
+#: ``New Circuit.<name>`` is DSS's ``Vsource.source`` (the reader's rule).
+CIRCUIT_SOURCE = "source"
+
+#: Slots written before all others, in this order. Each sets other properties when assigned: a template
+#: (XfmrCode, LineCode, geometry, spacing) copies its values, and an XfmrCode re-sizes the windings (resetting their
+#: buses); ``Switch=y`` sets r1=1, x1=1, ... So they go first and the record's own values after them. ``phases``
+#: sizes the arrays that follow, and goes before ``Switch`` as decks write it: the engine's later recalculation of
+#: a switch line depends on that order (IEEE13_CDPSM ``Sect1``, engine-checked).
+_LEADING_SLOTS = ("XfmrCode", "linecode", "geometry", "spacing", "phases", "Switch")
+
+#: A LineGeometry's active-conductor slots: the reader leaves the last cond= block in them and folds every block
+#: into the arrays, so the writer writes blocks from the arrays (``DssWriter._geometry``).
+_GEOMETRY_CURSOR = ("cond", "wire", "cncable", "tscable", "x", "h")
+_NAME_ARRAYS = ("wires", "cncables", "tscables")
+_CATALOG_KINDS = ((schema.Wiredata, "wire"), (schema.Cndata, "cncable"), (schema.Tsdata, "tscable"))
+
+
+def _has_positions(obj) -> bool:
+    return isinstance(obj, schema.Linegeometry) and bool(obj.xs)
+
+
+def _conductor_kinds(model: GraphModel) -> dict[str, str]:
+    """``{lowered catalog name: cond= keyword}`` over the three wire catalogs; a name in two raises."""
+    kinds: dict[str, str] = {}
+    for catalog, kind in _CATALOG_KINDS:
+        for record in model.list_by_class(catalog):
+            name = str(record.name).lower()
+            if name in kinds:
+                raise ValueError(f"DssWriter: conductor {record.name!r} is in two wire catalogs")
+            kinds[name] = kind
+    return kinds
+
+
 class DssWriter(FormatWriter):
-    """Serialize LinkML-generated OpenDSS dataclasses to DSS command strings.
+    """Serialize a ``DssModel`` to one deck the engine compiles and ``DssReader`` reads back.
 
     Produces strings like::
 
@@ -61,43 +110,120 @@ class DssWriter(FormatWriter):
     # ------------------------------------------------------------------
 
     def write(self, model: GraphModel, destination: str) -> None:
-        """Write every object in *model* to *destination* as DSS commands.
-
-        Args:
-            model: GraphModel of OpenDSS schema dataclasses.
-            destination: Path to the output .dss file.
-        """
-        with open(destination, 'w') as f:
-            for obj in model.iter_all():
-                f.write(self.serialize(obj) + '\n')
+        """Write *model* to the deck *destination* (a ``.dss`` path), in this order: ``Clear``; ``Set
+        defaultbasefreq``; ``New Circuit``; ``Set earthmodel``; the records in ``WRITE_ORDER``; ``Set voltagebases`` and
+        ``CalcVoltageBases``; one ``Open`` per open terminal; ``Buscoords``/``LatLongCoords`` naming the coordinates
+        files written beside the deck (``<stem>_buscoords.csv``, ``<stem>_latlongcoords.csv``)."""
+        destination = Path(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        options = self._options(model)
+        unknown = [cls.__name__ for cls in model.graph if cls not in WRITE_ORDER and cls not in _DECK_RECORDS]
+        if unknown:
+            raise ValueError(f"DssWriter: no write order for {sorted(unknown)}")
+        lines = ["Clear"]
+        if getattr(options, "defaultbasefreq", None) is not None:
+            lines.append(self._set(options, "defaultbasefreq"))  # before the circuit, which takes it
+        lines += self._circuit(model, options)
+        if getattr(options, "earthmodel", None) is not None:
+            lines.append(self._set(options, "earthmodel"))  # the engine needs a circuit first
+        kinds = _conductor_kinds(model)
+        for cls in WRITE_ORDER:
+            for obj in model.list_by_class(cls):
+                if cls is schema.Vsource and str(obj.name).lower() == CIRCUIT_SOURCE:
+                    continue
+                lines.append(self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj))
+        if options is not None and options.voltagebases:
+            lines += [self._set(options, "voltagebases"), "CalcVoltageBases"]
+        for terminal in (options.open_terminals if options is not None else None) or []:
+            lines.append(f"Open {terminal}")
+        lines += self._write_coordinates(model, destination)
+        destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def serialize(self, obj) -> str:
         """Serialize a single LinkML dataclass to a DSS ``new`` command."""
-        class_name = obj.__class__.__name__
-        name = getattr(obj, 'name', None)
-        parts = [f'new {class_name}.{dss_safe_name(str(name))}']
+        if isinstance(obj, _DECK_RECORDS):
+            raise ValueError(f"DssWriter: {type(obj).__name__} is not a New command; write() places it")
+        if _has_positions(obj):
+            raise ValueError(f"DssWriter: LineGeometry {obj.name} has positions; its cond= blocks need the "
+                             "model's wire catalogs, so write() places it")
+        return " ".join([f"new {obj.__class__.__name__}.{dss_safe_name(str(obj.name))}", *self._properties(obj)])
 
+    def _properties(self, obj, skip: tuple[str, ...] = ()) -> list[str]:
+        """``dss_name=value`` for each set slot, ``_LEADING_SLOTS`` first, then the schema's ``order``, except ``skip``.
+        ``like`` is never written: the reader has copied its values into the slots already, and ``like=`` written
+        after them would copy the other object over them."""
         schema_annots = get_schema_annotations(type(obj))
-
-        # Sort fields by annotated order; fields without order go last
         ordered = sorted(
-            (f for f in fields(obj) if f.name != 'name'),
-            key=lambda f: 0 if f.name == 'phases' else schema_annots.get(f.name, {}).get('order', 9999),
+            (f for f in fields(obj) if f.name not in ('name', 'like', *skip)),
+            key=lambda f: _LEADING_SLOTS.index(f.name) - len(_LEADING_SLOTS) if f.name in _LEADING_SLOTS
+            else schema_annots.get(f.name, {}).get('order', 9999),
         )
-
+        parts = []
         for f in ordered:
             value = getattr(obj, f.name)
             if value is None:
                 continue
-
             field_annots = schema_annots.get(f.name, {})
-            dss_name = field_annots.get('dss_name', f.name)
             formatted = self._format_value(value, field_annots)
-
             if formatted is not None:
-                parts.append(f'{dss_name}={formatted}')
+                parts.append(f"{field_annots.get('dss_name', f.name)}={formatted}")
+        return parts
 
-        return ' '.join(parts)
+    def _geometry(self, geometry, kinds: dict[str, str]) -> str:
+        """A LineGeometry with positions: its other slots, then one ``cond=`` block per conductor naming its kind
+        (``wire``, ``cncable``, ``tscable``: the catalog that defines the name), as only blocks can mix kinds."""
+        arrays = [getattr(geometry, slot) for slot in _NAME_ARRAYS if getattr(geometry, slot)]
+        if len(arrays) != 1 or not len(arrays[0]) == len(geometry.xs) == len(geometry.hs):
+            raise ValueError(f"DssWriter: LineGeometry {geometry.name}: needs one of {list(_NAME_ARRAYS)} with a "
+                             "name per position")
+        parts = [f"new {type(geometry).__name__}.{dss_safe_name(str(geometry.name))}",
+                 *self._properties(geometry, skip=(*_GEOMETRY_CURSOR, *_NAME_ARRAYS, "xs", "hs", "units"))]
+        for number, (name, x, h) in enumerate(zip(arrays[0], geometry.xs, geometry.hs), start=1):
+            kind = kinds.get(str(name).lower())
+            if kind is None:
+                raise ValueError(f"DssWriter: LineGeometry {geometry.name}: conductor {name!r} is in no wire catalog")
+            block = f"cond={number} {kind}={dss_safe_name(str(name))} x={x!r} h={h!r}"
+            parts.append(block + (f" units={geometry.units}" if geometry.units else ""))
+        return " ".join(parts)
+
+    @staticmethod
+    def _options(model: GraphModel):
+        """The model's one ``Options`` record, or None."""
+        records = model.list_by_class(schema.Options)
+        if len(records) > 1:
+            raise ValueError(f"DssWriter: {len(records)} Options records; a deck has one")
+        return records[0] if records else None
+
+    def _set(self, options, slot: str) -> str:
+        return f"Set {slot}={self._format_value(getattr(options, slot))}"
+
+    def _circuit(self, model: GraphModel, options) -> list[str]:
+        """``New Circuit.<Options.circuit>`` with the slots of ``Vsource.source``, or nothing for a fragment (a
+        catalog deck the reader also reads without a circuit); one without the other raises."""
+        sources = [obj for obj in model.list_by_class(schema.Vsource) if str(obj.name).lower() == CIRCUIT_SOURCE]
+        circuit = options.circuit if options is not None else None
+        if not sources and circuit is None:
+            return []
+        if not sources or circuit is None:
+            raise ValueError("DssWriter: Options.circuit and Vsource.source (New Circuit) come together; "
+                             f"the model has {'only Options.circuit' if circuit else 'only Vsource.source'}")
+        return [" ".join([f"New Circuit.{dss_safe_name(str(circuit))}", *self._properties(sources[0])])]
+
+    @staticmethod
+    def _write_coordinates(model: GraphModel, destination: Path) -> list[str]:
+        """Write the ``Buscoords`` rows beside the deck, one file per kind; the commands that read them."""
+        commands = []
+        for geographic, command, suffix in ((False, "Buscoords", "buscoords"), (True, "LatLongCoords", "latlongcoords")):
+            rows = [row for row in model.list_by_class(schema.Buscoords) if bool(row.geographic) == geographic]
+            if not rows:
+                continue
+            path = destination.with_name(f"{destination.stem}_{suffix}.csv")
+            # LatLongCoords files are lat, long: y first (the reader swaps them back)
+            text = "".join(f"{row.name}, {row.y!r}, {row.x!r}\n" if geographic else f"{row.name}, {row.x!r}, {row.y!r}\n"
+                           for row in rows)
+            path.write_text(text, encoding="utf-8")
+            commands.append(f"{command} {path.name}")
+        return commands
 
     # ------------------------------------------------------------------
     # DSS-specific value formatting
@@ -178,7 +304,7 @@ class DssWriter(FormatWriter):
         parts = []
         idx = 0
         for row in range(1, n + 1):
-            row_vals = [f'{values[idx + col]:.6g}' for col in range(row)]
+            row_vals = [repr(float(values[idx + col])) for col in range(row)]  # full precision: a round trip is exact
             parts.append(' '.join(row_vals))
             idx += row
         return '[' + ' |'.join(parts) + ']'
