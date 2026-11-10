@@ -1,0 +1,793 @@
+id: https://gridappsd.github.io/dss-graph/pce/generator
+name: generator
+title: OpenDSS Generator Component Schema
+description: >-
+  LinkML schema for OpenDSS Generator objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-50).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Generator:
+    description: >-
+      A Generator object in OpenDSS representing a power generator connected
+      to a bus in the distribution system.
+    class_uri: dss:Generator
+    exact_mappings:
+      - cim:SynchronousMachine
+    comments:
+      - >-
+        OpenDSS Generator maps to CIM SynchronousMachine. Active/reactive power
+        use generator sign convention: CIM Terminal positive p = power into
+        equipment, so generator p is negative (power flows out). The converter
+        covers only steady-state rating and dispatch attributes (bus, phases,
+        kV, kW, kvar, kVA, connection); dynamics/fault-study parameters
+        (Xd, Xdp, Xdpp, H, D, user models) and dispatch-mode/fuel-model
+        attributes have no equivalent in the steady-state CIM profile used here.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct string mapping; no conversion needed."
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this Generator. Power is evenly divided among phases.
+        range: integer
+        required: false
+        minimum_value: 1
+        maximum_value: 3
+        comments:
+          - >-
+            OpenDSS-only (N/A): phases is not read directly — the phase count
+            is implied by parsing bus1's node suffix during import, but the
+            resulting phase count is only used for a log message and is not
+            stored on the SynchronousMachine. Export always writes a bare
+            bus1 with no phase suffix, so the exported Generator relies on
+            OpenDSS's default 3-phase assumption regardless of the original
+            phase count.
+        todos:
+          - "Per-phase detail is discarded. A per-phase-aware roundtrip would need RotatingMachinePhase objects (present in CIM18 but not in the cimhub_2026 profile used here — see the commented-out code in the importer)."
+        annotations:
+          order: 1
+          dss_default: int(3)
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the Generator is connected. May include specific node
+          specification.
+        range: string
+        required: false
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Structural mapping via traversal. Import: bus1 (including any
+            phase suffix) is parsed to build the Terminal/ConnectivityNode
+            structure; the phase suffix itself is not separately retained on
+            the SynchronousMachine (see phases comments). Export: bus1 =
+            Terminals[0].ConnectivityNode.name, with no phase suffix appended.
+        annotations:
+          order: 2
+
+      # (3) kv
+      kv:
+        description: >-
+          Nominal rated (1.0 per unit) voltage, kV, for Generator. For 2- and
+          3-phase Generators, specify phase-phase kV. Otherwise, for phases=1
+          or phases>3, specify actual kV across each branch of the Generator.
+        range: float
+        required: false
+        minimum_value: 0.0
+        exact_mappings:
+          - cim:RotatingMachine.ratedU
+        comments:
+          - >-
+            Unit conversion only: kV ↔ V.
+            Import: ratedU = cim.Voltage(kv, 'kV').
+            Export: kv = ratedU.to('kV').
+        annotations:
+          order: 3
+          dss_default: float(12.47)
+
+      # (4) kW
+      kW:
+        description: >-
+          Total base kW for the Generator. A positive value denotes power
+          coming OUT of the element. This value is modified depending on the
+          dispatch mode.
+        range: float
+        required: false
+        exact_mappings:
+          - cim:RotatingMachine.p
+        comments:
+          - >-
+            Generator sign convention: DSS kW positive = generation out; CIM
+            Terminal p is negative for a generator (power flows out of
+            equipment). Import: p = cim.ActivePower(-kW, 'kW').
+            Export: kW = -p.to('kW').
+        annotations:
+          order: 4
+          dss_default: float(1000.0)
+
+      # (5) pf
+      pf:
+        description: >-
+          Generator power factor. Default is 0.88. Enter negative for leading
+          power factor. A positive power factor signifies the generator
+          produces vars.
+        range: float
+        required: false
+        minimum_value: -1.0
+        maximum_value: 1.0
+        related_mappings:
+          - cim:RotatingMachine.q
+        comments:
+          - >-
+            OpenDSS-only (N/A): pf itself is not stored on CIM, but it feeds a
+            derivation formula used only as a fallback when kvar is not given.
+            Import: kvar = kW × tan(acos(|pf|)), sign-flipped if pf is negative
+            (leading power factor), then combined into q the same way as an
+            explicit kvar (see kvar comments). Export: pf is not recovered from
+            q — the exporter always writes an explicit kvar instead.
+        annotations:
+          order: 5
+          dss_default: float(0.88)
+
+      # (6) kvar
+      kvar:
+        description: >-
+          Specify the base kvar. Alternative to specifying the power factor.
+          Side effect: the power factor value is altered to agree.
+        range: float
+        required: false
+        exact_mappings:
+          - cim:RotatingMachine.q
+        comments:
+          - >-
+            Generator sign convention (same negation as kW). Import (when
+            kvar is given): q = cim.ReactivePower(-kvar, 'kVAr'). If kvar is
+            omitted, q is instead derived from kW and pf (see pf comments).
+            Export: kvar = -q.to('kVAr').
+        annotations:
+          order: 6
+
+      # (7) model
+      model:
+        description: >-
+          Integer code for the model to use for generation variation with voltage.
+          1=Constant kW at specified pf, 2=Constant admittance, 3=Const kW const kV,
+          4=Const kW Fixed Q, 5=Const kW Fixed Q as reactance, 6=User model,
+          7=Const kW kvar current-limited.
+        range: GeneratorModel
+        required: false
+        comments:
+          - "OpenDSS generator model code; no direct CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS generator model enumeration."
+        annotations:
+          order: 7
+          dss_default: int(1)
+          dss_valid_values: "1,2,3,4,5,6,7"
+
+      # (8) Vminpu
+      Vminpu:
+        description: >-
+          Minimum per unit voltage for which the Model is assumed to apply.
+          Default is 0.90.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS voltage limit; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip (e.g. operational voltage limits)."
+        annotations:
+          order: 8
+          dss_default: float(0.90)
+
+      # (9) Vmaxpu
+      Vmaxpu:
+        description: >-
+          Maximum per unit voltage for which the Model is assumed to apply.
+          Default is 1.10.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS voltage limit; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip (e.g. operational voltage limits)."
+        annotations:
+          order: 9
+          dss_default: float(1.10)
+
+      # (10) yearly
+      yearly:
+        description: >-
+          Dispatch shape to use for yearly simulations. Must be previously
+          defined as a Loadshape object.
+        range: string
+        required: false
+        related_mappings:
+          - cim:RegularTimePoint
+        comments:
+          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+        todos:
+          - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
+        annotations:
+          order: 10
+
+      # (11) daily
+      daily:
+        description: >-
+          Dispatch shape to use for daily simulations. Must be previously
+          defined as a Loadshape object of 24 hrs, typically.
+        range: string
+        required: false
+        related_mappings:
+          - cim:RegularTimePoint
+        comments:
+          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+        todos:
+          - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
+        annotations:
+          order: 11
+
+      # (12) duty
+      duty:
+        description: >-
+          Load shape to use for duty cycle dispatch simulations such as for
+          wind generation. Must be previously defined as a Loadshape object.
+        range: string
+        required: false
+        related_mappings:
+          - cim:RegularTimePoint
+        comments:
+          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+        todos:
+          - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
+        annotations:
+          order: 12
+
+      # (13) dispmode
+      dispmode:
+        description: >-
+          Dispatch mode. Default, Loadlevel, or Price.
+        range: DispatchMode
+        required: false
+        comments:
+          - "OpenDSS dispatch mode; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS dispatch mode enumeration."
+        annotations:
+          order: 13
+
+      # (14) dispvalue
+      dispvalue:
+        description: >-
+          Dispatch value. If = 0.0 (default) then Generator follows dispatch
+          curves. If > 0 then Generator is ON only when price or load exceeds
+          this value.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS dispatch threshold; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for dispatch trigger value."
+        annotations:
+          order: 14
+          dss_default: float(0.0)
+
+      # (15) conn
+      conn:
+        description: >-
+          Connection type. Default is wye.
+        range: ConnectionType
+        required: false
+        related_mappings:
+          - cim:SynchronousMachine.description
+        comments:
+          - >-
+            No dedicated CIM slot for generator winding connection in the
+            standard profile. Import: wye is the default and requires no
+            action; conn=delta sets SynchronousMachine.description to the
+            literal text "conn=delta" as a workaround. Export: description
+            is checked for that exact literal to restore conn=delta;
+            otherwise conn is left unset (wye default).
+        annotations:
+          order: 15
+          dss_default: string(wye)
+
+      # (16) Rneut
+      # Removed - not used
+
+      # (17) Xneut
+      # Removed - not used
+
+      # (18) status
+      status:
+        description: >-
+          Fixed or Variable. If Fixed, dispatch multipliers do not apply.
+          Default is Variable.
+        range: GenStatus
+        required: false
+        comments:
+          - "OpenDSS dispatch status; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for Fixed/Variable dispatch status."
+        annotations:
+          order: 18
+
+      # (19) class
+      gen_class:
+        description: >-
+          An arbitrary integer number representing the class of Generator.
+        range: integer
+        required: false
+        comments:
+          - "Arbitrary DSS classification integer; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS generator class integer."
+        annotations:
+          order: 19
+          dss_name: class
+          dss_default: int(1)
+
+      # (20) Vpu
+      Vpu:
+        description: >-
+          Per Unit voltage set point for Model = 3. Default is 1.0.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS Model=3 voltage set point; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS Vpu (Model=3 set point)."
+        annotations:
+          order: 20
+          dss_default: float(1.0)
+
+      # (21) maxkvar
+      maxkvar:
+        description: >-
+          Maximum kvar limit for Model = 3. Defaults to twice the specified
+          load kvar.
+        range: float
+        required: false
+        comments:
+          - >-
+            OpenDSS Model=3 reactive limit; no direct CIM equivalent.
+            Note: PVSystem uses cim:PowerElectronicsConnection.maxQ for this
+            concept, but Generator does not currently map maxkvar.
+        todos:
+          - "No CIM equivalent currently mapped for Generator maxkvar."
+        annotations:
+          order: 21
+
+      # (22) minkvar
+      minkvar:
+        description: >-
+          Minimum kvar limit for Model = 3. Enter a negative number if
+          generator can absorb vars.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS Model=3 reactive limit; no CIM equivalent currently mapped."
+        todos:
+          - "No CIM equivalent currently mapped for Generator minkvar."
+        annotations:
+          order: 22
+
+      # (23) pvfactor
+      pvfactor:
+        description: >-
+          Deceleration factor for P-V generator model (Model=3). Default is 0.1.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS P-V model deceleration factor; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS pvfactor."
+        annotations:
+          order: 23
+          dss_default: float(0.1)
+
+      # (24) forceon
+      forceon:
+        description: >-
+          Forces generator ON despite requirements of other dispatch modes.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS dispatch override; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS forceon flag."
+        annotations:
+          order: 24
+          dss_default: "false"
+
+      # (25) kVA
+      kVA:
+        description: >-
+          kVA rating of electrical machine. Defaults to 1.2 * kW if not
+          specified.
+        range: float
+        required: false
+        exact_mappings:
+          - cim:RotatingMachine.ratedS
+        comments:
+          - >-
+            Unit conversion only: kVA ↔ VA.
+            Import: ratedS = cim.ApparentPower(kVA, 'kVA').
+            Export: kVA = ratedS.to('kVA').
+        annotations:
+          order: 25
+
+      # (26) MVA
+      MVA:
+        description: >-
+          MVA rating of electrical machine. Alternative to using kVA.
+        range: float
+        required: false
+        comments:
+          - >-
+            OpenDSS-only (N/A) for now: the current importer only reads kVA,
+            never MVA; if both are given in a DSS file, MVA is silently
+            ignored. No CIM field is set from this property.
+        todos:
+          - "MVA is not read by the importer. If implemented, it should be treated as an alternate input for RotatingMachine.ratedS when kVA is absent."
+        annotations:
+          order: 26
+
+      # (27) Xd
+      Xd:
+        description: >-
+          Per unit synchronous reactance of machine. Default is 1.0.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+        todos:
+          - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 27
+          dss_default: float(1.0)
+
+      # (28) Xdp
+      Xdp:
+        description: >-
+          Per unit transient reactance of the machine. Used for Dynamics mode
+          and Fault studies. Default is 0.27.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+        todos:
+          - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 28
+          dss_default: float(0.28)
+
+      # (29) Xdpp
+      Xdpp:
+        description: >-
+          Per unit subtransient reactance of the machine. Used for Harmonics.
+          Default is 0.20.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+        todos:
+          - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 29
+          dss_default: float(0.20)
+
+      # (30) H
+      H:
+        description: >-
+          Per unit mass constant of the machine. MW-sec/MVA. Default is 1.0.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine inertia constant; no CIM equivalent in steady-state profile."
+        todos:
+          - "Dynamic parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 30
+          dss_default: float(1.0)
+
+      # (31) D
+      D:
+        description: >-
+          Damping constant. Usual range is 0 to 4. Default is 1.0.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine damping constant; no CIM equivalent in steady-state profile."
+        todos:
+          - "Dynamic parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 31
+          dss_default: float(1.0)
+
+      # (32) UserModel
+      UserModel:
+        description: >-
+          Name of DLL containing user-written model for Dynamics studies.
+        range: string
+        required: false
+        comments:
+          - "OpenDSS user DLL reference; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS UserModel DLL reference."
+        annotations:
+          order: 32
+
+      # (33) UserData
+      UserData:
+        description: >-
+          String that gets passed to user-written model.
+        range: string
+        required: false
+        comments:
+          - "OpenDSS user DLL data string; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS UserData string."
+        annotations:
+          order: 33
+
+      # (34) ShaftModel
+      ShaftModel:
+        description: >-
+          Name of user-written DLL containing a Shaft model.
+        range: string
+        required: false
+        comments:
+          - "OpenDSS shaft DLL reference; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS ShaftModel DLL reference."
+        annotations:
+          order: 34
+
+      # (35) ShaftData
+      ShaftData:
+        description: >-
+          String that gets passed to user-written shaft dynamic model.
+        range: string
+        required: false
+        comments:
+          - "OpenDSS shaft DLL data string; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS ShaftData string."
+        annotations:
+          order: 35
+
+      # (36) DutyStart
+      DutyStart:
+        description: >-
+          Starting time offset [hours] into the duty cycle shape. Defaults to 0.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS time offset into duty shape; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS DutyStart time offset."
+        annotations:
+          order: 36
+          dss_default: float(0.0)
+
+      # (37) debugtrace
+      debugtrace:
+        description: >-
+          Turn this on to capture the progress of the generator model for each
+          iteration.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS simulation diagnostic flag; no CIM equivalent."
+        annotations:
+          order: 37
+          dss_default: "false"
+
+      # (38) Balanced
+      Balanced:
+        description: >-
+          For Model=7, force balanced current only for 3-phase generators.
+          Default is No.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS Model=7 flag; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS Balanced flag."
+        annotations:
+          order: 38
+          dss_default: "false"
+
+      # (39) XRdp
+      XRdp:
+        description: >-
+          X/R ratio for Xdp property for FaultStudy and Dynamic modes.
+          Default is 20.
+        range: float
+        required: false
+        comments:
+          - "Synchronous machine fault study parameter; no CIM equivalent in steady-state profile."
+        todos:
+          - "Fault study parameter — requires CIM Dynamics profile extension to roundtrip."
+        annotations:
+          order: 39
+          dss_default: float(20.0)
+
+      # (40) UseFuel
+      UseFuel:
+        description: >-
+          Activates the use of fuel for the operation of the generator.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS fuel model flag; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS fuel model parameters."
+        annotations:
+          order: 40
+          dss_default: "false"
+
+      # (41) FuelkWh
+      FuelkWh:
+        description: >-
+          Nominal level of fuel for the generator (kWh). Only applies if
+          UseFuel = Yes/True.
+        range: float
+        required: false
+        comments:
+          - "OpenDSS fuel capacity; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS FuelkWh."
+        annotations:
+          order: 41
+          dss_default: float(0.0)
+
+      # (42) %Fuel
+      pct_Fuel:
+        description: >-
+          Current amount of fuel available in percentage of FuelkWh (0-100).
+        range: float
+        required: false
+        comments:
+          - "OpenDSS fuel level percentage; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS %Fuel."
+        annotations:
+          order: 42
+          dss_name: "%Fuel"
+
+      # (43) %Reserve
+      pct_Reserve:
+        description: >-
+          Reserve level in percentage of FuelkWh (0-100).
+        range: float
+        required: false
+        comments:
+          - "OpenDSS fuel reserve percentage; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS %Reserve."
+        annotations:
+          order: 43
+          dss_name: "%Reserve"
+
+      # (44) Refuel
+      Refuel:
+        description: >-
+          Boolean value to manually refuel the generator when needed.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS fuel model control; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS Refuel flag."
+        annotations:
+          order: 44
+          dss_default: "false"
+
+      # (45) DynamicEq
+      DynamicEq:
+        description: >-
+          Name of the dynamic equation (DynamicExp) for defining the dynamic
+          behavior of the generator.
+        range: string
+        required: false
+        comments:
+          - "OpenDSS dynamic equation reference; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS DynamicEq reference."
+        annotations:
+          order: 45
+
+      # (46) DynOut
+      DynOut:
+        description: >-
+          Name of the variables within the Dynamic equation for governing
+          generator dynamics.
+        range: string
+        multivalued: true
+        required: false
+        comments:
+          - "OpenDSS dynamic equation variable references; no CIM equivalent."
+        todos:
+          - "No CIM equivalent for DSS DynOut variable list."
+        annotations:
+          order: 46
+
+      # (47) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic voltage or current spectrum for this generator.
+          Default is "default".
+        range: string
+        required: false
+        comments:
+          - "OpenDSS harmonic spectrum reference; no CIM equivalent in the standard profile."
+        todos:
+          - "No CIM equivalent for DSS spectrum reference."
+        annotations:
+          order: 47
+          dss_default: string(default)
+
+      # (48) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        comments:
+          - >-
+            Not stored on the CIM SynchronousMachine directly; base frequency
+            is a circuit-level property (cim:BaseVoltage or network metadata).
+        todos:
+          - "Extract base frequency from CIM circuit metadata on import; do not map to machine object."
+        annotations:
+          order: 48
+
+      # (49) enabled
+      enabled:
+        description: >-
+          Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        comments:
+          - "OpenDSS enable/disable flag; CIM machines are always modelled as enabled. No CIM equivalent needed."
+        annotations:
+          order: 49
+          dss_default: "true"
+
+      # (50) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Generator.G2 like=G1 ...
+        range: string
+        required: false
+        comments:
+          - "OpenDSS template inheritance; resolved at parser time, no CIM equivalent needed."
+        annotations:
+          order: 50
+
+# Enums are imported from common_enums.yaml

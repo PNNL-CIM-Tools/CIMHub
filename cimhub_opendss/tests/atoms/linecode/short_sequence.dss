@@ -1,0 +1,6 @@
+// 1- and 2-phase sequence codes from EPRI J1 (DSS-4), on one line each so the engine builds their matrices.
+New Circuit.short basekv=12.47
+New Linecode.OH-1X_4CU_4CUN nphases=1 r1=0.85376372 x1=0.52808766 r0=1.2467747 x0=1.4672122 C1=8.2172 C0=4.7725 units=km baseFreq=60
+New Linecode.OH-2X_4CU_4CUN nphases=2 r1=0.85376372 x1=0.52788263 r0=1.2308676 x0=1.4899794 C1=8.2205 C0=4.5833 units=km baseFreq=60
+New Line.one bus1=sourcebus.1 bus2=b1.1 phases=1 linecode=OH-1X_4CU_4CUN length=1 units=km
+New Line.two bus1=sourcebus.1.2 bus2=b2.1.2 phases=2 linecode=OH-2X_4CU_4CUN length=1 units=km

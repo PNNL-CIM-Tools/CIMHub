@@ -1,0 +1,68 @@
+id: https://gridappsd.github.io/dss-graph/general/tcc_curve
+name: tcc_curve
+title: OpenDSS TccCurve Component Schema
+description: >-
+  LinkML schema for OpenDSS TccCurve objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-4).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  TccCurve:
+    description: >-
+      A TccCurve object in OpenDSS.
+    class_uri: dss:TccCurve
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) npts
+      npts:
+        description: >-
+          Number of points to expect in time-current arrays
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) C_array
+      C_array:
+        description: >-
+          Array of current (or voltage) values corresponding to time values (see help on T_Array)
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 2
+
+      # (3) T_array
+      T_array:
+        description: >-
+          Array of time values in sec
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+
+      # (4) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 4

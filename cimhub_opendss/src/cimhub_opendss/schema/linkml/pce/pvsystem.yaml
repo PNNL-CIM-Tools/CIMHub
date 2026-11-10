@@ -1,0 +1,747 @@
+id: https://gridappsd.github.io/dss-graph/pce/pvsystem
+name: pvsystem
+title: OpenDSS Pvsystem Component Schema
+description: >-
+  LinkML schema for OpenDSS Pvsystem objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-54).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Pvsystem:
+    description: >-
+      A Pvsystem object in OpenDSS representing a photovoltaic generator with
+      inverter-based grid connection.
+    class_uri: dss:Pvsystem
+    close_mappings:
+      - cim:PhotoVoltaicUnit
+    comments:
+      - >-
+        Each DSS PVSystem creates two CIM objects: PhotoVoltaicUnit (the PV panel;
+        holds maxP/minP) and PowerElectronicsConnection (the inverter; holds
+        ratedS, ratedU, p, q, maxQ, minQ). The converter returns the
+        PowerElectronicsConnection; the PhotoVoltaicUnit is linked via
+        PowerElectronicsConnection.PowerElectronicsUnit.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Name applied to both PhotoVoltaicUnit and PowerElectronicsConnection with suffix '_pv' / '_pec'."
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this PVSystem element
+        range: integer
+        required: false
+        annotations:
+          order: 1
+          dss_default: int(3)
+        related_mappings:
+          - cim:PowerElectronicsConnectionPhase
+        comments:
+          - "Import: inferred from bus1 node suffix. Export: len(PowerElectronicsConnection.PowerElectronicsConnectionPhase)."
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the PVSystem element is connected
+        range: string
+        required: false
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Structural mapping via traversal: equipment.Terminals[0].ConnectivityNode.name. Phase suffix reconstructed from PowerElectronicsConnectionPhase objects."
+
+      # (3) kv
+      kv:
+        description: >-
+          Nominal rated (1.0 per unit) voltage, kV, for PVSystem element. For
+          2- and 3-phase PVSystems, specify phase-phase kV. Otherwise, specify
+          actual kV across each branch.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 3
+          dss_default: float(12.47)
+        exact_mappings:
+          - cim:PowerElectronicsConnection.ratedU
+        comments:
+          - >-
+            Direct unit conversion with no phase-count-dependent scaling:
+            ratedU = Voltage(kv, 'kV') on import, kv = ratedU.to('kV') on export.
+            OpenDSS PVSystem kV is always line-to-line regardless of phase
+            count, so single-phase PVSystems are not scaled by sqrt(3). CIM
+            stores the value in V (SI base).
+
+      # (4) irradiance
+      irradiance:
+        description: >-
+          Get/set the present irradiance value in kW/sq-m
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 4
+          dss_default: float(1.0)
+          dss_name: "irrad"
+        comments:
+          - "OpenDSS-only (N/A): operational state variable; no CIM equivalent in the standard profile."
+
+      # (5) Pmpp
+      Pmpp:
+        description: >-
+          Get/set the rated max power of the PV array for 1.0 kW/sq-m irradiance, kW.
+        range: float
+        required: false
+        annotations:
+          order: 5
+          dss_default: float(500.0)
+        exact_mappings:
+          - cim:PowerElectronicsUnit.maxP
+        comments:
+          - >-
+            Import: PhotoVoltaicUnit.maxP = ActivePower(Pmpp, 'kW').
+            Export: Pmpp = maxP.to('kW'). CIM stores in W (SI base).
+
+      # (6) %Pmpp
+      pct_Pmpp:
+        description: >-
+          Upper limit on active power as a percentage of Pmpp
+        range: float
+        required: false
+        annotations:
+          order: 6
+          dss_default: float(100.0)
+          dss_name: "%Pmpp"
+        comments:
+          - "OpenDSS-only (N/A): operational curtailment factor; no CIM equivalent in the standard profile."
+
+      # (7) Temperature
+      Temperature:
+        description: >-
+          Get/set the present Temperature (deg C) for the P-T curve.
+        range: float
+        required: false
+        annotations:
+          order: 7
+        comments:
+          - "OpenDSS-only (N/A): operational state variable; no CIM equivalent in the standard profile."
+
+      # (8) pf
+      pf:
+        description: >-
+          Nominally, the power factor for the output power. Default is 0.88.
+          Consumed to compute kvar if kvar is not specified.
+        range: float
+        required: false
+        minimum_value: -1.0
+        maximum_value: 1.0
+        annotations:
+          order: 8
+          dss_default: float(1.0)
+        related_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import fallback only, used when kvar is not explicitly specified:
+            q = Pmpp * tan(acos(|pf|)), sign-flipped when pf is negative
+            (leading power factor), then stored on
+            PowerElectronicsConnection.q. CIM has no dedicated power-factor
+            field, so pf itself is not stored — only its derived q value is.
+            Export never recovers pf; it always writes an explicit kvar value.
+
+      # (9) conn
+      conn:
+        description: >-
+          ={wye|LN|delta|LL}
+        range: string
+        required: false
+        annotations:
+          order: 9
+          dss_default: string(wye)
+        related_mappings:
+          - cim:PowerElectronicsConnection.description
+        comments:
+          - >-
+            No dedicated CIM connection-kind field is set. Import: when conn
+            is 'delta', PowerElectronicsConnection.description is set to the
+            literal string 'conn=delta' as a workaround; wye (the default)
+            leaves description unset. Export: reads that literal string back
+            to decide whether to write conn=delta; otherwise conn is omitted
+            and OpenDSS defaults to wye.
+
+      # (10) kvar
+      kvar:
+        description: >-
+          Get/set the present kvar value. Positive is capacitive (generator convention).
+        range: float
+        required: false
+        annotations:
+          order: 10
+        close_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import: PEC.q = ReactivePower(-kvar, 'kVAr') — negated because DSS uses
+            generator convention (positive kvar = capacitive = +Q supplied to grid),
+            while CIM Terminal uses load convention (positive q = absorbed).
+            Export: kvar = -PEC.q.to('kVAr').
+
+      # (11) kVA
+      kVA:
+        description: >-
+          kVA rating of inverter. Defaults to 1.1 * Pmpp.
+        range: float
+        required: false
+        annotations:
+          order: 11
+          dss_default: float(500.0)
+        exact_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - "Import: PEC.ratedS = ApparentPower(kVA, 'kVA'). Export: kVA = ratedS.to('kVA'). CIM stores in VA (SI base)."
+
+      # (12) %Cutin
+      pct_Cutin:
+        description: >-
+          % cut-in power -- % of kVA rating of inverter. Below this, PVSystem is idle.
+        range: float
+        required: false
+        annotations:
+          order: 12
+          dss_default: float(20.0)
+          dss_name: "%Cutin"
+        comments:
+          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
+
+      # (13) %Cutout
+      pct_Cutout:
+        description: >-
+          % cut-out power -- % of kVA rating of inverter. Below this, PVSystem turns off.
+        range: float
+        required: false
+        annotations:
+          order: 13
+          dss_default: float(20.0)
+          dss_name: "%Cutout"
+        comments:
+          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
+
+      # (14) EffCurve
+      EffCurve:
+        description: >-
+          An XYCurve object, previously defined, that describes the PER UNIT
+          efficiency vs PER UNIT of rated kVA for the inverter.
+        range: string
+        required: false
+        annotations:
+          order: 14
+        todos:
+          - "No CIM equivalent. Inverter efficiency curve; requires CIM extension or mapping to a custom XYCurve linked to the PEC."
+
+      # (15) P-TCurve
+      P-TCurve:
+        description: >-
+          An XYCurve object, previously defined, that describes the PV array
+          PER UNIT Pmpp vs Temperature curve.
+        range: string
+        required: false
+        annotations:
+          order: 15
+        todos:
+          - "No CIM equivalent. Temperature derating curve for PV panel; requires CIM extension."
+
+      # (16) %R
+      pct_R:
+        description: >-
+          Equivalent percent internal resistance, ohms. Default is 0.
+        range: float
+        required: false
+        annotations:
+          order: 16
+          dss_name: "%R"
+        comments:
+          - "OpenDSS-only (N/A): internal resistance used for short-circuit simulation; no standard CIM equivalent on PowerElectronicsConnection."
+
+      # (17) %X
+      pct_X:
+        description: >-
+          Equivalent percent internal reactance, ohms. Default is 50.
+        range: float
+        required: false
+        annotations:
+          order: 17
+          dss_name: "%X"
+        comments:
+          - "OpenDSS-only (N/A): internal reactance used for short-circuit simulation; no standard CIM equivalent on PowerElectronicsConnection."
+
+      # (18) model
+      model:
+        description: >-
+          Integer code (default=1) for the model to use for power output
+          variation with voltage. 1=Constant P+jQ, 2=Constant Z, 3=Constant I.
+        range: integer
+        required: false
+        annotations:
+          order: 18
+          dss_default: int(1)
+          dss_valid_values: "1,2,3"
+        comments:
+          - "OpenDSS-only (N/A): DSS V/Q model selector; no direct CIM equivalent in the standard profile."
+
+      # (19) Vminpu
+      Vminpu:
+        description: >-
+          Minimum per unit voltage. Default = 0.9. Below this, inverter trips
+          and the element goes to constant impedance mode.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 19
+          dss_default: float(0.9)
+        close_mappings:
+          - cim:PowerElectronicsConnection.maxIFault
+        comments:
+          - >-
+            Import: PEC.maxIFault = 1.0 / Vminpu (current limit scales inversely
+            with voltage minimum). Export: Vminpu = 1.0 / maxIFault. Approximate
+            mapping — maxIFault is the primary CIM field used by OpenDSS for fault
+            current limiting.
+
+      # (20) Vmaxpu
+      Vmaxpu:
+        description: >-
+          Maximum per unit voltage. Default = 1.1.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 20
+          dss_default: float(1.1)
+        comments:
+          - "OpenDSS-only (N/A): overvoltage trip threshold; no direct CIM equivalent in the standard profile."
+
+      # (21) Balanced
+      Balanced:
+        description: >-
+          {Yes | No*} Default is No. If true, force balanced operation.
+        range: boolean
+        required: false
+        annotations:
+          order: 21
+        comments:
+          - "OpenDSS-only (N/A): simulation option; no CIM equivalent."
+
+      # (22) LimitCurrent
+      LimitCurrent:
+        description: >-
+          Limits current magnitude to Vminpu value for both 1-phase and
+          3-phase PVSystems similar to Generator Model 7.
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "OpenDSS-only (N/A): current-limiting simulation flag; no CIM equivalent."
+
+      # (23) yearly
+      yearly:
+        description: >-
+          Dispatch shape to use for yearly simulations. LoadShape name.
+        range: string
+        required: false
+        annotations:
+          order: 23
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to the PowerElectronicsConnection."
+
+      # (24) daily
+      daily:
+        description: >-
+          Dispatch shape to use for daily simulations. LoadShape name.
+        range: string
+        required: false
+        annotations:
+          order: 24
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (25) duty
+      duty:
+        description: >-
+          Load shape to use for duty cycle dispatch simulations.
+        range: integer
+        required: false
+        annotations:
+          order: 25
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (26) Tyearly
+      Tyearly:
+        description: >-
+          Temperature shape to use for yearly simulations.
+        range: string
+        required: false
+        annotations:
+          order: 26
+        comments:
+          - "OpenDSS-only (N/A): temperature-driven derating schedule; no CIM equivalent in the standard profile."
+
+      # (27) Tdaily
+      Tdaily:
+        description: >-
+          Temperature shape to use for daily simulations.
+        range: string
+        required: false
+        annotations:
+          order: 27
+        comments:
+          - "OpenDSS-only (N/A): temperature-driven derating schedule; no CIM equivalent."
+
+      # (28) Tduty
+      Tduty:
+        description: >-
+          Temperature shape to use for duty cycle dispatch simulations.
+        range: integer
+        required: false
+        annotations:
+          order: 28
+        comments:
+          - "OpenDSS-only (N/A): temperature-driven derating schedule; no CIM equivalent."
+
+      # (29) class
+      class_class:
+        description: >-
+          An arbitrary integer number representing the class of PVSystem element.
+        range: integer
+        required: false
+        annotations:
+          order: 29
+          dss_name: "class"
+        comments:
+          - "OpenDSS-only (N/A): internal classification integer; no CIM equivalent."
+
+      # (30) UserModel
+      UserModel:
+        description: >-
+          Name of DLL containing user-written model for Dynamics studies.
+        range: string
+        required: false
+        annotations:
+          order: 30
+        comments:
+          - "OpenDSS-only (N/A): dynamics DLL hook; no CIM equivalent."
+
+      # (31) UserData
+      UserData:
+        description: >-
+          String that gets passed to user-written model for defining the data
+          required for that model.
+        range: string
+        required: false
+        annotations:
+          order: 31
+        comments:
+          - "OpenDSS-only (N/A): dynamics DLL data; no CIM equivalent."
+
+      # (32) debugtrace
+      debugtrace:
+        description: >-
+          {Yes | No }  Default is no. If true, writes debug trace to a file.
+        range: boolean
+        required: false
+        annotations:
+          order: 32
+        comments:
+          - "OpenDSS-only (N/A): simulation debug flag; no CIM equivalent."
+
+      # (33) VarFollowInverter
+      VarFollowInverter:
+        description: >-
+          Boolean variable (Yes|No) or (True|False). When True, reactive power
+          follows the inverter dispatch.
+        range: boolean
+        required: false
+        annotations:
+          order: 33
+        comments:
+          - "OpenDSS-only (N/A): inverter control mode flag; no CIM equivalent in the standard profile."
+
+      # (34) DutyStart
+      DutyStart:
+        description: >-
+          Starting time offset [hours] into the duty cycle shape. Default is 0.
+        range: string
+        required: false
+        annotations:
+          order: 34
+        comments:
+          - "OpenDSS-only (N/A): simulation time offset; no CIM equivalent."
+
+      # (35) WattPriority
+      WattPriority:
+        description: >-
+          {Yes/No*/True/False} Set inverter to watt priority instead of the
+          default var priority.
+        range: boolean
+        required: false
+        annotations:
+          order: 35
+        comments:
+          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent in the standard profile."
+
+      # (36) PFPriority
+      PFPriority:
+        description: >-
+          {Yes/No*/True/False} Set inverter to operate with PF priority when
+          in constant PF mode.
+        range: boolean
+        required: false
+        annotations:
+          order: 36
+        comments:
+          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent."
+
+      # (37) %PminNoVars
+      pct_PminNoVars:
+        description: >-
+          Minimum active power as percentage of Pmpp under which there is no
+          vars production/absorption.
+        range: float
+        required: false
+        annotations:
+          order: 37
+          dss_name: "%PminNoVars"
+        comments:
+          - "OpenDSS-only (N/A): inverter deadband parameter; no CIM equivalent in the standard profile."
+
+      # (38) %PminkvarMax
+      pct_PminkvarMax:
+        description: >-
+          Minimum active power as percentage of Pmpp that allows the inverter
+          to produce/absorb reactive power up to its kvarMax or kvarMaxAbs.
+        range: float
+        required: false
+        annotations:
+          order: 38
+          dss_name: "%PminkvarMax"
+        comments:
+          - "OpenDSS-only (N/A): inverter reactive capability threshold; no CIM equivalent."
+
+      # (39) kvarMax
+      kvarMax:
+        description: >-
+          Maximum reactive power GENERATION (un-signed, kvar) for the inverter.
+        range: float
+        required: false
+        annotations:
+          order: 39
+        exact_mappings:
+          - cim:PowerElectronicsConnection.maxQ
+        comments:
+          - >-
+            Import: PEC.maxQ = ReactivePower(kvarMax, 'kVAr').
+            Export: kvarMax = maxQ.to('kVAr'). CIM stores in VAr (SI base).
+
+      # (40) kvarMaxAbs
+      kvarMaxAbs:
+        description: >-
+          Maximum reactive power ABSORPTION (un-signed, kvar) for the inverter.
+        range: float
+        required: false
+        annotations:
+          order: 40
+        close_mappings:
+          - cim:PowerElectronicsConnection.minQ
+        comments:
+          - >-
+            Import: PEC.minQ = ReactivePower(-kvarMaxAbs, 'kVAr') — negated because
+            absorption is negative Q in CIM convention.
+            Export: kvarMaxAbs = abs(minQ.to('kVAr')).
+
+      # (41) kVDC
+      kVDC:
+        description: >-
+          Indicates the rated voltage (kV) at the input of the inverter at
+          the peak of PV energy production.
+        range: float
+        required: false
+        annotations:
+          order: 41
+        comments:
+          - "OpenDSS-only (N/A): DC-side voltage rating; no CIM equivalent in the standard AC profile."
+
+      # (42) Kp
+      Kp:
+        description: >-
+          It is the proportional gain for the PI controller within the inverter.
+        range: string
+        required: false
+        annotations:
+          order: 42
+        comments:
+          - "OpenDSS-only (N/A): inverter PI controller tuning parameter; no CIM equivalent."
+
+      # (43) PITol
+      PITol:
+        description: >-
+          It is the tolerance (%) for the closed loop controller of the inverter.
+        range: string
+        required: false
+        annotations:
+          order: 43
+        comments:
+          - "OpenDSS-only (N/A): inverter PI controller tolerance; no CIM equivalent."
+
+      # (44) SafeVoltage
+      SafeVoltage:
+        description: >-
+          Indicates the voltage level (%) respect to the base voltage level
+          for which the Inverter will operate.
+        range: float
+        required: false
+        annotations:
+          order: 44
+        comments:
+          - "OpenDSS-only (N/A): grid-forming safe-voltage operating threshold; no CIM equivalent."
+
+      # (45) SafeMode
+      SafeMode:
+        description: >-
+          (Read only) Indicates whether the inverter entered (Yes) or not (No)
+          into Safe Mode.
+        range: string
+        required: false
+        annotations:
+          order: 45
+        comments:
+          - "OpenDSS-only (N/A): read-only operational state flag; no CIM equivalent."
+
+      # (46) DynamicEq
+      DynamicEq:
+        description: >-
+          The name of the dynamic equation (DinamicExp) that will be used for
+          defining the dynamic behavior of the generator.
+        range: string
+        required: false
+        annotations:
+          order: 46
+        comments:
+          - "OpenDSS-only (N/A): dynamics model reference; no CIM equivalent in the standard profile."
+
+      # (47) DynOut
+      DynOut:
+        description: >-
+          The name of the variables within the Dynamic equation that will be
+          used to govern the PVSystem dynamics.
+        range: float
+        required: false
+        annotations:
+          order: 47
+        comments:
+          - "OpenDSS-only (N/A): dynamics output variable mapping; no CIM equivalent."
+
+      # (48) ControlMode
+      ControlMode:
+        description: >-
+          Defines the control mode for the inverter. {GFM | GFL*} Default is GFL.
+        range: string
+        required: false
+        annotations:
+          order: 48
+        comments:
+          - "OpenDSS-only (N/A): grid-forming vs. grid-following mode flag; no CIM equivalent in the standard profile."
+
+      # (49) AmpLimit
+      AmpLimit:
+        description: >-
+          Is the current limiter per phase for the IBR when operating in GFM mode.
+        range: float
+        required: false
+        annotations:
+          order: 49
+        comments:
+          - "OpenDSS-only (N/A): GFM current limiter; no CIM equivalent in the standard profile."
+
+      # (50) AmpLimitGain
+      AmpLimitGain:
+        description: >-
+          Use it for fine tunning the current limiter when active, by default is 0.
+        range: float
+        required: false
+        annotations:
+          order: 50
+        comments:
+          - "OpenDSS-only (N/A): GFM limiter gain; no CIM equivalent."
+
+      # (51) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic voltage or current spectrum for this PVSystem element.
+        range: float
+        required: false
+        annotations:
+          order: 51
+        comments:
+          - "OpenDSS-only (N/A): harmonic spectrum reference; no CIM equivalent in the standard profile."
+
+      # (52) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 52
+        comments:
+          - "Not stored on CIM PowerElectronicsConnection; base frequency is a circuit-level property in CIM. Converter must derive this from circuit context."
+
+      # (53) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 53
+          dss_default: "true"
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None and no CIM objects are created. All CIM PEC objects are assumed enabled."
+
+      # (54) like
+      like:
+        description: >-
+          Make like another object, e.g.: New PVSystem.PV2 like=PV1 ...
+        range: string
+        required: false
+        annotations:
+          order: 54
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

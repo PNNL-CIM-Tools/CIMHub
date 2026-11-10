@@ -1,0 +1,70 @@
+# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or a synthesized template) or a Switch
+# (Fuse / Recloser / LoadBreakSwitch by the control that switches it; DSS-9).
+# Source table: Line (records: 10)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches
+
+Profile = cim18v17
+
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+    # derived from a 1-phase sequence code: z = Z1 (phase_matrix); a 1-phase line does not use r0=0.9, x0=2.1, C0=1.6
+    # synthesized: the inline values of Line seq3
+    # units inferred: km (median r 0.5 per unit over 1 code; no units on code or line)
+    # defaulted: C1=3.4, C0=1.6
+    # defaulted: baseFreq=60.0
+    ln_seq3_lc, seq3, 1, 60.0
+
+# units=km. row/column are conductor indices of the lower triangle.
+# derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS; 1- and 2-phase sequence codes: r, x, C by phase_matrix (DSS-4)
+Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/km), x (ohm/km), b (nS/km)
+    ln_seq3_lc_11, ln_seq3_lc, 1, 1, 0.5, 0.9, 1281.7698026646356
+
+# derived: bch/b0ch = 2 pi baseFreq C1/C0 (b_from_c), from C (nF) -> nS
+Table PerLengthSequenceImpedance: mRID, name, r (ohm/km), x (ohm/km), r0 (ohm/km), x0 (ohm/km), calculatedFrequency (Hz), bch (nS/km), b0ch (nS/km)
+    # synthesized: the inline values of Line seq1
+    # defaulted: baseFreq=60.0
+    ln_seq1_lc, seq1, 0.3, 0.6, 0.6,    1.8,    60.0, 3769.9111843077517, 1507.9644737231006
+    # synthesized: the inline values of Line seq2
+    # defaulted: r0=0.1784, x0=0.4047, C1=11.15485564304462, C0=5.2493438320209975
+    # defaulted: baseFreq=60.0
+    ln_seq2_lc, seq2, 0.3, 0.6, 0.1784, 0.4047, 60.0, 4205.281504805234,  1978.9560022612868
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    ln_l1, l1, sourcebus, n1, ABC, 2000.0, lc_mtx601, bv_4p16kv,
+    ln_l2, l2, n1,        n2, CB,  500.0,  lc_mtx603, bv_4p16kv,
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (km), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    ln_seq1, seq1, n1, n8,  ABC, 1.0, ln_seq1_lc, bv_4p16kv,
+    ln_seq2, seq2, n8, n9,  ABC, 0.2, ln_seq2_lc, bv_4p16kv,
+    ln_seq3, seq3, n9, n10, A,   0.3, ln_seq3_lc, bv_4p16kv,
+
+Table OperationalLimitSet: mRID, Equipment
+    # ratings: normamps from LineCode mtx601
+    ln_l1_limits, ln_l1
+    # ratings: emergamps from LineCode mtx603
+    ln_l2_limits, ln_l2
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_l1_norm,  730.0, olt_normal,    ln_l1_limits
+    ln_l2_norm,  200.0, olt_normal,    ln_l2_limits
+    ln_l2_emerg, 345.0, olt_emergency, ln_l2_limits
+
+# open: an Open command or the control's State; normalOpen: the control's Normal, else open
+Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    sw_fuse1, fuse1, n1, n4, , 100.0, false, false, bv_4p16kv,
+
+# open: an Open command or the control's State; normalOpen: the control's Normal, else open
+Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    sw_rec1, rec1, n1, n5, , false, false, bv_4p16kv,
+
+# open: an Open command or the control's State; normalOpen: the control's Normal, else open
+Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_atom, normallyInService
+    sw_sect, sect, n1, n7, ,  true,  true,  bv_4p16kv,
+    # untranscribed (a switch): r1=0.0001, x1=0.0, r0=0.0001, x0=0.0, C1=0.0, C0=0.0
+    sw_sw1,  sw1,  n1, n3, ,  false, false, bv_4p16kv,
+    sw_tie,  tie,  n2, n6, C, true,  true,  bv_4p16kv,
+
+# a Recloser's Shots - 1 reclosures at its RecloseIntervals
+Table RecloseSequence: mRID, ProtectedSwitch, recloseStep, recloseDelay (s)
+    # defaulted: RecloseIntervals=(0.5 2.0)
+    sw_rec1_rs1, sw_rec1, 1, 0.5
+    sw_rec1_rs2, sw_rec1, 2, 2.0

@@ -1,0 +1,179 @@
+id: https://gridappsd.github.io/dss-graph/meters/sensor
+name: sensor
+title: OpenDSS Sensor Component Schema
+description: >-
+  LinkML schema for OpenDSS Sensor objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-16).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Sensor:
+    description: >-
+      A Sensor object in OpenDSS.
+    class_uri: dss:Sensor
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) element
+      element:
+        description: >-
+          Name (Full Object name) of element to which the Sensor is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) terminal
+      terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the Sensor is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) kvbase
+      kvbase:
+        description: >-
+          Voltage base for the sensor, in kV
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) clear
+      clear:
+        description: >-
+          { Yes | No }
+        range: boolean
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kVs
+      kVs:
+        description: >-
+          Array of Voltages (kV) measured by the voltage sensor
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 5
+
+      # (6) currents
+      currents:
+        description: >-
+          Array of Currents (amps) measured by the current sensor
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 6
+
+      # (7) kWs
+      kWs:
+        description: >-
+          Array of Active power (kW) measurements at the sensor
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 7
+
+      # (8) kvars
+      kvars:
+        description: >-
+          Array of Reactive power (kvar) measurements at the sensor
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 8
+
+      # (9) conn
+      conn:
+        description: >-
+          Voltage sensor Connection: { wye | delta | LN | LL }
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) Deltadirection
+      Deltadirection:
+        description: >-
+          {1 or -1}  Default is 1:  1-2, 2-3, 3-1
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) %Error
+      pct_Error:
+        description: >-
+          Assumed percent error in the measurement
+        range: float
+        required: false
+        annotations:
+          order: 11
+          dss_name: "%Error"
+
+      # (12) Weight
+      Weight:
+        description: >-
+          Weighting factor: Default is 1
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) action
+      action:
+        description: >-
+          NOT IMPLEMENTED
+        range: string
+        required: false
+        annotations:
+          order: 13
+
+      # (14) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 15
+
+      # (16) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 16

@@ -1,0 +1,8 @@
+# PSS/E RAW Zone -> SubGeographicalRegion.
+# Source table: Zone (records: 1)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#zone
+
+Profile = cim18v17
+
+Table SubGeographicalRegion: mRID, name, Region=rgn_ieee14
+    srgn_1, IEEE 14

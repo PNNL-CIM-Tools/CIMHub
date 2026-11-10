@@ -1,0 +1,10 @@
+# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
+# Source table: LineCode (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode
+
+Profile = cim18v17
+
+# derived: bch/b0ch = 2 pi baseFreq C1/C0 (b_from_c), from C (nF) -> nS
+Table PerLengthSequenceImpedance: mRID, name, r (ohm/km), x (ohm/km), r0 (ohm/km), x0 (ohm/km), calculatedFrequency (Hz), bch (nS/km), b0ch (nS/km)
+    # untranscribed: normamps=310.0, emergamps=310.0, faultrate=0.1, pctperm=20.0, repair=3
+    lc_3-1/0c_2/0cn_t, 3-1/0C_2/0CN_T, 0.3489, 0.426198, 0.588811, 1.29612, 60, 3932.350000000008, 1690.8100000000002

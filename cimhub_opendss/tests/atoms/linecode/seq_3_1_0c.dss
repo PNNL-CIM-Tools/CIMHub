@@ -1,0 +1,2 @@
+// IEEE8500 LineCodes.dss line 3 (test_data/models/feeders/OpenDSS/IEEE/IEEE8500/LineCodes.dss)
+New Linecode.3-1/0C_2/0CN_T         nphases=3 r1=0.3489   x1=0.426198 r0=0.588811 x0=1.29612   c1=10.4308823411236  c0=4.48501282215346  units=km baseFreq=60 normamps=310  emergamps=310  faultrate=0.1 pctperm=20 repair=3 

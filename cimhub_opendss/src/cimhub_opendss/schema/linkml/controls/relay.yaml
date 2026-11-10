@@ -1,0 +1,512 @@
+id: https://gridappsd.github.io/dss-graph/controls/relay
+name: relay
+title: OpenDSS Relay Component Schema
+description: >-
+  LinkML schema for OpenDSS Relay objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-53).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Relay:
+    description: >-
+      A Relay object in OpenDSS.
+    class_uri: dss:Relay
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) MonitoredObj
+      MonitoredObj:
+        description: >-
+          Full object name of the circuit element, typically a line, transformer, load, or generator, to which the relay's PT and/or CT are connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) MonitoredTerm
+      MonitoredTerm:
+        description: >-
+          Number of the terminal of the circuit element to which the Relay is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) SwitchedObj
+      SwitchedObj:
+        description: >-
+          Name of circuit element switch that the Relay controls
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) SwitchedTerm
+      SwitchedTerm:
+        description: >-
+          Number of the terminal of the controlled element in which the switch is controlled by the Relay
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) type
+      type:
+        description: >-
+          One of a legal relay type:  Current  Voltage  Reversepower  46 (neg seq current)  47 (neg seq voltage)  Generic (generic over/under relay)  Distance  TD21  DOC (directional overcurrent)D...
+        range: string
+        required: false
+        annotations:
+          order: 5
+
+      # (6) Phasecurve
+      Phasecurve:
+        description: >-
+          Name of the TCC Curve object that determines the phase trip
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) Groundcurve
+      Groundcurve:
+        description: >-
+          Name of the TCC Curve object that determines the ground trip
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) PhaseTrip
+      PhaseTrip:
+        description: >-
+          Multiplier or actual phase amps for the phase TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 8
+
+      # (9) GroundTrip
+      GroundTrip:
+        description: >-
+          Multiplier or actual ground amps (3I0) for the ground TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) TDPhase
+      TDPhase:
+        description: >-
+          Time dial for Phase trip curve
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) TDGround
+      TDGround:
+        description: >-
+          Time dial for Ground trip curve
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) PhaseInst
+      PhaseInst:
+        description: >-
+          Actual  amps (Current relay) or kW (reverse power relay) for instantaneous phase trip which is assumed to happen in 0
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) GroundInst
+      GroundInst:
+        description: >-
+          Actual  amps for instantaneous ground trip which is assumed to happen in 0
+        range: string
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Reset
+      Reset:
+        description: >-
+          Reset time in sec for relay
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) Shots
+      Shots:
+        description: >-
+          Number of shots to lockout
+        range: integer
+        required: false
+        annotations:
+          order: 15
+
+      # (16) RecloseIntervals
+      RecloseIntervals:
+        description: >-
+          Array of reclose intervals
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 16
+
+      # (17) Delay
+      Delay:
+        description: >-
+          Trip time delay (sec) for DEFINITE TIME relays
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Overvoltcurve
+      Overvoltcurve:
+        description: >-
+          TCC Curve object to use for overvoltage relay
+        range: float
+        required: false
+        annotations:
+          order: 18
+
+      # (19) Undervoltcurve
+      Undervoltcurve:
+        description: >-
+          TCC Curve object to use for undervoltage relay
+        range: float
+        required: false
+        annotations:
+          order: 19
+
+      # (20) kvbase
+      kvbase:
+        description: >-
+          Voltage base (kV) for the relay
+        range: integer
+        required: false
+        annotations:
+          order: 20
+
+      # (21) 47%Pickup
+      pct_47_pickup:
+        description: >-
+          Percent voltage pickup for 47 relay (Neg seq voltage)
+        range: float
+        required: false
+        annotations:
+          order: 21
+          dss_name: "47%Pickup"
+
+      # (22) 46BaseAmps
+      neg_seq_46_base_amps:
+        description: >-
+          Base current, Amps, for 46 relay (neg seq current)
+        range: float
+        required: false
+        annotations:
+          order: 22
+          dss_name: "46BaseAmps"
+
+      # (23) 46%Pickup
+      pct_46_pickup:
+        description: >-
+          Percent pickup current for 46 relay (neg seq current)
+        range: float
+        required: false
+        annotations:
+          order: 23
+          dss_name: "46%Pickup"
+
+      # (24) 46isqt
+      neg_seq_46_isqt:
+        description: >-
+          Negative Sequence I-squared-t trip value for 46 relay (neg seq current)
+        range: float
+        required: false
+        annotations:
+          order: 24
+          dss_name: "46isqt"
+
+      # (25) Variable
+      Variable:
+        description: >-
+          Name of variable in PC Elements being monitored
+        range: string
+        required: false
+        annotations:
+          order: 25
+
+      # (26) overtrip
+      overtrip:
+        description: >-
+          Trip setting (high value) for Generic relay variable
+        range: string
+        required: false
+        annotations:
+          order: 26
+
+      # (27) undertrip
+      undertrip:
+        description: >-
+          Trip setting (low value) for Generic relay variable
+        range: string
+        required: false
+        annotations:
+          order: 27
+
+      # (28) Breakertime
+      Breakertime:
+        description: >-
+          Fixed delay time (sec) added to relay time
+        range: float
+        required: false
+        annotations:
+          order: 28
+
+      # (29) action
+      action:
+        description: >-
+          DEPRECATED
+        range: string
+        required: false
+        annotations:
+          order: 29
+
+      # (30) Z1mag
+      Z1mag:
+        description: >-
+          Positive sequence reach impedance in primary ohms for Distance and TD21 functions
+        range: float
+        required: false
+        annotations:
+          order: 30
+
+      # (31) Z1ang
+      Z1ang:
+        description: >-
+          Positive sequence reach impedance angle in degrees for Distance and TD21 functions
+        range: float
+        required: false
+        annotations:
+          order: 31
+
+      # (32) Z0mag
+      Z0mag:
+        description: >-
+          Zero sequence reach impedance in primary ohms for Distance and TD21 functions
+        range: float
+        required: false
+        annotations:
+          order: 32
+
+      # (33) Z0ang
+      Z0ang:
+        description: >-
+          Zero sequence reach impedance angle in degrees for Distance and TD21 functions
+        range: float
+        required: false
+        annotations:
+          order: 33
+
+      # (34) Mphase
+      Mphase:
+        description: >-
+          Phase reach multiplier in per-unit for Distance and TD21 functions
+        range: string
+        required: false
+        annotations:
+          order: 34
+
+      # (35) Mground
+      Mground:
+        description: >-
+          Ground reach multiplier in per-unit for Distance and TD21 functions
+        range: string
+        required: false
+        annotations:
+          order: 35
+
+      # (36) EventLog
+      EventLog:
+        description: >-
+          {Yes/True* | No/False} Default is Yes for Relay
+        range: string
+        required: false
+        annotations:
+          order: 36
+
+      # (37) DebugTrace
+      DebugTrace:
+        description: >-
+          {Yes/True* | No/False} Default is No for Relay
+        range: string
+        required: false
+        annotations:
+          order: 37
+
+      # (38) DistReverse
+      DistReverse:
+        description: >-
+          {Yes/True* | No/False} Default is No; reverse direction for distance and td21 types
+        range: string
+        required: false
+        annotations:
+          order: 38
+
+      # (39) Normal
+      Normal:
+        description: >-
+          {Open | Closed} Normal state of the relay
+        range: string
+        required: false
+        annotations:
+          order: 39
+
+      # (40) State
+      State:
+        description: >-
+          {Open | Closed} Actual state of the relay
+        range: string
+        required: false
+        annotations:
+          order: 40
+
+      # (41) DOC_TiltAngleLow
+      DOC_TiltAngleLow:
+        description: >-
+          Tilt angle for low-current trip line
+        range: float
+        required: false
+        annotations:
+          order: 41
+
+      # (42) DOC_TiltAngleHigh
+      DOC_TiltAngleHigh:
+        description: >-
+          Tilt angle for high-current trip line
+        range: float
+        required: false
+        annotations:
+          order: 42
+
+      # (43) DOC_TripSettingLow
+      DOC_TripSettingLow:
+        description: >-
+          Resistive trip setting for low-current line
+        range: float
+        required: false
+        annotations:
+          order: 43
+
+      # (44) DOC_TripSettingHigh
+      DOC_TripSettingHigh:
+        description: >-
+          Resistive trip setting for high-current line
+        range: float
+        required: false
+        annotations:
+          order: 44
+
+      # (45) DOC_TripSettingMag
+      DOC_TripSettingMag:
+        description: >-
+          Trip setting for current magnitude (defines a circle in the relay characteristics)
+        range: float
+        required: false
+        annotations:
+          order: 45
+
+      # (46) DOC_DelayInner
+      DOC_DelayInner:
+        description: >-
+          Trip time delay (sec) for operation in inner region for DOC relay, defined when "DOC_TripSettingMag" or "DOC_TripSettingHigh" are activate
+        range: string
+        required: false
+        annotations:
+          order: 46
+
+      # (47) DOC_PhaseCurveInner
+      DOC_PhaseCurveInner:
+        description: >-
+          Name of the TCC Curve object that determines the phase trip for operation in inner region for DOC relay
+        range: float
+        required: false
+        annotations:
+          order: 47
+
+      # (48) DOC_PhaseTripInner
+      DOC_PhaseTripInner:
+        description: >-
+          Multiplier for the "DOC_PhaseCurveInner" TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 48
+
+      # (49) DOC_TDPhaseInner
+      DOC_TDPhaseInner:
+        description: >-
+          Time dial for "DOC_PhaseCurveInner" TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 49
+
+      # (50) DOC_P1Blocking
+      DOC_P1Blocking:
+        description: >-
+          {Yes/True* | No/False} Blocking element that impedes relay from tripping if balanced net three-phase active power is in the forward direction (i
+        range: float
+        required: false
+        annotations:
+          order: 50
+
+      # (51) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 51
+
+      # (52) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 52
+
+      # (53) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 53

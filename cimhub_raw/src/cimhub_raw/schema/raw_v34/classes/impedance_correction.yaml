@@ -1,0 +1,67 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/impedance_correction
+name: impedance_correction
+title: Transformer Impedance Correction Record
+description: raw RAW Transformer Impedance Correction Table Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  ImpedanceCorrectionRecord:
+    description: |
+      Transformer impedance correction table data record: the table number, then its points, six per line,
+      as many lines as needed. A point of three zeros ends the table (it is not a point of the table).
+    comments:
+      - Variable length; read and written by raw34_reader / raw34_writer, not by the positional layout
+    attributes:
+      table_number:
+        description: I - Impedance correction table number
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          line_number: 1
+          order: 1
+          value_type: int
+
+      points:
+        description: The table's points (T, Re(F), Im(F)), up to 99, in file order
+        range: ImpedanceCorrectionPoint
+        inlined: true
+        inlined_as_list: true
+        multivalued: true
+        required: false
+
+  ImpedanceCorrectionPoint:
+    description: One point of an impedance correction table
+    attributes:
+      t:
+        description: Ti - Off-nominal turns ratio (pu) or phase shift angle (deg)
+        range: float
+        required: true
+        annotations:
+          value_type: float
+          precision: 5
+
+      f_real:
+        description: Re(Fi) - Real part of the impedance scaling factor
+        range: float
+        required: true
+        annotations:
+          value_type: float
+          precision: 5
+
+      f_imag:
+        description: Im(Fi) - Imaginary part of the impedance scaling factor
+        range: float
+        required: true
+        annotations:
+          value_type: float
+          precision: 5

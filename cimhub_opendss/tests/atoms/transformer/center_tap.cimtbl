@@ -1,0 +1,41 @@
+# OpenDSS Transformer -> PowerTransformer + PowerTransformerEnd per bus;
+# 1-phase: TransformerTank + TransformerPhaseEnd + TransformerWinding; 3-phase: balanced ends.
+# Source table: Transformer (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#transformer
+
+Profile = cim18v17
+
+# untranscribed: Xscarray, thermal, n, m, flrise, hsrise, normhkVA, emerghkVA, Seasons, Ratings, normamps, emergamps,
+# sub, subname, ppm_antifloat, bank, XRConst, LeadLag, Core, RdcOhms, faultrate, pct_perm, repair, basefreq, like
+Table PowerTransformer: mRID, name, EquipmentContainer, normallyInService
+    # defaulted: conns=wye
+    xf_ct_ab, ct_ab, fdr_atom,
+
+# 1-phase by phase ends, and every instance by template (end n is the template's end n)
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_ct_ab_1, xf_ct_ab, n1,    AB,    1, D, false, bv_4p16kv
+    xf_ct_ab_2, xf_ct_ab, house, s1s2N, 2, I, true,  bv_240v
+
+# derived: noLoadLoss = pct_noloadloss / 100 x winding 1 kVA
+Table TransformerTank: mRID, PowerTransformer, percentMagnetizingCurrent (percent), noLoadLoss (kW)
+    xf_ct_ab_tank, xf_ct_ab, 0.5, 0.01
+
+# sequenceNumber is unique in the transformer, end 1 first, in terminal phase order
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase
+    xf_ct_ab_1_A,  1, 1, A
+    xf_ct_ab_1_B,  1, 2, B
+    xf_ct_ab_2_s1, 2, 3, s1
+    xf_ct_ab_2_s2, 2, 4, s2
+    xf_ct_ab_2_N,  2, 5, N
+
+# baseU = DSS kV (the coil); derived: ratedU phase-to-phase (x sqrt 3 for a phase-to-neutral coil on a 3-phase system, x 2 for a split-phase half), ratedS of a half = kVA / 2
+Table TransformerWinding: mRID, TransformerTank, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd, ToTransformerEnd
+    xf_ct_ab_wdg_1, xf_ct_ab_tank, 4.16, 4.16, 5.0, 5.0, 0.6, xf_ct_ab_1_A,  xf_ct_ab_1_B
+    xf_ct_ab_wdg_2, xf_ct_ab_tank, 0.24, 0.12, 2.5, 5.0, 1.2, xf_ct_ab_2_s1, xf_ct_ab_2_N
+    xf_ct_ab_wdg_3, xf_ct_ab_tank, 0.24, 0.12, 2.5, 5.0, 1.2, xf_ct_ab_2_N,  xf_ct_ab_2_s2
+
+# x in percent on winding 1's kVA (every coil's baseS) at the From winding's baseU
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xf_ct_ab_mesh_12, xf_ct_ab_wdg_1, xf_ct_ab_wdg_2, 2.04
+    xf_ct_ab_mesh_13, xf_ct_ab_wdg_1, xf_ct_ab_wdg_3, 2.04
+    xf_ct_ab_mesh_23, xf_ct_ab_wdg_2, xf_ct_ab_wdg_3, 1.36

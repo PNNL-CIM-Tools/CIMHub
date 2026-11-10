@@ -1,0 +1,3 @@
+// A 50 Hz circuit (the export's defaultbasefreq comes from the model's BaseFrequency, U14).
+Set defaultbasefreq=50
+New Circuit.f50 basekv=11 bus1=src pu=1.03 MVAsc3=500 MVAsc1=400

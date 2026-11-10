@@ -1,0 +1,687 @@
+id: https://gridappsd.github.io/dss-graph/pce/load
+name: load
+title: OpenDSS Load Component Schema
+description: >-
+  LinkML schema for OpenDSS Load objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-42).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Load:
+    description: >-
+      A Load object in OpenDSS representing an energy consumer connected
+      to a bus in the distribution system.
+    class_uri: dss:Load
+    exact_mappings:
+      - cim:EnergyConsumer
+    comments:
+      - >-
+        OpenDSS Load maps to CIM EnergyConsumer. On export, a single
+        EnergyConsumer can produce more than one DSS Load: an unbalanced
+        multi-phase wye load (per-phase kW/kvar not all equal) is split into
+        one single-phase Load per EnergyConsumerPhase so the imbalance is
+        preserved, and a 2-phase wye load below 250 V (a center-tap/split-phase
+        service) is split the same way into two single-phase 120 V loads.
+        Balanced loads export as a single multi-phase Load.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this load. Load is evenly divided among phases.
+        range: integer
+        required: false
+        minimum_value: 1
+        maximum_value: 3
+        annotations:
+          order: 1
+          dss_default: int(3)
+        related_mappings:
+          - cim:EnergyConsumerPhase
+        comments:
+          - >-
+            Import: if bus1 has an explicit phase suffix (e.g. ".1.2.3"), that
+            is authoritative; otherwise phases selects that many of A, B, C in
+            order. One EnergyConsumerPhase object is created per resolved
+            phase. Export: phases = len(EnergyConsumerPhase), except a 2-phase
+            delta load exports as phases=1 (DSS represents a single-phase L-L
+            delta load this way).
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the load is connected. May include specific node
+          specification.
+        range: string
+        required: true
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Import: bus name extracted from Terminal[0].ConnectivityNode.name; phase suffix reconstructed from EnergyConsumerPhase.phase values. Export: bus1 = cn.name + '.' + '.'.join(phase_suffix)."
+
+      # (3) kV
+      kV:
+        description: >-
+          Nominal rated (1.0 per unit) voltage, kV, for load. For 2- and
+          3-phase loads, specify phase-phase kV. Otherwise, specify actual
+          kV across each branch of the load. If wye (star), specify
+          phase-neutral kV. If delta or phase-phase connected, specify
+          phase-phase kV.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 3
+          dss_default: float(12.47)
+        close_mappings:
+          - cim:BaseVoltage.nominalVoltage
+        comments:
+          - >-
+            CIM BaseVoltage.nominalVoltage is always phase-phase (L-L).
+            Import: EnergyConsumer.BaseVoltage.nominalVoltage =
+            Voltage(kV × √3, 'kV') for a single-phase wye load, or
+            Voltage(kV, 'kV') for delta or for 2-/3-phase wye (kV is already
+            L-L in those cases). Export: kV = nominalVoltage.to('kV') / √3 for
+            a single-phase wye load, otherwise kV = nominalVoltage.to('kV').
+            If kV is omitted on import, the voltage is left unset and filled
+            in later by BFS-based repair.
+
+      # (4) kW
+      kW:
+        description: >-
+          Total base kW for the load. Normally, you would enter the maximum
+          kW for the load for the first year and allow it to be adjusted by
+          the load shapes, growth shapes, and global load multiplier.
+        range: float
+        required: false
+        annotations:
+          order: 4
+          dss_default: float(10.0)
+        close_mappings:
+          - cim:EnergyConsumer.p
+        comments:
+          - >-
+            Import: EnergyConsumer.p = ActivePower(kW, 'kW'); if kW is not
+            given but kVA and pf are, kW = kVA × |pf| first (see kVA and pf
+            comments). Export: kW = p.to('kW'). Sign: CIM positive p = power
+            consumed (load convention matches); no sign flip needed for loads.
+
+      # (5) pf
+      pf:
+        description: >-
+          Load power factor. Enter negative for leading power factor (when
+          kW and kvar have opposite signs).
+        range: float
+        required: false
+        minimum_value: -1.0
+        maximum_value: 1.0
+        annotations:
+          order: 5
+          dss_default: float(0.88)
+        comments:
+          - >-
+            Not stored on CIM EnergyConsumer; CIM stores p and q independently.
+            Import: used only when kvar is not explicitly given —
+            kvar = kW × tan(acos(|pf|)), sign-negated if pf is negative
+            (leading). Export: pf is always recomputed as
+            p / sqrt(p² + q²) (1.0 if p and q are both zero); the sign of the
+            original pf is not preserved.
+
+      # (6) model
+      model:
+        description: >-
+          Integer code for the model to use for load variation with voltage.
+          1=Constant P+jQ (default), 2=Constant Z, 3=Const P Quadratic Q,
+          4=Nominal Linear P Quadratic Q (CVR), 5=Constant I, 6=Const P
+          Fixed Q, 7=Const P Fixed Impedance Q, 8=ZIPV.
+        range: LoadModel
+        required: false
+        annotations:
+          order: 6
+          dss_default: int(1)
+          dss_valid_values: "1,2,3,4,5,6,7,8"
+        close_mappings:
+          - cim:LoadResponseCharacteristic
+        comments:
+          - >-
+            Import: each DSS model value (1-8) selects a fixed ZIP
+            (constant-impedance/current/power) fraction profile for p and q,
+            which is stored on a shared LoadResponseCharacteristic and linked
+            via EnergyConsumer.LoadResponse; model=4 (CVR) instead sets
+            exponentModel=True with CVRwatts/CVRvars as the p/q voltage
+            exponents, and model=8 (ZIPV) reads the 7-element ZIPV array
+            directly into the ZIP fractions. Export: the reverse lookup
+            matches the LoadResponseCharacteristic's ZIP fractions against the
+            same standard profiles (models 1, 2, 3, 5); an exponent model
+            exports as model=4 with CVRwatts/CVRvars; any other combination of
+            fractions exports as model=8 with a ZIPV array (Vminpu fixed at 0.5).
+
+      # (7) yearly
+      yearly:
+        description: >-
+          LOADSHAPE object name for yearly simulations. Must be previously
+          defined as a Loadshape object.
+        range: string
+        required: false
+        annotations:
+          order: 7
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+
+      # (8) daily
+      daily:
+        description: >-
+          LOADSHAPE object name for daily simulations. Must be previously
+          defined as a Loadshape object of 24 hrs, typically.
+        range: string
+        required: false
+        annotations:
+          order: 8
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+
+      # (9) duty
+      duty:
+        description: >-
+          LOADSHAPE object name for duty cycle simulations. Must be
+          previously defined as a Loadshape object. Typically would have
+          time intervals less than 1 hr.
+        range: string
+        required: false
+        annotations:
+          order: 9
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+
+      # (10) growth
+      growth:
+        description: >-
+          Growthshape object name to use for growth factors by years. Must
+          be previously defined as a Growthshape object. Defaults to circuit
+          default growth factor.
+        range: string
+        required: false
+        annotations:
+          order: 10
+        related_mappings:
+          - cim:GrowthShape
+        todos:
+          - "GrowthShape converter not yet implemented. DSS GrowthShape name should reference a CIM GrowthShape object."
+
+      # (11) conn
+      conn:
+        description: >-
+          Connection type. Default is wye.
+        range: ConnectionType
+        required: false
+        annotations:
+          order: 11
+          dss_default: string(wye)
+        exact_mappings:
+          - cim:EnergyConsumer.phaseConnection
+        comments:
+          - "Import: DSS 'wye'/'delta' maps to CIM PhaseShuntConnectionKind.Y / D. Export: reverse enum lookup."
+
+      # (12) kvar
+      kvar:
+        description: >-
+          Base kvar for specifying load as kW & kvar. Assumes kW has been
+          already defined. Alternative to specifying the power factor.
+        range: float
+        required: false
+        annotations:
+          order: 12
+        close_mappings:
+          - cim:EnergyConsumer.q
+        comments:
+          - "Import: EnergyConsumer.q = ReactivePower(kvar, 'kVAr'). Export: kvar = q.to('kVAr'). Sign: positive q = inductive (lagging) consumption in CIM load convention."
+
+      # (13) Rneut
+      Rneut:
+        description: >-
+          Neutral resistance of wye-connected load in actual ohms. Default
+          is -1. If entered as negative, the neutral can be open or floating.
+        range: float
+        required: false
+        annotations:
+          order: 13
+          dss_default: float(-1.0)
+        todos:
+          - "No CIM equivalent. Requires CIM extension (e.g. custom attribute on EnergyConsumer or dedicated NeutralImpedance class) to round-trip."
+
+      # (14) Xneut
+      Xneut:
+        description: >-
+          Neutral reactance of wye-connected load in actual ohms. May be
+          positive or negative.
+        range: float
+        required: false
+        annotations:
+          order: 14
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Requires CIM extension alongside Rneut."
+
+      # (15) status
+      status:
+        description: >-
+          Load status. Variable=all multipliers apply, Fixed=no load
+          multipliers (growth still applies), Exempt=not modified by
+          global load multiplier.
+        range: LoadStatus
+        required: false
+        annotations:
+          order: 15
+        todos:
+          - "No CIM equivalent for load multiplier status flags. Requires CIM extension."
+
+      # (16) class
+      load_class:
+        description: >-
+          An arbitrary integer number representing the class of load so
+          that load values may be segregated by load value. Default is 1;
+          not used internally.
+        range: integer
+        required: false
+        annotations:
+          order: 16
+          dss_name: class
+          dss_default: int(1)
+        todos:
+          - "No CIM equivalent. Could potentially map to a PSRType classification but no standard CIM field exists."
+
+      # (17) Vminpu
+      Vminpu:
+        description: >-
+          Minimum per unit voltage for which the MODEL is assumed to apply.
+          Lower end of normal voltage range. Default is 0.95.
+        range: float
+        required: false
+        annotations:
+          order: 17
+          dss_default: float(0.95)
+        todos:
+          - "No CIM equivalent. Requires CIM extension for per-unit voltage model applicability bounds."
+
+      # (18) Vmaxpu
+      Vmaxpu:
+        description: >-
+          Maximum per unit voltage for which the MODEL is assumed to apply.
+          Default is 1.05.
+        range: float
+        required: false
+        annotations:
+          order: 18
+          dss_default: float(1.05)
+        todos:
+          - "No CIM equivalent. Requires CIM extension alongside Vminpu."
+
+      # (19) Vminnorm
+      Vminnorm:
+        description: >-
+          Minimum per unit voltage for load EEN evaluations, Normal limit.
+          Default is 0, which defaults to system vminnorm property.
+        range: float
+        required: false
+        annotations:
+          order: 19
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Requires CIM extension for normal-range voltage limit on loads."
+
+      # (20) Vminemerg
+      Vminemerg:
+        description: >-
+          Minimum per unit voltage for load UE evaluations, Emergency limit.
+          Default is 0, which defaults to system vminemerg property.
+        range: float
+        required: false
+        annotations:
+          order: 20
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Requires CIM extension for emergency-range voltage limit on loads."
+
+      # (21) xfkVA
+      xfkVA:
+        description: >-
+          Rated kVA of service transformer for allocating loads based on
+          connected kVA at a bus. Default is 0.0.
+        range: float
+        required: false
+        annotations:
+          order: 21
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Load allocation metadata; requires CIM extension."
+
+      # (22) allocationfactor
+      allocationfactor:
+        description: >-
+          Allocation factor for allocating loads based on connected kVA at
+          a bus. Default is 0.5.
+        range: float
+        required: false
+        annotations:
+          order: 22
+          dss_default: float(0.5)
+        todos:
+          - "No CIM equivalent. Load allocation metadata; requires CIM extension alongside xfkVA."
+
+      # (23) kVA
+      kVA:
+        description: >-
+          Specify base Load in kVA (and power factor).
+        range: float
+        required: false
+        annotations:
+          order: 23
+        comments:
+          - >-
+            Not stored on CIM EnergyConsumer; p and q are stored
+            independently. Import: used only when kW is not given — combined
+            with pf to derive kW = kVA × |pf| (see kW comments); kvar is then
+            derived from that kW and pf as usual. Export: not written; kVA is
+            not reconstructed on the DSS side (only kW/kvar/pf are).
+
+      # (24) %mean
+      pct_mean:
+        description: >-
+          Percent mean value for load to use for monte carlo studies if no
+          loadshape is assigned to this load. Default is 50.
+        range: float
+        required: false
+        annotations:
+          order: 24
+          dss_name: "%mean"
+          dss_default: float(50.0)
+        todos:
+          - "No CIM equivalent. Monte Carlo study metadata; requires CIM extension."
+
+      # (25) %stddev
+      pct_stddev:
+        description: >-
+          Percent Std deviation value for load to use for monte carlo
+          studies if no loadshape is assigned to this load. Default is 10.
+        range: float
+        required: false
+        annotations:
+          order: 25
+          dss_name: "%stddev"
+          dss_default: float(10.0)
+        todos:
+          - "No CIM equivalent. Monte Carlo study metadata; requires CIM extension."
+
+      # (26) CVRwatts
+      CVRwatts:
+        description: >-
+          Percent reduction in active power per 1% reduction in voltage
+          from 100% rated. Default is 1. Applies to Model=4 only.
+        range: float
+        required: false
+        annotations:
+          order: 26
+          dss_default: float(1.0)
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pVoltageExponent
+        comments:
+          - >-
+            Only meaningful when model=CVR (4). Import:
+            LoadResponseCharacteristic.pVoltageExponent = CVRwatts (or 1.0 if
+            not specified), with exponentModel set True. Export: CVRwatts =
+            pVoltageExponent (or 1.0 if not set), written only when the
+            LoadResponseCharacteristic has exponentModel=True (which exports
+            as model=4).
+
+      # (27) CVRvars
+      CVRvars:
+        description: >-
+          Percent reduction in reactive power per 1% reduction in voltage
+          from 100% rated. Default is 2. Applies to Model=4 only.
+        range: float
+        required: false
+        annotations:
+          order: 27
+          dss_default: float(2.0)
+        close_mappings:
+          - cim:LoadResponseCharacteristic.qVoltageExponent
+        comments:
+          - >-
+            Only meaningful when model=CVR (4). Import:
+            LoadResponseCharacteristic.qVoltageExponent = CVRvars (or 2.0 if
+            not specified), alongside CVRwatts (see CVRwatts comments).
+            Export: CVRvars = qVoltageExponent (or 2.0 if not set), written
+            alongside CVRwatts under the same condition.
+
+      # (28) kwh
+      kwh:
+        description: >-
+          kWh billed for this period. Default is 0.
+        range: float
+        required: false
+        annotations:
+          order: 28
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Billing energy metadata; requires CIM extension."
+
+      # (29) kwhdays
+      kwhdays:
+        description: >-
+          Length of kWh billing period in days (24 hr days). Default is 30.
+        range: float
+        required: false
+        annotations:
+          order: 29
+          dss_default: float(30.0)
+        todos:
+          - "No CIM equivalent. Billing period metadata; requires CIM extension alongside kwh."
+
+      # (30) Cfactor
+      Cfactor:
+        description: >-
+          Factor relating average kW to peak kW. Default is 4.0.
+        range: float
+        required: false
+        annotations:
+          order: 30
+          dss_default: float(4.0)
+        todos:
+          - "No CIM equivalent. Load factor metadata; requires CIM extension."
+
+      # (31) CVRcurve
+      CVRcurve:
+        description: >-
+          Curve describing both watt and var factors as a function of time.
+          Refers to a LoadShape object with both Mult and Qmult defined.
+          Default is NONE.
+        range: string
+        required: false
+        annotations:
+          order: 31
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. CVRcurve LoadShape reference should map to a CIM schedule linked via LoadResponseCharacteristic."
+
+      # (32) NumCust
+      NumCust:
+        description: >-
+          Number of customers, this load. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 32
+          dss_default: int(1)
+        exact_mappings:
+          - cim:EnergyConsumer.customerCount
+        comments:
+          - "Import: EnergyConsumer.customerCount = NumCust. Export: NumCust = customerCount. Direct integer mapping; no unit conversion."
+
+      # (33) ZIPV
+      ZIPV:
+        description: >-
+          Array of 7 coefficients for ZIP load model. First 3 are ZIP
+          weighting factors for real power (should sum to 1). Next 3 are
+          ZIP weighting factors for reactive power (should sum to 1).
+          Last 1 is cut-off voltage in p.u. of base kV.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 33
+        close_mappings:
+          - cim:LoadResponseCharacteristic
+        comments:
+          - >-
+            Only meaningful when model=ZIPV (8). Import: the 7 elements
+            (p_z, p_i, p_p, q_z, q_i, q_p, Vminpu) are read directly into the
+            matching LoadResponseCharacteristic ZIP-fraction fields (Vminpu is
+            not currently stored). Export: when the LoadResponseCharacteristic's
+            ZIP fractions don't match one of the standard DSS profiles
+            (models 1/2/3/5) and it is not an exponent model, ZIPV is written
+            as [p_z, p_i, p_p, q_z, q_i, q_p, 0.5] — the 7th element (Vminpu)
+            is always exported as a fixed 0.5, since it is not stored on CIM.
+
+      # (34) %SeriesRL
+      pct_SeriesRL:
+        description: >-
+          Percent of load that is series R-L for Harmonic studies. Default
+          is 50. Remainder is assumed to be parallel R and L.
+        range: float
+        required: false
+        annotations:
+          order: 34
+          dss_name: "%SeriesRL"
+          dss_default: float(50.0)
+        todos:
+          - "No CIM equivalent. Harmonic study circuit decomposition; requires CIM extension."
+
+      # (35) RelWeight
+      RelWeight:
+        description: >-
+          Relative weighting factor for reliability calcs. Default is 1.
+          Used to designate high priority loads such as hospitals.
+        range: float
+        required: false
+        annotations:
+          order: 35
+          dss_default: float(1.0)
+        todos:
+          - "No CIM equivalent. Reliability priority weighting; requires CIM extension."
+
+      # (36) Vlowpu
+      Vlowpu:
+        description: >-
+          Per unit voltage at which the model switches to constant Z model
+          (model=2). Default is 0.50.
+        range: float
+        required: false
+        annotations:
+          order: 36
+          dss_default: float(0.50)
+        todos:
+          - "No CIM equivalent. Voltage-dependent model switching threshold; requires CIM extension."
+
+      # (37) puXharm
+      puXharm:
+        description: >-
+          Special reactance, pu (based on kVA, kV properties), for the
+          series impedance branch in the load model for HARMONICS analysis.
+          Default is 0.
+        range: float
+        required: false
+        annotations:
+          order: 37
+          dss_default: float(0.0)
+        todos:
+          - "No CIM equivalent. Harmonic-mode series reactance; requires CIM extension."
+
+      # (38) XRharm
+      XRharm:
+        description: >-
+          X/R ratio of the special harmonics mode reactance specified by
+          the puXHARM property at fundamental frequency. Default is 6.
+        range: float
+        required: false
+        annotations:
+          order: 38
+          dss_default: float(6.0)
+        todos:
+          - "No CIM equivalent. Harmonic-mode X/R ratio; requires CIM extension alongside puXharm."
+
+      # (39) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic current spectrum for this load. Default is
+          "defaultload".
+        range: string
+        required: false
+        annotations:
+          order: 39
+          dss_default: string(defaultload)
+        todos:
+          - "No CIM equivalent. Harmonic current spectrum reference; requires CIM extension."
+
+      # (40) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 40
+        todos:
+          - "Not stored on CIM EnergyConsumer. Base frequency should be extracted from the CIM BaseVoltage or circuit-level object. Converter must derive this from circuit context."
+
+      # (41) enabled
+      enabled:
+        description: >-
+          Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 41
+          dss_default: "true"
+        comments:
+          - "OpenDSS-only (N/A): CIM EnergyConsumer has no enabled/disabled flag; CIM consumers are always considered active in the network model."
+
+      # (42) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Load.L2 like=L1 ...
+        range: string
+        required: false
+        annotations:
+          order: 42
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+
+# Enums are imported from common_enums.yaml

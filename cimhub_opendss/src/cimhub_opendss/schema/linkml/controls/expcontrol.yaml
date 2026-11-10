@@ -1,0 +1,184 @@
+id: https://gridappsd.github.io/dss-graph/controls/expcontrol
+name: expcontrol
+title: OpenDSS Expcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Expcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-17).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Expcontrol:
+    description: >-
+      A Expcontrol object in OpenDSS.
+    class_uri: dss:Expcontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) PVSystemList
+      PVSystemList:
+        description: >-
+          Array list of PVSystems to be controlled
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Vreg
+      Vreg:
+        description: >-
+          Per-unit voltage at which reactive power is zero; defaults to 1
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) Slope
+      Slope:
+        description: >-
+          Per-unit reactive power injection / per-unit voltage deviation from Vreg; defaults to 50
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) VregTau
+      VregTau:
+        description: >-
+          Time constant for adaptive Vreg
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) Qbias
+      Qbias:
+        description: >-
+          Equilibrium per-unit reactive power when V=Vreg; defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) VregMin
+      VregMin:
+        description: >-
+          Lower limit on adaptive Vreg; defaults to 0
+        range: string
+        required: false
+        annotations:
+          order: 6
+
+      # (7) VregMax
+      VregMax:
+        description: >-
+          Upper limit on adaptive Vreg; defaults to 1
+        range: string
+        required: false
+        annotations:
+          order: 7
+
+      # (8) QmaxLead
+      QmaxLead:
+        description: >-
+          Limit on leading (inductive) reactive power injection, in per-unit of base kva; defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) QmaxLag
+      QmaxLag:
+        description: >-
+          Limit on lagging (capacitive) reactive power injection, in per-unit of base kva; defaults to 0
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) EventLog
+      EventLog:
+        description: >-
+          {Yes/True* | No/False} Default is No for ExpControl
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) DeltaQ_factor
+      DeltaQ_factor:
+        description: >-
+          Convergence parameter; Defaults to 0
+        range: integer
+        required: false
+        annotations:
+          order: 11
+
+      # (12) PreferQ
+      PreferQ:
+        description: >-
+          {Yes/True* | No/False} Default is No for ExpControl
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Tresponse
+      Tresponse:
+        description: >-
+          Open-loop response time for changes in Q
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) DERList
+      DERList:
+        description: >-
+          Alternative to PVSystemList for CIM export and import
+        range: string
+        required: false
+        annotations:
+          order: 14
+
+      # (15) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 16
+
+      # (17) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 17

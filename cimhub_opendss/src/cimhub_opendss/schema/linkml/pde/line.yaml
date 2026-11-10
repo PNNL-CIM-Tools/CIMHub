@@ -1,0 +1,727 @@
+id: https://gridappsd.github.io/dss-graph/pde/line
+name: line
+title: OpenDSS Line Component Schema
+description: >-
+  LinkML schema for OpenDSS Line objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-42).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Line:
+    description: >-
+      A Line object in OpenDSS representing a power delivery line connecting
+      two buses in the distribution system. If Switch=True the element is
+      treated as a switching device instead.
+    class_uri: dss:Line
+    exact_mappings:
+      - cim:ACLineSegment
+    comments:
+      - >-
+        OpenDSS Line maps to CIM ACLineSegment for normal lines. When Switch=True
+        the converter routes to a LoadBreakSwitch (or Breaker/Fuse/Recloser when
+        an associated protection device is present) — the ACLineSegment mapping
+        does not apply in that case. Impedance may be given directly on the Line
+        (r1/x1/r0/x0/C1/C0), as a phase matrix (rmatrix/xmatrix/cmatrix), by
+        reference to a Linecode (PerLengthImpedance), or by a geometry/spacing +
+        conductor specification (WireSpacingInfo + WireInfo); only one of these
+        forms is used per line, in that priority order.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of bus to which first terminal is connected.
+        range: string
+        required: true
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Terminal 1 structural mapping: equipment.Terminals[0].ConnectivityNode.name.
+            Phase suffix reconstructed from ACLineSegmentPhase objects ordered by
+            SinglePhaseKind (A=1, B=2, C=3).
+
+      # (2) bus2
+      bus2:
+        description: >-
+          Name of bus to which 2nd terminal is connected.
+        range: string
+        required: false
+        annotations:
+          order: 2
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Terminal 2 structural mapping: equipment.Terminals[1].ConnectivityNode.name."
+
+      # (3) linecode
+      linecode:
+        description: >-
+          Name of linecode object describing line impedances. If no line code
+          or impedance data are specified, the line defaults to 336 MCM ACSR
+          on 4 ft spacing.
+        range: string
+        required: false
+        annotations:
+          order: 3
+        related_mappings:
+          - cim:PerLengthImpedance
+        comments:
+          - >-
+            Import: resolved to a PerLengthSequenceImpedance or PerLengthPhaseImpedance
+            by name lookup; ACLineSegment.PerLengthImpedance = that object.
+            Export: ACLineSegment.PerLengthImpedance.name used to reconstruct linecode reference.
+
+      # (4) length
+      length:
+        description: >-
+          Length of line. Default is 1.0. If units do not match the impedance
+          data, specify units property.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 4
+          dss_default: float(1.0)
+        exact_mappings:
+          - cim:Conductor.length
+        comments:
+          - >-
+            Import: ACLineSegment.length = Length(length, units_str) — unit from 'units'
+            attribute. Export: length = ACLineSegment.length.to(units_str). CIM stores
+            length in m (SI base); DSS default unit is ft when no units given.
+
+      # (5) phases
+      phases:
+        description: >-
+          Number of phases, this line.
+        range: integer
+        required: false
+        minimum_value: 1
+        maximum_value: 3
+        annotations:
+          order: 5
+          dss_default: int(3)
+        related_mappings:
+          - cim:ACLineSegmentPhase
+        comments:
+          - "Import: inferred from bus1 node suffix. Export: len(ACLineSegment.ACLineSegmentPhase)."
+
+      # (6) r1
+      r1:
+        description: >-
+          Positive-sequence Resistance, ohms per unit length. Setting any of
+          R1, R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 6
+          dss_default: float(0.058)
+        close_mappings:
+          - cim:ACLineSegment.r
+        comments:
+          - >-
+            Only used when the line has no linecode/matrix/geometry/spacing
+            reference. Import: ACLineSegment.r = Resistance(r1, 'ohm'), taken
+            directly as ohms with no multiplication by length. Export:
+            r1 = ACLineSegment.r.to('ohm'). When a linecode is used instead,
+            r1 is stored per-unit-length on the Linecode (see general/linecode.yaml).
+        todos:
+          - "Converter bug: DSS r1 is documented as ohms per unit length, but the direct-impedance path (no linecode) stores it as total ohms without multiplying by length. Roundtrips correctly within this converter, but a line authored elsewhere with a true per-length r1 and length != 1 would import with the wrong total resistance."
+
+      # (7) x1
+      x1:
+        description: >-
+          Positive-sequence Reactance, ohms per unit length. Setting any of
+          R1, R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 7
+          dss_default: float(0.1206)
+        close_mappings:
+          - cim:ACLineSegment.x
+        comments:
+          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling. Import: ACLineSegment.x = Reactance(x1, 'ohm'). Export: x1 = ACLineSegment.x.to('ohm')."
+
+      # (8) r0
+      r0:
+        description: >-
+          Zero-sequence Resistance, ohms per unit length. Setting any of R1,
+          R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 8
+          dss_default: float(0.1784)
+        close_mappings:
+          - cim:ACLineSegment.r0
+        comments:
+          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling, and only set when r1/x1 are also given. Import: ACLineSegment.r0 = Resistance(r0, 'ohm'). Export: r0 = ACLineSegment.r0.to('ohm')."
+
+      # (9) x0
+      x0:
+        description: >-
+          Zero-sequence Reactance, ohms per unit length. Setting any of R1,
+          R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 9
+          dss_default: float(0.4047)
+        close_mappings:
+          - cim:ACLineSegment.x0
+        comments:
+          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling, and only set when r1/x1 are also given. Import: ACLineSegment.x0 = Reactance(x0, 'ohm'). Export: x0 = ACLineSegment.x0.to('ohm')."
+
+      # (10) C1
+      C1:
+        description: >-
+          Positive-sequence capacitance, nf per unit length. Setting any of
+          R1, R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 10
+          dss_default: float(3.4)
+        close_mappings:
+          - cim:ACLineSegment.bch
+        comments:
+          - >-
+            Only used on the direct-impedance path (no linecode/matrix/geometry/spacing;
+            see r1 comments — same total-vs-per-length caveat applies to C1).
+            Import: bch = Susceptance(2π × 60 × C1_nF × 1e-9, 'S') (b = 2πfC, frequency
+            hardcoded to 60 Hz). Export: C1 = bch.to('S') / (2π × 60) × 1e9 (back to nF).
+
+      # (11) C0
+      C0:
+        description: >-
+          Zero-sequence capacitance, nf per unit length. Setting any of R1,
+          R0, X1, X0, C1, C0 forces the program to use the symmetrical
+          component line definition.
+        range: float
+        required: false
+        annotations:
+          order: 11
+          dss_default: float(1.6)
+        close_mappings:
+          - cim:ACLineSegment.b0ch
+        comments:
+          - "Same C→B conversion as C1 (see C1 comments), applied to the zero-sequence susceptance. Import: b0ch = Susceptance(2π × 60 × C0_nF × 1e-9, 'S'). Export: C0 = b0ch.to('S') / (2π × 60) × 1e9."
+
+      # (12) rmatrix
+      rmatrix:
+        description: >-
+          Resistance matrix, lower triangle, ohms per unit length. Order of
+          the matrix is the number of phases. Using any of Rmatrix, Xmatrix,
+          Cmatrix forces program to use matrix values for line impedance.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 12
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - >-
+            Import: when both rmatrix and xmatrix are given, the converter synthesizes
+            a temporary Linecode from the matrices and reuses the linecode importer,
+            producing a PerLengthPhaseImpedance with one PhaseImpedanceData entry per
+            (row, column) pair; ACLineSegment.PerLengthImpedance points to it.
+            Export: PerLengthPhaseImpedance.PhaseImpedanceData.r values are reassembled
+            into the pipe-delimited lower-triangle string DSS expects (see linecode
+            exporter for the exact format).
+
+      # (13) xmatrix
+      xmatrix:
+        description: >-
+          Reactance matrix, lower triangle, ohms per unit length. Order of
+          the matrix is the number of phases. Using any of Rmatrix, Xmatrix,
+          Cmatrix forces program to use matrix values for line impedance.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 13
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - "Same synthesized-Linecode path as rmatrix (see rmatrix comments); xmatrix values become PhaseImpedanceData.x entries. Only used together with rmatrix — xmatrix alone is not read."
+
+      # (14) cmatrix
+      cmatrix:
+        description: >-
+          Nodal Capacitance matrix, lower triangle, nf per unit length. Order
+          of the matrix is the number of phases. Using any of Rmatrix,
+          Xmatrix, Cmatrix forces program to use matrix values.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 14
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - >-
+            Same synthesized-Linecode path as rmatrix (see rmatrix comments); optional
+            alongside rmatrix/xmatrix. Diagonal cmatrix entries (nF/unit) become
+            PhaseImpedanceData.b via b = 2πfC; off-diagonal capacitive coupling
+            terms are preserved as separate PhaseImpedanceData entries, not lost,
+            since PerLengthPhaseImpedance stores a full matrix.
+
+      # (15) Switch
+      Switch:
+        description: >-
+          Designates this line as a switch for graphics and algorithmic
+          purposes. Default is false. SIDE EFFECT: Sets r1=1.0, x1=1.0,
+          r0=1.0, x0=1.0, c1=1.1, c0=1.0, length=0.001.
+        range: boolean
+        required: false
+        annotations:
+          order: 15
+          dss_default: "false"
+        close_mappings:
+          - cim:LoadBreakSwitch
+        comments:
+          - >-
+            When Switch=True the converter returns a LoadBreakSwitch (or
+            Breaker/Fuse/Recloser when an associated protection device is present)
+            instead of an ACLineSegment; the ACLineSegment class mapping is bypassed.
+            On export, a switch-class CIM object is written back as Line with Switch=True.
+
+      # (16) Rg
+      Rg:
+        description: >-
+          Carson earth return resistance per unit length used to compute
+          impedance values at base frequency. Default is 0.01805 ohms per kft.
+        range: float
+        required: false
+        annotations:
+          order: 16
+          dss_default: float(0.01805)
+        comments:
+          - "OpenDSS-only (N/A): Carson earth model parameter used at line-constants calculation time; not persisted on CIM ACLineSegment."
+
+      # (17) Xg
+      Xg:
+        description: >-
+          Carson earth return reactance per unit length used to compute
+          impedance values at base frequency. Default is 0.155081 ohms per kft.
+        range: float
+        required: false
+        annotations:
+          order: 17
+          dss_default: float(0.155081)
+        comments:
+          - "OpenDSS-only (N/A): Carson earth model parameter; not persisted on CIM ACLineSegment."
+
+      # (18) rho
+      rho:
+        description: >-
+          Earth resitivity used to compute earth correction factor. Default is
+          100 meter ohms. Overrides Line geometry definition if specified.
+        range: float
+        required: false
+        annotations:
+          order: 18
+          dss_default: float(100.0)
+        exact_mappings:
+          - cim:EarthResistivity.rho
+        comments:
+          - "Import: EarthResistivity.rho stored as associated object if specified. Export: rho = EarthResistivity.rho. Units: ohm-m in both DSS and CIM."
+
+      # (19) geometry
+      geometry:
+        description: >-
+          Geometry code for LineGeometry Object. Supercedes any previous
+          definition of line impedance. CAUTION: may alter number of phases.
+        range: string
+        required: false
+        annotations:
+          order: 19
+        related_mappings:
+          - cim:WireSpacingInfo
+        comments:
+          - >-
+            Import: geometry name is resolved to a previously-converted LineGeometry
+            result (spacing + per-conductor WireInfo list); ACLineSegment.WireSpacingInfo
+            is set to the spacing object, and one ACLineSegmentPhase per conductor is
+            created linking to its WireInfo. Export: DSS geometry is not reconstructed
+            as a separate named object — the exporter instead emits the equivalent
+            spacing + wires (see spacing/wires comments), which OpenDSS accepts in
+            place of a geometry reference.
+
+      # (20) units
+      units:
+        description: >-
+          Length Units. Default is None - assumes length units match impedance
+          units.
+        range: LengthUnit
+        required: false
+        annotations:
+          order: 20
+        comments:
+          - "OpenDSS-only (N/A): consumed during import to scale 'length' to SI meters for CIM storage; not persisted as a CIM attribute."
+
+      # (21) spacing
+      spacing:
+        description: >-
+          Reference to a LineSpacing for use in a line constants calculation.
+          Must be used in conjunction with the Wires property.
+        range: string
+        required: false
+        annotations:
+          order: 21
+        related_mappings:
+          - cim:WireSpacingInfo
+        comments:
+          - >-
+            Import: spacing name is resolved to a previously-converted WireSpacingInfo
+            object; ACLineSegment.WireSpacingInfo is set to it, and the wires/cncables/tscables
+            references (see their comments) are resolved to WireInfo objects and attached
+            as ACLineSegmentPhase entries. Export: spacing = WireSpacingInfo.name
+            (or the newer ConductorDistanceSpacing.name when that asset model is used).
+
+      # cncables written after spacing (21) and before wires (24) so OpenDSS
+      # assigns cable positions before overhead wire positions
+      cncables:
+        description: >-
+          Array of CNData names for use in a cable constants calculation. Must
+          be used in conjunction with the Spacing property.
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 22
+        related_mappings:
+          - cim:ConcentricNeutralCableInfo
+        comments:
+          - >-
+            Used together with spacing (see spacing comments). Import: each name is
+            resolved to a ConcentricNeutralCableInfo and attached as an ACLineSegmentPhase.WireInfo.
+            Export: only cables whose ConcentricNeutralCableInfo carries full neutral
+            strand geometry (neutralStrandRadius/neutralStrandGmr) are written as cncables;
+            cables imported without that geometry (e.g. from GLM, which only carries
+            Rac/GMR) are exported into wires instead, since DSS needs the full geometry
+            to compute CN impedance.
+
+      # tscables written after cncables (22) and before wires (24)
+      tscables:
+        description: >-
+          Array of TSData names for use in a cable constants calculation. Must
+          be used in conjunction with the Spacing property.
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 23
+        related_mappings:
+          - cim:TapeShieldCableInfo
+        comments:
+          - >-
+            Used together with spacing (see spacing comments). Import: each name is
+            resolved to a TapeShieldCableInfo and attached as an ACLineSegmentPhase.WireInfo.
+            Export: tscables = names of ACLineSegmentPhase.WireInfo objects that are
+            TapeShieldCableInfo instances.
+
+      wires:
+        description: >-
+          Array of WireData names for use in an overhead line constants
+          calculation. Must be used in conjunction with the Spacing property.
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 24
+        related_mappings:
+          - cim:OverheadWireInfo
+        comments:
+          - >-
+            Used together with spacing (see spacing comments). Import: each name is
+            resolved to a WireInfo (typically OverheadWireInfo) and attached as an
+            ACLineSegmentPhase.WireInfo. Export: wires = names of ACLineSegmentPhase.WireInfo
+            objects that are not concentric-neutral or tape-shield cable types (those
+            go to cncables/tscables instead).
+
+      EarthModel:
+        description: >-
+          Earth model to use for impedance calculations. This is used to
+          override the global value for this line. Applies only when geometry
+          property is used.
+        range: EarthModelType
+        required: false
+        annotations:
+          order: 25
+        exact_mappings:
+          - cim:EarthResistivity.earthModelType
+        comments:
+          - "Import: EarthResistivity.earthModelType set from EarthModel enum value. Export: earthModelType → EarthModel enum string."
+
+      # (26) B1
+      B1:
+        description: >-
+          Alternate way to specify C1. MicroS per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 26
+        close_mappings:
+          - cim:ACLineSegment.bch
+        todos:
+          - "B1 input path not yet implemented. B1 (µS/unit) → bch via bch = B1 × 1e-6 × length. When present, should take precedence over C1 for bch calculation."
+
+      # (27) B0
+      B0:
+        description: >-
+          Alternate way to specify C0. MicroS per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 27
+        close_mappings:
+          - cim:ACLineSegment.b0ch
+        todos:
+          - "B0 input path not yet implemented. B0 (µS/unit) → b0ch via b0ch = B0 × 1e-6 × length."
+
+      # (28) Seasons
+      Seasons:
+        description: >-
+          Defines the number of ratings to be defined for the wire, to be used
+          only when defining seasonal ratings using the Ratings property.
+        range: integer
+        required: false
+        annotations:
+          order: 28
+        comments:
+          - "OpenDSS-only (N/A): seasonal ratings metadata; no direct CIM equivalent. Used alongside Ratings array."
+
+      # (29) Ratings
+      Ratings:
+        description: >-
+          An array of ratings to be used when the seasonal ratings flag is
+          True. Can be used to insert multiple ratings to change during a QSTS
+          simulation.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 29
+        related_mappings:
+          - cim:OperationalLimit
+        todos:
+          - "Seasonal ratings converter not yet implemented. Ratings array should map to multiple CurrentLimit objects on an OperationalLimitSet, one per season."
+
+      # (30) LineType
+      LineType:
+        description: >-
+          Code designating the type of line. OpenDSS currently does not use
+          this internally. Default is OH.
+        range: LineTypeCode
+        required: false
+        annotations:
+          order: 30
+        related_mappings:
+          - cim:PSRType
+        todos:
+          - "LineType → PSRType mapping not yet implemented. DSS LineTypeCode (OH, UG, etc.) could be mapped to a PSRType classification on the ACLineSegment."
+
+      # (31) EpsRmedium
+      EpsRmedium:
+        description: >-
+          Relative Permittivity of the medium. Used by lines with a geometry
+          definition. Default is 1.0 for air.
+        range: float
+        required: false
+        annotations:
+          order: 31
+          dss_default: float(1.0)
+        comments:
+          - "OpenDSS-only (N/A): dielectric constant for line-constants calculation; no CIM equivalent in the standard profile."
+
+      # (32) HeightOffset
+      HeightOffset:
+        description: >-
+          Average Height (or depth) offset to be applied on top of coordinates
+          of geometry or spacing. Use negative value for depth in underground
+          lines. Default is 0.0.
+        range: float
+        required: false
+        annotations:
+          order: 32
+          dss_default: float(0.0)
+        comments:
+          - "OpenDSS-only (N/A): geometry adjustment parameter; no CIM equivalent in the standard profile."
+
+      # (33) HeightUnit
+      HeightUnit:
+        description: >-
+          Height offset Units. If none is detected, meters is assumed.
+        range: LengthUnit
+        required: false
+        annotations:
+          order: 33
+        comments:
+          - "OpenDSS-only (N/A): unit for HeightOffset; no CIM equivalent."
+
+      # (34) conductors
+      conductors:
+        description: >-
+          Array of conductor names for use in line constants calculation. Must
+          be used in conjunction with the Spacing property. Specify conductor
+          type followed by conductor name.
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 34
+        related_mappings:
+          - cim:WireInfo
+        todos:
+          - "Conductor converter not yet implemented. Names should resolve to WireInfo (OverheadWireInfo or CableInfo) objects."
+
+      # (35) normamps
+      normamps:
+        description: >-
+          Normal rated current.
+        range: float
+        required: false
+        annotations:
+          order: 35
+        related_mappings:
+          - cim:CurrentLimit
+        comments:
+          - >-
+            Import: CurrentLimit with limitType=normalOperating on an OperationalLimitSet
+            linked to the ACLineSegment terminal.
+            Export: normalOperating CurrentLimit value. DONE in converter.
+
+      # (36) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current.
+        range: float
+        required: false
+        annotations:
+          order: 36
+        related_mappings:
+          - cim:CurrentLimit
+        comments:
+          - >-
+            Import: CurrentLimit with limitType=emergency on the OperationalLimitSet.
+            Export: emergency CurrentLimit value. DONE in converter.
+
+      # (37) faultrate
+      faultrate:
+        description: >-
+          Failure rate PER UNIT LENGTH per year. Length must be same units as
+          LENGTH property. Default is 0.1 fault per unit length per year.
+        range: float
+        required: false
+        annotations:
+          order: 37
+          dss_default: float(0.1)
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip (e.g. on FailureStatistic or AssetFailureInfo)."
+
+      # (38) pctperm
+      pct_perm:
+        description: >-
+          Percent of failures that become permanent. Default is 20.
+        range: float
+        required: false
+        annotations:
+          order: 38
+          dss_name: "pctperm"
+          dss_default: float(20.0)
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (39) repair
+      repair:
+        description: >-
+          Hours to repair. Default is 3 hr.
+        range: float
+        required: false
+        annotations:
+          order: 39
+          dss_default: float(3.0)
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (40) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 40
+        comments:
+          - >-
+            Not stored on CIM ACLineSegment; base frequency is circuit-level in CIM.
+            The C1/C0 → bch conversion in the converter uses 60 Hz hardcoded; a
+            non-60-Hz system would need this extracted from circuit context.
+        todos:
+          - "Extract base frequency from circuit-level CIM attributes for non-60 Hz systems."
+
+      # (41) enabled
+      enabled:
+        description: >-
+          Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 41
+          dss_default: "true"
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created. CIM ACLineSegment has no enabled/disabled flag."
+
+      # (42) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Capacitor.C2 like=c1 ...
+        range: string
+        required: false
+        annotations:
+          order: 42
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+
+# Enums are imported from common_enums.yaml

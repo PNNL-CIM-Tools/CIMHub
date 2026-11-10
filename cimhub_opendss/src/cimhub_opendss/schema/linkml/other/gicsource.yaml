@@ -1,0 +1,156 @@
+id: https://gridappsd.github.io/dss-graph/other/gicsource
+name: gicsource
+title: OpenDSS Gicsource Component Schema
+description: >-
+  LinkML schema for OpenDSS Gicsource objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-14).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Gicsource:
+    description: >-
+      A Gicsource object in OpenDSS.
+    class_uri: dss:Gicsource
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) Volts
+      Volts:
+        description: >-
+          Voltage magnitude, in volts, of the GIC voltage induced across the associated line
+        range: float
+        required: false
+        annotations:
+          order: 1
+
+      # (2) angle
+      angle:
+        description: >-
+          Phase angle in degrees of first phase
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) frequency
+      frequency:
+        description: >-
+          Source frequency
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) phases
+      phases:
+        description: >-
+          Number of phases
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) EN
+      EN:
+        description: >-
+          Northward Electric field (V/km)
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) EE
+      EE:
+        description: >-
+          Eastward Electric field (V/km)
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) Lat1
+      Lat1:
+        description: >-
+          Latitude of Bus1 of the line(degrees)
+        range: string
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Lon1
+      Lon1:
+        description: >-
+          Longitude of Bus1 of the line (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 8
+
+      # (9) Lat2
+      Lat2:
+        description: >-
+          Latitude of Bus2 of the line (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) Lon2
+      Lon2:
+        description: >-
+          Longitude of Bus2 of the line (degrees)
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) spectrum
+      spectrum:
+        description: >-
+          Not used
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) basefreq
+      basefreq:
+        description: >-
+          Not used
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 13
+
+      # (14) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 14

@@ -1,0 +1,5 @@
+New linecode.mtx601 nphases=3 BaseFreq=60 
+~ rmatrix = (0.3465 | 0.1535 0.3375 | 0.1580 0.1560 0.3414 ) 
+~ xmatrix = (1.0179 | 0.3849 1.0478 | 0.4236 0.5017 1.0348 ) 
+~ cmatrix = (0 | 0 0 | 0 0 0) 
+~ units=mi normamps=730

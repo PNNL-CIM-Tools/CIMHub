@@ -1,0 +1,36 @@
+# Shape: single-phase transformer instance by phase ends. One PowerTransformerEnd per bus carries the
+# node and the terminal phases; one TransformerPhaseEnd per phase conductor on that bus, matched to the
+# PowerTransformerEnd by endNumber. Each TransformerWinding (one coil) runs between two phase ends.
+# No TransformerTankEnd. Source: OpenDSS Transformer, buses=[n1.1.2, house.1.0, house.0.2].
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Object PowerTransformer: mRID=xf_t3, name=t3, EquipmentContainer=fdr_shapes
+Table PowerTransformerEnd: mRID, node, phases, endNumber, BaseVoltage, PowerTransformer=xf_t3
+    xf_t3_1, n1,    AB,    1, bv_4p16kv
+    xf_t3_2, house, s1s2N, 2, bv_240v
+
+Object TransformerTank: mRID=xf_t3_tank, PowerTransformer=xf_t3, EquipmentContainer=fdr_shapes, percentMagnetizingCurrent (percent)=0.5, noLoadLoss (W)=10
+
+# sequenceNumber runs across the whole transformer in terminal phase order, end 1 first (as a template lug's
+# slot would). phaseNeutralU: the coil voltage of a phase-to-neutral coil, 0 on N; unset on a phase-to-phase coil.
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, phaseNeutralU (kV)
+    xf_t3_1_A,  1, 1, A,
+    xf_t3_1_B,  1, 2, B,
+    xf_t3_2_s1, 2, 3, s1, 0.12
+    xf_t3_2_s2, 2, 4, s2, 0.12
+    xf_t3_2_N,  2, 5, N,  0
+
+# ratedU phase-to-phase (s1-s2 = 0.24 on the halves; halves rated kVA / 2), baseU the coil voltage: phase-to-neutral for wye,
+# here phase-to-phase for the A-B coil. baseS is the first winding's kVA on every coil (the DSS percent base).
+Table TransformerWinding: mRID, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd, ToTransformerEnd, TransformerTank=xf_t3_tank
+    xf_t3_wdg_1, 4.16, 4.16, 5, 5, 0.6, xf_t3_1_A,  xf_t3_1_B
+    xf_t3_wdg_2, 0.24, 0.12, 2.5, 5, 1.2, xf_t3_2_s1, xf_t3_2_N
+    xf_t3_wdg_3, 0.24, 0.12, 2.5, 5, 1.2, xf_t3_2_N,  xf_t3_2_s2
+
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xf_t3_mesh_12, xf_t3_wdg_1, xf_t3_wdg_2, 2.04
+    xf_t3_mesh_13, xf_t3_wdg_1, xf_t3_wdg_3, 2.04
+    xf_t3_mesh_23, xf_t3_wdg_2, xf_t3_wdg_3, 1.36

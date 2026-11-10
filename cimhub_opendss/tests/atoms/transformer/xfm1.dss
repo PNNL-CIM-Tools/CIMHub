@@ -1,0 +1,4 @@
+// IEEE13_CDPSM.dss lines 31-33 (cimhub_opendss/tests/test_models/IEEE13_CDPSM.dss): 3-phase, wdg= form
+New Transformer.XFM1  Phases=3   Windings=2  XHL=2
+~ wdg=1 bus=XF1 conn=Wye kv=4.16    kva=500    %r=.55
+~ wdg=2 bus=634 conn=Wye kv=0.480   kva=500    %r=.55

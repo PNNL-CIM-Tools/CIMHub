@@ -1,0 +1,993 @@
+id: https://gridappsd.github.io/dss-graph/pde/transformer
+name: transformer
+title: OpenDSS Transformer Component Schema
+description: >-
+  LinkML schema for OpenDSS Transformer objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-57).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Transformer:
+    description: >-
+      A Transformer object in OpenDSS representing a multi-winding transformer
+      connecting two or more buses in the distribution system.
+    class_uri: dss:Transformer
+    exact_mappings:
+      - cim:PowerTransformer
+    comments:
+      - >-
+        3-phase (or phases > 1): mapped to CIM PowerTransformer with one
+        PowerTransformerEnd per winding. Single-phase with bank set: mapped
+        to a TransformerTank (one TransformerTankEnd per winding) attached
+        to a shared PowerTransformer named after the bank, so all
+        single-phase units of a bank share one CIM transformer container.
+        Impedances are stored as TransformerMeshImpedance objects between
+        winding pairs, and no-load losses/magnetizing current as a single
+        TransformerCoreAdmittance on the primary winding — unless an
+        XfmrCode catalog entry is referenced, in which case impedance and
+        loss data are instead read from the catalog's ShortCircuitTest and
+        NoLoadTest objects.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of phases this transformer. Default is 3.
+        range: integer
+        required: false
+        minimum_value: 1
+        maximum_value: 3
+        annotations:
+          order: 1
+          dss_default: int(3)
+        related_mappings:
+          - cim:PowerTransformerEnd
+        comments:
+          - >-
+            1-phase transformers with bank set are routed to the TransformerTank
+            path rather than a standalone PowerTransformer.
+
+      # (2) windings
+      windings:
+        description: >-
+          Number of windings, this transformers. Also is the number of
+          terminals. Default is 2. This property triggers memory allocation for
+          the Transformer and will cause other properties to revert to default
+          values.
+        range: integer
+        required: false
+        minimum_value: 2
+        annotations:
+          order: 2
+          dss_default: int(2)
+        related_mappings:
+          - cim:PowerTransformerEnd
+        comments:
+          - >-
+            Count of PowerTransformerEnd objects attached to the PowerTransformer.
+
+      # (3) wdg
+      wdg:
+        description: >-
+          Set this to the number of the winding you wish to define. Then set
+          the values for this winding. Repeat for each winding.
+        range: integer
+        required: false
+        annotations:
+          order: 3
+        comments:
+          - >-
+            N/A: OpenDSS winding selector resolved at parse time; no CIM equivalent.
+
+      # (4) bus
+      bus:
+        description: >-
+          Bus connection spec for this winding.
+        range: string
+        required: false
+        annotations:
+          order: 4
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Per-winding terminal traversal: each winding maps to a CIM Terminal
+            whose ConnectivityNode carries the bus name.
+
+      # (5) conn
+      conn:
+        description: >-
+          Connection of this winding. Default is wye with the neutral solidly
+          grounded.
+        range: ConnectionType
+        required: false
+        annotations:
+          order: 5
+          dss_default: string(wye)
+        exact_mappings:
+          - cim:PowerTransformerEnd.connectionKind
+        comments:
+          - >-
+            WindingConnection enum: Y→wye, D→delta. Import/export: direct enum translation.
+
+      # (6) kV
+      kV:
+        description: >-
+          For 2-or 3-phase, enter phase-phase kV rating. Otherwise, kV rating
+          of the actual winding.
+        range: float
+        required: false
+        annotations:
+          order: 6
+          dss_default: float(12.47)
+        exact_mappings:
+          - cim:PowerTransformerEnd.ratedU
+        comments:
+          - >-
+            Unit conversion: import ratedU = kV(V) * 1000; export kV = ratedU / 1000.
+
+      # (7) kVA
+      kVA:
+        description: >-
+          Base kVA rating of the winding. Side effect: forces change of max
+          normal and emerg kVA ratings.
+        range: float
+        required: false
+        annotations:
+          order: 7
+          dss_default: float(1000.0)
+        exact_mappings:
+          - cim:PowerTransformerEnd.ratedS
+        comments:
+          - >-
+            Unit conversion: import ratedS = kVA * 1000; export kVA = ratedS / 1000.
+
+      # (8) tap
+      tap:
+        description: >-
+          Per unit tap that this winding is on.
+        range: float
+        required: false
+        annotations:
+          order: 8
+          dss_default: float(1.0)
+        exact_mappings:
+          - cim:RatioTapChanger.step
+        comments:
+          - >-
+            Per-unit tap position. A RatioTapChanger is attached to the
+            PowerTransformerEnd when tap != 1.0. Import/export: direct per-unit value.
+
+      # (9) %R
+      pct_R:
+        description: >-
+          Percent resistance this winding. Half of total for a 2-winding.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 9
+          dss_default: float(0.2)
+          dss_name: "%R"
+        close_mappings:
+          - cim:PowerTransformerEnd.r
+        comments:
+          - >-
+            Import: r_ohm = (pct_R / 100) * zbase, where zbase = kV^2 * 1e6 / kVA_VA.
+            Export: pct_R = (r / zbase) * 100.
+
+      # (10) Rneut
+      Rneut:
+        description: >-
+          Neutral resistance of wye (star)-connected winding in actual ohms.
+          Default is -1. If entered as negative, the neutral is assumed to be
+          open or floating.
+        range: float
+        required: false
+        annotations:
+          order: 10
+          dss_default: float(-1.0)
+        exact_mappings:
+          - cim:PowerTransformerEnd.rground
+        comments:
+          - >-
+            Unit: ohm (no conversion). Negative value indicates open/floating neutral.
+            Import/export: direct ohm value.
+
+      # (11) Xneut
+      Xneut:
+        description: >-
+          Neutral reactance of wye(star)-connected winding in actual ohms. May
+          be positive or negative.
+        range: float
+        required: false
+        annotations:
+          order: 11
+        exact_mappings:
+          - cim:PowerTransformerEnd.xground
+        comments:
+          - >-
+            Unit: ohm (no conversion). Import/export: direct ohm value.
+
+      # (12) buses
+      buses:
+        description: >-
+          Use this to specify all the bus connections at once using an array.
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 12
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Array form of bus (one entry per winding). Each element maps to the
+            ConnectivityNode of the corresponding winding Terminal.
+
+      # (13) conns
+      conns:
+        description: >-
+          Use this to specify all the Winding connections at once using an
+          array.
+        range: ConnectionType
+        multivalued: true
+        required: false
+        annotations:
+          order: 13
+        exact_mappings:
+          - cim:PowerTransformerEnd.connectionKind
+        comments:
+          - >-
+            Array form of conn (one WindingConnection per winding). Import/export:
+            direct enum translation per element.
+
+      # (14) kVs
+      kVs:
+        description: >-
+          Use this to specify the kV ratings of all windings at once using an
+          array.
+        range: float
+        multivalued: true
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 14
+        exact_mappings:
+          - cim:PowerTransformerEnd.ratedU
+        comments:
+          - >-
+            Array form of kV (one per winding, kV). Unit conversion per element:
+            import ratedU = kVs[i] * 1000; export kVs[i] = ratedU / 1000.
+
+      # (15) kVAs
+      kVAs:
+        description: >-
+          Use this to specify the kVA ratings of all windings at once using an
+          array.
+        range: float
+        multivalued: true
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 15
+        exact_mappings:
+          - cim:PowerTransformerEnd.ratedS
+        comments:
+          - >-
+            Array form of kVA (one per winding, kVA). Unit conversion per element:
+            import ratedS = kVAs[i] * 1000; export kVAs[i] = ratedS / 1000.
+
+      # (16) taps
+      taps:
+        description: >-
+          Use this to specify the p.u. tap of all windings at once using an
+          array.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 16
+        exact_mappings:
+          - cim:RatioTapChanger.step
+        comments:
+          - >-
+            Array form of tap (one per winding, per-unit). A RatioTapChanger is
+            created per winding where taps[i] != 1.0.
+
+      # (17) XHL
+      XHL:
+        description: >-
+          Percent reactance, H-L (winding 1 to winding 2). Use for 2- or
+          3-winding transformers. On the kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 17
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Winding 1-to-2 leakage reactance, in percent on the kVA base of
+            winding 1. Import: x_ohm = (XHL / 100) * zbase, where
+            zbase = kV_wdg1^2 * 1000 / kVA_wdg1 (both taken from the lower-
+            numbered winding of the pair — here winding 1). Export: the
+            same zbase formula recovers XHL = (x / zbase) * 100.
+
+      # (18) XHT
+      XHT:
+        description: >-
+          Percent reactance, H-T (winding 1 to winding 3). Use for 3-winding
+          transformers only. On the kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 18
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Winding 1-to-3 leakage reactance, in percent on the kVA base of
+            winding 1. Same conversion as XHL, with zbase computed from
+            winding 1's own kV and kVA (winding 1 is the lower-numbered
+            winding of the 1-3 pair).
+
+      # (19) XLT
+      XLT:
+        description: >-
+          Percent reactance, L-T (winding 2 to winding 3). Use for 3-winding
+          transformers only. On the kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 19
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Winding 2-to-3 leakage reactance, in percent, using the kVA
+            base of winding 1 but the kV base of winding 2 (the lower-
+            numbered winding of the 2-3 pair): zbase = kV_wdg2^2 * 1000 /
+            kVA_wdg1. Import/export conversion is otherwise the same
+            formula as XHL.
+
+      # (20) Xscarray
+      Xscarray:
+        description: >-
+          Percent reactance between all pairs of windings as an array. All
+          values are on the kVA base of winding 1.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 20
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Array form giving one percent leakage-reactance entry per
+            winding pair, ordered (1-2, 1-3, ..., 2-3, 2-4, ...) — i.e. by
+            increasing "from" winding, then increasing "to" winding. Each
+            entry maps to a separate TransformerMeshImpedance.x, with
+            zbase = kV_from^2 * 1000 / kVA_wdg1 (the "from" winding's own
+            kV, always winding 1's kVA), matching the XHL/XHT/XLT
+            convention.
+
+      # (21) thermal
+      thermal:
+        description: >-
+          Thermal time constant of the transformer in hours. Typically about 2.
+        range: float
+        required: false
+        annotations:
+          order: 21
+          dss_default: float(2.0)
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Consider CIM extension for
+            IEEE C57 thermal model parameters.
+
+      # (22) n
+      n:
+        description: >-
+          n Exponent for thermal properties in IEEE C57. Typically 0.8.
+        range: float
+        required: false
+        annotations:
+          order: 22
+          dss_default: float(0.8)
+        todos:
+          - >-
+            No CIM equivalent. IEEE C57 exponent n for thermal model; requires
+            CIM extension.
+
+      # (23) m
+      m:
+        description: >-
+          m Exponent for thermal properties in IEEE C57. Typically 0.9 - 1.0.
+        range: float
+        required: false
+        annotations:
+          order: 23
+          dss_default: float(0.9)
+        todos:
+          - >-
+            No CIM equivalent. IEEE C57 exponent m for thermal model; requires
+            CIM extension.
+
+      # (24) flrise
+      flrise:
+        description: >-
+          Temperature rise, deg C, for full load. Default is 65.
+        range: float
+        required: false
+        annotations:
+          order: 24
+          dss_default: float(65.0)
+        todos:
+          - >-
+            No CIM equivalent. Full-load temperature rise (deg C); requires CIM
+            extension.
+
+      # (25) hsrise
+      hsrise:
+        description: >-
+          Hot spot temperature rise, deg C. Default is 15.
+        range: float
+        required: false
+        annotations:
+          order: 25
+          dss_default: float(15.0)
+        todos:
+          - >-
+            No CIM equivalent. Hot-spot temperature rise (deg C); requires CIM
+            extension.
+
+      # (26) %loadloss
+      pct_loadloss:
+        description: >-
+          Percent load loss at full load. The %R of the High and Low windings
+          (1 and 2) are adjusted to agree at rated kVA loading.
+        range: float
+        required: false
+        annotations:
+          order: 26
+          dss_name: "%loadloss"
+        related_mappings:
+          - cim:PowerTransformerEnd.r
+        comments:
+          - >-
+            Import fallback only, used when neither %R nor %Rs[] is given:
+            each winding's own resistance percentage is set to
+            %loadloss / num_windings (evenly split), then converted to ohms
+            on PowerTransformerEnd.r using the same zbase formula as %R.
+            Export never recovers %loadloss — it always recomputes %r per
+            winding from PowerTransformerEnd.r, so a model that originally
+            set only %loadloss will round-trip as %Rs[] instead.
+
+      # (27) %noloadloss
+      pct_noloadloss:
+        description: >-
+          Percent no load losses at rated excitatation voltage. Default is 0.
+          Converts to a resistance in parallel with the magnetizing impedance
+          in each winding.
+        range: float
+        required: false
+        annotations:
+          order: 27
+          dss_name: "%noloadloss"
+          dss_default: float(0.0)
+        close_mappings:
+          - cim:TransformerCoreAdmittance.g
+        comments:
+          - >-
+            Import: a single TransformerCoreAdmittance is created on the
+            primary winding (whenever %noloadloss or %imag is nonzero),
+            with g = (pct_noloadloss / 100) / zbase, using the primary
+            winding's own zbase = kV^2 * 1000 / kVA. Export reverses the
+            same formula. When an XfmrCode catalog entry is used instead,
+            the equivalent value is read from a NoLoadTest attached to the
+            catalog's primary TransformerEndInfo.
+
+      # (28) normhkVA
+      normhkVA:
+        description: >-
+          Normal maximum kVA rating of H winding (winding 1). Usually 100%-110%
+          of maximum nameplate rating. Defaults to 110% of kVA rating of
+          Winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 28
+        todos:
+          - >-
+            No CIM equivalent. Normal H-winding kVA rating; consider
+            OperationalLimitSet mapping.
+
+      # (29) emerghkVA
+      emerghkVA:
+        description: >-
+          Emergency (contingency) kVA rating of H winding (winding 1). Usually
+          140%-150% of maximum nameplate rating. Defaults to 150% of kVA rating
+          of Winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 29
+        todos:
+          - >-
+            No CIM equivalent. Emergency H-winding kVA rating; consider
+            OperationalLimitSet mapping.
+
+      # (30) sub
+      sub:
+        description: >-
+          Designates whether this transformer is to be considered a substation.
+          Default is No.
+        range: boolean
+        required: false
+        annotations:
+          order: 30
+          dss_default: "false"
+        todos:
+          - >-
+            Not read by the current importer or written by the exporter —
+            the transformer's EquipmentContainer is always the feeder
+            container, never a Substation. If implemented, sub=Yes should
+            place the PowerTransformer in a CIM Substation container.
+
+      # (31) MaxTap
+      MaxTap:
+        description: >-
+          Max per unit tap for the active winding. Default is 1.10.
+        range: float
+        required: false
+        annotations:
+          order: 31
+          dss_default: float(1.10)
+        related_mappings:
+          - cim:RatioTapChanger.highStep
+        comments:
+          - >-
+            Import: only applies to windings whose tap differs from 1.0
+            (a RatioTapChanger is created for that winding); highStep is
+            set to NumTaps / 2 (defaulting to 16 if NumTaps is absent), and
+            stepVoltageIncrement = (MaxTap - MinTap) / (highStep - lowStep)
+            * 100. MaxTap itself is not stored on any CIM field — only its
+            derived effect on highStep and stepVoltageIncrement is.
+        todos:
+          - >-
+            Not exported: the exporter reads back RatioTapChanger.step for
+            tap= but never reconstructs MaxTap/MinTap/NumTaps from
+            highStep/lowStep/stepVoltageIncrement.
+
+      # (32) MinTap
+      MinTap:
+        description: >-
+          Min per unit tap for the active winding. Default is 0.90.
+        range: float
+        required: false
+        annotations:
+          order: 32
+          dss_default: float(0.90)
+        related_mappings:
+          - cim:RatioTapChanger.lowStep
+        comments:
+          - >-
+            Import: lowStep = -highStep (see MaxTap comments), and combines
+            with MaxTap to set stepVoltageIncrement. MinTap itself is not
+            stored on any CIM field directly.
+        todos:
+          - "Not exported; see MaxTap todos."
+
+      # (33) NumTaps
+      NumTaps:
+        description: >-
+          Total number of taps between min and max tap. Default is 32 (16 raise
+          and 16 lower taps about the neutral position). The neutral position
+          is not counted.
+        range: integer
+        required: false
+        annotations:
+          order: 33
+          dss_default: int(32)
+        related_mappings:
+          - cim:RatioTapChanger.highStep
+        comments:
+          - >-
+            Import: highStep = NumTaps / 2, lowStep = -highStep (see MaxTap
+            comments); no single CIM field stores NumTaps directly.
+        todos:
+          - "Not exported; see MaxTap todos."
+
+      # (34) subname
+      subname:
+        description: >-
+          Substation Name. Optional. Default is null. If specified, printed on
+          plots.
+        range: string
+        required: false
+        annotations:
+          order: 34
+        todos:
+          - >-
+            Not read by the current importer or written by the exporter;
+            see sub todos. If implemented, would name the CIM Substation
+            container created for sub=Yes transformers.
+
+      # (35) %imag
+      pct_imag:
+        description: >-
+          Percent magnetizing current. Default=0.0. Magnetizing branch is in
+          parallel with windings in each phase.
+        range: float
+        required: false
+        annotations:
+          order: 35
+          dss_name: "%imag"
+          dss_default: float(0.0)
+        close_mappings:
+          - cim:TransformerCoreAdmittance.b
+        comments:
+          - >-
+            Import: stored on the same primary-winding
+            TransformerCoreAdmittance as %noloadloss, with
+            b = (pct_imag / 100) / zbase using the primary winding's own
+            zbase = kV^2 * 1000 / kVA. Export reverses the same formula.
+            When an XfmrCode catalog entry is used instead, the equivalent
+            value is reconstructed from the catalog NoLoadTest's
+            excitingCurrent field via
+            pct_imag = sqrt(excitingCurrent^2 - pct_noloadloss^2).
+
+      # (36) ppm_antifloat
+      ppm_antifloat:
+        description: >-
+          Default=1 ppm. Parts per million of transformer winding VA rating
+          connected to ground to protect against accidentally floating a winding
+          without a reference.
+        range: float
+        required: false
+        annotations:
+          order: 36
+          dss_default: float(1.0)
+        todos:
+          - >-
+            No CIM equivalent. Anti-float grounding resistance in ppm; requires
+            CIM extension or drop on export.
+
+      # (37) %Rs
+      pct_Rs:
+        description: >-
+          Use this property to specify all the winding %resistances using an
+          array.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 37
+          dss_name: "%Rs"
+        close_mappings:
+          - cim:PowerTransformerEnd.r
+        comments:
+          - >-
+            Array form of pct_R (one per winding). Same per-unit to ohm conversion
+            as pct_R: r_ohm = (pct_Rs[i] / 100) * zbase_i.
+
+      # (38) bank
+      bank:
+        description: >-
+          Name of the bank this transformer is part of, for CIM, MultiSpeak,
+          and other interfaces.
+        range: string
+        required: false
+        annotations:
+          order: 38
+        related_mappings:
+          - cim:PowerTransformer
+        comments:
+          - >-
+            Bank name groups single-phase TransformerTank objects under one shared
+            PowerTransformer. When bank is set, this Transformer becomes a
+            TransformerTank; multiple tanks with the same bank name share one
+            PowerTransformer parent.
+
+      # (39) XfmrCode
+      XfmrCode:
+        description: >-
+          Name of a library entry for transformer properties. The named
+          XfmrCode must already be defined.
+        range: string
+        required: false
+        annotations:
+          order: 39
+        related_mappings:
+          - cim:PowerTransformer.AssetDatasheet
+        comments:
+          - >-
+            Import (3-phase path): looked up by name against previously
+            converted PowerTransformerInfo catalog objects; if found, it is
+            set as PowerTransformer.AssetDatasheet and impedance/loss data
+            come from the catalog's TransformerEndInfo/ShortCircuitTest/
+            NoLoadTest objects instead of being computed inline. Export:
+            writes XfmrCode=AssetDatasheet.name whenever AssetDatasheet is
+            set. Single-phase bank members instead look up a
+            TransformerTankInfo directly (see general/xfmrcode.yaml).
+
+      # (40) XRConst
+      XRConst:
+        description: >-
+          Default is NO. Signifies whether or not the X/R is assumed contant
+          for harmonic studies.
+        range: boolean
+        required: false
+        annotations:
+          order: 40
+          dss_default: "false"
+        todos:
+          - >-
+            No CIM equivalent. X/R constancy flag for harmonic studies; drop on
+            export or store as extension attribute.
+
+      # (41) X12
+      X12:
+        description: >-
+          Alternative to XHL for specifying the percent reactance from winding
+          1 to winding 2. Use for 2- or 3-winding transformers. Percent on the
+          kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 41
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Import-only fallback for XHL: used when XHL is not specified
+            (2-winding case) or when XHL/XHT/XLT are not all three given
+            together (3-winding case). Same zbase conversion as XHL.
+            Export always writes XHL, never X12.
+
+      # (42) X13
+      X13:
+        description: >-
+          Alternative to XHT for specifying the percent reactance from winding
+          1 to winding 3. Use for 3-winding transformers only. Percent on the
+          kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 42
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Import-only fallback for XHT, used only when XHL/XHT/XLT are
+            not all three given together for a 3-winding transformer (must
+            appear alongside X12 and X23). Same zbase conversion as XHT.
+            Export always writes XHT, never X13.
+
+      # (43) X23
+      X23:
+        description: >-
+          Alternative to XLT for specifying the percent reactance from winding
+          2 to winding 3. Use for 3-winding transformers only. Percent on the
+          kVA base of winding 1.
+        range: float
+        required: false
+        annotations:
+          order: 43
+        close_mappings:
+          - cim:TransformerMeshImpedance.x
+        comments:
+          - >-
+            Import-only fallback for XLT, used only when XHL/XHT/XLT are
+            not all three given together for a 3-winding transformer (must
+            appear alongside X12 and X13). Same zbase conversion as XLT.
+            Export always writes XLT, never X23.
+
+      # (44) LeadLag
+      LeadLag:
+        description: >-
+          Designation in mixed Delta-wye connections the relationship between
+          HV to LV winding. Default is ANSI 30 deg lag.
+        range: LeadLagType
+        required: false
+        annotations:
+          order: 44
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Phase shift convention for
+            mixed Delta-wye; requires CIM extension.
+
+      # (45) WdgCurrents
+      # Skipped - Read only property
+
+      # (46) Core
+      Core:
+        description: >-
+          Core Type. Used for GIC analysis. Default is Shell.
+        range: CoreType
+        required: false
+        annotations:
+          order: 46
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Core type for GIC analysis
+            (Shell/5-leg/3-leg); requires CIM extension.
+
+      # (47) RdcOhms
+      RdcOhms:
+        description: >-
+          Winding dc resistance in OHMS. Useful for GIC analysis. From
+          transformer test report. Defaults to 85% of %R property.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 47
+        todos:
+          - >-
+            No CIM equivalent in standard profile. DC winding resistance for GIC
+            analysis; requires CIM extension.
+
+      # (48) Seasons
+      Seasons:
+        description: >-
+          Defines the number of ratings to be defined for the transfomer, to be
+          used only when defining seasonal ratings using the Ratings property.
+        range: integer
+        required: false
+        annotations:
+          order: 48
+        todos:
+          - >-
+            No CIM equivalent. Seasonal ratings count; see Ratings property.
+
+      # (49) Ratings
+      Ratings:
+        description: >-
+          An array of ratings to be used when the seasonal ratings flag is
+          True. Given in kVA.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 49
+        related_mappings:
+          - cim:OperationalLimitSet
+        todos:
+          - >-
+            Seasonal kVA ratings array. Map to CIM OperationalLimitSet with one
+            ActivePowerLimit or ApparentPowerLimit per season; converter not yet
+            implemented.
+
+      # (50) normamps
+      normamps:
+        description: >-
+          Normal rated current.
+        range: float
+        required: false
+        annotations:
+          order: 50
+        related_mappings:
+          - cim:OperationalLimit
+        todos:
+          - >-
+            Map to CIM OperationalLimitSet/CurrentLimit for normal rating;
+            converter not yet implemented.
+
+      # (51) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current.
+        range: float
+        required: false
+        annotations:
+          order: 51
+        related_mappings:
+          - cim:OperationalLimit
+        todos:
+          - >-
+            Map to CIM OperationalLimitSet/CurrentLimit for emergency rating;
+            converter not yet implemented.
+
+      # (52) faultrate
+      faultrate:
+        description: >-
+          Failure rate per year.
+        range: float
+        required: false
+        annotations:
+          order: 52
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Requires CIM extension for
+            reliability data.
+
+      # (53) pctperm
+      pct_perm:
+        description: >-
+          Percent of failures that become permanent.
+        range: float
+        required: false
+        annotations:
+          order: 53
+          dss_name: "pctperm"
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Requires CIM extension for
+            reliability data.
+
+      # (54) repair
+      repair:
+        description: >-
+          Hours to repair.
+        range: float
+        required: false
+        annotations:
+          order: 54
+        todos:
+          - >-
+            No CIM equivalent in standard profile. Requires CIM extension for
+            reliability data.
+
+      # (55) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 55
+        todos:
+          - >-
+            Not stored on CIM PowerTransformer. Extract from circuit-level
+            BaseVoltage or NetworkModelProject frequency attribute on export.
+
+      # (56) enabled
+      enabled:
+        description: >-
+          Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 56
+          dss_default: "true"
+        comments:
+          - >-
+            N/A: CIM transformers are always present/enabled; disabled elements
+            are omitted from the CIM export.
+
+      # (57) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Capacitor.C2 like=c1 ...
+        range: string
+        required: false
+        annotations:
+          order: 57
+        comments:
+          - >-
+            N/A: OpenDSS template mechanism; resolved at parse time, not stored
+            in CIM.
+
+# Enums are imported from common_enums.yaml

@@ -1,0 +1,171 @@
+id: https://gridappsd.github.io/dss-graph/controls/espvlcontrol
+name: espvlcontrol
+title: OpenDSS Espvlcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Espvlcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-15).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Espvlcontrol:
+    description: >-
+      A Espvlcontrol object in OpenDSS.
+    class_uri: dss:Espvlcontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) Element
+      Element:
+        description: >-
+          Full object name of the circuit element, typically a line or transformer, which the control is monitoring
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Terminal
+      Terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the ESPVLControl control is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) Type
+      Type:
+        description: >-
+          Type of controller
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kWBand
+      kWBand:
+        description: >-
+          Bandwidth (kW) of the dead band around the target limit
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kvarlimit
+      kvarlimit:
+        description: >-
+          Max kvar to be delivered through the element
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) LocalControlList
+      LocalControlList:
+        description: >-
+          Array list of ESPVLControl local controller objects to be dispatched by System Controller
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 6
+
+      # (7) LocalControlWeights
+      LocalControlWeights:
+        description: >-
+          Array of proportional weights corresponding to each ESPVLControl local controller in the LocalControlList
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 7
+
+      # (8) PVSystemList
+      PVSystemList:
+        description: >-
+          Array list of PVSystem objects to be dispatched by a Local Controller
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 8
+
+      # (9) PVSystemWeights
+      PVSystemWeights:
+        description: >-
+          Array of proportional weights corresponding to each PVSystem in the PVSystemList
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 9
+
+      # (10) StorageList
+      StorageList:
+        description: >-
+          Array list of Storage objects to be dispatched by Local Controller
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 10
+
+      # (11) StorageWeights
+      StorageWeights:
+        description: >-
+          Array of proportional weights corresponding to each Storage object in the StorageControlList
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+
+      # (12) Forecast
+      Forecast:
+        description: >-
+          Loadshape object containing daily forecast
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 14
+
+      # (15) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 15

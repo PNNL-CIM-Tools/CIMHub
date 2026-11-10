@@ -1,0 +1,249 @@
+id: https://gridappsd.github.io/dss-graph/general/loadshape
+name: loadshape
+title: OpenDSS Loadshape Component Schema
+description: >-
+  LinkML schema for OpenDSS Loadshape objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-24).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Loadshape:
+    description: >-
+      A Loadshape object in OpenDSS.
+    class_uri: dss:Loadshape
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) npts
+      npts:
+        description: >-
+          Max number of points to expect in load shape vectors
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) interval
+      interval:
+        description: >-
+          Time interval for fixed interval data, hrs
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) mult
+      mult:
+        description: >-
+          Array of multiplier values for active power (P) or other key value (such as pu V for Vsource)
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+
+      # (4) hour
+      hour:
+        description: >-
+          Array of hour values
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+
+      # (5) mean
+      mean:
+        description: >-
+          Mean of the active power multipliers
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) stddev
+      stddev:
+        description: >-
+          Standard deviation of active power multipliers
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) csvfile
+      csvfile:
+        description: >-
+          Switch input of active power load curve data to a CSV text file containing (hour, mult) points, or simply (mult) values for fixed time interval data, one per line
+        range: integer
+        required: false
+        annotations:
+          order: 7
+
+      # (8) sngfile
+      sngfile:
+        description: >-
+          Switch input of active power load curve data to a binary file of singles containing (hour, mult) points, or simply (mult) values for fixed time interval data, packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 8
+
+      # (9) dblfile
+      dblfile:
+        description: >-
+          Switch input of active power load curve data to a binary file of doubles containing (hour, mult) points, or simply (mult) values for fixed time interval data, packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 9
+
+      # (10) action
+      action:
+        description: >-
+          {NORMALIZE | DblSave | SngSave} After defining load curve data, setting action=normalize will modify the multipliers so that the peak is 1
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) qmult
+      qmult:
+        description: >-
+          Array of multiplier values for reactive power (Q)
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+
+      # (12) UseActual
+      UseActual:
+        description: >-
+          {Yes | No* | True | False*} If true, signifies to Load, Generator, Vsource, or other objects to use the return value as the actual kW, kvar, kV, or other value rather than a multiplier
+        range: boolean
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Pmax
+      Pmax:
+        description: >-
+          kW value at the time of max power
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) Qmax
+      Qmax:
+        description: >-
+          kvar value at the time of max kW power
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) sinterval
+      sinterval:
+        description: >-
+          Specify fixed interval in SECONDS
+        range: string
+        required: false
+        annotations:
+          order: 15
+
+      # (16) minterval
+      minterval:
+        description: >-
+          Specify fixed interval in MINUTES
+        range: string
+        required: false
+        annotations:
+          order: 16
+
+      # (17) Pbase
+      Pbase:
+        description: >-
+          Base P value for normalization
+        range: string
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Qbase
+      Qbase:
+        description: >-
+          Base Q value for normalization
+        range: string
+        required: false
+        annotations:
+          order: 18
+
+      # (19) Pmult
+      Pmult:
+        description: >-
+          Synonym for "mult"
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) PQCSVFile
+      PQCSVFile:
+        description: >-
+          Switch input to a CSV text file containing (active, reactive) power (P, Q) multiplier pairs, one per row
+        range: float
+        required: false
+        annotations:
+          order: 20
+
+      # (21) MemoryMapping
+      MemoryMapping:
+        description: >-
+          {Yes | No* | True | False*} Enables the memory mapping functionality for dealing with large amounts of load shapes
+        range: boolean
+        required: false
+        annotations:
+          order: 21
+
+      # (22) Mode
+      Mode:
+        description: >-
+          {carryover | default} carryover will initialize generator dispatch from latest Pgen/Qgen in memory
+        range: float
+        required: false
+        annotations:
+          order: 22
+
+      # (23) Interpolation
+      Interpolation:
+        description: >-
+          {AVG* | EDGE} Defines the interpolation method used for connecting distant dots within the load shape
+        range: string
+        required: false
+        annotations:
+          order: 23
+
+      # (24) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 24

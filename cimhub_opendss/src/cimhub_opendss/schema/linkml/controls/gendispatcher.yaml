@@ -1,0 +1,112 @@
+id: https://gridappsd.github.io/dss-graph/controls/gendispatcher
+name: gendispatcher
+title: OpenDSS Gendispatcher Component Schema
+description: >-
+  LinkML schema for OpenDSS Gendispatcher objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-9).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Gendispatcher:
+    description: >-
+      A Gendispatcher object in OpenDSS.
+    class_uri: dss:Gendispatcher
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) Element
+      Element:
+        description: >-
+          Full object name of the circuit element, typically a line or transformer, which the control is monitoring
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Terminal
+      Terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the GenDispatcher control is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) kWLimit
+      kWLimit:
+        description: >-
+          kW Limit for the monitored element
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kWBand
+      kWBand:
+        description: >-
+          Bandwidth (kW) of the dead band around the target limit
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kvarlimit
+      kvarlimit:
+        description: >-
+          Max kvar to be delivered through the element
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) GenList
+      GenList:
+        description: >-
+          Array list of generators to be dispatched
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 6
+
+      # (7) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 8
+
+      # (9) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 9

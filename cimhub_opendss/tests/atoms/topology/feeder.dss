@@ -1,0 +1,24 @@
+// Topology walk atom: one of each way a transformer starts or keeps a system
+Clear
+New Circuit.topo basekv=69 bus1=src pu=1.0
+New Transformer.sub phases=3 windings=2 buses=[src lsb] conns=[delta wye] kVs=[66 13.09] kVAs=[10000 10000] XHL=8
+New Line.feeder bus1=lsb bus2=f1 phases=3 length=1 units=km
+// regulator bank: three 1-phase units, phase-to-neutral coils, equal kV
+New Transformer.rega phases=1 buses=[f1.1 f2.1] kVs=[7.2 7.2] kVAs=[2000 2000] XHL=0.01
+New Transformer.regb phases=1 buses=[f1.2 f2.2] kVs=[7.2 7.2] kVAs=[2000 2000] XHL=0.01
+New Transformer.regc phases=1 buses=[f1.3 f2.3] kVs=[7.2 7.2] kVAs=[2000 2000] XHL=0.01
+New Reactor.series phases=3 bus1=f2 bus2=f3 X=0.1 R=0.01
+New Line.lat bus1=f3.1 bus2=l1.1 phases=1 length=1 units=km
+// one regulator on the lateral keeps the feeder's 3-phase system
+New Transformer.latreg phases=1 buses=[l1.1 l2.1] kVs=[7.2 7.2] kVAs=[500 500] XHL=0.01
+// service: 240 V 2-wire secondary
+New Transformer.svc phases=1 buses=[l2.1 x1.1] kVs=[7.2 0.24] kVAs=[25 25] XHL=2
+// center tap by XfmrCode
+New XfmrCode.ct25 phases=1 windings=3 kVs=[7.2 0.12 0.12] kVAs=[25 25 25] XHL=2 XHT=2 XLT=1.6
+New Transformer.ct XfmrCode=ct25 buses=[f3.2 house.1.0 house.0.2]
+New Transformer.t480 phases=3 windings=2 buses=[f3 m1] conns=[delta wye] kVs=[12.47 0.48] kVAs=[500 500] XHL=5
+New Load.l1 bus1=m1 phases=3 kV=0.48 kW=100
+New Load.l2 bus1=house.1.2 phases=1 kV=0.24 kW=5
+New Load.l3 bus1=x1.1 phases=1 kV=0.24 kW=5
+Set voltagebases=[69 12.47 0.48 0.208]
+CalcVoltageBases

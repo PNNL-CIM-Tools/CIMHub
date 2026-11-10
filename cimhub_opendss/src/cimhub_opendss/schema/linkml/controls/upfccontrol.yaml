@@ -1,0 +1,66 @@
+id: https://gridappsd.github.io/dss-graph/controls/upfccontrol
+name: upfccontrol
+title: OpenDSS Upfccontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Upfccontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-4).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Upfccontrol:
+    description: >-
+      A Upfccontrol object in OpenDSS.
+    class_uri: dss:Upfccontrol
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) UPFCList
+      UPFCList:
+        description: >-
+          The list of all the UPFC devices to be controlled by this controller, If left empty, this control will apply for all UPFCs in the model
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 3
+
+      # (4) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 4

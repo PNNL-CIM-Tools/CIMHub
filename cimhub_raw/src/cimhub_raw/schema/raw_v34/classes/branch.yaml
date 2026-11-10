@@ -1,0 +1,269 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/branch
+name: branch
+title: Branch Record
+description: raw RAW Branch (Non-transformer) Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  BranchRecord:
+    description: Non-transformer branch (line) data record
+    attributes:
+      from_bus_number:
+        description: I - From bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      to_bus_number:
+        description: J - To bus number
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      circuit:
+        description: CKT - Circuit identifier
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: "1"
+
+      r:
+        description: R - Branch resistance in pu
+        range: float
+        required: true
+        annotations:
+          order: 4
+          value_type: float
+          precision: 5
+          separator: ","
+
+      x:
+        description: X - Branch reactance in pu
+        range: float
+        required: true
+        annotations:
+          order: 5
+          value_type: float
+          precision: 5
+          separator: ","
+
+      b:
+        description: B - Total branch charging susceptance in pu
+        range: float
+        required: false
+        annotations:
+          order: 6
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      name:
+        description: NAME - Branch name (40 characters)
+        range: string
+        required: false
+        annotations:
+          order: 7
+          value_type: string
+          width: 40
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+        comments:
+          - Branch name field, typically blank/spaces in most files
+
+      ratings:
+        description: RATE1-RATE12 - Branch ratings (12 values)
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          precision: 2
+          separator: ","
+          raw_default: 0.0
+          multivalued: true
+          count: 12
+        comments:
+          - This is a multivalued field that expands to 12 rating values in the output
+
+      g_from:
+        description: GI - Complex admittance of line shunt at from bus, conductance component in pu
+        range: float
+        required: false
+        annotations:
+          order: 20
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      b_from:
+        description: BI - Complex admittance of line shunt at from bus, susceptance component in pu
+        range: float
+        required: false
+        annotations:
+          order: 21
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      g_to:
+        description: GJ - Complex admittance of line shunt at to bus, conductance component in pu
+        range: float
+        required: false
+        annotations:
+          order: 22
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      b_to:
+        description: BJ - Complex admittance of line shunt at to bus, susceptance component in pu
+        range: float
+        required: false
+        annotations:
+          order: 23
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.0
+
+      status:
+        description: STAT - Branch status (0=out of service, 1=in service)
+        range: integer
+        required: false
+        annotations:
+          order: 24
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      metered_end:
+        description: MET - Metered end flag
+        range: integer
+        required: false
+        annotations:
+          order: 25
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      length:
+        description: LEN - Line length
+        range: float
+        required: false
+        annotations:
+          order: 26
+          value_type: float
+          precision: 1
+          separator: ","
+          raw_default: 0.0
+
+      o1:
+        description: O1 - Owner 1 number
+        range: integer
+        required: false
+        annotations:
+          order: 27
+          value_type: int
+          separator: ","
+
+      f1:
+        description: F1 - Fraction of ownership for owner 1
+        range: float
+        required: false
+        annotations:
+          order: 28
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      o2:
+        description: O2 - Owner 2 number
+        range: integer
+        required: false
+        annotations:
+          order: 29
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      f2:
+        description: F2 - Fraction of ownership for owner 2
+        range: float
+        required: false
+        annotations:
+          order: 30
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      o3:
+        description: O3 - Owner 3 number
+        range: integer
+        required: false
+        annotations:
+          order: 31
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      f3:
+        description: F3 - Fraction of ownership for owner 3
+        range: float
+        required: false
+        annotations:
+          order: 32
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      o4:
+        description: O4 - Owner 4 number
+        range: integer
+        required: false
+        annotations:
+          order: 33
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      f4:
+        description: F4 - Fraction of ownership for owner 4
+        range: float
+        required: false
+        annotations:
+          order: 34
+          value_type: float
+          precision: 4
+          separator: ""  # No separator after last field
+          raw_default: 1.0

@@ -1,0 +1,22 @@
+# Shared prerequisites of the shape examples: containers, BaseVoltages, load models, limit types.
+# Imported by every instance shape; templates and wire catalogs need none of it.
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_shapes, name=shapes
+Object Feeder: mRID=fdr_shapes, name=shapes, NormalEnergizingSubstation=sub_shapes
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,  115
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+    bv_240v,   0.24
+
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_constant_pq, false, 1, 0, 0, 1, 0, 0
+    zip_constant_z,  false, 0, 0, 1, 0, 0, 1
+    zip_constant_i,  false, 0, 1, 0, 0, 1, 0
+
+Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
+    olt_normal,    normal,    normal,    true,  absoluteValue
+    olt_emergency, emergency, emergency, false, absoluteValue

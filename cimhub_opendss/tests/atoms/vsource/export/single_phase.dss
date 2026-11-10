@@ -1,0 +1,5 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_lateral phases=1 bus1=tap.2 basekv=7.2 pu=1.02 angle=0 MVAsc3=100 MVAsc1=90 x1r1=4 x0r0=3
+Set voltagebases=[7.2]
+CalcVoltageBases

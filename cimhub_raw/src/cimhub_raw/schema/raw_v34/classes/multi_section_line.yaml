@@ -1,0 +1,163 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/multi_section_line
+name: multi_section_line
+title: Multi-Section Line Record
+description: raw RAW Multi-Section Line Grouping Record (variable-length single line)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  MultiSectionLineRecord:
+    description: |
+      Multi-section line grouping data record.
+
+      Variable-length format:
+      - Fixed fields: I, J, ID, MET
+      - Variable section identifiers: Up to 9 dummy integer fields (DUM1-DUM9)
+      - Only non-zero section identifiers are serialized
+
+      A multi-section line groups several branch sections that are treated as a
+      single transmission line for operational purposes. Each section references
+      a branch record by its bus endpoints.
+
+      Maps to CIM: cim.Line (grouping multiple cim.ACLineSegment objects)
+
+    attributes:
+      # ==== FIXED FIELDS ====
+      i:
+        description: I - From bus number (line endpoint 1)
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      j:
+        description: J - To bus number (line endpoint 2)
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      line_id:
+        description: ID - Multi-section line grouping identifier (2 characters, first must be '&')
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          width: 2
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: "1"
+
+      met:
+        description: MET - Metered end flag (1=bus I, 2=bus J)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      # ==== VARIABLE SECTION IDENTIFIERS ====
+      dum1:
+        description: DUM1 - Dummy bus number 1 (between sections 1 and 2); at least one dummy bus is needed
+        range: integer
+        required: true
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum1 != 0"
+
+      dum2:
+        description: DUM2 - Dummy bus number 2 (between sections 2 and 3)
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum2 != 0"
+
+      dum3:
+        description: DUM3 - Dummy bus number 3 (between sections 3 and 4)
+        range: integer
+        required: false
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum3 != 0"
+
+      dum4:
+        description: DUM4 - Dummy bus number 4 (between sections 4 and 5)
+        range: integer
+        required: false
+        annotations:
+          order: 8
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum4 != 0"
+
+      dum5:
+        description: DUM5 - Dummy bus number 5 (between sections 5 and 6)
+        range: integer
+        required: false
+        annotations:
+          order: 9
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum5 != 0"
+
+      dum6:
+        description: DUM6 - Dummy bus number 6 (between sections 6 and 7)
+        range: integer
+        required: false
+        annotations:
+          order: 10
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum6 != 0"
+
+      dum7:
+        description: DUM7 - Dummy bus number 7 (between sections 7 and 8)
+        range: integer
+        required: false
+        annotations:
+          order: 11
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum7 != 0"
+
+      dum8:
+        description: DUM8 - Dummy bus number 8 (between sections 8 and 9)
+        range: integer
+        required: false
+        annotations:
+          order: 12
+          value_type: int
+          separator: ","
+          serialize_if: "custom:dum8 != 0"
+
+      dum9:
+        description: DUM9 - Dummy bus number 9 (between sections 9 and 10)
+        range: integer
+        required: false
+        annotations:
+          order: 13
+          value_type: int
+          separator: ""
+          serialize_if: "custom:dum9 != 0"

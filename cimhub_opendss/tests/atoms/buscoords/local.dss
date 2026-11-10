@@ -1,0 +1,18 @@
+// Bus coordinates by BusCoords: a line, a switch, a center-tap transformer, a regulator, a load, a capacitor and a
+// PV. The coordinate file mixes comma and whitespace rows, gives a bus the circuit does not have (ghost) and one
+// bus twice (b1, the last row wins), and leaves bus far without coordinates, so the line to it gets no Location.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Line.sw1 bus1=b1 bus2=b2 phases=3 switch=y
+New Line.far bus1=b2 bus2=far phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Transformer.ct phases=1 windings=3 buses=[b2.1.0 house.1.0 house.0.2] kVs=[2.4 0.12 0.12] kVAs=[25 25 25]
+~ %Rs=[0.6 1.2 1.2] XHL=2.04 XHT=2.04 XLT=1.36
+New Transformer.reg phases=1 buses=[b2.2 rg.2] kVs=[2.4 2.4] kVAs=[1666 1666] XHL=0.01 %LoadLoss=0.01
+New RegControl.reg transformer=reg winding=2 vreg=122 band=2 ptratio=20
+New Load.house bus1=house.1.2 phases=2 kV=0.208 kW=5 pf=0.95
+New Capacitor.c1 bus1=b2 phases=3 kvar=300 kV=4.16
+New PVSystem.pv bus1=house.1.2 phases=2 kV=0.208 kVA=6 Pmpp=5
+Set voltagebases=[4.16 0.24]
+CalcVoltageBases
+BusCoords local_xy.csv

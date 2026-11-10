@@ -1,0 +1,14 @@
+# Shape: voltage regulator. A single-phase PowerTransformer by ends + RatioTapChanger on end 2 +
+# TapChangerControl monitoring the generated Terminal <xf>_T2. step is a tap position, never a ratio.
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Object PowerTransformer: mRID=xf_reg1, name=reg1, EquipmentContainer=fdr_shapes
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer=xf_reg1
+    xf_reg1_1, n0,  A, 1, Y, true, 2.4, 1666, 0.005, bv_4p16kv
+    xf_reg1_2, rg1, A, 2, Y, true, 2.4, 1666, 0.005, bv_4p16kv
+Object TransformerMeshImpedance: mRID=xf_reg1_mesh_12, FromTransformerEnd=xf_reg1_1, ToTransformerEnd=xf_reg1_2, x (percent)=0.01
+Object TapChangerControl: mRID=xf_reg1_ctrl, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, targetValue=2440, targetDeadband=40, lineDropCompensation=true, lineDropR (ohm)=0.085714, lineDropX (ohm)=0.257143, Terminal=xf_reg1_T2
+Object RatioTapChanger: mRID=xf_reg1_tap, lowStep=-16, highStep=16, neutralStep=0, normalStep=0, step=10, stepVoltageIncrement=0.625, neutralU (V)=2400, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating=700, ctRatio=3500, initialDelay (s)=15, subsequentDelay (s)=2, TapChangerControl=xf_reg1_ctrl, TransformerEnd=xf_reg1_2

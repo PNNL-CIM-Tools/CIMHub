@@ -1,0 +1,19 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
+new Linecode.ln_l1_lc nphases=3 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m baseFreq=60
+new Linecode.ln_l2_lc nphases=1 units=m rmatrix=[0.000328083989501312] xmatrix=[0.000656167979002625] cmatrix=[0.0111548556430446] baseFreq=60
+new Line.ln_l1 linecode=ln_l1_lc phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 units=m
+new Line.ln_l2 linecode=ln_l2_lc phases=1 bus1=b1.3 bus2=b2.3 length=304.8 units=m
+new Line.sw_capsw phases=3 Switch=Yes bus1=b1.1.2.3 bus2=b3.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
+new Capacitor.cap_c1 phases=1 bus1=b2.3 kvar=[100] kv=2.4 conn=wye states=[1] enabled=Yes
+new Capacitor.cap_c3 phases=3 bus1=b3.1.2.3 kvar=[600] kv=4.16 conn=wye states=[1] enabled=Yes
+new Capacitor.cap_cd phases=3 bus1=b1.1.2.3 kvar=[300] kv=4.16 conn=delta states=[1] enabled=Yes
+new Capacitor.cap_open phases=1 bus1=b1.1 kvar=[50] kv=2.4 conn=wye states=[0] enabled=Yes
+new Capacitor.cap_own phases=3 bus1=b1.1.2.3 kvar=[900] kv=4.16 conn=wye states=[1] enabled=Yes
+new Capcontrol.cc_kvar element=Line.sw_capsw terminal=1 capacitor=cap_c3 type=kvar PTratio=1 CTratio=1 on=150 off=-225 Delay=100 PTPhase=1 enabled=Yes
+new Capcontrol.cc_own element=Capacitor.cap_own terminal=1 capacitor=cap_own type=voltage PTratio=1 CTratio=60 on=1950 off=2500 Delay=300 PTPhase=1 enabled=Yes
+new Capcontrol.cc_time element=Capacitor.cap_cd terminal=1 capacitor=cap_cd type=time PTratio=60 CTratio=60 on=8 off=19 Delay=15 PTPhase=1 enabled=Yes
+new Capcontrol.cc_volt element=Line.ln_l2 terminal=2 capacitor=cap_c1 type=voltage PTratio=20 CTratio=60 on=115 off=125 Delay=15 PTPhase=1 enabled=Yes
+Set voltagebases=[4.16]
+CalcVoltageBases

@@ -1,0 +1,21 @@
+// Capacitors and CapControls: a 3-phase bank behind a switch with a kvar control (after IEEE8500), a 1-phase bank
+// with a voltage control on a line (after IEEE13_Assets Cap2), a bank with a voltage control on its own terminal
+// (after IEEE13_OCHRE), a delta bank with a time control on its own terminal (after IEEE13_Assets Cap1), and an
+// open 1-phase bank (states=[0], after M1). The switch carries the export's invented 1 mOhm (B3), so the bank behind
+// it solves alike.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Line.l2 bus1=b1.3 bus2=b2.3 phases=1 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Line.capsw bus1=b1 bus2=b3 phases=3 switch=y r1=0.001 r0=0.001 x1=0 x0=0 C1=0 C0=0 length=1 units=m
+New Capacitor.c3 bus1=b3 phases=3 kvar=600 kv=4.16
+New Capacitor.c1 bus1=b2.3 phases=1 kvar=100 kv=2.4
+New Capacitor.own bus1=b1 phases=3 kvar=900 kv=4.16 conn=wye
+New Capacitor.cd bus1=b1 phases=3 kvar=300 kv=4.16 conn=delta
+New Capacitor.open bus1=b1.1 phases=1 kvar=50 kv=2.4 states=[0]
+New CapControl.kvar capacitor=c3 element=line.capsw terminal=1 type=kvar ONsetting=150 OFFsetting=-225 PTratio=1
+~ CTratio=1 VoltOverride=y Vmin=7110 Vmax=7740 Delay=100 DelayOFF=90
+New CapControl.volt capacitor=c1 element=line.l2 terminal=2 type=voltage on=115 off=125 ptratio=20 ptphase=1
+New CapControl.own capacitor=own element=capacitor.own terminal=1 type=volt ONsetting=1950 OFFsetting=2500
+~ ptratio=1 delay=300
+New CapControl.time capacitor=cd element=capacitor.cd type=time on=8 off=19

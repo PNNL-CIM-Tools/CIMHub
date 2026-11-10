@@ -1,0 +1,5 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_ieee13nodeckt phases=3 bus1=sourcebus.1.2.3 basekv=115 pu=1 angle=30 R1=0.160376682055275 X1=0.641506728221101 R0=0.179603583012336 X0=0.538810749037007
+Set voltagebases=[115]
+CalcVoltageBases

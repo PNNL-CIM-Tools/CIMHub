@@ -1,0 +1,239 @@
+id: https://gridappsd.github.io/dss-graph/pde/gictransformer
+name: gictransformer
+title: OpenDSS Gictransformer Component Schema
+description: >-
+  LinkML schema for OpenDSS Gictransformer objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-23).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Gictransformer:
+    description: >-
+      A Gictransformer object in OpenDSS.
+    class_uri: dss:Gictransformer
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) BusH
+      BusH:
+        description: >-
+          Name of High-side(H) bus
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) BusNH
+      BusNH:
+        description: >-
+          Name of Neutral bus for H, or first, winding
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) BusX
+      BusX:
+        description: >-
+          Name of Low-side(X) bus, if type=Auto or YY
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) BusNX
+      BusNX:
+        description: >-
+          Name of Neutral bus for X, or Second, winding
+        range: string
+        required: false
+        annotations:
+          order: 4
+
+      # (5) phases
+      phases:
+        description: >-
+          Number of Phases
+        range: integer
+        required: false
+        annotations:
+          order: 5
+
+      # (6) Type
+      Type:
+        description: >-
+          Type of transformer: {GSU* | Auto | YY}
+        range: string
+        required: false
+        annotations:
+          order: 6
+
+      # (7) R1
+      R1:
+        description: >-
+          Resistance, each phase, ohms for H winding, (Series winding, if Auto)
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) R2
+      R2:
+        description: >-
+          Resistance, each phase, ohms for X winding, (Common winding, if Auto)
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) KVLL1
+      KVLL1:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) KVLL2
+      KVLL2:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) MVA
+      MVA:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) VarCurve
+      VarCurve:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) %R1
+      pct_R1:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 13
+          dss_name: "%R1"
+
+      # (14) %R2
+      pct_R2:
+        description: >-
+          Optional
+        range: float
+        required: false
+        annotations:
+          order: 14
+          dss_name: "%R2"
+
+      # (15) K
+      K:
+        description: >-
+          Mvar K factor
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) normamps
+      normamps:
+        description: >-
+          Normal rated current
+        range: float
+        required: false
+        annotations:
+          order: 16
+
+      # (17) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current
+        range: float
+        required: false
+        annotations:
+          order: 17
+
+      # (18) faultrate
+      faultrate:
+        description: >-
+          Failure rate per year
+        range: string
+        required: false
+        annotations:
+          order: 18
+
+      # (19) pctperm
+      pctperm:
+        description: >-
+          Percent of failures that become permanent
+        range: float
+        required: false
+        annotations:
+          order: 19
+
+      # (20) repair
+      repair:
+        description: >-
+          Hours to repair
+        range: string
+        required: false
+        annotations:
+          order: 20
+
+      # (21) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 21
+
+      # (22) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+
+      # (23) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 23

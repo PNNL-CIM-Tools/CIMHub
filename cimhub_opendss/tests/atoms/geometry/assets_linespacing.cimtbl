@@ -1,0 +1,13 @@
+# OpenDSS LineSpacing -> XYSpacing + XYConductorPosition (catalog). No impedance is computed: geometry stays geometry.
+# Source table: LineSpacing (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry
+
+Profile = cim18v17
+
+Object XYSpacing: mRID=spc_500, name=500, isTemplate=true
+
+Table XYConductorPosition: mRID, XYSpacing=spc_500, sequenceNumber, xCoord (ft), yCoord (ft), kind
+    spc_500_1, 1, -4.0, 28.0, phase
+    spc_500_2, 2, -1.0, 28.0, phase
+    spc_500_3, 3, 3.0,  28.0, phase
+    spc_500_4, 4, 0.0,  24.0, neutral

@@ -1,0 +1,277 @@
+id: https://gridappsd.github.io/dss-graph/meters/energymeter
+name: energymeter
+title: OpenDSS Energymeter Component Schema
+description: >-
+  LinkML schema for OpenDSS Energymeter objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-27).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Energymeter:
+    description: >-
+      A Energymeter object in OpenDSS.
+    class_uri: dss:Energymeter
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) element
+      element:
+        description: >-
+          Name (Full Object name) of element to which the monitor is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) terminal
+      terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the monitor is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) action
+      action:
+        description: >-
+          {Clear (reset) | Save | Take | Zonedump | Allocate | Reduce} (A)llocate = Allocate loads on the meter zone to match PeakCurrent
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) option
+      option:
+        description: >-
+          Enter a string ARRAY of any combination of the following
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+
+      # (5) kVAnormal
+      kVAnormal:
+        description: >-
+          Upper limit on kVA load in the zone, Normal configuration
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) kVAemerg
+      kVAemerg:
+        description: >-
+          Upper limit on kVA load in the zone, Emergency configuration
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) peakcurrent
+      peakcurrent:
+        description: >-
+          ARRAY of current magnitudes representing the peak currents measured at this location for the load allocation function
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Zonelist
+      Zonelist:
+        description: >-
+          ARRAY of full element names for this meter's zone
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 8
+
+      # (9) LocalOnly
+      LocalOnly:
+        description: >-
+          {Yes | No}  Default is NO
+        range: boolean
+        required: false
+        annotations:
+          order: 9
+
+      # (10) Mask
+      Mask:
+        description: >-
+          Mask for adding registers whenever all meters are totalized
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Losses
+      Losses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 11
+
+      # (12) LineLosses
+      LineLosses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 12
+
+      # (13) XfmrLosses
+      XfmrLosses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 13
+
+      # (14) SeqLosses
+      SeqLosses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 14
+
+      # (15) 3phaseLosses
+      three_phase_losses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 15
+          dss_name: "3phaseLosses"
+
+      # (16) VbaseLosses
+      VbaseLosses:
+        description: >-
+          {Yes | No}  Default is YES
+        range: boolean
+        required: false
+        annotations:
+          order: 16
+
+      # (17) PhaseVoltageReport
+      PhaseVoltageReport:
+        description: >-
+          {Yes | No}  Default is NO
+        range: boolean
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Int_Rate
+      Int_Rate:
+        description: >-
+          Average number of annual interruptions for head of the meter zone (source side of zone or feeder)
+        range: integer
+        required: false
+        annotations:
+          order: 18
+
+      # (19) Int_Duration
+      Int_Duration:
+        description: >-
+          Average annual duration, in hr, of interruptions for head of the meter zone (source side of zone or feeder)
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) SAIFI
+      SAIFI:
+        description: >-
+          (Read only) Makes SAIFI result available via return on query (? energymeter
+        range: string
+        required: false
+        annotations:
+          order: 20
+
+      # (21) SAIFIkW
+      SAIFIkW:
+        description: >-
+          (Read only) Makes SAIFIkW result available via return on query (? energymeter
+        range: float
+        required: false
+        annotations:
+          order: 21
+
+      # (22) SAIDI
+      SAIDI:
+        description: >-
+          (Read only) Makes SAIDI result available via return on query (? energymeter
+        range: string
+        required: false
+        annotations:
+          order: 22
+
+      # (23) CAIDI
+      CAIDI:
+        description: >-
+          (Read only) Makes CAIDI result available via return on query (? energymeter
+        range: string
+        required: false
+        annotations:
+          order: 23
+
+      # (24) CustInterrupts
+      CustInterrupts:
+        description: >-
+          (Read only) Makes Total Customer Interrupts value result available via return on query (? energymeter
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 25
+
+      # (26) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 26
+
+      # (27) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 27

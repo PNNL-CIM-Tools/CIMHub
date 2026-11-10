@@ -1,0 +1,498 @@
+id: https://gridappsd.github.io/dss-graph/pce/generic5
+name: generic5
+title: OpenDSS Generic5 Component Schema
+description: >-
+  LinkML schema for OpenDSS Generic5 objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-52).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Generic5:
+    description: >-
+      A Generic5 object in OpenDSS.
+    class_uri: dss:Generic5
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) phases
+      phases:
+        description: >-
+          Number of Phases, this Induction Machine
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) bus1
+      bus1:
+        description: >-
+          Bus to which the Induction Machine is connected
+        range: string
+        required: false
+        annotations:
+          order: 2
+
+      # (3) kv
+      kv:
+        description: >-
+          Nominal rated (1
+        range: float
+        required: false
+        annotations:
+          order: 3
+
+      # (4) kW
+      kW:
+        description: >-
+          Shaft Power, kW, for the Induction Machine
+        range: float
+        required: false
+        annotations:
+          order: 4
+
+      # (5) pf
+      pf:
+        description: >-
+          [Read Only] Present power factor for the machine
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) conn
+      conn:
+        description: >-
+          Connection of stator: Delta or Wye
+        range: string
+        required: false
+        annotations:
+          order: 6
+
+      # (7) kVA
+      kVA:
+        description: >-
+          Rated kVA for the machine
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) H
+      H:
+        description: >-
+          Per unit mass constant of the machine
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) D
+      D:
+        description: >-
+          Damping constant
+        range: string
+        required: false
+        annotations:
+          order: 9
+
+      # (10) P_ref1kW
+      P_ref1kW:
+        description: >-
+          P_ref1kW = 10, goes to P_ref1, unit kW, 1st phase set power
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) P_ref2kW
+      P_ref2kW:
+        description: >-
+          P_ref2kW = 10, goes to P_ref2, unit kW, 2nd phase set power
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) P_ref3kW
+      P_ref3kW:
+        description: >-
+          P_ref3kW = 10, goes to P_ref3, unit kW, 3rd phase set power
+        range: float
+        required: false
+        annotations:
+          order: 12
+
+      # (13) V_ref1kVLN
+      V_ref1kVLN:
+        description: >-
+          V_ref1kVLN = 2
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) V_ref2kVLN
+      V_ref2kVLN:
+        description: >-
+          V_ref2kVLN = 2
+        range: float
+        required: false
+        annotations:
+          order: 14
+
+      # (15) V_ref3kVLN
+      V_ref3kVLN:
+        description: >-
+          V_ref3kVLN = 2
+        range: float
+        required: false
+        annotations:
+          order: 15
+
+      # (16) MaxSlip
+      MaxSlip:
+        description: >-
+          Max slip value to allow
+        range: string
+        required: false
+        annotations:
+          order: 16
+
+      # (17) SlipOption
+      SlipOption:
+        description: >-
+          Option for slip model
+        range: string
+        required: false
+        annotations:
+          order: 17
+
+      # (18) Yearly
+      Yearly:
+        description: >-
+          LOADSHAPE object to use for yearly simulations
+        range: string
+        required: false
+        annotations:
+          order: 18
+
+      # (19) Daily
+      Daily:
+        description: >-
+          LOADSHAPE object to use for daily simulations
+        range: string
+        required: false
+        annotations:
+          order: 19
+
+      # (20) Duty
+      Duty:
+        description: >-
+          LOADSHAPE object to use for duty cycle simulations
+        range: integer
+        required: false
+        annotations:
+          order: 20
+
+      # (21) Debugtrace
+      Debugtrace:
+        description: >-
+          [Yes | No*] Write DebugTrace file
+        range: string
+        required: false
+        annotations:
+          order: 21
+
+      # (22) P_refkW
+      P_refkW:
+        description: >-
+          P_refkW = 10, goes to P_ref
+        range: float
+        required: false
+        annotations:
+          order: 22
+
+      # (23) Q_refkVAr
+      Q_refkVAr:
+        description: >-
+          Q_refkVAr=10
+        range: float
+        required: false
+        annotations:
+          order: 23
+
+      # (24) Cluster_num
+      Cluster_num:
+        description: >-
+          Cluster_num: has to be coincident with Fmonitor attached
+        range: string
+        required: false
+        annotations:
+          order: 24
+
+      # (25) V_refkVLN
+      V_refkVLN:
+        description: >-
+          V_refkVLN = 2
+        range: float
+        required: false
+        annotations:
+          order: 25
+
+      # (26) ctrl_mode
+      ctrl_mode:
+        description: >-
+          ctrl mode:     /// contrl mode     ///    ctrl_mode =0; phases = 3;  // pos avg control---p_ref, V_ref, Q_ref    \n  ///    ctrl_mode =1; phases = 1; bus1 = 452
+        range: string
+        required: false
+        annotations:
+          order: 26
+
+      # (27) QV_flag
+      QV_flag:
+        description: >-
+          QV_flag : 0-Q_ref mode; 1- V_ref mode
+        range: string
+        required: false
+        annotations:
+          order: 27
+
+      # (28) kcd
+      kcd:
+        description: >-
+          kcd: Idi control gain
+        range: string
+        required: false
+        annotations:
+          order: 28
+
+      # (29) kcq
+      kcq:
+        description: >-
+          kcq: Iqi control gain to delta V
+        range: string
+        required: false
+        annotations:
+          order: 29
+
+      # (30) kqi
+      kqi:
+        description: >-
+          kqi: Iqi control gain to delta Q
+        range: string
+        required: false
+        annotations:
+          order: 30
+
+      # (31) Q_ref1kVAr
+      Q_ref1kVAr:
+        description: >-
+          Q_ref1kVAr=10
+        range: float
+        required: false
+        annotations:
+          order: 31
+
+      # (32) Q_ref2kVAr
+      Q_ref2kVAr:
+        description: >-
+          Q_ref2kVAr=10
+        range: float
+        required: false
+        annotations:
+          order: 32
+
+      # (33) Q_ref3kVAr
+      Q_ref3kVAr:
+        description: >-
+          Q_ref3kVAr=10
+        range: float
+        required: false
+        annotations:
+          order: 33
+
+      # (34) PmaxkW
+      PmaxkW:
+        description: >-
+          PmaxkW = 100, goes to Pmax, unit kW, set max active power output; Operation limit of active power for DG  Pmax should be less than or equal to kW
+        range: float
+        required: false
+        annotations:
+          order: 34
+
+      # (35) PminkW
+      PminkW:
+        description: >-
+          PminkW = 10, goes to Pmin, unit kW; Operation limit of active power for DG
+        range: float
+        required: false
+        annotations:
+          order: 35
+
+      # (36) PQpriority
+      PQpriority:
+        description: >-
+          PQpriority, goes to PQpriority, define how to set Qmax
+        range: string
+        required: false
+        annotations:
+          order: 36
+
+      # (37) PmppkW
+      PmppkW:
+        description: >-
+          PmppkW = 100, goes to Pmpp, unit kW, input Pmpp to calculate kW;  kW := (Pmpp + Pbias)*Pfctr1*Pfctr2*Pfctr3*Pfctr4*Pfctr5*Pfctr6;Pbias = 0 by default, Pfctr*=1 by default; These properties will o...
+        range: float
+        required: false
+        annotations:
+          order: 37
+
+      # (38) Pfctr1
+      Pfctr1:
+        description: >-
+          Pfctr1 = 0
+        range: float
+        required: false
+        annotations:
+          order: 38
+
+      # (39) Pfctr2
+      Pfctr2:
+        description: >-
+          Pfctr2 = 1, 1 by default, see PmppkW
+        range: float
+        required: false
+        annotations:
+          order: 39
+
+      # (40) Pfctr3
+      Pfctr3:
+        description: >-
+          Pfctr3 = 1, 1 by default, see PmppkW
+        range: float
+        required: false
+        annotations:
+          order: 40
+
+      # (41) Pfctr4
+      Pfctr4:
+        description: >-
+          Pfctr4= 1, 1 by default, see PmppkW
+        range: float
+        required: false
+        annotations:
+          order: 41
+
+      # (42) Pfctr5
+      Pfctr5:
+        description: >-
+          Pfctr5 =1, 1 by default, see PmppkW
+        range: float
+        required: false
+        annotations:
+          order: 42
+
+      # (43) Pfctr6
+      Pfctr6:
+        description: >-
+          Pfctr6 = 1, 1 by default, see PmppkW
+        range: float
+        required: false
+        annotations:
+          order: 43
+
+      # (44) PbiaskW
+      PbiaskW:
+        description: >-
+          Pbias = -0
+        range: float
+        required: false
+        annotations:
+          order: 44
+
+      # (45) CC_Switch
+      CC_Switch:
+        description: >-
+          CC_Switch: default value is false
+        range: string
+        required: false
+        annotations:
+          order: 45
+
+      # (46) kcq_drp2
+      kcq_drp2:
+        description: >-
+          kcq_drp2
+        range: string
+        required: false
+        annotations:
+          order: 46
+
+      # (47) Volt_Trhd
+      Volt_Trhd:
+        description: >-
+          Volt_Trhd
+        range: string
+        required: false
+        annotations:
+          order: 47
+
+      # (48) droop
+      droop:
+        description: >-
+          droop type: integer: 2- Q = kcq_drp2 * (1-v_dg)
+        range: integer
+        required: false
+        annotations:
+          order: 48
+
+      # (49) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic voltage or current spectrum for this IndMach012
+        range: float
+        required: false
+        annotations:
+          order: 49
+
+      # (50) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 50
+
+      # (51) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 51
+
+      # (52) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 52

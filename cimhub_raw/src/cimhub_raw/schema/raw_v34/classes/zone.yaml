@@ -1,0 +1,41 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/zone
+name: zone
+title: Zone Record
+description: raw RAW Zone Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  ZoneRecord:
+    description: Zone data record
+    attributes:
+      zone_number:
+        description: I - Zone number
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      zone_name:
+        description: ZONAME - Zone name (12 characters)
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ""  # No separator after last field
+          raw_default: ""

@@ -1,0 +1,100 @@
+# add_regulators(): each regulated phase is a single-phase step-voltage regulator, as CIMTBL-Models
+# regulator_example.cimtbl writes it (DSS-13): a VoltageRegulator with AutoTransformerEnds S (end 1, bus 1) and L
+# (end 2, bus 2), lugs S L SL, one series winding S->SL tapped at L; a RatioTapChanger on the tapped winding's end
+# and a TapChangerControl on the controlled bus's end. r1: one phase with line drop compensation; rb: a bank of three.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# The regulator catalogs are DistributionTransformerEquipment, built as every catalog is (by tank end).
+# untranscribed: mounting=POLE_MOUNT
+Table TransformerTankConfiguration: mRID, name, noLoadLoss (kW), loadLoss (kW)
+    xc_reg1666, reg1666, 0, 0
+    xc_reg3,    reg3,    0, 0
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind
+    xc_reg1666_end_1, xc_reg1666, 1, Y
+    xc_reg1666_end_2, xc_reg1666, 2, Y
+    xc_reg3_end_1,    xc_reg3,    1, Y
+    xc_reg3_end_2,    xc_reg3,    2, Y
+# derived: ratedU = 2.4018 x sqrt 3 = 4.16004 kV; reg3 baseS = 5000 / 3
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd
+    xc_reg1666_wdg_1, xc_reg1666, 4.16003962961893, 2.4018, 1666, 1666,               0.005, xc_reg1666_end_1
+    xc_reg1666_wdg_2, xc_reg1666, 4.16003962961893, 2.4018, 1666, 1666,               0.005, xc_reg1666_end_2
+    xc_reg3_wdg_1,    xc_reg3,    4.16003962961893, 2.4018, 5000, 1666.6666666666667, 0.001, xc_reg3_end_1
+    xc_reg3_wdg_2,    xc_reg3,    4.16003962961893, 2.4018, 5000, 1666.6666666666667, 0.001, xc_reg3_end_2
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_reg1666_mesh_12, xc_reg1666_wdg_1, xc_reg1666_wdg_2, 0.01
+    xc_reg3_mesh_12,    xc_reg3_wdg_1,    xc_reg3_wdg_2,    0.01
+
+# B17: the regulator catalog's tap data. derived: 32 taps over 0.9-1.1 pu -> +/-16, 0.625 % a step; the through
+# rating per phase (5000 / 3); neutralU the coil
+Table TapChangerInfo: mRID, name, ratedApparentPower (kVA), neutralU (kV), highStep, lowStep, neutralStep, stepVoltageIncrement
+    tci_reg1666, reg1666, 1666,               2.4018, 16, -16, 0, 0.625
+    tci_reg3,    reg3,    1666.6666666666667, 2.4018, 16, -16, 0, 0.625
+
+# untranscribed (no AutoTransformer configuration in cim18v17): the windings' r (0.005 %, 0.001 %) and x (0.01 %)
+Table VoltageRegulator: mRID, name, EquipmentContainer=fdr_atom
+    vr_r1,   r1
+    vr_rb_a, rb_a
+    vr_rb_b, rb_b
+    vr_rb_c, rb_c
+
+# node puts each end's Terminal on the regulator (<vr>_T1, _T2); a wye end gets N. baseU the coil; ratedS the
+# through rating per phase
+Table AutoTransformerEnd: mRID, AutoTransformer, endNumber, node, phase, baseU (kV), ratedS (kVA), BaseVoltage=bv_4p16kv
+    vr_r1_end1,   vr_r1,   1, b1, AN, 2.4018, 1666
+    vr_r1_end2,   vr_r1,   2, b3, AN, 2.4018, 1666
+    vr_rb_a_end1, vr_rb_a, 1, b1, AN, 2.4018, 1666.6666666666667
+    vr_rb_a_end2, vr_rb_a, 2, b3, AN, 2.4018, 1666.6666666666667
+    vr_rb_b_end1, vr_rb_b, 1, b1, BN, 2.4018, 1666.6666666666667
+    vr_rb_b_end2, vr_rb_b, 2, b3, BN, 2.4018, 1666.6666666666667
+    vr_rb_c_end1, vr_rb_c, 1, b1, CN, 2.4018, 1666.6666666666667
+    vr_rb_c_end2, vr_rb_c, 2, b3, CN, 2.4018, 1666.6666666666667
+
+Table TransformerLug: mRID, designation, sequenceNumber, TransformerEnd
+    vr_r1_lug_s,    S,  1, vr_r1_end1
+    vr_r1_lug_l,    L,  2, vr_r1_end2
+    vr_r1_lug_sl,   SL, 3,
+    vr_rb_a_lug_s,  S,  1, vr_rb_a_end1
+    vr_rb_a_lug_l,  L,  2, vr_rb_a_end2
+    vr_rb_a_lug_sl, SL, 3,
+    vr_rb_b_lug_s,  S,  1, vr_rb_b_end1
+    vr_rb_b_lug_l,  L,  2, vr_rb_b_end2
+    vr_rb_b_lug_sl, SL, 3,
+    vr_rb_c_lug_s,  S,  1, vr_rb_c_end1
+    vr_rb_c_lug_l,  L,  2, vr_rb_c_end2
+    vr_rb_c_lug_sl, SL, 3,
+
+# derived: ratedS = the buck/boost rating, the through rating x (max_tap - 1): 1666 x 0.1 = 166.6 kVA,
+# 1666.67 x 0.1 = 166.667 kVA
+Table TransformerWinding: mRID, ratedS (kVA), baseU (kV), FromTransformerEnd, ToTransformerEnd, FromTransformerLug, ToTransformerLug, AutoTransformerLug
+    vr_r1_wdg,   166.60000000000014, 2.4018, vr_r1_end1,   vr_r1_end2,   vr_r1_lug_s,   vr_r1_lug_sl,   vr_r1_lug_l
+    vr_rb_a_wdg, 166.66666666666683, 2.4018, vr_rb_a_end1, vr_rb_a_end2, vr_rb_a_lug_s, vr_rb_a_lug_sl, vr_rb_a_lug_l
+    vr_rb_b_wdg, 166.66666666666683, 2.4018, vr_rb_b_end1, vr_rb_b_end2, vr_rb_b_lug_s, vr_rb_b_lug_sl, vr_rb_b_lug_l
+    vr_rb_c_wdg, 166.66666666666683, 2.4018, vr_rb_c_end1, vr_rb_c_end2, vr_rb_c_lug_s, vr_rb_c_lug_sl, vr_rb_c_lug_l
+Update Table VoltageRegulator: mRID, AutoTransformerWinding
+    vr_r1,   vr_r1_wdg
+    vr_rb_a, vr_rb_a_wdg
+    vr_rb_b, vr_rb_b_wdg
+    vr_rb_c, vr_rb_c_wdg
+
+# On the 120 V PT basis x ptRatio 20: band center 122 V -> 2440 V, bandwidth 2 V -> 40 V, limits 110 / 130 V ->
+# 2200 / 2600 V. Line drop: R = 3 V x 20 / 700 A = 0.0857143 ohm, X = 9 V x 20 / 700 A = 0.257143 ohm (r1 only).
+# The controlled bus b3 is end 2's.
+# untranscribed: max_step=16
+Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, lineDropCompensation, lineDropR (ohm), lineDropX (ohm), reversible=false, minLimitVoltage (V), maxLimitVoltage (V), Terminal
+    vr_r1_ctrl,   r1, A, 2440, 40, true,  0.08571428571428572, 0.2571428571428571, 2200, 2600, vr_r1_T2
+    vr_rb_a_ctrl, rb_a, A, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_a_T2
+    vr_rb_b_ctrl, rb_b, B, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_b_T2
+    vr_rb_c_ctrl, rb_c, C, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_c_T2
+
+# On the tapped winding's end (tapped_winding 2, L). step = (tap - 1) / 0.625 %: r1 1.0125 -> 2;
+# rb 1.00625 / 1.0125 / 1.0 -> 1, 2, 0. ctRating = ct_primary in A; initialDelay = the controller's delay
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, highStep=16, lowStep=-16, neutralStep=0, normalStep=0, step, stepVoltageIncrement (percent)=0.625, neutralU (kV)=2.4018, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating=700, initialDelay (s)=30, AssetDatasheet
+    vr_r1_tap,   r1, vr_r1_end2,   vr_r1_ctrl,   2, tci_reg1666
+    vr_rb_a_tap, rb_a, vr_rb_a_end2, vr_rb_a_ctrl, 1, tci_reg3
+    vr_rb_b_tap, rb_b, vr_rb_b_end2, vr_rb_b_ctrl, 2, tci_reg3
+    vr_rb_c_tap, rb_c, vr_rb_c_end2, vr_rb_c_ctrl, 0, tci_reg3

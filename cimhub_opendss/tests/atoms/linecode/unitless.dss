@@ -1,0 +1,9 @@
+// Line codes with no units (DSS-3): "single" takes its lines' kft, "split" has lines in kft and mi (one
+// template per unit), "spare" no line uses (the magnitude gate: 0.134 per unit is km).
+New Circuit.unitless basekv=12.47
+New Linecode.single nphases=3 r1=0.0583 x1=0.1206 r0=0.1784 x0=0.4047
+New Linecode.split nphases=3 r1=0.0583 x1=0.1206 r0=0.1784 x0=0.4047
+New Linecode.spare nphases=3 r1=0.134 x1=0.3 r0=0.4 x0=0.9
+New Line.l1 bus1=sourcebus bus2=b1 linecode=single length=2 units=kft
+New Line.l2 bus1=b1 bus2=b2 linecode=split length=2 units=kft
+New Line.l3 bus1=b2 bus2=b3 linecode=split length=0.5 units=mi

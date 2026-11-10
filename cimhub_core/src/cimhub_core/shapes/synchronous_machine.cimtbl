@@ -1,0 +1,19 @@
+# Shape: synchronous machine on a node (distribution form). CIM load sign: generation is negative p. ratedU is line
+# to line. The phases column gives one RotatingMachinePhase per phase (a 1-phase motor's too). A PV-bus machine
+# (constant P and V) regulates its own terminal: its RegulatingControl comes after the machine, and an Update gives
+# the machine its control (the own-terminal form of shunt.cimtbl). targetValue is in V, the regulated line-to-line
+# voltage. Bus-branch variants (with GeneratingUnit) are added by the transmission waves.
+# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default.
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table SynchronousMachine: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), type, operatingMode, earthing, BaseVoltage, EquipmentContainer=fdr_shapes
+    gen_g1, g1, n2,    , 250,  0.48,  -100,  -20.3, ,     ,      generator, generator, false, bv_480v
+    gen_g2, g2, n2, A,   12,   0.48,  -10,   -3.3,  ,     ,      generator, generator, true,  bv_480v
+    gen_g3, g3, n1,    , 4000, 4.16,  -1000, -540,  1080, -1080, generator, generator, true,  bv_4p16kv
+
+Object RegulatingControl: mRID=gen_g3_ctrl, mode=voltage, discrete=false, enabled=true, targetValue=4160, targetDeadband=0, Terminal=gen_g3_T1
+
+Update SynchronousMachine: mRID=gen_g3, RegulatingControl=gen_g3_ctrl, controlEnabled=true

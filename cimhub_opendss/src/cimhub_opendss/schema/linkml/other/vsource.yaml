@@ -1,0 +1,518 @@
+id: https://gridappsd.github.io/dss-graph/other/vsource
+name: vsource
+title: OpenDSS Vsource Component Schema
+description: >-
+  LinkML schema for OpenDSS Vsource objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-35).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Vsource:
+    description: >-
+      A Vsource object in OpenDSS representing an ideal voltage source (slack bus)
+      in the distribution system. Used to represent the transmission-system
+      equivalent or a substation source.
+    class_uri: dss:Vsource
+    exact_mappings:
+      - cim:EnergySource
+    comments:
+      - >-
+        OpenDSS Vsource maps to CIM EnergySource. Voltage magnitude and angle
+        are SSH-profile attributes; nominal voltage and sequence impedances
+        (r, x, r0, x0) are EQ-profile attributes. The impedance comes from one of
+        R1/X1/R0/X0, MVAsc3/MVAsc1 or Isc3/Isc1 (cimhub_opendss mapping spec
+        #vsource); Z1/Z0/Z2/puZ1/puZ0/puZ2 are not mapped yet.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of bus to which the main terminal (1) is connected.
+        range: string
+        required: false
+        annotations:
+          order: 1
+          dss_default: sourcebus
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - "Structural mapping: equipment.Terminals[0].ConnectivityNode.name."
+
+      # (2) basekv
+      basekv:
+        description: >-
+          Base Source kV, usually phase-phase (L-L) unless positive-sequence or
+          single-phase model. Default is 115 kV.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 2
+          dss_default: float(115.0)
+        exact_mappings:
+          - cim:EnergySource.nominalVoltage
+        comments:
+          - >-
+            Import: EnergySource.nominalVoltage = Voltage(basekv, 'kV').
+            Export: basekv = nominalVoltage.to('kV'). CIM stores in V (SI base).
+
+      # (3) pu
+      pu:
+        description: >-
+          Per unit of the base voltage that the source is actually operating at.
+          Default is 1.0.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 3
+          dss_default: float(1.0)
+        close_mappings:
+          - cim:EnergySource.voltageMagnitude
+        comments:
+          - >-
+            Import: EnergySource.voltageMagnitude = Voltage(basekv * pu, 'kV') (SSH attribute).
+            Export: pu = voltageMagnitude.to('kV') / basekv.
+
+      # (4) angle
+      angle:
+        description: >-
+          Phase angle in degrees of first phase. Default is 0 degrees.
+        range: float
+        required: false
+        annotations:
+          order: 4
+          dss_default: float(0.0)
+        exact_mappings:
+          - cim:EnergySource.voltageAngle
+        comments:
+          - >-
+            Import: EnergySource.voltageAngle = AngleRadians(angle_deg * π/180) (SSH attribute).
+            Export: angle = voltageAngle.to('deg').
+
+      # (5) frequency
+      frequency:
+        description: >-
+          Source frequency. Default = circuit base frequency.
+        range: float
+        unit:
+          ucum_code: Hz
+        required: false
+        annotations:
+          order: 5
+        comments:
+          - "Not stored on CIM EnergySource; base frequency is a circuit-level property in CIM."
+
+      # (6) phases
+      phases:
+        description: >-
+          Number of phases. Default = 3.
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          dss_default: int(3)
+        comments:
+          - >-
+            Import: inferred from the bus1 node suffix via parse_bus_phases();
+            not stored directly on CIM EnergySource. Export: inferred from the
+            PhaseCode of the connected Terminal (single-phase codes → 1,
+            two-phase codes → 2, otherwise 3).
+
+      # (7) MVAsc3
+      MVAsc3:
+        description: >-
+          MVA Short circuit, 3-phase fault. Used to derive positive-sequence
+          impedance.
+        range: float
+        required: false
+        annotations:
+          order: 7
+          dss_default: float(2000.0)
+        close_mappings:
+          - cim:EnergySource.r
+          - cim:EnergySource.x
+        comments:
+          - >-
+            Import: with MVAsc1, x1r1 and x0r0, derives EnergySource r/x/r0/x0 as
+            VSource.pas RecalcElementData does (mapping spec #vsource).
+
+      # (8) MVAsc1
+      MVAsc1:
+        description: >-
+          MVA Short Circuit, 1-phase fault. Used to derive zero-sequence impedance.
+        range: float
+        required: false
+        annotations:
+          order: 8
+          dss_default: float(2100.0)
+        close_mappings:
+          - cim:EnergySource.r0
+          - cim:EnergySource.x0
+        comments:
+          - "Import: see MVAsc3."
+
+      # (9) x1r1
+      x1r1:
+        description: >-
+          Positive-sequence X/R ratio. Used with MVAsc3 to derive R1, X1.
+        range: float
+        required: false
+        annotations:
+          order: 9
+          dss_default: float(4.0)
+        comments:
+          - "Import: see MVAsc3. Not stored on CIM EnergySource."
+
+      # (10) x0r0
+      x0r0:
+        description: >-
+          Zero-sequence X/R ratio. Used with MVAsc1 to derive R0, X0.
+        range: float
+        required: false
+        annotations:
+          order: 10
+          dss_default: float(3.0)
+        comments:
+          - "Import: see MVAsc3. Not stored on CIM EnergySource."
+
+      # (11) Isc3
+      Isc3:
+        description: >-
+          Alternate method of defining source impedance via 3-phase fault current, amps.
+        range: float
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 11
+        comments:
+          - "Import: converted to MVAsc3, then as MVAsc3 (mapping spec #vsource)."
+
+      # (12) Isc1
+      Isc1:
+        description: >-
+          Alternate method of defining source impedance via single-phase fault current, amps.
+        range: float
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 12
+        comments:
+          - "Import: converted to MVAsc1, then as MVAsc3 (mapping spec #vsource)."
+
+      # (13) R1
+      R1:
+        description: >-
+          Positive-sequence resistance, ohms. Alternate way to define source impedance.
+        range: float
+        required: false
+        annotations:
+          order: 13
+        exact_mappings:
+          - cim:EnergySource.r
+        comments:
+          - "Import: EnergySource.r = Resistance(R1, 'ohm'). Export: R1 = r.to('ohm'). CIM stores in ohm (SI base)."
+
+      # (14) X1
+      X1:
+        description: >-
+          Positive-sequence reactance, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 14
+        exact_mappings:
+          - cim:EnergySource.x
+        comments:
+          - "Import: EnergySource.x = Reactance(X1, 'ohm'). Export: X1 = x.to('ohm')."
+
+      # (15) R0
+      R0:
+        description: >-
+          Zero-sequence resistance, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 15
+        exact_mappings:
+          - cim:EnergySource.r0
+        comments:
+          - "Import: EnergySource.r0 = Resistance(R0, 'ohm'). Export: R0 = r0.to('ohm')."
+
+      # (16) X0
+      X0:
+        description: >-
+          Zero-sequence reactance, ohms.
+        range: float
+        required: false
+        annotations:
+          order: 16
+        exact_mappings:
+          - cim:EnergySource.x0
+        comments:
+          - "Import: EnergySource.x0 = Reactance(X0, 'ohm'). Export: X0 = x0.to('ohm')."
+
+      # (17) ScanType
+      ScanType:
+        description: >-
+          {pos*| zero | none} Maintain specified sequence for harmonic solution.
+        range: string
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "OpenDSS-only (N/A): harmonic analysis sequence type; no CIM equivalent."
+
+      # (18) Sequence
+      Sequence:
+        description: >-
+          {pos*| neg | zero} Set the phase angles for the specified symmetrical
+          component sequence for non-harmonic solution modes.
+        range: string
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - "OpenDSS-only (N/A): sequence assignment for symmetrical component models; no CIM equivalent."
+
+      # (19) bus2
+      bus2:
+        description: >-
+          Name of bus to which 2nd terminal is connected. Default is the floating
+          neutral node.
+        range: string
+        required: false
+        annotations:
+          order: 19
+        comments:
+          - "OpenDSS-only (N/A): second terminal bus; CIM EnergySource is single-terminal (grounded neutral implicit)."
+
+      # (20) Z1
+      Z1:
+        description: >-
+          Positive-sequence equivalent source impedance, ohms, as a 2-element
+          complex array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 20
+        comments:
+          - "OpenDSS-only (N/A): alternate complex-array form for R1/X1; the current converter does not read Z1 (only scalar R1/X1 are consumed)."
+        todos:
+          - "Converter does not currently consume Z1 as an r/x source; would need to be added to the import fallback chain to roundtrip models that only set Z1."
+
+      # (21) Z0
+      Z0:
+        description: >-
+          Zero-sequence equivalent source impedance, ohms, as a 2-element
+          complex array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 21
+        comments:
+          - "OpenDSS-only (N/A): alternate complex-array form for R0/X0; the current converter does not read Z0 (only scalar R0/X0 are consumed)."
+        todos:
+          - "Converter does not currently consume Z0 as an r0/x0 source; would need to be added to the import fallback chain to roundtrip models that only set Z0."
+
+      # (22) Z2
+      Z2:
+        description: >-
+          Negative-sequence equivalent source impedance, ohms, as a 2-element
+          complex array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "OpenDSS-only (N/A): negative-sequence impedance; no CIM equivalent on EnergySource."
+
+      # (23) puZ1
+      puZ1:
+        description: >-
+          Positive-sequence impedance in per-unit on the baseMVA base, as a 2-element
+          complex array [R, X].
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 23
+        comments:
+          - "OpenDSS-only (N/A): alternate per-unit form for source impedance (z_base = basekv² / baseMVA); the current converter does not read puZ1."
+        todos:
+          - "Converter does not currently consume puZ1 as an r/x source; would need to be added to the import fallback chain to roundtrip models that only set puZ1."
+
+      # (24) puZ0
+      puZ0:
+        description: >-
+          Zero-sequence impedance in per-unit.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 24
+        comments:
+          - "OpenDSS-only (N/A): alternate per-unit form for zero-sequence impedance; the current converter does not read puZ0."
+        todos:
+          - "Converter does not currently consume puZ0 as an r0/x0 source; would need to be added to the import fallback chain to roundtrip models that only set puZ0."
+
+      # (25) puZ2
+      puZ2:
+        description: >-
+          Negative-sequence impedance in per-unit.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 25
+        comments:
+          - "OpenDSS-only (N/A): negative-sequence per-unit impedance; no CIM equivalent."
+
+      # (26) baseMVA
+      baseMVA:
+        description: >-
+          Base MVA for converting per-unit impedances. Default is 100 MVA.
+        range: float
+        required: false
+        annotations:
+          order: 26
+        comments:
+          - >-
+            OpenDSS-only (N/A): would be used as the per-unit base for
+            puZ1/puZ0/puZ2 conversion, but the converter does not currently
+            read those fields (see their comments); not stored on CIM
+            EnergySource.
+
+      # (27) Yearly
+      Yearly:
+        description: >-
+          LOADSHAPE object to use for the per-unit voltage for YEARLY-mode
+          simulations.
+        range: string
+        required: false
+        annotations:
+          order: 27
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (28) Daily
+      Daily:
+        description: >-
+          LOADSHAPE object to use for the per-unit voltage for DAILY-mode
+          simulations.
+        range: string
+        required: false
+        annotations:
+          order: 28
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (29) Duty
+      Duty:
+        description: >-
+          LOADSHAPE object to use for the per-unit voltage for DUTYCYCLE-mode
+          simulations.
+        range: string
+        required: false
+        annotations:
+          order: 29
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented."
+
+      # (30) Model
+      Model:
+        description: >-
+          {Thevenin* | Ideal} Specifies whether the Vsource is to be considered
+          a Thevenin short circuit model or a quasi-ideal voltage source.
+        range: string
+        required: false
+        annotations:
+          order: 30
+        comments:
+          - "OpenDSS-only (N/A): source model type selector; no CIM equivalent on EnergySource."
+
+      # (31) puZideal
+      puZideal:
+        description: >-
+          Per-unit series impedance when Model=Ideal.
+        range: float
+        required: false
+        annotations:
+          order: 31
+        comments:
+          - "OpenDSS-only (N/A): ideal source series impedance; no CIM equivalent."
+
+      # (32) spectrum
+      spectrum:
+        description: >-
+          Name of harmonic spectrum for this source.
+        range: string
+        required: false
+        annotations:
+          order: 32
+        comments:
+          - "OpenDSS-only (N/A): harmonic spectrum reference; no CIM equivalent in the standard profile."
+
+      # (33) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 33
+        comments:
+          - "Not stored on CIM EnergySource; base frequency is a circuit-level property."
+
+      # (34) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 34
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created."
+
+      # (35) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Vsource.V2 like=V1 ...
+        range: string
+        required: false
+        annotations:
+          order: 35
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

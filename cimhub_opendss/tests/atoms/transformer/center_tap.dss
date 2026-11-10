@@ -1,0 +1,3 @@
+// Center tap with a phase-to-phase primary (the padmount pattern, values from IEEE13_CDPSM XfmrCode CT5), inline
+New Transformer.ct_ab phases=1 windings=3 buses=[n1.1.2 house.1.0 house.0.2] kVs=[4.16 0.12 0.12] kVAs=[5 5 5]
+~ %Rs=[0.6 1.2 1.2] XHL=2.04 XHT=2.04 XLT=1.36 %imag=0.5 %noloadloss=0.2

@@ -1,0 +1,156 @@
+id: https://gridappsd.github.io/dss-graph/general/xycurve
+name: xycurve
+title: OpenDSS Xycurve Component Schema
+description: >-
+  LinkML schema for OpenDSS Xycurve objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-14).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Xycurve:
+    description: >-
+      A Xycurve object in OpenDSS.
+    class_uri: dss:Xycurve
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) npts
+      npts:
+        description: >-
+          Max number of points to expect in curve
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) Points
+      Points:
+        description: >-
+          One way to enter the points in a curve
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) Yarray
+      Yarray:
+        description: >-
+          Alternate way to enter Y values
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) Xarray
+      Xarray:
+        description: >-
+          Alternate way to enter X values
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) csvfile
+      csvfile:
+        description: >-
+          Switch input of  X-Y curve data to a CSV file containing X, Y points one per line
+        range: integer
+        required: false
+        annotations:
+          order: 5
+
+      # (6) sngfile
+      sngfile:
+        description: >-
+          Switch input of  X-Y curve data to a binary file of SINGLES containing X, Y points packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 6
+
+      # (7) dblfile
+      dblfile:
+        description: >-
+          Switch input of  X-Y  curve data to a binary file of DOUBLES containing X, Y points packed one after another
+        range: integer
+        required: false
+        annotations:
+          order: 7
+
+      # (8) x
+      x:
+        description: >-
+          Enter a value and then retrieve the interpolated Y value from the Y property
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) y
+      y:
+        description: >-
+          Enter a value and then retrieve the interpolated X value from the X property
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) Xshift
+      Xshift:
+        description: >-
+          Shift X property values (in/out) by this amount of offset
+        range: string
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Yshift
+      Yshift:
+        description: >-
+          Shift Y property values (in/out) by this amount of offset
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) Xscale
+      Xscale:
+        description: >-
+          Scale X property values (in/out) by this factor
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) Yscale
+      Yscale:
+        description: >-
+          Scale Y property values (in/out) by this factor
+        range: string
+        required: false
+        annotations:
+          order: 13
+
+      # (14) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 14

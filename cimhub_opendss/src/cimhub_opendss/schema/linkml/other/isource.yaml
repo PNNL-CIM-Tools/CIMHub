@@ -1,0 +1,165 @@
+id: https://gridappsd.github.io/dss-graph/other/isource
+name: isource
+title: OpenDSS Isource Component Schema
+description: >-
+  LinkML schema for OpenDSS Isource objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-15).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Isource:
+    description: >-
+      A Isource object in OpenDSS.
+    class_uri: dss:Isource
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of bus to which source is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) amps
+      amps:
+        description: >-
+          Magnitude of current source, each phase, in Amps
+        range: float
+        required: false
+        annotations:
+          order: 2
+
+      # (3) angle
+      angle:
+        description: >-
+          Phase angle in degrees of first phase: e
+        range: integer
+        required: false
+        annotations:
+          order: 3
+
+      # (4) frequency
+      frequency:
+        description: >-
+          Source frequency
+        range: string
+        required: false
+        annotations:
+          order: 4
+
+      # (5) phases
+      phases:
+        description: >-
+          Number of phases
+        range: integer
+        required: false
+        annotations:
+          order: 5
+
+      # (6) scantype
+      scantype:
+        description: >-
+          {pos*| zero | none} Maintain specified sequence for harmonic solution
+        range: float
+        required: false
+        annotations:
+          order: 6
+
+      # (7) sequence
+      sequence:
+        description: >-
+          {pos*| neg | zero} Set the phase angles for the specified symmetrical component sequence for non-harmonic solution modes
+        range: float
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Yearly
+      Yearly:
+        description: >-
+          LOADSHAPE object to use for the per-unit current for YEARLY-mode simulations
+        range: float
+        required: false
+        annotations:
+          order: 8
+
+      # (9) Daily
+      Daily:
+        description: >-
+          LOADSHAPE object to use for the per-unit current for DAILY-mode simulations
+        range: float
+        required: false
+        annotations:
+          order: 9
+
+      # (10) Duty
+      Duty:
+        description: >-
+          LOADSHAPE object to use for the per-unit current for DUTYCYCLE-mode simulations
+        range: float
+        required: false
+        annotations:
+          order: 10
+
+      # (11) Bus2
+      Bus2:
+        description: >-
+          Name of bus to which 2nd terminal is connected
+        range: string
+        required: false
+        annotations:
+          order: 11
+
+      # (12) spectrum
+      spectrum:
+        description: >-
+          Harmonic spectrum assumed for this source
+        range: string
+        required: false
+        annotations:
+          order: 12
+
+      # (13) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 13
+
+      # (14) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 14
+
+      # (15) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 15

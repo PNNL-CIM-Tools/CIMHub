@@ -1,0 +1,181 @@
+id: https://gridappsd.github.io/dss-graph/general/linespacing
+name: linespacing
+title: OpenDSS Linespacing Component Schema
+description: >-
+  LinkML schema for OpenDSS Linespacing objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-11).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Linespacing:
+    description: >-
+      A Linespacing object in OpenDSS defining the physical arrangement (XY
+      coordinates) of conductors in a cross-section, used for geometric
+      impedance calculation.
+    class_uri: dss:Linespacing
+    exact_mappings:
+      - cim:WireSpacingInfo
+    comments:
+      - >-
+        OpenDSS LineSpacing maps to CIM WireSpacingInfo. Each conductor position
+        is a WirePosition child object (WireSpacingInfo.WirePosition). X and H
+        arrays are converted to meters from the specified units.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) nconds
+      nconds:
+        description: >-
+          Number of wires in this geometry (phase + neutral conductors).
+        range: integer
+        required: false
+        minimum_value: 1
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:WirePosition
+        comments:
+          - "Import: total number of WirePosition children created on the WireSpacingInfo. Export: len(WireSpacingInfo.WirePosition)."
+
+      # (2) nphases
+      nphases:
+        description: >-
+          Number of retained phase conductors (nconds minus neutrals).
+        range: integer
+        required: false
+        minimum_value: 1
+        annotations:
+          order: 2
+        exact_mappings:
+          - cim:WireSpacingInfo.phaseWireCount
+        comments:
+          - >-
+            Import: WireSpacingInfo.phaseWireCount = nphases. Export: nphases is
+            recovered by counting labeled A/B/C phase conductors on an ACLineSegment
+            that references this WireSpacingInfo (falls back to nconds if no such
+            segment is found), since phaseWireCount is not read back directly.
+
+      # (3) x
+      x:
+        description: >-
+          Array of wire X coordinates (horizontal position), one per conductor.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 3
+        exact_mappings:
+          - cim:WirePosition.xCoord
+        comments:
+          - "Import: WirePosition.xCoord = x[i] converted to meters using units. Export: x[i] = xCoord in selected units."
+
+      # (4) h
+      h:
+        description: >-
+          Array of wire Heights (vertical position), one per conductor.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+        exact_mappings:
+          - cim:WirePosition.yCoord
+        comments:
+          - "Import: WirePosition.yCoord = h[i] converted to meters using units. Export: h[i] = yCoord in selected units."
+
+      # (5) units
+      units:
+        description: >-
+          Units for x and h: {mi|kft|km|m|Ft|in|cm}. Initial default is ft.
+        range: string
+        required: false
+        annotations:
+          order: 5
+        comments:
+          - "OpenDSS-only (N/A): unit selector consumed during import for x/h conversion to meters; not stored on CIM."
+
+      # (6) detailed
+      detailed:
+        description: >-
+          {Yes/True | No/False} Default = Yes. If No, uses equivalent spacing
+          formulas instead of actual geometry.
+        range: boolean
+        required: false
+        annotations:
+          order: 6
+        comments:
+          - "OpenDSS-only (N/A): computation mode selector; no CIM equivalent."
+
+      # (7) EqDistPhPh
+      EqDistPhPh:
+        description: >-
+          Equivalent distance between phase conductors.
+        range: string
+        required: false
+        annotations:
+          order: 7
+        comments:
+          - "OpenDSS-only (N/A): derived equivalent spacing parameter; not stored on CIM WireSpacingInfo."
+
+      # (8) EqDistPhN
+      EqDistPhN:
+        description: >-
+          Equivalent distance between phase and neutral conductors.
+        range: string
+        required: false
+        annotations:
+          order: 8
+        comments:
+          - "OpenDSS-only (N/A): derived equivalent spacing parameter; not stored on CIM."
+
+      # (9) AvgPhaseHeight
+      AvgPhaseHeight:
+        description: >-
+          Average height of phase conductors.
+        range: string
+        required: false
+        annotations:
+          order: 9
+        comments:
+          - "OpenDSS-only (N/A): derived average height; not stored on CIM."
+
+      # (10) AvgNeutralHeight
+      AvgNeutralHeight:
+        description: >-
+          Average height of neutral conductors.
+        range: string
+        required: false
+        annotations:
+          order: 10
+        comments:
+          - "OpenDSS-only (N/A): derived average height; not stored on CIM."
+
+      # (11) like
+      like:
+        description: >-
+          Make like another object, e.g.: New LineSpacing.S2 like=S1 ...
+        range: string
+        required: false
+        annotations:
+          order: 11
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

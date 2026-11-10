@@ -1,0 +1,394 @@
+id: https://gridappsd.github.io/dss-graph/controls/capcontrol
+name: capcontrol
+title: OpenDSS Capcontrol Component Schema
+description: >-
+  LinkML schema for OpenDSS Capcontrol objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-26).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Capcontrol:
+    description: >-
+      A Capcontrol object in OpenDSS representing a capacitor bank control that
+      monitors a line or transformer and switches the capacitor ON or OFF.
+    class_uri: dss:Capcontrol
+    exact_mappings:
+      - cim:RegulatingControl
+    comments:
+      - >-
+        OpenDSS Capcontrol maps to CIM RegulatingControl. The monitored element
+        Terminal is set as RegulatingControl.Terminal, and the controlled
+        LinearShuntCompensator is set as RegulatingControl.RegulatingCondEq.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) element
+      element:
+        description: >-
+          Full object name of the circuit element (typically a line or transformer)
+          to which the capacitor control's PT and/or CT are connected.
+        range: string
+        required: false
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:RegulatingControl.Terminal
+        comments:
+          - "Import: resolved to a Terminal on the named element; RegulatingControl.Terminal = that terminal. Export: element = Terminal.ConductingEquipment.name."
+
+      # (2) terminal
+      terminal:
+        description: >-
+          Number of the terminal of the circuit element to which the CapControl
+          is connected. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 2
+          dss_default: int(1)
+        related_mappings:
+          - cim:RegulatingControl.Terminal
+        comments:
+          - "Import: selects terminal index (1-based) on the monitored element for RegulatingControl.Terminal. Export: terminal = index of RegulatingControl.Terminal."
+
+      # (3) capacitor
+      capacitor:
+        description: >-
+          Name of Capacitor element which the CapControl controls.
+        range: string
+        required: false
+        annotations:
+          order: 3
+        related_mappings:
+          - cim:RegulatingControl.RegulatingCondEq
+        comments:
+          - "Import: resolved to a LinearShuntCompensator by name; RegulatingControl.RegulatingCondEq = that object. Export: capacitor = RegulatingCondEq.name."
+
+      # (4) type
+      type:
+        description: >-
+          {Current | voltage | kvar | PF | time | Follow} Control type.
+          Default is current.
+        range: string
+        required: false
+        annotations:
+          order: 4
+          dss_default: string(current)
+        exact_mappings:
+          - cim:RegulatingControl.mode
+        comments:
+          - >-
+            Import: 'voltage' → RegulatingControlModeKind.voltage; 'current' → currentFlow;
+            'kvar' → reactivePower; 'PF' → powerFactor; 'time' → timeScheduled.
+            Export: reverse enum lookup.
+
+      # (5) PTratio
+      PTratio:
+        description: >-
+          Ratio of the PT that converts the monitored voltage to the control voltage.
+          Default is 60.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 5
+          dss_default: float(60.0)
+        exact_mappings:
+          - cim:RegulatingControl.ptRatio
+        comments:
+          - "Import: RegulatingControl.ptRatio = PTratio. Export: PTratio = ptRatio."
+
+      # (6) CTratio
+      CTratio:
+        description: >-
+          Ratio of the CT from line amps to control ampere setting for current
+          and kvar control types. Default is 60.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 6
+          dss_default: float(60.0)
+        exact_mappings:
+          - cim:RegulatingControl.ctRatio
+        comments:
+          - "Import: RegulatingControl.ctRatio = CTratio. Export: CTratio = ctRatio."
+
+      # (7) ONsetting
+      ONsetting:
+        description: >-
+          Value at which the control arms to switch the capacitor ON (or ratchet
+          up a step). Default is 300 amps.
+        range: float
+        required: false
+        annotations:
+          order: 7
+          dss_default: float(300.0)
+          dss_name: "on"
+        exact_mappings:
+          - cim:RegulatingControl.targetValue
+        comments:
+          - "Import: targetValue = (ONsetting + OFFsetting) / 2 in primary units by type (CIMTBL_MAPPING.md#capcontrol). Export: ON and OFF = targetValue -/+ targetDeadband / 2, ON on the side the type fixes."
+
+      # (8) OFFsetting
+      OFFsetting:
+        description: >-
+          Value at which the control arms to switch the capacitor OFF.
+          Default is 200 amps.
+        range: float
+        required: false
+        annotations:
+          order: 8
+          dss_default: float(200.0)
+          dss_name: "off"
+        close_mappings:
+          - cim:RegulatingControl.targetDeadband
+        comments:
+          - >-
+            Import: targetDeadband = abs(OFFsetting - ONsetting) in primary units by type (the full
+            width of the band). Export: see ONsetting.
+
+      # (9) Delay
+      Delay:
+        description: >-
+          Time delay, in seconds, from when the control is armed before it sends
+          the switching command to turn ON. Default is 15 s.
+        range: float
+        required: false
+        annotations:
+          order: 9
+          dss_default: float(15.0)
+        exact_mappings:
+          - cim:ShuntCompensator.aVRDelay
+        comments:
+          - "Import: LinearShuntCompensator.aVRDelay = Delay (seconds). Export: Delay = aVRDelay."
+
+      # (10) VoltOverride
+      VoltOverride:
+        description: >-
+          {Yes | No}  Default is No. If Yes, enables the VoltOverride feature
+          using Vmax and Vmin limits.
+        range: boolean
+        required: false
+        annotations:
+          order: 10
+        comments:
+          - "OpenDSS-only (N/A): flag enabling the voltage override feature; no clean CIM mapping. Vmax/Vmin carry the actual limit values."
+
+      # (11) Vmax
+      Vmax:
+        description: >-
+          Maximum voltage, in volts, above which control is forced ON regardless
+          of control type setting.
+        range: float
+        required: false
+        annotations:
+          order: 11
+        exact_mappings:
+          - cim:RegulatingControl.maxAllowedTargetValue
+        comments:
+          - "Import: RegulatingControl.maxAllowedTargetValue = Vmax. Export: Vmax = maxAllowedTargetValue."
+
+      # (12) Vmin
+      Vmin:
+        description: >-
+          Minimum voltage, in volts, below which control is forced OFF regardless
+          of control type setting.
+        range: float
+        required: false
+        annotations:
+          order: 12
+        exact_mappings:
+          - cim:RegulatingControl.minAllowedTargetValue
+        comments:
+          - "Import: RegulatingControl.minAllowedTargetValue = Vmin. Export: Vmin = minAllowedTargetValue."
+
+      # (13) DelayOFF
+      DelayOFF:
+        description: >-
+          Time delay, in seconds, for control to turn OFF when present state is ON.
+          Default is 15 s.
+        range: float
+        required: false
+        annotations:
+          order: 13
+          dss_default: float(15.0)
+        comments:
+          - "OpenDSS-only (N/A): asymmetric OFF delay; no CIM equivalent distinguishing ON vs OFF delay in RegulatingControl."
+
+      # (14) DeadTime
+      DeadTime:
+        description: >-
+          Dead time after capacitor is turned OFF before it can be turned back ON.
+          Default is 300 s.
+        range: float
+        required: false
+        annotations:
+          order: 14
+        comments:
+          - "OpenDSS-only (N/A): re-close inhibit timer; no direct CIM equivalent in the standard profile."
+
+      # (15) CTPhase
+      CTPhase:
+        description: >-
+          Number of the phase being monitored for CURRENT control or one of
+          {AVG | MAX | MIN} for all phases. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 15
+        comments:
+          - "OpenDSS-only (N/A): CT monitoring phase selector; no direct CIM equivalent on RegulatingControl."
+
+      # (16) PTPhase
+      PTPhase:
+        description: >-
+          Number of the phase being monitored for VOLTAGE control or one of
+          {AVG | MAX | MIN} for all phases. Default is 1.
+        range: integer
+        required: false
+        annotations:
+          order: 16
+          dss_default: int(1)
+        exact_mappings:
+          - cim:RegulatingControl.monitoredPhase
+        comments:
+          - "Import: RegulatingControl.monitoredPhase set from PTPhase. Export: PTPhase from monitoredPhase."
+
+      # (17) VBus
+      VBus:
+        description: >-
+          Name of bus to use for voltage override function. Defaults to monitored
+          element bus.
+        range: float
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "OpenDSS-only (N/A): alternate monitoring bus for voltage override; no direct CIM equivalent."
+
+      # (18) EventLog
+      EventLog:
+        description: >-
+          {Yes/True* | No/False} Default is YES for CapControl. If Yes, writes
+          switching events to a log.
+        range: string
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+
+      # (19) UserModel
+      UserModel:
+        description: >-
+          Name of DLL containing user-written CapControl model.
+        range: string
+        required: false
+        annotations:
+          order: 19
+        comments:
+          - "OpenDSS-only (N/A): user model DLL hook; no CIM equivalent."
+
+      # (20) UserData
+      UserData:
+        description: >-
+          String that gets passed to the user-written CapControl model.
+        range: string
+        required: false
+        annotations:
+          order: 20
+        comments:
+          - "OpenDSS-only (N/A): user model data; no CIM equivalent."
+
+      # (21) pctMinkvar
+      pctMinkvar:
+        description: >-
+          For PF control option, min percent of total bank kvar at which control
+          will close capacitor switch. Default is 50.
+        range: float
+        required: false
+        annotations:
+          order: 21
+        comments:
+          - "OpenDSS-only (N/A): PF control deadband parameter; no direct CIM equivalent."
+
+      # (22) Reset
+      Reset:
+        description: >-
+          {Yes | No} If Yes, forces Reset of this CapControl.
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "OpenDSS-only (N/A): operational reset flag; no CIM equivalent."
+
+      # (23) ControlSignal
+      ControlSignal:
+        description: >-
+          Name of the load shape used for controlling the connection/disconnection
+          of the capacitor to the grid.
+        range: string
+        required: false
+        annotations:
+          order: 23
+        related_mappings:
+          - cim:SeasonDayTypeSchedule
+        todos:
+          - "Loadshape converter not yet implemented. ControlSignal LoadShape reference should map to a CIM SeasonDayTypeSchedule."
+
+      # (24) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 24
+        comments:
+          - "Not stored on CIM RegulatingControl; base frequency is a circuit-level property in CIM."
+
+      # (25) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 25
+          dss_default: "true"
+        exact_mappings:
+          - cim:RegulatingControl.enabled
+        comments:
+          - "Import: RegulatingControl.enabled = enabled. Export: enabled from RegulatingControl.enabled."
+
+      # (26) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Capcontrol.CC2 like=CC1 ...
+        range: string
+        required: false
+        annotations:
+          order: 26
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

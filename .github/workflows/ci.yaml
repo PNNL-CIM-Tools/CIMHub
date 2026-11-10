@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # The root pyproject resolves the cim-graph stack from sibling checkouts
+      # (../CIM-*) until those packages are released (UPSTREAM_REQUESTS U7), so
+      # CI lays out the same siblings. CIM-Tables is private: CIM_REPOS_TOKEN is a
+      # fine-grained read-only token for the PNNL-CIM-Tools repos.
+      - uses: actions/checkout@v4
+        with:
+          path: CIMHub
+      - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Graph, path: CIM-Graph }
+      - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Profiles, path: CIM-Profiles }
+      - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Builder, path: CIM-Builder }
+      - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Graph-Topology-Processor, path: CIM-Graph-Topology-Processor }
+      - uses: actions/checkout@v4
+        with: { repository: PNNL-CIM-Tools/CIM-Tables, path: CIM-Tables, token: "${{ secrets.CIM_REPOS_TOKEN }}" }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Leak gate
+        working-directory: CIMHub
+        run: scripts/leak-gate.sh
+      - name: Install
+        working-directory: CIMHub
+        run: uv sync --locked
+      - name: Test (one pytest process per package)
+        working-directory: CIMHub
+        run: scripts/test-all.sh

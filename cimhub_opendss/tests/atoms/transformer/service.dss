@@ -1,0 +1,2 @@
+// EPRI J1 Transformers.dss line 1: 1-phase service, 240 V 2-wire secondary (a single-phase system)
+New	Transformer.B13552-1A	phases=1	wdg=1	bus=B13552.1	kv=7.2	kVA=40	wdg=2	bus=X_B13552-A.1	kv=0.24	kVA=40	%loadloss=0.7221	%noloadloss=.2423	XHL=1.5158	normhkva=40	emerghkva=56

@@ -1,0 +1,12 @@
+# Prerequisites of the vsource atoms: the container and the BaseVoltages the topology walk gives.
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_atom, name=atom
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,   115
+    bv_69kv,    69
+    bv_12p47kv, 12.47
+    bv_7p2kv,   7.2
+    bv_4p16kv,  4.16

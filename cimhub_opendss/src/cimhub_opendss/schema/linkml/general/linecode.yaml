@@ -1,0 +1,444 @@
+id: https://gridappsd.github.io/dss-graph/general/linecode
+name: linecode
+title: OpenDSS Linecode Component Schema
+description: >-
+  LinkML schema for OpenDSS Linecode objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-28).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Linecode:
+    description: >-
+      A Linecode object in OpenDSS defining per-unit-length impedance data shared
+      by multiple lines. Depending on whether sequence impedances or matrices are
+      provided, the converter creates either a PerLengthSequenceImpedance or a
+      PerLengthPhaseImpedance + PhaseImpedanceData.
+    class_uri: dss:Linecode
+    close_mappings:
+      - cim:PerLengthSequenceImpedance
+    comments:
+      - >-
+        OpenDSS Linecode maps to CIM PerLengthSequenceImpedance when sequence
+        parameters (r1, x1, r0, x0, C1, C0) are used, or to
+        PerLengthPhaseImpedance + PhaseImpedanceData when matrix parameters are
+        used. All CIM impedance values are stored in SI units (ohm/m, S/m);
+        DSS per-unit-length values are scaled by the units property on import
+        and always exported in ohm/m (units=m).
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) nphases
+      nphases:
+        description: >-
+          Number of phases in the line this line code data represents. Default is 3.
+        range: integer
+        required: false
+        minimum_value: 1
+        maximum_value: 3
+        annotations:
+          order: 1
+          dss_default: int(3)
+        comments:
+          - >-
+            Import: determines routing to PerLengthSequenceImpedance (3-phase
+            balanced, no matrix given) or PerLengthPhaseImpedance (matrix given,
+            or fewer than 3 phases). Export: for PerLengthPhaseImpedance,
+            nphases = conductorCount (or the highest row index in
+            PhaseImpedanceData if conductorCount is absent); for
+            PerLengthSequenceImpedance, nphases is always written as 3.
+
+      # (2) r1
+      r1:
+        description: >-
+          Positive-sequence Resistance, ohms per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 2
+          dss_default: float(0.058)
+        exact_mappings:
+          - cim:PerLengthSequenceImpedance.r
+        comments:
+          - >-
+            Import: PerLengthSequenceImpedance.r = r1 converted to ohm/m via units.
+            Export: r1 = r in selected output units. CIM stores in ohm/m (SI base).
+
+      # (3) x1
+      x1:
+        description: >-
+          Positive-sequence Reactance, ohms per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 3
+          dss_default: float(0.1206)
+        exact_mappings:
+          - cim:PerLengthSequenceImpedance.x
+        comments:
+          - "Import: PerLengthSequenceImpedance.x = x1 converted to ohm/m. Export: x1 = x."
+
+      # (4) r0
+      r0:
+        description: >-
+          Zero-sequence Resistance, ohms per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 4
+          dss_default: float(0.1784)
+        exact_mappings:
+          - cim:PerLengthSequenceImpedance.r0
+        comments:
+          - >-
+            Import: PerLengthSequenceImpedance.r0 = r0 converted to ohm/m,
+            or 0.0 if r0 is not specified. Export: r0 = r0.
+
+      # (5) x0
+      x0:
+        description: >-
+          Zero-sequence Reactance, ohms per unit length.
+        range: float
+        required: false
+        annotations:
+          order: 5
+          dss_default: float(0.4047)
+        exact_mappings:
+          - cim:PerLengthSequenceImpedance.x0
+        comments:
+          - >-
+            Import: PerLengthSequenceImpedance.x0 = x0 converted to ohm/m,
+            or 0.0 if x0 is not specified. Export: x0 = x0.
+
+      # (6) C1
+      C1:
+        description: >-
+          Positive-sequence capacitance, nf per unit length.
+        range: string
+        required: false
+        annotations:
+          order: 6
+          dss_default: float(3.4)
+        close_mappings:
+          - cim:PerLengthSequenceImpedance.bch
+        comments:
+          - >-
+            Import: bch = 2π × 60 × C1_nF × 1e-9 × units_scale (S/m), or 0.0
+            if C1 is not specified. Export: C1 = bch / (2π × 60) × 1e9 in
+            nF/m, or omitted (null) if bch is 0.
+
+      # (7) C0
+      C0:
+        description: >-
+          Zero-sequence capacitance, nf per unit length.
+        range: string
+        required: false
+        annotations:
+          order: 7
+          dss_default: float(1.6)
+        close_mappings:
+          - cim:PerLengthSequenceImpedance.b0ch
+        comments:
+          - >-
+            Import: b0ch = 2π × 60 × C0_nF × 1e-9 × units_scale (S/m), or 0.0
+            if C0 is not specified. Export: C0 = b0ch / (2π × 60) × 1e9 in
+            nF/m, or omitted (null) if b0ch is 0.
+
+      # (8) units
+      units:
+        description: >-
+          One of (none|mi|km|kft|m|ft|in|cm) for the length units. Default is none
+          (use Line object's units).
+        range: string
+        required: false
+        annotations:
+          order: 8
+        comments:
+          - "OpenDSS-only (N/A): unit selector consumed during import for impedance per-length conversion; not stored on CIM."
+
+      # (9) rmatrix
+      rmatrix:
+        description: >-
+          Resistance matrix, lower triangle, ohms per unit length.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 9
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - "Import: triggers creation of PerLengthPhaseImpedance + PhaseImpedanceData elements instead of PerLengthSequenceImpedance."
+
+      # (10) xmatrix
+      xmatrix:
+        description: >-
+          Reactance matrix, lower triangle, ohms per unit length.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 10
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - "Import: processed alongside rmatrix into PhaseImpedanceData.x values."
+
+      # (11) cmatrix
+      cmatrix:
+        description: >-
+          Nodal Capacitance matrix, lower triangle, nf per unit length.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+          dss_format: matrix
+        related_mappings:
+          - cim:PerLengthPhaseImpedance
+        comments:
+          - >-
+            Import: each lower-triangle entry (row, col) is converted to a
+            PhaseImpedanceData.b value via b = 2π × 60 × C_nF × 1e-9 × units_scale
+            (S/m); the full lower-triangle is preserved (not reduced to a
+            diagonal). Export: PhaseImpedanceData.b is converted back to nF/m
+            and reassembled into the lower-triangle cmatrix string.
+
+      # (12) baseFreq
+      baseFreq:
+        description: >-
+          Frequency at which impedances are specified. Default is 60 Hz.
+        range: string
+        required: false
+        annotations:
+          order: 12
+        comments:
+          - "Not stored on CIM PerLengthImpedance; base frequency is a circuit-level property. Used in C→susceptance conversion."
+
+      # (13) normamps
+      normamps:
+        description: >-
+          Normal ampere limit on line.
+        range: float
+        required: false
+        annotations:
+          order: 13
+        related_mappings:
+          - cim:CurrentLimit
+        todos:
+          - "Per-length-impedance-level current limits not yet mapped. Should create a WireInfo.ratedCurrent or OperationalLimitSet if this is needed."
+
+      # (14) emergamps
+      emergamps:
+        description: >-
+          Emergency ampere limit on line (usually one-hour rating).
+        range: float
+        required: false
+        annotations:
+          order: 14
+        related_mappings:
+          - cim:CurrentLimit
+        todos:
+          - "Emergency rating not yet mapped; same path as normamps."
+
+      # (15) faultrate
+      faultrate:
+        description: >-
+          Number of faults per unit length per year.
+        range: float
+        required: false
+        annotations:
+          order: 15
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (16) pctperm
+      pctperm:
+        description: >-
+          Percentage of the faults that become permanent.
+        range: float
+        required: false
+        annotations:
+          order: 16
+        comments:
+          - "Reliability parameter; no CIM equivalent."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (17) repair
+      repair:
+        description: >-
+          Hours to repair.
+        range: string
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "Reliability parameter; no CIM equivalent."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (18) Kron
+      Kron:
+        description: >-
+          Kron = Y/N. If Yes, performs Kron reduction after impedance matrix
+          is computed.
+        range: string
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - "OpenDSS-only (N/A): Kron reduction flag applied before CIM storage; result is already reduced in the CIM object."
+
+      # (19) Rg
+      Rg:
+        description: >-
+          Carson earth return resistance per unit length used to compute
+          impedance values at base frequency.
+        range: float
+        required: false
+        annotations:
+          order: 19
+        exact_mappings:
+          - cim:PerLengthImpedance.rg
+        comments:
+          - >-
+            Import: PerLengthImpedance.rg = Rg converted to ohm/m, set only
+            if Rg is specified. Export: Rg = rg.to('ohmPerm').
+
+      # (20) Xg
+      Xg:
+        description: >-
+          Carson earth return reactance per unit length used to compute
+          impedance values at base frequency.
+        range: float
+        required: false
+        annotations:
+          order: 20
+        exact_mappings:
+          - cim:PerLengthImpedance.xg
+        comments:
+          - >-
+            Import: PerLengthImpedance.xg = Xg converted to ohm/m, set only
+            if Xg is specified. Export: Xg = xg.to('ohmPerm').
+
+      # (21) rho
+      rho:
+        description: >-
+          Default=100 meter ohms. Earth resistivity.
+        range: float
+        required: false
+        annotations:
+          order: 21
+        comments:
+          - "OpenDSS-only (N/A): earth resistivity; not persisted on CIM PerLengthImpedance. Use EarthResistivity on the Line for this."
+
+      # (22) neutral
+      neutral:
+        description: >-
+          Designates which conductor is the neutral conductor that will be
+          eliminated by Kron reduction.
+        range: string
+        required: false
+        annotations:
+          order: 22
+        comments:
+          - "OpenDSS-only (N/A): Kron reduction index; not persisted after reduction."
+
+      # (23) B1
+      B1:
+        description: >-
+          Alternate way to specify C1. MicroS per unit length.
+        range: string
+        required: false
+        annotations:
+          order: 23
+        close_mappings:
+          - cim:PerLengthSequenceImpedance.bch
+        todos:
+          - "B1 input path not yet implemented. B1 (µS/unit) → bch via bch = B1 × 1e-6 / length_factor."
+
+      # (24) B0
+      B0:
+        description: >-
+          Alternate way to specify C0. MicroS per unit length.
+        range: string
+        required: false
+        annotations:
+          order: 24
+        close_mappings:
+          - cim:PerLengthSequenceImpedance.b0ch
+        todos:
+          - "B0 input path not yet implemented."
+
+      # (25) Seasons
+      Seasons:
+        description: >-
+          Defines the number of ratings to be defined for the wire, to be used
+          only when defining seasonal ratings using the Ratings property.
+        range: integer
+        required: false
+        annotations:
+          order: 25
+        comments:
+          - "OpenDSS-only (N/A): seasonal ratings count; no direct CIM equivalent on PerLengthImpedance."
+
+      # (26) Ratings
+      Ratings:
+        description: >-
+          An array of ratings to be used when the seasonal ratings flag is True.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 26
+        related_mappings:
+          - cim:OperationalLimit
+        todos:
+          - "Seasonal ratings converter not yet implemented for LineCode."
+
+      # (27) LineType
+      LineType:
+        description: >-
+          Code designating the type of line.
+        range: float
+        required: false
+        annotations:
+          order: 27
+        related_mappings:
+          - cim:PSRType
+        todos:
+          - "LineType → PSRType mapping not yet implemented for LineCode."
+
+      # (28) like
+      like:
+        description: >-
+          Make like another object, e.g.: New LineCode.L2 like=L1 ...
+        range: string
+        required: false
+        annotations:
+          order: 28
+        comments:
+          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."

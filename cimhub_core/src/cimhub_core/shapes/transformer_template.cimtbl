@@ -1,0 +1,20 @@
+# Shape: transformer template, 3-phase (catalog). One TankEnd and one Winding per side; series
+# impedance on the mesh, in percent on the From winding's baseU^2/baseS. Source: a 3-phase catalog transformer (IEEE 13 XFM1).
+
+Profile = cim18v17
+
+Object TransformerTankConfiguration: mRID=xc_xfm1, name=XFM1, percentImpedance=2.2825, percentMagnetizingCurrent=0, noLoadLoss (kW)=0
+
+Table TransformerTankEnd: mRID, endNumber, connectionKind, grounded, rground (ohm), xground (ohm), TankConfiguration=xc_xfm1
+    xc_xfm1_end_1, 1, Yn, true, 0, 0
+    xc_xfm1_end_2, 2, Yn, true, 0, 0
+
+# Nameplate 4160GY/2400 - 480Y/277, 500 kVA: ratedU/ratedS as printed; baseU the coil (phase-to-neutral on wye),
+# baseS the per-phase kVA (500 / 3), the percent -> ohm basis.
+Table TransformerWinding: mRID, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), FromTransformerEnd, TankConfiguration=xc_xfm1
+    xc_xfm1_wdg_1, 4.16, 2.4,   500, 166.667, xc_xfm1_end_1
+    xc_xfm1_wdg_2, 0.48, 0.277, 500, 166.667, xc_xfm1_end_2
+
+Object TransformerCore: mRID=xc_xfm1_core, form=shellForm, TankConfiguration=xc_xfm1
+
+Object TransformerMeshImpedance: mRID=xc_xfm1_mesh_12, FromWinding=xc_xfm1_wdg_1, ToWinding=xc_xfm1_wdg_2, r (percent)=1.1, x (percent)=2.0

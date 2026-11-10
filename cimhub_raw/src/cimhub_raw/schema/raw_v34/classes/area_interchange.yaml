@@ -1,0 +1,77 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/area_interchange
+name: area_interchange
+title: Area Interchange Record
+description: raw RAW Area Interchange Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  AreaInterchangeRecord:
+    description: Area interchange data record
+    attributes:
+      area_number:
+        description: I - Area number
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      bus_number:
+        description: ISW - Slack bus number for this area
+        range: integer
+        required: false
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      pdes:
+        description: PDES - Desired net interchange (export) in MW
+        range: float
+        required: false
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      ptol:
+        description: PTOL - Interchange tolerance in MW
+        range: float
+        required: false
+        unit:
+          ucum_code: "MW"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 10.0
+
+      name:
+        description: ARNAME - Area name
+        range: string
+        required: false
+        annotations:
+          order: 5
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ""  # No separator after last field
+          raw_default: ""

@@ -1,0 +1,152 @@
+id: https://gridappsd.github.io/dss-graph/controls/fuse
+name: fuse
+title: OpenDSS Fuse Component Schema
+description: >-
+  LinkML schema for OpenDSS Fuse objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-13).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Fuse:
+    description: >-
+      A Fuse object in OpenDSS.
+    class_uri: dss:Fuse
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) MonitoredObj
+      MonitoredObj:
+        description: >-
+          Full object name of the circuit element, typically a line, transformer, load, or generator, to which the Fuse is connected
+        range: string
+        required: false
+        annotations:
+          order: 1
+
+      # (2) MonitoredTerm
+      MonitoredTerm:
+        description: >-
+          Number of the terminal of the circuit element to which the Fuse is connected
+        range: integer
+        required: false
+        annotations:
+          order: 2
+
+      # (3) SwitchedObj
+      SwitchedObj:
+        description: >-
+          Name of circuit element switch that the Fuse controls
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) SwitchedTerm
+      SwitchedTerm:
+        description: >-
+          Number of the terminal of the controlled element in which the switch is controlled by the Fuse
+        range: integer
+        required: false
+        annotations:
+          order: 4
+
+      # (5) FuseCurve
+      FuseCurve:
+        description: >-
+          Name of the TCC Curve object that determines the fuse blowing
+        range: float
+        required: false
+        annotations:
+          order: 5
+
+      # (6) RatedCurrent
+      RatedCurrent:
+        description: >-
+          Multiplier or actual phase amps for the phase TCC curve
+        range: float
+        required: false
+        annotations:
+          order: 6
+          dss_default: float(1.0)
+
+      # (7) Delay
+      Delay:
+        description: >-
+          Fixed delay time (sec) added to Fuse blowing time determined from the TCC curve
+        range: string
+        required: false
+        annotations:
+          order: 7
+
+      # (8) Action
+      Action:
+        description: >-
+          DEPRECATED
+        range: string
+        required: false
+        annotations:
+          order: 8
+
+      # (9) Normal
+      Normal:
+        description: >-
+          ARRAY of strings {Open | Closed} representing the Normal state of the fuse in each phase of the controlled element
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 9
+          dss_default: string(closed)
+
+      # (10) State
+      State:
+        description: >-
+          ARRAY of strings {Open | Closed} representing the Actual state of the fuse in each phase of the controlled element
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 10
+          dss_default: string(closed)
+
+      # (11) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings
+        range: float
+        required: false
+        annotations:
+          order: 11
+
+      # (12) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled
+        range: boolean
+        required: false
+        annotations:
+          order: 12
+
+      # (13) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 13

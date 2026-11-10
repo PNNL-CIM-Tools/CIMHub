@@ -1,0 +1,94 @@
+id: https://gridappsd.github.io/dss-graph/general/dynamicexp
+name: dynamicexp
+title: OpenDSS Dynamicexp Component Schema
+description: >-
+  LinkML schema for OpenDSS Dynamicexp objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-7).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Dynamicexp:
+    description: >-
+      A Dynamicexp object in OpenDSS.
+    class_uri: dss:Dynamicexp
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+
+      # (1) nvariables
+      nvariables:
+        description: >-
+          (Int) Number of state variables to be considered in the differential equation
+        range: integer
+        required: false
+        annotations:
+          order: 1
+
+      # (2) varnames
+      varnames:
+        description: >-
+          ([String]) Array of strings with the names of the state variables
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 2
+
+      # (3) var
+      var:
+        description: >-
+          (String) Activates the state variable using the given name
+        range: string
+        required: false
+        annotations:
+          order: 3
+
+      # (4) varidx
+      varidx:
+        description: >-
+          (Int) read-only, returns the index of the active state variable
+        range: string
+        required: false
+        annotations:
+          order: 4
+
+      # (5) expression
+      expression:
+        description: >-
+          It is the differential expression using OpenDSS RPN syntax
+        range: string
+        required: false
+        annotations:
+          order: 5
+
+      # (6) Domain
+      Domain:
+        description: >-
+          It is the domain for which the equation is defined, it can be one of [time*, dq]
+        range: string
+        required: false
+        annotations:
+          order: 6
+
+      # (7) like
+      like:
+        description: >-
+          Make like another object, e
+        range: string
+        required: false
+        annotations:
+          order: 7

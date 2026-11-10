@@ -1,0 +1,48 @@
+# OpenDSS LineGeometry -> EarthResistivity, WireConfiguration + WireSequenceConfiguration (catalog). No impedance is computed: geometry stays geometry.
+# Source table: LineGeometry (records: 3)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry
+
+Profile = cim18v17
+
+# the deck's earthmodel and its geometry lines' rho (ohm-m: the profile types rho Resistance)
+# defaulted: earthmodel=Deri, rho=100.0
+Object EarthResistivity: mRID=earth, name=deri, earthModelType=deri, rho (ohm)=100.0
+
+# untranscribed: reduce=true
+Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500, EarthResistivity=earth
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_601, sequenceNumber, WireInfo
+    wc_601_1, 1, wire_acsr_556_5
+    wc_601_2, 2, wire_acsr_556_5
+    wc_601_3, 3, wire_acsr_556_5
+    wc_601_4, 4, wire_acsr_4/0
+
+# synthesized: the inline positions of LineGeometry 606
+Object XYSpacing: mRID=wc_606_spc, name=606, isTemplate=true
+
+Table XYConductorPosition: mRID, XYSpacing=wc_606_spc, sequenceNumber, xCoord (ft), yCoord (ft), kind
+    wc_606_spc_1, 1, -0.5, -4.0, phase
+    wc_606_spc_2, 2, 0.0,  -4.0, phase
+    wc_606_spc_3, 3, 0.5,  -4.0, phase
+
+# untranscribed: reduce=true
+Object WireConfiguration: mRID=wc_606, name=606, numberOfPhases=3, WireSpacing=wc_606_spc, EarthResistivity=earth
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_606, sequenceNumber, WireInfo
+    wc_606_1, 1, cn_cn_250
+    wc_606_2, 2, cn_cn_250
+    wc_606_3, 3, cn_cn_250
+
+# synthesized: the inline positions of LineGeometry 607
+Object XYSpacing: mRID=wc_607_spc, name=607, isTemplate=true
+
+Table XYConductorPosition: mRID, XYSpacing=wc_607_spc, sequenceNumber, xCoord (ft), yCoord (ft), kind
+    wc_607_spc_1, 1, 0.0,  -4.0, phase
+    wc_607_spc_2, 2, 0.25, -4.0, neutral
+
+# untranscribed: reduce=true
+Object WireConfiguration: mRID=wc_607, name=607, numberOfPhases=1, WireSpacing=wc_607_spc, EarthResistivity=earth
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_607, sequenceNumber, WireInfo
+    wc_607_1, 1, ts_ts_1/0
+    wc_607_2, 2, wire_cu_1/0

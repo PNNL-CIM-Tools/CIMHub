@@ -1,0 +1,24 @@
+# OpenDSS bus coordinates -> a Location per equipment, a PositionPoint per Terminal at its bus.
+# Source table: Buscoords (records: 2)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#buscoords
+
+Profile = cim18v17
+
+Object CoordinateSystem: mRID=crs_latlong, name=LatLongCoords, crsUrn=urn:ogc:def:crs:OGC:1.3:CRS84
+
+Table Location: mRID, name, CoordinateSystem=crs_latlong
+    src_source_loc, source_Loc
+    ln_l1_loc,      l1_Loc
+    ld_ld_loc,      ld_Loc
+
+# copied: x, y of the Terminal's bus; sequenceNumber = the Terminal's
+Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
+    src_source_loc_1, src_source_loc, 1, -119.0696656, 46.6965308
+    ln_l1_loc_1,      ln_l1_loc,      1, -119.0696656, 46.6965308
+    ln_l1_loc_2,      ln_l1_loc,      2, -119.0702,    46.6971
+    ld_ld_loc_1,      ld_ld_loc,      1, -119.0702,    46.6971
+
+Update Table PowerSystemResource: mRID, Location
+    src_source, src_source_loc
+    ln_l1,      ln_l1_loc
+    ld_ld,      ld_ld_loc

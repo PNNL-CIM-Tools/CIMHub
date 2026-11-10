@@ -1,0 +1,59 @@
+[project]
+name = "cimhub"
+version = "3.0.0"
+description = "CIMHub: CIM converters built on .cimtbl (development workspace)"
+requires-python = ">=3.11,<3.14"
+license = "BSD-3-Clause"
+dependencies = [
+    "cimhub-core",
+    "cimhub-opendss",
+    "cimhub-raw",
+    "cimhub-gdm",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pydantic",
+    "ruff~=0.14.0",
+    "opendssdirect.py~=0.9.4",   # the engine is a test oracle only
+    "NREL-ditto~=0.1.8",         # DSS -> GDM for cimhub_gdm sweeps and DSS/GDM parity tests; pins grid-data-models==2.4.1
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+# Add each spoke here when its wave starts (cleared packages only; see the split-readiness skill).
+members = [
+    "cimhub_core",
+    "cimhub_opendss",
+    "cimhub_raw",
+    "cimhub_gdm",
+]
+
+[tool.uv.sources]
+cimhub-core = { workspace = true }
+cimhub-opendss = { workspace = true }
+cimhub-raw = { workspace = true }
+cimhub-gdm = { workspace = true }
+# Sibling checkouts of the cim-graph stack, for local development only. The packages pin the released
+# versions; release.yml builds with --no-sources and tests the wheels against PyPI.
+cim-graph = { path = "../CIM-Graph", editable = true }
+cim-profiles = { path = "../CIM-Profiles", editable = true }
+cim-tables = { path = "../CIM-Tables", editable = true }
+cim-builder = { path = "../CIM-Builder", editable = true }
+cim-topology = { path = "../CIM-Graph-Topology-Processor", editable = true }
+
+[tool.pytest.ini_options]
+# One pytest process per package (scripts/test-all.sh): cimtables sets the CIM profile
+# and model scope process-wide, and tests/ dirs stay free of __init__.py.
+addopts = "-ra"
+markers = [
+    "roundtrip: end-to-end format roundtrip tests needing full models or external solvers",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"

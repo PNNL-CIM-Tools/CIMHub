@@ -1,0 +1,39 @@
+# Shape: equipment behind its own transformer (bus-branch; plan C8), for formats that give the transformer as data of
+# the equipment: PSS/E RAW's generator step-up (RT, XT, GTAP) and two-terminal DC converter transformer (EBAS, TR,
+# TAP, RC, XC). A 2-winding PowerTransformer <eq>_xf joins the network bus (end 1) to an internal TopologicalNode
+# <eq>_int (end 2) that only the transformer and the equipment touch, and the equipment sits on that node. r and x
+# are on end 1 (cim18v17's 2-winding form), in ohm on its ratedU. The internal node has no busNumber, sits in the
+# network bus's Substation, and has the BaseVoltage of end 2's ratedU. A tap on end 1 is a RatioTapChanger.
+# Load with cimtables.load_model(path, model_cls=BusBranchModel).
+
+Profile = cim18v17
+
+Object BasePower: mRID=sbase, basePower (MVA)=100
+Object GeographicalRegion: mRID=rgn_shapes, name=shapes
+Object SubGeographicalRegion: mRID=srgn_shapes, name=shapes, Region=rgn_shapes
+Object Substation: mRID=sub_bus1, name=bus1, Region=srgn_shapes
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_230kv,  230
+    bv_120kv,  120
+    bv_13p8kv, 13.8
+
+Table TopologicalNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=sub_bus1
+    bus_1,      1,                bv_230kv
+    gen_g1_int, g1 terminal,      bv_13p8kv
+    cs_c1_int,  c1 valve side,    bv_120kv
+
+Table PowerTransformer: mRID, name, EquipmentContainer=sub_bus1
+    gen_g1_xf, g1 step-up
+    cs_c1_xf,  c1 converter transformer
+
+Table PowerTransformerEnd: mRID, bus, endNumber, ratedU (kV), ratedS (MVA), r (ohm), x (ohm), BaseVoltage, PowerTransformer
+    gen_g1_xf_1, bus_1,      1, 230,  150, 0.35, 42.3, bv_230kv,  gen_g1_xf
+    gen_g1_xf_2, gen_g1_int, 2, 13.8, 150, ,     ,     bv_13p8kv, gen_g1_xf
+    cs_c1_xf_1,  bus_1,      1, 230,  ,    0.0,  12.9, bv_230kv,  cs_c1_xf
+    cs_c1_xf_2,  cs_c1_int,  2, 120,  ,    ,     ,     bv_120kv,  cs_c1_xf
+
+Object RatioTapChanger: mRID=cs_c1_xf_tap1, lowStep=1, highStep=33, neutralStep=17, neutralU (kV)=230, stepVoltageIncrement=1.25, step=19, ltcFlag=true, controlEnabled=true, TransformerEnd=cs_c1_xf_1
+
+Object SynchronousMachine: mRID=gen_g1, name=g1, bus=gen_g1_int, ratedS (MVA)=150, p (MW)=-120, q (MVAr)=-30, BaseVoltage=bv_13p8kv, EquipmentContainer=sub_bus1
+Object CsConverter: mRID=cs_c1, name=c1, bus=cs_c1_int, operatingMode=rectifier, numberOfValves=12, BaseVoltage=bv_120kv, EquipmentContainer=sub_bus1

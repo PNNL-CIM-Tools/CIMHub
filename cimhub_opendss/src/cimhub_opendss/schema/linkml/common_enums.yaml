@@ -1,0 +1,229 @@
+id: https://gridappsd.github.io/dss-graph/common_enums
+name: common_enums
+title: OpenDSS Common Enumerations
+description: >-
+  Shared enumeration types used across multiple OpenDSS component schemas.
+  This file consolidates common enumerations to avoid URI conflicts when
+  importing multiple schemas.
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+
+enums:
+  ConnectionType:
+    description: Electrical connection topology
+    permissible_values:
+      wye:
+        description: "Wye (star) connection"
+        aliases: ["Y", "LN"]
+        meaning: cim:WindingConnection.Y
+      delta:
+        description: "Delta connection"
+        aliases: ["Delta", "LL"]
+        meaning: cim:WindingConnection.D
+
+  GeneratorModel:
+    description: >-
+      Integer code for generation variation model with voltage.
+    permissible_values:
+      ConstantPQ:
+        description: "1: Generator injects constant kW at specified power factor"
+        meaning: dss:GeneratorModel.1
+      ConstantZ:
+        description: "2: Generator is modeled as constant admittance"
+        meaning: dss:GeneratorModel.2
+      ConstantPV:
+        description: "3: Const kW, constant kV (like transmission P-V generator)"
+        meaning: dss:GeneratorModel.3
+      ConstantPFixedQ:
+        description: "4: Const kW, Fixed Q (Q never varies)"
+        meaning: dss:GeneratorModel.4
+      ConstantPFixedQX:
+        description: "5: Const kW, Fixed Q as constant reactance"
+        meaning: dss:GeneratorModel.5
+      UserModel:
+        description: "6: Compute load injection from User-written Model"
+        meaning: dss:GeneratorModel.6
+      CurrentLimited:
+        description: "7: Constant kW, kvar, but current-limited below Vminpu"
+        meaning: dss:GeneratorModel.7
+
+  DispatchMode:
+    description: Generator dispatch mode
+    permissible_values:
+      Default:
+        description: "Generator is either always on or follows dispatch curve"
+      Loadlevel:
+        description: "Generator comes on when load level exceeds dispatch value"
+      Price:
+        description: "Generator comes on when price exceeds dispatch value"
+
+  GenStatus:
+    description: Generator dispatch status
+    permissible_values:
+      Fixed:
+        description: "Dispatch multipliers do not apply, always at full power when ON"
+      Variable:
+        description: "Follows dispatch curves"
+
+  LoadModel:
+    description: >-
+      Integer code for load variation model with voltage.
+    permissible_values:
+      ConstantPQ:
+        description: "1: Standard constant P+jQ load (Default)"
+        meaning: dss:LoadModel.1
+        annotations:
+          dss_value: 1
+      ConstantZ:
+        description: "2: Constant impedance load"
+        meaning: dss:LoadModel.2
+        annotations:
+          dss_value: 2
+      ConstantPQuadQ:
+        description: "3: Const P, Quadratic Q (like a motor)"
+        meaning: dss:LoadModel.3
+        annotations:
+          dss_value: 3
+      CVR:
+        description: "4: Nominal Linear P, Quadratic Q (feeder mix, use with CVRfactor)"
+        meaning: dss:LoadModel.4
+        annotations:
+          dss_value: 4
+      ConstantI:
+        description: "5: Constant Current Magnitude"
+        meaning: dss:LoadModel.5
+        annotations:
+          dss_value: 5
+      ConstantPFixedQ:
+        description: "6: Const P, Fixed Q"
+        meaning: dss:LoadModel.6
+        annotations:
+          dss_value: 6
+      ConstantPFixedZQ:
+        description: "7: Const P, Fixed Impedance Q"
+        meaning: dss:LoadModel.7
+        annotations:
+          dss_value: 7
+      ZIPV:
+        description: "8: ZIPV model (7 values)"
+        meaning: dss:LoadModel.8
+        annotations:
+          dss_value: 8
+
+  LoadStatus:
+    description: Load participation in multiplier adjustments
+    permissible_values:
+      Variable:
+        description: "All multipliers apply"
+      Fixed:
+        description: "No load multipliers apply; growth multipliers still apply"
+      Exempt:
+        description: "Not modified by global load multiplier; daily multipliers still apply"
+
+  LeadLagType:
+    description: Phase shift designation for Delta-Wye connections
+    permissible_values:
+      Lead:
+        description: "Lead phase shift"
+      Lag:
+        description: "Lag phase shift (default)"
+      ANSI:
+        description: "ANSI 30 deg lag (same as Lag)"
+      Euro:
+        description: "European Dy11 connection (same as Lead)"
+
+  CoreType:
+    description: Transformer core type for GIC analysis
+    permissible_values:
+      Shell:
+        description: "Shell core (default)"
+      "5-leg":
+        description: "5-leg core"
+      "3-Leg":
+        description: "3-leg core"
+      "1-phase":
+        description: "Single-phase core"
+      "core-1-phase":
+        description: "Core-type single-phase"
+      "4-leg":
+        description: "4-leg core"
+
+  LengthUnit:
+    description: Units of length measurement
+    permissible_values:
+      none:
+        description: "No units specified - assumes length units match impedance units"
+      mi:
+        description: "Miles"
+      kft:
+        description: "Kilofeet"
+      km:
+        description: "Kilometers"
+      m:
+        description: "Meters"
+      Ft:
+        description: "Feet"
+      in:
+        description: "Inches"
+      cm:
+        description: "Centimeters"
+
+  EarthModelType:
+    description: Earth model for impedance calculations
+    permissible_values:
+      Carson:
+        description: "Carson earth model"
+      FullCarson:
+        description: "Full Carson earth model"
+      Deri:
+        description: "Deri earth model"
+
+  LineTypeCode:
+    description: Code designating the type of line
+    permissible_values:
+      OH:
+        description: "Overhead line (default)"
+      UG:
+        description: "Underground"
+      UG_TS:
+        description: "Underground tape shield"
+      UG_CN:
+        description: "Underground concentric neutral"
+      SWT_LDBRK:
+        description: "Switch load break"
+      SWT_FUSE:
+        description: "Switch fuse"
+      SWT_SECT:
+        description: "Switch sectionalizer"
+      SWT_REC:
+        description: "Switch recloser"
+      SWT_DISC:
+        description: "Switch disconnect"
+      SWT_BRK:
+        description: "Switch breaker"
+      SWT_ELBOW:
+        description: "Switch elbow"
+      BUSBAR:
+        description: "Busbar"
+
+  SwitchState:
+    description: Discrete state of switchable capacitor step
+    permissible_values:
+      ON:
+        description: "Capacitor step energized"
+        annotations:
+          cim_equivalent: "cim:SwitchState.closed"
+      OFF:
+        description: "Capacitor step de-energized"
+        annotations:
+          cim_equivalent: "cim:SwitchState.open"

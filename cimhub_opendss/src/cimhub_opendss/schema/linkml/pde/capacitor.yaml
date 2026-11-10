@@ -1,0 +1,366 @@
+id: https://gridappsd.github.io/dss-graph/pde/capacitor
+name: capacitor
+title: OpenDSS Capacitor Component Schema
+description: >-
+  LinkML schema for OpenDSS Capacitor objects. Attributes are ordered to match
+  the positional indices required by the OpenDSS parser (1-21).
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  dss: https://gridappsd.github.io/dss-graph/
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: dss
+default_range: string
+
+imports:
+  - linkml:types
+  - ../common_enums
+
+classes:
+  Capacitor:
+    description: >-
+      A Capacitor object in OpenDSS representing a shunt or series capacitor
+      bank connected to the distribution system.
+    class_uri: dss:Capacitor
+    exact_mappings:
+      - cim:LinearShuntCompensator
+    comments:
+      - >-
+        OpenDSS Capacitor maps to CIM LinearShuntCompensator. Per-phase
+        susceptance information is carried on LinearShuntCompensatorPhase
+        collections.
+    attributes:
+      name:
+        description: Object name. Must be unique per object type.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - "Direct name mapping; no conversion needed."
+
+      # (1) bus1
+      bus1:
+        description: >-
+          Name of first bus of 2-terminal capacitor. If only one bus specified,
+          Bus2 defaults to this bus, Node 0 (Yg shunt bank).
+        range: string
+        required: false
+        annotations:
+          order: 1
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Structural mapping via traversal: equipment.Terminals[0].ConnectivityNode.name.
+            Phase suffix reconstructed from LinearShuntCompensatorPhase objects ordered
+            by SinglePhaseKind (A=1, B=2, C=3).
+
+      # (2) bus2
+      bus2:
+        description: >-
+          Name of 2nd bus. Defaults to all phases connected to first bus, node 0.
+        range: string
+        required: false
+        annotations:
+          order: 2
+        comments:
+          - >-
+            N/A for CIM roundtrip. OpenDSS shunt capacitors are single-terminal in CIM
+            (LinearShuntCompensator has one Terminal; neutral is implicit via grounded=True).
+            Bus2 is meaningful only for two-terminal series capacitor configurations.
+
+      # (3) phases
+      phases:
+        description: >-
+          Number of phases.
+        range: integer
+        required: false
+        annotations:
+          order: 3
+          dss_default: int(3)
+        related_mappings:
+          - cim:LinearShuntCompensatorPhase
+        comments:
+          - >-
+            Import: inferred from the bus phase specification in bus1 via parse_bus_phases().
+            Export: derived as len(shunt.ShuntCompensatorPhase).
+
+      # (4) kvar
+      kvar:
+        description: >-
+          Total kvar, if one step, or ARRAY of kvar ratings for each step.
+          Evenly divided among phases.
+        range: float
+        multivalued: true
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 4
+          dss_default: float(1200.0)
+        close_mappings:
+          - cim:LinearShuntCompensator.bPerSection
+        comments:
+          - >-
+            Import: bPerSection = 0.001 × kvar_total / kV² / Numsteps (kvar → siemens).
+            Export: kvar_total = bPerSection × kV² × 1000 × Numsteps.
+            Same physical concept; CIM stores susceptance per section in SI (siemens).
+
+      # (5) kv
+      kv:
+        description: >-
+          For 2, 3-phase, kV phase-phase. Otherwise specify actual can rating.
+        range: float
+        required: false
+        minimum_value: 0.0
+        annotations:
+          order: 5
+          dss_default: float(12.47)
+        exact_mappings:
+          - cim:LinearShuntCompensator.nomU
+        comments:
+          - "Unit conversion: kV ↔ V (CIM stores SI base units via cim.Voltage)."
+
+      # (6) conn
+      conn:
+        description: >-
+          ={wye | delta |LN |LL}  Default is wye, which is equivalent to LN.
+        range: ConnectionType
+        required: false
+        annotations:
+          order: 6
+          dss_default: string(wye)
+        exact_mappings:
+          - cim:LinearShuntCompensator.phaseConnection
+        comments:
+          - >-
+            Import: wye → PhaseShuntConnectionKind.Y (grounded=True, b0PerSection=bPerSection);
+            delta → PhaseShuntConnectionKind.D (grounded=False, b0PerSection=0).
+            Export: PhaseShuntConnectionKind.Y → wye; D → delta.
+
+      # (7) cmatrix
+      cmatrix:
+        description: >-
+          Nodal cap. matrix, lower triangle, microfarads. All steps are assumed
+          the same if this property is used.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 7
+          dss_format: matrix
+        related_mappings:
+          - cim:LinearShuntCompensatorPhase.bPerSection
+        comments:
+          - >-
+            Lossy roundtrip: CIM stores only per-phase susceptance (diagonal elements);
+            off-diagonal coupling terms are discarded. Diagonal index for phase i:
+            i*(i+1)/2 + i. Conversion: B = 2π × 60 × C_µF × 1e-6 (siemens).
+
+      # (8) cuf
+      cuf:
+        description: >-
+          ARRAY of Capacitance, each phase, for each step, microfarads.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 8
+        related_mappings:
+          - cim:LinearShuntCompensatorPhase.bPerSection
+        comments:
+          - "Import: flat per-phase µF array converted to per-phase bPerSection. B = 2π × 60 × C_µF × 1e-6 (siemens)."
+        todos:
+          - "Exporter: B → µF per-phase path not yet implemented; cuf is not written on export."
+
+      # (9) R
+      R:
+        description: >-
+          ARRAY of series resistance in each phase (line), ohms. Default is 0.0.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 9
+        comments:
+          - "OpenDSS filter-capacitor feature (series R for harmonic filter tuning); no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension (e.g. cim:LinearShuntCompensator.seriesR) to roundtrip."
+
+      # (10) XL
+      XL:
+        description: >-
+          ARRAY of series inductive reactance(s) in each phase (line) for
+          filter, ohms at base frequency. Default is 0.0.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 10
+        comments:
+          - "OpenDSS harmonic filter tuning parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension (e.g. cim:LinearShuntCompensator.seriesXL) to roundtrip."
+
+      # (11) Harm
+      Harm:
+        description: >-
+          ARRAY of harmonics to which each step is tuned. Zero = no filter.
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+        comments:
+          - "OpenDSS harmonic filter tuning parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension (e.g. cim:LinearShuntCompensator.filterHarmonic) to roundtrip."
+
+      # (12) Numsteps
+      Numsteps:
+        description: >-
+          Number of steps in this capacitor bank. Default = 1.
+        range: integer
+        required: false
+        annotations:
+          order: 12
+          dss_default: int(1)
+        exact_mappings:
+          - cim:LinearShuntCompensator.maximumSections
+        comments:
+          - >-
+            Import: mapped to both normalSections and maximumSections.
+            Export: read from maximumSections.
+
+      # (13) states
+      states:
+        description: >-
+          ARRAY of integers {1|0} states representing the state of each step (on|off).
+        range: integer
+        required: false
+        multivalued: true
+        annotations:
+          order: 13
+        close_mappings:
+          - cim:LinearShuntCompensator.sections
+        comments:
+          - >-
+            Import: count of on steps (states[i] > 0) stored as sections (float).
+            Export: sections → [1]*current_sections + [0]*(Numsteps - current_sections).
+
+      # (14) normamps
+      normamps:
+        description: >-
+          Normal rated current.
+        range: float
+        required: false
+        annotations:
+          order: 14
+        related_mappings:
+          - cim:OperationalLimit
+        comments:
+          - >-
+            Intended target: a normal-rating CurrentLimit on an OperationalLimitSet
+            attached to this equipment's terminal.
+        todos:
+          - "Converter not yet implemented; requires OperationalLimitSet + CurrentLimit creation."
+
+      # (15) emergamps
+      emergamps:
+        description: >-
+          Maximum or emerg current.
+        range: float
+        required: false
+        annotations:
+          order: 15
+        related_mappings:
+          - cim:OperationalLimit
+        comments:
+          - >-
+            Intended target: an emergency-rating CurrentLimit on an OperationalLimitSet
+            attached to this equipment's terminal.
+        todos:
+          - "Converter not yet implemented; requires OperationalLimitSet + CurrentLimit creation."
+
+      # (16) faultrate
+      faultrate:
+        description: >-
+          Failure rate per year.
+        range: string
+        required: false
+        annotations:
+          order: 16
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (17) pctperm
+      pctperm:
+        description: >-
+          Percent of failures that become permanent.
+        range: float
+        required: false
+        annotations:
+          order: 17
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (18) repair
+      repair:
+        description: >-
+          Hours to repair.
+        range: string
+        required: false
+        annotations:
+          order: 18
+        comments:
+          - "Reliability parameter; no CIM equivalent in the standard profile."
+        todos:
+          - "Requires CIM extension to roundtrip."
+
+      # (19) basefreq
+      basefreq:
+        description: >-
+          Base Frequency for ratings.
+        range: float
+        required: false
+        annotations:
+          order: 19
+        comments:
+          - >-
+            Not stored on CIM LinearShuntCompensator; base frequency is a circuit-level
+            property in CIM. The µF ↔ susceptance conversion uses 60 Hz hardcoded;
+            a non-60-Hz capacitor would need this from circuit context.
+        todos:
+          - "Extract base frequency from circuit-level CIM attributes for non-60Hz systems."
+
+      # (20) enabled
+      enabled:
+        description: >-
+          {Yes|No or True|False} Indicates whether this element is enabled.
+        range: boolean
+        required: false
+        annotations:
+          order: 20
+          dss_default: "true"
+        comments:
+          - "OpenDSS-only (N/A): if False, converter returns None. All CIM LinearShuntCompensator objects are assumed enabled."
+
+      # (21) like
+      like:
+        description: >-
+          Make like another object, e.g.: New Capacitor.C2 like=c1 ...
+        range: string
+        required: false
+        annotations:
+          order: 21
+        comments:
+          - "OpenDSS-only (N/A): DSS template inheritance resolved at parser time; no CIM equivalent."
+
+# Enums are imported from common_enums.yaml
