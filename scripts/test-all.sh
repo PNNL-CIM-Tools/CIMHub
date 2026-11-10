@@ -14,7 +14,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
-# PYTEST overrides the runner: release.yml tests the built wheels in their own venv.
+# PYTEST overrides the runner: the publish-*.yml workflows test the built wheel in its own venv.
 read -ra RUNNER <<< "${PYTEST:-uv run pytest}"
 
 PYTEST_ARGS=()

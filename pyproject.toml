@@ -39,7 +39,7 @@ cimhub-opendss = { workspace = true }
 cimhub-raw = { workspace = true }
 cimhub-gdm = { workspace = true }
 # Sibling checkouts of the cim-graph stack, for local development only. The packages pin the released
-# versions; release.yml builds with --no-sources and tests the wheels against PyPI.
+# versions; the publish-*.yml workflows build with --no-sources and test the wheels against PyPI.
 cim-graph = { path = "../CIM-Graph", editable = true }
 cim-profiles = { path = "../CIM-Profiles", editable = true }
 cim-tables = { path = "../CIM-Tables", editable = true }
