@@ -10,7 +10,7 @@ its README).
 The master imports the parts in `MAPPING_ORDER` (`importer/glm_to_cimtbl.py`), which follows the plan's section 2.
 S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 the six catalog files; S3a the six line and switch
 files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transformer.cimtbl` (after the
-switches).
+switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own).
 
 ## master
 
@@ -1868,3 +1868,172 @@ transformer, the link's solver outputs and state and inrush settings (as S3a) ar
 | `phase_B_secondary_flux_value` | `Optional[float]` |  | untranscribed | inrush state |
 | `phase_C_secondary_flux_value` | `Optional[float]` |  | untranscribed | inrush state |
 
+## S3c: regulators (by the user's direction 2026-11-09; built 2026-11-09)
+
+S3c maps `regulator` with its `regulator_configuration` (GLM-7), plan section 2 rows 6 and 11. The user's
+direction: **a regulator is a `VoltageRegulator` with two `AutoTransformerEnd`s, never a `TransformerTankEnd`; an LTC
+on a step-down transformer would be a `PowerTransformerEnd`; the lack of impedance is why `AutoTransformerEnd`
+exists.** GLM has no LTC: a GridLAB-D regulator has no voltage ratio (it is 1:1 by construction), and a
+`transformer` has no tap changer. So every GLM regulator is a `VoltageRegulator`, and the core `voltage_regulator`
+shape applies without its mesh. GridLAB-D citations are to `powerflow/regulator.cpp` and
+`regulator_configuration.cpp`.
+
+| # | artifact | native class (records) | CIM | mRID |
+|---|---|---|---|---|
+| 6 | none | regulator_configuration (36) | none on its own: CIM has no regulator template (an AutoTransformer has none), so the mapper copies a configuration's values onto every unit that names it | |
+| 11 | `regulator.cimtbl` | regulator (36) | `VoltageRegulator` + two `AutoTransformerEnd`s + `TapChangerControl` + `RatioTapChanger` per unit | `xf_<name>[_<phase>]`, `rc_<name>[_<phase>]` |
+
+**What the decks hold** (the 28 readable decks): 36 regulators, one configuration each, all `WYE_WYE`.
+`control_level` is never set (GridLAB-D's default `INDIVIDUAL`); `Control` is `OUTPUT_VOLTAGE` 28, `MANUAL` 7 (the
+Java exports, whose `LINE_DROP_COMP` is commented out), `REMOTE_NODE` 1 (IEEE13_houses, which stops at the walk).
+`Type` is set on the 6 Java-export configurations (`B`); `CT_phase`, `PT_phase`, `reverse_flow_control` and the
+regulator's `tap_X` are never set. Phases: `ABCN` 30 and the Java exports' `CAB`, `BCA`, `CBA`, `ABC`, `CA`, `A`.
+`raise_taps` = `lower_taps` = 16 and `regulation` 0.1 everywhere. No regulator sets `regulator_resistance`.
+
+```
+# IEEE13_cdpsm xf_Reg (phases CAB, MANUAL, Type B, tap_pos 10 / 8 / 11): three units, as the DSS import's reg1-3
+Table VoltageRegulator: mRID, name, construction, EquipmentContainer=fdr_IEEE13_cdpsm
+    xf_xf_Reg_A, xf_Reg_A, typeB                       # and _B, _C
+Table AutoTransformerEnd: mRID, AutoTransformer, node, phase, endNumber, grounded=true, baseU (V), BaseVoltage
+    xf_xf_Reg_A_1, xf_xf_Reg_A, brkr, AN, 1, 2401.78, bv_4p16kv
+    xf_xf_Reg_A_2, xf_xf_Reg_A, rg60, AN, 2, 2401.78, bv_4p16kv
+Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled, monitoredPhase, ptRatio, targetValue, targetDeadband, lineDropCompensation, lineDropR (ohm), lineDropX (ohm), Terminal
+    rc_xf_Reg_A, xf_Reg_A, false, A, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_A_T2
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, initialDelay (s), subsequentDelay (s)
+    rc_xf_Reg_A_tap, xf_Reg_A, xf_xf_Reg_A_2, rc_xf_Reg_A, -16, 16, 10, 0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
+```
+
+| GLM slot | kind | target |
+|---|---|---|
+| regulator `name` | derived | `VoltageRegulator.name` = name (BANK) or name_<phase> (INDIVIDUAL); mRID `xf_` + that; the control `rc_` + that, its tap changer + `_tap` |
+| `from`, `to` | structural | end 1 and end 2 `node`: the root bus (GLM-4); each end's `BaseVoltage` is the walk's |
+| `phases` | structural | the units and each end's `phase`: the letter + N (a gang unit ABCN), N or not written (every unit is wye to neutral) |
+| `configuration` | structural | its values on every unit (no template) |
+| `tap_A`/`_B`/`_C`, `tap_pos_A`/`_B`/`_C` | derived | `RatioTapChanger.step` of the phase's unit: the regulator's `tap_X`, else the configuration's `tap_pos_X`, else 0 (`regulator.cpp:146`, `:262`) |
+| `raise_taps`, `lower_taps` | copied, derived | `highStep`, `lowStep` = -`lower_taps`; `neutralStep` 0 |
+| `regulation` | derived | `stepVoltageIncrement` = regulation / raise_taps (GridLAB-D's `tapChangePer`, `:244`), in percent |
+| `Type` | mapped | `VoltageRegulator.construction`: A `typeA`, B `typeB` (default B) |
+| `Control` | structural | `MANUAL` (default): `TapChangerControl.enabled` = `RatioTapChanger.controlEnabled` = false; `OUTPUT_VOLTAGE`, `LINE_DROP_COMP`: true; `lineDropCompensation` on `LINE_DROP_COMP` only |
+| `band_center`, `band_width` | derived | `targetValue`, `targetDeadband` (full band, as CIM's): primary volts as written, × `power_transducer_ratio` on `LINE_DROP_COMP`, whose band is on the PT secondary (`:1316`) |
+| `power_transducer_ratio`, `current_transducer_ratio` | copied | `TapChangerControl.ptRatio`, `RatioTapChanger.ptRatio`, `RatioTapChanger.ctRatio` |
+| `compensator_r_setting_X`, `compensator_x_setting_X` | derived | `lineDropR`, `lineDropX` (ohm) of the phase's unit = setting × PT ratio / CT ratio (`line_drop_ohms`; S3c-4) |
+| `dwell_time`, `time_delay` | derived | `initialDelay` = `subsequentDelay` = dwell_time + time_delay (S3c-5) |
+| `control_level` | structural | `INDIVIDUAL`: a unit per wired phase; `BANK`: one gang unit on ABC (GLM-7) |
+| `PT_phase`, `CT_phase` | structural | `BANK`: `monitoredPhase` (the two must agree); `INDIVIDUAL`: raise when set (GridLAB-D ignores them there) |
+| `regulator_resistance` | untranscribed | NR's stand-in (default `powerflow::default_resistance`, 1e-4 Ω); the ends are ideal (S3c-2) |
+| the link's ratings | structural | each unit's own `OperationalLimitSet`, its phase's `continuous_rating_X`/`emergency_rating_X` (a gang unit: as S3a-5) |
+| `msg_mode`, `remote_voltage_X`, `tap_X_change_count`, the link outputs and header slots | untranscribed | co-simulation messaging, solver output or state, as S3a |
+
+### Fail fast (S3c)
+
+| condition | why |
+|---|---|
+| `connect_type` other than `WYE_WYE` | `regulator_configuration.cpp:232`: NR takes only `WYE_WYE`; every deck is `WYE_WYE` |
+| `raise_taps` or `lower_taps` unset or not positive; `regulation` unset or 0 on an automatic `Control` | `:198`, `:212` throw |
+| `Control REMOTE_NODE`, `sense_node` set | S3c-6 |
+| `reverse_flow_control` other than `LOCK_NONE`; `PT_phase`/`CT_phase` on `INDIVIDUAL`; a `BANK` not on ABC, whose `PT_phase` and `CT_phase` are not one equal phase, or whose taps differ | in no deck; a gang holds one tap |
+| a tap outside -lower_taps..+raise_taps | GridLAB-D would clamp it on the first tap change, not at init |
+| compensator settings without both transducer ratios | the primary ohms need both; in no deck |
+| phases with S or nothing in ABC; status `OPEN` | as S3b |
+
+### Decisions for S3c
+
+| # | question | decision |
+|---|---|---|
+| S3c-1 | Form (GLM-7) | **The user's: a `VoltageRegulator` with two `AutoTransformerEnd`s, no tank end; an LTC on a step-down transformer would be a `PowerTransformerEnd`, and GLM has none.** One unit per wired phase on `INDIVIDUAL` (each its own `RatioTapChanger` on end 2 and `TapChangerControl` on its `T2`, as the DSS import's IEEE 13), one gang unit on `BANK`. `mRID` `xf_` as the core shape and the DSS import |
+| S3c-2 | Impedance and kVA | **The user's: the lack of impedance is why `AutoTransformerEnd` exists.** GridLAB-D's regulator has no impedance and no kVA (its NR stand-in resistance is a solver setting), so the ends carry no `ratedS` and there is no `TransformerMeshImpedance` |
+| S3c-3 | Coil voltage | `baseU` = `neutralU` = the from bus's `nominal_voltage` as written (phase to neutral, 2401.78 V): the coil the band works against (`regulator.cpp:1380` compares the to-node's phase voltage). A gang unit's is that × √3 (line to line, as the core shape's 3-phase `vr3`) |
+| S3c-4 | Line drop | GridLAB-D's compensator drop is `(I / current_transducer_ratio) × (R + jX)` on the PT secondary (`:1330`), so the primary ohms are the setting × PT ratio / CT ratio: `line_drop_ohms` with the CT ratio where it takes a CT primary rating (GridLAB-D's CT secondary is 1 A). `ctRating` is not written (GLM has no CT primary rating). The settings are written on every unit that has them, also on `MANUAL`, where `lineDropCompensation` is false |
+| S3c-5 | Delays | GridLAB-D waits `dwell_time` and then `time_delay` before every tap change, the first and each later one (`regulator.cpp:598`-`611`: a change re-arms the dwell, and the out-of-band branch then sets the mechanism time after it), so `initialDelay` = `subsequentDelay` = the sum. An exporter writes `dwell_time` 0 and `time_delay` = `subsequentDelay` |
+| S3c-6 | `REMOTE_NODE` | Raises: a `TapChangerControl.Terminal` is a terminal, and a sense node is a bus with no single terminal to name; its one deck (IEEE13_houses) stops at the walk. As the DSS import's remote `bus` |
+| S3c-7 | Ratings | Each 1-phase unit's `OperationalLimitSet` carries its own phase's ratings (6 Java-export regulators: 763.58 / 1041.25 A); a gang unit's are the link's, as S3a-5 |
+
+**Core owes (plan section 7):** the transformer getter's `AUTO` form reads `ratedS` (required) and a mesh between
+the ends; an ideal regulator (no `ratedS`, no mesh) has to read as a 1:1 unit before an exporter can read these.
+S3c's tests do not go through the getter.
+
+**Tests.** An atom `tests/atoms/regulator/regulator.glm` on the line atom: `OUTPUT_VOLTAGE` written `CAB` with a
+regulator `tap_B`, IEEE123's `MANUAL` `CA` unit (`Type A`, compensator settings), a `LINE_DROP_COMP` 1-phase unit with
+`regulator_resistance`, a `BANK` gang unit monitoring B, and an unused configuration; its golden, 10 fail-fast
+cases, the IEEE13_cdpsm golden, and on every deck **the engine check (GLM-16):** each unit's tap changer gives
+GridLAB-D's tap and step, its control GridLAB-D's band and enabled state, a unit per wired phase, and no mesh.
+
+**Expected differences from the DSS import of IEEE13 (GLM-16).** Equal: three units AN/BN/CN on brkr→rg60, the
+taps 10/8/11, ±16 steps of 0.625 %, PT ratio 20, CT ratio 3500, the control on `T2`. Different, all from what GLM
+holds: no `ratedS` (DSS 1666 kVA) and no mesh (DSS 0.01 % r and x); `baseU`/`neutralU` 2401.78 V (DSS 2.4 kV);
+`enabled`/`controlEnabled` false and no band (the Java export wrote `MANUAL` and commented the band out);
+`lineDropR`/`X` 0.0171 / 0.0514 Ω against DSS 0.0857 / 0.2571 Ω (the Java export copied the DSS dial volts with the
+DSS CT ratio 700 / 0.2 A, which GridLAB-D reads on a 1 A secondary); `initialDelay` 15 and `subsequentDelay` 15
+(DSS 15 and 2: the export dropped `tapdelay`); no `ctRating`, no reverse settings; mRIDs `xf_xf_Reg_A` against
+`xf_reg1`; the units carry limit sets.
+
+### Built (2026-11-09)
+
+- `importer/cimtbl/regulator.py` (`map_regulators`; `FIELDS` and `CONFIGURATION_FIELDS`), wired into
+  `MAPPING_ORDER` (row 11, after the transformers) and `CLASSIFIED` (both classes).
+- Atom `tests/atoms/regulator/regulator.glm` with its golden; golden `tests/goldens/IEEE13_cdpsm/regulator`; the
+  master golden's new `Import`; `tests/test_cimtbl_regulator.py`.
+- Every deck that binds S3b binds S3c: 27 of 29, the same two deck defects; 35 regulators as 102 units (33
+  3-phase, one 2-phase, one 1-phase).
+
+### Field tables (generated: `fields_table(cls, records, fields=...)`, samples from tests/decks and the atom)
+
+The object header and the link slots (as S3a) are left out.
+
+#### regulator_configuration
+
+| RegulatorConfiguration field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, RegulatorConfigurationName]` | `rcon_reg3`, `rcon_creg1a`, `rcon_creg2a` | structural | read by every regulator that names it; CIM has no regulator template, so nothing carries it but the units' row comments |
+| `connect_type` | `Union[str, ForwardRef('ConnectType'), NoneType]` | `WYE_WYE` | structural | WYE_WYE (every unit wye, grounded); any other raises (regulator_configuration.cpp:232: NR takes WYE_WYE only) |
+| `band_center` | `Optional[float]` | `7500.0`, `2440.0`, `122.0` | derived | targetValue = band_center (V): primary volts on OUTPUT_VOLTAGE and MANUAL, x power_transducer_ratio on LINE_DROP_COMP, whose band is on the PT secondary (regulator.cpp:1316) |
+| `band_width` | `Optional[float]` | `120.0`, `40.0`, `2.0` | derived | targetDeadband = band_width (V): primary volts on OUTPUT_VOLTAGE and MANUAL, x power_transducer_ratio on LINE_DROP_COMP, whose band is on the PT secondary (regulator.cpp:1316); the full band, as CIM's |
+| `time_delay` | `Optional[float]` | `30.0` | derived | initialDelay = subsequentDelay = dwell_time + time_delay (s): every tap change waits both (regulator.cpp:598-611, S3c-5); default 0 |
+| `dwell_time` | `Optional[float]` | `15.0` | derived | with time_delay; default 0 |
+| `raise_taps` | `Optional[int]` | `16` | copied | `RatioTapChanger.highStep`; also the stepVoltageIncrement divisor; 0 raises (regulator_configuration.cpp:198) |
+| `lower_taps` | `Optional[int]` | `16` | derived | RatioTapChanger.lowStep = -lower_taps; 0 raises |
+| `current_transducer_ratio` | `Optional[float]` | `3500.0`, `250.0`, `1500.0` | copied | `RatioTapChanger.ctRatio`; and the line drop's CT ratio |
+| `power_transducer_ratio` | `Optional[float]` | `20.0` | copied | `TapChangerControl.ptRatio`, `RatioTapChanger.ptRatio`; and the line drop's and LINE_DROP_COMP band's PT ratio |
+| `compensator_r_setting_A` | `Optional[float]` | `3.0`, `0.4`, `0.6` | derived | lineDropR (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `compensator_r_setting_B` | `Optional[float]` | `3.0`, `1.4` | derived | lineDropR (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `compensator_r_setting_C` | `Optional[float]` | `3.0`, `0.4`, `0.2` | derived | lineDropR (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `compensator_x_setting_A` | `Optional[float]` | `9.0`, `7.5`, `0.4` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `compensator_x_setting_B` | `Optional[float]` | `9.0`, `7.5`, `2.6` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `compensator_x_setting_C` | `Optional[float]` | `9.0`, `7.5`, `0.4` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
+| `CT_phase` | `Optional[str]` | `B` | structural | BANK: the phase whose compensator setting is read, which must be PT_phase; INDIVIDUAL: raises when set: no deck sets it, so a mapping waits for one (GridLAB-D ignores it there) |
+| `PT_phase` | `Optional[str]` | `B` | structural | BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: raises when set: no deck sets it, so a mapping waits for one |
+| `regulation` | `Optional[float]` | `0.1` | derived | RatioTapChanger.stepVoltageIncrement = regulation / raise_taps (percent), GridLAB-D's tapChangePer (regulator.cpp:244); 0 raises unless MANUAL |
+| `control_level` | `Optional[str]` | `BANK` | structural | INDIVIDUAL (default): one unit per wired phase; BANK: one gang unit on ABC (GLM-7) |
+| `Control` | `Optional[str]` | `MANUAL`, `OUTPUT_VOLTAGE`, `LINE_DROP_COMP` | structural | MANUAL (default): enabled = controlEnabled = false; OUTPUT_VOLTAGE, LINE_DROP_COMP: true, lineDropCompensation on LINE_DROP_COMP only; REMOTE_NODE raises (S3c-6: only IEEE13_houses, which stops at the walk) |
+| `reverse_flow_control` | `Optional[str]` |  | structural | unset or LOCK_NONE; others raises when set: no deck sets it, so a mapping waits for one |
+| `Type` | `Optional[str]` | `B`, `A` | mapped | `VoltageRegulator.construction`; A -> typeA, B -> typeB (default B): GridLAB-D's ratio 1 / (1 + tap x step) or 1 - tap x step |
+| `tap_pos_A` | `Optional[int]` | `10`, `6`, `0` | derived | RatioTapChanger.step of the phase's unit, unless the regulator's tap_A; default 0 (regulator.cpp:146) |
+| `tap_pos_B` | `Optional[int]` | `8`, `6`, `4` | derived | RatioTapChanger.step of the phase's unit, unless the regulator's tap_B; default 0 (regulator.cpp:146) |
+| `tap_pos_C` | `Optional[int]` | `11`, `6`, `0` | derived | RatioTapChanger.step of the phase's unit, unless the regulator's tap_C; default 0 (regulator.cpp:146) |
+
+#### regulator
+
+| Regulator field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, RegulatorName]` | `xf_Reg`, `xf_reg1a`, `xf_reg2` | derived | VoltageRegulator.name = name (BANK) or name_<phase> (INDIVIDUAL); mRID = xf_ + that; the controls rc_ + that |
+| `phases` | `Optional[str]` | `CAB`, `ABC`, `A` | structural | the wired phases A, B, C (N optional: every unit is wye to neutral); S raises |
+| `inrush_integration_method` | `Optional[str]` |  | untranscribed | inrush solver setting |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk) |
+| `from_node` | `Optional[str]` | `brkr`, `150`, `9` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `rg60`, `150r`, `9r` | structural | node2: the root bus of the object it names (GLM-4) |
+| `inrush_convergence_value` | `Optional[float]` |  | untranscribed | inrush solver setting |
+| `inrush_integration_method_capacitance` | `Union[str, ForwardRef('InrushIntegrationMethodCapacitance'), NoneType]` |  | untranscribed | inrush solver setting |
+| `inrush_integration_method_inductance` | `Union[str, ForwardRef('InrushIntegrationMethodInductance'), NoneType]` |  | untranscribed | inrush solver setting |
+| `configuration` | `Optional[str]` | `rcon_reg3`, `rcon_creg1a`, `rcon_creg2a` | structural | a regulator_configuration: its values on every unit |
+| `tap_A` | `Optional[int]` |  | derived | RatioTapChanger.step of the phase's unit (over tap_pos_A) |
+| `tap_B` | `Optional[int]` | `3` | derived | RatioTapChanger.step of the phase's unit (over tap_pos_B) |
+| `tap_C` | `Optional[int]` |  | derived | RatioTapChanger.step of the phase's unit (over tap_pos_C) |
+| `msg_mode` | `Optional[str]` |  | untranscribed | co-simulation messaging |
+| `remote_voltage_A` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output or state |
+| `remote_voltage_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output or state |
+| `remote_voltage_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output or state |
+| `tap_A_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
+| `tap_B_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
+| `tap_C_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
+| `sense_node` | `Optional[str]` |  | structural | REMOTE_NODE's monitored node; raises when set (S3c-6) |
+| `regulator_resistance` | `Optional[float]` | `0.001` | untranscribed | NR's stand-in series resistance (default powerflow::default_resistance, 1e-4 ohm); the AutoTransformerEnds are ideal (S3c-2) |

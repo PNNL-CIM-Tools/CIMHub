@@ -1,0 +1,51 @@
+# GridLAB-D regulator -> VoltageRegulator + AutoTransformerEnd + TapChangerControl + RatioTapChanger (with its regulator_configuration).
+# Source table: regulator (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3c-regulators
+
+Profile = cim18v17
+
+# one unit per wired phase (INDIVIDUAL) or a gang unit (BANK), GLM-7
+Table VoltageRegulator: mRID, name, construction, EquipmentContainer=fdr_IEEE13_cdpsm
+    # configuration rcon_reg3
+    # defaulted: time_delay=0.0, control_level=INDIVIDUAL
+    xf_xf_Reg_A, xf_Reg_A, typeB
+    # configuration rcon_reg3
+    # defaulted: time_delay=0.0, control_level=INDIVIDUAL
+    xf_xf_Reg_B, xf_Reg_B, typeB
+    # configuration rcon_reg3
+    # defaulted: time_delay=0.0, control_level=INDIVIDUAL
+    xf_xf_Reg_C, xf_Reg_C, typeB
+
+# ideal (S3c-2): GridLAB-D's regulator has no impedance or kVA; baseU = the from bus's nominal_voltage (the coil, phase to neutral; a gang unit's x sqrt 3)
+Table AutoTransformerEnd: mRID, AutoTransformer, node, phase, endNumber, grounded=true, baseU (V), BaseVoltage
+    xf_xf_Reg_A_1, xf_xf_Reg_A, brkr, AN, 1, 2401.78, bv_4p16kv
+    xf_xf_Reg_A_2, xf_xf_Reg_A, rg60, AN, 2, 2401.78, bv_4p16kv
+    xf_xf_Reg_B_1, xf_xf_Reg_B, brkr, BN, 1, 2401.78, bv_4p16kv
+    xf_xf_Reg_B_2, xf_xf_Reg_B, rg60, BN, 2, 2401.78, bv_4p16kv
+    xf_xf_Reg_C_1, xf_xf_Reg_C, brkr, CN, 1, 2401.78, bv_4p16kv
+    xf_xf_Reg_C_2, xf_xf_Reg_C, rg60, CN, 2, 2401.78, bv_4p16kv
+
+# targetValue/Deadband = band_center/band_width, primary volts (x ptRatio on LINE_DROP_COMP); lineDropR/X = compensator setting x ptRatio / ctRatio (line_drop_ohms); enabled = Control is not MANUAL
+Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled, monitoredPhase, ptRatio, targetValue, targetDeadband, lineDropCompensation, lineDropR (ohm), lineDropX (ohm), Terminal
+    rc_xf_Reg_A, xf_Reg_A, false, A, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_A_T2
+    rc_xf_Reg_B, xf_Reg_B, false, B, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_B_T2
+    rc_xf_Reg_C, xf_Reg_C, false, C, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_C_T2
+
+# stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5)
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, initialDelay (s), subsequentDelay (s)
+    rc_xf_Reg_A_tap, xf_Reg_A, xf_xf_Reg_A_2, rc_xf_Reg_A, -16, 16, 10, 0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
+    rc_xf_Reg_B_tap, xf_Reg_B, xf_xf_Reg_B_2, rc_xf_Reg_B, -16, 16, 8,  0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
+    rc_xf_Reg_C_tap, xf_Reg_C, xf_xf_Reg_C_2, rc_xf_Reg_C, -16, 16, 11, 0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
+
+Table OperationalLimitSet: mRID, Equipment
+    xf_xf_Reg_A_limits, xf_xf_Reg_A
+    xf_xf_Reg_B_limits, xf_xf_Reg_B
+    xf_xf_Reg_C_limits, xf_xf_Reg_C
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    xf_xf_Reg_A_norm,  763.58,  olt_normal,    xf_xf_Reg_A_limits
+    xf_xf_Reg_A_emerg, 1041.25, olt_emergency, xf_xf_Reg_A_limits
+    xf_xf_Reg_B_norm,  763.58,  olt_normal,    xf_xf_Reg_B_limits
+    xf_xf_Reg_B_emerg, 1041.25, olt_emergency, xf_xf_Reg_B_limits
+    xf_xf_Reg_C_norm,  763.58,  olt_normal,    xf_xf_Reg_C_limits
+    xf_xf_Reg_C_emerg, 1041.25, olt_emergency, xf_xf_Reg_C_limits

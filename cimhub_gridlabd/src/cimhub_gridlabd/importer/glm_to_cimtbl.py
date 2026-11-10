@@ -21,8 +21,8 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import (bus, conductor, configuration, line, spacing, switch, transformer,
-                                            transformer_configuration)
+from cimhub_gridlabd.importer.cimtbl import (bus, conductor, configuration, line, regulator, spacing, switch,
+                                            transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -62,13 +62,16 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
       for native_class, _, _ in switch.SWITCHES),
     (schema.Transformer, lambda model, site: transformer.map_transformers(model, site.roots, site.buses,
                                                                           site.feeder)),
+    (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
 )
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
 CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, schema.LineSpacing: spacing.FIELDS,
                                             **configuration.FIELDS, **line.FIELDS, **switch.FIELDS,
                                             schema.TransformerConfiguration: transformer_configuration.FIELDS,
-                                            schema.Transformer: transformer.FIELDS}
+                                            schema.Transformer: transformer.FIELDS,
+                                            schema.Regulator: regulator.FIELDS,
+                                            schema.RegulatorConfiguration: regulator.CONFIGURATION_FIELDS}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:
