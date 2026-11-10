@@ -71,6 +71,18 @@ def vars_from_mvar(value_mvar: float) -> float:
     return ureg.Quantity(value_mvar, "MVAr").to("VAr").magnitude
 
 
+def reactive_band(vswlo: float, vswhi: float, q_min_mvar: float, q_max_mvar: float) -> tuple[float, float]:
+    """A switched shunt's reactive-power ``(targetValue, targetDeadband)`` in VAr (MODSW 3 and 6, R2b).
+
+    VSWLO..VSWHI are pu of the controlled device's range q_min..q_max (Mvar, output sign): the band is
+    q_min + VSWLO x span .. q_min + VSWHI x span. The target is its midpoint under the CIM load sign at the device's
+    terminal (-midpoint, 0 kept 0.0, as the machine's q = -QG); the deadband is its width.
+    """
+    span = q_max_mvar - q_min_mvar
+    low, high = q_min_mvar + vswlo * span, q_min_mvar + vswhi * span
+    return vars_from_mvar(0.0 - (low + high) / 2), vars_from_mvar(high - low)
+
+
 def _per_unit_from_watts(watts: float, base_mva: float) -> float:
     """A loss in W as pu of a base in MVA."""
     return ureg.Quantity(watts, "W").to("MW").magnitude / base_mva

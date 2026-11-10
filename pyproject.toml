@@ -36,8 +36,8 @@ cimhub-raw = { workspace = true }
 # Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }
-cimprofiles = { path = "../CIM-Profiles", editable = true }
-cimtables = { path = "../CIM-Tables", editable = true }
+cim-profiles = { path = "../CIM-Profiles", editable = true }
+cim-tables = { path = "../CIM-Tables", editable = true }
 cim-builder = { path = "../CIM-Builder", editable = true }
 cim-topology = { path = "../CIM-Graph-Topology-Processor", editable = true }
 

@@ -55,6 +55,7 @@ from cimhub_raw.importer.cimtbl.derived import (
     per_unit_from_mva,
     phase_tap,
     ratio_tap,
+    reactive_band,
     siemens_from_per_unit,
     transformer_ohms,
     vars_from_mvar,
@@ -318,6 +319,47 @@ def test_a_series_capacitor_with_charging_raises():
         RawImporter("WECC240").to_cimtbl(native)
 
 
+# -- R1b: a branch between two bases, a series capacitor with a length, a multi-section line holding one -----
+
+
+MIXED_BASE_ATOM = BRANCH_ATOMS / "mixed_base.raw"
+
+
+@pytest.fixture(scope="module")
+def mixed_base_network():
+    with cim_scope():
+        yield _network(MIXED_BASE_ATOM)
+
+
+def test_r1b_a_line_between_two_bases_keeps_bus_i_base(mixed_base_network):
+    """(pu system) on bus I's base, a line shunt on its own bus's (R1b-1)."""
+    line = _objects(mixed_base_network, "ACLineSegment")["ln_4_5_1"]
+    assert line.BaseVoltage.nominalVoltage.to("kV") == pytest.approx(230.0)
+    assert line.bch.to("S") == pytest.approx(0.02 / (230.0 ** 2 / 100.0))
+    assert line.x.to("ohm") == pytest.approx(0.02 * 230.0 ** 2 / 100.0)
+    shunt = _objects(mixed_base_network, "LinearShuntCompensator")["cap_4_5_1_j"]
+    assert shunt.BaseVoltage.nominalVoltage.to("kV") == pytest.approx(240.0)
+    assert shunt.bPerSection.to("S") == pytest.approx(0.01 / (240.0 ** 2 / 100.0))
+
+
+def test_r1b_a_capacitor_section_stays_in_its_substation(mixed_base_network):
+    """The capacitor merges its buses into one substation; the Line holds the other sections (R1b-3)."""
+    line = _objects(mixed_base_network, "Line")["msl_1_4_&1"]
+    assert sorted(equipment.mRID for equipment in line.Equipments) == ["ln_1_2_1", "ln_3_4_1"]
+    assert _objects(mixed_base_network, "SeriesCompensator")["sc_2_3_1"].EquipmentContainer.mRID == "sub_2"
+
+
+def test_r1b_comments():
+    """Bus J's base and the capacitor's LEN are listed (R1b-1, R1b-2); the Line lists its capacitor (R1b-3)."""
+    parts = {part.name: part for part in RawImporter("atom").to_cimtbl(Raw34Reader(MIXED_BASE_ATOM).read_all()).parts}
+    rows = {row.cells[0]: row for name in ("branch", "multi_section_line")
+            for statement in parts[name].statements for row in statement.rows}
+    assert rows["ln_4_5_1"].comment == "BASKV 240.0 at bus J"
+    assert rows["sc_2_3_1"].comment == "untranscribed: length=1.0"
+    assert rows["ln_1_2_1"].comment is None
+    assert rows["msl_1_4_&1"].comment == "path 1, 2, 3, 4; in substations: sc_2_3_1"
+
+
 # -- R2: loads, fixed shunts, switched shunts -------------------------------------------------------------
 
 
@@ -463,8 +505,8 @@ def test_switched_shunt_atom():
 
 
 @pytest.mark.parametrize(("changes", "error", "message"), [
-    ({"modsw": 3}, NotImplementedError, "MODSW 3 .plant reactive power"),
-    ({"modsw": 6}, NotImplementedError, "MODSW 6 .FACTS"),
+    ({"modsw": 4}, NotImplementedError, "MODSW 4 .VSC converter reactive power"),
+    ({"modsw": 5}, NotImplementedError, "MODSW 5 .another switched shunt"),
     ({"nreg": 2}, ValueError, "node 2 of bus 4, which has no SUBSTATION block"),
     ({"n2": None, "b2": None}, ValueError, "a block after the first zero"),
     ({"binit": 1000.0}, ValueError, "BINIT=1000.0 is beyond its blocks"),
@@ -473,6 +515,56 @@ def test_a_switched_shunt_outside_r2_raises(changes, error, message):
     native = Raw34Reader(SHUNT_ATOMS / "switched_shunts.raw").read_all()
     _replace_record(native, schema.SwitchedShuntRecord, "1", **changes)
     with pytest.raises(error, match=message):
+        RawImporter("atom").to_cimtbl(native)
+
+
+PLANT_AND_FACTS_ATOM = SHUNT_ATOMS / "plant_and_facts.raw"
+
+
+def test_reactive_band():
+    """QB -50 to QT 50, VSWLO 0.2 to VSWHI 0.75: the band -30 to 25 Mvar, its midpoint -2.5 under the load sign."""
+    assert reactive_band(0.2, 0.75, -50.0, 50.0) == pytest.approx((2.5e6, 55e6))
+    assert str(reactive_band(0.4, 0.6, -100.0, 100.0)[0]) == "0.0"
+
+
+def test_r2b_reactive_power_controls():
+    """MODSW 3 on the plant's machine, MODSW 6 on the FACTS shunt (R2b-1, R2b-2); no plant: disabled."""
+    with cim_scope():
+        network = _network(PLANT_AND_FACTS_ATOM)
+        controls, shunts = _objects(network, "RegulatingControl"), _objects(network, "LinearShuntCompensator")
+        plant, no_plant, facts = controls["cc_2"], controls["cc_3"], controls["cc_5"]
+        assert {control.mode.value for control in (plant, no_plant, facts)} == {"reactivePower"}
+        assert (plant.Terminal.mRID, plant.discrete, plant.enabled) == ("pec_1_PV_T1", True, True)
+        assert (plant.targetValue, plant.targetDeadband) == pytest.approx((-10e6, 40e6))  # -30 + 0.25..0.75 x 80
+        assert (no_plant.Terminal.mRID, no_plant.enabled, no_plant.targetValue) == ("bb_3_T1", False, None)
+        assert shunts["swsh_3_b1"].controlEnabled is False
+        assert (facts.Terminal.mRID, facts.targetValue, facts.targetDeadband) == ("fd_SVC-1_T1", 0.0, 40e6)
+        assert shunts["swsh_5_b1"].RegulatingControl.mRID == "cc_5"
+
+
+def test_r2b_comments():
+    """No machine at SWREG: VSWLO is listed (R2b-1)."""
+    document = next(part for part in RawImporter("atom").to_cimtbl(Raw34Reader(PLANT_AND_FACTS_ATOM).read_all()).parts
+                    if part.name == "switched_shunt")
+    rows = {row.cells[0]: row for statement in document.statements for row in statement.rows}
+    assert rows["cc_3"].comment == "defaulted: nreg=0; untranscribed: vswlo=0.0"
+    assert rows["cc_2"].comment == "defaulted: nreg=0"
+
+
+def test_r2b_a_plant_of_several_machines_raises():
+    native = Raw34Reader(PLANT_AND_FACTS_ATOM).read_all()
+    record = native.graph[schema.GeneratorRecord]["1_PV"]
+    second = dataclasses.replace(record, gen_id="2")
+    second.ID = "1_2"
+    native.graph[schema.GeneratorRecord]["1_2"] = second
+    with pytest.raises(NotImplementedError, match="the plant at bus 1 has 2 machines"):
+        RawImporter("atom").to_cimtbl(native)
+
+
+def test_r2b_an_unknown_facts_device_raises():
+    native = Raw34Reader(PLANT_AND_FACTS_ATOM).read_all()
+    _replace_record(native, schema.SwitchedShuntRecord, "5", rmidnt="SVC-2")
+    with pytest.raises(ValueError, match="RMIDNT 'SVC-2' names no FACTS device"):
         RawImporter("atom").to_cimtbl(native)
 
 

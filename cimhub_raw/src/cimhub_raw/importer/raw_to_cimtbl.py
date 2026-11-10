@@ -93,14 +93,12 @@ MAPPING_ORDER = (
                                                                  site.values.branch_ratings_in_current)),
     (switch.NATIVE_CLASS, lambda native, site: switch.map_switch(native, site.substation_of, site.base_kv, site.areas,
                                                                  site.values.branch_ratings_in_current)),
-    (multi_section_line.NATIVE_CLASS, lambda native, site: multi_section_line.map_multi_section_line(native,
-                                                                                                    site.zones)),
+    (multi_section_line.NATIVE_CLASS, lambda native, site: multi_section_line.map_multi_section_line(
+        native, site.zones, site.substation_of)),
     (load.NATIVE_CLASS, lambda native, site: load.map_load(native, site.substation_of, site.base_kv, site.areas,
                                                            site.zones)),
     (fixed_shunt.NATIVE_CLASS, lambda native, site: fixed_shunt.map_fixed_shunt(native, site.substation_of,
                                                                                 site.base_kv, site.values.base_mva)),
-    (switched_shunt.NATIVE_CLASS, lambda native, site: switched_shunt.map_switched_shunt(
-        native, site.substation_of, site.base_kv, site.node_breaker, site.values.base_mva)),
     (generator.NATIVE_CLASS, lambda native, site: generator.map_generator(
         native, site.substation_of, site.base_kv, site.areas, site.bus_types, site.node_breaker, site.values.base_mva)),
     (impedance_correction.NATIVE_CLASS, lambda native, site: impedance_correction.map_impedance_correction(
@@ -115,6 +113,9 @@ MAPPING_ORDER = (
     (multi_terminal_dc.NATIVE_CLASS, lambda native, site: multi_terminal_dc.map_multi_terminal_dc(native)),
     (facts_device.NATIVE_CLASS, lambda native, site: facts_device.map_facts_device(
         native, site.substation_of, site.base_kv, site.node_breaker)),
+    # after generator and facts_device: a MODSW 3 / 6 control's Terminal is theirs (R2b)
+    (switched_shunt.NATIVE_CLASS, lambda native, site: switched_shunt.map_switched_shunt(
+        native, site.substation_of, site.base_kv, site.node_breaker, site.values.base_mva)),
     (gne_device.NATIVE_CLASS, lambda native, site: gne_device.map_gne_device(native)),
     (induction_machine.NATIVE_CLASS, lambda native, site: induction_machine.map_induction_machine(native)),
 )

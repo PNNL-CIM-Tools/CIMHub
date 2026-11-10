@@ -1,5 +1,6 @@
 """RAW Multi-section line grouping -> ``multi_section_line.cimtbl``: a ``Line`` per record, and an ``Update`` row
-moving each of its sections (ordinary branches in ``branch.cimtbl``) into it (RAW-12).
+moving each of its sections (ordinary branches in ``branch.cimtbl``) into it (RAW-12). A section with both buses in one
+substation (a series capacitor merges its buses) stays in that substation, listed on the Line's row (R1b-3).
 
 Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#multi-section-line``.
 """
@@ -24,7 +25,9 @@ FIELDS = {
     "line_id": Field("copied", (("Line", "name", None),), note="ID: the key"),
     "met": Field("untranscribed", note="MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22)"),
     "dum1": Field("structural", note="DUM1: the path I, DUM1, .., J names the sections, one branch per step; each "
-                                     "section's EquipmentContainer becomes the Line (an Update row)"),
+                                     "section's EquipmentContainer becomes the Line (an Update row), except a "
+                                     "section in one substation, which stays there, listed on the Line's row "
+                                     "(R1b-3)"),
     **{slot: Field("structural", note="as DUM1") for slot in DUMMY_SLOTS[1:]},
 }
 
@@ -56,7 +59,7 @@ def _sections(record, branches_at: dict[frozenset, list], degree: dict[int, int]
     return sections
 
 
-def map_multi_section_line(native, bus_zones: dict[int, int]) -> Document:
+def map_multi_section_line(native, bus_zones: dict[int, int], substations_by_bus: dict[int, str]) -> Document:
     records = sorted(native.list_by_class(NATIVE_CLASS), key=lambda line: (line.i, line.j, str(line.line_id)))
     if not records:
         return Document(name="multi_section_line", statements=[], profile=CIM_PROFILE)
@@ -71,10 +74,16 @@ def map_multi_section_line(native, bus_zones: dict[int, int]) -> Document:
     used: set = set()
     for record in records:
         line = mrid(PREFIX, record.ID)
-        line_rows.append(Row([line, cell(record.line_id), zone_mrid(bus_zones[record.i])],
-                             comment=f"path {', '.join(map(str, _path(record)))}"))
+        in_substations = []
         for section in _sections(record, branches_at, degree, used):
-            updates_by_class.setdefault(branch_class(section), []).append(Row([branch_mrid(section), line]))
+            if substations_by_bus[section.from_bus_number] == substations_by_bus[section.to_bus_number]:
+                in_substations.append(branch_mrid(section))
+            else:
+                updates_by_class.setdefault(branch_class(section), []).append(Row([branch_mrid(section), line]))
+        notes = [f"path {', '.join(map(str, _path(record)))}"]
+        if in_substations:
+            notes.append(f"in substations: {', '.join(in_substations)}")
+        line_rows.append(Row([line, cell(record.line_id), zone_mrid(bus_zones[record.i])], comment="; ".join(notes)))
 
     statements = [Table("Line", [Column("mRID"), Column("name"), Column("Region")], line_rows,
                         comment=untranscribed_names(FIELDS))]

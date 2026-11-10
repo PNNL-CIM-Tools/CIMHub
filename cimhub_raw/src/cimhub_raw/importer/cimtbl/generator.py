@@ -104,6 +104,13 @@ Source table: Generator (records: {count})
 Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3"""
 
 
+def machine_mrid(generator) -> str:
+    """The machine's mRID: ``sm_<I>_<ID>`` (WMOD 0) or ``pec_<I>_<ID>`` (WMOD 1); a switched shunt's plant control
+    measures its terminal (R2b-1)."""
+    converter = lookup(CONVERTER, generator.wmod, slot="wmod", record_id=generator.ID)
+    return mrid((CONVERTER_PREFIXES if converter else MACHINE_PREFIXES)[0], generator.ID)
+
+
 def has_step_up(generator) -> bool:
     """RT + jXT != 0: the record carries an implicit step-up transformer (R3b)."""
     return bool(generator.rt or generator.xt)

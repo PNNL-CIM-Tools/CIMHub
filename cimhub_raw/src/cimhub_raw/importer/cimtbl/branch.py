@@ -13,7 +13,7 @@ import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_names
 from cimhub_raw.importer.cimtbl.area_interchange import control_area_numbers
 from cimhub_raw.importer.cimtbl.ratings import RatingRows
-from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, raw_defaults
+from cimhub_raw.importer.cimtbl.records import fill_keyed_defaults, listed_off_default, raw_defaults
 from cimhub_raw.importer.cimtbl.tie_flow import TieFlowRows, branch_home_end, off_tie_note
 
 NATIVE_CLASS = schema.BranchRecord
@@ -26,10 +26,12 @@ IN_SERVICE = {1: True, 0: False}
 
 _OWNER = "ownership is an asset concept (CIM 18 gap)"
 _SHUNT = ("{name}: with {pair}, a LinearShuntCompensator cap_<I>_<J>_<CKT>_{end} on bus {bus} when either is nonzero "
-          "(RAW-13): {column} (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation")
+          "(RAW-13): {column} (pu system), nomU (kV) and BaseVoltage = bus {bus}'s BASKV, one section, inService = "
+          "ST, the bus's substation")
 FIELDS = {
-    "from_bus_number": Field("structural", note="I: bus1; BaseVoltage = bus I's bv_<BASKV>; I and J with different "
-                                                "BASKV raise ((pu system) would have two bases)"),
+    "from_bus_number": Field("structural", note="I: bus1; BaseVoltage = bus I's bv_<BASKV>, the base of every (pu "
+                                                "system) value and of a CurrentLimit; J with another BASKV is listed "
+                                                "on the row (R1b-1)"),
     "to_bus_number": Field("structural", note="J: bus2"),
     "circuit": Field("structural", note="CKT: with I and J the key, mRID ln_<I>_<J>_<CKT> (X < 0: sc_); a first "
                                         "character @ or * is a substation merge edge (plan 3.2)"),
@@ -37,7 +39,8 @@ FIELDS = {
     "x": Field("copied", (("ACLineSegment", "x", "pu system"), ("SeriesCompensator", "x", "pu system")),
                note="X; X < 0: a SeriesCompensator, compensatorType = capacitor, x verbatim (RAW-15)"),
     "b": Field("copied", (("ACLineSegment", "bch", "pu system"),),
-               note="B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch)"),
+               note="B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch; no "
+                    "case)"),
     "name": Field("copied", (("ACLineSegment", "name", None), ("SeriesCompensator", "name", None)),
                   note="NAME; blank: the key I_J_CKT"),
     "ratings": Field("structural", note="RATE1..RATE12: each nonzero RATEn an ApparentPowerLimit <eq>_rate<n> "
@@ -56,7 +59,7 @@ FIELDS = {
                                             "(defaulted)"),
     "length": Field("copied", (("ACLineSegment", "length", "km"),),
                     note="LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series "
-                         "capacitor with LEN != 0 raises (SeriesCompensator is no Conductor)"),
+                         "capacitor's LEN != 0 is listed on its row (SeriesCompensator is no Conductor, R1b-2)"),
     **{slot: Field("untranscribed", note=_OWNER) for slot in ("o1", "f1", "o2", "f2", "o3", "f3", "o4", "f4")},
 }
 
@@ -86,31 +89,27 @@ def filled_branches(native) -> list[tuple[schema.BranchRecord, str | None]]:
     return [fill_keyed_defaults(FIELDS, record, defaults) for record in records]
 
 
-def _base_kv(record, base_kv_of: dict[int, float]) -> float:
-    base_kv = base_kv_of[record.from_bus_number]
-    if base_kv_of[record.to_bus_number] != base_kv:
-        raise ValueError(f"branch {record.ID}: buses {record.from_bus_number} and {record.to_bus_number} have BASKV "
-                         f"{base_kv!r} and {base_kv_of[record.to_bus_number]!r}; a branch's (pu system) needs one base")
-    return base_kv
+def _other_base(record, base_kv_of: dict[int, float]) -> str | None:
+    """``BASKV <kV> at bus J`` when bus J's base differs from bus I's, the branch's (R1b-1)."""
+    to_kv = base_kv_of[record.to_bus_number]
+    return None if to_kv == base_kv_of[record.from_bus_number] else f"BASKV {cell(to_kv)} at bus J"
 
 
 def _check_series_capacitor(record) -> None:
     if record.b:
         raise ValueError(f"branch {record.ID}: a series capacitor (X < 0) with B={record.b!r}; SeriesCompensator "
                          "has no bch")
-    if record.length:
-        raise ValueError(f"branch {record.ID}: a series capacitor (X < 0) with LEN={record.length!r}; "
-                         "SeriesCompensator has no length")
 
 
 def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int, float], bus_area: dict[int, int],
                ratings_in_current: bool) -> Document:
     branches = filled_branches(native)
+    defaults = raw_defaults(NATIVE_CLASS)
     line_rows, capacitor_rows, shunt_rows = [], [], []
     ratings = RatingRows(ratings_in_current)
     ties = TieFlowRows(bus_area, control_area_numbers(native))
     for branch, defaulted in branches:
-        base_kv = _base_kv(branch, base_kv_of)
+        base_kv = base_kv_of[branch.from_bus_number]
         voltage = base_voltage_mrid(base_kv)
         in_service = lookup(IN_SERVICE, branch.status, slot="status", record_id=f"branch {branch.ID}")
         first, second = substations_by_bus[branch.from_bus_number], substations_by_bus[branch.to_bus_number]
@@ -119,11 +118,14 @@ def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
         common = [equipment, cell(branch.name or branch.ID), str(branch.from_bus_number), str(branch.to_bus_number)]
         if is_series_capacitor(branch):
             _check_series_capacitor(branch)
+            notes = [defaulted, listed_off_default(branch, ("length",), defaults), _other_base(branch, base_kv_of)]
             capacitor_rows.append(Row([*common, "capacitor", cell(branch.r), cell(branch.x), cell(in_service), voltage,
-                                       container], comment=defaulted))
+                                       container], comment="; ".join(filter(None, notes)) or None))
         else:
             line_values = [cell(branch.r), cell(branch.x), cell(branch.b), cell(branch.length or None)]
-            line_rows.append(Row([*common, *line_values, cell(in_service), voltage, container], comment=defaulted))
+            notes = [defaulted, _other_base(branch, base_kv_of)]
+            line_rows.append(Row([*common, *line_values, cell(in_service), voltage, container],
+                                 comment="; ".join(filter(None, notes)) or None))
         ratings.add(equipment, branch.ratings, base_kv)
         buses = (branch.from_bus_number, branch.to_bus_number)
         if ties.is_tie(buses):
@@ -133,8 +135,8 @@ def map_branch(native, substations_by_bus: dict[int, str], base_kv_of: dict[int,
                                ("j", branch.to_bus_number, branch.g_to, branch.b_to)):
             if g or b:
                 shunt_rows.append(Row([mrid(SHUNT_PREFIX, f"{branch.ID}_{end}"), f"{branch.ID}_{end}", str(bus),
-                                       cell(g), cell(b), cell(base_kv), "1", "1", "1", cell(in_service), voltage,
-                                       substations_by_bus[bus]]))
+                                       cell(g), cell(b), cell(base_kv_of[bus]), "1", "1", "1", cell(in_service),
+                                       base_voltage_mrid(base_kv_of[bus]), substations_by_bus[bus]]))
 
     statements = []
     untranscribed = off_tie_note(untranscribed_names(FIELDS), "MET")

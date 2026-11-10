@@ -11,7 +11,7 @@ devices, equipment terminals, regulated nodes) approved and implemented 2026-11-
 atoms in `tests/atoms/substation/`. R4b (the transformer forms R4 raised on: fixed phase shifts, phase shifters,
 impedance correction tables, fixed ratios, one winding out, CONT 0 and negative, load-drop compensation) approved
 and implemented 2026-11-09; atom `tests/atoms/transformer/forms_r4b.raw`. P2a (shunt FACTS devices, VSC DC lines)
-and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. R3b's implicit step-up transformers approved and implemented 2026-11-09; atom `tests/atoms/generator/step_up.raw`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
+and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. R3b's implicit step-up transformers approved and implemented 2026-11-09; atom `tests/atoms/generator/step_up.raw`. R1b / R2b (a branch between two base voltages, a series capacitor with a length, a multi-section line holding one; switched shunts with MODSW 3 and 6) approved and implemented 2026-11-09; atoms `tests/atoms/branch/mixed_base.raw`, `tests/atoms/shunt/plant_and_facts.raw`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
 `tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
@@ -40,7 +40,6 @@ IEEE14 and WECC240. Field names are the LinkML slots; the RAW names (I, BASKV, .
 | 6 | Multi-section line | `multi_section_line.cimtbl` | `Line` + `Update` rows on its sections (R1) | 4 |
 | 7 | Load | `load.cimtbl` | `load` with `bus`: `LoadArea` ⊃ `SubLoadArea` ⊃ load groups, ZIP `LoadResponseCharacteristic`s, `ConformLoad` / `NonConformLoad` (R2) | 2, 3 |
 | 8 | Fixed shunt | `fixed_shunt.cimtbl` | `shunt` with `bus`: `LinearShuntCompensator` (R2) | 3 |
-| 9 | Switched shunt | `switched_shunt.cimtbl` | `shunt` with `bus`: `RegulatingControl`, a `LinearShuntCompensator` per block (R2) | 3 |
 | 10 | Generator | `generator.cimtbl` | `synchronous_machine` (bus-branch, new, C2) and `der` with `bus`: a `RegulatingControl` per plant; `SynchronousMachine` + `GeneratingUnit` (WMOD 0) or `PowerElectronicsConnection` + `PowerElectronicsUnit` (WMOD 1), each with its control-area membership (R3) | 2, 3 |
 | 11 | Transformer | `transformer.cimtbl` | `transformer_by_ends` with `bus` (2-winding r/x/g/b on end 1, cim18v17; C2) + the `regulator` shape's `RatioTapChanger` / `TapChangerControl`: `PowerTransformer`, an end per winding, a 3-winding unit's `TransformerMeshImpedance`s, ratings per winding (R4), `TieFlow`s of ties (R5) | 3 |
 | 12 | Equipment terminal | `equipment_terminal.cimtbl` | `Update Table Terminal: mRID, ConnectivityNode` (R6) | 3a and every equipment artifact |
@@ -51,7 +50,10 @@ Inter-area transfer has no artifact (R5: listed on `area_interchange.cimtbl`). A
 `TieFlow`s of ties) and `facts_device.cimtbl` (`StaticSynchronousCompensator` + `RegulatingControl`), both P2a, and
 before them `two_terminal_dc.cimtbl` (P2b: the same DC rows, `CsConverter`s behind their converter transformers on
 internal `TopologicalNode`s, whose BaseVoltages the master writes). Impedance correction comes before 11 (R4b). The
-remaining phase-2 stubs (multi-terminal DC, GNE, induction machine) write nothing yet. `equipment_terminal.cimtbl` (12) comes after them all.
+remaining phase-2 stubs (multi-terminal DC, GNE, induction machine) write nothing yet. `switched_shunt.cimtbl` (9:
+`shunt` with `bus`: a `RegulatingControl`, a `LinearShuntCompensator` per block, R2) follows `facts_device.cimtbl`,
+because a MODSW 3 or 6 control's `Terminal` is a machine's or a FACTS device's (R2b); it keeps its number.
+`equipment_terminal.cimtbl` (12) comes after them all.
 
 ## Master
 
@@ -277,10 +279,10 @@ Table SeriesCompensator: mRID, name, bus1, bus2, compensatorType, r (pu system),
 ```
 
 - **Class:** X < 0 → `SeriesCompensator` (`sc_`, `compensatorType = capacitor`, r/x verbatim; RAW-15). A
-  series capacitor with B ≠ 0 raises: `SeriesCompensator` has no `bch`. Every other branch is an
+  series capacitor with B ≠ 0 raises: `SeriesCompensator` has no `bch` (no case has one). Every other branch is an
   `ACLineSegment` (`ln_`). `gch` is not written (RAW has no line conductance).
-- **BaseVoltage:** bus I's. A branch whose buses have different BASKV raises, because its `(pu system)` base
-  would be ambiguous. Neither public case has one.
+- **BaseVoltage:** bus I's, the base of every `(pu system)` value and of a `CurrentLimit`. A branch whose bus J
+  has another BASKV lists it on its row (`# BASKV <kV> at bus J`; R1b-1).
 - **Container:** the substation, when both buses are in one (a zero-impedance branch, a `@`/`*` circuit, a
   series capacitor, or a parallel path inside a merged substation). Otherwise none, or the multi-section `Line`
   (below).
@@ -303,14 +305,15 @@ Table SeriesCompensator: mRID, name, bus1, bus2, compensatorType, r (pu system),
   (√3 × BASKV), derived by `current_from_rating`. A blank NXFRAT ("the present option setting", as for BASFRQ)
   is MVA, marked `# defaulted: NXFRAT=0` on the master.
 - **Line shunts (RAW-13):** GI + jBI ≠ 0 gives a `LinearShuntCompensator` `cap_<I>_<J>_<CKT>_i` on bus I, and
-  GJ + jBJ ≠ 0 gives `_j` on bus J. Each has `gPerSection`/`bPerSection (pu system)`, `nomU (kV)` = BASKV, one
+  GJ + jBJ ≠ 0 gives `_j` on bus J. Each has `gPerSection`/`bPerSection (pu system)`, `nomU (kV)` and the
+  BaseVoltage of its own bus (R1b-1), one
   section, `inService` = the branch's ST, and the end bus's substation as its container: an ordinary shunt
   (user 2026-11-08). "Switched with its line" has no CIM association in a bus-branch model, so it is carried by
   the mRID only (CIM 18 gap; in a node-breaker model the shunt would sit on the line's side of the breaker).
   Neither public case sets a line shunt; the atom `tests/atoms/branch/line_shunts.raw` covers it.
 - **LEN (RAW-21):** `Conductor.length (km)`, copied: RAW's "user-selected units" are taken as km (user
-  2026-11-08). LEN = 0 (the default, "not given") writes no length. A series capacitor with LEN ≠ 0 raises
-  (`SeriesCompensator` is no `Conductor`). Neither public case sets one.
+  2026-11-08). LEN = 0 (the default, "not given") writes no length. A series capacitor's LEN ≠ 0 is listed on its
+  row (`untranscribed: length=…`): `SeriesCompensator` is no `Conductor` (R1b-2).
 - **MET (RAW-22):** untranscribed, a CIM 18 gap (user 2026-11-08: power flow only, no interchange balancing).
   WECC240 has 81 branches with MET = 2, written back as MET = 1 (expected difference).
 - **Owners:** untranscribed (CIM 18 gap).
@@ -318,21 +321,21 @@ Table SeriesCompensator: mRID, name, bus1, bus2, compensatorType, r (pu system),
 
 | BranchRecord field | type | samples | kind | target |
 |---|---|---|---|---|
-| `from_bus_number` | `int` | `1001`, `1002`, `1004` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>; I and J with different BASKV raise ((pu system) would have two bases) |
+| `from_bus_number` | `int` | `1001`, `1002`, `1004` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>, the base of every (pu system) value and of a CurrentLimit; J with another BASKV is listed on the row (R1b-1) |
 | `to_bus_number` | `int` | `1201`, `1202`, `1004` | structural | J: bus2 |
 | `r` | `float` | `0.00177`, `0.0108`, `0.0005` | copied | `ACLineSegment.r` (pu system), `SeriesCompensator.r` (pu system); R |
 | `x` | `float` | `0.03169`, `0.0965`, `0.0053` | copied | `ACLineSegment.x` (pu system), `SeriesCompensator.x` (pu system); X; X < 0: a SeriesCompensator, compensatorType = capacitor, x verbatim (RAW-15) |
 | `circuit` | `Optional[str]` | `1`, `9`, `2` | structural | CKT: with I and J the key, mRID ln_<I>_<J>_<CKT> (X < 0: sc_); a first character @ or * is a substation merge edge (plan 3.2) |
-| `b` | `Optional[float]` | `3.3446`, `0.3296`, `0.0882` | copied | `ACLineSegment.bch` (pu system); B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch) |
+| `b` | `Optional[float]` | `3.3446`, `0.3296`, `0.0882` | copied | `ACLineSegment.bch` (pu system); B; blank: 0 (defaulted); a series capacitor with B != 0 raises (SeriesCompensator has no bch; no case) |
 | `name` | `Optional[str]` |  | copied | `ACLineSegment.name`, `SeriesCompensator.name`; NAME; blank: the key I_J_CKT |
 | `ratings` | `Union[float, list[float], NoneType]` | `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...`, `[0.0, 0.0, 1630.0, 0.0, 0.0, 0.0, 0.0...`, `[0.0, 0.0, 1800.0, 0.0, 0.0, 0.0, 0.0...` | structural | RATE1..RATE12: each nonzero RATEn an ApparentPowerLimit <eq>_rate<n> (normalValue (MVA)) in the set <eq>_ratings on terminal <eq>_T1, type olt_rate<n> (RAW-9, RAW-20); NXFRAT > 0: a CurrentLimit, normalValue (kA) = RATEn / (sqrt(3) x BASKV) (ka_from_rating); 0 is no limit, no row |
-| `g_from` | `Optional[float]` | `0.0` | structural | GI: with BI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
-| `b_from` | `Optional[float]` | `0.0` | structural | BI: with GI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
-| `g_to` | `Optional[float]` | `0.0` | structural | GJ: with BJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
-| `b_to` | `Optional[float]` | `0.0` | structural | BJ: with GJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) = BASKV, one section, inService = ST, the bus's substation |
+| `g_from` | `Optional[float]` | `0.0` | structural | GI: with BI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) and BaseVoltage = bus I's BASKV, one section, inService = ST, the bus's substation |
+| `b_from` | `Optional[float]` | `0.0` | structural | BI: with GI, a LinearShuntCompensator cap_<I>_<J>_<CKT>_i on bus I when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) and BaseVoltage = bus I's BASKV, one section, inService = ST, the bus's substation |
+| `g_to` | `Optional[float]` | `0.0` | structural | GJ: with BJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): gPerSection (pu system), nomU (kV) and BaseVoltage = bus J's BASKV, one section, inService = ST, the bus's substation |
+| `b_to` | `Optional[float]` | `0.0` | structural | BJ: with GJ, a LinearShuntCompensator cap_<I>_<J>_<CKT>_j on bus J when either is nonzero (RAW-13): bPerSection (pu system), nomU (kV) and BaseVoltage = bus J's BASKV, one section, inService = ST, the bus's substation |
 | `status` | `Optional[int]` | `1`, `0` | mapped | ST: inService = (ST == 1), also on the line shunts; blank: 1 (defaulted) |
 | `metered_end` | `Optional[int]` | `1`, `2` | structural | MET: on a tie (I and J in two AREAs) the home end is the non-metered one (1: J, 2: I), and both TieFlows sit on the metered terminal (R5); another code on a tie raises; elsewhere untranscribed, the loss-allocation end has no CIM home (CIM 18 gap, RAW-22); blank: 1 (defaulted) |
-| `length` | `Optional[float]` | `0.0` | copied | `ACLineSegment.length` (km); LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series capacitor with LEN != 0 raises (SeriesCompensator is no Conductor) |
+| `length` | `Optional[float]` | `0.0` | copied | `ACLineSegment.length` (km); LEN, 'user-selected units' taken as km (RAW-21); 0 (the default): no length; a series capacitor's LEN != 0 is listed on its row (SeriesCompensator is no Conductor, R1b-2) |
 | `o1` | `Optional[int]` | `1` | untranscribed | ownership is an asset concept (CIM 18 gap) |
 | `f1` | `Optional[float]` | `1.0` | untranscribed | ownership is an asset concept (CIM 18 gap) |
 | `o2` | `Optional[int]` |  | untranscribed | ownership is an asset concept (CIM 18 gap) |
@@ -406,7 +409,8 @@ Update Table ACLineSegment: mRID, EquipmentContainer
 
 - **Members:** the path I, DUM1, …, J. Each consecutive pair must be joined by exactly one branch not already
   used, in either direction, and each dummy bus must have exactly two branches. Anything else raises with the
-  record. A member already in a substation raises too, because an `Update` only adds.
+  record. A member with both buses in one substation (a series capacitor merges its buses) stays there: it gets no
+  `Update` row and is listed on the Line's row (`# path …; in substations: sc_…`; R1b-3).
 - **Region:** bus I's zone. **Name:** ID.
 - The `msl_` prefix is requested from the translate-table owners (C3).
 - Neither public case has one; the atom `tests/atoms/branch/multi_section_line.raw` covers it.
@@ -415,7 +419,7 @@ Update Table ACLineSegment: mRID, EquipmentContainer
 |---|---|---|---|---|
 | `i` | `int` | `1` | structural | I: the path's first bus; with J and ID the key, mRID msl_<I>_<J>_<ID>; the Line's Region is bus I's zone |
 | `j` | `int` | `4` | structural | J: the path's last bus |
-| `dum1` | `int` | `2` | structural | DUM1: the path I, DUM1, .., J names the sections, one branch per step; each section's EquipmentContainer becomes the Line (an Update row) |
+| `dum1` | `int` | `2` | structural | DUM1: the path I, DUM1, .., J names the sections, one branch per step; each section's EquipmentContainer becomes the Line (an Update row), except a section in one substation, which stays there, listed on the Line's row (R1b-3) |
 | `line_id` | `Optional[str]` | `&1` | copied | `Line.name`; ID: the key |
 | `met` | `Optional[int]` | `1` | untranscribed | MET: the loss-allocation end has no CIM home (CIM 18 gap, RAW-22) |
 | `dum2` | `Optional[int]` | `3` | structural | as DUM1 |
@@ -546,13 +550,14 @@ Mapper: `importer/cimtbl/switched_shunt.py` (`map_switched_shunt`). Shape: `shun
   steps of Bi Mvar (Bi < 0 a reactor; reactor blocks first).
 - **Per block:** to match how the banks are wired and switched (user 2026-11-08), each block is its own
   `LinearShuntCompensator`, and all of them name one `RegulatingControl`.
-- **Order:** the control comes first. Its terminal is a busbar's from `bus.cimtbl`, so no `Update` is needed.
+- **Order:** the control comes first. Its terminal is a busbar's from `bus.cimtbl`, or for MODSW 3 / 6 a
+  machine's or a FACTS device's, so `switched_shunt.cimtbl` follows them (R2b); no `Update` is needed.
 
 WECC240:
 
 ```
-# untranscribed: adjm, rmpct, rmidnt
-# targetValue and targetDeadband in V
+# untranscribed: adjm, rmpct
+# targetValue and targetDeadband in V (voltage) or VAr (reactivePower)
 Table RegulatingControl: mRID, name, mode, discrete, enabled, targetValue, targetDeadband, Terminal
     # defaulted: nreg=0
     cc_4001, 4001, voltage, true, true, 500000.0, 500000.0, bb_4001_T1
@@ -596,8 +601,9 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
   | 0 locked | `enabled = false`, every block `controlEnabled = false`, `discrete` blank; the VSWHI/VSWLO target as read (unused) |
   | 1 discrete, voltage | `mode = voltage`, `discrete = true` |
   | 2 continuous, voltage | `mode = voltage`, `discrete = false` |
-  | 3 plant Q, 5 another shunt's admittance | raise `NotImplementedError`: no case has one yet |
-  | 4 VSC converter Q, 6 FACTS shunt Q | raise `NotImplementedError`: phase 2 (VSC DC, FACTS) |
+  | 3 discrete, plant Q | `mode = reactivePower`, `discrete = true`, on the plant's machine (R2b-1) |
+  | 6 discrete, FACTS shunt Q | `mode = reactivePower`, `discrete = true`, on the FACTS device (R2b-2) |
+  | 4 VSC converter Q, 5 another shunt's admittance | raise `NotImplementedError`: no case has one yet |
 
   - **Regulated point:** `Terminal` = `bb_<SWREG>_T1`, or `bb_<I>_T1` when SWREG is 0 (RAW-11). NREG ≠ 0 names
     node NREG of the regulated bus: `bb_s<IS>_n<NREG>_T1`, that node's busbar (R6).
@@ -614,21 +620,21 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
 - **Untranscribed:**
   - RMPCT: CIM has no participation share for a shunt (canonical CIM 18's `SynchronousMachine.qPercent` covers
     only machines; cim18v17 has it since 2026-11-08); CIM 18 gap; 100 everywhere in both cases;
-  - RMIDNT: only used by MODSW 4 and 6, which raise.
+  - nothing else: RMIDNT names MODSW 6's FACTS device (R2b-2).
 - **Atom:** `tests/atoms/shunt/switched_shunts.raw` covers reactor + capacitor blocks with remote regulation,
   continuous mode with 2.5 steps, and a locked shunt (10 × 1.0 and 5 × 1.5 Mvar, BINIT 13 → 10 and 2 steps).
 
 | SwitchedShuntRecord field | type | samples | kind | target |
 |---|---|---|---|---|
 | `bus_number` | `int` | `4001`, `4005`, `6104` | structural | I: the key (a v34 switched shunt has no ID); every block's bus, nomU (kV) = its BASKV, BaseVoltage and EquipmentContainer (its substation) |
-| `modsw` | `Optional[int]` | `1` | mapped | MODSW: 0 locked (control enabled = false), 1 voltage discrete, 2 voltage continuous; 3 and 5 raise (no case), 4 and 6 raise (phase 2); blank: 1 (defaulted) |
+| `modsw` | `Optional[int]` | `1` | mapped | MODSW: 0 locked (control enabled = false), 1 voltage discrete, 2 voltage continuous, 3 plant and 6 FACTS shunt reactivePower discrete (R2b); 4 and 5 raise (no case); blank: 1 (defaulted) |
 | `adjm` | `Optional[int]` | `0` | untranscribed | ADJM: the switching-order method has no CIM home; the block order is kept by _b<i> |
 | `status` | `Optional[int]` | `1` | mapped | STATUS: inService = (STATUS == 1) on every block; blank: 1 (defaulted) |
-| `vswhi` | `Optional[float]` | `1.5` | derived | VSWHI (pu): targetValue = (VSWHI + VSWLO) / 2 and targetDeadband = VSWHI - VSWLO, x the regulated bus's BASKV, in V (volts_from_per_unit); blank: 1.0 (defaulted) |
+| `vswhi` | `Optional[float]` | `1.5` | derived | VSWHI (pu): MODSW 0..2: targetValue = (VSWHI + VSWLO) / 2 and targetDeadband = VSWHI - VSWLO, x the regulated bus's BASKV, in V (volts_from_per_unit); MODSW 3, 6: pu of the device's Q range, in VAr (reactive_band; R2b-1, R2b-2), listed when there is no machine at SWREG; blank: 1.0 (defaulted) |
 | `vswlo` | `Optional[float]` | `0.5` | derived | VSWLO (pu): as VSWHI |
-| `swreg` | `Optional[int]` | `4001`, `4005`, `6104` | structural | SWREG: the regulated bus; the control's Terminal = bb_<SWREG>_T1, or bb_<I>_T1 when 0 (RAW-11); blank: 0 (defaulted) |
+| `swreg` | `Optional[int]` | `4001`, `4005`, `6104` | structural | SWREG: the regulated bus; the control's Terminal = bb_<SWREG>_T1, or bb_<I>_T1 when 0 (RAW-11); MODSW 3: the plant's bus, Terminal = its machine's <machine>_T1 (several machines raise; none: the control disabled on bb_<SWREG>_T1, R2b-1); MODSW 6: unused; blank: 0 (defaulted) |
 | `rmpct` | `Optional[float]` | `100.0` | untranscribed | RMPCT: CIM has no participation share for a shunt (CIM 18 gap) |
-| `rmidnt` | `Optional[str]` |  | untranscribed | RMIDNT: only MODSW 4 and 6 use it, which raise |
+| `rmidnt` | `Optional[str]` |  | structural | RMIDNT: MODSW 6: the FACTS device, Terminal fd_<RMIDNT>_T1 (R2b-2); only MODSW 4 (raises) uses it otherwise |
 | `binit` | `Optional[float]` | `600.0`, `0.0`, `400.0` | derived | BINIT (Mvar at 1 pu): split into each block's sections in RAW's switching order (block_sections); beyond the blocks' total raises; blank: 0 (defaulted) |
 | `n1` | `Optional[int]` | `5`, `6` | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `b1` | `Optional[float]` | `200.0`, `100.0` | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
@@ -647,6 +653,100 @@ Table LinearShuntCompensator: mRID, name, bus, bPerSection (pu system), nomU (kV
 | `n8` | `Optional[int]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `b8` | `Optional[float]` |  | structural | Ni / Bi: block i, a LinearShuntCompensator swsh_<I>_b<i> with maximumSections = Ni and bPerSection (pu system) = Bi / SBASE (per_unit_from_mva), up to the first Ni or Bi of 0 (RAW's end of blocks); a block after it raises; never defaulted |
 | `nreg` | `Optional[int]` |  | structural | NREG: a node of bus SWREG; nonzero: the control's Terminal is that node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); blank: 0 (defaulted) |
+
+## Branches and switched shunts: the forms R1 and R2 raised on (R1b, R2b)
+
+**Approved 2026-11-09 (user: "line at bus I's base", "load sign, as spec", "disabled control", "approve,
+implement") and implemented.** Mappers: `branch.py`, `multi_section_line.py`, `switched_shunt.py`. The local case set
+(29 cases of one network, never committed, counted only) has these in every case: 18 branches between two base
+voltages, 1 series capacitor with a length, 35 multi-section lines holding a series capacitor, 25 switched shunts
+with MODSW 3 and 3 or 4 with MODSW 6.
+
+### A branch between two base voltages (decision R1b-1)
+
+PSS/E solves in per unit, so a branch's R, X and B on SBASE need no kV. CIM gives an `ACLineSegment` one
+BaseVoltage. Of the 18: 10 are out of service, 3 are zero-impedance jumpers, none has X < 0; 10 have a BASKV
+ratio ≤ 1.095 (labels of one voltage) and 8 one of 1.5 to 2.0. None has a line shunt.
+
+- The line (or capacitor) keeps its class and bus I's base: BaseVoltage `bv_<BASKV(I)>`, every `(pu system)` value
+  and a `CurrentLimit` on BASKV(I). Its row lists bus J's: `# BASKV 240.0 at bus J`.
+- The exporter converts back on the line's own base, so the values round-trip exactly.
+- A line shunt keeps its own bus's base: GJ + jBJ is on bus J's BASKV. R1 used the line's base for both ends, which
+  is the same whenever the two buses share one.
+- Not a nominal-ratio transformer: it would invent equipment and have no place for the pi-split B. A kV solve sees
+  the step between the two bases at bus J (expected solve difference).
+
+### A series capacitor with a length (decision R1b-2)
+
+A `SeriesCompensator` is no `Conductor`, so LEN ≠ 0 is listed on its row (`untranscribed: length=1.0`), as GTAP is
+in R3b-4. A series capacitor with B ≠ 0 still raises (no case).
+
+### A multi-section line holding a series capacitor (decision R1b-3)
+
+Every capacitor section of the set (44) has both buses in one substation, which the capacitor merges; every line
+section (39) spans two. A section already in a substation stays there, with no `Update` row (an `Update` only
+adds, so it clashed with the capacitor's substation at bind time). The Line holds the rest, and its row lists the
+others for the exporter: `# path 1, 2, 3, 4; in substations: sc_2_3_1`. The rule is the same for a line section
+inside one substation (none in the set).
+
+### MODSW 3: a plant's reactive power (decision R2b-1)
+
+24 of the 25 regulate the single machine at SWREG: 17 WMOD 1 in service, 7 out of service, none behind a step-up,
+22 in another substation than the shunt.
+
+- `RegulatingControl` `cc_<I>`: `mode = reactivePower`, `discrete = true`, `enabled = true`, `Terminal` = the
+  machine's own `<machine>_T1` (`sm_` or `pec_<SWREG>_<ID>_T1`, `generator.machine_mrid`), where PSS/E measures QG
+  (behind a step-up, still the machine's).
+- **Band:** VSWLO and VSWHI are pu of the plant's QT − QB. The band runs QB + VSWLO × (QT − QB) to QB + VSWHI ×
+  (QT − QB) Mvar, from that machine's QT and QB as written. Its status is ignored, so the exporter inverts exactly.
+- `targetValue` = −(the band's midpoint) and `targetDeadband` = its width, in VAr (`reactive_band`): the terminal's
+  Q under CIM's load sign, as the machine's q = −QG.
+- A plant of several machines at SWREG raises: one terminal measures one machine (no case).
+- **No machine at SWREG** (1 a case: SWREG = I, a type 1 bus, out of service, VSW 0 / 1). PSS/E requires a type 2
+  or 3 bus, so it cannot regulate. The control is written disabled (`enabled = false`, the blocks' `controlEnabled =
+  false`), with no target, on `bb_<SWREG>_T1`, and VSWHI / VSWLO off their defaults are listed: `untranscribed:
+  vswlo=0.0`. The exporter writes MODSW 3 from the mode.
+
+### MODSW 6: a FACTS device's shunt reactive power (decision R2b-2)
+
+Each names a shunt-only FACTS device by RMIDNT (J = 0, mapped in P2a; SWREG is unused).
+
+- `mode = reactivePower`, `discrete = true`, `enabled = true`, `Terminal` = the
+  `StaticSynchronousCompensator`'s `fd_<RMIDNT>_T1`.
+- **Band:** −SHMX + VSWLO × 2 SHMX to −SHMX + VSWHI × 2 SHMX Mvar; the target and deadband as R2b-1. The set's
+  symmetric bands (0.375 / 0.625, 0.4 / 0.6) give a target of 0.
+- An RMIDNT naming no FACTS device raises; so does one with a series element, whose range the bridge transfer
+  reduces (no case).
+
+MODSW 4 (a VSC converter's Q) and 5 (another shunt's admittance) still raise: no case has one.
+
+### Order
+
+A control's `Terminal` must bind before it (an unresolved mRID raises), so `switched_shunt.cimtbl` follows
+`generator.cimtbl` and `facts_device.cimtbl` in the master's `Import` order. No golden changes: neither IEEE14 nor
+IEEE118 has a switched shunt.
+
+### Atoms (hand-built)
+
+- `tests/atoms/branch/mixed_base.raw` (the `multi_section_line.raw` frame): 230 kV buses 1-4 and 240 kV bus 5; a
+  multi-section line 1-4 `&1` through 2 and 3 whose middle section 2-3 is a series capacitor with LEN 1.0; a line
+  4-5 between the two bases with B and BJ.
+- `tests/atoms/shunt/plant_and_facts.raw` (the `generators.raw` frame): a WMOD 1 machine at bus 1 (QT 50, QB −30)
+  that a MODSW 3 shunt at bus 2 regulates over 0.25 / 0.75 (target −10 Mvar, deadband 40); a MODSW 3 shunt at bus 3
+  with no plant; a FACTS device `SVC-1` at bus 4 (SHMX 100) that a MODSW 6 shunt at bus 5 regulates over 0.4 / 0.6.
+
+Raise tests: MODSW 4 and 5, a plant of two machines, an RMIDNT naming no FACTS device; the series capacitor with
+B ≠ 0 still raises.
+
+### CIM 18 gaps
+
+None new. The line's two base voltages are a RAW labelling; a shunt's participation share (RMPCT) is still a gap.
+
+### Results
+
+All 29 local cases map their branches, multi-section lines and switched shunts. One case binds whole in 66 s with
+only its 50 WMOD 2/3 generators set aside: 14380 `ACLineSegment`s, 66 `SeriesCompensator`s, 35 `Line`s; of its 28
+reactivePower controls, 24 are on machines and 3 on FACTS devices, and 1 (no plant) is disabled.
 
 ## Generator (R3)
 
