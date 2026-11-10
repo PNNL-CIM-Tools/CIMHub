@@ -8,10 +8,14 @@
 #   scripts/test-all.sh              # every package
 #   scripts/test-all.sh core opendss # only the named packages
 #   scripts/test-all.sh -- -x -q     # extra args go to pytest
+#   PYTEST=venv/bin/pytest scripts/test-all.sh  # another runner
 #
 # Exits non-zero if any package fails, after running all of them.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
+
+# PYTEST overrides the runner: release.yml tests the built wheels in their own venv.
+read -ra RUNNER <<< "${PYTEST:-uv run pytest}"
 
 PYTEST_ARGS=()
 PACKAGES=()
@@ -37,7 +41,7 @@ fi
 FAILED=()
 for d in "${TEST_DIRS[@]}"; do
     echo "== $d"
-    uv run pytest "$d" "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}" || FAILED+=("$d")
+    "${RUNNER[@]}" "$d" "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}" || FAILED+=("$d")
 done
 
 if [[ "${#FAILED[@]}" -eq 0 ]]; then

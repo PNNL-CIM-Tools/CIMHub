@@ -1,6 +1,6 @@
 [project]
 name = "cimhub"
-version = "3.0.0a0"
+version = "3.0.0"
 description = "CIMHub: CIM converters built on .cimtbl (development workspace)"
 requires-python = ">=3.11,<3.14"
 dependencies = [
@@ -37,8 +37,8 @@ cimhub-core = { workspace = true }
 cimhub-opendss = { workspace = true }
 cimhub-raw = { workspace = true }
 cimhub-gdm = { workspace = true }
-# Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
-# A public build cannot resolve these: switch to version pins before release.
+# Sibling checkouts of the cim-graph stack, for local development only. The packages pin the released
+# versions; release.yml builds with --no-sources and tests the wheels against PyPI.
 cim-graph = { path = "../CIM-Graph", editable = true }
 cim-profiles = { path = "../CIM-Profiles", editable = true }
 cim-tables = { path = "../CIM-Tables", editable = true }
