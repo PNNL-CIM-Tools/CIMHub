@@ -1,0 +1,15 @@
+# GridLAB-D buses -> ConnectivityNode, BaseVoltage from the topology walk (cimtopology.core); 4 buses.
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#buses
+
+Profile = cim18v17
+
+# nominal_voltage disagrees with the walk (10%): 480.0 V (0.8314 kV 3-phase) on bv_480v (1): meter_1
+# untranscribed, set here: substation power_convergence_value 1, triplex_node power_12 1
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_feeder
+    # children: ld_1
+    n1,        n1,        bv_12p47kv
+    sourcebus, sourcebus, bv_12p47kv
+    # bustype SWING_PQ: a plain bus here; it is a swing only when its island separates (S1-2)
+    meter_1,   meter_1,   bv_480v
+    # children: tn_1
+    tm_1,      tm_1,      bv_240v

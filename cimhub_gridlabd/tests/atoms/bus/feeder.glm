@@ -1,0 +1,23 @@
+// S1 atom: buses and the swing source. Values from IEEE13_cdpsm and the taxonomy feeders.
+module powerflow { solver_method NR; }
+object substation {
+  name "sourcebus";
+  bustype SWING;
+  phases ABCN;
+  nominal_voltage 7200.0;
+  base_power 12MVA;
+  power_convergence_value 100VA;
+  positive_sequence_voltage 7200.0;
+}
+object node { name n1; phases ABCN; nominal_voltage 7200.0; }
+object overhead_line { name l1; phases ABCN; from sourcebus; to n1; length 100; }
+object load { name ld_1; parent n1; phases AN; nominal_voltage 7200.0; }
+object transformer_configuration { name xc_3ph; connect_type WYE_WYE; primary_voltage 12470; secondary_voltage 480;
+  power_rating 75; }
+object transformer { name xf_3ph; phases ABCN; from n1; to meter_1; configuration xc_3ph; }
+object meter { name meter_1; phases ABCN; nominal_voltage 480; bustype SWING_PQ; }
+object transformer_configuration { name xc_ct; connect_type SINGLE_PHASE_CENTER_TAPPED; primary_voltage 7200;
+  secondary_voltage 120; power_rating 25; }
+object transformer { name xf_ct; phases AS; from n1; to tm_1; configuration xc_ct; }
+object triplex_meter { name tm_1; phases AS; nominal_voltage 120; }
+object triplex_node { name tn_1; parent tm_1; phases AS; nominal_voltage 120; power_12 1500+500j; }

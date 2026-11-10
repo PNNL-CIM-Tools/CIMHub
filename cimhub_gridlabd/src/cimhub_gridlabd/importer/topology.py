@@ -4,7 +4,8 @@
   ``capacitor``, ``substation``, ``triplex_meter``, ...). A bus whose ``parent`` is a bus is solved by GridLAB-D
   as its parent's bus, so it is not a bus of its own: ``bus_roots`` maps it to the root of its parent chain.
 - **Sources:** every ``substation`` and every bus with ``bustype SWING``. Its kV is the system voltage of its
-  ``nominal_voltage`` (phase to neutral) on the system its phases give (``line_kv``).
+  ``nominal_voltage`` (phase to neutral) on the system its phases give (``line_voltage``). ``SWING_PQ`` is a plain
+  bus: it becomes a swing only when its island separates (S1-2).
 - **Branches:** every line, switch, fuse, recloser, sectionalizer, series reactor and regulator (a regulator keeps
   the voltage). A switching device's ``status OPEN`` is a normally open branch.
 - **Transformers:** one ``Coil`` per winding, from the ``transformer_configuration``. ``WYE_WYE``: polyphase
@@ -37,15 +38,15 @@ _DELTA_CONNECTIONS = {"DELTA_DELTA", "DELTA_GWYE"}
 _CENTER_TAP = "SINGLE_PHASE_CENTER_TAPPED"
 
 
-def line_kv(phase_to_neutral_kv: float, system: System) -> float:
-    """The system voltage (``BusSystem.kv``) of a bus whose GLM ``nominal_voltage`` is ``phase_to_neutral_kv``:
-    x sqrt(3) on a 3-phase system (7.2 kV -> 12.47), x 2 on a split-phase one (0.12 -> 0.24), unchanged on a
-    single-phase one."""
+def line_voltage(phase_to_neutral: float, system: System) -> float:
+    """The system voltage of a bus whose GLM voltage (``nominal_voltage``, ``|voltage_A|``) is
+    ``phase_to_neutral``, in the same unit: x sqrt(3) on a 3-phase system (7200 V -> 12470.8 V), x 2 on a
+    split-phase one (120 -> 240), unchanged on a single-phase one."""
     if system is System.THREE_PHASE:
-        return phase_to_neutral_kv * math.sqrt(3)
+        return phase_to_neutral * math.sqrt(3)
     if system is System.SPLIT_PHASE:
-        return phase_to_neutral_kv * 2
-    return phase_to_neutral_kv
+        return phase_to_neutral * 2
+    return phase_to_neutral
 
 
 def kv(model: GlmModel, record, slot: str) -> float:
@@ -63,14 +64,15 @@ def phase_letters(record) -> frozenset[str]:
     return frozenset(str(record.phases)) & _PHASE_LETTERS
 
 
-def _buses(model: GlmModel) -> dict[str, object]:
+def bus_records(model: GlmModel) -> dict[str, object]:
+    """Name -> record of every bus object (any ``node`` or ``triplex_node`` subclass)."""
     return {name: record for cls, bucket in model.graph.items() if issubclass(cls, BUS_CLASSES)
             for name, record in bucket.items()}
 
 
 def bus_roots(model: GlmModel) -> dict[str, str]:
     """Bus object name -> the bus it is solved as: itself, or the root of its ``parent`` chain (GLM-4)."""
-    buses = _buses(model)
+    buses = bus_records(model)
     roots: dict[str, str] = {}
     for name, record in buses.items():
         chain = [name]
@@ -103,20 +105,30 @@ def _end(record, slot: str, roots: dict[str, str]) -> str:
     return roots[bus]
 
 
+def swing_buses(model: GlmModel) -> list:
+    """Every ``substation`` and every bus with ``bustype SWING``, by name."""
+    return sorted((record for record in bus_records(model).values()
+                   if isinstance(record, schema.Substation) or str(record.bustype) == "SWING"),
+                  key=lambda record: str(record.name))
+
+
+def source_system(record) -> System:
+    """A swing bus's system: 3-phase on three conductors, single-phase on one; any other count raises."""
+    conductors = phase_letters(record)
+    if len(conductors) == 3:
+        return System.THREE_PHASE
+    if len(conductors) == 1:
+        return System.SINGLE_PHASE
+    raise ValueError(f"{record.class_name} {record.name}: phases {record.phases}; only 1- and 3-phase swing buses")
+
+
 def _sources(model: GlmModel, roots: dict[str, str]):
-    for name, record in _buses(model).items():
-        if not (isinstance(record, schema.Substation) or str(record.bustype) == "SWING"):
-            continue
+    for record in swing_buses(model):
+        name = str(record.name)
         if roots[name] != name:
             raise ValueError(f"{record.class_name} {name}: a swing bus with a parent")
-        conductors = phase_letters(record)
-        if len(conductors) == 3:
-            system = System.THREE_PHASE
-        elif len(conductors) == 1:
-            system = System.SINGLE_PHASE
-        else:
-            raise ValueError(f"{record.class_name} {name}: phases {record.phases}; only 1- and 3-phase swing buses")
-        yield Source(name, line_kv(kv(model, record, "nominal_voltage"), system), system)
+        system = source_system(record)
+        yield Source(name, line_voltage(kv(model, record, "nominal_voltage"), system), system)
 
 
 def _branches(model: GlmModel, roots: dict[str, str]):

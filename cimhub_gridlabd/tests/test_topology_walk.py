@@ -6,9 +6,9 @@ import math
 import pytest
 from cimtopology.core import Connection, System, walk
 
-from conftest import DEFINES, deck, deck_params
+from conftest import deck, deck_params, defines
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
-from cimhub_gridlabd.importer.topology import bus_roots, glm_network, line_kv
+from cimhub_gridlabd.importer.topology import bus_roots, glm_network, line_voltage
 
 
 def read(tmp_path, text: str):
@@ -17,10 +17,10 @@ def read(tmp_path, text: str):
     return GlmReader(path).read_all()
 
 
-def test_line_kv():
-    assert line_kv(7.2, System.THREE_PHASE) == pytest.approx(7.2 * math.sqrt(3))
-    assert line_kv(0.12, System.SPLIT_PHASE) == pytest.approx(0.24)
-    assert line_kv(0.277, System.SINGLE_PHASE) == 0.277
+def test_line_voltage():
+    assert line_voltage(7.2, System.THREE_PHASE) == pytest.approx(7.2 * math.sqrt(3))
+    assert line_voltage(0.12, System.SPLIT_PHASE) == pytest.approx(0.24)
+    assert line_voltage(0.277, System.SINGLE_PHASE) == 0.277
 
 
 def test_child_buses_are_their_root(tmp_path):
@@ -89,7 +89,7 @@ def test_center_tap_on_three_phases_raises(tmp_path):
 
 
 def test_ieee13_cdpsm_systems():
-    buses = walk(glm_network(GlmReader(deck("IEEE/IEEE13_cdpsm.glm"), defines=DEFINES).read_all()))
+    buses = walk(glm_network(GlmReader(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm")).read_all()))
     assert buses["sourcebus"].kv == 115.0
     assert buses["650"].kv == 4.16 and buses["650"].system is System.THREE_PHASE
     assert buses["634"].kv == 0.48
@@ -106,7 +106,7 @@ WALK_STOPS = {
 @pytest.mark.parametrize("relative, stop", deck_params(WALK_STOPS))
 def test_every_deck_walks(relative, stop):
     def run():
-        model = GlmReader(deck(relative), defines=DEFINES).read_all()
+        model = GlmReader(deck(relative), defines=defines(relative)).read_all()
         return model, walk(glm_network(model))
 
     if stop is not None:

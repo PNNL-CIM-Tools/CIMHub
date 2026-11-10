@@ -1,11 +1,11 @@
 """GridLAB-D model -> ``.cimtbl`` documents -> cim18v17: the orchestrator.
 
 The topology walk runs once (``site``). The master holds the containers, BaseFrequency and BaseVoltages, then one
-``Import`` per part. ``MAPPING_ORDER`` is the ``Import`` order of the class parts (GLM_REWRITE_PLAN.md section 2):
-catalogs before the instances that use them; each slice adds its mappers here. A GLM class nothing maps is listed
-by count on the master's comment (GLM-14), so nothing disappears silently. A value the reader kept as an
-expression (``LIGHTS*1.2``) on a record a mapper reads raises (GLM-8): the mapper would otherwise see the slot
-as unset.
+``Import`` per part: ``bus.cimtbl`` (every root bus) and ``source.cimtbl`` first, then ``MAPPING_ORDER``, the class
+parts in the plan's section 2 order (catalogs before the instances that use them); each slice adds its mappers.
+``CLASSIFIED`` holds every mapped class's ``FIELDS``. A GLM class not in it is listed by count on the master's
+comment (GLM-14), so nothing disappears silently. A value the reader kept as an expression (``LIGHTS*1.2``) in a
+slot a mapper reads raises (GLM-8): the mapper would otherwise see the slot as unset.
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master``.
 """
@@ -19,8 +19,9 @@ from cimtables.document import Column, Document, DocumentSet, Import, ObjectStat
 from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 
 from cimhub_core.base import CimtblImporter
-from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_gridlabd.glm_reader import GlmModel
+from cimhub_gridlabd.importer.cimtbl import bus
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -41,8 +42,12 @@ class Site(NamedTuple):
     base_frequency: float
 
 
-#: ``(native class, mapper(model, site))`` in ``Import`` order. Each slice adds its mappers.
+#: ``(native class, mapper(model, site))`` in ``Import`` order, after ``bus`` and ``source``. Each slice adds its
+#: mappers.
 MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = ()
+
+#: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
+CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:
@@ -62,11 +67,12 @@ def site(model: GlmModel, name: str) -> Site:
                 base_frequency(model)[0])
 
 
-def check_expressions(model: GlmModel, mapped: set[type]) -> None:
-    """Raise if a record of a mapped class has a slot the reader kept as an expression (GLM-8)."""
+def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]]) -> None:
+    """Raise if a slot a mapper reads (not untranscribed) holds an expression the reader kept (GLM-8)."""
     for (name, slot), text in sorted(model.expressions.items()):
         record = model.by_name(name)
-        if type(record) in mapped:
+        fields = classified.get(type(record))
+        if fields is not None and fields[slot].kind != "untranscribed":
             origin = model.origins[name]
             raise ValueError(f"{record.class_name} {name} ({origin[0]}:{origin[1]}): {slot} is the expression "
                              f"{text!r}, which no mapper reads yet (GLM-8)")
@@ -86,7 +92,7 @@ def _base_frequency(model: GlmModel) -> ObjectStatement:
                                              (Column("frequency", "Hz"), cell(frequency))], comment=comment)
 
 
-def _not_mapped(model: GlmModel, mapped: set[type]) -> list[tuple[str, int]]:
+def _not_mapped(model: GlmModel, mapped) -> list[tuple[str, int]]:
     """``(GLM type, count)`` of every object no mapper reads: schema classes and types the schema lacks."""
     counts = {cls.class_name: model.count(cls) for cls in model.graph if cls not in mapped}
     counts.update(model.not_read)
@@ -95,7 +101,7 @@ def _not_mapped(model: GlmModel, mapped: set[type]) -> list[tuple[str, int]]:
 
 def map_master(model: GlmModel, parts: list[Document], site: Site, *, authority: str = AUTHORITY) -> Document:
     """The master document: containers, BaseFrequency, BaseVoltages, then one ``Import`` per non-empty part."""
-    mapped = {native_class for native_class, _ in MAPPING_ORDER}
+    mapped = set(CLASSIFIED)
     comment = f"GridLAB-D model {site.name}\nMapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master"
     counts = _not_mapped(model, mapped)
     if counts:
@@ -123,9 +129,12 @@ class GlmImporter(CimtblImporter):
         self.authority = authority
 
     def to_cimtbl(self, model: GlmModel) -> DocumentSet:
-        check_expressions(model, {native_class for native_class, _ in MAPPING_ORDER})
+        check_expressions(model, CLASSIFIED)
         walked = site(model, self.name)
-        parts = [part for part in (mapper(model, walked) for _, mapper in MAPPING_ORDER) if part.statements]
+        documents = [bus.map_buses(model, walked.buses, walked.roots, walked.feeder),
+                     bus.map_source(model, walked.buses, walked.substation),
+                     *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
+        parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, authority=self.authority), parts=parts)
 
 

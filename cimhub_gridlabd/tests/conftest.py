@@ -16,8 +16,16 @@ from cimhub_core.cimtbl_testing import cim_scope
 DECKS = Path(__file__).parent / "decks"
 
 #: The Java CIMHub exports reference ``${VSOURCE}`` without defining it (GLM-15): the source's phase-to-neutral
-#: volts on 115 kV, as ``gridlabd -D VSOURCE=...`` would pass it.
-DEFINES = {"VSOURCE": "66395.28"}
+#: volts, as ``gridlabd -D VSOURCE=...`` would pass it. It is per deck (S1-4): 115 kV / sqrt 3 for the IEEE 13
+#: exports, 4.16 kV / sqrt 3 for IEEE 123, whose substation is the 4.16 kV bus 150.
+VSOURCE = {"IEEE/IEEE123.glm": "2401.78"}
+DEFAULT_VSOURCE = "66395.28"
+
+
+def defines(relative: str) -> dict[str, str]:
+    """The ``defines`` a deck needs."""
+    return {"VSOURCE": VSOURCE.get(relative, DEFAULT_VSOURCE)}
+
 
 #: Every public Powergrid-Models GLM deck, by its path under ``models/feeders/GridLABD``.
 ALL_DECKS = [

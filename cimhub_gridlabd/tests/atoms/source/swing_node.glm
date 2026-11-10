@@ -1,0 +1,4 @@
+// S1 atom: a taxonomy-style SWING node (no substation) with a polar source voltage.
+object node { name swing; bustype SWING; phases ABCN; nominal_voltage 7200; voltage_A 7416-30d; }
+object node { name n1; phases ABCN; nominal_voltage 7200; }
+object overhead_line { name l1; phases ABCN; from swing; to n1; length 100; }

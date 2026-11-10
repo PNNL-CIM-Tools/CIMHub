@@ -6,10 +6,11 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import DEFINES, deck
+from conftest import deck, defines
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer import glm_to_cimtbl
+from cimhub_gridlabd.importer.cimtbl import bus
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, base_frequency, check_expressions, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
@@ -28,15 +29,21 @@ def test_base_frequency(tmp_path):
     assert base_frequency(read(tmp_path, "module powerflow;\n")) == (60.0, True)
 
 
-def test_expression_on_a_mapped_class_raises(tmp_path):
-    model = read(tmp_path, "schedule S { * * * * * 1; }\nobject load { name l1; phases AN; base_power_A S*2; }\n")
-    check_expressions(model, {schema.Node})  # load is not mapped: nothing to check
-    with pytest.raises(ValueError, match=r"load l1 \(.*model.glm:2\): base_power_A is the expression 'S\*2'"):
-        check_expressions(model, {schema.Load})
+def test_expression_only_raises_in_a_slot_a_mapper_reads(tmp_path):
+    model = read(tmp_path, """
+schedule S { * * * * * 1; }
+object load { name l1; phases AN; base_power_A S*2; }
+object node { name n1; phases ABCN; voltage_B S*7200; voltage_A S*7200; }
+""")
+    fields = {schema.Node: bus.FIELDS[schema.Node]}
+    with pytest.raises(ValueError, match=r"node n1 \(.*model.glm:4\): voltage_A is the expression 'S\*7200'"):
+        check_expressions(model, fields)  # voltage_A is read on a swing bus; voltage_B (untranscribed) is not
+    del model.expressions[("n1", "voltage_A")]
+    check_expressions(model, fields)  # load is not classified yet, voltage_B is untranscribed: nothing raises
 
 
 def test_ieee13_cdpsm_master(scope):
-    model = GlmReader(deck("IEEE/IEEE13_cdpsm.glm"), defines=DEFINES).read_all()
+    model = GlmReader(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm")).read_all()
     documents = GlmImporter("IEEE13_cdpsm").to_cimtbl(model)
     assert_matches_golden(documents.master, GOLDENS / "IEEE13_cdpsm" / "IEEE13_cdpsm.cimtbl")
     network = glm_to_cim(model, name="IEEE13_cdpsm")
@@ -48,8 +55,9 @@ def test_master_lists_every_class_no_mapper_reads(tmp_path, scope, monkeypatch):
     monkeypatch.setattr(glm_to_cimtbl, "MAPPING_ORDER", ())
     model = read(tmp_path, """
 object substation { name src; bustype SWING; phases ABCN; nominal_voltage 7200; }
+object load { name ld; parent src; phases AN; nominal_voltage 7200; }
 object recorder { name r; }
 """)
     master = GlmImporter("m").to_cimtbl(model).master
-    assert "not mapped: recorder 1, substation 1" in master.comment
+    assert "not mapped: load 1, recorder 1" in master.comment  # substation is mapped (S1)
 

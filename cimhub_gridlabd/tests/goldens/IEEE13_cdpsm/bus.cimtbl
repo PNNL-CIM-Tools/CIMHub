@@ -1,0 +1,38 @@
+# GridLAB-D buses -> ConnectivityNode, BaseVoltage from the topology walk (cimtopology.core); 21 buses.
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#buses
+
+Profile = cim18v17
+
+# untranscribed, set here: substation power_convergence_value 1
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_IEEE13_cdpsm
+    sourcebus, sourcebus, bv_115kv
+    # children: cap_cap2, ld_611
+    611,       611,       bv_4p16kv
+    632,       632,       bv_4p16kv
+    633,       633,       bv_4p16kv
+    # children: ld_645
+    645,       645,       bv_4p16kv
+    # children: ld_646
+    646,       646,       bv_4p16kv
+    650,       650,       bv_4p16kv
+    # children: ld_652
+    652,       652,       bv_4p16kv
+    # children: ld_670a
+    670,       670,       bv_4p16kv
+    # children: ld_671
+    671,       671,       bv_4p16kv
+    # children: cap_cap1, ld_675a
+    675,       675,       bv_4p16kv
+    680,       680,       bv_4p16kv
+    684,       684,       bv_4p16kv
+    # children: ld_692
+    692,       692,       bv_4p16kv
+    brkr,      brkr,      bv_4p16kv
+    mid,       mid,       bv_4p16kv
+    rg60,      rg60,      bv_4p16kv
+    tap,       tap,       bv_4p16kv
+    xf1,       xf1,       bv_4p16kv
+    # children: 634_pvmtr, 634_stmtr, ld_634c; bustype SWING_PQ: a plain bus here; it is a swing only when its island separates (S1-2)
+    634,       634,       bv_480v
+    # children: house_pvmtr, house_stmtr, ld_house
+    house,     house,     bv_240v

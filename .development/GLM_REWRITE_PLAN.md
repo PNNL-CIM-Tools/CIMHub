@@ -1,6 +1,6 @@
 # GridLAB-D rewrite on `.cimtbl`: importer wave plan
 
-**Status:** approved by the user 2026-11-09. **S0 built 2026-11-09, uncommitted** (§4, findings in §3.5); one decision is reopened by its data: **GLM-1** (§6), needed before S1. Branch `glm-importer` (worktree
+**Status:** approved by the user 2026-11-09. **S0 built 2026-11-09, uncommitted** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09, uncommitted.** S2 (catalogs) next. Branch `glm-importer` (worktree
 `CIMHub-glm`, off `rc_1` at `d0901e7`). This wave is the **importer** (`glm_to_cim`). The exporter (`cim_to_glm` on
 the core getters) gets its own plan once the importer is done, as DSS S6 did.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (F3+, GridLAB-D). **Contract, shapes, spec format:** the
@@ -21,7 +21,7 @@ written fresh. CIMHub_2_0's `cimhub_gridlabd/` stays the read-only oracle (copy 
 |---|---:|---|---|
 | `schema/linkml/**` (90 yaml), `schema/gridlabd.py` (generated) | 27k + yaml | COPY | no CIM profile import; each slot has `unit.ucum_code` and `native_name`. Defaults are missing (§3.3) |
 | `schema/cpp_parser.py`, `property_parser.py`, `linkml_generator.py` | 1,225 | COPY | the schema's provenance: they regenerate it from the GridLAB-D C++ source. Review that they hold no absolute paths |
-| `importer/glm_text_reader.py`, `glm_reader.py` (GLM-JSON), `glm_serialization.py`, `glm_registry.py` | 1,067 | ~~COPY, then fix~~ **rewritten in S0** (`glm_reader.py`, `glm_schema.py`) | a line-regex state machine feeding a JSON-shaped dict, with `name`/`parent` attached by `setattr`; making it fail fast and unit-preserving touched every line, so it was rewritten on the same schema. The GLM-JSON form is not carried (GLM-17) |
+| `importer/glm_text_reader.py`, `glm_reader.py` (GLM-JSON), `glm_serialization.py`, `glm_registry.py` | 1,067 | ~~COPY, then fix~~ **rewritten in S0** (`glm_reader.py`, `glm_schema.py`) | a line-regex state machine feeding a JSON-shaped dict, with `name`/`parent` attached by `setattr`; making it fail fast and unit-preserving touched every line, so it was rewritten on the same schema. GLM-JSON is deferred to after the migration (GLM-17) |
 | `exporter/glm_writer.py`, `glm_text_writer.py` | 490 | deferred to the exporter wave | nothing in the importer uses them; they are copied when their first test is written |
 | `importer/<class>/` (17 modules), `common.py`, `glm_to_cim.py` | 1,625 | DROP | cimhub_2026, `cim.X(...)`, `link_terminal`, `propagate_base_voltages` after bind (I1, I5) |
 | `exporter/<class>/`, `cim_to_glm.py` | 3,800 | not in this wave | the exporter wave, written fresh on the getters |
@@ -99,8 +99,9 @@ These run on the reader's objects before any mapper and construct no CIM (I5).
 
 ### 3.1 Bus voltages and systems (GLM-1)
 
-> **Reopened by the S0 data** (§3.5, GLM-1 in §6): the rule below stops 24 of 29 decks on the taxonomy meters'
-> constant `nominal_voltage 480`. The recommendation is now the walk's kV, with disagreements listed, not raised.
+> **Superseded (GLM-1, decided 2026-11-09):** BaseVoltage is the walk's kV; a node's `nominal_voltage` is checked
+> against it and disagreements are listed in `bus.cimtbl`, not raised. The rule below stopped 24 of 29 decks on the
+> taxonomy meters' constant `nominal_voltage 480`.
 
 Unlike DSS, every GLM node states its own `nominal_voltage`, line to neutral, in V (7200 on a 12.47 kV feeder,
 120 on a triplex secondary). GridLAB-D uses it as the per-unit base and the initial guess. So the source of the
@@ -189,7 +190,7 @@ writes the stubs.
 | slice | content | exit |
 |---|---|---|
 | S0 | workspace member + seed (§0); reader (§3.4); `importer/topology.py` (`glm_network` on `cimtopology.core`); orchestrator `glm_to_cimtbl.py` with `MAPPING_ORDER`, master document, `GlmImporter(CimtblImporter)`, the expression guard; small decks vendored (§5) | **built 2026-11-09:** 28 of 29 decks read and 27 walk with every bus reached, the stops listed as deck defects (§3.5); the IEEE13_cdpsm master binds |
-| S1 | nodes, meters, triplex nodes/meters (root CNs, GLM-4/5); BaseVoltage (GLM-1); source from `substation` / SWING nodes (GLM-9) | master + node files + source bind on all 29 decks; every node's BaseVoltage agrees with the walk |
+| S1 | buses (`bus.cimtbl`: every root bus, BaseVoltage from the walk, GLM-1/4/5) and the swing source (`source.cimtbl`: substation / SWING buses, stiff default impedance, `BasePower`) | **built 2026-11-09 (CIMTBL_MAPPING.md S1):** every deck binds master + bus + source except the two listed deck defects; IEEE13_cdpsm bus and source goldens committed with the master's |
 | S2 | catalogs: overhead/underground/triplex conductors (`wire_info`), line_spacing (XYSpacing), line_configuration and triplex_line_configuration (geometry → WireConfiguration, z-matrix → PerLengthPhaseImpedance; GLM-11, GLM-12) | every catalog binds on all decks; geometry is never replaced by a matrix (skill `conductor-geometry`) |
 | S3a | overhead/underground/triplex lines (ratings → OperationalLimitSet); switch, fuse, recloser (GLM-10) | all lines and switches bind |
 | S3b | transformer_configuration templates (3-phase by TankEnd, 1-phase, center-tap by lugs) and transformer instances (GLM-6) | every template binds; IEEE13_cdpsm's transformers equal the DSS importer's IEEE13_CDPSM golden in SI (GLM-16) |
@@ -219,7 +220,7 @@ Each item has a recommendation and the slice that needs it.
 
 | # | question | recommendation | slice |
 |---|---|---|---|
-| GLM-1 | Where BaseVoltage comes from | ~~The node's `nominal_voltage`, scaled by the walk's system; the walk must agree within 10 % or the import raises.~~ **Reopened 2026-11-09 by the S0 data (§3.5):** the taxonomy meters' `nominal_voltage` is a constant 480, so that rule stops 24 of 29 decks on 1,469 meters. **New recommendation:** the walk's kV (source and transformer ratings, as DSS-1), which GridLAB-D's own solution follows; each root bus whose `nominal_voltage` disagrees by more than 10 % is listed in `bus.cimtbl`'s comment (`# nominal_voltage disagrees with the walk: meter_1 480 V (831 V line to line) on 0.48 kV`), not raised. **Awaiting the user** | S1 |
+| GLM-1 | Where BaseVoltage comes from | **Decided by the user 2026-11-09 (amended from the approved plan by the S0 data, §3.5):** the walk's kV from the source and transformer ratings (as DSS-1), which GridLAB-D's own solution follows. Each root bus whose `nominal_voltage`, on the walk's system, disagrees by more than 10 % is listed in `bus.cimtbl`'s comment, not raised. The taxonomy meters' constant `nominal_voltage 480` made the first rule stop 24 of 29 decks | S1 |
 | GLM-2 | Inline units on values | Value-verbatim: the reader keeps the written unit; the column header carries it (`distance_AN (in)`, `nomQ (MVAr)`), and rows whose units differ go in separate `Table` blocks of the same class. The alternative, converting on read to the declared unit as GridLAB-D does, breaks I2 | S0 |
 | GLM-3 | Defaults | `glm_default` annotation from the C++ source, filled per slice, applied by core `fill_defaults`, listed as `# defaulted` (as DSS-6) | S0 + per slice |
 | GLM-4 | Parent-child nodes (7,492 triplex nodes, 25 nodes, 2 meters) | GridLAB-D solves a child as its parent's bus, so a child is not its own ConnectivityNode: its equipment lands on the root's node. The child's name is listed in the root row's comment (`# children: tn_2`); a child whose `nominal_voltage` or phases disagree with its root raises | S1 |
@@ -227,7 +228,7 @@ Each item has a recommendation and the slice that needs it.
 | GLM-6 | Transformers | A `transformer_configuration` is a template (`TransformerTankConfiguration`), every `transformer` a `PowerTransformer` + tank by template (D10 conventions; center tap by the DSS lug template, H1 H2 X1 X3 X2). Per-unit `impedance`/`impedance1`/`impedance2` and `shunt_impedance` go on the template in `(pu)` on its own base; the star→mesh split for the center tap is a named derived function (detail in the S3b spec). 1-phase `WYE_WYE` voltages are phase to neutral (`ratedU` LL is derived ×√3, `baseU` the coil) | S3b |
 | GLM-7 | Regulators | Follow DSS-13: equal-kV → `VoltageRegulator` (AutoTransformer). `control_level INDIVIDUAL` (or per-phase `tap_pos_X` that differ) → one 1-phase regulator per phase, each with its own `RatioTapChanger` + `TapChangerControl` (matches the three DSS units of IEEE 13); `BANK` → one gang unit, `ABCN` | S3c |
 | GLM-8 | Loads | Per-phase p/q: a `load` is one EnergyConsumer with an `EnergyConsumerPhase` per phase (GLM loads are unbalanced by construction). Constant-power components are copied (complex → p, q); constant-current and constant-impedance components and the `base_power` + fraction form give derived ZIP fractions per load, with one LoadResponseCharacteristic per distinct fraction set (as DSS-7's `exp_` rows). A `base_power_X` that names a schedule raises until its rule is set (taxonomy/transactive decks) | S4a |
-| GLM-9 | Swing source | `substation` and `bustype SWING` nodes → `EnergySource` with the node's voltage and zero impedance (GridLAB-D's swing is ideal), `voltageMagnitude`/`voltageAngle` from `positive_sequence_voltage` or `voltage_A`. `SWING_PQ` (IEEE13_cdpsm's second swing) raises until its meaning is pinned | S1 |
+| GLM-9 | Swing source | **Decided 2026-11-09 (S1-2, S1-3):** `substation` and `bustype SWING` buses → `EnergySource`; voltage from `positive_sequence_voltage` / `voltage_A`; a stiff default impedance (|Z| = kV² / 10,000 MVA, X/R 10) so round trips work, since GridLAB-D's swing has none. `SWING_PQ` is ignored: a plain bus with a row comment, revisited if something breaks | S1 |
 | GLM-10 | Switches | switch → LoadBreakSwitch, fuse → Fuse (`current_limit` → `ratedCurrent`), recloser → Recloser, sectionalizer → Sectionalizer; `status` → `open`/`normalOpen`; per-phase `phase_X_state` that differ → per-phase rows. Reliability slots (`mean_replacement_time`, `retry_time`) untranscribed | S3a |
 | GLM-11 | Line configurations | A configuration with spacing + conductors is geometry (WireConfiguration); with `z11..z33` only, a `PerLengthPhaseImpedance` (`ohm/mi`, `c` in nF/mi verbatim). Both on one record: geometry, with the matrix untranscribed and noted (never substitute) | S2 |
 | GLM-12 | Triplex geometry | GLM gives a triplex configuration as conductors + `insulation_thickness` + `diameter`, with no spacing object. Recommendation: an `XYSpacing` derived from those (named function, the GridLAB-D triplex formula cited), so it stays geometry; check it against the triplex z-matrix the Java exports carry for the same conductors | S2 |
@@ -235,7 +236,7 @@ Each item has a recommendation and the slice that needs it.
 | GLM-14 | Not mapped | recorder, multi_recorder, player, fncs_msg, house, ZIPload, waterheater and every class with no deck: listed with counts in the master comment, so nothing disappears silently (as DSS-11). Houses have no network-profile home | S0 |
 | GLM-15 | `${VSOURCE}` in the Java exports | `glm_to_cim(path, defines={"VSOURCE": ...})`; without it the reader raises naming the macro. Vendored IEEE13 atoms pass it explicitly | S0 |
 | GLM-16 | Test oracle | No GridLAB-D engine is installed. For the importer: the tier-4 IEEE 13 GLM vs DSS comparison (§5) plus spot checks against the C++ formulas. Building GridLAB-D for power-flow parity is deferred to the exporter wave | S3b on |
-| GLM-17 | GLM-JSON input | ~~Kept~~ **Amended in S0: not carried.** The premise (the JSON reader is the text reader's base, so free) went with the rewrite, and GLM-JSON was the old CIMHub's own intermediate, not a GridLAB-D format. Added when a caller needs it | S0 |
+| GLM-17 | GLM-JSON input | **Decided by the user 2026-11-09: deferred to a phase after the migration.** GLM-JSON is GridLAB-D's new official format (reference schema in GridLAB-D's `utilities/json_schema`), but `.glm` is the commonly used one, so the `.glm` reader comes first. The S0 reader keeps parsing (pass 1, raw objects) apart from typing (pass 2), so a JSON front end can feed the same pass 2 | after the migration |
 
 Master-plan decisions this wave inherits: D6 (the reference golden is vendored), D7 (`Model` = the name the caller
 passes), D9 (conductor ratings → `WireInfo.ratedCurrent` + AssetInfo `OperationalLimitSet`; line ratings on the
@@ -251,5 +252,5 @@ line's own set), D10 and D14 (no open delta in the decks, so it stays fail fast)
 | core | `source` shape: an ideal swing with zero impedance binds (GLM-9) | S1 |
 | core | derived functions: LN→system kV (GLM-1), triplex spacing (GLM-12), ZIP fractions (GLM-8); each goes to `derived/` when a second spoke needs it, else stays in the spoke | S1, S2, S4a |
 | ~~root workspace~~ | ~~`cimhub_gridlabd` added to the root `pyproject.toml` members and sources, then one `uv lock`~~ done in S0, with the same `cimtables` → `cim-tables` rename that is uncommitted on `rc_1` | — |
-| user | `CIM-Graph-Topology-Processor` checked out on `develop` (2026-11-09 17:10), which lacks `cimtopology.core`'s network and walk: the topology tests here (and DSS's on `rc_1`) need its `cim18v17` branch | the walk |
+| user | `cim-topology` release (0.1.0, from 0.1.0a2 on PyPI) carrying `cimtopology.core`; then the root `../CIM-Graph-Topology-Processor` path source can become a version pin. Until then the sibling checkout must be on a branch with `cimtopology.core` (its `develop` lacks it) | the walk |
 | user | review of this plan and of each slice's spec section | every slice |

@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from conftest import DEFINES, deck, deck_params
+from conftest import deck, deck_params, defines
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
 from cimhub_gridlabd.schema import gridlabd as schema
 
@@ -184,7 +184,7 @@ READ_STOPS = {
 
 @pytest.mark.parametrize("relative, stop", deck_params(READ_STOPS))
 def test_every_deck_reads(relative, stop):
-    reader = GlmReader(deck(relative), defines=DEFINES)
+    reader = GlmReader(deck(relative), defines=defines(relative))
     if stop is None:
         model = reader.read_all()
         assert len(model) > 0
