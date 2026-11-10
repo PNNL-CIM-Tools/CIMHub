@@ -2,7 +2,8 @@
 
 RATEn is the limit whose type has the importer's mRID ``olt_rate<n>`` (RAW-9). The ratings are in MVA
 (``ApparentPowerLimit``) or "current expressed as MVA" (``CurrentLimit``: NXFRAT / XFRRAT 1, RATEn = sqrt(3) x kV x
-kA on the device's BaseVoltage). One device or one case holding both kinds raises.
+kA on the device's BaseVoltage). One device or one case holding both kinds raises. A transformer's ratings are per
+winding, on its terminals (``terminal``).
 """
 
 from __future__ import annotations
@@ -26,11 +27,11 @@ def rating_set_number(limit_type: cim.OperationalLimitType) -> int | None:
     return None if match is None else int(match.group(1))
 
 
-def device_limits(device) -> tuple[type | None, dict]:
+def device_limits(device, terminal=None) -> tuple[type | None, dict]:
     """The device's rating kind (``ApparentPowerLimit``, ``CurrentLimit`` or None) and its limits by type, in MVA or
-    kA."""
-    power = get_limits_by_type(device, cim.ApparentPowerLimit, "MVA")
-    current = get_limits_by_type(device, cim.CurrentLimit, "kA")
+    kA: all of them, or those on ``terminal``."""
+    power = get_limits_by_type(device, cim.ApparentPowerLimit, "MVA", terminal=terminal)
+    current = get_limits_by_type(device, cim.CurrentLimit, "kA", terminal=terminal)
     if power and current:
         raise ValueError(f"{describe(device)}: holds both ApparentPowerLimits and CurrentLimits; RAW's ratings are "
                          "one or the other")
@@ -39,12 +40,15 @@ def device_limits(device) -> tuple[type | None, dict]:
     return (cim.ApparentPowerLimit if power else None), power
 
 
-def ratings_in_current(devices) -> bool:
+def ratings_in_current(devices, *, per_terminal: bool = False) -> bool:
     """True when the devices' ratings are CurrentLimits (NXFRAT / XFRRAT 1); False for ApparentPowerLimits or none.
-    Both kinds among the devices raise."""
+    Both kinds among the devices raise. ``per_terminal``: each terminal's ratings are its own (a transformer's
+    windings)."""
     first_of_kind: dict[type, object] = {}
-    for device in devices:
-        kind, _ = device_limits(device)
+    rated = [(device, terminal) for device in devices
+             for terminal in (device.Terminals if per_terminal else [None])]
+    for device, terminal in rated:
+        kind, _ = device_limits(device, terminal)
         if kind is not None:
             first_of_kind.setdefault(kind, device)
     if len(first_of_kind) > 1:
@@ -54,11 +58,13 @@ def ratings_in_current(devices) -> bool:
     return cim.CurrentLimit in first_of_kind
 
 
-def device_ratings(device) -> list[float]:
-    """RATE1..RATE12, 0 where the device has no limit of that set. A limit of another type raises."""
-    kind, limits = device_limits(device)
+def device_ratings(device, terminal=None) -> list[float]:
+    """RATE1..RATE12, 0 where the device (or its ``terminal``) has no limit of that set; a current is on the
+    device's, or the terminal's node's, BaseVoltage. A limit of another type raises."""
+    kind, limits = device_limits(device, terminal)
     ratings = [0.0] * RATING_SETS
-    base_kv = get_base_voltage(device, "kV", form="LL") if kind is cim.CurrentLimit else None
+    base = device if terminal is None else terminal.TopologicalNode
+    base_kv = get_base_voltage(base, "kV", form="LL") if kind is cim.CurrentLimit else None
     for limit_type, value in limits.items():
         number = rating_set_number(limit_type)
         if number is None or not 1 <= number <= RATING_SETS:

@@ -77,6 +77,24 @@ def siemens_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> f
     return per_unit * base_mva / base_kv ** 2
 
 
+def per_unit_from_ohms(ohms: float, base_kv: float, base_mva: float) -> float:
+    """An impedance in pu on a base kV and MVA from ohm: ``ohms_from_per_unit`` inverted (the exporter's transformer
+    CR/CX, E4)."""
+    return ohms * base_mva / base_kv ** 2
+
+
+def impedance_on_bus_base(per_unit: float, rated_kv: float, bus_kv: float) -> float:
+    """A transformer impedance in pu on a winding's ratedU moved to its bus's BASKV, at the same power:
+    pu x (ratedU / BASKV)^2. The exporter's CZ 1 (E4), ``transformer_ohms`` CZ 1 inverted; 1 when NOMV = BASKV."""
+    return per_unit * (rated_kv / bus_kv) ** 2
+
+
+def admittance_on_bus_base(per_unit: float, rated_kv: float, bus_kv: float) -> float:
+    """A transformer admittance in pu on a winding's ratedU moved to its bus's BASKV, at the same power:
+    pu x (BASKV / ratedU)^2. The exporter's CM 1 (E4), ``magnetizing_siemens`` CM 1 inverted."""
+    return per_unit * (bus_kv / rated_kv) ** 2
+
+
 def watts_from_mw(value_mw: float) -> float:
     """An active power in W from MW, through the units library: a ``TapChangerControl`` target in mode activePower
     (transformer COD 3 VMA/VMI, R4b)."""
@@ -203,7 +221,7 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     - step = neutralStep + (WINDV - the neutral ratio) / the step size, a float (CIM allows a non-integer
       step); measured from the neutral, so a WINDV at ratio 1 is exactly neutralStep;
     - a WINDV outside RMI..RMA extends lowStep below 1 or highStep above NTP to the first whole step past it
-      (R4b-5; CIM: lowStep <= step <= highStep).
+      (R4b-5; CIM: lowStep <= step <= highStep); one at RMA or RMI is step NTP or 1, not a rounding past it.
 
     NTP < 2 or RMA <= RMI raises.
     """
@@ -216,6 +234,8 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     neutral_offset = min(max(nearest, 0), ntp - 1)
     neutral = rmi + step_size * neutral_offset
     step = 1 + neutral_offset + (windv - neutral) / step_size
+    if rmi <= windv <= rma:  # on the grid's range: a WINDV at RMA or RMI is an end step, whatever the rounding
+        step = min(max(step, 1.0), float(ntp))
     return TapPosition(
         low_step=min(1, math.floor(step)),
         high_step=max(ntp, math.ceil(step)),
@@ -231,6 +251,12 @@ def cim_angle(angle_degrees: float) -> float:
     internal voltage; CIM's ``phaseShift`` and ``PhaseTapChanger`` angles are positive from the terminal into the
     transformer, the opposite. Used for ANGk, a shifter's step, and an impedance table's angle points."""
     return 0.0 - angle_degrees  # not -angle: 0.0 stays 0.0, not -0.0
+
+
+def raw_angle(cim_degrees: float) -> float:
+    """A CIM angle in PSS/E's sign: ``cim_angle`` inverted (the sign turned back; the exporter's ANGk and an angle
+    table's T, E4)."""
+    return 0.0 - cim_degrees
 
 
 class PhaseTap(NamedTuple):
@@ -270,6 +296,12 @@ def impedance_deviation_percent(factor: float) -> float:
     """An impedance correction factor F as CIM's deviation in percent of the nominal impedance, 100 x (F - 1),
     through the units library (``ImpedanceTapChangerTablePoint.rEnd1``/``xEnd1``, R4b-10)."""
     return ureg.Quantity(factor - 1.0, "").to("percent").magnitude
+
+
+def impedance_factor(deviation_percent: float) -> float:
+    """CIM's impedance deviation in percent as PSS/E's factor F, 1 + deviation / 100, through the units library:
+    ``impedance_deviation_percent`` inverted (the exporter's impedance correction, E4)."""
+    return 1.0 + ureg.Quantity(deviation_percent, "percent").to("").magnitude
 
 
 def is_angle_table(t_values: list[float]) -> bool:

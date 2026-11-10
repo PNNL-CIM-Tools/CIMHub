@@ -151,7 +151,7 @@ and Bus equals the RAW as read, except the list above. The written E0 tables rea
 | new_case_flag | rule | IC 0: a base case |
 | system_base_mva | written | SBASE: BasePower.basePower (MVA), the one BasePower |
 | revision | rule | REV 34 |
-| transformer_ratings_units | rule | XFRRAT 0 (MVA); E4 settles CurrentLimit ratings |
+| transformer_ratings_units | rule | XFRRAT 1 when the transformer ratings are CurrentLimits, else 0 |
 | branch_ratings_units | rule | NXFRAT 1 when the branch and switch ratings are CurrentLimits, else 0 |
 | system_base_frequency | written | BASFRQ: the network's base frequency (Hz) |
 | titles | unset | two blank lines: the importer lists the titles on the master's comment |
@@ -757,3 +757,299 @@ differences are unchanged.
 | wmod | written | WMOD: SynchronousMachine 0; PowerElectronicsConnection 3 under a powerFactor control, else 1 (WMOD 2 has no CIM home, R3c-1) |
 | wpf | written | WPF: WMOD 3: the powerFactor control's target, as stored (signed, R3c-2); else blank |
 | nreg | unset | NREG: a node of a node-breaker bus, written by E5 |
+
+## E4: transformer, impedance correction (spec approved 2026-11-09: E4-1 the getter reads on base_power, E4-2 a zero end holds no core, E4-3 `get_tap_voltage`; done 2026-11-09)
+
+Modules: `transformer.py` (`PowerTransformer` → Transformer) and `impedance_correction.py` (`ImpedanceTapChangerTable`
+→ Impedance correction). `EXPORT_ORDER` gains them after `generator`. Import spec: `CIMTBL_MAPPING.md#transformer-r4`,
+R4b (the forms R4 raised on), R5 (NMETR on a tie), R6 (NODk), P2-5 (converter transformers). CW = CZ = CM = 1 (plan
+§9.1).
+
+### Which transformers
+
+- Every `PowerTransformer` whose ends are all on numbered buses is one record, in the BY_ENDS form with 2 or 3
+  windings (`get_transformer_model`); tanks, 1 or 4+ windings raise.
+- E3's step-ups (`generator.step_ups`) are left out, as are converter transformers (P2-5: an end on an internal
+  node holding an `ACDCConverter`), which are E6's. Any other end on a node without a busNumber raises.
+
+### Keys, status, names
+
+| RAW | from |
+|---|---|
+| I, J, K | the busNumbers of ends 1, 2, 3 (by `endNumber`); K 0 for a 2-winding unit |
+| CKT | from the mRID `xf_<I>_<J>_<K>_<CKT>`, else the next free (X2) |
+| NAME | X2; blank when it equals the key `<I>_<J>_<K>_<CKT>` |
+| STAT | 0 when inService is false; else 2, 3 or 4 when exactly winding 2, 3 or 1 of a 3-winding unit has its terminal `connected = false` (R4b-6); else 1. Two windings out, or one out of a 2-winding unit, raise |
+| VECGRP | `vectorGroup`, blank when unset |
+| NMETR | on a tie (R5): the winding whose terminal holds no TieFlow; of two such (a 3-winding unit with two windings in the home area) the lower-numbered. Off a tie: blank (RAW-22, as branch MET) |
+| CW, CZ, CM | 1 |
+| O1..F4, ZCOD, VMSTAR, ANSTAR | unset (no CIM home; R4) |
+| NODk | unset in E4: E5's, as NREG |
+
+### Impedance and magnetizing (X4)
+
+`model = get_transformer_model(unit, "pu", base_power=SBASE, voltage_unit="kV")` gives each value in pu on SBASE
+and the winding's `ratedU` (a mesh impedance on its From end's; per-unit values on rated bases are the same seen
+from either end). RAW's CZ 1 and CM 1 are on the bus BASKV, so each moves by the voltage only, with new named
+derived functions: an impedance × (ratedU / BASKV)², an admittance × (BASKV / ratedU)². This is the importer's
+`transformer_ohms` / `magnetizing_siemens` (CZ 1, CM 1) inverted, and it is the identity when NOMV = BASKV.
+
+- R_ij, X_ij for each pair (1-2; 2-3 and 3-1 on a 3-winding unit), seen from winding i as on import (`MESH_PAIRS`:
+  1-2 and 3-1 from winding 1, 2-3 from winding 2): R = rᵢ + rⱼ + the mesh r (unset 0), X = the mesh x. This covers
+  the importer's two forms, a 2-winding unit's r, x on end 1 (E3-2's star reading) and a 3-winding unit's mesh,
+  and a CGMES-style star.
+- MAG1, MAG2: `model.core` g, b on winding 1 (RAW's only place), sign kept.
+- SBASE1-2: a 2-winding unit's ratedS (MVA; the two ends must agree). A 3-winding unit's SBASE1-2, 2-3, 3-1: SBASE,
+  since no end holds a pair base (R4). *Amended at implementation:* the draft left them blank, but RAW's blank is
+  SBASE only by a rule the comparison's static defaults cannot hold, so SBASE is written.
+- NOMVk: winding k's `ratedU` (kV).
+
+### Taps and control (per winding)
+
+Each winding has at most one controlled tap changer (one with a `TapChangerControl`), and may have a fixed
+`RatioTapChanger` beside a phase tap changer (R4b-3).
+
+| RAW | from |
+|---|---|
+| WINDVk | the winding's `RatioTapChanger` voltage at its `step` (**`get_tap_voltage`**, below) / bus k's BASKV (CW 1); no ratio tap: ratedU / BASKV. *Amended at implementation:* the draft (and R4b-4's note) had 1, which holds only when NOMV = BASKV; the import writes no tap at ratio NOMV, so such a winding is at its ratedU (about 600 local windings a case with NOMV ≠ BASKV) |
+| ANGk | −(phaseShift + the phase tap changer's angle at its step): `Winding.phase_shift` (new) plus **`get_phase_tap_steps`** (step − neutral) × increment (R4b-1, -2, -3). A 2-winding unit has only ANG1: −(θ₁ − θ₂), only the difference being physical (R4b-1's UML text) |
+| CODk | the controlled tap changer: a `RatioTapChanger` with ltcFlag false 0; ltcFlag true ±1 (voltage) or ±2 (reactivePower); a `PhaseTapChangerLinear` under an activePower control ±3; + when the control is enabled (tap `controlEnabled` must agree). Any other pairing raises; no controlled tap: 0 |
+| CONTk | the control's terminal: the winding's own terminal 0; else its node's busNumber (none raises). COD ±3: blank (unused). A negative CONT comes back positive (R4b-8) |
+| RMAk, RMIk | ratio: the voltages at highStep and lowStep / BASKV; phase shifter: the larger and smaller PSS/E angle at the end steps; a fixed tap (lowStep = highStep, R4b-4) or none: blank |
+| NTPk | highStep − lowStep + 1 of the stepped tap; a fixed tap or none: blank |
+| VMAk, VMIk | `get_tap_changer_control` target ± deadband / 2: voltage in kV / the regulated bus's BASKV (CONT 0: the winding's own bus); reactivePower in Mvar; activePower in MW. No control: blank |
+| CRk, CXk | `line_drop` r, x (ohm) as pu on SBASE and the regulated bus's BASKV (a new `per_unit_from_ohms`, `ohms_from_per_unit` inverted), when lineDropCompensation is true; else blank |
+| CNXAk | blank (0; COD ±5 is not mapped) |
+| TABk | the number of the table of the end's `ImpedanceTapChangerTabular` (below); a 3-winding unit's raises (as on import); none: blank |
+| RATEk-n | winding k's limits on its own terminal (ratings.py, per terminal); a 2-winding unit's only on winding 1 (a rating on winding 2 raises). XFRRAT (E0's `transformer_ratings_units`) 1 when the transformer ratings are CurrentLimits, each winding's terminal read on its own (`ratings_in_current(per_terminal=True)`) |
+
+Winding 2 of a 2-winding unit has only WINDV2: a fixed `RatioTapChanger` (neutralU / BASKV₂) or none (ratedU / BASKV₂). A tap
+that moves, a control, or a phase tap changer on it raises.
+
+### Impedance correction
+
+One record per `ImpedanceTapChangerTable`: I from the mRID `ict_<I>`, else the next free. The points, by T
+ascending (PSS/E's order), from **`get_impedance_table`**:
+- an angle point: T = −angle (`cim_angle` inverted); a ratio point: T = ratio × ratedU / BASKV of its users' winding
+  (users that disagree raise; a ratio table without a user raises, as on import);
+- F = 1 + rEnd1 / 100. rEnd1 ≠ xEnd1, a set rEnd2/3 or xEnd2/3, a point with both or neither of ratio and angle, and
+  a table mixing them raise. Im F is 0.
+
+### Getter changes (core, on this branch)
+
+- `get_transformer_model`: with a declared `base_power`, an impedance or admittance is read on that power directly
+  (`get_qty(power_base=)`), so an end needs no `ratedS` (E4-1); an end whose g and b are zero holds no core (E4-2);
+  `Winding.phase_shift` (deg) from `PowerTransformerEnd.phaseShift`.
+- **`get_tap_voltage(tap, *, which, voltage_unit)`** (`tap_changer.py`, E4-3): a `RatioTapChanger`'s voltage at a
+  position: neutralU + (position − neutralStep) × stepVoltageIncrement / 100 × the end's ratedU; a fixed tap's is
+  its neutralU. `get_tap_ratio` keeps its meaning (the ratio about the neutral).
+- **`get_phase_tap_steps(tap, angle_unit="deg")`**: a `PhaseTapChangerLinear`'s low, high, neutral, normal, step
+  and `stepPhaseShiftIncrement` (all required but normal).
+- **`get_impedance_table(table)`**: each point's step, ratio, angle, rEnd1..3, xEnd1..3 (percent).
+- `get_limits_by_type(..., terminal=)`: the limits on one terminal (a transformer's are per winding).
+
+### Decisions
+
+- **E4-1. A 3-winding unit's ends have no ratedS** (R4: the pair bases fit no end), and `get_transformer_model`
+  required one. **User 2026-11-09:** the getter reads on the declared `base_power` directly, needing only ratedU (the
+  ohms and siemens are on the end's ratedU, and the power is the caller's). Not recommended: the importer writing
+  ratedS = SBASE on 3-winding ends (a nameplate the case does not give).
+- **E4-2. End 2's zeros.** The import writes end 2's r, x, g, b as 0 (R4, CIM's "the secondary end is zero"), and
+  the getter counted two ends holding a core. **User 2026-11-09:** an end whose g and b are zero holds no core (zeros on
+  several ends are one zero core). Not recommended: the importer leaving end 2 blank (an R4 change; the goldens
+  change).
+- **E4-3. A tap's voltage when neutralU ≠ ratedU** (R4: the neutral nearest ratio 1, e.g. WECC240 6103-6104).
+  `get_tap_ratio` is 1 + (position − neutral) × increment, the ratio about the neutral. **User 2026-11-09:** a new core
+  `get_tap_voltage` (above), as CIM defines the increment in percent of the end's ratedU. Not recommended: the
+  exporter computing it from `get_tap_steps`.
+
+### Tests (E4)
+
+`tests/test_cim_to_raw.py`: the round trip with E4 added, over every fixture, and:
+- the transformers atom (A to E: CW/CZ/CM 2 and 3, a 3-winding unit, COD ±1 and 2, CONT 0, ratings on windings 1
+  and 3), the R4b atom (F to T and tables 1 and 2), IEEE14 (NOMV 0, off-nominal WINDV1), WECC240 (122 units with
+  ratings), IEEE118;
+- the step-up atom's 4 step-ups and the two-terminal atom's 8 converter transformers are left out;
+- the R4b atom's L (NOMV1 240 on a 230 kV bus, CZ 1): its end holds the ohms on 240 kV, and X1-2 comes back on 230 kV;
+- `to_model` exports IEEE14 whole, and raises on the two-terminal atom's `CsConverter`s (E6);
+- raises: an end off a numbered bus that is neither, two windings out, a moving tap on a 2-winding unit's winding 2,
+  a control on a phase tap changer in voltage mode, a 3-winding unit's tabular, a table point with rEnd1 ≠ xEnd1;
+- the written transformers and R4b models read back with the same records;
+- core: each getter change against hand numbers on the core shapes.
+
+### Expected differences (E4)
+
+- CW, CZ, CM 2 or 3 come back 1, with their values in CW/CZ/CM 1 units (the transformers atom's A, B, E; R4).
+- NOMV 0 comes back BASKV, the end's ratedU (R4): IEEE14's three units and most atom windings, computed in the test
+  (`_nominal_zero`).
+- A 3-winding unit's SBASE1-2, 2-3, 3-1 come back SBASE: the transformers atom's E (R4).
+- Blank RMA/RMI and VMA/VMI take RAW's defaults that hang on CW and COD (1.1/0.9, R4), which the schema's static
+  defaults do not hold: the test fills them (`IMPORT_DEFAULTS`), and they come back written (E).
+- A shifter's RMA/RMI with 0° off its grid come back moved by the offset (the R4b atom's K; R4b-3).
+- COD 0 RMA/RMI/NTP that no tap holds come back blank (defaults; O; P's were blank; R4b-4).
+- A voltage control's extended range comes back as its extended steps' RMA/RMI/NTP (Q; R4b-5).
+- A negative CONT comes back positive (S; R4b-8); a COD ±3 CONT comes back blank.
+- NMETR off a tie comes back blank (2; RAW-22): none in the committed fixtures; about 2165 a local case.
+- WINDV, RMA, RMI, VMA, VMI, R, X, MAG, CR, CX and the table T, F: rel 1e-9.
+- ZCOD, VMSTAR, ANSTAR, O1..F4, NODk: unset, not compared.
+
+### Import fix found by the export (R4b-5)
+
+`ratio_tap` extended a range when WINDV sat exactly at RMA or RMI: rounding put the step a hair past NTP or 1, and
+`ceil`/`floor` added a step, so the tap came back one step wider (RMA/RMI) with NTP + 1. About 50 local windings a
+case. The extension now applies only to a WINDV outside RMI..RMA (R4b-5's rule), and a WINDV at an end is that end's
+step. No golden changed; `test_ratio_tap_at_an_end_of_its_range_is_not_extended`.
+
+### Results
+
+All 18 atoms, IEEE14, WECC240 and IEEE118: every compared Transformer and Impedance correction slot equals the RAW
+as read, except the list above; the E0 to E3 tables are as before. The transformers and R4b atoms write and read
+back unchanged. `to_model` exports IEEE14 whole. Put in CW = CZ = CM = 1 by the importer's own conversions
+(`transformer_ohms`, `magnetizing_siemens`, `winding_unit_kv`; a scratch check, not a test), the atoms' CW/CZ/CM 2
+and 3 units (A, B, E, N) come back at rel 1e-9.
+
+**Local case set** (29 v34 cases of one network, never committed; 3 run, counts only): every transformer (7391 to
+7402 a case, about 680 of them 3-winding, 66 phase shifters, 49 tabulars) and all 32 impedance correction tables
+come back keyed as on import, each case in about 80 s. About 40 % of the units have CW, CZ or CM 2 or 3 and so come
+back in other units; put in CW = CZ = CM = 1 as above, every R, X, SBASE, MAG, NOMV, WINDV, ANG, COD, VMA, VMI, CR,
+CX, TAB, STAT and RATE matches at rel 1e-9. Per case the differences left are only the listed ones: NMETR off a tie
+2163 to 2168; COD 0 RMA/RMI/NTP that no tap holds, which come back as defaults (R4b-4: about 650 to 700 windings);
+a shifter's RMA/RMI with 0° off its grid 10 (R4b-3); a COD ±3 CONT 18 and a negative CONT 11 (R4b-8); the one
+extended voltage-control range (R4b-5). Two defects surfaced and are fixed: WINDV of a winding without a tap (above)
+and the import's spurious range extension. The E0 to E3 differences are unchanged.
+
+### Slots (generated from `SLOTS`)
+
+#### TransformerRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| i | written | I: end 1's busNumber |
+| j | written | J: end 2's busNumber |
+| k | written | K: end 3's busNumber; 0 for a 2-winding unit |
+| circuit | written | CKT: the xf_<I>_<J>_<K>_<CKT> key, else the next free (X2) |
+| cw | rule | CW 1: WINDV, RMA, RMI in pu of the bus's BASKV |
+| cz | rule | CZ 1: R, X in pu on SBASE and the bus's BASKV |
+| cm | rule | CM 1: MAG1, MAG2 in pu on SBASE and bus 1's BASKV |
+| mag1 | written | MAG1: get_transformer_model core g, moved to bus 1's BASKV (admittance_on_bus_base) |
+| mag2 | written | MAG2: the core b, as MAG1 |
+| nmetr | written | NMETR: on a tie, the winding whose terminal holds no TieFlow (the lower of two); off a tie blank (RAW-22) |
+| name | written | NAME: X2; blank when it is the key I_J_K_CKT |
+| status | rule | STAT: 0 when inService is false; 2, 3, 4 when winding 2, 3, 1 alone is disconnected (R4b-6); else 1 |
+| o1 | unset | ownership is an asset concept (CIM 18 gap) |
+| f1 | unset | ownership is an asset concept (CIM 18 gap) |
+| o2 | unset | ownership is an asset concept (CIM 18 gap) |
+| f2 | unset | ownership is an asset concept (CIM 18 gap) |
+| o3 | unset | ownership is an asset concept (CIM 18 gap) |
+| f3 | unset | ownership is an asset concept (CIM 18 gap) |
+| o4 | unset | ownership is an asset concept (CIM 18 gap) |
+| f4 | unset | ownership is an asset concept (CIM 18 gap) |
+| vecgrp | written | VECGRP: vectorGroup |
+| zcod | unset | ZCOD: zero-sequence data is in the sequence file |
+| r1_2 | written | R1-2: r1 + r2 + the mesh r, pu on SBASE moved to bus 1's BASKV (impedance_on_bus_base; CZ 1); 2-winding |
+| x1_2 | written | X1-2: the mesh (1, 2) x, as R1-2 |
+| sbase1_2 | written | SBASE1-2: a 2-winding unit's ratedS (MVA); a 3-winding unit's SBASE, since no end holds a pair base (R4) |
+| r2_3 | written | R2-3: r2 + r3 + the mesh r, pu on SBASE moved to bus 2's BASKV (impedance_on_bus_base; CZ 1); 3-winding |
+| x2_3 | written | X2-3: the mesh (2, 3) x, as R2-3 |
+| sbase2_3 | written | SBASE2-3: a 2-winding unit's ratedS (MVA); a 3-winding unit's SBASE, since no end holds a pair base (R4) |
+| r3_1 | written | R1-3: r1 + r3 + the mesh r, pu on SBASE moved to bus 1's BASKV (impedance_on_bus_base; CZ 1); 3-winding |
+| x3_1 | written | X1-3: the mesh (1, 3) x, as R1-3 |
+| sbase3_1 | written | SBASE1-3: a 2-winding unit's ratedS (MVA); a 3-winding unit's SBASE, since no end holds a pair base (R4) |
+| vmstar | unset | VMSTAR: the star point's solved voltage, which the Delta model omits |
+| anstar | unset | ANSTAR: as VMSTAR |
+| windv1 | written | WINDV1: get_tap_voltage(actual) of the end's RatioTapChanger / bus 1's BASKV (CW 1); without one, ratedU / BASKV (the import writes no tap at ratio NOMV) |
+| nomv1 | written | NOMV1: winding 1's ratedU (kV) |
+| ang1 | written | ANG1: -(phaseShift + the PhaseTapChangerLinear's (step - neutral) x increment) (raw_angle); a 2-winding unit's ANG1 is winding 1's less winding 2's |
+| rate1_1 | written | RATE1-1: the olt_rate1 limit on winding 1's terminal (device_ratings) |
+| rate1_2 | written | RATE1-2: the olt_rate2 limit on winding 1's terminal (device_ratings) |
+| rate1_3 | written | RATE1-3: the olt_rate3 limit on winding 1's terminal (device_ratings) |
+| rate1_4 | written | RATE1-4: the olt_rate4 limit on winding 1's terminal (device_ratings) |
+| rate1_5 | written | RATE1-5: the olt_rate5 limit on winding 1's terminal (device_ratings) |
+| rate1_6 | written | RATE1-6: the olt_rate6 limit on winding 1's terminal (device_ratings) |
+| rate1_7 | written | RATE1-7: the olt_rate7 limit on winding 1's terminal (device_ratings) |
+| rate1_8 | written | RATE1-8: the olt_rate8 limit on winding 1's terminal (device_ratings) |
+| rate1_9 | written | RATE1-9: the olt_rate9 limit on winding 1's terminal (device_ratings) |
+| rate1_10 | written | RATE1-10: the olt_rate10 limit on winding 1's terminal (device_ratings) |
+| rate1_11 | written | RATE1-11: the olt_rate11 limit on winding 1's terminal (device_ratings) |
+| rate1_12 | written | RATE1-12: the olt_rate12 limit on winding 1's terminal (device_ratings) |
+| cod1 | written | COD1: the controlled tap changer: a RatioTapChanger with ltcFlag false 0, else +-1 voltage, +-2 reactivePower; a PhaseTapChangerLinear under activePower +-3; + when the control is enabled |
+| cont1 | written | CONT1: the busNumber of the control's terminal; the winding's own 0; blank for COD +-3 |
+| rma1 | written | RMA1: the stepped tap's highStep voltage / BASKV, or a shifter's larger end angle (deg); blank for a fixed tap |
+| rmi1 | written | RMI1: as RMA1, at lowStep or the smaller end angle |
+| vma1 | written | VMA1: the control's target + deadband / 2: pu of the regulated bus's BASKV, Mvar or MW by mode |
+| vmi1 | written | VMI1: as VMA1, target - deadband / 2 |
+| ntp1 | written | NTP1: highStep - lowStep + 1 of the stepped tap |
+| tab1 | written | TAB1: the number of the end's ImpedanceTapChangerTabular's table |
+| cr1 | written | CR1: lineDropR as pu on SBASE and the regulated bus's BASKV (per_unit_from_ohms) |
+| cx1 | written | CX1: lineDropX, as CR1 |
+| cnxa1 | unset | CNXA1: only COD +-5 uses it, which is not mapped |
+| nod1 | unset | NOD1: a node of a node-breaker bus, written by E5 |
+| windv2 | written | WINDV2: a 2-winding unit's fixed RatioTapChanger neutralU / bus 2's BASKV, ratedU / BASKV without one; a 3-winding unit's as WINDV1 |
+| nomv2 | written | NOMV2: winding 2's ratedU (kV) |
+| ang2 | written | ANG2: -(phaseShift + the PhaseTapChangerLinear's (step - neutral) x increment) (raw_angle); a 2-winding unit's ANG1 is winding 1's less winding 2's (3-winding only) |
+| rate2_1 | written | RATE2-1: the olt_rate1 limit on winding 2's terminal (device_ratings) |
+| rate2_2 | written | RATE2-2: the olt_rate2 limit on winding 2's terminal (device_ratings) |
+| rate2_3 | written | RATE2-3: the olt_rate3 limit on winding 2's terminal (device_ratings) |
+| rate2_4 | written | RATE2-4: the olt_rate4 limit on winding 2's terminal (device_ratings) |
+| rate2_5 | written | RATE2-5: the olt_rate5 limit on winding 2's terminal (device_ratings) |
+| rate2_6 | written | RATE2-6: the olt_rate6 limit on winding 2's terminal (device_ratings) |
+| rate2_7 | written | RATE2-7: the olt_rate7 limit on winding 2's terminal (device_ratings) |
+| rate2_8 | written | RATE2-8: the olt_rate8 limit on winding 2's terminal (device_ratings) |
+| rate2_9 | written | RATE2-9: the olt_rate9 limit on winding 2's terminal (device_ratings) |
+| rate2_10 | written | RATE2-10: the olt_rate10 limit on winding 2's terminal (device_ratings) |
+| rate2_11 | written | RATE2-11: the olt_rate11 limit on winding 2's terminal (device_ratings) |
+| rate2_12 | written | RATE2-12: the olt_rate12 limit on winding 2's terminal (device_ratings) |
+| cod2 | written | COD2: the controlled tap changer: a RatioTapChanger with ltcFlag false 0, else +-1 voltage, +-2 reactivePower; a PhaseTapChangerLinear under activePower +-3; + when the control is enabled (3-winding only) |
+| cont2 | written | CONT2: the busNumber of the control's terminal; the winding's own 0; blank for COD +-3 (3-winding only) |
+| rma2 | written | RMA2: the stepped tap's highStep voltage / BASKV, or a shifter's larger end angle (deg); blank for a fixed tap (3-winding only) |
+| rmi2 | written | RMI2: as RMA2, at lowStep or the smaller end angle (3-winding only) |
+| vma2 | written | VMA2: the control's target + deadband / 2: pu of the regulated bus's BASKV, Mvar or MW by mode (3-winding only) |
+| vmi2 | written | VMI2: as VMA2, target - deadband / 2 (3-winding only) |
+| ntp2 | written | NTP2: highStep - lowStep + 1 of the stepped tap (3-winding only) |
+| tab2 | written | TAB2: the number of the end's ImpedanceTapChangerTabular's table (3-winding only) |
+| cr2 | written | CR2: lineDropR as pu on SBASE and the regulated bus's BASKV (per_unit_from_ohms) (3-winding only) |
+| cx2 | written | CX2: lineDropX, as CR2 (3-winding only) |
+| cnxa2 | unset | CNXA2: only COD +-5 uses it, which is not mapped |
+| nod2 | unset | NOD2: a node of a node-breaker bus, written by E5 |
+| windv3 | written | WINDV3: get_tap_voltage(actual) of the end's RatioTapChanger / bus 3's BASKV (CW 1); without one, ratedU / BASKV (the import writes no tap at ratio NOMV) |
+| nomv3 | written | NOMV3: winding 3's ratedU (kV) |
+| ang3 | written | ANG3: -(phaseShift + the PhaseTapChangerLinear's (step - neutral) x increment) (raw_angle); a 2-winding unit's ANG1 is winding 1's less winding 2's (3-winding only) |
+| rate3_1 | written | RATE3-1: the olt_rate1 limit on winding 3's terminal (device_ratings) |
+| rate3_2 | written | RATE3-2: the olt_rate2 limit on winding 3's terminal (device_ratings) |
+| rate3_3 | written | RATE3-3: the olt_rate3 limit on winding 3's terminal (device_ratings) |
+| rate3_4 | written | RATE3-4: the olt_rate4 limit on winding 3's terminal (device_ratings) |
+| rate3_5 | written | RATE3-5: the olt_rate5 limit on winding 3's terminal (device_ratings) |
+| rate3_6 | written | RATE3-6: the olt_rate6 limit on winding 3's terminal (device_ratings) |
+| rate3_7 | written | RATE3-7: the olt_rate7 limit on winding 3's terminal (device_ratings) |
+| rate3_8 | written | RATE3-8: the olt_rate8 limit on winding 3's terminal (device_ratings) |
+| rate3_9 | written | RATE3-9: the olt_rate9 limit on winding 3's terminal (device_ratings) |
+| rate3_10 | written | RATE3-10: the olt_rate10 limit on winding 3's terminal (device_ratings) |
+| rate3_11 | written | RATE3-11: the olt_rate11 limit on winding 3's terminal (device_ratings) |
+| rate3_12 | written | RATE3-12: the olt_rate12 limit on winding 3's terminal (device_ratings) |
+| cod3 | written | COD3: the controlled tap changer: a RatioTapChanger with ltcFlag false 0, else +-1 voltage, +-2 reactivePower; a PhaseTapChangerLinear under activePower +-3; + when the control is enabled (3-winding only) |
+| cont3 | written | CONT3: the busNumber of the control's terminal; the winding's own 0; blank for COD +-3 (3-winding only) |
+| rma3 | written | RMA3: the stepped tap's highStep voltage / BASKV, or a shifter's larger end angle (deg); blank for a fixed tap (3-winding only) |
+| rmi3 | written | RMI3: as RMA3, at lowStep or the smaller end angle (3-winding only) |
+| vma3 | written | VMA3: the control's target + deadband / 2: pu of the regulated bus's BASKV, Mvar or MW by mode (3-winding only) |
+| vmi3 | written | VMI3: as VMA3, target - deadband / 2 (3-winding only) |
+| ntp3 | written | NTP3: highStep - lowStep + 1 of the stepped tap (3-winding only) |
+| tab3 | written | TAB3: the number of the end's ImpedanceTapChangerTabular's table (3-winding only) |
+| cr3 | written | CR3: lineDropR as pu on SBASE and the regulated bus's BASKV (per_unit_from_ohms) (3-winding only) |
+| cx3 | written | CX3: lineDropX, as CR3 (3-winding only) |
+| cnxa3 | unset | CNXA3: only COD +-5 uses it, which is not mapped |
+| nod3 | unset | NOD3: a node of a node-breaker bus, written by E5 |
+
+#### ImpedanceCorrectionRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| table_number | written | I: the ict_<I> key, else the next number (X2) |
+| points | written | the table's points (get_impedance_table), by T ascending |
+
+#### ImpedanceCorrectionPoint
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| t | written | Ti: an angle point's raw_angle(angle) (deg), or a ratio point's ratio x ratedU / BASKV of its users' winding (users that disagree, or none, raise) |
+| f_real | written | Re(Fi): 1 + rEnd1 / 100 (impedance_factor); rEnd1 != xEnd1, or rEnd2/3, xEnd2/3 set, raise |
+| f_imag | rule | Im(Fi): 0 (CIM's deviations are real) |

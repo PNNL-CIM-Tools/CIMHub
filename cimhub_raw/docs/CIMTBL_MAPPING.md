@@ -1457,7 +1457,8 @@ highStep = neutralStep = step = 1, `neutralU` = WINDVk in kV (`winding_kv`), `st
   them at COD 0). A COD 0 winding with a usable range keeps R4's stepped tap changer.
 - **A phase shifter's winding, off nominal:** no control (the phase tap changer has it).
 
-Exporter: WINDVk = neutralU / the winding unit; no `RatioTapChanger` → WINDV 1.
+Exporter: WINDVk = neutralU / the winding unit; no `RatioTapChanger` → the end's ratedU / the winding unit (1 only
+when NOMV = BASKV; corrected by E4, `EXPORT_MAPPING.md#e4-transformer-impedance-correction`).
 
 ### A voltage control's WINDV outside its range (decision R4b-5)
 
@@ -1465,6 +1466,8 @@ COD ±1 with WINDV outside RMI..RMA (1 winding in the set): CIM needs lowStep �
 increment stay, and lowStep extends below 1 or highStep above NTP to the first whole step past the position
 (`ratio_tap`). The same holds for COD ±2, the other stepped control (none in the set). RMA and RMI are listed on the
 row, and the exporter's RMA/RMI come from the extended steps (expected difference).
+*Fixed 2026-11-09 (E4):* a WINDV exactly at RMA or RMI is that end's step, not an extension; rounding had put
+its step a hair past the end, so `ratio_tap` added a step (about 50 local windings a case).
 
 ### One winding out, STAT 2 / 3 / 4 (decision R4b-6)
 

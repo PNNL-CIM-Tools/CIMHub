@@ -877,6 +877,17 @@ def test_ratio_tap(windv, rma, rmi, ntp, units, expected):
     assert (tap.increment_percent, tap.step) == (pytest.approx(increment), pytest.approx(step))
 
 
+@pytest.mark.parametrize(("windv", "rma", "rmi", "ntp"), [
+    (1.07203, 1.07203, 0.8771, 31),  # WINDV at RMA: rounding put the step a hair above NTP (found by the E4 export)
+    (0.8891, 1.1316, 0.8891, 33),  # at RMI
+    (1.12, 1.12, 0.88, 33),
+])
+def test_ratio_tap_at_an_end_of_its_range_is_not_extended(windv, rma, rmi, ntp):
+    tap = ratio_tap(windv, rma, rmi, ntp, unit_kv=1.0, rated_kv=1.0, record_id="x")
+    assert (tap.low_step, tap.high_step) == (1, ntp)
+    assert tap.step == pytest.approx(ntp if windv == rma else 1)
+
+
 @pytest.mark.parametrize(("windv", "rma", "rmi", "ntp", "message"), [
     (1.0, 1.1, 0.9, 1, "NTP 1 gives no tap range"),
     (1.0, 0.9, 1.1, 33, "RMA 0.9 is not above RMI 1.1"),

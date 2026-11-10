@@ -1,5 +1,6 @@
 """The RAW exporter, sub-slice by sub-slice (``docs/EXPORT_MAPPING.md``): E0 (framework, case data, zone, area,
-bus), E1 (branch, series capacitor, switch, multi-section line, ratings).
+bus), E1 (branch, series capacitor, switch, multi-section line, ratings), E2 (load, fixed and switched shunt), E3
+(generator), E4 (transformer, impedance correction).
 
 Each case and atom goes RAW -> ``.cimtbl`` -> CIM -> RAW records, and every exported table is compared with the RAW
 as read, record by record (by key) and slot by slot. ``unset`` slots are skipped; blanks on both sides are filled
@@ -19,8 +20,9 @@ import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.export_slots import check_slots
 from cimhub_core.graph_model import _get_identifier
-from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, generator, load,
-                                 multi_section_line, switch, switched_shunt, zone)
+from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, generator,
+                                 impedance_correction, load, multi_section_line, switch, switched_shunt, transformer,
+                                 zone)
 from cimhub_raw.exporter.cim_to_raw import EXPORT_ORDER, RawExporter, export_context, export_tables
 from cimhub_raw.exporter.identity import keyed_ids
 from cimhub_raw.exporter.ratings import ratings_in_current
@@ -30,10 +32,12 @@ from cimhub_raw.importer.cimtbl import bus as import_bus
 from cimhub_raw.importer.cimtbl import case_identification as import_case
 from cimhub_raw.importer.cimtbl import fixed_shunt as import_fixed_shunt
 from cimhub_raw.importer.cimtbl import generator as import_generator
+from cimhub_raw.importer.cimtbl import impedance_correction as import_impedance_correction
 from cimhub_raw.importer.cimtbl import load as import_load
 from cimhub_raw.importer.cimtbl import multi_section_line as import_multi_section_line
 from cimhub_raw.importer.cimtbl import switch as import_switch
 from cimhub_raw.importer.cimtbl import switched_shunt as import_switched_shunt
+from cimhub_raw.importer.cimtbl import transformer as import_transformer
 from cimhub_raw.importer.cimtbl import zone as import_zone
 from cimhub_raw.importer.cimtbl.derived import band_fractions, mva_from_per_unit, per_unit_from_mva, reactive_band
 from cimhub_raw.importer.cimtbl.records import raw_defaults
@@ -47,7 +51,8 @@ E0_MODULES = (case_identification, zone, area_interchange, bus)
 E1_MODULES = (*E0_MODULES, branch, switch, multi_section_line)
 E2_MODULES = (*E1_MODULES, load, fixed_shunt, switched_shunt)
 E3_MODULES = (*E2_MODULES, generator)
-LANDED = E3_MODULES
+E4_MODULES = (*E3_MODULES, transformer, impedance_correction)
+LANDED = E4_MODULES
 REL_TOL = 1e-9
 
 #: export slots written although the importer lists the field untranscribed
@@ -56,10 +61,14 @@ NOT_UNSET = {
     (schema.SwitchRecord, "x"),  # 0.0001: the format gives a system switching device's X no default
 }
 
-#: blanks the importer fills outside the schema's raw_default (RAW-17: "the present option setting")
-IMPORT_DEFAULTS = {schema.CaseIdentificationRecord: {
-    "system_base_frequency": import_case.DEFAULT_BASE_FREQUENCY, "branch_ratings_units": 0,
-    "transformer_ratings_units": 0}}
+#: blanks the importer fills outside the schema's raw_default (RAW-17: "the present option setting"; a transformer's
+#: RMA/RMI and VMA/VMI defaults hang on CW and COD, R4: every blank one in the fixtures is a COD 0 winding under CW 1)
+IMPORT_DEFAULTS = {
+    schema.CaseIdentificationRecord: {"system_base_frequency": import_case.DEFAULT_BASE_FREQUENCY,
+                                      "branch_ratings_units": 0, "transformer_ratings_units": 0},
+    schema.TransformerRecord: {f"{slot}{k}": value for k in (1, 2, 3)
+                               for slot, value in (("rma", 1.1), ("rmi", 0.9), ("vma", 1.1), ("vmi", 0.9))},
+}
 
 _ZONE_1 = ("ZoneRecord", "1", "<extra>")  # a zone the buses name without a Zone record: synthesized on import
 _ISOLATED = {("BusRecord", "303", "area"), ("BusRecord", "303", "bus_type")}  # IDE 4, untraced: 1 and blank
@@ -84,8 +93,22 @@ EXPECTED = {
                    ("GeneratorRecord", "4_W1", "wmod"), ("GeneratorRecord", "5_S", "regulated_bus_number"),
                    ("GeneratorRecord", "5_S", "regulated_voltage_setpoint"), ("GeneratorRecord", "6_S2", "zr")},
     "step_up": {_ZONE_1, ("GeneratorRecord", "2_G2", "gtap")},  # GTAP without a step-up (R3b-4)
+    # CW, CZ, CM 2 and 3 come back 1 with their values in pu (A, B, E); a 3-winding unit's pair bases come back SBASE
+    "transformers": {_ZONE_1,
+                     *(("TransformerRecord", "1_2_0_1", slot) for slot in ("cw", "cz", "cm", "mag1", "mag2", "r1_2",
+                                                                          "x1_2", "windv1", "windv2", "rma1", "rmi1")),
+                     *(("TransformerRecord", "2_6_0_1", slot) for slot in ("cw", "cz", "r1_2", "x1_2")),
+                     *(("TransformerRecord", "6_7_4_2", f"{kind}{pair}") for pair in ("1_2", "2_3", "3_1")
+                       for kind in ("r", "x", "sbase")), ("TransformerRecord", "6_7_4_2", "cz")},
+    # R4b: a voltage control's extended steps (Q, R4b-5), 0 deg off a shifter's grid (K, R4b-3), CW 2 (N), COD 0
+    # ranges no tap holds come back blank (O, R4b-4; P's were blank), a negative CONT positive (S, R4b-8)
+    "forms_r4b": {_ZONE_1, ("TransformerRecord", "1_6_0_Q", "ntp1"), ("TransformerRecord", "1_6_0_Q", "rma1"),
+                  *(("TransformerRecord", key, slot) for key in ("2_5_0_K", "6_7_0_O")
+                    for slot in ("rma1", "rmi1")),
+                  *(("TransformerRecord", "3_4_0_N", slot) for slot in ("cw", "windv1", "windv2", "rma1", "rmi1")),
+                  ("TransformerRecord", "5_6_0_S", "cont1")},
     **{stem: {_ZONE_1} for stem in ("switches", "line_shunts", "multi_section_line", "fixed_shunts",
-                                    "switched_shunts", "forms_r4b", "transformers")},
+                                    "switched_shunts")},
     # areas and zones named by their own number come back blank
     "IEEE118_all_hydro_25_clean_4_subs": {(record, key, slot) for record, slot in
                                           (("ZoneRecord", "zone_name"), ("AreaInterchangeRecord", "name"))
@@ -143,8 +166,17 @@ def _own_bus_ireg(native) -> set[tuple[str, str, str]]:
             if not record.regulated_bus_number and record.wmod != import_generator.FIXED_POWER_FACTOR}
 
 
+def _nominal_zero(native) -> set[tuple[str, str, str]]:
+    """NOMVk 0 (the bus's BASKV) comes back as BASKV, the end's ratedU (R4)."""
+    return {("TransformerRecord", str(_get_identifier(record)), f"nomv{k}")
+            for record in native.list_by_class(schema.TransformerRecord)
+            for k in ((1, 2, 3) if record.k else (1, 2)) if not getattr(record, f"nomv{k}")}
+
+
 def _same(left, right) -> bool:
-    if isinstance(left, list) or isinstance(right, list):  # RATE1..RATE12
+    if isinstance(left, schema.ImpedanceCorrectionPoint) and isinstance(right, schema.ImpedanceCorrectionPoint):
+        return all(_same(getattr(left, slot), getattr(right, slot)) for slot in ("t", "f_real", "f_imag"))
+    if isinstance(left, list) or isinstance(right, list):  # RATE1..RATE12, a table's points
         return left is not None and right is not None and len(left) == len(right) and all(map(_same, left, right))
     if isinstance(left, float) or isinstance(right, float):
         return left is not None and right is not None and math.isclose(float(left), float(right), rel_tol=REL_TOL)
@@ -191,7 +223,8 @@ def _differences(native, exported, modules) -> set[tuple[str, str, str]]:
 def test_round_trip(path):
     native, exported = _round_trip(path, LANDED)
     assert _differences(native, exported, LANDED) == (EXPECTED.get(path.stem, set()) | _metered_off_a_tie(native)
-                                                      | _own_bus_swreg(native) | _own_bus_ireg(native))
+                                                      | _own_bus_swreg(native) | _own_bus_ireg(native)
+                                                      | _nominal_zero(native))
 
 
 def test_e0_wecc240_gains_the_default_rating_records():
@@ -204,7 +237,8 @@ def test_e0_wecc240_gains_the_default_rating_records():
                                   _atom("branch", "mixed_base"), _atom("branch", "switches"), _atom("load", "loads"),
                                   _atom("shunt", "switched_shunts"), _atom("shunt", "plant_and_facts"),
                                   _atom("generator", "generators"), _atom("generator", "renewables"),
-                                  _atom("generator", "step_up")],
+                                  _atom("generator", "step_up"), _atom("transformer", "transformers"),
+                                  _atom("transformer", "forms_r4b")],
                          ids=lambda path: path.stem)
 def test_written_case_reads_back(tmp_path, path):
     _, exported = _round_trip(path, LANDED)
@@ -217,9 +251,12 @@ def test_written_case_reads_back(tmp_path, path):
 
 
 def test_to_model_raises_on_equipment_not_yet_exported():
+    # E4 exports IEEE14 whole; the two-terminal DC line's converters are E6's (their transformers are left out)
     native = Raw34Reader(str(TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw")).read_all()
-    with pytest.raises(ValueError, match=r"no RAW export yet for \{'PowerTransformer': 3\}$"):
-        RawExporter().to_model(raw_to_cim(native, name="IEEE14"))
+    assert len(RawExporter().to_model(raw_to_cim(native, name="IEEE14")).list_by_class(schema.TransformerRecord)) == 3
+    native = Raw34Reader(str(_atom("dc", "two_terminal"))).read_all()
+    with pytest.raises(ValueError, match=r"no RAW export yet for \{'CsConverter': 8\}$"):
+        RawExporter().to_model(raw_to_cim(native, name="two_terminal_case"))
 
 
 @pytest.mark.parametrize("module", EXPORT_ORDER, ids=lambda module: module.__name__.rsplit(".", 1)[1])
@@ -234,7 +271,8 @@ def test_slots_are_complete(module):
                                                 (multi_section_line, import_multi_section_line), (load, import_load),
                                                 (fixed_shunt, import_fixed_shunt),
                                                 (switched_shunt, import_switched_shunt),
-                                                (generator, import_generator)],
+                                                (generator, import_generator), (transformer, import_transformer),
+                                                (impedance_correction, import_impedance_correction)],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_untranscribed_on_import_is_unset_on_export(exporter, importer):
     untranscribed = {slot for slot, field in importer.FIELDS.items() if field.kind == "untranscribed"}
@@ -486,3 +524,84 @@ def test_e3_reversed_p_limits_come_back_as_written():
     record = next(record for record in export_tables(network, (generator,)).list_by_class(schema.GeneratorRecord)
                   if record.gen_id == "1" and record.bus_number == 1)
     assert (record.min_p_output, record.max_p_output) == pytest.approx((1.1, 0.62))
+
+
+# E4
+
+
+def test_e4_step_ups_and_converter_transformers_are_left_out():
+    _, network = _network(_atom("generator", "step_up"))
+    assert len(network.graph[cim.PowerTransformer]) == 4  # E3's
+    assert export_tables(network, (transformer,)).list_by_class(schema.TransformerRecord) == []
+    native, network = _network(_atom("dc", "two_terminal"))
+    exported = export_tables(network, (transformer,)).list_by_class(schema.TransformerRecord)
+    assert len(network.graph[cim.PowerTransformer]) == 11  # 8 of them the DC converters' (E6)
+    assert sorted(str(_get_identifier(record)) for record in exported) == sorted(
+        str(_get_identifier(record)) for record in native.list_by_class(schema.TransformerRecord))
+
+
+def test_e4_an_end_on_an_unnumbered_node_raises():
+    _, network = _network(TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw")
+    _get(network, cim.PowerTransformerEnd, "xf_4_7_0_1_2").Terminal.TopologicalNode.busNumber = None
+    with pytest.raises(ValueError, match="xf_4_7_0_1'.*neither a generator step-up .E3. nor a converter"):
+        export_tables(network, (transformer,))
+
+
+def test_e4_two_windings_out_raise():
+    _, network = _network(_atom("transformer", "transformers"))
+    for end in ("xf_1_2_3_1_2", "xf_1_2_3_1_3"):
+        _get(network, cim.PowerTransformerEnd, end).Terminal.connected = False
+    with pytest.raises(ValueError, match="windings \\[2, 3\\] disconnected"):
+        export_tables(network, (transformer,))
+
+
+def test_e4_a_moving_tap_on_winding_2_of_two_raises():
+    _, network = _network(_atom("transformer", "forms_r4b"))
+    tap = _get(network, cim.RatioTapChanger, "xf_6_7_0_M_tap2")
+    tap.highStep, tap.stepVoltageIncrement = 2, cim.PerCent(1.0)
+    with pytest.raises(ValueError, match="xf_6_7_0_M_tap2'.*has only a fixed ratio"):
+        export_tables(network, (transformer,))
+
+
+def test_e4_a_shifter_under_a_voltage_control_raises():
+    _, network = _network(_atom("transformer", "forms_r4b"))
+    _get(network, cim.TapChangerControl, "xf_2_5_0_J_ctrl1").mode = cim.RegulatingControlModeKind.voltage
+    with pytest.raises(ValueError, match="xf_2_5_0_J_ptap1'.*a phase tap changer under a voltage control"):
+        export_tables(network, (transformer,))
+
+
+def test_e4_a_three_winding_tabular_raises():
+    _, network = _network(_atom("transformer", "forms_r4b"))
+    tabular = _get(network, cim.ImpedanceTapChangerTabular, "xf_2_5_0_K_ztab1")
+    end = _get(network, cim.PowerTransformerEnd, "xf_1_2_3_G_1")
+    end.ImpedanceTapChanger, tabular.TransformerEnd = tabular, end
+    with pytest.raises(ValueError, match="xf_2_5_0_K_ztab1'.*on a 3-winding unit"):
+        export_tables(network, (transformer,))
+
+
+def test_e4_a_table_point_scaling_r_and_x_apart_raises():
+    _, network = _network(_atom("transformer", "forms_r4b"))
+    table = _get(network, cim.ImpedanceTapChangerTable, "ict_1")
+    table.ImpedanceTapChangerTablePoint[0].xEnd1 = cim.PerCent(5.0)
+    with pytest.raises(ValueError, match="ict_1'.*PSS/E's F scales end 1's r and x alike"):
+        export_tables(network, (impedance_correction,))
+
+
+def test_e4_impedance_off_the_bus_base_moves_by_the_voltage():
+    # L: NOMV1 240 kV on the 230 kV bus, CZ 1. The end holds ohms on 240 kV; RAW's X is on 230 kV
+    native, network = _network(_atom("transformer", "forms_r4b"))
+    [original] = [record for record in native.list_by_class(schema.TransformerRecord) if record.circuit == "L"]
+    end = _get(network, cim.PowerTransformerEnd, "xf_2_6_0_L_1")
+    assert end.x.to("ohm") == pytest.approx(original.x1_2 * 230.0 ** 2 / 100.0)
+    [record] = [record for record in export_tables(network, (transformer,)).list_by_class(schema.TransformerRecord)
+                if record.circuit == "L"]
+    assert (record.nomv1, record.x1_2) == (pytest.approx(240.0), pytest.approx(original.x1_2))
+
+
+def test_e4_a_winding_at_its_rating_off_the_bus_base():
+    # the import writes no tap at ratio NOMV, so a winding without one is at its ratedU: WINDV = ratedU / BASKV
+    _, network = _network(TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw")
+    _get(network, cim.PowerTransformerEnd, "xf_4_7_0_1_2").ratedU = cim.Voltage(130.0, "kV")
+    [record] = [record for record in export_tables(network, (transformer,)).list_by_class(schema.TransformerRecord)
+                if (record.i, record.j) == (4, 7)]
+    assert (record.nomv2, record.windv2) == (pytest.approx(130.0), pytest.approx(130.0 / 138.0))

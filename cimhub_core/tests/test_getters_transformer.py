@@ -178,6 +178,39 @@ def test_network_base_power():
     assert model.mesh[(1, 2)].x == pytest.approx(160.0)
 
 
+def test_unrated_ends_read_on_a_declared_base_power(tmp_path):
+    # a RAW 3-winding unit's ends have no ratedS (E4-1): the ohms on each end's ratedU go straight onto 100 MVA, the
+    # same numbers as test_system_base_in_pu
+    network = _three_winding(tmp_path)
+    for end in network.graph[cim.PowerTransformerEnd].values():
+        end.ratedS = None
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    assert [w.r for w in model.windings] == pytest.approx([0.04, 0.1, 0.1])
+    assert [w.rated_s for w in model.windings] == [None, None, None]
+    assert model.mesh[(2, 3)].x == pytest.approx(0.8)
+    with pytest.raises(ValueError, match="PowerTransformerEnd 'xf_3w_1': ratedS is unset"):
+        _model(network, "xf_3w")
+
+
+def test_zero_end_holds_no_core(tmp_path):
+    # RAW writes end 2's g, b as 0 (CIM: the secondary end is zero, E4-2); the core is end 1's
+    network = _three_winding(tmp_path)
+    end_1, end_2 = (_get(network, cim.PowerTransformerEnd, mrid) for mrid in ("xf_3w_1", "xf_3w_2"))
+    end_1.g, end_1.b = cim.Conductance(1e-4, "S"), cim.Susceptance(-2e-4, "S")
+    end_2.g, end_2.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    z_base = 115e3 ** 2 / 100e6
+    assert model.core == pytest.approx(CoreAdmittance(1e-4 * z_base, -2e-4 * z_base))
+    end_1.g, end_1.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")
+    assert _model(network, "xf_3w").core == CoreAdmittance(0.0, 0.0)  # zeros on two ends: one zero core
+
+
+def test_phase_shift_of_an_end(tmp_path):
+    network = _three_winding(tmp_path)
+    _get(network, cim.PowerTransformerEnd, "xf_3w_2").phaseShift = cim.AngleDegrees(-30.0)
+    assert [w.phase_shift for w in _model(network, "xf_3w").windings] == [None, pytest.approx(-30.0), None]
+
+
 def test_core_on_an_end_moves_by_its_rating(tmp_path):
     network = _three_winding(tmp_path)
     end = _get(network, cim.PowerTransformerEnd, "xf_3w_2")

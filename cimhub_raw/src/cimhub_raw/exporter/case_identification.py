@@ -19,7 +19,7 @@ CASE_SLOTS = {
     "new_case_flag": Slot("rule", "IC 0: a base case"),
     "system_base_mva": Slot("written", "SBASE: BasePower.basePower (MVA), the one BasePower"),
     "revision": Slot("rule", "REV 34"),
-    "transformer_ratings_units": Slot("rule", "XFRRAT 0 (MVA); E4 settles CurrentLimit ratings"),
+    "transformer_ratings_units": Slot("rule", "XFRRAT 1 when the transformer ratings are CurrentLimits, else 0"),
     "branch_ratings_units": Slot("rule", "NXFRAT 1 when the branch and switch ratings are CurrentLimits, else 0"),
     "system_base_frequency": Slot("written", "BASFRQ: the network's base frequency (Hz)"),
     "titles": Slot("unset", "two blank lines: the importer lists the titles on the master's comment"),
@@ -46,7 +46,8 @@ def export(context) -> list[schema.CaseIdentificationRecord]:
         raise ValueError(f"{len(base_powers)} BasePower objects; RAW's SBASE needs exactly one")
     return [schema.CaseIdentificationRecord(
         new_case_flag=0, system_base_mva=get_qty(base_powers[0], "basePower", "MVA"), revision=REVISION,
-        transformer_ratings_units=0, branch_ratings_units=1 if context.branch_ratings_in_current else 0,
+        transformer_ratings_units=1 if context.transformer_ratings_in_current else 0,
+        branch_ratings_units=1 if context.branch_ratings_in_current else 0,
         system_base_frequency=context.network.base_frequency.to("Hz"), titles=["", ""],
         ratings=_ratings(context))]
 

@@ -14,8 +14,9 @@ import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatExporter
-from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, generator, load,
-                                 multi_section_line, switch, switched_shunt, zone)
+from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, generator,
+                                 impedance_correction, load, multi_section_line, switch, switched_shunt, transformer,
+                                 zone)
 from cimhub_raw.exporter.area_trace import trace_areas
 from cimhub_raw.exporter.identity import bus_numbers, keyed_numbers
 from cimhub_raw.exporter.ratings import ratings_in_current
@@ -25,7 +26,7 @@ from cimhub_raw.schema.raw_v34 import composite_id
 #: Modules in export order. Each has ``NATIVE_CLASS``, ``CIM_CLASSES`` (the conducting equipment it exports, if
 #: any), ``SLOTS`` (``{native class: {slot: Slot}}``) and ``export(context) -> list[record]``.
 EXPORT_ORDER = (case_identification, zone, area_interchange, bus, branch, switch, multi_section_line, load,
-                fixed_shunt, switched_shunt, generator)
+                fixed_shunt, switched_shunt, generator, transformer, impedance_correction)
 
 __all__ = ["EXPORT_ORDER", "ExportContext", "RawExporter", "cim_to_raw", "export_context", "export_tables"]
 
@@ -39,6 +40,7 @@ class ExportContext(NamedTuple):
     area_numbers: dict  # ControlArea -> area I
     bus_areas: dict  # TopologicalNode -> ControlArea or None (the R5 trace)
     branch_ratings_in_current: bool  # NXFRAT: the branch and switch ratings are CurrentLimits
+    transformer_ratings_in_current: bool  # XFRRAT: the transformer ratings are CurrentLimits
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -56,7 +58,8 @@ def export_context(network) -> ExportContext:
                          keyed_numbers(network.graph.get(cim.SubGeographicalRegion, {}).values(), "srgn_"),
                          keyed_numbers(network.graph.get(cim.ControlArea, {}).values(), "ca_"),
                          trace_areas(network),
-                         ratings_in_current(_objects(network, *branch.CIM_CLASSES, *switch.CIM_CLASSES)))
+                         ratings_in_current(_objects(network, *branch.CIM_CLASSES, *switch.CIM_CLASSES)),
+                         ratings_in_current(_objects(network, *transformer.CIM_CLASSES), per_terminal=True))
 
 
 def export_tables(network, modules) -> GraphModel:

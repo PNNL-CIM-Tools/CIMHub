@@ -87,3 +87,16 @@ def test_limits_of_one_type_that_disagree_raise(tmp_path):
     network = _network(tmp_path, ["a, sc_ratings, olt_rate1, 250", "b, sc_ratings, olt_rate1, 260"])
     with pytest.raises(ValueError, match="SeriesCompensator 'sc': olt_rate1 ApparentPowerLimit limits disagree"):
         get_limits_by_type(_get(network, cim.SeriesCompensator, "sc"), cim.ApparentPowerLimit, "MVA")
+
+
+def test_limits_by_type_on_one_terminal(tmp_path):
+    # a transformer's ratings are per winding: the set on sc_T1 is not on sc_T2
+    network = _network(tmp_path, ["sc_rate1, sc_ratings, olt_rate1, 250"])
+    compensator = _get(network, cim.SeriesCompensator, "sc")
+    first, second = sorted(compensator.Terminals, key=lambda terminal: terminal.sequenceNumber)
+    limits = get_limits_by_type(compensator, cim.ApparentPowerLimit, "MVA", terminal=first)
+    assert [value for value in limits.values()] == [pytest.approx(250.0)]
+    assert get_limits_by_type(compensator, cim.ApparentPowerLimit, "MVA", terminal=second) == {}
+    other = _get(network, cim.LinearShuntCompensator, "cap").Terminals[0]
+    with pytest.raises(ValueError, match="is not a terminal of SeriesCompensator 'sc'"):
+        get_limits_by_type(compensator, cim.ApparentPowerLimit, "MVA", terminal=other)
