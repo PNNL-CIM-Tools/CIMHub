@@ -29,6 +29,9 @@ exporter) may ask for signature changes before anything is frozen.
 | G6d | `get_inverter_rating`, `get_inverter_unit`, `get_photovoltaic_unit`, `get_battery_unit`, `get_machine_rating`, `get_machine_impedance` (`getters/der.py`); `getters.required_qty` shared | **done 2026-11-08**, 15 tests |
 | S6b | `get_wire_info`, `get_configuration_wires` (`getters/wire.py`), `get_asset_info_current_limits`, `get_phase_impedance_code`/`get_sequence_impedance_code`, `derived/capacitance.py` (`b_from_c`, `c_from_b`) | **done 2026-11-09** with the DSS S6b exporter (`cimhub_opendss/docs/EXPORT_MAPPING.md`) |
 | S6c | `get_transformer_model`: a template Y and an instance Yn agree, and the instance's kind wins (T2); a BY_TANK_ENDS coil's phases follow its instance phase ends (T3); `derived/regulator.py` (`secondary_to_primary`, `primary_to_secondary`, `line_drop_ohms`, `line_drop_volts`) | **done 2026-11-09** with the DSS S6c exporter |
+| S6e | `get_inverter_units` (`InverterUnitShare`: a shared PowerElectronicsConnection chopped by maxP share, each unit's own p or its share of the connection's; `getters/der.py`), `get_series_compensator` (`getters/series_compensator.py`, ohm) | **done 2026-11-09** with the DSS S6e exporter |
+| S6f | `get_location_coordinates` (`LocationCoordinates`: a Location's points in order and each Terminal's point; `getters/location.py`) | **done 2026-11-09** with the DSS S6f exporter |
+| S6g | `get_earth_resistivity` (`getters/earth.py`: `EarthData`, rho in ohm-m from the profile's Resistance), `get_reclose_delays` (`getters/switch_state.py`) | **done 2026-11-09** with the DSS S6g slice |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)

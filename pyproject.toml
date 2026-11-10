@@ -38,7 +38,7 @@ cimhub-gdm = { workspace = true }
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }
 cim-profiles = { path = "../CIM-Profiles", editable = true }
-cimtables = { path = "../CIM-Tables", editable = true }
+cim-tables = { path = "../CIM-Tables", editable = true }
 cim-builder = { path = "../CIM-Builder", editable = true }
 cim-topology = { path = "../CIM-Graph-Topology-Processor", editable = true }
 

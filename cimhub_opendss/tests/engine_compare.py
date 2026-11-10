@@ -123,3 +123,119 @@ def _value(text: str) -> object:
         return float(text)
     except ValueError:
         return text
+
+
+# power flow parity (S6f) -------------------------------------------------------------------------------------------
+
+#: settings CIM has no home for (E10, L6; the earth model since S6g only on a deck with geometry), and the control
+#: state an in-deck ``Solve`` leaves (the importer reads the deck's text). The parity solve takes them from the
+#: original; each is named when the written deck differed.
+UNTRANSCRIBED = ("earthmodel", "Load.Vminpu/Vmaxpu", "Transformer.ppm_antifloat", "Transformer.taps",
+                 "Capacitor.states")
+
+
+def assert_same_power_flow(original: Path, written: Path, *, tolerance: float = 1e-3) -> set[str]:
+    """Every node voltage within ``tolerance`` of its bus's base (0.1 %, plan section 5), both solved with controls
+    off at the original's ``UNTRANSCRIBED`` settings and control state; the control settings themselves are compared
+    one by one (``assert_same_settings``). Returns which of ``UNTRANSCRIBED`` the written deck had otherwise."""
+    compile_deck(original)
+    settings = _untranscribed()
+    voltages, bases = _solved_voltages(original)
+    compile_deck(written)
+    dss.Text.Command("Get earthmodel")
+    differed = set()
+    if dss.Text.Result().lower() != settings["earthmodel"].lower():
+        differed.add("earthmodel")
+        written = _with_earth_model(written, settings["earthmodel"])
+        compile_deck(written)
+    differed |= _apply(settings)
+    written_voltages, _ = _solved_voltages(written)
+    assert written_voltages.keys() == voltages.keys()
+    for node, voltage in voltages.items():
+        assert abs(written_voltages[node] - voltage) <= tolerance * bases[node.split(".")[0]], node
+    return differed
+
+
+def _untranscribed() -> dict:
+    """The compiled deck's ``UNTRANSCRIBED`` values."""
+    dss.Text.Command("Get earthmodel")
+    loads = {}
+    for name in dss.Loads.AllNames() or []:
+        dss.Loads.Name(name)
+        loads[name] = (dss.Loads.Vminpu(), dss.Loads.Vmaxpu())
+    transformers = {}
+    for name in dss.Transformers.AllNames() or []:
+        dss.Transformers.Name(name)
+        taps = []
+        for winding in range(1, dss.Transformers.NumWindings() + 1):
+            dss.Transformers.Wdg(winding)
+            taps.append(dss.Transformers.Tap())
+        transformers[name] = (dss.Properties.Value("ppm_antifloat"), taps)
+    capacitors = {}
+    for name in dss.Capacitors.AllNames() or []:
+        dss.Capacitors.Name(name)
+        capacitors[name] = list(dss.Capacitors.States())
+    return {"earthmodel": dss.Text.Result(), "loads": loads, "transformers": transformers, "capacitors": capacitors}
+
+
+def _apply(settings: dict) -> set[str]:
+    """Put ``settings`` on the compiled written deck; the names of those that differed."""
+    differed = set()
+    for name, limits in settings["loads"].items():
+        dss.Loads.Name(name)
+        if (dss.Loads.Vminpu(), dss.Loads.Vmaxpu()) != limits:
+            dss.Loads.Vminpu(limits[0])
+            dss.Loads.Vmaxpu(limits[1])
+            differed.add("Load.Vminpu/Vmaxpu")
+    for name, (ppm, taps) in settings["transformers"].items():
+        dss.Transformers.Name(name)
+        if dss.Properties.Value("ppm_antifloat") != ppm:
+            dss.Text.Command(f"Transformer.{name}.ppm_antifloat={ppm}")
+            differed.add("Transformer.ppm_antifloat")
+        for winding, tap in enumerate(taps, 1):
+            dss.Transformers.Wdg(winding)
+            if dss.Transformers.Tap() != tap:
+                dss.Transformers.Tap(tap)
+                differed.add("Transformer.taps")
+    for name, states in settings["capacitors"].items():
+        dss.Capacitors.Name(name)
+        if list(dss.Capacitors.States()) != states:
+            dss.Capacitors.States(states)
+            differed.add("Capacitor.states")
+    return differed
+
+
+def _with_earth_model(written: Path, earth_model: str) -> Path:
+    """A copy of ``written`` that sets ``earth_model`` before any line is built (after it, Compile has used it)."""
+    lines = written.read_text(encoding="utf-8").splitlines()
+    circuit = next(number for number, line in enumerate(lines) if line.lower().startswith("new circuit."))
+    lines.insert(circuit + 1, f"Set earthmodel={earth_model}")
+    copy = written.with_name(f"{written.stem}_parity{written.suffix}")
+    copy.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return copy
+
+
+def _solved_voltages(path: Path) -> tuple[dict[str, complex], dict[str, float]]:
+    """``({node: voltage (V)}, {bus: base (V, LN)})`` solved with controls off."""
+    dss.Text.Command("Set controlmode=off maxiterations=100")
+    dss.Solution.Solve()
+    assert dss.Solution.Converged(), path
+    values = dss.Circuit.AllBusVolts()
+    nodes = [name.lower() for name in dss.Circuit.AllNodeNames()]
+    bases = {}
+    for bus in dss.Circuit.AllBusNames():
+        dss.Circuit.SetActiveBus(bus)
+        bases[bus.lower()] = dss.Bus.kVBase() * 1000
+        assert bases[bus.lower()] > 0, f"{path.name}: bus {bus} has no voltage base"
+    return {node: complex(values[2 * i], values[2 * i + 1]) for i, node in enumerate(nodes)}, bases
+
+
+def engine_coordinates(path: Path) -> dict[str, tuple[float, float]]:
+    """``{bus: (x, y)}`` after Compile, for every bus with coordinates."""
+    compile_deck(path)
+    found = {}
+    for bus in dss.Circuit.AllBusNames():
+        dss.Circuit.SetActiveBus(bus)
+        if dss.Bus.Coorddefined():
+            found[bus.lower()] = (dss.Bus.X(), dss.Bus.Y())
+    return found

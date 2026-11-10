@@ -917,7 +917,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
 | `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
 | `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
-| `rho` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (earth resistivity; home EarthResistivity) |
+| `rho` | `Optional[float]` |  | structural | the deck's EarthResistivity.rho (ohm-m), which every geometry line must agree on (geometry.earth_statement); on another line it raises |
 | `geometry` | `Optional[str]` | `602`, `603`, `601` | structural | ACLineSegment.WireConfiguration = wc_<geometry> |
 | `units` | `Union[str, ForwardRef('LengthUnit'), NoneType]` | `Ft`, `mi`, `km` | mapped | the length unit (LENGTH_UNIT); unset: the template's unit (DSS-3) |
 | `spacing` | `Optional[str]` | `510` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
@@ -950,7 +950,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `SwitchedObj` | `Optional[str]` | `Line.2002200004641085_sw`, `Line.2002200004868472_sw`, `Line.200220000499_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
-| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `RatedCurrent` | `Optional[float]` | `100.0`, `65.0`, `15.0` | copied | `Fuse.ratedCurrent` (A) |
 | `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
@@ -967,24 +967,24 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `SwitchedObj` | `Optional[str]` | `Line.A333_48332_sw`, `Line.G9343_48332_sw`, `Line.L5397_48332_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
-| `NumFast` | `Optional[int]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `Reset` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `Shots` | `Optional[int]` | `3` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `NumFast` | `Optional[int]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `Reset` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `Shots` | `Optional[int]` | `3` | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
+| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
 | `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
-| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `Normal` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `State` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
@@ -2139,3 +2139,14 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
 - **S5-5:** `sequenceNumber` is the Terminal number, 1-based.
 - **S5-6:** the sweep test covers the 24 `CIMHUB_DSS_DECKS` decks; the 7 CIMHub_2_0 `test_models` copies are dropped.
 - **S5-7:** the reader reads whitespace-separated coordinate rows and raises on a row it can't parse.
+
+## S6g: earth model and reclose sequences (2026-11-09)
+
+Specified with the export in `EXPORT_MAPPING.md#s6g-earth-model-and-reclose-sequences`. On import:
+- A deck with geometry gets one `EarthResistivity` (`earth`), first in `linegeometry.cimtbl`, from `Set earthmodel`
+  and the geometry lines' `rho` (the engine's Deri and 100 ohm-m when unset, listed). Every WireConfiguration names
+  it. FullCarson, disagreeing rho, and rho on a line without geometry raise.
+- A Recloser's `Shots` - 1 reclosures are `RecloseSequence` rows `<switch>_rs<n>` in `line.cimtbl`, at its
+  `RecloseIntervals` (the engine's defaults filling either, listed). Both given and disagreeing raise, and so does
+  Shots above 4 without intervals.
+

@@ -14,8 +14,9 @@ from cimhub_core.base import FormatExporter
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
-from cimhub_opendss.exporter import (capacitor, capcontrol, generator, line, linecode, linegeometry, load, pvsystem,
-                                     reactor, regcontrol, storage, switch, transformer, vsource, wire, xfmrcode)
+from cimhub_opendss.exporter import (buscoords, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
+                                     pvsystem, reactor, regcontrol, storage, switch, transformer, vsource, wire,
+                                     xfmrcode)
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
 
@@ -23,7 +24,7 @@ from cimhub_opendss.exporter.options import options_record
 #: and ``export(context) -> list[record]`` over the whole network: a LineGeometry is one per (WireConfiguration,
 #: offset) over the lines, so a module cannot work object by object.
 EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch, xfmrcode, transformer, regcontrol, load, capacitor,
-                capcontrol, pvsystem, storage, generator, reactor)
+                capcontrol, pvsystem, storage, generator, reactor, buscoords)
 
 __all__ = ["DssExporter", "EXPORT_ORDER", "cim_to_dss"]
 
