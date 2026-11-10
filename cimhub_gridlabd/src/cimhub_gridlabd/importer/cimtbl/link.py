@@ -99,6 +99,6 @@ class Limits:
                                        Column("OperationalLimitSet")], self.limits)]
 
 
-def provenance(native: str, targets: str, count: int) -> str:
+def provenance(native: str, targets: str, count: int, anchor: str = "s3a-lines-and-switches") -> str:
     return (f"GridLAB-D {native} -> {targets}.\nSource table: {native} (records: {count})\n"
-            "Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches")
+            f"Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#{anchor}")
