@@ -16,6 +16,7 @@ members = [
     "cimhub-core",
     "cimhub-gdm",
     "cimhub-opendss",
+    "cimhub-raw",
 ]
 
 [[package]]
@@ -316,6 +317,7 @@ dependencies = [
     { name = "cimhub-core" },
     { name = "cimhub-gdm" },
     { name = "cimhub-opendss" },
+    { name = "cimhub-raw" },
 ]
 
 [package.dev-dependencies]
@@ -333,6 +335,7 @@ requires-dist = [
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cimhub-gdm", editable = "cimhub_gdm" },
     { name = "cimhub-opendss", editable = "cimhub_opendss" },
+    { name = "cimhub-raw", editable = "cimhub_raw" },
 ]
 
 [package.metadata.requires-dev]
@@ -375,14 +378,29 @@ name = "cimhub-gdm"
 version = "3.0.0a0"
 source = { editable = "cimhub_gdm" }
 dependencies = [
-    { name = "cim-builder" },
     { name = "cim-tables" },
+    { name = "cim-topology" },
     { name = "cimhub-core" },
+    { name = "pyyaml" },
+    { name = "cim-builder" },
     { name = "grid-data-models" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
+    { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "pyyaml" },
+]
+
+[[package]]
+name = "cimhub-raw"
+version = "3.0.0a0"
+source = { editable = "cimhub_raw" }
+dependencies = [
+    { name = "cim-tables" },
+    { name = "cimhub-core" },
     { name = "cim-builder", editable = "../CIM-Builder" },
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
@@ -403,8 +421,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "pyyaml" },
 ]
 

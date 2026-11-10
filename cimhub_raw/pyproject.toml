@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools~=80.9"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cimhub_raw"
+description = "CIMHub PSS/E RAW v34 converter: .raw <-> .cimtbl <-> cim18v17"
+readme = "README.md"
+version = "3.0.0a0"
+requires-python = ">=3.11"
+license = { text = "BSD-2-Clause" }
+authors = [
+  { name = "Pacific Northwest National Laboratory", email = "gridappsd@pnnl.gov" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "cimhub-core>=3.0.0a0,<3.1",
+  "cim-tables",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/PNNL-CIM-Tools/CIMHub"
+"Bug Tracker" = "https://github.com/PNNL-CIM-Tools/CIMHub/issues"
+
+[tool.setuptools]
+packages = { find = { where = ["src"] } }
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]

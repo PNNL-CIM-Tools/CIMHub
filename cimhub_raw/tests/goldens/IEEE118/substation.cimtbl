@@ -1,0 +1,119 @@
+# PSS/E RAW Substation data -> ConnectivityNode, Switch / Breaker / Disconnector (by TYPE), Location,
+# BusbarSection per regulated node; each block's Substation is in bus.cimtbl, its equipment terminals in
+# equipment_terminal.cimtbl.
+# Source table: Substation (blocks: 4, nodes: 42, switching devices: 59)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#node-breaker-substations-r6
+# untranscribed: grounding_resistance
+# no Location: blocks 8, 37, 49, 100 at LATI = LONG = 0 (the default)
+
+Profile = cim18v17
+
+# untranscribed: status, vm, va
+Table ConnectivityNode: mRID, name, TopologicalNode, BaseVoltage, ConnectivityNodeContainer
+    sub_s8_n1,    STATION_8_8_1, 8,   bv_345kv, sub_s8
+    sub_s8_n2,    STATION_8_8_2, 8,   bv_345kv, sub_s8
+    sub_s8_n3,    STATION_8_8_3, 8,   bv_345kv, sub_s8
+    sub_s8_n4,    STATION_8_8_4, 8,   bv_345kv, sub_s8
+    sub_s8_n5,    STATION_8_8_5, 8,   bv_345kv, sub_s8
+    sub_s8_n6,    STATION_8_8_6, 8,   bv_345kv, sub_s8
+    sub_s8_n7,    STATION_8_8_7, 8,   bv_345kv, sub_s8
+    sub_s37_n1,   EASTLI_37_1,   37,  bv_138kv, sub_s37
+    sub_s37_n2,   EASTLI_37_2,   37,  bv_138kv, sub_s37
+    sub_s37_n3,   EASTLI_37_3,   37,  bv_138kv, sub_s37
+    sub_s37_n4,   EASTLI_37_4,   37,  bv_138kv, sub_s37
+    sub_s37_n5,   EASTLI_37_5,   37,  bv_138kv, sub_s37
+    sub_s37_n6,   EASTLI_37_6,   37,  bv_138kv, sub_s37
+    sub_s37_n7,   EASTLI_37_7,   37,  bv_138kv, sub_s37
+    sub_s49_n1,   PHILO_49_1,    49,  bv_138kv, sub_s49
+    sub_s49_n2,   PHILO_49_2,    49,  bv_138kv, sub_s49
+    sub_s49_n3,   PHILO_49_3,    49,  bv_138kv, sub_s49
+    sub_s49_n4,   PHILO_49_4,    49,  bv_138kv, sub_s49
+    sub_s49_n5,   PHILO_49_5,    49,  bv_138kv, sub_s49
+    sub_s49_n6,   PHILO_49_6,    49,  bv_138kv, sub_s49
+    sub_s49_n7,   PHILO_49_7,    49,  bv_138kv, sub_s49
+    sub_s49_n8,   PHILO_49_8,    49,  bv_138kv, sub_s49
+    sub_s49_n9,   PHILO_49_9,    49,  bv_138kv, sub_s49
+    sub_s49_n10,  PHILO_49_10,   49,  bv_138kv, sub_s49
+    sub_s49_n11,  PHILO_49_11,   49,  bv_138kv, sub_s49
+    sub_s49_n12,  PHILO_49_12,   49,  bv_138kv, sub_s49
+    sub_s49_n13,  PHILO_49_13,   49,  bv_138kv, sub_s49
+    sub_s49_n14,  PHILO_49_14,   49,  bv_138kv, sub_s49
+    sub_s49_n15,  PHILO_49_15,   49,  bv_138kv, sub_s49
+    sub_s49_n16,  PHILO_49_16,   49,  bv_138kv, sub_s49
+    sub_s100_n1,  GLEN L_100_1,  100, bv_138kv, sub_s100
+    # untranscribed: status=0
+    sub_s100_n2,  GLEN L_100_2,  100, bv_138kv, sub_s100
+    sub_s100_n3,  GLEN L_100_3,  100, bv_138kv, sub_s100
+    sub_s100_n4,  GLEN L_100_4,  100, bv_138kv, sub_s100
+    sub_s100_n5,  GLEN L_100_5,  100, bv_138kv, sub_s100
+    sub_s100_n6,  GLEN L_100_6,  100, bv_138kv, sub_s100
+    sub_s100_n7,  GLEN L_100_7,  100, bv_138kv, sub_s100
+    sub_s100_n8,  GLEN L_100_8,  100, bv_138kv, sub_s100
+    sub_s100_n9,  GLEN L_100_9,  100, bv_138kv, sub_s100
+    sub_s100_n10, GLEN L_100_10, 100, bv_138kv, sub_s100
+    sub_s100_n11, GLEN L_100_11, 100, bv_138kv, sub_s100
+    sub_s100_n12, GLEN L_100_12, 100, bv_138kv, sub_s100
+
+# untranscribed: reactance
+Table Breaker: mRID, name, node1, node2, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_s8_1_3_1,    8_1_3_1,    sub_s8_n1,   sub_s8_n3,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_1_4_1,    8_1_4_1,    sub_s8_n1,   sub_s8_n4,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_1_5_1,    8_1_5_1,    sub_s8_n1,   sub_s8_n5,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_1_6_1,    8_1_6_1,    sub_s8_n1,   sub_s8_n6,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_1_7_1,    8_1_7_1,    sub_s8_n1,   sub_s8_n7,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_2_3_1,    8_2_3_1,    sub_s8_n2,   sub_s8_n3,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_2_4_1,    8_2_4_1,    sub_s8_n2,   sub_s8_n4,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_2_5_1,    8_2_5_1,    sub_s8_n2,   sub_s8_n5,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_2_6_1,    8_2_6_1,    sub_s8_n2,   sub_s8_n6,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s8_2_7_1,    8_2_7_1,    sub_s8_n2,   sub_s8_n7,    8,   8,   false, false, bv_345kv, sub_s8
+    sw_s37_1_2_1,   37_1_2_1,   sub_s37_n1,  sub_s37_n2,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_1_7_1,   37_1_7_1,   sub_s37_n1,  sub_s37_n7,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_2_3_1,   37_2_3_1,   sub_s37_n2,  sub_s37_n3,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_3_4_1,   37_3_4_1,   sub_s37_n3,  sub_s37_n4,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_4_5_1,   37_4_5_1,   sub_s37_n4,  sub_s37_n5,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_5_6_1,   37_5_6_1,   sub_s37_n5,  sub_s37_n6,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s37_6_7_1,   37_6_7_1,   sub_s37_n6,  sub_s37_n7,   37,  37,  false, false, bv_138kv, sub_s37
+    sw_s49_1_3_1,   49_1_3_1,   sub_s49_n1,  sub_s49_n3,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_4_1,   49_1_4_1,   sub_s49_n1,  sub_s49_n4,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_5_1,   49_1_5_1,   sub_s49_n1,  sub_s49_n5,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_6_1,   49_1_6_1,   sub_s49_n1,  sub_s49_n6,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_7_1,   49_1_7_1,   sub_s49_n1,  sub_s49_n7,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_8_1,   49_1_8_1,   sub_s49_n1,  sub_s49_n8,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_1_9_1,   49_1_9_1,   sub_s49_n1,  sub_s49_n9,   49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_10_1,  49_2_10_1,  sub_s49_n2,  sub_s49_n10,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_11_1,  49_2_11_1,  sub_s49_n2,  sub_s49_n11,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_12_1,  49_2_12_1,  sub_s49_n2,  sub_s49_n12,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_13_1,  49_2_13_1,  sub_s49_n2,  sub_s49_n13,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_14_1,  49_2_14_1,  sub_s49_n2,  sub_s49_n14,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_15_1,  49_2_15_1,  sub_s49_n2,  sub_s49_n15,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_2_16_1,  49_2_16_1,  sub_s49_n2,  sub_s49_n16,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_3_10_1,  49_3_10_1,  sub_s49_n3,  sub_s49_n10,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_4_11_1,  49_4_11_1,  sub_s49_n4,  sub_s49_n11,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_5_12_1,  49_5_12_1,  sub_s49_n5,  sub_s49_n12,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_6_13_1,  49_6_13_1,  sub_s49_n6,  sub_s49_n13,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_7_14_1,  49_7_14_1,  sub_s49_n7,  sub_s49_n14,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_8_15_1,  49_8_15_1,  sub_s49_n8,  sub_s49_n15,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s49_9_16_1,  49_9_16_1,  sub_s49_n9,  sub_s49_n16,  49,  49,  false, false, bv_138kv, sub_s49
+    sw_s100_1_2_1,  100_1_2_1,  sub_s100_n1, sub_s100_n2,  100, 100, true,  true,  bv_138kv, sub_s100
+    sw_s100_1_3_1,  100_1_3_1,  sub_s100_n1, sub_s100_n3,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_4_1,  100_1_4_1,  sub_s100_n1, sub_s100_n4,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_5_1,  100_1_5_1,  sub_s100_n1, sub_s100_n5,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_6_1,  100_1_6_1,  sub_s100_n1, sub_s100_n6,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_7_1,  100_1_7_1,  sub_s100_n1, sub_s100_n7,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_8_1,  100_1_8_1,  sub_s100_n1, sub_s100_n8,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_9_1,  100_1_9_1,  sub_s100_n1, sub_s100_n9,  100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_10_1, 100_1_10_1, sub_s100_n1, sub_s100_n10, 100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_11_1, 100_1_11_1, sub_s100_n1, sub_s100_n11, 100, 100, false, false, bv_138kv, sub_s100
+    sw_s100_1_12_1, 100_1_12_1, sub_s100_n1, sub_s100_n12, 100, 100, false, false, bv_138kv, sub_s100
+
+Table Disconnector: mRID, name, node1, node2, bus1, bus2, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_s100_2_3_1,  100_2_3_1,  sub_s100_n2, sub_s100_n3,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_4_1,  100_2_4_1,  sub_s100_n2, sub_s100_n4,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_5_1,  100_2_5_1,  sub_s100_n2, sub_s100_n5,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_6_1,  100_2_6_1,  sub_s100_n2, sub_s100_n6,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_7_1,  100_2_7_1,  sub_s100_n2, sub_s100_n7,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_8_1,  100_2_8_1,  sub_s100_n2, sub_s100_n8,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_9_1,  100_2_9_1,  sub_s100_n2, sub_s100_n9,  100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_10_1, 100_2_10_1, sub_s100_n2, sub_s100_n10, 100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_11_1, 100_2_11_1, sub_s100_n2, sub_s100_n11, 100, 100, true, true, bv_138kv, sub_s100
+    sw_s100_2_12_1, 100_2_12_1, sub_s100_n2, sub_s100_n12, 100, 100, true, true, bv_138kv, sub_s100
