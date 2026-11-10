@@ -7,7 +7,7 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import deck, deck_params, defines
+from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
@@ -134,13 +134,6 @@ def test_ieee13_cdpsm_goldens():
     documents = parts(model, "IEEE13_cdpsm")
     for name in ("bus", "source"):
         assert_matches_golden(documents[name], GOLDENS / "IEEE13_cdpsm" / f"{name}.cimtbl")
-
-
-#: Decks that stop before binding, with the reason (deck defects; tests/decks/README.md).
-BIND_STOPS = {
-    "IEEE/IEEE123_transactive.glm": "unknown block 'Object battery'",
-    "IEEE/IEEE13_houses.glm": "Transformer 633-634: its coil on bus 634 gives 0.48 kV",
-}
 
 
 @pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))

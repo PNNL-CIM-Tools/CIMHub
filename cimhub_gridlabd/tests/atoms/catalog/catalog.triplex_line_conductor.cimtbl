@@ -1,0 +1,9 @@
+# GridLAB-D triplex_line_conductor -> OverheadWireInfo (catalog).
+# Source table: triplex_line_conductor (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+Table OverheadWireInfo: mRID, name, rAC50 (ohm/mile), gmr (ft), ratedCurrent (A), OperationalLimitSet
+    # not filled (S2-7): rating.summer.continuous, rating.summer.emergency
+    tpc_triplex_4/0 AA, triplex_4/0 AA, 0.48, 0.0158, ,

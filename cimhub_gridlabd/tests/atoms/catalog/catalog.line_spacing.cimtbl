@@ -1,0 +1,30 @@
+# GridLAB-D line_spacing -> ConductorDistanceSpacing + ConductorDistance (distances as written; GLM gives no coordinates) (catalog).
+# Source table: line_spacing (records: 3)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+# 0 (GridLAB-D: no coupling): AB
+Object ConductorDistanceSpacing: mRID=spc_line_spacing:10, name=line_spacing:10, isTemplate=true
+
+Table ConductorDistance: mRID, ConductorDistanceSpacing=spc_line_spacing:10, sequenceNumber1, conductorKind1, fromPhase, sequenceNumber2, conductorKind2, toPhase, distance (in)
+    spc_line_spacing:10_AN, 1, phase, A, 2, neutral, N, 84.0
+
+Object ConductorDistanceSpacing: mRID=spc_spc_601_ABCN, name=spc_601_ABCN, isTemplate=true
+
+Table ConductorDistance: mRID, ConductorDistanceSpacing=spc_spc_601_ABCN, sequenceNumber1, conductorKind1, fromPhase, sequenceNumber2, conductorKind2, toPhase, distance (ft)
+    spc_spc_601_ABCN_AB, 1, phase,   A, 2, phase,   B, 2.5
+    spc_spc_601_ABCN_AC, 1, phase,   A, 3, phase,   C, 7.0
+    spc_spc_601_ABCN_BC, 2, phase,   B, 3, phase,   C, 4.5
+    spc_spc_601_ABCN_AN, 1, phase,   A, 4, neutral, N, 5.6569
+    spc_spc_601_ABCN_BN, 2, phase,   B, 4, neutral, N, 4.272
+    spc_spc_601_ABCN_CN, 3, phase,   C, 4, neutral, N, 5.0
+    spc_spc_601_ABCN_AE, 1, phase,   A, ,  earth,   ,  28.0
+    spc_spc_601_ABCN_BE, 2, phase,   B, ,  earth,   ,  28.0
+    spc_spc_601_ABCN_CE, 3, phase,   C, ,  earth,   ,  28.0
+    spc_spc_601_ABCN_NE, 4, neutral, N, ,  earth,   ,  24.0
+
+Object ConductorDistanceSpacing: mRID=spc_spc_607_AN, name=spc_607_AN, isTemplate=true
+
+Table ConductorDistance: mRID, ConductorDistanceSpacing=spc_spc_607_AN, sequenceNumber1, conductorKind1, fromPhase, sequenceNumber2, conductorKind2, toPhase, distance (ft)
+    spc_spc_607_AN_AN, 1, phase, A, 2, neutral, N, 0.0833

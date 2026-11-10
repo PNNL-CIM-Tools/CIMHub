@@ -79,3 +79,13 @@ def slots(native_cls: type) -> dict[str, SlotInfo]:
 def slot_for_property(native_cls: type) -> dict[str, str]:
     """GLM property name -> slot (``from`` -> ``from_node``)."""
     return {info.native_name: slot for slot, info in slots(native_cls).items()}
+
+
+#: GridLAB-D unit names (its ``unitfile.txt``) that the CIM unit registry spells differently. Only the spelling
+#: changes: the number stays as written (I2).
+_REGISTRY_SPELLING = {"Ohm": "ohm", "Ohm/mile": "ohm/mile"}
+
+
+def registry_unit(unit: str | None) -> str | None:
+    """A GridLAB-D unit as a ``.cimtbl`` header unit: ``Ohm/mile`` is ``ohm/mile``; others are the same."""
+    return _REGISTRY_SPELLING.get(unit, unit)

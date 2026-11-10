@@ -1,8 +1,7 @@
 # GridLAB-D model IEEE13_cdpsm
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master
-# not mapped: battery 3, capacitor 2, fuse 1, inverter 5, line_configuration 7, load 9, overhead_line 11, recloser 1,
-# regulator 1, regulator_configuration 1, solar 2, switch 3, transformer 3, transformer_configuration 3, triplex_load
-# 1
+# not mapped: battery 3, capacitor 2, fuse 1, inverter 5, load 9, overhead_line 11, recloser 1, regulator 1,
+# regulator_configuration 1, solar 2, switch 3, transformer 3, transformer_configuration 3, triplex_load 1
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -21,6 +20,12 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
     bv_480v,   0.48
     bv_240v,   0.24
 
+Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
+    olt_normal,    normal,    normal,    true,  absoluteValue
+    olt_emergency, emergency, emergency, false, absoluteValue
+
 Import bus.cimtbl
 
 Import source.cimtbl
+
+Import line_configuration.cimtbl

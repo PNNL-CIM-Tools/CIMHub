@@ -21,8 +21,10 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import bus
+from cimhub_gridlabd.importer.cimtbl import bus, conductor, configuration, spacing
+from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
+from cimhub_gridlabd.schema import gridlabd as schema
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
 AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
@@ -44,10 +46,17 @@ class Site(NamedTuple):
 
 #: ``(native class, mapper(model, site))`` in ``Import`` order, after ``bus`` and ``source``. Each slice adds its
 #: mappers.
-MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = ()
+MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
+    *((native_class, lambda model, site, native_class=native_class: conductor.map_conductors(model, native_class))
+      for native_class, _, _ in conductor.CATALOGS),
+    (schema.LineSpacing, lambda model, site: spacing.map_line_spacing(model)),
+    (schema.LineConfiguration, lambda model, site: configuration.map_line_configuration(model, site.base_frequency)),
+    (schema.TriplexLineConfiguration, lambda model, site: configuration.map_triplex_line_configuration(model)),
+)
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
-CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS}
+CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, schema.LineSpacing: spacing.FIELDS,
+                                            **configuration.FIELDS}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:
@@ -113,6 +122,7 @@ def map_master(model: GlmModel, parts: list[Document], site: Site, *, authority:
                                    (Column("NormalEnergizingSubstation"), site.substation)]),
         _base_frequency(model),
         _base_voltages(site.buses),
+        limit_types(),
     ]
     return Document(name=site.name, statements=[*common, *(Import(part.name) for part in parts)],
                     profile=CIM_PROFILE, authority=authority, model=site.name, comment=comment)

@@ -23,6 +23,9 @@ CIM 18 removed `WireSpacingInfo` and the rest of the `*Info` catalog. Geometry i
 ACLineSegment.WireConfiguration ─▶ WireConfiguration
                                      ├─ WireSpacing ─▶ XYSpacing (isTemplate=true)
                                      │                   └─ XYConductorPosition × n  (sequenceNumber, xCoord, yCoord, kind)
+                                     │            or ─▶ ConductorDistanceSpacing (isTemplate=true)
+                                     │                   └─ ConductorDistance × n  (sequenceNumber1/2, conductorKind1/2,
+                                     │                      fromPhase/toPhase, distance; kind earth = a height)
                                      └─ WireSequenceConfiguration × n  (sequenceNumber)
                                           └─ WireInfo  (OverheadWireInfo, ConcentricNeutralCableInfo, TapeShieldCableInfo)
 ```
@@ -33,7 +36,8 @@ Phasing comes from the segment: `ACLineSegment.ACLineSegmentPhases`. The `.cimtb
 
 | Native | CIM |
 |---|---|
-| DSS `LineSpacing`, GLM `line_spacing` | `XYSpacing(isTemplate=true)` + `XYConductorPosition` |
+| DSS `LineSpacing` | `XYSpacing(isTemplate=true)` + `XYConductorPosition` |
+| GLM `line_spacing` (pairwise distances and heights, no coordinates) | `ConductorDistanceSpacing(isTemplate=true)` + `ConductorDistance` |
 | DSS `LineGeometry`, GLM `line_configuration` (conductor form) | `WireConfiguration` + one `WireSequenceConfiguration` per conductor |
 | DSS `WireData` / `CNData` / `TSData`, GLM `overhead_line_conductor` / `underground_line_conductor` | `OverheadWireInfo` / `ConcentricNeutralCableInfo` / `TapeShieldCableInfo` |
 | DSS `Line geometry=`, GLM `overhead_line configuration=` | `ACLineSegment.WireConfiguration` |
@@ -113,6 +117,10 @@ IEEE123). That output has years of GridLAB-D round-trip testing behind it, so it
   `line_by_wire_configuration` shape. Never a Carson-computed `PerLengthPhaseImpedance`.
 - Positions are copied verbatim with their source unit: `xCoord (ft)`, `yCoord (ft)`. Use `XYConductorPosition`,
   not the deprecated `WirePosition`.
+- A spacing given as distances (GLM `line_spacing`) stays distances: a `ConductorDistanceSpacing`, each distance
+  verbatim, a height as a distance to a position of kind `earth`, the phases on `fromPhase`/`toPhase`. Never solve
+  them into XY on import: most GLM spacings have no heights and many are not planar. The core getters
+  (`getters/spacing.py`) derive XY on export when the target needs it.
 - Native `LineCode` / matrix configurations stay matrices (`line_by_impedance`); do not invent geometry for them.
 
 ## Checklist

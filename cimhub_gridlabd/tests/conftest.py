@@ -45,6 +45,13 @@ VENDORED_DECKS = [
 ]
 
 
+#: Decks that stop before binding, with the reason (deck defects; tests/decks/README.md).
+BIND_STOPS = {
+    "IEEE/IEEE123_transactive.glm": "unknown block 'Object battery'",
+    "IEEE/IEEE13_houses.glm": "Transformer 633-634: its coil on bus 634 gives 0.48 kV",
+}
+
+
 def deck(relative: str) -> Path:
     """The deck at ``relative``: vendored, else under ``CIMHUB_GLM_DECKS``, else the test skips."""
     vendored = DECKS / relative
