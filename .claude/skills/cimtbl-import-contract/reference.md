@@ -47,9 +47,11 @@ class CimtblImporter(FormatImporter):  # every file-format spoke
     model_cls: type | None = None       # None: the master's Feeder/Substation decides; BusBranchModel for RAW, MATPOWER
     @abstractmethod
     def to_cimtbl(self, model) -> DocumentSet: ...          # pure: no I/O, no CIM objects (I5, I7)
+    def bound_parts(self, model, network) -> list[Document]:  # parts that read the bound Terminals; none by default
+        return []
     def to_cim(self, model, *, network=None, artifact_dir=None):
-        return cimtbl_to_cim(self.to_cimtbl(model), model_cls=self.model_cls,
-                             network=network, artifact_dir=artifact_dir)
+        return cimtbl_to_cim(self.to_cimtbl(model), model_cls=self.model_cls, network=network,
+                             artifact_dir=artifact_dir, bound_parts=lambda bound: self.bound_parts(model, bound))
 ```
 
 ## 4. Typed value → cell text (`cell`)

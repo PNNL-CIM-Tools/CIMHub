@@ -1,0 +1,8 @@
+// Series reactors: IEEE8500's HVMV_Sub_HSB (3-phase, X only, 400 A) and a 1-phase reactor with R and a normal
+// rating only.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Reactor.HVMV_Sub_HSB bus1=sourcebus bus2=b0 R=0 X=14.798306633595042 normamps=400 emergamps=400
+New Line.l1 bus1=b0 bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Reactor.r1 phases=1 bus1=b1.2 bus2=b3.2 R=0.5 X=2 normamps=100
+New Load.l3 bus1=b3.2 phases=1 kV=2.4 kW=10

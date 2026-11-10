@@ -1,0 +1,49 @@
+# add_der(): each DER is a PowerElectronicsConnection on its bus with its unit, as the DSS wave's PVSystem and
+# Storage goldens write them: the snapshot p, q in the load sign (generation and discharge negative), ratedS from the
+# inverter, ratedU line-to-line. GDM names no connection kind for a DER, so there is no phaseConnection. Balanced ABC
+# has no phases (G3). The inverter is an InverterInfo on the connection's AssetDatasheet.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# Inverters, built the first time a DER names one: GenerationInverterInfo for PV, StorageInverterInfo for a battery.
+# roof and roof2 share inv33. house's inverter has no name, so its mRID is its rehashed uuid (B18; the atom pins the uuid).
+# untranscribed on every inverter: cutout_percent=10, cutin_percent=10, dc_to_ac_efficiency=98
+Table GenerationInverterInfo: mRID, name, apparentPowerMaximum (kVA)
+    inv_inv33,                            inv33,  33
+    53cd40e1-4a74-56af-8ddb-273b080b75b3, ,       6
+    inv_inv120,                           inv120, 120
+Table StorageInverterInfo: mRID, name, apparentPowerMaximum (kVA)
+    inv_inv250, inv250, 250
+    inv_inv5,   inv5,   5
+
+# derived: p = -active_power, q = -reactive_power; ratedU: 0.12 kV split-phase x 2 = 0.24 kV, 2.4018 kV x sqrt 3 =
+# 4.16004 kV. primary absorbs 10 kvar (reactive_power -10), so q is +10.
+# untranscribed on every PV: irradiance=0.9 kW/m^2
+Table PowerElectronicsConnection: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), AssetDatasheet, BaseVoltage, EquipmentContainer=fdr_atom
+    pv_roof,      roof,    b4, ,     33,  0.48,             -25,  -2, inv_inv33,                            bv_480v
+    pv_roof2,     roof2,   b4, ,     33,  0.48,             -30,  0,  inv_inv33,                            bv_480v
+    pv_house,     house,   b5, s1s2, 6,   0.24,             -4,   0,  53cd40e1-4a74-56af-8ddb-273b080b75b3, bv_240v
+    pv_primary,   primary, b2, C,    120, 4.16003962961893, -100, 10, inv_inv120,                           bv_4p16kv
+    storage_ess,  ess,     b4, ,     250, 0.48,             -150, 0,  inv_inv250,                           bv_480v
+    storage_home, home,    b5, s1s2, 5,   0.24,             3,    0,  inv_inv5,                             bv_240v
+
+# maxP = the panel's rated_power. untranscribed on every panel: resistance=0.5, reactance=5
+Table PhotoVoltaicUnit: mRID, name, maxP (kW), PowerElectronicsConnection
+    pv_roof_unit,    roof,    30,  pv_roof
+    pv_roof2_unit,   roof2,   30,  pv_roof2
+    pv_house_unit,   house,   5,   pv_house
+    pv_primary_unit, primary, 120, pv_primary
+
+Table BatteryInfo: mRID, name, ratedCapacity (kWh)
+    batt_bess500, bess500, 500
+    batt_pw13,    pw13,    13.5
+
+# derived: maxP = rated_power, minP = -rated_power; batteryState from the sign of active_power (ess discharges 150 kW,
+# home charges 3 kW). untranscribed: idling_efficiency=99
+Table BatteryUnit: mRID, name, maxP (kW), minP (kW), ratedE (kWh), chargingEfficiency (percent), dischargingEfficiency (percent), batteryState, AssetDatasheet, PowerElectronicsConnection
+    storage_ess_unit,  ess,  250, -250, 500,  95, 94, discharging, batt_bess500, storage_ess
+    storage_home_unit, home, 5,   -5,   13.5, 90, 90, charging,    batt_pw13,    storage_home

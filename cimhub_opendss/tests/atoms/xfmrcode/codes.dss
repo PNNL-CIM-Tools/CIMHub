@@ -1,0 +1,16 @@
+// XfmrCode templates: ct25 (center tap, after IEEE8500, two instances on a 3-phase system), sub (3-phase delta-wye,
+// after IEEE13_Assets FdrXfmr) and yyd (1-phase Y-Y-D 3-winding, after IEEE4 YYD; 3 cans on one 3-phase bank).
+Clear
+New Circuit.atom basekv=115 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New XfmrCode.sub phases=3 windings=2 conns=[delta wye] kVs=[115 12.47] kVAs=[20000 20000] XHL=8 %Rs=[0.5 0.5]
+~ %noloadloss=0.1 %imag=0.4
+New Transformer.sub XfmrCode=sub buses=[sourcebus feeder]
+New XfmrCode.ct25 phases=1 windings=3 kVs=[7.2 0.12 0.12] kVAs=[25 25 25] %Rs=[0.6 1.2 1.2]
+~ XHL=2.04 XHT=2.04 XLT=1.36 %noloadloss=0.2 %imag=0.5
+New Transformer.t1 XfmrCode=ct25 buses=[feeder.1 house1.1.0 house1.0.2]
+New Transformer.t2 XfmrCode=ct25 buses=[feeder.2 house2.1.0 house2.0.2] ppm=0
+New XfmrCode.yyd phases=1 windings=3 conns=[wye wye delta] kVs=[7.2 2.4 2.4] kVAs=[1000 1000 333] XHL=6 XHT=4 XLT=3
+New Transformer.yyda XfmrCode=yyd buses=[feeder.1.0 low.1.0 tert.1.2]
+New Transformer.yydb XfmrCode=yyd buses=[feeder.2.0 low.2.0 tert.2.3]
+New Transformer.yydc XfmrCode=yyd buses=[feeder.3.0 low.3.0 tert.3.1]
+New XfmrCode.unused phases=1 windings=2 kVs=[7.2 7.2] kVAs=[100 100]

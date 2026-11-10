@@ -6,6 +6,7 @@ import dataclasses
 import math
 from typing import Optional
 
+import cimtables
 import pytest
 from cimtables.document import Column, Document, DocumentSet, Import, Row, Table
 from pydantic import BaseModel
@@ -260,6 +261,44 @@ def test_cimtbl_importer(cim18_scope, tmp_path):
     assert (tmp_path / "atom.cimtbl").exists()
 
 
+def _naming_part(network) -> Document:
+    """A part mapped from the bound network: a name for every BaseVoltage it holds."""
+    rows = [Row([bv.mRID, f"{float(bv.nominalVoltage.to('kV'))} kV"])
+            for bv in network.graph[network.cim.BaseVoltage].values()]
+    return Document(name="names", profile=CIM_PROFILE,
+                    statements=[Table("BaseVoltage", [Column("mRID"), Column("name")], rows, update=True)])
+
+
+def test_bound_parts_bind_last_and_the_directory_reloads(cim18_scope, tmp_path):
+    seen = []
+
+    def bound_parts(network):
+        seen.append(_nominal_kv(network))  # the to_cimtbl documents have bound
+        return [_naming_part(network), Document(name="empty", profile=CIM_PROFILE, statements=[])]
+
+    network = cimtbl_to_cim(_documents(), artifact_dir=tmp_path, bound_parts=bound_parts)
+    assert seen == [[0.48, 4.16]]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["atom.cimtbl", "base_voltage.cimtbl", "names.cimtbl"]
+    imports = [line for line in (tmp_path / "atom.cimtbl").read_text().splitlines() if line.startswith("Import")]
+    assert imports == ["Import base_voltage.cimtbl", "Import names.cimtbl"]
+    names = {bv.uri(): bv.name for bv in network.graph[network.cim.BaseVoltage].values()}
+    assert sorted(names.values()) == ["0.48 kV", "4.16 kV"]
+    reloaded = cimtables.load_model(tmp_path / "atom.cimtbl")
+    assert {bv.uri(): bv.name for bv in reloaded.graph[reloaded.cim.BaseVoltage].values()} == names
+
+
+def test_cimtbl_importer_bound_parts(cim18_scope):
+    class AtomImporter(CimtblImporter):
+        def to_cimtbl(self, model):
+            return _documents()
+
+        def bound_parts(self, model, network):
+            return [_naming_part(network)]
+
+    network = AtomImporter().to_cim(None)
+    assert sorted(bv.name for bv in network.graph[network.cim.BaseVoltage].values()) == ["0.48 kV", "4.16 kV"]
+
+
 # --- untranscribed (D5) -------------------------------------------------------
 
 def test_untranscribed_values_lists_non_empty_values():
@@ -298,6 +337,14 @@ def test_fill_defaults_fills_unset_read_slots_only():
     assert (filled.rated_kva, filled.primary_kv, filled.insulation) == (500.0, 4.16, None)
     assert comment == "defaulted: rated_kva=500.0"
     assert record.rated_kva is None  # the original is not changed
+
+
+def test_fill_defaults_keeps_attributes_outside_the_fields():
+    """A reader's composite ``record.ID`` is no dataclass field, so ``dataclasses.replace`` alone would drop it."""
+    record = NativeRecord("T1", None)
+    record.ID = "T1_1"
+    filled, _ = fill_defaults(FIELDS, record, {"rated_kva": 500.0})
+    assert filled.ID == "T1_1"
 
 
 def test_fill_defaults_with_nothing_to_fill():

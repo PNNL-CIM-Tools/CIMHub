@@ -1,0 +1,38 @@
+# add_loads(): one load of each phase and model form (OPEN_DECISIONS 13). The EnergyConsumer holds the totals
+# (CIM load sign: consumption positive). Balanced ABC with equal phases: no phases column, no EnergyConsumerPhase.
+# Any other load gets a child per phase (per branch for delta); per-phase p, q only where the phases differ.
+# Wye is grounded, delta is not (as the DSS wave writes loads).
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# The shared constant P, Z and I rows (DSS-7), a general ZIP tuple's own row (pZ pI pP qZ qI qP), and an
+# exponential row (the voltage exponents override the ZIP fractions).
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantImpedance, pConstantCurrent, pConstantPower, qConstantImpedance, qConstantCurrent, qConstantPower
+    zip_constant_pq,           false, 0,   0,   1,   0,   0, 1
+    zip_constant_z,            false, 1,   0,   0,   1,   0, 0
+    zip_constant_i,            false, 0,   1,   0,   0,   1, 0
+    zip_0.4_0.3_0.3_0.5_0_0.5, false, 0.4, 0.3, 0.3, 0.5, 0, 0.5
+Object LoadResponseCharacteristic: mRID=exp_0.8_3, exponentModel=true, pVoltageExponent=0.8, qVoltageExponent=3
+
+# untranscribed on every phase load: cutoff_voltage_pu=0.0
+# bal: 3 x (100, 50); unbal: 100 + 200 + 50, 50 + 80 + 20; tpx: 2 x (2.5, 1); dbc: 2 x (85, 40), one branch BC;
+# zip: 3 x (100, 40). num_customers is the same on every phase (bal 1, leg 3), else unset.
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, BaseVoltage, EquipmentContainer=fdr_atom
+    ld_bal,   bal,   b1,     ,    Y, true,  300, 150, 1, zip_constant_pq,           bv_4p16kv
+    ld_unbal, unbal, b2, ABC,     Y, true,  350, 150,  , zip_constant_z,            bv_4p16kv
+    ld_one,   one,   b3, B,       Y, true,  50,  25,   , zip_constant_i,            bv_4p16kv
+    ld_tpx,   tpx,   b5, s1s2,    Y, true,  5,   2,    , zip_constant_pq,           bv_240v
+    ld_leg,   leg,   b5, s2,      Y, true,  2,   0.5, 3, zip_constant_pq,           bv_240v
+    ld_dbc,   dbc,   b1, BC,      D, false, 170, 80,   , zip_constant_pq,           bv_4p16kv
+    ld_zip,   zip,   b2,     ,    Y, true,  300, 120,  , zip_0.4_0.3_0.3_0.5_0_0.5, bv_4p16kv
+    ld_cvr,   cvr,   b3, A,       Y, true,  100, 30,   , exp_0.8_3,                 bv_4p16kv
+
+# unbal: the phases differ, so each child carries its own p, q.
+Update Table EnergyConsumerPhase: mRID, p (kW), q (kVAr)
+    ld_unbal_A, 100, 50
+    ld_unbal_B, 200, 80
+    ld_unbal_C, 50,  20

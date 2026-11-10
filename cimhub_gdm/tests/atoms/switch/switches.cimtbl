@@ -1,0 +1,31 @@
+# add_switches(): one of each mapped switch kind. The GDM equipment class picks the CIM class (OPEN_DECISIONS 14).
+# Balanced ABC with one state for every phase: no phases column, no SwitchPhase. open = not is_closed.
+# normalOpen: the equipment controller's normal_state when there is one (lbs: open), else = open.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# lbs: closed, controller normal_state=open. tie: SequenceImpedanceSwitch, all open, on feeder atom2.
+# mix: A closed, B open, C closed: phases written, the Switch has no open/normalOpen, each SwitchPhase has open.
+Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, ratedCurrent (A), BaseVoltage=bv_4p16kv, EquipmentContainer
+    sw_lbs, lbs, b1, b2,    , false, true, 400, fdr_atom
+    sw_tie, tie, b1, b2,    , true,  true, 400, fdr_atom2
+    sw_mix, mix, b1, b3, ABC,      ,     , 400, fdr_atom
+Update Table SwitchPhase: mRID, open
+    sw_mix_A, false
+    sw_mix_B, true
+    sw_mix_C, false
+
+# CircuitBreakerEquipment: interrupting_current 12.5 in interrupting_current_unit kiloampere.
+Object Breaker: mRID=sw_brk, name=brk, node1=b2, node2=b3, open=false, normalOpen=false, ratedCurrent (A)=600, breakingCapacity (kA)=12.5, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+Object Disconnector: mRID=sw_dis, name=dis, node1=b1, node2=b3, phases=C, open=true, normalOpen=true, ratedCurrent (A)=200, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+# Fuse delay and tcc_curve are untranscribed: no FuseCharacteristicCurve in cim18v17.
+Object Fuse: mRID=sw_fus, name=fus, node1=b1, node2=b3, phases=B, open=false, normalOpen=false, ratedCurrent (A)=65, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+# The recloser controller is untranscribed: no RecloseSequence in cim18v17.
+Object Recloser: mRID=sw_rcl, name=rcl, node1=b2, node2=b3, open=false, normalOpen=false, ratedCurrent (A)=300, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom

@@ -11,6 +11,10 @@ from pathlib import Path
 
 import opendssdirect
 import pytest
+from cimtables.document import Document
+
+from cimhub_core.cimtbl import CIM_PROFILE
+from cimhub_opendss.importer.dss_to_cimtbl import limit_types
 
 # OpenDSS ``Compile`` chdirs the whole process into the deck's directory; once a temp dir is gone the next
 # ``Compile`` segfaults. Keep the process cwd fixed.
@@ -47,8 +51,10 @@ CATALOG_DECKS = [
 
 
 def compile_deck(path: Path) -> None:
-    """Compile a deck in the engine, from a clean circuit."""
+    """Compile a deck in the engine, from a clean circuit. ``Set defaultbasefreq`` outlives ``Clear``, so it is put
+    back to the engine's 60 Hz first: a 50 Hz deck must not change the next deck's frequency."""
     opendssdirect.Text.Command("Clear")
+    opendssdirect.Text.Command("Set defaultbasefreq=60")
     opendssdirect.Text.Command(f"Compile [{path.resolve()}]")
 
 
@@ -76,3 +82,8 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "roundtrip" in item.keywords:
             item.add_marker(skip)
+
+
+def limits() -> Document:
+    """The master's OperationalLimitTypes as a part of their own, for atoms that bind rated catalogs or lines."""
+    return Document(name="limits", statements=[limit_types()], profile=CIM_PROFILE)

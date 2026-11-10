@@ -1,7 +1,6 @@
 # OpenDSS deck IEEE13_CDPSM
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master
-# not mapped: Buscoords 22, Capacitor 2, Fuse 1, Line 16, Load 16, Pvsystem 2, Recloser 1, Regcontrol 3, Relay 1,
-# Storage 3, Transformer 6, Xfmrcode 1
+# not mapped: Relay 1
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -22,8 +21,32 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
     bv_480v,   0.48
     bv_240v,   0.24
 
+Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
+    olt_normal,    normal,    normal,    true,  absoluteValue
+    olt_emergency, emergency, emergency, false, absoluteValue
+
 Import bus.cimtbl
+
+Import zip_fractions.cimtbl
 
 Import linecode.cimtbl
 
+Import xfmrcode.cimtbl
+
 Import vsource.cimtbl
+
+Import line.cimtbl
+
+Import transformer.cimtbl
+
+Import regcontrol.cimtbl
+
+Import load.cimtbl
+
+Import capacitor.cimtbl
+
+Import pvsystem.cimtbl
+
+Import storage.cimtbl
+
+Import buscoords.cimtbl

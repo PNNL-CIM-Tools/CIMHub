@@ -1,0 +1,8 @@
+sourcebus, 0, 0
+b1, 10, 10
+b2    100   0
+house, 110, -5
+rg 105 5
+! a comment row
+ghost, 1, 1
+b1, 50, 0

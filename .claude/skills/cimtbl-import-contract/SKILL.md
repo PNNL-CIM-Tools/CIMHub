@@ -12,9 +12,14 @@ A spoke importer only *maps* native records to `.cimtbl` rows, in the source's o
 <Fmt>Importer().to_cimtbl(native)       -> DocumentSet       pure, no I/O, no CIM     spoke mappers
 cimtables.document.write_documents(...) -> <dir>/*.cimtbl    the filesystem boundary  cimtables
 cimtables.load_model(master)            -> GraphModel        rows -> bind_row         cimtables
+<Fmt>Importer().bound_parts(native, network) -> [Document]   reads the bound network  spoke mappers (optional)
 ```
 
-`CimtblImporter.to_cim` composes the last three steps through `cimhub_core.cimtbl.cimtbl_to_cim`.
+`CimtblImporter.to_cim` composes the steps through `cimhub_core.cimtbl.cimtbl_to_cim`. `bound_parts` is only for a
+part that needs what binding made, chiefly the Terminals (DSS `buscoords.cimtbl` locates each piece of equipment at
+its Terminals' buses). Its parts are written beside the rest, imported last, and bound onto the same network, so the
+artifact directory stays the complete model. Never re-derive Terminals from document text: a `.cimtbl` means what
+binding makes (CIM-Tables declined that inverse, U11).
 Profile: **cim18v17 only** (`cimhub_core.cimtbl.CIM_PROFILE`). No other profile is imported anywhere.
 
 ## Invariants (check every change against these)
@@ -74,6 +79,8 @@ def dss_to_cim(path, *, artifact_dir=None):
 - `CimtblImporter.model_cls`: `None` (the master's one Feeder or Substation decides) for distribution formats;
   `BusBranchModel` for RAW and MATPOWER.
 - `to_cim(model, *, network=None, artifact_dir=None)`: pass `network` to bind several native models onto one network.
+- `bound_parts(model, network) -> list[Document]` (default none): parts mapped from the bound network; they read
+  it, never construct on it (I5). DSS: `[buscoords.map_buscoords(model, network)]`.
 - A native table with no records yields an empty document: no file, no `Import`.
 - No `try`/`except` around mappers. The first failure stops the import with its context.
 - Builder-native spokes (GDM) subclass `FormatImporter` directly and have no `to_cimtbl` (reference.md).

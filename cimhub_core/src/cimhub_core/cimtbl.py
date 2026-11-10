@@ -18,10 +18,12 @@ import re
 import tempfile
 import textwrap
 from pathlib import Path
+from collections.abc import Callable, Iterable
 from typing import Literal
 
 import cimtables
-from cimtables.document import Column, DocumentSet, write_documents
+from cimgraph.models import GraphModel as CIMGraphModel
+from cimtables.document import Column, Document, DocumentSet, Import, write_documents
 from linkml_runtime.linkml_model.meta import PermissibleValue
 from linkml_runtime.utils.enumerations import EnumDefinitionImpl
 
@@ -86,6 +88,18 @@ def cell(value) -> str | None:
     if isinstance(value, PermissibleValue):  # how some generated enum slots hold their value
         return value.text
     raise TypeError(f"no .cimtbl cell text for {type(value).__name__} {value!r}; map it in the mapper")
+
+
+#: A balanced three-phase device's phases: CIM's default when a device has no per-phase children.
+BALANCED_PHASES = "ABC"
+
+
+def phases_cell(phases: str) -> str | None:
+    """The ``phases`` cell of a device that is balanced when three-phase (a load, shunt, source, machine, inverter,
+    switch): blank for ``ABC``, so cimtables writes no per-phase children and no ``Terminal.phases`` (the OpenDSS CIM
+    export's rule), else ``phases``. A line keeps its phases: its ACLineSegmentPhases are the conductor order.
+    UPSTREAM_REQUESTS U10 asks CIM-Tables for a balanced form that keeps ``Terminal.phases``."""
+    return None if phases == BALANCED_PHASES else phases
 
 
 def mrid(prefix: str, native_id, *, lowercase: bool = False) -> str:
@@ -246,15 +260,22 @@ def fill_defaults(fields: dict[str, Field], record, defaults: dict[str, object])
     """``(record, comment)``: the record with every unset slot the mapper reads filled from ``defaults``.
 
     Untranscribed slots are left alone. The record is a copy (``dataclasses.replace``, so the schema's
-    ``__post_init__`` types the defaults); the original is not changed. ``comment`` is
-    ``defaulted: slot=value, ...`` for the row comment, or ``None`` when nothing was filled.
+    ``__post_init__`` types the defaults); the original is not changed. Attributes set on the record outside its
+    fields (a reader's composite ``record.ID``, which ``GraphModel`` keys on) are carried over, because
+    ``dataclasses.replace`` drops them. ``comment`` is ``defaulted: slot=value, ...`` for the row comment, or
+    ``None`` when nothing was filled.
     """
     filled = {slot: defaults[slot] for slot, field in fields.items()
               if field.kind != "untranscribed" and slot in defaults and _is_unset(getattr(record, slot))}
     if not filled:
         return record, None
     items = [f"{slot}={_comment_text(value)}" for slot, value in filled.items()]
-    return dataclasses.replace(record, **filled), _wrapped(items, "defaulted")
+    copy = dataclasses.replace(record, **filled)
+    field_names_of_record = {field.name for field in dataclasses.fields(record)}
+    for name, value in vars(record).items():
+        if name not in field_names_of_record:
+            setattr(copy, name, value)
+    return copy, _wrapped(items, "defaulted")
 
 
 def field_names(native_cls: type) -> list[str]:
@@ -360,7 +381,8 @@ def fields_stub(native_cls: type, records=(), *, limit: int = 3) -> str:
 # ---------------------------------------------------------------------------
 
 def cimtbl_to_cim(documents: DocumentSet, *, model_cls: type | None = None, network=None,
-                  artifact_dir: str | Path | None = None):
+                  artifact_dir: str | Path | None = None,
+                  bound_parts: Callable[[CIMGraphModel], Iterable[Document]] | None = None):
     """Write ``documents`` and build CIM from the written files (plan I1).
 
     The files go to ``artifact_dir`` (the human audit artifact), or to a
@@ -372,6 +394,12 @@ def cimtbl_to_cim(documents: DocumentSet, *, model_cls: type | None = None, netw
     (``BusBranchModel``). With ``network``, the rows are bound onto it and it is
     returned; that is how several native models merge into one network, and
     ``model_cls`` does not apply.
+
+    ``bound_parts(network)`` maps the parts that read what binding made, such as
+    the Terminals a coordinates part locates (``CimtblImporter.bound_parts``).
+    Its non-empty parts join the set after the rest has bound: the master
+    imports them last, the whole set is written again, and they are bound onto
+    the same network. So the directory still holds the complete model.
     """
     if documents.master.profile != CIM_PROFILE:
         raise ValueError(
@@ -379,9 +407,22 @@ def cimtbl_to_cim(documents: DocumentSet, *, model_cls: type | None = None, netw
             f"CIMHub artifacts declare {CIM_PROFILE!r}"
         )
     if artifact_dir is not None:
-        return _load(write_documents(documents, artifact_dir), model_cls, network)
+        return _write_and_load(documents, Path(artifact_dir), model_cls, network, bound_parts)
     with tempfile.TemporaryDirectory(prefix="cimtbl_") as directory:
-        return _load(write_documents(documents, directory), model_cls, network)
+        return _write_and_load(documents, Path(directory), model_cls, network, bound_parts)
+
+
+def _write_and_load(documents: DocumentSet, directory: Path, model_cls: type | None, network, bound_parts):
+    network = _load(write_documents(documents, directory), model_cls, network)
+    late = [part for part in bound_parts(network) if part.statements] if bound_parts is not None else []
+    if not late:
+        return network
+    master = dataclasses.replace(documents.master,
+                                 statements=[*documents.master.statements, *(Import(part.name) for part in late)])
+    write_documents(DocumentSet(master=master, parts=[*documents.parts, *late]), directory)
+    for part in late:  # under the master's model scope, which cimtables keeps process-wide, as for any Import
+        cimtables.load(directory / f"{part.name}.cimtbl", network)
+    return network
 
 
 def _load(master: Path, model_cls: type | None, network):

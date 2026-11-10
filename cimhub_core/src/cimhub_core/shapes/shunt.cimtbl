@@ -1,13 +1,24 @@
-# Shape: shunt capacitor with control. LinearShuntCompensator + RegulatingControl monitoring a Terminal
-# declared earlier (generated: <equipment>_T<n>, here the line the control watches, as an OpenDSS
-# CapControl element=line.j1). The control delay is the compensator's aVRDelay.
-# A control watching the capacitor's own terminal cannot be written yet: the compensator references the
-# control and RegulatingControl.RegulatingCondEq is not a column (CIMTABLES_REQUESTS R11).
+# Shape: shunt capacitor with control. LinearShuntCompensator first, then its RegulatingControl monitoring a
+# Terminal declared earlier (generated: <equipment>_T<n>): a line's (an OpenDSS CapControl element=line.j1) or the
+# compensator's own (element=capacitor.c2). An Update then gives the compensator its control and delay, which
+# breaks the reference cycle of a control on its own terminal. targetValue and targetDeadband are plain floats in
+# primary units by mode (V for voltage).
+# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default.
 
 Profile = cim18v17
 
 Import common.cimtbl
 
-Object LoadBreakSwitch: mRID=sw_j1, name=j1, node1=n1, node2=n10, phases=ABC, open=false, normalOpen=false, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
-Object RegulatingControl: mRID=cap_c1_ctrl, name=c1_ctrl, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, targetValue (V)=2225, targetDeadband (V)=550, ptRatio=1, Terminal=sw_j1_T1
-Object LinearShuntCompensator: mRID=cap_c1, name=c1, node=n10, phases=ABC, phaseConnection=Y, grounded=true, nomQ (kVAr)=600, nomU (kV)=4.16, bPerSection (S)=0.0346709, sections=1, normalSections=1, maximumSections=1, aVRDelay (s)=15, controlEnabled=true, RegulatingControl=cap_c1_ctrl, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
+Object LoadBreakSwitch: mRID=sw_j1, name=j1, node1=n1, node2=n10, open=false, normalOpen=false, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
+
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (kVAr), nomU (kV), bPerSection (S), sections, normalSections, maximumSections, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
+    cap_c1, c1, n10,    , Y, true, 600, 4.16, 0.0346709, 1, 1, 1
+    cap_c2, c2, n10, C,   Y, true, 100, 2.4,  0.0173611, 1, 1, 1
+
+Table RegulatingControl: mRID, name, mode, discrete, enabled, monitoredPhase, targetValue, targetDeadband, ptRatio, Terminal
+    cc_c1, c1, voltage, true, true, A, 2400, 200, 20, sw_j1_T1
+    cc_c2, c2, voltage, true, true, C, 2225, 550, 1,  cap_c2_T1
+
+Update Table LinearShuntCompensator: mRID, RegulatingControl, aVRDelay (s), controlEnabled
+    cap_c1, cc_c1, 15,  true
+    cap_c2, cc_c2, 300, true

@@ -16,6 +16,7 @@ default_range: string
 
 imports:
   - linkml:types
+  - ../common_enums
 
 classes:
   Xfmrcode:
@@ -90,10 +91,11 @@ classes:
       conn:
         description: >-
           Connection of this winding. Default is wye.
-        range: string
+        range: ConnectionType
         required: false
         annotations:
           order: 4
+          dss_default: string(wye)
         exact_mappings:
           - cim:TransformerEndInfo.connectionKind
         comments:
@@ -108,6 +110,7 @@ classes:
         required: false
         annotations:
           order: 5
+          dss_default: float(12.47)
         related_mappings:
           - cim:TransformerEndInfo.ratedVoltage
         comments:
@@ -129,6 +132,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(1000.0)
         exact_mappings:
           - cim:TransformerEndInfo.ratedS
         comments:
@@ -142,6 +146,7 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(1.0)
         comments:
           - "OpenDSS-only (N/A): the current converter never reads tap or taps[]; no CIM field is set from this property."
         todos:
@@ -155,6 +160,7 @@ classes:
         required: false
         annotations:
           order: 8
+          dss_default: float(0.2)
           dss_name: "%R"
         close_mappings:
           - cim:TransformerEndInfo.r
@@ -191,7 +197,7 @@ classes:
       conns:
         description: >-
           Use this to specify all the Winding connections at once using an array.
-        range: string
+        range: ConnectionType
         multivalued: true
         required: false
         annotations:

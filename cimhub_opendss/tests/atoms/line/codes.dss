@@ -1,0 +1,22 @@
+// Lines by LineCode and inline values, and the four kinds of switch (after IEEE13_CDPSM, tests/decks/IEEE/IEEE13_CDPSM).
+// mtx601 has no cmatrix (the engine's default C); l2 carries its own normamps; tie and sect are open.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=200000 MVAsc1=210000
+New Linecode.mtx601 nphases=3 BaseFreq=60 units=mi normamps=730
+~ rmatrix=(0.3465 | 0.1560 0.3375 | 0.1580 0.1535 0.3414) xmatrix=(1.0179 | 0.5017 1.0478 | 0.4236 0.3849 1.0348)
+New Linecode.mtx603 nphases=2 BaseFreq=60 units=mi normamps=230 emergamps=345
+~ rmatrix=(1.3294 | 0.2066 1.3238) xmatrix=(1.3471 | 0.4591 1.3569) cmatrix=(4.6658 | -0.8999 4.7097)
+New Line.l1 bus1=sourcebus bus2=n1 linecode=mtx601 length=2000 units=ft
+New Line.l2 bus1=n1.3.2 bus2=n2.3.2 phases=2 linecode=mtx603 length=500 units=ft normamps=200
+New Line.seq1 bus1=n1 bus2=n8 r1=0.3 x1=0.6 r0=0.6 x0=1.8 C1=10 C0=4 length=1 units=km
+New Line.seq2 bus1=n8 bus2=n9 r1=0.3 x1=0.6 length=0.2 units=km
+New Line.seq3 bus1=n9.1 bus2=n10.1 phases=1 r1=0.5 x1=0.9 r0=0.9 x0=2.1 length=0.3
+New Line.sw1 bus1=n1 bus2=n3 Switch=y r1=1e-4 r0=1e-4 x1=0 x0=0 c1=0 c0=0
+New Line.fuse1 bus1=n1 bus2=n4 Switch=y
+New Fuse.fuse1 MonitoredObj=Line.fuse1 RatedCurrent=100
+New Line.rec1 bus1=n1 bus2=n5 Switch=y
+New Recloser.rec1 MonitoredObj=Line.rec1 PhaseTrip=1200 GroundTrip=400 Shots=3
+New Line.tie bus1=n2.3 bus2=n6.3 phases=1 Switch=y
+New SwtControl.tie SwitchedObj=Line.tie Normal=open State=open
+New Line.sect bus1=n1 bus2=n7 Switch=y
+Open Line.sect 1

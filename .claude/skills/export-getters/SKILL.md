@@ -66,20 +66,32 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
 - **Geometry-capable formats (GLM, DSS) never use the chain.** They export native geometry (`line_spacing` +
   `overhead_line_conductor`; `LineSpacing` + `LineGeometry`) via the spacing and wire getters, and fall back to the
   phase matrix only when CIM has no geometry (skill `conductor-geometry`).
-- Heights matter for shunt `b` and Deri earth return: take them from the positions or an explicit `height=`; raise
-  otherwise.
+- Heights matter for shunt `b` and Deri earth return: take them from `get_line_conductor_xy` (the spacing's y plus
+  `ACLineSegment.spacingYOffset`, or a distance to earth); raise otherwise.
 
 ## Semantic rules the getters settle (one documented rule each)
 
 1. **Switch state:** `get_switch_state(switch, which='actual'|'normal')`; `which` has no default (`open` vs `normalOpen`).
-2. **Generator sign:** CIM terminal `p` is positive into equipment; generation is negative `p`. The getter returns CIM
-   sign; the spoke negates where its format wants positive generation, and says so.
-3. **Per-phase load:** `EnergyConsumerPhase` values when present, else the total split evenly.
-4. **Shunt Q:** one formula with an explicit voltage base (`nomU`, LL vs LN) and an explicit `sections` factor.
-5. **Transformer per-unit base:** `get_xfmr_impedance(..., base=...)` declares the base; no format picks its own.
+2. **Generator sign:** CIM terminal `p` is positive into equipment; generation is negative `p`.
+   `get_der_output(eq, sign='load'|'generation')` takes the sign as an argument, so no spoke negates on its own.
+   Nameplate limits (`maxQ`/`minQ`, `maxP`/`minP`) are stored in the generation sign; the rating getters return
+   them as `(min, max)` in the same `sign=`.
+3. **Per-phase load:** `EnergyConsumerPhase` values when every child has them, else the total split evenly over the
+   phase conductors (`phase_power.device_power`, also DER).
+4. **Shunt Q:** one formula, Q = bPerSection × V² × sections, with `voltage=` (`nomU` or the BaseVoltage, LN for one
+   phase conductor) and `sections=` both required (`get_shunt_reactive_power`).
+5. **Transformer per-unit base:** `get_transformer_model(unit, impedance_unit, base_power=...)` puts every percent
+   on one declared power base (default winding 1's `ratedS`, DSS/GLM's); no format picks or rebases its own.
 6. **Raw floats:** an attribute that is not a CIMUnit fails fast (`get_qty` raises); never guess kV vs V.
 7. **Frequency:** from the network (`network.base_frequency`, set by cimgraph's `set_default_bases`), never a
    hard-coded 60 Hz in a getter or spoke.
+8. **Unset is `None`, and the spoke decides** (user, 2026-11-08). A getter returns `None` for an optional value CIM
+   leaves unset (a line's `b`, `g`, zero sequence), never 0.0, so "not modelled" and "zero" stay distinguishable.
+   Each spoke writes its own rule, with a comment saying why:
+   - RAW and MATPOWER write `b = 0.0` when `None` (RAW's spec default for `B`; MATPOWER's `BR_B` column cannot be
+     blank). Neither has a series line conductance: a set `g` raises until a real case needs a `GI`/`GJ` split.
+   - DSS writes `C1=0`/`C0=0` when `b` is `None`. A blank lets the engine default in (C1=3.4, C0=1.6 nF per unit
+     length, or the balanced 2.8/-0.6 C matrix on a matrix code), which silently adds line charging.
 
 ## Import-side code tables (`cimhub_core/codes.py`)
 

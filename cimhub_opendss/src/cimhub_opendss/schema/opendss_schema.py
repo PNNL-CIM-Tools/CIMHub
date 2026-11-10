@@ -1,5 +1,5 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-07T19:07:33
+# Generation date: 2026-11-08T17:27:30
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -1181,15 +1181,15 @@ class Pvsystem(YAMLRoot):
     kVA: Optional[float] = None
     pct_Cutin: Optional[float] = None
     pct_Cutout: Optional[float] = None
-    EffCurve: Optional[float] = None
-    P_TCurve: Optional[float] = None
+    EffCurve: Optional[str] = None
+    P_TCurve: Optional[str] = None
     pct_R: Optional[float] = None
     pct_X: Optional[float] = None
     model: Optional[int] = None
     Vminpu: Optional[float] = None
     Vmaxpu: Optional[float] = None
     Balanced: Optional[Union[bool, Bool]] = None
-    LimitCurrent: Optional[float] = None
+    LimitCurrent: Optional[Union[bool, Bool]] = None
     yearly: Optional[str] = None
     daily: Optional[str] = None
     duty: Optional[int] = None
@@ -1197,13 +1197,13 @@ class Pvsystem(YAMLRoot):
     Tdaily: Optional[str] = None
     Tduty: Optional[int] = None
     class_class: Optional[int] = None
-    UserModel: Optional[float] = None
+    UserModel: Optional[str] = None
     UserData: Optional[str] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     VarFollowInverter: Optional[Union[bool, Bool]] = None
     DutyStart: Optional[str] = None
-    WattPriority: Optional[str] = None
-    PFPriority: Optional[str] = None
+    WattPriority: Optional[Union[bool, Bool]] = None
+    PFPriority: Optional[Union[bool, Bool]] = None
     pct_PminNoVars: Optional[float] = None
     pct_PminkvarMax: Optional[float] = None
     kvarMax: Optional[float] = None
@@ -1268,11 +1268,11 @@ class Pvsystem(YAMLRoot):
         if self.pct_Cutout is not None and not isinstance(self.pct_Cutout, float):
             self.pct_Cutout = float(self.pct_Cutout)
 
-        if self.EffCurve is not None and not isinstance(self.EffCurve, float):
-            self.EffCurve = float(self.EffCurve)
+        if self.EffCurve is not None and not isinstance(self.EffCurve, str):
+            self.EffCurve = str(self.EffCurve)
 
-        if self.P_TCurve is not None and not isinstance(self.P_TCurve, float):
-            self.P_TCurve = float(self.P_TCurve)
+        if self.P_TCurve is not None and not isinstance(self.P_TCurve, str):
+            self.P_TCurve = str(self.P_TCurve)
 
         if self.pct_R is not None and not isinstance(self.pct_R, float):
             self.pct_R = float(self.pct_R)
@@ -1292,8 +1292,8 @@ class Pvsystem(YAMLRoot):
         if self.Balanced is not None and not isinstance(self.Balanced, Bool):
             self.Balanced = Bool(self.Balanced)
 
-        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, float):
-            self.LimitCurrent = float(self.LimitCurrent)
+        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, Bool):
+            self.LimitCurrent = Bool(self.LimitCurrent)
 
         if self.yearly is not None and not isinstance(self.yearly, str):
             self.yearly = str(self.yearly)
@@ -1316,8 +1316,8 @@ class Pvsystem(YAMLRoot):
         if self.class_class is not None and not isinstance(self.class_class, int):
             self.class_class = int(self.class_class)
 
-        if self.UserModel is not None and not isinstance(self.UserModel, float):
-            self.UserModel = float(self.UserModel)
+        if self.UserModel is not None and not isinstance(self.UserModel, str):
+            self.UserModel = str(self.UserModel)
 
         if self.UserData is not None and not isinstance(self.UserData, str):
             self.UserData = str(self.UserData)
@@ -1331,11 +1331,11 @@ class Pvsystem(YAMLRoot):
         if self.DutyStart is not None and not isinstance(self.DutyStart, str):
             self.DutyStart = str(self.DutyStart)
 
-        if self.WattPriority is not None and not isinstance(self.WattPriority, str):
-            self.WattPriority = str(self.WattPriority)
+        if self.WattPriority is not None and not isinstance(self.WattPriority, Bool):
+            self.WattPriority = Bool(self.WattPriority)
 
-        if self.PFPriority is not None and not isinstance(self.PFPriority, str):
-            self.PFPriority = str(self.PFPriority)
+        if self.PFPriority is not None and not isinstance(self.PFPriority, Bool):
+            self.PFPriority = Bool(self.PFPriority)
 
         if self.pct_PminNoVars is not None and not isinstance(self.pct_PminNoVars, float):
             self.pct_PminNoVars = float(self.pct_PminNoVars)
@@ -1417,12 +1417,12 @@ class Storage(YAMLRoot):
     kVA: Optional[float] = None
     pct_Cutin: Optional[float] = None
     pct_Cutout: Optional[float] = None
-    EffCurve: Optional[float] = None
+    EffCurve: Optional[str] = None
     VarFollowInverter: Optional[Union[bool, Bool]] = None
     kvarMax: Optional[float] = None
     kvarMaxAbs: Optional[float] = None
-    WattPriority: Optional[str] = None
-    PFPriority: Optional[float] = None
+    WattPriority: Optional[Union[bool, Bool]] = None
+    PFPriority: Optional[Union[bool, Bool]] = None
     pct_PminNoVars: Optional[float] = None
     pct_PminkvarMax: Optional[float] = None
     kWrated: Optional[float] = None
@@ -1437,25 +1437,25 @@ class Storage(YAMLRoot):
     pct_EffCharge: Optional[float] = None
     pct_EffDischarge: Optional[float] = None
     pct_IdlingkW: Optional[float] = None
-    pct_Idlingkvar: Optional[str] = None
+    pct_Idlingkvar: Optional[float] = None
     pct_R: Optional[float] = None
     pct_X: Optional[float] = None
     model: Optional[int] = None
     Vminpu: Optional[float] = None
     Vmaxpu: Optional[float] = None
     Balanced: Optional[Union[bool, Bool]] = None
-    LimitCurrent: Optional[float] = None
+    LimitCurrent: Optional[Union[bool, Bool]] = None
     yearly: Optional[str] = None
     daily: Optional[str] = None
     duty: Optional[int] = None
-    DispMode: Optional[float] = None
+    DispMode: Optional[str] = None
     DischargeTrigger: Optional[str] = None
     ChargeTrigger: Optional[str] = None
     TimeChargeTrig: Optional[str] = None
     class_class: Optional[int] = None
-    DynaDLL: Optional[float] = None
+    DynaDLL: Optional[str] = None
     DynaData: Optional[str] = None
-    UserModel: Optional[float] = None
+    UserModel: Optional[str] = None
     UserData: Optional[str] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     kVDC: Optional[float] = None
@@ -1509,8 +1509,8 @@ class Storage(YAMLRoot):
         if self.pct_Cutout is not None and not isinstance(self.pct_Cutout, float):
             self.pct_Cutout = float(self.pct_Cutout)
 
-        if self.EffCurve is not None and not isinstance(self.EffCurve, float):
-            self.EffCurve = float(self.EffCurve)
+        if self.EffCurve is not None and not isinstance(self.EffCurve, str):
+            self.EffCurve = str(self.EffCurve)
 
         if self.VarFollowInverter is not None and not isinstance(self.VarFollowInverter, Bool):
             self.VarFollowInverter = Bool(self.VarFollowInverter)
@@ -1521,11 +1521,11 @@ class Storage(YAMLRoot):
         if self.kvarMaxAbs is not None and not isinstance(self.kvarMaxAbs, float):
             self.kvarMaxAbs = float(self.kvarMaxAbs)
 
-        if self.WattPriority is not None and not isinstance(self.WattPriority, str):
-            self.WattPriority = str(self.WattPriority)
+        if self.WattPriority is not None and not isinstance(self.WattPriority, Bool):
+            self.WattPriority = Bool(self.WattPriority)
 
-        if self.PFPriority is not None and not isinstance(self.PFPriority, float):
-            self.PFPriority = float(self.PFPriority)
+        if self.PFPriority is not None and not isinstance(self.PFPriority, Bool):
+            self.PFPriority = Bool(self.PFPriority)
 
         if self.pct_PminNoVars is not None and not isinstance(self.pct_PminNoVars, float):
             self.pct_PminNoVars = float(self.pct_PminNoVars)
@@ -1569,8 +1569,8 @@ class Storage(YAMLRoot):
         if self.pct_IdlingkW is not None and not isinstance(self.pct_IdlingkW, float):
             self.pct_IdlingkW = float(self.pct_IdlingkW)
 
-        if self.pct_Idlingkvar is not None and not isinstance(self.pct_Idlingkvar, str):
-            self.pct_Idlingkvar = str(self.pct_Idlingkvar)
+        if self.pct_Idlingkvar is not None and not isinstance(self.pct_Idlingkvar, float):
+            self.pct_Idlingkvar = float(self.pct_Idlingkvar)
 
         if self.pct_R is not None and not isinstance(self.pct_R, float):
             self.pct_R = float(self.pct_R)
@@ -1590,8 +1590,8 @@ class Storage(YAMLRoot):
         if self.Balanced is not None and not isinstance(self.Balanced, Bool):
             self.Balanced = Bool(self.Balanced)
 
-        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, float):
-            self.LimitCurrent = float(self.LimitCurrent)
+        if self.LimitCurrent is not None and not isinstance(self.LimitCurrent, Bool):
+            self.LimitCurrent = Bool(self.LimitCurrent)
 
         if self.yearly is not None and not isinstance(self.yearly, str):
             self.yearly = str(self.yearly)
@@ -1602,8 +1602,8 @@ class Storage(YAMLRoot):
         if self.duty is not None and not isinstance(self.duty, int):
             self.duty = int(self.duty)
 
-        if self.DispMode is not None and not isinstance(self.DispMode, float):
-            self.DispMode = float(self.DispMode)
+        if self.DispMode is not None and not isinstance(self.DispMode, str):
+            self.DispMode = str(self.DispMode)
 
         if self.DischargeTrigger is not None and not isinstance(self.DischargeTrigger, str):
             self.DischargeTrigger = str(self.DischargeTrigger)
@@ -1617,14 +1617,14 @@ class Storage(YAMLRoot):
         if self.class_class is not None and not isinstance(self.class_class, int):
             self.class_class = int(self.class_class)
 
-        if self.DynaDLL is not None and not isinstance(self.DynaDLL, float):
-            self.DynaDLL = float(self.DynaDLL)
+        if self.DynaDLL is not None and not isinstance(self.DynaDLL, str):
+            self.DynaDLL = str(self.DynaDLL)
 
         if self.DynaData is not None and not isinstance(self.DynaData, str):
             self.DynaData = str(self.DynaData)
 
-        if self.UserModel is not None and not isinstance(self.UserModel, float):
-            self.UserModel = float(self.UserModel)
+        if self.UserModel is not None and not isinstance(self.UserModel, str):
+            self.UserModel = str(self.UserModel)
 
         if self.UserData is not None and not isinstance(self.UserData, str):
             self.UserData = str(self.UserData)
@@ -3280,13 +3280,13 @@ class Capcontrol(YAMLRoot):
     PTratio: Optional[float] = None
     CTratio: Optional[float] = None
     ONsetting: Optional[float] = None
-    OFFsetting: Optional[str] = None
-    Delay: Optional[str] = None
+    OFFsetting: Optional[float] = None
+    Delay: Optional[float] = None
     VoltOverride: Optional[Union[bool, Bool]] = None
     Vmax: Optional[float] = None
     Vmin: Optional[float] = None
-    DelayOFF: Optional[str] = None
-    DeadTime: Optional[str] = None
+    DelayOFF: Optional[float] = None
+    DeadTime: Optional[float] = None
     CTPhase: Optional[int] = None
     PTPhase: Optional[int] = None
     VBus: Optional[float] = None
@@ -3327,11 +3327,11 @@ class Capcontrol(YAMLRoot):
         if self.ONsetting is not None and not isinstance(self.ONsetting, float):
             self.ONsetting = float(self.ONsetting)
 
-        if self.OFFsetting is not None and not isinstance(self.OFFsetting, str):
-            self.OFFsetting = str(self.OFFsetting)
+        if self.OFFsetting is not None and not isinstance(self.OFFsetting, float):
+            self.OFFsetting = float(self.OFFsetting)
 
-        if self.Delay is not None and not isinstance(self.Delay, str):
-            self.Delay = str(self.Delay)
+        if self.Delay is not None and not isinstance(self.Delay, float):
+            self.Delay = float(self.Delay)
 
         if self.VoltOverride is not None and not isinstance(self.VoltOverride, Bool):
             self.VoltOverride = Bool(self.VoltOverride)
@@ -3342,11 +3342,11 @@ class Capcontrol(YAMLRoot):
         if self.Vmin is not None and not isinstance(self.Vmin, float):
             self.Vmin = float(self.Vmin)
 
-        if self.DelayOFF is not None and not isinstance(self.DelayOFF, str):
-            self.DelayOFF = str(self.DelayOFF)
+        if self.DelayOFF is not None and not isinstance(self.DelayOFF, float):
+            self.DelayOFF = float(self.DelayOFF)
 
-        if self.DeadTime is not None and not isinstance(self.DeadTime, str):
-            self.DeadTime = str(self.DeadTime)
+        if self.DeadTime is not None and not isinstance(self.DeadTime, float):
+            self.DeadTime = float(self.DeadTime)
 
         if self.CTPhase is not None and not isinstance(self.CTPhase, int):
             self.CTPhase = int(self.CTPhase)
@@ -3586,7 +3586,7 @@ class Fuse(YAMLRoot):
     SwitchedObj: Optional[str] = None
     SwitchedTerm: Optional[int] = None
     FuseCurve: Optional[float] = None
-    RatedCurrent: Optional[str] = None
+    RatedCurrent: Optional[float] = None
     Delay: Optional[str] = None
     Action: Optional[str] = None
     Normal: Optional[Union[str, list[str]]] = empty_list()
@@ -3616,8 +3616,8 @@ class Fuse(YAMLRoot):
         if self.FuseCurve is not None and not isinstance(self.FuseCurve, float):
             self.FuseCurve = float(self.FuseCurve)
 
-        if self.RatedCurrent is not None and not isinstance(self.RatedCurrent, str):
-            self.RatedCurrent = str(self.RatedCurrent)
+        if self.RatedCurrent is not None and not isinstance(self.RatedCurrent, float):
+            self.RatedCurrent = float(self.RatedCurrent)
 
         if self.Delay is not None and not isinstance(self.Delay, str):
             self.Delay = str(self.Delay)
@@ -4066,19 +4066,19 @@ class Regcontrol(YAMLRoot):
     transformer: Optional[str] = None
     winding: Optional[int] = None
     vreg: Optional[float] = None
-    band: Optional[str] = None
+    band: Optional[float] = None
     ptratio: Optional[float] = None
     CTprim: Optional[float] = None
-    R: Optional[str] = None
-    X: Optional[str] = None
+    R: Optional[float] = None
+    X: Optional[float] = None
     bus: Optional[str] = None
     delay: Optional[float] = None
     reversible: Optional[Union[bool, Bool]] = None
     revvreg: Optional[float] = None
     revband: Optional[float] = None
-    revR: Optional[str] = None
-    revX: Optional[str] = None
-    tapdelay: Optional[str] = None
+    revR: Optional[float] = None
+    revX: Optional[float] = None
+    tapdelay: Optional[float] = None
     debugtrace: Optional[Union[bool, Bool]] = None
     maxtapchange: Optional[float] = None
     inversetime: Optional[Union[bool, Bool]] = None
@@ -4086,7 +4086,7 @@ class Regcontrol(YAMLRoot):
     vlimit: Optional[float] = None
     PTphase: Optional[int] = None
     revThreshold: Optional[float] = None
-    revDelay: Optional[str] = None
+    revDelay: Optional[float] = None
     revNeutral: Optional[Union[bool, Bool]] = None
     EventLog: Optional[str] = None
     RemotePTRatio: Optional[float] = None
@@ -4117,8 +4117,8 @@ class Regcontrol(YAMLRoot):
         if self.vreg is not None and not isinstance(self.vreg, float):
             self.vreg = float(self.vreg)
 
-        if self.band is not None and not isinstance(self.band, str):
-            self.band = str(self.band)
+        if self.band is not None and not isinstance(self.band, float):
+            self.band = float(self.band)
 
         if self.ptratio is not None and not isinstance(self.ptratio, float):
             self.ptratio = float(self.ptratio)
@@ -4126,11 +4126,11 @@ class Regcontrol(YAMLRoot):
         if self.CTprim is not None and not isinstance(self.CTprim, float):
             self.CTprim = float(self.CTprim)
 
-        if self.R is not None and not isinstance(self.R, str):
-            self.R = str(self.R)
+        if self.R is not None and not isinstance(self.R, float):
+            self.R = float(self.R)
 
-        if self.X is not None and not isinstance(self.X, str):
-            self.X = str(self.X)
+        if self.X is not None and not isinstance(self.X, float):
+            self.X = float(self.X)
 
         if self.bus is not None and not isinstance(self.bus, str):
             self.bus = str(self.bus)
@@ -4147,14 +4147,14 @@ class Regcontrol(YAMLRoot):
         if self.revband is not None and not isinstance(self.revband, float):
             self.revband = float(self.revband)
 
-        if self.revR is not None and not isinstance(self.revR, str):
-            self.revR = str(self.revR)
+        if self.revR is not None and not isinstance(self.revR, float):
+            self.revR = float(self.revR)
 
-        if self.revX is not None and not isinstance(self.revX, str):
-            self.revX = str(self.revX)
+        if self.revX is not None and not isinstance(self.revX, float):
+            self.revX = float(self.revX)
 
-        if self.tapdelay is not None and not isinstance(self.tapdelay, str):
-            self.tapdelay = str(self.tapdelay)
+        if self.tapdelay is not None and not isinstance(self.tapdelay, float):
+            self.tapdelay = float(self.tapdelay)
 
         if self.debugtrace is not None and not isinstance(self.debugtrace, Bool):
             self.debugtrace = Bool(self.debugtrace)
@@ -4177,8 +4177,8 @@ class Regcontrol(YAMLRoot):
         if self.revThreshold is not None and not isinstance(self.revThreshold, float):
             self.revThreshold = float(self.revThreshold)
 
-        if self.revDelay is not None and not isinstance(self.revDelay, str):
-            self.revDelay = str(self.revDelay)
+        if self.revDelay is not None and not isinstance(self.revDelay, float):
+            self.revDelay = float(self.revDelay)
 
         if self.revNeutral is not None and not isinstance(self.revNeutral, Bool):
             self.revNeutral = Bool(self.revNeutral)
@@ -5917,14 +5917,14 @@ class Xfmrcode(YAMLRoot):
     phases: Optional[int] = None
     windings: Optional[int] = None
     wdg: Optional[int] = None
-    conn: Optional[str] = None
+    conn: Optional[Union[str, "ConnectionType"]] = None
     kV: Optional[float] = None
     kVA: Optional[float] = None
     tap: Optional[str] = None
     pct_R: Optional[float] = None
     Rneut: Optional[float] = None
     Xneut: Optional[float] = None
-    conns: Optional[Union[str, list[str]]] = empty_list()
+    conns: Optional[Union[Union[str, "ConnectionType"], list[Union[str, "ConnectionType"]]]] = empty_list()
     kVs: Optional[Union[float, list[float]]] = empty_list()
     kVAs: Optional[Union[float, list[float]]] = empty_list()
     taps: Optional[Union[float, list[float]]] = empty_list()
@@ -5970,8 +5970,8 @@ class Xfmrcode(YAMLRoot):
         if self.wdg is not None and not isinstance(self.wdg, int):
             self.wdg = int(self.wdg)
 
-        if self.conn is not None and not isinstance(self.conn, str):
-            self.conn = str(self.conn)
+        if self.conn is not None and not isinstance(self.conn, ConnectionType):
+            self.conn = ConnectionType(self.conn)
 
         if self.kV is not None and not isinstance(self.kV, float):
             self.kV = float(self.kV)
@@ -5993,7 +5993,7 @@ class Xfmrcode(YAMLRoot):
 
         if not isinstance(self.conns, list):
             self.conns = [self.conns] if self.conns is not None else []
-        self.conns = [v if isinstance(v, str) else str(v) for v in self.conns]
+        self.conns = [v if isinstance(v, ConnectionType) else ConnectionType(v) for v in self.conns]
 
         if not isinstance(self.kVs, list):
             self.kVs = [self.kVs] if self.kVs is not None else []
@@ -8028,10 +8028,10 @@ slots.pvsystem__pct_Cutout = Slot(uri=DSS.pct_Cutout, name="pvsystem__pct_Cutout
                    model_uri=DSS.pvsystem__pct_Cutout, domain=None, range=Optional[float])
 
 slots.pvsystem__EffCurve = Slot(uri=DSS.EffCurve, name="pvsystem__EffCurve", curie=DSS.curie('EffCurve'),
-                   model_uri=DSS.pvsystem__EffCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__EffCurve, domain=None, range=Optional[str])
 
 slots.pvsystem__P_TCurve = Slot(uri=DSS.P_TCurve, name="pvsystem__P_TCurve", curie=DSS.curie('P_TCurve'),
-                   model_uri=DSS.pvsystem__P_TCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__P_TCurve, domain=None, range=Optional[str])
 
 slots.pvsystem__pct_R = Slot(uri=DSS.pct_R, name="pvsystem__pct_R", curie=DSS.curie('pct_R'),
                    model_uri=DSS.pvsystem__pct_R, domain=None, range=Optional[float])
@@ -8052,7 +8052,7 @@ slots.pvsystem__Balanced = Slot(uri=DSS.Balanced, name="pvsystem__Balanced", cur
                    model_uri=DSS.pvsystem__Balanced, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__LimitCurrent = Slot(uri=DSS.LimitCurrent, name="pvsystem__LimitCurrent", curie=DSS.curie('LimitCurrent'),
-                   model_uri=DSS.pvsystem__LimitCurrent, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__LimitCurrent, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__yearly = Slot(uri=DSS.yearly, name="pvsystem__yearly", curie=DSS.curie('yearly'),
                    model_uri=DSS.pvsystem__yearly, domain=None, range=Optional[str])
@@ -8076,7 +8076,7 @@ slots.pvsystem__class_class = Slot(uri=DSS.class_class, name="pvsystem__class_cl
                    model_uri=DSS.pvsystem__class_class, domain=None, range=Optional[int])
 
 slots.pvsystem__UserModel = Slot(uri=DSS.UserModel, name="pvsystem__UserModel", curie=DSS.curie('UserModel'),
-                   model_uri=DSS.pvsystem__UserModel, domain=None, range=Optional[float])
+                   model_uri=DSS.pvsystem__UserModel, domain=None, range=Optional[str])
 
 slots.pvsystem__UserData = Slot(uri=DSS.UserData, name="pvsystem__UserData", curie=DSS.curie('UserData'),
                    model_uri=DSS.pvsystem__UserData, domain=None, range=Optional[str])
@@ -8091,10 +8091,10 @@ slots.pvsystem__DutyStart = Slot(uri=DSS.DutyStart, name="pvsystem__DutyStart", 
                    model_uri=DSS.pvsystem__DutyStart, domain=None, range=Optional[str])
 
 slots.pvsystem__WattPriority = Slot(uri=DSS.WattPriority, name="pvsystem__WattPriority", curie=DSS.curie('WattPriority'),
-                   model_uri=DSS.pvsystem__WattPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.pvsystem__WattPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__PFPriority = Slot(uri=DSS.PFPriority, name="pvsystem__PFPriority", curie=DSS.curie('PFPriority'),
-                   model_uri=DSS.pvsystem__PFPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.pvsystem__PFPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.pvsystem__pct_PminNoVars = Slot(uri=DSS.pct_PminNoVars, name="pvsystem__pct_PminNoVars", curie=DSS.curie('pct_PminNoVars'),
                    model_uri=DSS.pvsystem__pct_PminNoVars, domain=None, range=Optional[float])
@@ -8184,7 +8184,7 @@ slots.storage__pct_Cutout = Slot(uri=DSS.pct_Cutout, name="storage__pct_Cutout",
                    model_uri=DSS.storage__pct_Cutout, domain=None, range=Optional[float])
 
 slots.storage__EffCurve = Slot(uri=DSS.EffCurve, name="storage__EffCurve", curie=DSS.curie('EffCurve'),
-                   model_uri=DSS.storage__EffCurve, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__EffCurve, domain=None, range=Optional[str])
 
 slots.storage__VarFollowInverter = Slot(uri=DSS.VarFollowInverter, name="storage__VarFollowInverter", curie=DSS.curie('VarFollowInverter'),
                    model_uri=DSS.storage__VarFollowInverter, domain=None, range=Optional[Union[bool, Bool]])
@@ -8196,10 +8196,10 @@ slots.storage__kvarMaxAbs = Slot(uri=DSS.kvarMaxAbs, name="storage__kvarMaxAbs",
                    model_uri=DSS.storage__kvarMaxAbs, domain=None, range=Optional[float])
 
 slots.storage__WattPriority = Slot(uri=DSS.WattPriority, name="storage__WattPriority", curie=DSS.curie('WattPriority'),
-                   model_uri=DSS.storage__WattPriority, domain=None, range=Optional[str])
+                   model_uri=DSS.storage__WattPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__PFPriority = Slot(uri=DSS.PFPriority, name="storage__PFPriority", curie=DSS.curie('PFPriority'),
-                   model_uri=DSS.storage__PFPriority, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__PFPriority, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__pct_PminNoVars = Slot(uri=DSS.pct_PminNoVars, name="storage__pct_PminNoVars", curie=DSS.curie('pct_PminNoVars'),
                    model_uri=DSS.storage__pct_PminNoVars, domain=None, range=Optional[float])
@@ -8244,7 +8244,7 @@ slots.storage__pct_IdlingkW = Slot(uri=DSS.pct_IdlingkW, name="storage__pct_Idli
                    model_uri=DSS.storage__pct_IdlingkW, domain=None, range=Optional[float])
 
 slots.storage__pct_Idlingkvar = Slot(uri=DSS.pct_Idlingkvar, name="storage__pct_Idlingkvar", curie=DSS.curie('pct_Idlingkvar'),
-                   model_uri=DSS.storage__pct_Idlingkvar, domain=None, range=Optional[str])
+                   model_uri=DSS.storage__pct_Idlingkvar, domain=None, range=Optional[float])
 
 slots.storage__pct_R = Slot(uri=DSS.pct_R, name="storage__pct_R", curie=DSS.curie('pct_R'),
                    model_uri=DSS.storage__pct_R, domain=None, range=Optional[float])
@@ -8265,7 +8265,7 @@ slots.storage__Balanced = Slot(uri=DSS.Balanced, name="storage__Balanced", curie
                    model_uri=DSS.storage__Balanced, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__LimitCurrent = Slot(uri=DSS.LimitCurrent, name="storage__LimitCurrent", curie=DSS.curie('LimitCurrent'),
-                   model_uri=DSS.storage__LimitCurrent, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__LimitCurrent, domain=None, range=Optional[Union[bool, Bool]])
 
 slots.storage__yearly = Slot(uri=DSS.yearly, name="storage__yearly", curie=DSS.curie('yearly'),
                    model_uri=DSS.storage__yearly, domain=None, range=Optional[str])
@@ -8277,7 +8277,7 @@ slots.storage__duty = Slot(uri=DSS.duty, name="storage__duty", curie=DSS.curie('
                    model_uri=DSS.storage__duty, domain=None, range=Optional[int])
 
 slots.storage__DispMode = Slot(uri=DSS.DispMode, name="storage__DispMode", curie=DSS.curie('DispMode'),
-                   model_uri=DSS.storage__DispMode, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__DispMode, domain=None, range=Optional[str])
 
 slots.storage__DischargeTrigger = Slot(uri=DSS.DischargeTrigger, name="storage__DischargeTrigger", curie=DSS.curie('DischargeTrigger'),
                    model_uri=DSS.storage__DischargeTrigger, domain=None, range=Optional[str])
@@ -8292,13 +8292,13 @@ slots.storage__class_class = Slot(uri=DSS.class_class, name="storage__class_clas
                    model_uri=DSS.storage__class_class, domain=None, range=Optional[int])
 
 slots.storage__DynaDLL = Slot(uri=DSS.DynaDLL, name="storage__DynaDLL", curie=DSS.curie('DynaDLL'),
-                   model_uri=DSS.storage__DynaDLL, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__DynaDLL, domain=None, range=Optional[str])
 
 slots.storage__DynaData = Slot(uri=DSS.DynaData, name="storage__DynaData", curie=DSS.curie('DynaData'),
                    model_uri=DSS.storage__DynaData, domain=None, range=Optional[str])
 
 slots.storage__UserModel = Slot(uri=DSS.UserModel, name="storage__UserModel", curie=DSS.curie('UserModel'),
-                   model_uri=DSS.storage__UserModel, domain=None, range=Optional[float])
+                   model_uri=DSS.storage__UserModel, domain=None, range=Optional[str])
 
 slots.storage__UserData = Slot(uri=DSS.UserData, name="storage__UserData", curie=DSS.curie('UserData'),
                    model_uri=DSS.storage__UserData, domain=None, range=Optional[str])
@@ -9387,10 +9387,10 @@ slots.capcontrol__ONsetting = Slot(uri=DSS.ONsetting, name="capcontrol__ONsettin
                    model_uri=DSS.capcontrol__ONsetting, domain=None, range=Optional[float])
 
 slots.capcontrol__OFFsetting = Slot(uri=DSS.OFFsetting, name="capcontrol__OFFsetting", curie=DSS.curie('OFFsetting'),
-                   model_uri=DSS.capcontrol__OFFsetting, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__OFFsetting, domain=None, range=Optional[float])
 
 slots.capcontrol__Delay = Slot(uri=DSS.Delay, name="capcontrol__Delay", curie=DSS.curie('Delay'),
-                   model_uri=DSS.capcontrol__Delay, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__Delay, domain=None, range=Optional[float])
 
 slots.capcontrol__VoltOverride = Slot(uri=DSS.VoltOverride, name="capcontrol__VoltOverride", curie=DSS.curie('VoltOverride'),
                    model_uri=DSS.capcontrol__VoltOverride, domain=None, range=Optional[Union[bool, Bool]])
@@ -9402,10 +9402,10 @@ slots.capcontrol__Vmin = Slot(uri=DSS.Vmin, name="capcontrol__Vmin", curie=DSS.c
                    model_uri=DSS.capcontrol__Vmin, domain=None, range=Optional[float])
 
 slots.capcontrol__DelayOFF = Slot(uri=DSS.DelayOFF, name="capcontrol__DelayOFF", curie=DSS.curie('DelayOFF'),
-                   model_uri=DSS.capcontrol__DelayOFF, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__DelayOFF, domain=None, range=Optional[float])
 
 slots.capcontrol__DeadTime = Slot(uri=DSS.DeadTime, name="capcontrol__DeadTime", curie=DSS.curie('DeadTime'),
-                   model_uri=DSS.capcontrol__DeadTime, domain=None, range=Optional[str])
+                   model_uri=DSS.capcontrol__DeadTime, domain=None, range=Optional[float])
 
 slots.capcontrol__CTPhase = Slot(uri=DSS.CTPhase, name="capcontrol__CTPhase", curie=DSS.curie('CTPhase'),
                    model_uri=DSS.capcontrol__CTPhase, domain=None, range=Optional[int])
@@ -9564,7 +9564,7 @@ slots.fuse__FuseCurve = Slot(uri=DSS.FuseCurve, name="fuse__FuseCurve", curie=DS
                    model_uri=DSS.fuse__FuseCurve, domain=None, range=Optional[float])
 
 slots.fuse__RatedCurrent = Slot(uri=DSS.RatedCurrent, name="fuse__RatedCurrent", curie=DSS.curie('RatedCurrent'),
-                   model_uri=DSS.fuse__RatedCurrent, domain=None, range=Optional[str])
+                   model_uri=DSS.fuse__RatedCurrent, domain=None, range=Optional[float])
 
 slots.fuse__Delay = Slot(uri=DSS.Delay, name="fuse__Delay", curie=DSS.curie('Delay'),
                    model_uri=DSS.fuse__Delay, domain=None, range=Optional[str])
@@ -9843,7 +9843,7 @@ slots.regcontrol__vreg = Slot(uri=DSS.vreg, name="regcontrol__vreg", curie=DSS.c
                    model_uri=DSS.regcontrol__vreg, domain=None, range=Optional[float])
 
 slots.regcontrol__band = Slot(uri=DSS.band, name="regcontrol__band", curie=DSS.curie('band'),
-                   model_uri=DSS.regcontrol__band, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__band, domain=None, range=Optional[float])
 
 slots.regcontrol__ptratio = Slot(uri=DSS.ptratio, name="regcontrol__ptratio", curie=DSS.curie('ptratio'),
                    model_uri=DSS.regcontrol__ptratio, domain=None, range=Optional[float])
@@ -9852,10 +9852,10 @@ slots.regcontrol__CTprim = Slot(uri=DSS.CTprim, name="regcontrol__CTprim", curie
                    model_uri=DSS.regcontrol__CTprim, domain=None, range=Optional[float])
 
 slots.regcontrol__R = Slot(uri=DSS.R, name="regcontrol__R", curie=DSS.curie('R'),
-                   model_uri=DSS.regcontrol__R, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__R, domain=None, range=Optional[float])
 
 slots.regcontrol__X = Slot(uri=DSS.X, name="regcontrol__X", curie=DSS.curie('X'),
-                   model_uri=DSS.regcontrol__X, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__X, domain=None, range=Optional[float])
 
 slots.regcontrol__bus = Slot(uri=DSS.bus, name="regcontrol__bus", curie=DSS.curie('bus'),
                    model_uri=DSS.regcontrol__bus, domain=None, range=Optional[str])
@@ -9873,13 +9873,13 @@ slots.regcontrol__revband = Slot(uri=DSS.revband, name="regcontrol__revband", cu
                    model_uri=DSS.regcontrol__revband, domain=None, range=Optional[float])
 
 slots.regcontrol__revR = Slot(uri=DSS.revR, name="regcontrol__revR", curie=DSS.curie('revR'),
-                   model_uri=DSS.regcontrol__revR, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revR, domain=None, range=Optional[float])
 
 slots.regcontrol__revX = Slot(uri=DSS.revX, name="regcontrol__revX", curie=DSS.curie('revX'),
-                   model_uri=DSS.regcontrol__revX, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revX, domain=None, range=Optional[float])
 
 slots.regcontrol__tapdelay = Slot(uri=DSS.tapdelay, name="regcontrol__tapdelay", curie=DSS.curie('tapdelay'),
-                   model_uri=DSS.regcontrol__tapdelay, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__tapdelay, domain=None, range=Optional[float])
 
 slots.regcontrol__debugtrace = Slot(uri=DSS.debugtrace, name="regcontrol__debugtrace", curie=DSS.curie('debugtrace'),
                    model_uri=DSS.regcontrol__debugtrace, domain=None, range=Optional[Union[bool, Bool]])
@@ -9903,7 +9903,7 @@ slots.regcontrol__revThreshold = Slot(uri=DSS.revThreshold, name="regcontrol__re
                    model_uri=DSS.regcontrol__revThreshold, domain=None, range=Optional[float])
 
 slots.regcontrol__revDelay = Slot(uri=DSS.revDelay, name="regcontrol__revDelay", curie=DSS.curie('revDelay'),
-                   model_uri=DSS.regcontrol__revDelay, domain=None, range=Optional[str])
+                   model_uri=DSS.regcontrol__revDelay, domain=None, range=Optional[float])
 
 slots.regcontrol__revNeutral = Slot(uri=DSS.revNeutral, name="regcontrol__revNeutral", curie=DSS.curie('revNeutral'),
                    model_uri=DSS.regcontrol__revNeutral, domain=None, range=Optional[Union[bool, Bool]])
@@ -10929,7 +10929,7 @@ slots.xfmrcode__wdg = Slot(uri=DSS.wdg, name="xfmrcode__wdg", curie=DSS.curie('w
                    model_uri=DSS.xfmrcode__wdg, domain=None, range=Optional[int])
 
 slots.xfmrcode__conn = Slot(uri=DSS.conn, name="xfmrcode__conn", curie=DSS.curie('conn'),
-                   model_uri=DSS.xfmrcode__conn, domain=None, range=Optional[str])
+                   model_uri=DSS.xfmrcode__conn, domain=None, range=Optional[Union[str, "ConnectionType"]])
 
 slots.xfmrcode__kV = Slot(uri=DSS.kV, name="xfmrcode__kV", curie=DSS.curie('kV'),
                    model_uri=DSS.xfmrcode__kV, domain=None, range=Optional[float])
@@ -10950,7 +10950,7 @@ slots.xfmrcode__Xneut = Slot(uri=DSS.Xneut, name="xfmrcode__Xneut", curie=DSS.cu
                    model_uri=DSS.xfmrcode__Xneut, domain=None, range=Optional[float])
 
 slots.xfmrcode__conns = Slot(uri=DSS.conns, name="xfmrcode__conns", curie=DSS.curie('conns'),
-                   model_uri=DSS.xfmrcode__conns, domain=None, range=Optional[Union[str, list[str]]])
+                   model_uri=DSS.xfmrcode__conns, domain=None, range=Optional[Union[Union[str, "ConnectionType"], list[Union[str, "ConnectionType"]]]])
 
 slots.xfmrcode__kVs = Slot(uri=DSS.kVs, name="xfmrcode__kVs", curie=DSS.curie('kVs'),
                    model_uri=DSS.xfmrcode__kVs, domain=None, range=Optional[Union[float, list[float]]])

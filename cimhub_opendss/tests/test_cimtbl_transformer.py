@@ -44,8 +44,9 @@ def _bind(case: str):
     return cimtbl_to_cim(atom_documents(_map(case)), network=cimtables.load_model(ATOMS / "prereq.cimtbl"))
 
 
-def _native(*transformers):
-    return type("Native", (), {"list_by_class": staticmethod(lambda cls: list(transformers))})()
+def _native(*records):
+    return type("Native", (), {"list_by_class": staticmethod(
+        lambda cls: [record for record in records if isinstance(record, cls)])})()
 
 
 def _by_mrid(network, class_name: str) -> dict:
@@ -134,10 +135,9 @@ def _xf(**slots):
 
 
 @pytest.mark.parametrize(("slots", "message"), [
-    (dict(XfmrCode="ct5"), "t: XfmrCode=ct5 instances wait for the lug template"),
     (dict(phases=2), "t: phases=2; only 1 and 3 are mapped"),
     (dict(kV=7.2), "t: kV is set without wdg= or an array"),
-    (dict(taps=[1.0, 1.05]), r"t: taps=\[1.0, 1.05\] need a RatioTapChanger"),
+    (dict(taps=[1.0, 1.05]), r"t: taps=\[1.0, 1.05\] with no RegControl"),
     (dict(kVAs=[25, 50]), r"t: kVAs=\[25.0, 50.0\]; each coil's %R"),
     (dict(pct_Rs=[0.5, 0.5], pct_loadloss=2.0), "t: pct_Rs=.* and pct_loadloss=2.0 disagree"),
     (dict(XHL=2.0, X12=3.0), r"t: XHL and X12 disagree \(\[2.0, 3.0\]\)"),

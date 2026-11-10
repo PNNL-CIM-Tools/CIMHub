@@ -1,0 +1,132 @@
+# add_transformers(): one transformer per catalog shape. A catalog is a TransformerTankConfiguration: by tank end
+# (a TankEnd and a winding per winding, no phases; instance end n is template end n), or, for a center tap, by lug
+# (H1 H2 X1 X3 X2; windings H1->H2, X1->X2, X2->X3), as the DSS wave's XfmrCode goldens write them. A wye end is Yn
+# when its phases list N (the neutral brought out) and grounded when its winding is_grounded, both as GDM writes them.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# b8: the 0.24 kV line-to-line tertiary bus (the BaseVoltage the split-phase b5 already uses).
+Object ConnectivityNode: mRID=b8, name=b8, BaseVoltage=bv_240v, ConnectivityNodeContainer=fdr_atom
+
+# --- catalogs -------------------------------------------------------------------------------------------------
+# derived: noLoadLoss / loadLoss = pct / 100 x winding 1 kVA: dy 0.6 % and 1.74408 % of 75 = 0.45, 1.30806 kW;
+#   yyd 0.1 %, 0.5 % of 1000 = 1, 5 kW; ln1 0.2 %, 1 % of 50 = 0.1, 0.5 kW; ll1 0 %, 0.8 % of 100 = 0, 0.8 kW;
+#   ct25 0.2 %, 1.8 % of 25 = 0.05, 0.45 kW
+# untranscribed: mounting=POLE_MOUNT (every catalog); dy fluid_type=mineral_oil
+Table TransformerTankConfiguration: mRID, name, noLoadLoss (kW), loadLoss (kW), percentMagnetizingCurrent (percent)
+    xc_dy,   dy,   0.45, 1.30806,
+    xc_yyd,  yyd,  1.0,  5.0,
+    xc_ln1,  ln1,  0.1,  0.5,
+    xc_ll1,  ll1,  0.0,  0.8,
+    xc_ct25, ct25, 0.05, 0.45000000000000007, 0.5
+
+# a TankEnd per winding: STAR -> Y, DELTA -> D (the instance end carries the grounding)
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind
+    xc_dy_end_1,  xc_dy,  1, D
+    xc_dy_end_2,  xc_dy,  2, Y
+    xc_yyd_end_1, xc_yyd, 1, Y
+    xc_yyd_end_2, xc_yyd, 2, Y
+    xc_yyd_end_3, xc_yyd, 3, D
+    xc_ln1_end_1, xc_ln1, 1, Y
+    xc_ln1_end_2, xc_ln1, 2, Y
+    xc_ll1_end_1, xc_ll1, 1, D
+    xc_ll1_end_2, xc_ll1, 2, D
+
+# ratedU line-to-line: a line-to-ground rating x sqrt 3 (0.27713 -> 0.480003, 2.4018 -> 4.16004 kV), line-to-line as
+# written. baseU the coil: line-to-ground on a wye, line-to-line on a delta. baseS = kVA / phases (75 / 3 = 25,
+# 1000 / 3 = 333.333); r in percent on the coil base as written.
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd
+    xc_dy_wdg_1,  xc_dy,  4.16,                4.16,    75,   25,                 0.87204, xc_dy_end_1
+    xc_dy_wdg_2,  xc_dy,  0.48000324030156294, 0.27713, 75,   25,                 0.87204, xc_dy_end_2
+    xc_yyd_wdg_1, xc_yyd, 4.16003962961893,    2.4018,  1000, 333.3333333333333,  0.2,     xc_yyd_end_1
+    xc_yyd_wdg_2, xc_yyd, 0.48000324030156294, 0.27713, 1000, 333.3333333333333,  0.3,     xc_yyd_end_2
+    xc_yyd_wdg_3, xc_yyd, 0.24,                0.24,    1000, 333.3333333333333,  0.4,     xc_yyd_end_3
+    xc_ln1_wdg_1, xc_ln1, 4.16003962961893,    2.4018,  50,   50,                 0.5,     xc_ln1_end_1
+    xc_ln1_wdg_2, xc_ln1, 0.48000324030156294, 0.27713, 50,   50,                 0.5,     xc_ln1_end_2
+    xc_ll1_wdg_1, xc_ll1, 4.16,                4.16,    100,  100,                0.4,     xc_ll1_end_1
+    xc_ll1_wdg_2, xc_ll1, 0.48,                0.48,    100,  100,                0.4,     xc_ll1_end_2
+
+# center tap: sequenceNumber = the instance conductor each lug lands on (end 1: phase 1, N 2; end 2: s1 3, s2 4, N 5)
+Table TransformerLug: mRID, TankConfiguration, designation, sequenceNumber
+    xc_ct25_lug_h1, xc_ct25, H1, 1
+    xc_ct25_lug_h2, xc_ct25, H2, 2
+    xc_ct25_lug_x1, xc_ct25, X1, 3
+    xc_ct25_lug_x3, xc_ct25, X3, 4
+    xc_ct25_lug_x2, xc_ct25, X2, 5
+
+# from the polarity end: H1->H2, X1->X2 (s1->N), X2->X3 (N->s2). A half: ratedU 0.12 x 2 = 0.24 kV,
+# ratedS = 25 / 2 = 12.5 kVA on the 25 kVA base (r is on it)
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerLug, ToTransformerLug
+    xc_ct25_wdg_1, xc_ct25, 4.16003962961893, 2.4018, 25,   25, 0.6, xc_ct25_lug_h1, xc_ct25_lug_h2
+    xc_ct25_wdg_2, xc_ct25, 0.24,             0.12,   12.5, 25, 1.2, xc_ct25_lug_x1, xc_ct25_lug_x2
+    xc_ct25_wdg_3, xc_ct25, 0.24,             0.12,   12.5, 25, 1.2, xc_ct25_lug_x2, xc_ct25_lug_x3
+
+# x in percent on the From winding's base (every From winding is rated winding 1's kVA); ln1's couplings are
+# written 1-based (1, 2), the others 0-based
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_dy_mesh_12,   xc_dy_wdg_1,   xc_dy_wdg_2,   3.24
+    xc_yyd_mesh_12,  xc_yyd_wdg_1,  xc_yyd_wdg_2,  6.0
+    xc_yyd_mesh_13,  xc_yyd_wdg_1,  xc_yyd_wdg_3,  4.0
+    xc_yyd_mesh_23,  xc_yyd_wdg_2,  xc_yyd_wdg_3,  3.0
+    xc_ln1_mesh_12,  xc_ln1_wdg_1,  xc_ln1_wdg_2,  2.0
+    xc_ll1_mesh_12,  xc_ll1_wdg_1,  xc_ll1_wdg_2,  2.5
+    xc_ct25_mesh_12, xc_ct25_wdg_1, xc_ct25_wdg_2, 2.04
+    xc_ct25_mesh_13, xc_ct25_wdg_1, xc_ct25_wdg_3, 2.04
+    xc_ct25_mesh_23, xc_ct25_wdg_2, xc_ct25_wdg_3, 1.36
+
+# dy is a PowerTransformerEquipment: vector_group Dyn1 matches its windings (Dy1; the neutral mark is not checked:
+# it is the instance's N); cooling_class -> CoolingInfo
+Object CoolingInfo: mRID=cool_dy, name=dy, typeOfCooling=ONAN
+
+# --- instances ------------------------------------------------------------------------------------------------
+Table PowerTransformer: mRID, name, EquipmentContainer=fdr_atom
+    xf_t_dy, t_dy
+    xf_t3w,  t3w
+    xf_t_ln, t_ln
+    xf_t_ll, t_ll
+    xf_t_ct, t_ct
+
+# 3-phase wye: Yn when GDM lists N, else Y; grounded = is_grounded (t_dy 2 Yn grounded; t3w 1 Y ungrounded, as
+# ditto writes every DSS wye; t3w 2 Yn ungrounded, the neutral brought out but not grounded). A 1-phase wye coil
+# written with one phase returns to N (t_ln B -> BN, t_ct C -> CN). Delta D, not grounded. A center tap's halves are
+# one end, I, grounded as the halves are.
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_t_dy_1, xf_t_dy, b1, ABC,   1, D,  false, bv_4p16kv
+    xf_t_dy_2, xf_t_dy, b4, ABCN,  2, Yn, true,  bv_480v
+    xf_t3w_1,  xf_t3w,  b2, ABC,   1, Y,  false, bv_4p16kv
+    xf_t3w_2,  xf_t3w,  b4, ABCN,  2, Yn, false, bv_480v
+    xf_t3w_3,  xf_t3w,  b8, ABC,   3, D,  false, bv_240v
+    xf_t_ln_1, xf_t_ln, b2, BN,    1, Y,  true,  bv_4p16kv
+    xf_t_ln_2, xf_t_ln, b4, BN,    2, Y,  true,  bv_480v
+    xf_t_ll_1, xf_t_ll, b1, AB,    1, D,  false, bv_4p16kv
+    xf_t_ll_2, xf_t_ll, b4, AB,    2, D,  false, bv_480v
+    xf_t_ct_1, xf_t_ct, b2, CN,    1, Y,  true,  bv_4p16kv
+    xf_t_ct_2, xf_t_ct, b5, s1s2N, 2, I,  true,  bv_240v
+
+Table TransformerTank: mRID, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_atom
+    xf_t_dy_tank, xf_t_dy, xc_dy
+    xf_t3w_tank,  xf_t3w,  xc_yyd
+    xf_t_ln_tank, xf_t_ln, xc_ln1
+    xf_t_ll_tank, xf_t_ll, xc_ll1
+    xf_t_ct_tank, xf_t_ct, xc_ct25
+Update TransformerTank: mRID=xf_t_dy_tank, AssetDatasheet=cool_dy
+
+# center tap: one phase end per conductor, on the lug with its sequenceNumber
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_t_ct_1_c,  1, 1, C,  xf_t_ct_T1
+    xf_t_ct_1_n,  1, 2, N,  xf_t_ct_T1
+    xf_t_ct_2_s1, 2, 3, s1, xf_t_ct_T2
+    xf_t_ct_2_s2, 2, 4, s2, xf_t_ct_T2
+    xf_t_ct_2_n,  2, 5, N,  xf_t_ct_T2
+
+# --- taps (G4): a RatioTapChanger with no control on the off-nominal end -------------------------------------
+# t3w: the catalog's winding 2 at 1.0125 (the instance's are nominal); t_ln: the instance's winding 2 at 1.025.
+# derived: 32 taps over 0.9-1.1 pu -> +/-16, (1.1 - 0.9) / 32 = 0.625 %; step = (tap - 1) / 0.625 % = 2 and 4;
+# neutralU = the coil
+Table RatioTapChanger: mRID, TransformerEnd, highStep, lowStep, neutralStep, normalStep, step, stepVoltageIncrement (percent), neutralU (kV)
+    xf_t3w_2_tap,  xf_t3w_2,  16, -16, 0, 2, 2, 0.625, 0.27713
+    xf_t_ln_2_tap, xf_t_ln_2, 16, -16, 0, 4, 4, 0.625, 0.27713

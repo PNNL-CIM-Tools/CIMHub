@@ -1,0 +1,21 @@
+// Loads (after IEEE13_CDPSM): models 1, 2, 4 (two CVR pairs, one by the defaults) and 5; q from kvar, from pf and
+// from neither (pf 0.88); a kVA-only load (after ACEP_PSIL); 1-phase delta on .2.3 and .3.1; a center-tap
+// secondary with a 2-phase s1s2 load (two 120 V legs, after House) and an s2 leg; a disabled load. The CVR loads'
+// kV is the bus's to full precision (4.16 / sqrt 3), since the export writes the bus's (S4-2, E9); house keeps the
+// rounded 0.208 (the export's 0.2078 is a listed YPrim difference). The XfmrCode sets its reactances: left unset,
+// the engine reports XHL=7 but builds the instance with X near 0.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New XfmrCode.ct phases=1 windings=3 kVs=[2.4 0.12 0.12] kVAs=[25 25 25]
+~ %Rs=[0.6 1.2 1.2] Xhl=2.04 Xht=2.04 Xlt=1.36
+New Transformer.ct XfmrCode=ct buses=[b1.2 house.1.0 house.0.2]
+New Load.pq bus1=b1 phases=3 kV=4.16 kW=1155 kvar=660 model=1
+New Load.z bus1=b1.2.3 phases=1 conn=delta kV=4.16 kW=170 kvar=125 model=2
+New Load.ca bus1=b1.3.1 phases=1 conn=delta kV=4.16 kW=170 pf=0.9 model=5
+New Load.cvr1 bus1=b1.1 phases=1 kV=2.40177711982884 kW=100 pf=0.95 model=4 CVRwatts=0.8 CVRvars=3
+New Load.cvr2 bus1=b1.3 phases=1 kV=2.40177711982884 kW=100 model=4
+New Load.kva bus1=b1 phases=3 kV=4.16 kVA=313 pf=-0.8
+New Load.house bus1=house.1.2 phases=2 kV=0.208 kW=5 pf=0.85 Vminpu=0.88
+New Load.leg2 bus1=house.2 phases=1 kV=0.12 kW=2 kvar=0.5 NumCust=3 status=fixed
+New Load.off bus1=b1.3 phases=1 kV=2.4 kW=10 enabled=false

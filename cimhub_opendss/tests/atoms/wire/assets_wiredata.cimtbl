@@ -4,15 +4,35 @@
 
 Profile = cim18v17
 
-# derived: radius = diam / 2 (radius_from_diameter) where the deck gives diam
-Table OverheadWireInfo: mRID, name, rDC20 (ohm/kft), rAC25 (ohm/kft), gmr (in), radius (in), ratedCurrent (A)
-    # defaulted: Rac = 1.02 x Rdc
-    wire_acsr_1/0,   ACSR_1/0,   0.212121212, 0.21636363624000002, 0.05352, 0.199,  230.0
-    # defaulted: Rac = 1.02 x Rdc
-    wire_acsr_4/0,   ACSR_4/0,   0.112121212, 0.11436363624,       0.09768, 0.2815, 340.0
-    # defaulted: Rac = 1.02 x Rdc
-    wire_acsr_556_5, ACSR_556_5, 0.035227273, 0.03593181846,       0.3732,  0.4635, 730.0
+Table OperationalLimitSet: mRID
+    wire_acsr_1/0_limits
+    wire_acsr_4/0_limits
+    wire_acsr_556_5_limits
+    wire_cu_1/0_limits
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    wire_acsr_1/0_norm,    230.0,  olt_normal,    wire_acsr_1/0_limits
+    # defaulted: emergamps = 1.5 x normamps
+    wire_acsr_1/0_emerg,   345.0,  olt_emergency, wire_acsr_1/0_limits
+    wire_acsr_4/0_norm,    340.0,  olt_normal,    wire_acsr_4/0_limits
+    # defaulted: emergamps = 1.5 x normamps
+    wire_acsr_4/0_emerg,   510.0,  olt_emergency, wire_acsr_4/0_limits
+    wire_acsr_556_5_norm,  730.0,  olt_normal,    wire_acsr_556_5_limits
+    # defaulted: emergamps = 1.5 x normamps
+    wire_acsr_556_5_emerg, 1095.0, olt_emergency, wire_acsr_556_5_limits
+    wire_cu_1/0_norm,      100.0,  olt_normal,    wire_cu_1/0_limits
+    # defaulted: emergamps = 1.5 x normamps
+    wire_cu_1/0_emerg,     150.0,  olt_emergency, wire_cu_1/0_limits
 
 # derived: radius = diam / 2 (radius_from_diameter) where the deck gives diam
-Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A)
-    wire_cu_1/0, CU_1/0, , 0.607, 0.13356, 0.184, 100.0
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/kft), rAC25 (ohm/kft), gmr (in), radius (in), ratedCurrent (A), OperationalLimitSet
+    # defaulted: Rac = 1.02 x Rdc
+    wire_acsr_1/0,   ACSR_1/0,   0.212121212, 0.21636363624000002, 0.05352, 0.199,  230.0, wire_acsr_1/0_limits
+    # defaulted: Rac = 1.02 x Rdc
+    wire_acsr_4/0,   ACSR_4/0,   0.112121212, 0.11436363624,       0.09768, 0.2815, 340.0, wire_acsr_4/0_limits
+    # defaulted: Rac = 1.02 x Rdc
+    wire_acsr_556_5, ACSR_556_5, 0.035227273, 0.03593181846,       0.3732,  0.4635, 730.0, wire_acsr_556_5_limits
+
+# derived: radius = diam / 2 (radius_from_diameter) where the deck gives diam
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A), OperationalLimitSet
+    wire_cu_1/0, CU_1/0, , 0.607, 0.13356, 0.184, 100.0, wire_cu_1/0_limits

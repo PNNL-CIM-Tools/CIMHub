@@ -7,6 +7,7 @@ dependencies = [
     "cimhub-core",
     "cimhub-opendss",
     "cimhub-raw",
+    "cimhub-gdm",
 ]
 
 [dependency-groups]
@@ -16,6 +17,7 @@ dev = [
     "pydantic",
     "ruff~=0.14.0",
     "opendssdirect.py~=0.9.4",   # the engine is a test oracle only
+    "NREL-ditto~=0.1.8",         # DSS -> GDM for cimhub_gdm sweeps and DSS/GDM parity tests; pins grid-data-models==2.4.1
 ]
 
 [tool.uv]
@@ -27,12 +29,14 @@ members = [
     "cimhub_core",
     "cimhub_opendss",
     "cimhub_raw",
+    "cimhub_gdm",
 ]
 
 [tool.uv.sources]
 cimhub-core = { workspace = true }
 cimhub-opendss = { workspace = true }
 cimhub-raw = { workspace = true }
+cimhub-gdm = { workspace = true }
 # Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }

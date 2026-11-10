@@ -1,5 +1,8 @@
 # Shape: transformer instance by template. PowerTransformer + TransformerTank(TankConfiguration) + one
-# PowerTransformerEnd per side on its node; ratings and impedances live only in the template.
+# PowerTransformerEnd per side on its node; ratings and impedances live only in the template. By a TankEnd
+# template (t1) the instance end n is template end n. By a lug template (t2) the instance also has one
+# TransformerPhaseEnd per phase of each terminal, on that end's Terminal; each template lug's sequenceNumber names
+# the phase end it lands on.
 
 Profile = cim18v17
 
@@ -16,5 +19,11 @@ Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, ground
 Object PowerTransformer: mRID=xf_t2, name=t2, EquipmentContainer=fdr_shapes
 Object TransformerTank: mRID=xf_t2_tank, PowerTransformer=xf_t2, TankConfiguration=xc_ct5, EquipmentContainer=fdr_shapes
 Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, BaseVoltage, PowerTransformer=xf_t2
-    xf_t2_1, n1,    B,     1, Y, true, bv_4p16kv
+    xf_t2_1, n1,    BN,    1, Y, true, bv_4p16kv
     xf_t2_2, house, s1s2N, 2, I, true, bv_240v
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_t2_1_B,  1, 1, B,  xf_t2_T1
+    xf_t2_1_N,  1, 2, N,  xf_t2_T1
+    xf_t2_2_s1, 2, 3, s1, xf_t2_T2
+    xf_t2_2_s2, 2, 4, s2, xf_t2_T2
+    xf_t2_2_N,  2, 5, N,  xf_t2_T2

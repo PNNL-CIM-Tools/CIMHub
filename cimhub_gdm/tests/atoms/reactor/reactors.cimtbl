@@ -1,0 +1,18 @@
+# add_reactors(): each DistributionReactor is a SeriesCompensator between its buses, as the DSS wave's series Reactor
+# golden writes it: the ReactorEquipment's lumped r, x, and r0 = r, x0 = x (no mutual coupling). SeriesCompensator has
+# no per-phase class: a reactor of fewer than three phases puts its phases on its Terminals; balanced ABC writes none.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+# untranscribed on every reactor: length=1 m
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=fdr_atom
+    rx_rx3, rx3, b1, b3, 0.0, 14.8, 0.0, 14.8, bv_4p16kv
+    rx_r1,  r1,  b1, b3, 0.5, 2.0,  0.5, 2.0,  bv_4p16kv
+
+Update Table Terminal: mRID, phases
+    rx_r1_T1, B
+    rx_r1_T2, B

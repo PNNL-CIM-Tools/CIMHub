@@ -1,7 +1,7 @@
 # Shape: line by PerLengthImpedance. A matrix code (PerLengthPhaseImpedance + PhaseImpedanceData, lower
 # triangle, row/column = conductor index) or a sequence code (PerLengthSequenceImpedance). Per-length units
-# are the source's (ohm/mi, ohm/km, nS/mi, uS/km); the segment's length unit is its own. Catalog ratings go on
-# the instance as OperationalLimitSet + CurrentLimit.
+# are the source's (ohm/mi, ohm/km, nS/mi, uS/km); the segment's length unit is its own. Ratings go on the
+# instance: an OperationalLimitSet with one CurrentLimit per OperationalLimitType (common.cimtbl).
 
 Profile = cim18v17
 
@@ -20,4 +20,6 @@ Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImp
     ln_l2, l2, n1, n4, ABC, 500, lc_seq1
 
 Object OperationalLimitSet: mRID=ln_l1_limits, Equipment=ln_l1
-Object CurrentLimit: mRID=ln_l1_normal, normalValue (A)=340, OperationalLimitSet=ln_l1_limits
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet=ln_l1_limits
+    ln_l1_norm,  340, olt_normal
+    ln_l1_emerg, 600, olt_emergency

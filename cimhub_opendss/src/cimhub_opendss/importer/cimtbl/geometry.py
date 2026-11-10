@@ -13,6 +13,7 @@ from __future__ import annotations
 from cimtables.document import Column, Document, ObjectStatement, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_values
+from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import wire
 from cimhub_opendss.importer.cimtbl.linecode import LENGTH_UNIT
 from cimhub_opendss.schema import opendss_schema as schema
@@ -82,6 +83,10 @@ CATALOGS = (
 )
 
 _SPACING_PREFIX, _GEOMETRY_PREFIX = "spc_", "wc_"
+#: the deck's one EarthResistivity, which every WireConfiguration names (EXPORT_MAPPING.md S6g, G1)
+EARTH_MRID = "earth"
+#: DSS earthmodel (lowered) -> EarthModelKind; FullCarson has none and raises
+EARTH_MODELS = {"carson": "carson", "deri": "deri"}
 _FOLDED_SLOTS = ("cond", "wire", "cncable", "tscable", "x", "h")
 _NAME_ARRAYS = ("wires", "cncables", "tscables")
 
@@ -142,23 +147,31 @@ def wire_infos(native) -> dict[str, list[str]]:
     return infos
 
 
-def conductor_infos(geometry, infos: dict[str, list[str]]) -> list[str]:
-    """The ``WireInfo`` mRID of each conductor, in cond order."""
-    arrays = [getattr(geometry, slot) for slot in _NAME_ARRAYS if getattr(geometry, slot)]
+def conductor_infos(record, nconds: int, infos: dict[str, list[str]]) -> list[str]:
+    """The ``WireInfo`` mRID of each conductor of a LineGeometry (or a Line with ``spacing=``), in cond order."""
+    label = f"{type(record).__name__} {record.name}"
+    arrays = [getattr(record, slot) for slot in _NAME_ARRAYS if getattr(record, slot)]
     if len(arrays) != 1:
-        raise ValueError(f"LineGeometry {geometry.name}: sets {len(arrays)} of wires, cncables, tscables; the "
-                         "order between them is not recorded, so give one")
+        raise ValueError(f"{label}: sets {len(arrays)} of wires, cncables, tscables; the order between them is "
+                         "not recorded, so give one")
     [names] = arrays
-    if len(names) != geometry.nconds:
-        raise ValueError(f"LineGeometry {geometry.name}: {len(names)} conductor names for nconds={geometry.nconds}")
+    if len(names) != nconds:
+        raise ValueError(f"{label}: {len(names)} conductor names for nconds={nconds}")
     resolved = []
     for name in names:
         found = infos.get(str(name).lower(), [])
         if len(found) != 1:
-            raise ValueError(f"LineGeometry {geometry.name}: conductor {name!r} is "
+            raise ValueError(f"{label}: conductor {name!r} is "
                              + ("in no wire catalog" if not found else f"in two catalogs ({', '.join(found)})"))
         resolved.append(found[0])
     return resolved
+
+
+def wire_sequence_table(configuration: str, wire_info_mrids: list[str]) -> Table:
+    """The ``WireSequenceConfiguration`` rows of one ``WireConfiguration``, sequenceNumber 1..n."""
+    rows = [Row([f"{configuration}_{k}", str(k), info]) for k, info in enumerate(wire_info_mrids, start=1)]
+    return Table("WireSequenceConfiguration", [Column("mRID"), Column("WireConfiguration", default=configuration),
+                                               Column("sequenceNumber"), Column("WireInfo")], rows)
 
 
 def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[str]) -> list:
@@ -180,27 +193,69 @@ def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[st
         statements += spacing_statements(spacing, geometry.name, geometry.xs, geometry.hs, geometry.units,
                                          geometry.nphases, geometry.nconds,
                                          comment=f"synthesized: the inline positions of LineGeometry {geometry.name}")
-    rows = [Row([f"{configuration}_{k}", str(k), info])
-            for k, info in enumerate(conductor_infos(geometry, infos), start=1)]
     statements += [
         ObjectStatement("WireConfiguration", [(Column("mRID"), configuration), (Column("name"), str(geometry.name)),
                                               (Column("numberOfPhases"), cell(geometry.nphases)),
-                                              (Column("WireSpacing"), spacing)],
+                                              (Column("WireSpacing"), spacing),
+                                              (Column("EarthResistivity"), EARTH_MRID)],
                         comment=untranscribed_values(LINEGEOMETRY_FIELDS, geometry)),
-        Table("WireSequenceConfiguration", [Column("mRID"), Column("WireConfiguration", default=configuration),
-                                            Column("sequenceNumber"), Column("WireInfo")], rows),
+        wire_sequence_table(configuration, conductor_infos(geometry, geometry.nconds, infos)),
     ]
     return statements
 
 
 def map_linegeometry(native) -> Document:
-    """Every ``LineGeometry`` as a ``WireConfiguration`` in one ``linegeometry`` document."""
+    """Every ``LineGeometry`` as a ``WireConfiguration`` in one ``linegeometry`` document, after the deck's
+    ``EarthResistivity`` that they and the ``spacing=`` lines' configurations name (``earth_statement``)."""
     geometries = native.list_by_class(schema.Linegeometry)
     infos = wire_infos(native)
     spacings = {str(spacing.name).lower() for spacing in native.list_by_class(schema.Linespacing)}
-    statements = [statement for geometry in geometries
-                  for statement in _geometry_statements(geometry, infos, spacings)]
+    earth = earth_statement(native)
+    statements = [*([earth] if earth is not None else []),
+                  *(statement for geometry in geometries for statement in _geometry_statements(geometry, infos, spacings))]
     return Document(name="linegeometry", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(native="LineGeometry",
-                                               targets="WireConfiguration + WireSequenceConfiguration",
-                                               count=len(geometries)) if geometries else None)
+                                               targets="EarthResistivity, WireConfiguration + WireSequenceConfiguration",
+                                               count=len(geometries)) if statements else None)
+
+
+def uses_geometry(native) -> bool:
+    """The deck gives a WireConfiguration: a LineGeometry, or a Line by ``spacing=``."""
+    return bool(native.list_by_class(schema.Linegeometry)) or any(
+        line.spacing for line in native.list_by_class(schema.Line))
+
+
+def _text(value) -> str:
+    return str(getattr(value, "text", value))
+
+
+def earth_statement(native) -> ObjectStatement | None:
+    """The deck's ``EarthResistivity`` for its geometries: ``Set earthmodel`` and the geometry lines' ``rho``
+    (ohm-m; they must agree), the engine's Deri and 100 when unset (DSS-6). None for a deck without geometry, whose
+    earth model computes nothing."""
+    if not uses_geometry(native):
+        return None
+    defaulted = []
+    options = native.list_by_class(schema.Options)  # none in a model of geometry alone: no Set earthmodel
+    model = options[0].earthmodel if options else None
+    if model is None:
+        model = dss_defaults(schema.Options)["earthmodel"]
+        defaulted.append(f"earthmodel={_text(model)}")
+    kind = EARTH_MODELS.get(_text(model).lower())
+    if kind is None:
+        raise ValueError(f"earthmodel={_text(model)}: EarthModelKind has {sorted(EARTH_MODELS)}")
+    rhos = {float(line.rho) for line in native.list_by_class(schema.Line)
+            if (line.geometry or line.spacing) and line.rho is not None}
+    if len(rhos) > 1:
+        raise ValueError(f"geometry lines give rho {sorted(rhos)}; one EarthResistivity per deck is mapped")
+    if rhos:
+        rho = rhos.pop()
+    else:
+        rho = float(dss_defaults(schema.Line)["rho"])
+        defaulted.append(f"rho={cell(rho)}")
+    comment = "the deck's earthmodel and its geometry lines' rho (ohm-m: the profile types rho Resistance)"
+    if defaulted:
+        comment += f"\ndefaulted: {', '.join(defaulted)}"
+    return ObjectStatement("EarthResistivity", [(Column("mRID"), EARTH_MRID), (Column("name"), kind),
+                                                (Column("earthModelType"), kind), (Column("rho", "ohm"), cell(rho))],
+                           comment=comment)

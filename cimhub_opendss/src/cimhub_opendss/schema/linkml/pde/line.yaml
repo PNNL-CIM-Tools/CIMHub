@@ -140,6 +140,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(0.058)
         close_mappings:
           - cim:ACLineSegment.r
         comments:
@@ -162,6 +163,7 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(0.1206)
         close_mappings:
           - cim:ACLineSegment.x
         comments:
@@ -177,6 +179,7 @@ classes:
         required: false
         annotations:
           order: 8
+          dss_default: float(0.1784)
         close_mappings:
           - cim:ACLineSegment.r0
         comments:
@@ -192,6 +195,7 @@ classes:
         required: false
         annotations:
           order: 9
+          dss_default: float(0.4047)
         close_mappings:
           - cim:ACLineSegment.x0
         comments:
@@ -207,6 +211,7 @@ classes:
         required: false
         annotations:
           order: 10
+          dss_default: float(3.4)
         close_mappings:
           - cim:ACLineSegment.bch
         comments:
@@ -226,6 +231,7 @@ classes:
         required: false
         annotations:
           order: 11
+          dss_default: float(1.6)
         close_mappings:
           - cim:ACLineSegment.b0ch
         comments:

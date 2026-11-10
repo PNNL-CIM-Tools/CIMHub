@@ -51,6 +51,7 @@ classes:
         required: false
         annotations:
           order: 1
+          dss_default: int(3)
         related_mappings:
           - cim:PowerElectronicsConnectionPhase
         comments:
@@ -80,6 +81,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 3
+          dss_default: float(12.47)
         exact_mappings:
           - cim:PowerElectronicsConnection.ratedU
         comments:
@@ -99,6 +101,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 4
+          dss_default: float(1.0)
           dss_name: "irrad"
         comments:
           - "OpenDSS-only (N/A): operational state variable; no CIM equivalent in the standard profile."
@@ -111,6 +114,7 @@ classes:
         required: false
         annotations:
           order: 5
+          dss_default: float(500.0)
         exact_mappings:
           - cim:PowerElectronicsUnit.maxP
         comments:
@@ -126,6 +130,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(100.0)
           dss_name: "%Pmpp"
         comments:
           - "OpenDSS-only (N/A): operational curtailment factor; no CIM equivalent in the standard profile."
@@ -152,7 +157,7 @@ classes:
         maximum_value: 1.0
         annotations:
           order: 8
-          dss_default: float(0.88)
+          dss_default: float(1.0)
         related_mappings:
           - cim:PowerElectronicsConnection.q
         comments:
@@ -172,6 +177,7 @@ classes:
         required: false
         annotations:
           order: 9
+          dss_default: string(wye)
         related_mappings:
           - cim:PowerElectronicsConnection.description
         comments:
@@ -208,6 +214,7 @@ classes:
         required: false
         annotations:
           order: 11
+          dss_default: float(500.0)
         exact_mappings:
           - cim:PowerElectronicsConnection.ratedS
         comments:
@@ -221,6 +228,7 @@ classes:
         required: false
         annotations:
           order: 12
+          dss_default: float(20.0)
           dss_name: "%Cutin"
         comments:
           - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
@@ -233,6 +241,7 @@ classes:
         required: false
         annotations:
           order: 13
+          dss_default: float(20.0)
           dss_name: "%Cutout"
         comments:
           - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
@@ -242,7 +251,7 @@ classes:
         description: >-
           An XYCurve object, previously defined, that describes the PER UNIT
           efficiency vs PER UNIT of rated kVA for the inverter.
-        range: float
+        range: string
         required: false
         annotations:
           order: 14
@@ -254,7 +263,7 @@ classes:
         description: >-
           An XYCurve object, previously defined, that describes the PV array
           PER UNIT Pmpp vs Temperature curve.
-        range: float
+        range: string
         required: false
         annotations:
           order: 15
@@ -309,7 +318,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 19
-          dss_default: float(0.0)
+          dss_default: float(0.9)
         close_mappings:
           - cim:PowerElectronicsConnection.maxIFault
         comments:
@@ -348,7 +357,7 @@ classes:
         description: >-
           Limits current magnitude to Vminpu value for both 1-phase and
           3-phase PVSystems similar to Generator Model 7.
-        range: float
+        range: boolean
         required: false
         annotations:
           order: 22
@@ -443,7 +452,7 @@ classes:
       UserModel:
         description: >-
           Name of DLL containing user-written model for Dynamics studies.
-        range: float
+        range: string
         required: false
         annotations:
           order: 30
@@ -501,7 +510,7 @@ classes:
         description: >-
           {Yes/No*/True/False} Set inverter to watt priority instead of the
           default var priority.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 35
@@ -513,7 +522,7 @@ classes:
         description: >-
           {Yes/No*/True/False} Set inverter to operate with PF priority when
           in constant PF mode.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 36

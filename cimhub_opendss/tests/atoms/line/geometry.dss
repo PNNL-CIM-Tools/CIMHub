@@ -1,0 +1,13 @@
+// Lines by LineGeometry and by spacing + wires (after IEEE13_Assets, tests/decks/IEEE/IEEE13_assets).
+// g601 takes its ratings from its first wire (emergency 1.5 x normamps); g_m has no units (the engine reads metres).
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=200000 MVAsc1=210000
+new WireData.ACSR_556_5  NormAmps=730 DIAM=0.927  GMRac=0.37320  Rdc=0.035227273   Runits=kft Radunits=in gmrunits=in
+new WireData.ACSR_4/0    NormAmps=340 DIAM=0.563  GMRac=0.09768  Rdc=0.112121212   Runits=kft Radunits=in gmrunits=in
+new WireData.ACSR_1/0    NormAmps=230 emergamps=300 DIAM=0.398  GMRac=0.05352  Rdc=0.212121212   Runits=kft Radunits=in gmrunits=in
+new LineSpacing.500 nconds=4 nphases=3 units=ft x=[-4 -1 3 0] h=[28 28 28 24]
+new LineSpacing.510 nconds=2 nphases=1 units=ft x=[0 0.5] h=[29 24]
+new LineGeometry.601 nconds=4 nphases=3 reduce=y spacing=500 wires=[ACSR_556_5 ACSR_556_5 ACSR_556_5 ACSR_4/0]
+New Line.g601 bus1=sourcebus bus2=n1 geometry=601 length=500 units=ft
+New Line.g_m bus1=n1 bus2=n2 geometry=601 length=100
+New Line.s510 bus1=n1.3 bus2=n3.3 phases=1 spacing=510 wires=[ACSR_1/0 ACSR_1/0] length=300 units=ft

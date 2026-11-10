@@ -336,7 +336,7 @@ class TestTypeConversion:
 
         deck = tmp_path / "bad.dss"
         deck.write_text("new transformer.t phases=1 windings=2 buses=[a b] conns=[wye zigzag]\n")
-        with pytest.raises(DssParseError, match=r"transformer.t: conns='\[wye zigzag\]': 'zigzag' is not one of .* at line 1"):
+        with pytest.raises(DssParseError, match=r"transformer.t: conns='\[wye,zigzag\]': 'zigzag' is not one of .* at line 1"):
             DssReader(deck).read_all()
 
 

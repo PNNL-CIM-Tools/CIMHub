@@ -30,8 +30,7 @@ classes:
       - >-
         OpenDSS Capacitor maps to CIM LinearShuntCompensator. Per-phase
         susceptance information is carried on LinearShuntCompensatorPhase
-        collections. This schema in pde/ is the PDE-side counterpart of
-        pce/capacitor.yaml; both map to the same CIM class.
+        collections.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -82,6 +81,7 @@ classes:
         required: false
         annotations:
           order: 3
+          dss_default: int(3)
         related_mappings:
           - cim:LinearShuntCompensatorPhase
         comments:
@@ -100,6 +100,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 4
+          dss_default: float(1200.0)
         close_mappings:
           - cim:LinearShuntCompensator.bPerSection
         comments:
@@ -117,6 +118,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 5
+          dss_default: float(12.47)
         exact_mappings:
           - cim:LinearShuntCompensator.nomU
         comments:
@@ -130,6 +132,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: string(wye)
         exact_mappings:
           - cim:LinearShuntCompensator.phaseConnection
         comments:

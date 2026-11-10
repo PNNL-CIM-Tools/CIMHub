@@ -12,10 +12,10 @@ from cimhub_core.cimtbl import cimtbl_to_cim
 from cimhub_core.cimtbl_testing import assert_matches_golden, atom_documents, cim_scope
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer.cimtbl import wire
-from cimhub_opendss.importer.cimtbl.geometry import map_linegeometry, map_linespacing
+from cimhub_opendss.importer.cimtbl.geometry import earth_statement, map_linegeometry, map_linespacing
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import CATALOG_DECKS, ENGINE_UNIT, compile_deck, deck
+from conftest import CATALOG_DECKS, limits, ENGINE_UNIT, compile_deck, deck
 
 ATOMS = Path(__file__).parent / "atoms" / "geometry"
 
@@ -27,7 +27,7 @@ def _cim_scope():
 
 
 def documents(native):
-    return [*(wire.map_wires(native, *catalog) for catalog in wire.CATALOGS), map_linespacing(native),
+    return [limits(), *(wire.map_wires(native, *catalog) for catalog in wire.CATALOGS), map_linespacing(native),
             map_linegeometry(native)]
 
 
@@ -113,3 +113,46 @@ def test_geometries_match_the_engine(relative):
         positions = sorted(configuration.WireSpacing.XYConductorPosition, key=lambda p: p.sequenceNumber)
         assert [float(p.xCoord.to(unit)) for p in positions] == pytest.approx(dss.LineGeometries.Xcoords())
         assert [float(p.yCoord.to(unit)) for p in positions] == pytest.approx(dss.LineGeometries.Ycoords())
+
+
+_EARTH_DECK = """Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus
+{options}
+New Wiredata.w Rac=0.3 Runits=mi GMRac=0.03 GMRunits=ft Diam=0.7 Radunits=in
+New LineSpacing.s nconds=1 nphases=1 x=[0] h=[30] units=ft
+New Line.a bus1=sourcebus.1 bus2=b.1 phases=1 spacing=s wires=[w] length=1 units=kft {rho_a}
+New Line.b bus1=b.1 bus2=c.1 phases=1 spacing=s wires=[w] length=1 units=kft {rho_b}
+"""
+
+
+def _earth(tmp_path, options="", rho_a="", rho_b=""):
+    path = tmp_path / "deck.dss"
+    path.write_text(_EARTH_DECK.format(options=options, rho_a=rho_a, rho_b=rho_b))
+    return earth_statement(DssReader(path).read_all())
+
+
+def test_earth_is_the_decks_model_and_rho(tmp_path):
+    earth = _earth(tmp_path, "Set earthmodel=carson", "rho=30", "rho=30")
+    assert dict((column.name, value) for column, value in earth.cells) == {
+        "mRID": "earth", "name": "carson", "earthModelType": "carson", "rho": "30.0"}
+    assert "defaulted" not in earth.comment
+
+
+def test_earth_defaults_to_the_engines(tmp_path):
+    assert "defaulted: earthmodel=Deri, rho=100.0" in _earth(tmp_path).comment
+
+
+@pytest.mark.parametrize("options, rho_b, message", [
+    ("Set earthmodel=fullcarson", "", "EarthModelKind has"),
+    ("", "rho=50", r"geometry lines give rho \[30.0, 50.0\]"),
+])
+def test_earth_fails_fast(tmp_path, options, rho_b, message):
+    with pytest.raises(ValueError, match=message):
+        _earth(tmp_path, options, "rho=30", rho_b)
+
+
+def test_no_geometry_has_no_earth(tmp_path):
+    path = tmp_path / "deck.dss"
+    path.write_text("Clear\nNew Circuit.atom basekv=4.16 bus1=sourcebus\nSet earthmodel=carson\n"
+                    "New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2\n")
+    assert earth_statement(DssReader(path).read_all()) is None

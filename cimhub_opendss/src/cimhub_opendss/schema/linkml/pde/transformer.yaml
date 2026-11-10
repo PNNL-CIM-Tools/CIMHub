@@ -122,6 +122,7 @@ classes:
         required: false
         annotations:
           order: 5
+          dss_default: string(wye)
         exact_mappings:
           - cim:PowerTransformerEnd.connectionKind
         comments:
@@ -137,6 +138,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(12.47)
         exact_mappings:
           - cim:PowerTransformerEnd.ratedU
         comments:
@@ -152,6 +154,7 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(1000.0)
         exact_mappings:
           - cim:PowerTransformerEnd.ratedS
         comments:
@@ -166,6 +169,7 @@ classes:
         required: false
         annotations:
           order: 8
+          dss_default: float(1.0)
         exact_mappings:
           - cim:RatioTapChanger.step
         comments:
@@ -182,6 +186,7 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 9
+          dss_default: float(0.2)
           dss_name: "%R"
         close_mappings:
           - cim:PowerTransformerEnd.r

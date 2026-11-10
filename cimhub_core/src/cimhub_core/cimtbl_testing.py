@@ -23,10 +23,11 @@ from pathlib import Path
 from cimgraph.core import get_cim_profile, get_model_authority, get_model_name, set_model_scope
 from cimtables.document import Document, DocumentSet, Import, format_document
 from cimtables.parser import parse_text
+from cimtables.records import ImportRecord
 
 from cimhub_core.cimtbl import CIM_PROFILE
 
-__all__ = ["cim_scope", "atom_documents", "record_diff", "assert_matches_golden"]
+__all__ = ["cim_scope", "atom_documents", "record_diff", "assert_matches_golden", "assert_text_matches_golden"]
 
 UPDATE_GOLDENS = "CIMHUB_UPDATE_GOLDENS"
 
@@ -64,6 +65,9 @@ def _keyed_records(text: str, source_file: str) -> dict[tuple[str, str], dict[st
     keyed = {("Profile", ""): {"value": str(header.profile)}}
     counts: dict[str, int] = {}
     for record in records:
+        if isinstance(record, ImportRecord):
+            keyed[("Import", record.path)] = {}
+            continue
         counts[record.cim_class] = counts.get(record.cim_class, 0) + 1
         key = (record.fields.get("mRID") or record.fields.get("identifier") or record.fields.get("path")
                or f"#{counts[record.cim_class]}")
@@ -102,8 +106,13 @@ def record_diff(expected_text: str, actual_text: str) -> list[str]:
 
 def assert_matches_golden(document: Document, golden_path: str | Path) -> None:
     """Raise ``AssertionError`` unless ``format_document(document)`` equals the golden file's text."""
+    assert_text_matches_golden(format_document(document), golden_path)
+
+
+def assert_text_matches_golden(actual: str, golden_path: str | Path) -> None:
+    """Raise ``AssertionError`` unless ``actual`` (``.cimtbl`` text, e.g. a written artifact file) equals the golden
+    file's text."""
     golden_path = Path(golden_path)
-    actual = format_document(document)
     if os.environ.get(UPDATE_GOLDENS) == "1":
         golden_path.write_text(actual)
         return

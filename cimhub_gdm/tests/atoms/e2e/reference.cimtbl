@@ -1,0 +1,258 @@
+# reference_system(): an IEEE13-like system with every family on one feeder (TEST_DESIGN.md, Phase 5). Self-contained:
+# no prereq import. Each family follows its atom's rules (tests/atoms/<family>); the comments give the derived values.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = ieee13
+
+# --- shell ---------------------------------------------------------------------------------------------------------
+Object Substation: mRID=sub_sub, name=sub
+Object Feeder: mRID=fdr_ieee13, name=ieee13, NormalEnergizingSubstation=sub_sub
+Object BaseFrequency: mRID=base_freq, frequency (Hz)=60
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,  115
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_ieee13
+    sourcebus, sourcebus, bv_115kv
+    650,       650,       bv_4p16kv
+    rg60,      rg60,      bv_4p16kv
+    632,       632,       bv_4p16kv
+    633,       633,       bv_4p16kv
+    634,       634,       bv_480v
+    645,       645,       bv_4p16kv
+    646,       646,       bv_4p16kv
+    671,       671,       bv_4p16kv
+    680,       680,       bv_4p16kv
+    684,       684,       bv_4p16kv
+    611,       611,       bv_4p16kv
+    652,       652,       bv_4p16kv
+    692,       692,       bv_4p16kv
+    675,       675,       bv_4p16kv
+
+# --- source --------------------------------------------------------------------------------------------------------
+# derived: voltageMagnitude = 66.3953 kV LG x sqrt 3 = 115.000033 kV; voltageAngle = phase A's 30 deg
+Object EnergySource: mRID=src_source, name=source, node=sourcebus, nominalVoltage (kV)=115, voltageMagnitude (kV)=115.00003298377788, voltageAngle (deg)=30, r (ohm)=0.160377, x (ohm)=0.641507, r0 (ohm)=0.179604, x0 (ohm)=0.538811, BaseVoltage=bv_115kv, EquipmentContainer=fdr_ieee13
+
+# --- transformer catalogs (sub5000, xfm500; reg1666 for the regulators) -------------------------------------------
+# derived: loadLoss = pct / 100 x winding 1 kVA: 0.001 % of 5000 = 0.05 kW; 1.1 % of 500 = 5.5 kW
+Table TransformerTankConfiguration: mRID, name, noLoadLoss (kW), loadLoss (kW)
+    xc_sub5000, sub5000, 0, 0.05
+    xc_xfm500,  xfm500,  0, 5.500000000000001
+    xc_reg1666, reg1666, 0, 0
+
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind
+    xc_sub5000_end_1, xc_sub5000, 1, D
+    xc_sub5000_end_2, xc_sub5000, 2, Y
+    xc_xfm500_end_1,  xc_xfm500,  1, Y
+    xc_xfm500_end_2,  xc_xfm500,  2, Y
+    xc_reg1666_end_1, xc_reg1666, 1, Y
+    xc_reg1666_end_2, xc_reg1666, 2, Y
+
+# derived: ratedU 2.4018 x sqrt 3 = 4.16004 kV, 0.27713 x sqrt 3 = 0.480003 kV; baseU the coil; baseS = kVA / phases
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd
+    xc_sub5000_wdg_1, xc_sub5000, 115,                 115,     5000, 1666.6666666666667, 0.0005, xc_sub5000_end_1
+    xc_sub5000_wdg_2, xc_sub5000, 4.16003962961893,    2.4018,  5000, 1666.6666666666667, 0.0005, xc_sub5000_end_2
+    xc_xfm500_wdg_1,  xc_xfm500,  4.16003962961893,    2.4018,  500,  166.66666666666666, 0.55,   xc_xfm500_end_1
+    xc_xfm500_wdg_2,  xc_xfm500,  0.48000324030156294, 0.27713, 500,  166.66666666666666, 0.55,   xc_xfm500_end_2
+    xc_reg1666_wdg_1, xc_reg1666, 4.16003962961893,    2.4018,  1666, 1666,               0.005,  xc_reg1666_end_1
+    xc_reg1666_wdg_2, xc_reg1666, 4.16003962961893,    2.4018,  1666, 1666,               0.005,  xc_reg1666_end_2
+
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_sub5000_mesh_12, xc_sub5000_wdg_1, xc_sub5000_wdg_2, 0.008
+    xc_xfm500_mesh_12,  xc_xfm500_wdg_1,  xc_xfm500_wdg_2,  2.0
+    xc_reg1666_mesh_12, xc_reg1666_wdg_1, xc_reg1666_wdg_2, 0.01
+
+# --- transformers (taps nominal: no RatioTapChanger) ---------------------------------------------------------------
+Table PowerTransformer: mRID, name, EquipmentContainer=fdr_ieee13
+    xf_sub,  sub
+    xf_xfm1, xfm1
+
+# 3-phase wye without N: Y; grounded as the winding is_grounded
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_sub_1,  xf_sub,  sourcebus, ABC, 1, D, false, bv_115kv
+    xf_sub_2,  xf_sub,  650,       ABC, 2, Y, true,  bv_4p16kv
+    xf_xfm1_1, xf_xfm1, 633,       ABC, 1, Y, true,  bv_4p16kv
+    xf_xfm1_2, xf_xfm1, 634,       ABC, 2, Y, true,  bv_480v
+
+Table TransformerTank: mRID, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_ieee13
+    xf_sub_tank,  xf_sub,  xc_sub5000
+    xf_xfm1_tank, xf_xfm1, xc_xfm500
+
+# --- regulators: reg1, reg2, reg3, one per phase, sharing reg1666 --------------------------------------------------
+Object TapChangerInfo: mRID=tci_reg1666, name=reg1666, ratedApparentPower (kVA)=1666, neutralU (kV)=2.4018, highStep=16, lowStep=-16, neutralStep=0, stepVoltageIncrement=0.625
+
+Table VoltageRegulator: mRID, name, EquipmentContainer=fdr_ieee13
+    vr_reg1, reg1
+    vr_reg2, reg2
+    vr_reg3, reg3
+
+Table AutoTransformerEnd: mRID, AutoTransformer, endNumber, node, phase, baseU (kV), ratedS (kVA), BaseVoltage=bv_4p16kv
+    vr_reg1_end1, vr_reg1, 1, 650,  AN, 2.4018, 1666
+    vr_reg1_end2, vr_reg1, 2, rg60, AN, 2.4018, 1666
+    vr_reg2_end1, vr_reg2, 1, 650,  BN, 2.4018, 1666
+    vr_reg2_end2, vr_reg2, 2, rg60, BN, 2.4018, 1666
+    vr_reg3_end1, vr_reg3, 1, 650,  CN, 2.4018, 1666
+    vr_reg3_end2, vr_reg3, 2, rg60, CN, 2.4018, 1666
+
+Table TransformerLug: mRID, designation, sequenceNumber, TransformerEnd
+    vr_reg1_lug_s,  S,  1, vr_reg1_end1
+    vr_reg1_lug_l,  L,  2, vr_reg1_end2
+    vr_reg1_lug_sl, SL, 3,
+    vr_reg2_lug_s,  S,  1, vr_reg2_end1
+    vr_reg2_lug_l,  L,  2, vr_reg2_end2
+    vr_reg2_lug_sl, SL, 3,
+    vr_reg3_lug_s,  S,  1, vr_reg3_end1
+    vr_reg3_lug_l,  L,  2, vr_reg3_end2
+    vr_reg3_lug_sl, SL, 3,
+
+# derived: ratedS = 1666 x (1.1 - 1) = 166.6 kVA
+Table TransformerWinding: mRID, ratedS (kVA), baseU (kV), FromTransformerEnd, ToTransformerEnd, FromTransformerLug, ToTransformerLug, AutoTransformerLug
+    vr_reg1_wdg, 166.60000000000014, 2.4018, vr_reg1_end1, vr_reg1_end2, vr_reg1_lug_s, vr_reg1_lug_sl, vr_reg1_lug_l
+    vr_reg2_wdg, 166.60000000000014, 2.4018, vr_reg2_end1, vr_reg2_end2, vr_reg2_lug_s, vr_reg2_lug_sl, vr_reg2_lug_l
+    vr_reg3_wdg, 166.60000000000014, 2.4018, vr_reg3_end1, vr_reg3_end2, vr_reg3_lug_s, vr_reg3_lug_sl, vr_reg3_lug_l
+Update Table VoltageRegulator: mRID, AutoTransformerWinding
+    vr_reg1, vr_reg1_wdg
+    vr_reg2, vr_reg2_wdg
+    vr_reg3, vr_reg3_wdg
+
+# IEEE13's RegControl: 122 V band 2 V on PT 20 -> 2440 V, 40 V; R 3 V, X 9 V on CT 700 A -> 0.0857143, 0.257143 ohm;
+# limits 110 / 130 V x 20. The controlled bus rg60 is end 2's.
+Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue=2440, targetDeadband=40, lineDropCompensation=true, lineDropR (ohm)=0.08571428571428572, lineDropX (ohm)=0.2571428571428571, reversible=false, minLimitVoltage (V)=2200, maxLimitVoltage (V)=2600, Terminal
+    vr_reg1_ctrl, reg1, A, vr_reg1_T2
+    vr_reg2_ctrl, reg2, B, vr_reg2_T2
+    vr_reg3_ctrl, reg3, C, vr_reg3_T2
+
+# IEEE13's solved taps: step = (tap - 1) / 0.625 %: 1.0625 -> 10, 1.05 -> 8, 1.06875 -> 11
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, highStep=16, lowStep=-16, neutralStep=0, normalStep=0, step, stepVoltageIncrement (percent)=0.625, neutralU (kV)=2.4018, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating=700, initialDelay (s)=30, AssetDatasheet=tci_reg1666
+    vr_reg1_tap, reg1, vr_reg1_end2, vr_reg1_ctrl, 10
+    vr_reg2_tap, reg2, vr_reg2_end2, vr_reg2_ctrl, 8
+    vr_reg3_tap, reg3, vr_reg3_end2, vr_reg3_ctrl, 11
+
+# --- line catalogs -------------------------------------------------------------------------------------------------
+# mtx603 serves 632645, 645646 and (as IEEE13's 604) 671684; mtx605 serves 684611 and 684652.
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+    lc_mtx601, mtx601, 3, 60
+    lc_mtx602, mtx602, 3, 60
+    lc_mtx603, mtx603, 2, 60
+    lc_mtx605, mtx605, 1, 60
+
+# Lower triangle; derived: b = 2 pi 60 C (nF/mi -> nS/mi)
+Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/mi), x (ohm/mi), b (nS/mi)
+    lc_mtx601_11, lc_mtx601, 1, 1, 0.3465, 1.0179,  6299.521588978253
+    lc_mtx601_21, lc_mtx601, 2, 1, 0.1560, 0.5017, -1995.7909809725234
+    lc_mtx601_22, lc_mtx601, 2, 2, 0.3375, 1.0478,  5960.229582390555
+    lc_mtx601_31, lc_mtx601, 3, 1, 0.1580, 0.4236, -1259.52732667722
+    lc_mtx601_32, lc_mtx601, 3, 2, 0.1535, 0.3849, -741.5415299533347
+    lc_mtx601_33, lc_mtx601, 3, 3, 0.3414, 1.0348,  5639.787131724396
+    lc_mtx602_11, lc_mtx602, 1, 1, 0.7526, 1.1814,  5700.10571067332
+    lc_mtx602_21, lc_mtx602, 2, 1, 0.1580, 0.4236, -1081.587518777894
+    lc_mtx602_22, lc_mtx602, 2, 2, 0.7475, 1.1983,  5179.8579672388505
+    lc_mtx602_31, lc_mtx602, 3, 1, 0.1560, 0.5017, -1690.4281750435957
+    lc_mtx602_32, lc_mtx602, 3, 2, 0.1535, 0.3849, -658.980475016995
+    lc_mtx602_33, lc_mtx602, 3, 3, 0.7436, 1.2112,  5424.902194218855
+    lc_mtx603_11, lc_mtx603, 1, 1, 1.3238, 1.3569,  4708.619069200382
+    lc_mtx603_21, lc_mtx603, 2, 1, 0.2066, 0.4591, -899.8777996942603
+    lc_mtx603_22, lc_mtx603, 2, 2, 1.3294, 1.3471,  4667.150046172997
+    lc_mtx605_11, lc_mtx605, 1, 1, 1.3292, 1.3475,  4520.123509984994
+
+# ug606: three cn_250 cables (as the line atom's ug3)
+Object ConcentricNeutralCableInfo: mRID=cn_cn_250, name=cn_250, gmr (ft)=0.0171, radius (in)=0.2835, rAC25 (ohm/mi)=0.41, ratedCurrent (A)=260, ratedVoltage (kV)=15, insulationThickness (in)=0.22, diameterOverInsulation (in)=1.06, diameterOverJacket (in)=1.29, neutralStrandCount=13, neutralStrandRadius (in)=0.03205, neutralStrandGmr (ft)=0.00208, neutralStrandRDC20 (ohm/mi)=14.8722
+Object XYSpacing: mRID=spc_ug606, name=ug606, isTemplate=true
+Table XYConductorPosition: mRID, XYSpacing, sequenceNumber, xCoord (ft), yCoord (ft)
+    spc_ug606_1, spc_ug606, 1, -0.5, -4.0
+    spc_ug606_2, spc_ug606, 2,  0.0, -4.0
+    spc_ug606_3, spc_ug606, 3,  0.5, -4.0
+Object WireConfiguration: mRID=wc_ug606, name=ug606, WireSpacing=spc_ug606
+Table WireSequenceConfiguration: mRID, WireConfiguration, sequenceNumber, WireInfo
+    wc_ug606_1, wc_ug606, 1, cn_cn_250
+    wc_ug606_2, wc_ug606, 2, cn_cn_250
+    wc_ug606_3, wc_ug606, 3, cn_cn_250
+
+# --- lines and the switch ------------------------------------------------------------------------------------------
+# phases as IEEE13 writes them: 632633 C A B, 632645 and 645646 C B, 671684 A C
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
+    ln_650632, 650632, rg60, 632, ABC, 2000, lc_mtx601
+    ln_632671, 632671, 632,  671, ABC, 2000, lc_mtx601
+    ln_671680, 671680, 671,  680, ABC, 1000, lc_mtx601
+    ln_632633, 632633, 632,  633, CAB, 500,  lc_mtx602
+    ln_632645, 632645, 632,  645, CB,  500,  lc_mtx603
+    ln_645646, 645646, 645,  646, CB,  300,  lc_mtx603
+    ln_671684, 671684, 671,  684, AC,  300,  lc_mtx603
+    ln_684611, 684611, 684,  611, C,   300,  lc_mtx605
+    ln_684652, 684652, 684,  652, A,   800,  lc_mtx605
+Object ACLineSegment: mRID=ln_692675, name=692675, node1=692, node2=675, phases=ABC, length (ft)=500, WireConfiguration=wc_ug606, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
+
+Object LoadBreakSwitch: mRID=sw_671692, name=671692, node1=671, node2=692, open=false, normalOpen=false, ratedCurrent (A)=600, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
+
+# ratings: each catalog's ampacity; 692675 its first cable's (a cable has no emergency rating, so no emergency type)
+Object OperationalLimitType: mRID=olt_normal, name=normal, isInfiniteDuration=true, direction=absoluteValue
+Table OperationalLimitSet: mRID, Equipment
+    ln_650632_limits, ln_650632
+    ln_632671_limits, ln_632671
+    ln_671680_limits, ln_671680
+    ln_632633_limits, ln_632633
+    ln_632645_limits, ln_632645
+    ln_645646_limits, ln_645646
+    ln_671684_limits, ln_671684
+    ln_684611_limits, ln_684611
+    ln_684652_limits, ln_684652
+    ln_692675_limits, ln_692675
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType=olt_normal, OperationalLimitSet
+    ln_650632_norm, 730, ln_650632_limits
+    ln_632671_norm, 730, ln_632671_limits
+    ln_671680_norm, 730, ln_671680_limits
+    ln_632633_norm, 340, ln_632633_limits
+    ln_632645_norm, 230, ln_632645_limits
+    ln_645646_norm, 230, ln_645646_limits
+    ln_671684_norm, 230, ln_671684_limits
+    ln_684611_norm, 230, ln_684611_limits
+    ln_684652_norm, 230, ln_684652_limits
+    ln_692675_norm, 260, ln_692675_limits
+
+# --- loads ---------------------------------------------------------------------------------------------------------
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantImpedance, pConstantCurrent, pConstantPower, qConstantImpedance, qConstantCurrent, qConstantPower
+    zip_constant_pq, false, 0, 0, 1, 0, 0, 1
+    zip_constant_z,  false, 1, 0, 0, 1, 0, 0
+    zip_constant_i,  false, 0, 1, 0, 0, 1, 0
+
+# totals: 671 3 x (385, 220); 634 160 + 120 + 120, 110 + 90 + 90; 646 2 x (115, 66) on one branch BC; 692 2 x (85,
+# 75.5) on the branch C-A, written AC; 675 485 + 68 + 290, 190 + 60 + 212
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_ieee13
+    ld_671, 671, 671,    , D, false, 1155, 660, zip_constant_pq, bv_4p16kv
+    ld_634, 634, 634, ABC, Y, true,  400,  290, zip_constant_pq, bv_480v
+    ld_645, 645, 645, B,   Y, true,  170,  125, zip_constant_pq, bv_4p16kv
+    ld_646, 646, 646, BC,  D, false, 230,  132, zip_constant_z,  bv_4p16kv
+    ld_692, 692, 692, AC,  D, false, 170,  151, zip_constant_i,  bv_4p16kv
+    ld_675, 675, 675, ABC, Y, true,  843,  462, zip_constant_pq, bv_4p16kv
+    ld_611, 611, 611, C,   Y, true,  170,  80,  zip_constant_i,  bv_4p16kv
+    ld_652, 652, 652, A,   Y, true,  128,  86,  zip_constant_z,  bv_4p16kv
+
+Update Table EnergyConsumerPhase: mRID, p (kW), q (kVAr)
+    ld_634_A, 160, 110
+    ld_634_B, 120, 90
+    ld_634_C, 120, 90
+    ld_675_A, 485, 190
+    ld_675_B, 68,  60
+    ld_675_C, 290, 212
+
+# --- capacitors ----------------------------------------------------------------------------------------------------
+# derived: cap1 600 / 4.16^2 = 0.0346709 S; cap2 100 / 2.4^2 = 0.0173611 S
+Table LinearShuntCompensator: mRID, name, node, phases, compensatorType=capacitor, phaseConnection=Y, grounded=true, nomQ (kVAr), nomU (kV), bPerSection (S), maximumSections=1, normalSections=1, sections=1, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
+    cap_cap1, cap1, 675,  , 600, 4.16, 0.03467085798816568
+    cap_cap2, cap2, 611, C, 100, 2.4,  0.017361111111111112
+
+# --- DER -----------------------------------------------------------------------------------------------------------
+Object GenerationInverterInfo: mRID=inv_inv500, name=inv500, apparentPowerMaximum (kVA)=500
+Object StorageInverterInfo: mRID=inv_inv100, name=inv100, apparentPowerMaximum (kVA)=100
+Object BatteryInfo: mRID=batt_bess250, name=bess250, ratedCapacity (kWh)=250
+
+# derived: p = -active_power (300 kW generated, 50 kW discharged)
+Table PowerElectronicsConnection: mRID, name, node, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), AssetDatasheet, BaseVoltage, EquipmentContainer=fdr_ieee13
+    pv_pv680,       pv680,  680, 500, 4.16, -300, 0, inv_inv500, bv_4p16kv
+    storage_bat634, bat634, 634, 100, 0.48, -50,  0, inv_inv100, bv_480v
+
+Object PhotoVoltaicUnit: mRID=pv_pv680_unit, name=pv680, maxP (kW)=400, PowerElectronicsConnection=pv_pv680
+Object BatteryUnit: mRID=storage_bat634_unit, name=bat634, maxP (kW)=100, minP (kW)=-100, ratedE (kWh)=250, chargingEfficiency (percent)=95, dischargingEfficiency (percent)=95, batteryState=discharging, AssetDatasheet=batt_bess250, PowerElectronicsConnection=storage_bat634

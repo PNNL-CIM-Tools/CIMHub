@@ -74,6 +74,7 @@ classes:
         required: false
         annotations:
           order: 2
+          dss_default: float(0.058)
         exact_mappings:
           - cim:PerLengthSequenceImpedance.r
         comments:
@@ -89,6 +90,7 @@ classes:
         required: false
         annotations:
           order: 3
+          dss_default: float(0.1206)
         exact_mappings:
           - cim:PerLengthSequenceImpedance.x
         comments:
@@ -102,6 +104,7 @@ classes:
         required: false
         annotations:
           order: 4
+          dss_default: float(0.1784)
         exact_mappings:
           - cim:PerLengthSequenceImpedance.r0
         comments:
@@ -117,6 +120,7 @@ classes:
         required: false
         annotations:
           order: 5
+          dss_default: float(0.4047)
         exact_mappings:
           - cim:PerLengthSequenceImpedance.x0
         comments:
@@ -132,6 +136,7 @@ classes:
         required: false
         annotations:
           order: 6
+          dss_default: float(3.4)
         close_mappings:
           - cim:PerLengthSequenceImpedance.bch
         comments:
@@ -148,6 +153,7 @@ classes:
         required: false
         annotations:
           order: 7
+          dss_default: float(1.6)
         close_mappings:
           - cim:PerLengthSequenceImpedance.b0ch
         comments:

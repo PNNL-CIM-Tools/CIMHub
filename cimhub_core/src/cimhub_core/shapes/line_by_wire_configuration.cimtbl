@@ -14,7 +14,10 @@ Table XYConductorPosition: mRID, XYSpacing=spc_500, sequenceNumber, xCoord (ft),
     spc_500_3, 3, 7,   28, phase
     spc_500_4, 4, 4,   24, neutral
 
-Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500
+# The earth the configuration's impedance is computed over (an OpenDSS deck's earthmodel and a line's rho).
+# rho is typed Resistance in cim18v17; its value is ohm-m.
+Object EarthResistivity: mRID=earth_carson, name=carson, earthModelType=carson, rho (ohm)=100
+Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500, EarthResistivity=earth_carson
 Table WireSequenceConfiguration: mRID, WireConfiguration=wc_601, sequenceNumber, WireInfo
     wc_601_1, 1, wire_acsr_556_5
     wc_601_2, 2, wire_acsr_556_5
