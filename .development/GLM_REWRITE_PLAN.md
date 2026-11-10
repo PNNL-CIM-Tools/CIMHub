@@ -1,6 +1,6 @@
 # GridLAB-D rewrite on `.cimtbl`: importer wave plan
 
-**Status:** approved by the user 2026-11-09. **S0 built 2026-11-09, uncommitted** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09, uncommitted.** **S2 approved (S2-3 amended) and built 2026-11-09, uncommitted** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S3a (lines, switches) next. Branch `glm-importer` (worktree
+**Status:** approved by the user 2026-11-09. **S0 built 2026-11-09** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09.** **S2 approved (S2-3 amended) and built 2026-11-09** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S0-S2 committed (`3aa8e6d`). **S3a (lines, switches) approved and built 2026-11-09, uncommitted** (`CIMTBL_MAPPING.md` S3a; it amends GLM-10 and drops the section 7 `switch` row). S3b (transformers) next. Branch `glm-importer` (worktree
 `CIMHub-glm`, off `rc_1` at `d0901e7`). This wave is the **importer** (`glm_to_cim`). The exporter (`cim_to_glm` on
 the core getters) gets its own plan once the importer is done, as DSS S6 did.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (F3+, GridLAB-D). **Contract, shapes, spec format:** the
@@ -179,7 +179,7 @@ Every rule has a reader test (`tests/test_glm_reader.py`).
   per process (`_load_yaml`). `scripts/leak-gate.sh` excludes a worktree's `.git` file. Candidate for core: the
   `AUTHORITY` constant, now defined in three spokes.
 - **Deferred to their first consumer:** the `glm_default` helper (S1 or later, when a slice adds the first
-  annotation) and the phase code table (S3a).
+  annotation) and the phase code table (S3a; not needed: the line and switch phases are letter sets, S3a-3, S3a-7).
 
 ## 4. Slices
 
@@ -192,7 +192,7 @@ writes the stubs.
 | S0 | workspace member + seed (§0); reader (§3.4); `importer/topology.py` (`glm_network` on `cimtopology.core`); orchestrator `glm_to_cimtbl.py` with `MAPPING_ORDER`, master document, `GlmImporter(CimtblImporter)`, the expression guard; small decks vendored (§5) | **built 2026-11-09:** 28 of 29 decks read and 27 walk with every bus reached, the stops listed as deck defects (§3.5); the IEEE13_cdpsm master binds |
 | S1 | buses (`bus.cimtbl`: every root bus, BaseVoltage from the walk, GLM-1/4/5) and the swing source (`source.cimtbl`: substation / SWING buses, stiff default impedance, `BasePower`) | **built 2026-11-09 (CIMTBL_MAPPING.md S1):** every deck binds master + bus + source except the two listed deck defects; IEEE13_cdpsm bus and source goldens committed with the master's |
 | S2 | catalogs: overhead/underground/triplex conductors (`wire_info`), line_spacing (XYSpacing), line_configuration and triplex_line_configuration (geometry → WireConfiguration, z-matrix → PerLengthPhaseImpedance; GLM-11, GLM-12) | **built 2026-11-09 (CIMTBL_MAPPING.md S2):** every catalog binds on the 27 decks that bind S1; geometry stays geometry (distances as written) |
-| S3a | overhead/underground/triplex lines (ratings → OperationalLimitSet); switch, fuse, recloser (GLM-10) | all lines and switches bind |
+| S3a | overhead/underground/triplex lines (ratings → OperationalLimitSet); switch, fuse, recloser (GLM-10) | **built 2026-11-09 (CIMTBL_MAPPING.md S3a):** every line and switching device binds on the 27 decks that bind S2; each geometry line's phases are its spacing's positions |
 | S3b | transformer_configuration templates (3-phase by TankEnd, 1-phase, center-tap by lugs) and transformer instances (GLM-6) | every template binds; IEEE13_cdpsm's transformers equal the DSS importer's IEEE13_CDPSM golden in SI (GLM-16) |
 | S3c | regulator + regulator_configuration → `VoltageRegulator` + `RatioTapChanger` + `TapChangerControl` (GLM-7) | IEEE13_cdpsm's regulators equal the DSS golden's |
 | S4a | load, triplex_load, triplex_node power; capacitor + its control (GLM-8) | every load and capacitor binds; IEEE13_cdpsm loads/caps equal the DSS golden's |
@@ -229,7 +229,7 @@ Each item has a recommendation and the slice that needs it.
 | GLM-7 | Regulators | Follow DSS-13: equal-kV → `VoltageRegulator` (AutoTransformer). `control_level INDIVIDUAL` (or per-phase `tap_pos_X` that differ) → one 1-phase regulator per phase, each with its own `RatioTapChanger` + `TapChangerControl` (matches the three DSS units of IEEE 13); `BANK` → one gang unit, `ABCN` | S3c |
 | GLM-8 | Loads | Per-phase p/q: a `load` is one EnergyConsumer with an `EnergyConsumerPhase` per phase (GLM loads are unbalanced by construction). Constant-power components are copied (complex → p, q); constant-current and constant-impedance components and the `base_power` + fraction form give derived ZIP fractions per load, with one LoadResponseCharacteristic per distinct fraction set (as DSS-7's `exp_` rows). A `base_power_X` that names a schedule raises until its rule is set (taxonomy/transactive decks) | S4a |
 | GLM-9 | Swing source | **Decided 2026-11-09 (S1-2, S1-3):** `substation` and `bustype SWING` buses → `EnergySource`; voltage from `positive_sequence_voltage` / `voltage_A`; a stiff default impedance (|Z| = kV² / 10,000 MVA, X/R 10) so round trips work, since GridLAB-D's swing has none. `SWING_PQ` is ignored: a plain bus with a row comment, revisited if something breaks | S1 |
-| GLM-10 | Switches | switch → LoadBreakSwitch, fuse → Fuse (`current_limit` → `ratedCurrent`), recloser → Recloser, sectionalizer → Sectionalizer; `status` → `open`/`normalOpen`; per-phase `phase_X_state` that differ → per-phase rows. Reliability slots (`mean_replacement_time`, `retry_time`) untranscribed | S3a |
+| GLM-10 | Switches | **Amended in S3a (S3a-6, S3a-7, S3a-10):** `status` gives `open` and `normalOpen`; a per-phase state that differs from it raises (no deck has one, so no `SwitchPhase` rows); N is dropped from a switch's phases; `sectionalizer` is not mapped (cim18v17 has no class, no deck has one). Originally: switch → LoadBreakSwitch, fuse → Fuse (`current_limit` → `ratedCurrent`), recloser → Recloser, sectionalizer → Sectionalizer; `status` → `open`/`normalOpen`; per-phase `phase_X_state` that differ → per-phase rows. Reliability slots (`mean_replacement_time`, `retry_time`) untranscribed | S3a |
 | GLM-11 | Line configurations | **Amended in S2 (S2-9):** b derived from c (CIM has no capacitance on PhaseImpedanceData), rows compacted, and both forms on one record raise (GridLAB-D would use the matrix). Originally: a configuration with spacing + conductors is geometry (WireConfiguration); with `z11..z33` only, a `PerLengthPhaseImpedance` (`ohm/mi`, `c` in nF/mi verbatim). Both on one record: geometry, with the matrix untranscribed and noted (never substitute) | S2 |
 | GLM-12 | Triplex geometry | **Amended in S2 (S2-8):** a derived `ConductorDistanceSpacing` (D12 = d + 2t, D1N = d + t, `triplex_line.cpp`), not an XYSpacing; the z-matrix cross-check is dropped (no readable deck has one). Originally: GLM gives a triplex configuration as conductors + `insulation_thickness` + `diameter`, with no spacing object. Recommendation: an `XYSpacing` derived from those (named function, the GridLAB-D triplex formula cited), so it stays geometry; check it against the triplex z-matrix the Java exports carry for the same conductors | S2 |
 | GLM-13 | DER | `inverter` → `PowerElectronicsConnection` (`rated_power` is per phase in GLM: ratedS derived × phase count), nested `solar` → `PhotoVoltaicUnit`, `battery` → `BatteryUnit`. diesel_dg / windturb_dg: not mapped until a deck has one | S4b |
@@ -248,7 +248,7 @@ line's own set), D10 and D14 (no open delta in the decks, so it stays fail fast)
 |---|---|---|
 | core | `load` shape: per-phase `EnergyConsumerPhase` p/q rows (GLM-8) | S4a |
 | core | `shunt` shape: per-phase `LinearShuntCompensatorPhase` rows (`capacitor_A/B/C` differ by phase) | S4a |
-| core | `switch` shape: per-phase `SwitchPhase` states (GLM-10) | S3a, only for decks with per-phase states |
+| ~~core~~ | ~~`switch` shape: per-phase `SwitchPhase` states (GLM-10)~~ dropped in S3a (S3a-6): no deck has per-phase states, so they raise | — |
 | core | `source` shape: an ideal swing with zero impedance binds (GLM-9) | S1 |
 | core | `getters.spacing.get_spacing_distances` needs every conductor's height, which 224 GLM spacings and every triplex spacing lack; distances do not need heights, so the check belongs in `get_spacing_xy` (S2-2, S2-8) | the exporter wave's GLM round trip |
 | core | derived functions: LN→system kV (GLM-1), triplex spacing (GLM-12), ZIP fractions (GLM-8); each goes to `derived/` when a second spoke needs it, else stays in the spoke | S1, S2, S4a |

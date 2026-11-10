@@ -1,0 +1,55 @@
+# GridLAB-D overhead_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# Source table: overhead_line (records: 11)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ln_line_632633, line_632633, 632,  633, ABC, 500.0,  lc_lcon_mtx602_ABC, bv_4p16kv
+    ln_line_632645, line_632645, 632,  645, BC,  500.0,  lc_lcon_mtx603_CB,  bv_4p16kv
+    ln_line_632670, line_632670, mid,  670, ABC, 667.0,  lc_lcon_mtx601_ABC, bv_4p16kv
+    ln_line_645646, line_645646, 645,  646, BC,  300.0,  lc_lcon_mtx603_CB,  bv_4p16kv
+    ln_line_650632, line_650632, rg60, 632, ABC, 2000.0, lc_lcon_mtx601_ABC, bv_4p16kv
+    ln_line_670671, line_670671, 670,  671, ABC, 1333.0, lc_lcon_mtx601_ABC, bv_4p16kv
+    ln_line_671680, line_671680, 671,  680, ABC, 1000.0, lc_lcon_mtx601_ABC, bv_4p16kv
+    ln_line_671684, line_671684, 671,  684, AC,  300.0,  lc_lcon_mtx604_AC,  bv_4p16kv
+    ln_line_684611, line_684611, tap,  611, C,   300.0,  lc_lcon_mtx605_C,   bv_4p16kv
+    ln_line_684652, line_684652, 684,  652, A,   800.0,  lc_lcon_mtx607_A,   bv_4p16kv
+    ln_line_692675, line_692675, 692,  675, ABC, 500.0,  lc_lcon_mtx606_ABC, bv_4p16kv
+
+Table OperationalLimitSet: mRID, Equipment
+    ln_line_632633_limits, ln_line_632633
+    ln_line_632645_limits, ln_line_632645
+    ln_line_632670_limits, ln_line_632670
+    ln_line_645646_limits, ln_line_645646
+    ln_line_650632_limits, ln_line_650632
+    ln_line_670671_limits, ln_line_670671
+    ln_line_671680_limits, ln_line_671680
+    ln_line_671684_limits, ln_line_671684
+    ln_line_684611_limits, ln_line_684611
+    ln_line_684652_limits, ln_line_684652
+    ln_line_692675_limits, ln_line_692675
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_line_632633_norm,  340.0, olt_normal,    ln_line_632633_limits
+    ln_line_632633_emerg, 600.0, olt_emergency, ln_line_632633_limits
+    ln_line_632645_norm,  230.0, olt_normal,    ln_line_632645_limits
+    ln_line_632645_emerg, 600.0, olt_emergency, ln_line_632645_limits
+    ln_line_632670_norm,  730.0, olt_normal,    ln_line_632670_limits
+    ln_line_632670_emerg, 730.0, olt_emergency, ln_line_632670_limits
+    ln_line_645646_norm,  230.0, olt_normal,    ln_line_645646_limits
+    ln_line_645646_emerg, 600.0, olt_emergency, ln_line_645646_limits
+    ln_line_650632_norm,  730.0, olt_normal,    ln_line_650632_limits
+    ln_line_650632_emerg, 730.0, olt_emergency, ln_line_650632_limits
+    ln_line_670671_norm,  730.0, olt_normal,    ln_line_670671_limits
+    ln_line_670671_emerg, 730.0, olt_emergency, ln_line_670671_limits
+    ln_line_671680_norm,  730.0, olt_normal,    ln_line_671680_limits
+    ln_line_671680_emerg, 730.0, olt_emergency, ln_line_671680_limits
+    ln_line_671684_norm,  230.0, olt_normal,    ln_line_671684_limits
+    ln_line_671684_emerg, 600.0, olt_emergency, ln_line_671684_limits
+    ln_line_684611_norm,  230.0, olt_normal,    ln_line_684611_limits
+    ln_line_684611_emerg, 600.0, olt_emergency, ln_line_684611_limits
+    ln_line_684652_norm,  165.0, olt_normal,    ln_line_684652_limits
+    ln_line_684652_emerg, 600.0, olt_emergency, ln_line_684652_limits
+    ln_line_692675_norm,  260.0, olt_normal,    ln_line_692675_limits
+    ln_line_692675_emerg, 600.0, olt_emergency, ln_line_692675_limits

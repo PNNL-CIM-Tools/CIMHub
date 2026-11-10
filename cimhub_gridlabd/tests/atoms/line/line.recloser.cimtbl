@@ -1,0 +1,10 @@
+# GridLAB-D recloser -> Recloser.
+# Source table: recloser (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_line
+    # untranscribed (a phase it lacks): phase_A_state=CLOSED, phase_B_state=CLOSED
+    # untranscribed: operating_mode=INDIVIDUAL, retry_time=1.0, max_number_of_tries=3.0, number_of_tries=0.0
+    sw_recloser_1, recloser_1, n1, n10, C, false, false, bv_4p16kv

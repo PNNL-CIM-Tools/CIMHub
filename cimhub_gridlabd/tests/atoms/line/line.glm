@@ -1,0 +1,99 @@
+// S3a atom: every line and switch form, on the S2 catalog atom (its catalogs, src, n1 and the ABCN line l1).
+// Values from IEEE13_cdpsm, IEEE13_assets (the Java exports) and the taxonomy feeders.
+#include "../catalog/catalog.glm"
+
+object node { name n2; phases ABCN; nominal_voltage 2401.78; }
+object node { name n3; parent n2; phases ABCN; nominal_voltage 2401.78; }
+object node { name n4; phases ACN; nominal_voltage 2401.78; }
+object node { name n5; phases AN; nominal_voltage 2401.78; }
+object node { name n6; phases AN; nominal_voltage 2401.78; }
+object node { name n7; phases AN; nominal_voltage 2401.78; }
+object node { name n8; phases CN; nominal_voltage 2401.78; }
+object node { name n9; phases AN; nominal_voltage 2401.78; }
+object node { name n10; phases CN; nominal_voltage 2401.78; }
+
+// a switch with N (dropped) and its own ratings, the Java export's 400/600 A
+object switch {
+  name "swt_s1";
+  from "n1";
+  to "n2";
+  phases ABCN;
+  status CLOSED;
+  continuous_rating_A 400.00;
+  continuous_rating_B 400.00;
+  continuous_rating_C 400.00;
+  emergency_rating_A 600.00;
+  emergency_rating_B 600.00;
+  emergency_rating_C 600.00;
+}
+// a matrix line written CA, with its own ratings on the phases it has
+object overhead_line {
+  name "line_l2";
+  from "n1";
+  to "n4";
+  phases CA;
+  length 300.0000;
+  continuous_rating_A 230.00;
+  continuous_rating_C 230.00;
+  emergency_rating_A 600.00;
+  emergency_rating_C 600.00;
+  configuration "lcon_mtx604_AC";
+}
+// a taxonomy geometry line by alias, with an inline length unit
+object overhead_line:3 { phases AN; from n1; to n5; length 21.0 m; configuration line_configuration:18; }
+// an underground line from a child node (it lands on n2)
+object underground_line {
+  name "line_u1";
+  from "n3";
+  to "n6";
+  phases AN;
+  length 800.0000;
+  continuous_rating_A 165.00;
+  emergency_rating_A 247.50;
+  configuration "lcon_607";
+}
+object switch { name swt_s2; from n5; to n7; phases A; status OPEN; }
+object fuse { name fuse_1; phases CN; from n4; to n8; mean_replacement_time 3600; current_limit 50000; status CLOSED; }
+object fuse { name fuse_2; phases AN; from n5; to n9; status CLOSED; }
+object recloser {
+  name recloser_1;
+  phases CN;
+  from n1;
+  to n10;
+  status CLOSED;
+  operating_mode INDIVIDUAL;
+  phase_A_state CLOSED;
+  phase_B_state CLOSED;
+  phase_C_state CLOSED;
+  retry_time 1.0 s;
+  max_number_of_tries 3;
+  number_of_tries 0;
+}
+
+// a center tap (mapped in S3b; the walk needs it) and two triplex lines, one on a rated configuration
+object transformer_configuration {
+  name xc_ct;
+  connect_type SINGLE_PHASE_CENTER_TAPPED;
+  install_type POLETOP;
+  primary_voltage 2401.78;
+  secondary_voltage 120.0;
+  power_rating 25.0;
+  powerA_rating 25.0;
+  impedance 0.006+0.0136j;
+}
+object transformer { name xf_ct; phases AS; from n5; to tn1; configuration xc_ct; }
+object triplex_node { name tn1; phases AS; nominal_voltage 120; }
+object triplex_meter { name tm1; phases AS; nominal_voltage 120; }
+object triplex_meter { name tm2; phases AS; nominal_voltage 120; }
+object triplex_line_configuration {
+  name tc_rated;
+  conductor_1 triplex_4/0 AA;
+  conductor_2 triplex_4/0 AA;
+  conductor_N triplex_4/0 AA;
+  insulation_thickness 0.08;
+  diameter 0.522;
+  rating.summer.continuous 1200.0;
+  rating.summer.emergency 1200.0;
+}
+object triplex_line { name tl_1; phases AS; from tn1; to tm1; length 30; configuration triplex_line_configuration:1; }
+object triplex_line { name tl_2; phases AS; from tn1; to tm2; length 30; configuration tc_rated; }

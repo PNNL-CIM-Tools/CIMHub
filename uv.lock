@@ -198,21 +198,22 @@ wheels = [
 
 [[package]]
 name = "cim-builder"
-version = "0.0.1a0"
+version = "0.1.0"
 source = { editable = "../CIM-Builder" }
 dependencies = [
     { name = "cim-tables" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "graphviz", marker = "extra == 'dev'", specifier = ">=0.19.1" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.27.1" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=2.17.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
+requires-dist = [{ name = "cim-tables", editable = "../CIM-Tables" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "graphviz", specifier = ">=0.19.1" },
+    { name = "ipykernel", specifier = ">=6.27.1" },
+    { name = "pre-commit", specifier = ">=2.17.0" },
+    { name = "pytest", specifier = ">=8.3.5" },
 ]
-provides-extras = ["dev"]
 
 [[package]]
 name = "cim-graph"
@@ -286,20 +287,28 @@ dev = [{ name = "pytest", specifier = ">=8.3.5" }]
 
 [[package]]
 name = "cim-topology"
-version = "0.0.1a0"
+version = "0.1.0"
 source = { editable = "../CIM-Graph-Topology-Processor" }
 dependencies = [
     { name = "cim-graph" },
+    { name = "cim-profiles" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cim-graph", specifier = ">=0.4.3a0" },
+    { name = "cim-graph", editable = "../CIM-Graph" },
+    { name = "cim-profiles", editable = "../CIM-Profiles" },
     { name = "gridappsd-python", marker = "extra == 'gridappsd'" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.25.1" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=2.17.0" },
 ]
-provides-extras = ["gridappsd", "dev"]
+provides-extras = ["gridappsd"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "ipykernel", specifier = ">=6.25.1" },
+    { name = "pre-commit", specifier = ">=2.17.0" },
+    { name = "pytest", specifier = ">=8.3.5" },
+]
 
 [[package]]
 name = "cimhub"

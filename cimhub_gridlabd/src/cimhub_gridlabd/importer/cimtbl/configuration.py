@@ -82,13 +82,35 @@ def _is_set(record, slots) -> list[str]:
     return [slot for slot in slots if getattr(record, slot) is not None]
 
 
+def conductor_letters(configuration) -> str:
+    """The ``conductor_X`` letters a line_configuration sets, in ABCN order (its positions, S2-3)."""
+    return "".join(letter for letter in "ABCN" if getattr(configuration, f"conductor_{letter}") is not None)
+
+
+def diagonal_letters(configuration) -> str:
+    """The phases whose ``z_ii`` a matrix line_configuration sets, in ABC order (its compacted rows, S2-9)."""
+    return "".join(_LETTER[i] for i in _INDEX if getattr(configuration, f"z{i}{i}") is not None)
+
+
+def is_matrix(configuration) -> bool:
+    """A line_configuration given by z (and c) values, not by spacing and conductors (S2-9)."""
+    return bool(_is_set(configuration, Z_SLOTS + C_SLOTS))
+
+
+def template(configuration) -> tuple[str, str]:
+    """``(ACLineSegment column, mRID)`` of the template a line on ``configuration`` references (S3a-2)."""
+    if isinstance(configuration, schema.LineConfiguration) and is_matrix(configuration):
+        return "PerLengthImpedance", mrid(MATRIX_PREFIX, configuration.name)
+    return _WIRE, mrid(GEOMETRY_PREFIX, configuration.name)
+
+
 # ---------------------------------------------------------------------------
 # line_configuration: geometry
 # ---------------------------------------------------------------------------
 
 def _geometry(model: GlmModel, configuration) -> list:
     spacing = referenced(model, configuration, "spacing", (schema.LineSpacing,))
-    letters = "".join(letter for letter in "ABCN" if getattr(configuration, f"conductor_{letter}") is not None)
+    letters = conductor_letters(configuration)
     spaced = spacing_part.phases(spacing)
     if spaced and spaced != letters:
         raise ValueError(f"{label(configuration)}: its conductors {letters} are not the phases {spaced} its "

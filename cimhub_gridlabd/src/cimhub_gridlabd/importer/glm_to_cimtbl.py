@@ -21,7 +21,7 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import bus, conductor, configuration, spacing
+from cimhub_gridlabd.importer.cimtbl import bus, conductor, configuration, line, spacing, switch
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -52,11 +52,16 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     (schema.LineSpacing, lambda model, site: spacing.map_line_spacing(model)),
     (schema.LineConfiguration, lambda model, site: configuration.map_line_configuration(model, site.base_frequency)),
     (schema.TriplexLineConfiguration, lambda model, site: configuration.map_triplex_line_configuration(model)),
+    *((native_class, lambda model, site, native_class=native_class:
+       line.map_lines(model, native_class, site.roots, site.buses, site.feeder)) for native_class, _, _ in line.LINES),
+    *((native_class, lambda model, site, native_class=native_class:
+       switch.map_switches(model, native_class, site.roots, site.buses, site.feeder))
+      for native_class, _, _ in switch.SWITCHES),
 )
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
 CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, schema.LineSpacing: spacing.FIELDS,
-                                            **configuration.FIELDS}
+                                            **configuration.FIELDS, **line.FIELDS, **switch.FIELDS}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:

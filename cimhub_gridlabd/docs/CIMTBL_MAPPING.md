@@ -8,7 +8,8 @@ its README).
 ## Artifact files and order
 
 The master imports the parts in `MAPPING_ORDER` (`importer/glm_to_cimtbl.py`), which follows the plan's section 2.
-S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 (draft) the six catalog files (below).
+S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 the six catalog files; S3a the six line and switch
+files (below).
 
 ## master
 
@@ -1220,3 +1221,317 @@ that check moved to `get_spacing_xy`. Plan section 7.
 | `conductor_2` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | WireSequenceConfiguration 2 (spacing phase s2); required |
 | `insulation_thickness` | `Optional[float]` | `0.08` | derived | see diameter |
 | `diameter` | `Optional[float]` | `0.368`, `0.522` | derived | the spacing's distances (triplex_spacing): D12 = diameter + 2 insulation_thickness, D1N = D2N = diameter + insulation_thickness |
+
+## S3a: lines and switches (approved 2026-11-09)
+
+S3a maps the branches that are not transformers or regulators: the three line classes and the switching devices,
+six artifacts, one per native table (D4), in the plan's section 2 order (rows 8 and 9). Counts are from the 28
+readable decks (IEEE123_transactive stops at read); samples from the decks named. GridLAB-D citations are to the C++
+source (`powerflow/`).
+
+| # | artifact | native class (records) | CIM | mRID |
+|---|---|---|---|---|
+| 8 | `overhead_line.cimtbl` | overhead_line (7,306) | `ACLineSegment`: by `WireConfiguration` (7,176) or `PerLengthPhaseImpedance` (130) | `ln_<name>` |
+| 8 | `underground_line.cimtbl` | underground_line (4,278) | `ACLineSegment` by `WireConfiguration` (4,245 CN, 33 TS) | `ln_<name>` |
+| 8 | `triplex_line.cimtbl` | triplex_line (7,507) | `ACLineSegment` by `WireConfiguration`, phases `s1s2N` | `ln_<name>` |
+| 9 | `switch.cimtbl` | switch (580) | `LoadBreakSwitch` | `sw_<name>` |
+| 9 | `fuse.cimtbl` | fuse (1,599) | `Fuse` | `sw_<name>` |
+| 9 | `recloser.cimtbl` | recloser (35) | `Recloser` | `sw_<name>` |
+
+Shapes: `line_by_wire_configuration`, `line_by_impedance` (ratings on the instance), `switch`. No shape change.
+
+**Identity (S3a-1):** prefix + the GLM name in source case, as S2. The three line classes share `ln_` and the
+switching devices share `sw_` (the `switch` shape's rule, so a class change keeps the mRID); GLM names are unique
+across a model, so nothing collides. Limits: `<mRID>_limits`, `<mRID>_norm`, `<mRID>_emerg`, as DSS.
+
+**Ends:** `node1` = `from`, `node2` = `to`, each the root bus of its object (GLM-4): 30 lines and switches start on
+a child node (15 underground lines, 10 switches, 4 overhead lines, 1 recloser), which GridLAB-D solves as its root.
+`BaseVoltage` is the walk's at `node1`; `EquipmentContainer` the feeder.
+
+### Lines
+
+```
+# IEEE13_cdpsm: a matrix configuration; GLM phases are a set, so CB is written in ABC order
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ln_line_632645, line_632645, 632, 645, BC, 500.0, lc_lcon_mtx603_CB, bv_4p16kv
+Table OperationalLimitSet: mRID, Equipment
+    ln_line_632645_limits, ln_line_632645
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_line_632645_norm,  230.0, olt_normal,    ln_line_632645_limits
+    ln_line_632645_emerg, 600.0, olt_emergency, ln_line_632645_limits
+
+# orig_R1-12.47-3: geometry; ACLineSegmentPhase A, C, N are 1, 2, 3, the positions of its spacing (S2-3)
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_orig_R1-12.47-3
+    ln_R1-12-47-3_ol_2, R1-12-47-3_ol_2, R1-12-47-3_node_4, R1-12-47-3_node_5, ACN, 68.936, wc_line_configuration:19, bv_12p47kv
+
+# triplex: s1, s2, N are 1, 2, 3, the derived spacing's positions (S2-8)
+    ln_R1-12-47-3_tl_1, R1-12-47-3_tl_1, R1-12-47-3_tn_1, R1-12-47-3_tm_1, s1s2N, 30.0, wc_triplex_line_configuration:1, bv_240v  # phases BS
+```
+
+| GLM slot | kind | target |
+|---|---|---|
+| `name` | copied | `ACLineSegment.name`; mRID = `ln_` + name |
+| `from`, `to` | structural | `node1`, `node2`: the root bus (GLM-4) |
+| `phases` | structural | the `phases` cell, which numbers the ACLineSegmentPhases 1..n in written order (S3a-3) |
+| `configuration` | structural | `WireConfiguration = wc_<configuration>` (geometry, triplex) or `PerLengthImpedance = lc_<configuration>` (matrix), by the configuration's form (S2-9) |
+| `length` | copied | `length`, in its written unit (ft in every deck); unset raises (GridLAB-D's `create()` 0 is a line of no impedance) |
+| `continuous_rating_A`/`_B`/`_C` | structural | the normal `CurrentLimit` of the line's own `OperationalLimitSet` (S3a-4) |
+| `emergency_rating_A`/`_B`/`_C` | structural | the emergency `CurrentLimit` of that set |
+| `status` | structural | unset or `CLOSED`; `OPEN` raises (a line is not a switch; the walk already raises) |
+| `nominal_voltage` | untranscribed | the walk gives the BaseVoltage (GLM-1); no deck sets it on a link |
+| `mean_repair_time` | untranscribed | reliability data |
+| `power_*`, `current_*`, `fault_*`, `overloaded_status`, `flow_direction`, `triplex_neutral_*_value`, `condition`, `solution` | untranscribed | solver outputs and state |
+| `pdispatch`, `pdispatch_offset`, `set_pdispatch` | untranscribed | dispatch control, no network-profile home |
+| `inrush_*` | untranscribed | inrush solver settings |
+| object header (`parent`, `groupid`, `latitude`, `longitude`, `in_svc`, `out_svc`, `rank`, `flags`) | untranscribed | no deck sets them on a link; listed per row when set |
+
+### Switches, fuses, reclosers
+
+```
+# IEEE123: a balanced 3-phase device leaves phases blank (shape switch); GLM has one state, so normalOpen = open
+Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_IEEE123
+    sw_swt_sw7, swt_sw7, 151, 300, , true, true, bv_4p16kv
+    sw_swt_sw8, swt_sw8, 54,  94,  A, true, true, bv_4p16kv
+# IEEE13_cdpsm
+Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    sw_swt_fuse1, swt_fuse1, 633, xf1, , 100.0, false, false, bv_4p16kv
+```
+
+| GLM slot | kind | target |
+|---|---|---|
+| `name`, `from`, `to` | copied, structural | as lines; mRID = `sw_` + name |
+| `phases` | structural | the phase conductors, N dropped (S3a-7); `ABC` blank (`phases_cell`) |
+| `status` | structural | `open` and `normalOpen` (`OPEN` = true), S3a-6 |
+| `phase_A_state`/`_B_`/`_C_` (switch, recloser) | structural | on the device's phases must equal `status`, else raises (S3a-6); on a phase it lacks, untranscribed (the recloser default `CLOSED` the taxonomy writes on all three) |
+| `operating_mode` | untranscribed | with every phase state equal to `status`, BANKED and INDIVIDUAL operate the same (`switch_object.cpp:308`) |
+| `phase_A_status`/`_B_`/`_C_` (fuse) | structural | unset or `GOOD`; `BLOWN` raises (S3a-6); no deck sets them |
+| `current_limit` (fuse) | copied | `Fuse.ratedCurrent (A)` (S3a-8); unset: GridLAB-D's 9999 A (`fuse.cpp:119`, "big current") is not filled, and the row says so |
+| `continuous_rating_X`, `emergency_rating_X` | structural | the device's own `OperationalLimitSet`, as lines (S3a-5) |
+| `switch_resistance`, `switch_reactance`, `switch_impedance`, `fuse_resistance` | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8); none set |
+| `mean_replacement_time`, `repair_dist_type` (fuse), `mean_repair_time` | untranscribed | reliability data |
+| `retry_time`, `max_number_of_tries` (recloser) | untranscribed | protection settings; home `RecloseSequence`, which waits for the protection model as DSS-11 (U15) |
+| `number_of_tries` (recloser) | untranscribed | state |
+| the link outputs, dispatch, inrush and header slots | untranscribed | as lines |
+
+### Fail fast (S3a)
+
+| condition | why |
+|---|---|
+| a line without `configuration` or `length`, or with a configuration of the wrong class (a triplex configuration on an overhead line) | `overhead_line.cpp:96`, `:103` throw |
+| an overhead line on underground conductors or the reverse; an underground line whose phase cables are not one kind | `overhead_line.cpp:923`, `underground_line.cpp:149` throw; none in the decks |
+| a geometry line whose phases are not its configuration's conductors (`ACN` on an `A C N` configuration), or a matrix line whose phases are not its diagonal | the positions must agree (S2-3); GridLAB-D throws on a missing conductor (`test_phases`). All 11,584 agree |
+| a matrix line with `N`, `D` on any line, `S` on a non-triplex line, a triplex line not `AS`/`BS`/`CS`, or a triplex line whose ends the walk does not put on a split-phase system | none in the decks |
+| per-phase ratings that differ; a line's own rating and its configuration's that differ | one limit set per line; none in the decks |
+| a switch or recloser phase state that differs from `status` on a phase it has; a `BLOWN` fuse phase | per-phase state needs `SwitchPhase` rows; none in the decks (S3a-6) |
+| `status OPEN` on a line, an end that is no bus object | the walk raises (S0) |
+
+### Decisions for S3a
+
+| # | question | decision |
+|---|---|---|
+| S3a-1 | Files and identity | **approved:** The six artifacts above; `ln_` for every line class, `sw_` for every switching device, source case |
+| S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give `WireConfiguration`, a matrix gives `PerLengthImpedance`. The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
+| S3a-3 | Line phases | **approved:** The line's letters in ABC order then N (GLM `phases` is a set: `CB` is `BC`, so matrix row 1 is B, as S2-9 compacts it). It must equal the configuration's conductors (geometry) or diagonal (matrix), so ACLineSegmentPhase k is spacing position k. A triplex line is `s1s2N` whatever its letter (`AS`, `BS`, `CS`): CIM puts the primary phase on the center-tap transformer (S3b); the letter must match its end buses' |
+| S3a-4 | Line ratings | **approved:** **The line's own `continuous_rating_X`/`emergency_rating_X`, as written, on its own `OperationalLimitSet` (D9);** else its configuration's `rating.summer.*` (only `triplex_line_configuration:1` of orig_R5-35.00-1, 1200 A, 192 lines); else none. Conductor ratings stay on the WireInfo (S2-7) and are not copied, and GridLAB-D's 1000/2000 A defaults are never filled. Only the three Java exports rate lines (140 lines, always equal across phases). **Note:** GridLAB-D itself replaces a line's written ratings at init, with its conductors' (a running minimum over A, B, C) or, on a matrix configuration, the configuration's (`overhead_line.cpp:133`). The written values are the deck's statement (the Java exports wrote the CIM source's line limits: IEEE13_assets 730/1095 A on 730/730 A conductors), so they are kept. The alternative is to write the engine's effective rating and leave the written ones untranscribed |
+| S3a-5 | Switch ratings | **approved:** The same rule as lines: the device's own set (IEEE13_cdpsm, IEEE13_assets, IEEE123: 400/600 A on 12 switches, the fuse and the recloser). GridLAB-D reads no rating on a switch (`link.cpp:681` checks limits on lines and transformers only), and the DSS import drops a switch's ratings as stand-ins (DSS-8), so the alternative is untranscribed |
+| S3a-6 | Switch state | **approved:** `status` gives `open`, and `normalOpen` the same (GLM has one state; DSS's rule when no `Normal` is given). Per-phase states that differ raise instead of writing `SwitchPhase` rows: no deck has one (every recloser writes `CLOSED` on all three, status `CLOSED`), so plan section 7's core `switch` per-phase dependency is dropped until a deck needs it. 2 switches are open (IEEE123 `swt_sw7`, `swt_sw8`) |
+| S3a-7 | Switch phases | **approved:** The phase conductors, N dropped: GridLAB-D's switch, fuse and recloser have no neutral element, and CIM's `SwitchPhase` is a switched conductor (the DSS import writes none). 568 of 580 switches and 1,598 of 1,599 fuses write N |
+| S3a-8 | Fuse rating | **approved:** `current_limit` copied to `ratedCurrent` as written: 1,598 taxonomy fuses write 50000 A (`// 10000` in a trailing comment), a fuse that never blows; IEEE13_cdpsm's is 100 A, as the DSS import |
+| S3a-9 | Recloser | **approved:** `Recloser`; its reclosing settings untranscribed until the protection model lands (DSS-11, U15) |
+| S3a-10 | Sectionalizer (GLM-10, amended) | **approved:** **Not mapped:** cim18v17 has no `Sectionalizer` class and no deck has one, so it stays on the master's not-mapped list (GLM-14) |
+| S3a-11 | Field tables | **approved:** Generated from the mappers' `FIELDS` with `fields_table` once built, as S2-10 |
+
+**Expected differences from the DSS import of IEEE13 (GLM-16):** mRIDs and names carry the Java prefixes
+(`ln_line_632645`, `sw_swt_fuse1` vs `ln_632645`, `sw_fuse1`), so the comparison matches by connected nodes. The
+`CB` lines are `BC` (DSS writes bus order, `645.3.2`): the same impedance per phase in another row order. The lines
+carry an emergency limit (600 A, DSS's default `emergamps` the Java export wrote), which the DSS import does not
+fill. With S3a-5, the switches carry 400/600 A limits that the DSS import drops. `swt_brkr1` is a
+`LoadBreakSwitch` in both (the Java export's `// CIM Breaker` is a comment, which the reader does not keep).
+
+### Built (2026-11-09)
+
+- `importer/cimtbl/link.py` (the link slots and their untranscribed groups, `classify`, `ends`, `link_ratings`,
+  `Limits`), `line.py` (`map_lines`, `LINES`), `switch.py` (`map_switches`, `SWITCHES`), wired into
+  `MAPPING_ORDER` and `CLASSIFIED`. `configuration.py` gains `conductor_letters`, `diagonal_letters`, `is_matrix`
+  and `template`, which the line mapper reads.
+- The schema derives `triplex_line_configuration` from `line_configuration`, so a line's configuration class is
+  checked exactly (a triplex configuration on an overhead line raises, as `overhead_line.cpp:103`).
+- The S1 atoms' line `l1` now has a configuration (a 3-phase matrix) and phases `ABC`: GridLAB-D needs one, and S3a
+  maps the line. Their bus and source goldens are unchanged.
+- Atom `tests/atoms/line/line.glm` (on the S2 catalog atom by `#include`: a matrix line written `CA`, a taxonomy
+  geometry line in metres, an underground line from a child node, two triplex lines, one on a rated
+  configuration, a switch with N and ratings, an open switch, a fuse with and without `current_limit`, a 1-phase
+  recloser with three phase states) with one golden per part; goldens `tests/goldens/IEEE13_cdpsm/overhead_line`,
+  `switch`, `fuse`, `recloser`; `tests/test_cimtbl_line.py` (classification, the atom bound and read back, 11
+  fail-fast cases, and a sweep that counts every line and switching device and checks, on every geometry line,
+  that ACLineSegmentPhase k is its spacing's position k).
+- Every deck that binds S2 binds S3a: 27 of 29, the same two deck defects; 19,091 segments, 580 switches, 1,599
+  fuses, 35 reclosers.
+
+### Field tables (generated: `fields_table(cls, records, fields=...)`, samples from tests/decks and the atom)
+
+Every link class also has these untranscribed groups, left out of the tables: the object header (`parent`,
+`groupid`, `latitude`, `longitude`, `in_svc`, `out_svc`, `rank`, `flags`; no deck sets them on a link), solver
+outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overloaded_status`, `flow_direction`,
+`triplex_neutral_*_value`, `condition`, `solution`) and inrush solver settings (`inrush_*`).
+
+#### overhead_line
+
+| OverheadLine field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, OverheadLineName]` | `line_632633`, `line_632645`, `line_632670` | copied | `ACLineSegment.name`; mRID = ln_ + name |
+| `phases` | `Optional[str]` | `ABC`, `CB`, `AC` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
+| `from_node` | `Optional[str]` | `632`, `mid`, `645` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `633`, `645`, `670` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `340.0`, `730.0`, `230.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `340.0`, `230.0`, `730.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `340.0`, `230.0`, `730.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
+| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
+
+
+#### underground_line
+
+| UndergroundLine field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, UndergroundLineName]` | `line_684652`, `line_692675`, `GC-12-47-1_ul_1` | copied | `ACLineSegment.name`; mRID = ln_ + name |
+| `phases` | `Optional[str]` | `AN`, `ABC`, `ABCN` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
+| `from_node` | `Optional[str]` | `684`, `692`, `GC-12-47-1_node_5` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `652`, `675`, `GC-12-47-1_node_6` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `165.0`, `260.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `260.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `260.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `247.5`, `390.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
+| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `length` | `Optional[float]` | `800.0`, `500.0`, `340.889` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
+
+
+#### triplex_line
+
+| TriplexLine field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, TriplexLineName]` | `R1-12-47-3_tl_1`, `tl_1`, `tl_2` | copied | `ACLineSegment.name`; mRID = ln_ + name |
+| `phases` | `Optional[str]` | `BS`, `AS` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
+| `from_node` | `Optional[str]` | `R1-12-47-3_tn_1`, `tn1` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `R1-12-47-3_tm_1`, `tm1`, `tm2` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` |  | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` |  | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` |  | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
+| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `length` | `Optional[float]` | `30.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
+
+
+#### switch
+
+| Switch field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, SwitchName]` | `swt_671692`, `swt_brkr1`, `swt_sect1` | copied | `LoadBreakSwitch.name`; mRID = sw_ + name |
+| `phases` | `Optional[str]` | `ABC`, `C`, `A` | structural | the switched conductors A, B, C, N dropped; ABC is blank (S3a-7) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` | `CLOSED`, `OPEN` | structural | open and normalOpen (OPEN = true); unset: GridLAB-D's CLOSED, defaulted (S3a-6) |
+| `from_node` | `Optional[str]` | `671`, `650`, `684` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `692`, `brkr`, `tap` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `phase_A_state` | `Optional[str]` |  | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `phase_B_state` | `Optional[str]` |  | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `phase_C_state` | `Optional[str]` |  | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `operating_mode` | `Optional[str]` |  | untranscribed | with every phase state equal to status, BANKED and INDIVIDUAL operate the same (switch_object.cpp:308) |
+| `switch_impedance` | `Union[dict, Complex, NoneType]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+| `switch_resistance` | `Optional[float]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+| `switch_reactance` | `Optional[float]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+
+
+#### fuse
+
+| Fuse field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, FuseName]` | `swt_fuse1`, `GC-12-47-1_fuse_1`, `GC-12-47-1_fuse_2` | copied | `Fuse.name`; mRID = sw_ + name |
+| `phases` | `Optional[str]` | `ABC`, `ABCN`, `AN` | structural | the switched conductors A, B, C, N dropped; ABC is blank (S3a-7) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` | `CLOSED` | structural | open and normalOpen (OPEN = true); unset: GridLAB-D's CLOSED, defaulted (S3a-6) |
+| `from_node` | `Optional[str]` | `633`, `GC-12-47-1_node_11`, `GC-12-47-1_node_16` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `xf1`, `GC-12-47-1_node_12`, `GC-12-47-1_node_15` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `phase_A_status` | `Optional[str]` |  | structural | unset or GOOD; BLOWN raises on a phase the fuse has (S3a-6) |
+| `phase_B_status` | `Optional[str]` |  | structural | unset or GOOD; BLOWN raises on a phase the fuse has (S3a-6) |
+| `phase_C_status` | `Optional[str]` |  | structural | unset or GOOD; BLOWN raises on a phase the fuse has (S3a-6) |
+| `repair_dist_type` | `Optional[str]` |  | untranscribed | reliability data |
+| `current_limit` | `Optional[float]` | `100.0`, `50000.0` | copied | `Fuse.ratedCurrent` ({unit}); S3a-8; unset: GridLAB-D's 9999 A (fuse.cpp:119) is not filled, the row says so |
+| `mean_replacement_time` | `Optional[float]` | `3600.0`, `1000.0` | untranscribed | reliability data |
+| `fuse_resistance` | `Optional[float]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+
+
+#### recloser
+
+| Recloser field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, RecloserName]` | `swt_rec1`, `recloser_1` | copied | `Recloser.name`; mRID = sw_ + name |
+| `phases` | `Optional[str]` | `ABC`, `CN` | structural | the switched conductors A, B, C, N dropped; ABC is blank (S3a-7) |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` | `CLOSED` | structural | open and normalOpen (OPEN = true); unset: GridLAB-D's CLOSED, defaulted (S3a-6) |
+| `from_node` | `Optional[str]` | `632`, `n1` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `mid`, `n10` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `600.0` | structural | the emergency CurrentLimit of that set |
+| `phase_A_state` | `Optional[str]` | `CLOSED` | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `phase_B_state` | `Optional[str]` | `CLOSED` | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `phase_C_state` | `Optional[str]` | `CLOSED` | structural | on the device's phases must equal status, else raises (S3a-6); on a phase it lacks, listed on the row |
+| `operating_mode` | `Optional[str]` | `INDIVIDUAL` | untranscribed | with every phase state equal to status, BANKED and INDIVIDUAL operate the same (switch_object.cpp:308) |
+| `switch_impedance` | `Union[dict, Complex, NoneType]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+| `switch_resistance` | `Optional[float]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+| `switch_reactance` | `Optional[float]` |  | untranscribed | GridLAB-D's numerical stand-in for a closed device (as DSS-8) |
+| `retry_time` | `Optional[float]` | `1.0` | untranscribed | protection setting; home RecloseSequence, which waits for the protection model (DSS-11, U15) |
+| `max_number_of_tries` | `Optional[float]` | `3.0` | untranscribed | protection setting; see retry_time |
+| `number_of_tries` | `Optional[float]` | `0.0` | untranscribed | state |

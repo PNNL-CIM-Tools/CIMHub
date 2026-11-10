@@ -1,0 +1,11 @@
+# GridLAB-D fuse -> Fuse.
+# Source table: fuse (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_line
+    # untranscribed: mean_replacement_time=3600.0
+    sw_fuse_1, fuse_1, n4, n8, C, 50000.0, false, false, bv_4p16kv
+    # not filled (S3a-8): current_limit
+    sw_fuse_2, fuse_2, n5, n9, A, ,        false, false, bv_4p16kv
