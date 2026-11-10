@@ -1,10 +1,15 @@
-"""SynchronousMachine -> OpenDSS ``Generator`` (``EXPORT_MAPPING.md#generator``).
+"""SynchronousMachine, and PowerElectronicsWindUnit behind a PowerElectronicsConnection -> OpenDSS ``Generator``
+(``EXPORT_MAPPING.md#generator``).
 
 kW and kvar are the machine's output (generation sign: -p, -q), written kW first so that kvar is the engine's at
 that kW (S4b-8). A machine whose enabled control regulates the voltage of its own terminal is model 3 (a PV bus):
 ``Vpu`` = target / ratedU, ``Maxkvar``/``Minkvar`` its q limits. Any other is model 1: DSS has no disabled PV bus,
 so a disabled control is not written. CIM has no machine reactance (U13), so ``Xd``,
 ``Xdp``, ``Xdpp`` and ``H`` come back at the engine's defaults. ``earthing`` false is delta (S4b-5).
+
+A wind turbine behind an inverter is a model 1 Generator at the unit's output (``inverter.inverter_pieces``): DSS has
+no inverter wind class, and IEEE 9500 writes its turbines as Generators. The inverter's q limits and ``maxIFault``
+have no home on a model 1 Generator, so they are not written. The deck reads back as a SynchronousMachine.
 """
 
 from __future__ import annotations
@@ -17,11 +22,14 @@ from cimhub_core.getters.der import get_der_output, get_machine_rating
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_opendss.exporter.controls import control_enabled
 from cimhub_opendss.exporter.injection import device_connection, rated_kv
+from cimhub_opendss.exporter.inverter import inverter_pieces
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.SynchronousMachine,)
+#: the inverter unit a Generator stands for; its PowerElectronicsConnection is pvsystem's CIM class
+WIND_UNIT = cim.PowerElectronicsWindUnit
 NATIVE_CLASS = schema.Generator
 NAMESPACE = "Generator"
 #: earthing -> the PhaseShuntConnectionKind it stands for (SynchronousMachine has no phaseConnection, S4b-5)
@@ -29,12 +37,13 @@ CONNECTION = {True: cim.PhaseShuntConnectionKind.Y, False: cim.PhaseShuntConnect
 
 _NOT_IN_CIM = "untranscribed or raising on import; not in CIM"
 SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
-    "name": Slot("written", "Names, the Generator namespace"),
+    "name": Slot("written", "Names, the Generator namespace; a wind unit as inverter_pieces names it"),
     "phases": Slot("written", "the phase conductors; a delta across two is 1"),
     "bus1": Slot("written", "bus_ref of the phase conductors; a wye machine's neutral is node 0"),
     "kv": Slot("written", "ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted)"),
-    "kW": Slot("written", "get_der_output total p (kW, generation sign)"),
-    "kvar": Slot("written", "get_der_output total q (kVAr, generation sign), after kW"),
+    "kW": Slot("written", "get_der_output total p (kW, generation sign); a wind unit: its share of the "
+                          "connection's p (inverter_pieces)"),
+    "kvar": Slot("written", "get_der_output total q (kVAr, generation sign), after kW; a wind unit: its share of q"),
     "pf": Slot("not mapped", "kvar carries q"),
     "model": Slot("written", "3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 "
                              "(ConstantPQ); model 7 comes back as 1"),
@@ -42,7 +51,7 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "Vpu": Slot("written", "model 3: the control's target / ratedU"),
     "maxkvar": Slot("written", "model 3: maxQ (kVAr); unset -> not written"),
     "minkvar": Slot("written", "model 3: minQ (kVAr); unset -> not written"),
-    "kVA": Slot("written", "ratedS (kVA)"),
+    "kVA": Slot("written", "ratedS (kVA); a wind unit: its share of the inverter's ratedS"),
     "MVA": Slot("not mapped", "kVA carries ratedS"),
     **{slot: Slot("unset", "no machine reactance or inertia in cim18v17 (U13); the engine's default")
        for slot in ("Xd", "Xdp", "Xdpp", "H", "D", "XRdp")},
@@ -52,8 +61,11 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 
 
 def export(context) -> list[schema.Generator]:
-    """One Generator per SynchronousMachine."""
-    return [_generator(machine, context.names) for machine in context.objects(*CIM_CLASSES)]
+    """One Generator per SynchronousMachine, then one per PowerElectronicsWindUnit."""
+    machines = [_generator(machine, context.names) for machine in context.objects(*CIM_CLASSES)]
+    turbines = [_wind_generator(piece) for connection in context.objects(cim.PowerElectronicsConnection)
+                for piece in inverter_pieces(connection, WIND_UNIT, NAMESPACE, context.names)]
+    return machines + turbines
 
 
 def regulates_itself(machine: cim.SynchronousMachine) -> bool:
@@ -74,6 +86,12 @@ def _generator(machine: cim.SynchronousMachine, names: Names) -> schema.Generato
     if machine.RegulatingControl is not None:
         slots.update(_pv_bus(machine, rating))
     return NATIVE_CLASS(**slots)
+
+
+def _wind_generator(piece) -> schema.Generator:
+    """Model 1 at the unit's output, on the inverter's bus, voltage and kVA share."""
+    placed = {slot: piece.slots[slot] for slot in ("bus1", "phases", "conn", "kv", "kVA", "enabled")}
+    return NATIVE_CLASS(name=piece.name, kW=piece.p, kvar=piece.q, model="ConstantPQ", **placed)
 
 
 def _pv_bus(machine: cim.SynchronousMachine, rating) -> dict:

@@ -12,19 +12,31 @@ from cimhub_opendss.schema import opendss_schema as schema
 
 
 def options_record(network, names: Names, open_terminals: list[str]) -> schema.Options:
-    """``circuit`` = the one Feeder's name, ``defaultbasefreq`` = the network's base frequency (Hz), ``voltagebases``
+    """``circuit`` = ``circuit_name``, ``defaultbasefreq`` = the network's base frequency (Hz), ``voltagebases``
     = the distinct BaseVoltage nominal voltages (kV), ascending, ``earthmodel`` the WireConfigurations' earth
     model (``earth_model``), and the switches' ``open_terminals`` (``Class.name terminal``)."""
-    feeders = list(network.graph.get(cim.Feeder, {}).values())
-    if len(feeders) != 1:
-        raise ValueError(f"the model has {len(feeders)} Feeders; a DSS deck is one circuit, so one is exported")
     bases = {get_qty(base, "nominalVoltage", "kV") for base in network.graph.get(cim.BaseVoltage, {}).values()}
     if None in bases:
         raise ValueError("a BaseVoltage has no nominalVoltage")
-    return schema.Options(name="options", circuit=names.name(feeders[0], "Circuit"),
+    return schema.Options(name="options", circuit=circuit_name(network, names),
                           defaultbasefreq=network.base_frequency.to("Hz"), voltagebases=sorted(bases),
                           earthmodel=earth_model(network),
                           open_terminals=open_terminals or None)
+
+
+def circuit_name(network, names: Names) -> str:
+    """The one Feeder's name. Several Feeders are one circuit (one deck per substation) when they share one
+    NormalEnergizingSubstation, named by it. No Feeder, or several without one Substation, raises."""
+    feeders = list(network.graph.get(cim.Feeder, {}).values())
+    if len(feeders) == 1:
+        return names.name(feeders[0], "Circuit")
+    substations = {feeder.NormalEnergizingSubstation for feeder in feeders}
+    if len(substations) != 1 or None in substations:
+        shown = sorted(describe(feeder) for feeder in feeders)
+        raise ValueError(f"the model has {len(feeders)} Feeders {shown}; a DSS deck is one circuit: one Feeder, or "
+                         f"Feeders of one NormalEnergizingSubstation")
+    [substation] = substations
+    return names.name(substation, "Circuit")
 
 
 #: EarthModelKind -> the DSS earthmodel

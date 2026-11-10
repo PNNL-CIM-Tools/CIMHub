@@ -50,7 +50,9 @@ cimhub_opendss/src/cimhub_opendss/exporter/
   - It records the name per DSS class, lowercased. A second object on the same name raises, naming both mRIDs.
     Buses (ConnectivityNodes) are one namespace of their own.
 - **The circuit:**
-  - Its name is the one Feeder's, by the same switch. No Feeder, or several, raises.
+  - Its name is the one Feeder's, by the same switch. Several Feeders are one circuit (one deck per substation)
+    when every one has the same `NormalEnergizingSubstation`, and the Substation names it. No Feeder, or several
+    without one Substation, raises.
   - Its source's Vsource is always named `source`, whatever the switch: that is DSS's name for `New Circuit`'s
     source (the reader's rule).
   - The circuit source is the only EnergySource, or the one whose exported name is `circuit_source` (E2). Several
@@ -297,8 +299,8 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
 ### LineGeometry (B2)
 
 - **One record per (WireConfiguration, spacingYOffset)** among the lines (E3). It is named
-  `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m, `.` written as
-  `p`).
+  `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
+  mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
   default).
 - **Positions:**
@@ -549,7 +551,7 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise ('.' as 'p') |
+| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p') |
 | nconds | written | the spacing's positions |
 | nphases | written | WireConfiguration.numberOfPhases, required; position kinds phase then neutral |
 | cond | not mapped | the writer folds wires/xs/hs into cond= blocks |
@@ -686,7 +688,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Normal | written | get_switch_state(which='normal'); written only when open in either state; one value per phase (the engine sets a fuse per phase) |
 | State | written | get_switch_state(which='actual'); written only when open in either state; one value per phase (the engine sets a fuse per phase) |
 | basefreq | unset | no home on a Switch (untranscribed on import) |
-| enabled | unset | no home on a Switch (untranscribed on import) |
+| enabled | rule | no: no trip settings or curve in CIM yet (U15), so the engine's defaults would trip it (V7) |
 | like | not mapped | the writer never writes like= |
 
 **Recloser** (`exporter/switch.py`)
@@ -719,7 +721,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Normal | written | get_switch_state(which='normal'); written only when open in either state |
 | State | written | get_switch_state(which='actual'); written only when open in either state |
 | basefreq | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
-| enabled | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| enabled | rule | no: no trip settings or curve in CIM yet (U15), so the engine's defaults would trip it (V7) |
 | like | not mapped | the writer never writes like= |
 
 **Swtcontrol** (`exporter/switch.py`)
@@ -774,6 +776,7 @@ One DSS Transformer per unit of `get_transformer_units` (T4). Every value comes 
 | BY_ENDS (`PowerTransformer`, balanced ends) | inline, `phases=3` | `ratedU` (LL), `ratedS` | `%imag`/`%noloadloss` = the core's b/g |
 | BY_PHASE_ENDS (a tank's own windings) | inline, `phases=1` | `baseU`, `baseS` (the coil) | the tank's `%imag`/`%noloadloss` |
 | BY_TANK_ENDS, BY_LUGS (a `TankConfiguration`) | the configuration's XfmrCode; the instance writes `XfmrCode=`, `buses` and `enabled` | (on the code) | |
+| BY_TANK_IMPEDANCE (two ends and each tank's `percentImpedance`, a GIS's cans) | inline, `phases` 1 or 3; a center-tap end (s1s2N, kind I) is two halves on one bus; a bank is one 1-phase Transformer per can (T4), in tank order (GETTERS_PLAN bank rules) | a coil: `ratedU` derived to the coil (V2), each half `ratedU`/2 at the can's kVA; 3-phase `ratedU`, `ratedS` | `%Rs` and `X**` from %Z and loadLoss (Hopkinson's split on a center tap); the tank's `%imag`/`%noloadloss` |
 | AUTO (`AutoTransformer`, `VoltageRegulator`) | inline, `phases` 1 or 3 (DSS has no AutoTrans mapping here, DSS-11) | `baseU` (the deck's kV, LL on a 3-phase gang unit: an AutoTransformerEnd has no `ratedU`), `ratedS` | no core |
 
 - **kVA on a coil is `baseS`.** A center-tap half is written at the can's kVA (25 for a 25 kVA can), as every deck
@@ -1448,6 +1451,10 @@ Each piece's inverter slots:
   raises. Model 7 comes back as model 1 (CIM has no current limit; listed).
 - `Xd`, `Xdp`, `Xdpp`, `H`, `D`, `XRdp` are unset: cim18v17 has no machine reactance or inertia (U13), so they
   take the engine's defaults (E4).
+- **A PowerElectronicsWindUnit** (user, 2026-11-09, for a GIS spoke) is a model 1 Generator at the unit's output:
+  `inverter_pieces` gives its name, bus, `kv`, its share of the inverter's `kVA`, and its share of p and q. DSS has
+  no inverter wind class, and IEEE 9500 writes its turbines as Generators. The inverter's q limits and `maxIFault`
+  have no home on a model 1 Generator and are not written. The deck reads back as a SynchronousMachine.
 
 ### Reactor (P8)
 
@@ -1648,13 +1655,13 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names, the Generator namespace |
+| name | written | Names, the Generator namespace; a wind unit as inverter_pieces names it |
 | phases | written | the phase conductors; a delta across two is 1 |
 | bus1 | written | bus_ref of the phase conductors; a wye machine's neutral is node 0 |
 | kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
-| kW | written | get_der_output total p (kW, generation sign) |
+| kW | written | get_der_output total p (kW, generation sign); a wind unit: its share of the connection's p (inverter_pieces) |
 | pf | not mapped | kvar carries q |
-| kvar | written | get_der_output total q (kVAr, generation sign), after kW |
+| kvar | written | get_der_output total q (kVAr, generation sign), after kW; a wind unit: its share of q |
 | model | written | 3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1 |
 | Vminpu | unset | untranscribed or raising on import; not in CIM |
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
@@ -1671,7 +1678,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | minkvar | written | model 3: minQ (kVAr); unset -> not written |
 | pvfactor | unset | untranscribed or raising on import; not in CIM |
 | forceon | unset | untranscribed or raising on import; not in CIM |
-| kVA | written | ratedS (kVA) |
+| kVA | written | ratedS (kVA); a wind unit: its share of the inverter's ratedS |
 | MVA | not mapped | kVA carries ratedS |
 | Xd | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
 | Xdp | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
@@ -1824,6 +1831,13 @@ exporter now writes 1 on a 1-phase winding; the re-import then monitors B, the s
   (DSS-11's protection TODO). In a controls-on solve of the exported IEEE13_CDPSM, `Recloser.Rec1` trips at the
   engine's 1 A default, recloses and locks out after 7 control iterations. Parity runs controls off, so protection
   does not act there.
+- **Protection controls are written disabled (V7, the user's rule 2026-11-09, until U15).** Every Fuse and Recloser
+  control gets `enabled=no`, keeping `RatedCurrent`, `Shots`, `RecloseIntervals` and its states. Without CIM trip
+  settings or curves, the engine's defaults locked out a GIS spoke's feeders behind their head reclosers on the
+  first snapshot. A fuse blew under backfeed. The switch Line stays as CIM says, and an open switch is still opened
+  by its `Open` command (E6). The importer reads a disabled control back as the same Fuse or Recloser (its `enabled`
+  is untranscribed). The engine comparisons treat the original's controls as disabled (`engine_compare.as_exported`).
+  Once U15 maps the settings, a device that has them is written enabled (`switch.PROTECTION_ENABLED`).
 - **Controls on is fragile for parity (F2).** From the same starting state, IEEE9500's `vreg3_a` ends on tap 3 in the
   original and 4 in the export: the 0.095 % differences tip one band decision. IEEE13_CDPSM's deck itself ends in
   `Set Controlmode=OFF` with taps set by hand.

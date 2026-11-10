@@ -168,6 +168,19 @@ def test_geometry_name_at_offset_zero_is_the_configuration():
     assert (geometry_name(configuration, 0.0, names), geometry_name(configuration, 9.144, names)) == ("x", "x_9p144m")
 
 
+def test_geometry_name_rounds_the_offset_to_the_mm():
+    configuration = cim.WireConfiguration(mRID="wc_x", name="x")
+    assert geometry_name(configuration, 10.363199999999999, Names("name")) == "x_10p363m"
+
+
+def test_two_offsets_within_a_mm_raise():
+    network = _network("geometry")
+    _object(network, cim.ACLineSegment, "g_m").spacingYOffset = cim.Length(1.5, "m")
+    _object(network, cim.ACLineSegment, "g601").spacingYOffset = cim.Length(1.5002, "m")
+    with pytest.raises(ValueError, match="share one LineGeometry name"):
+        _model(network)
+
+
 def test_geometry_neutral_is_reduced_and_off_the_bus():
     model = _model(_network("geometry"))
     assert _record(model, schema.Linegeometry, "601").reduce is True

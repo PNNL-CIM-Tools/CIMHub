@@ -14,7 +14,8 @@ from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import compile_deck, deck
-from engine_compare import assert_same_engine_state, assert_same_settings, engine_buses, engine_settings
+from engine_compare import (DISABLED_BUSES, as_exported, assert_same_engine_state, assert_same_settings, engine_buses,
+                            engine_settings)
 from export_atoms import assert_matches_dss_golden, bus_names, export_atom, export_network
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -128,6 +129,7 @@ def test_deck_exports_the_same_elements_and_settings(relative, tmp_path):
     reordered, not_mapped = DECKS[relative]
     renamed = _switch_control_names(original)
     buses = {renamed.get(name, name): value for name, value in engine_buses(original).items() if name not in not_mapped}
+    buses = as_exported(buses, DISABLED_BUSES)
     written_buses = engine_buses(written)
     assert written_buses.keys() <= buses.keys()
     # E6: a switch closed in both states gets no SwtControl (IEEE9500 has one on every switch)
@@ -232,10 +234,10 @@ def test_unequal_phases_give_one_inverter_per_phase():
 def test_unit_of_no_dss_class_raises():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
-    wind = cim.PowerElectronicsWindUnit(mRID="wind", maxP=cim.ActivePower(100, "kW"),
-                                        PowerElectronicsConnection=connection)
-    connection.PowerElectronicsUnit.append(wind)
-    with pytest.raises(ValueError, match=r"units \[\"PowerElectronicsWindUnit 'wind'\"\] have no DSS class"):
+    thermal = cim.PowerElectronicsThermalUnit(mRID="thermal", maxP=cim.ActivePower(100, "kW"),
+                                              PowerElectronicsConnection=connection)
+    connection.PowerElectronicsUnit.append(thermal)
+    with pytest.raises(ValueError, match=r"units \[\"PowerElectronicsThermalUnit 'thermal'\"\] have no DSS class"):
         _model(network)
 
 

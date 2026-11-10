@@ -23,11 +23,14 @@ CIM_CLASSES = (cim.WireConfiguration,)
 NATIVE_CLASS = schema.Linegeometry
 NAMESPACE = "LineGeometry"
 UNIT = "m"  # B1
+#: a name carries the offset to the mm (10p363m), so two offsets of one configuration must differ by more
+NAME_DECIMALS = 3
 
 _BLOCKS = "the writer folds wires/xs/hs into cond= blocks"
 _NOT_IN_CIM = "not in CIM (untranscribed on import)"
 SLOTS = {NATIVE_CLASS: {
-    "name": Slot("written", "Names; <configuration> at offset 0, <configuration>_<offset>m otherwise ('.' as 'p')"),
+    "name": Slot("written", "Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm "
+                            "('.' as 'p')"),
     "nconds": Slot("written", "the spacing's positions"),
     "nphases": Slot("written", "WireConfiguration.numberOfPhases, required; position kinds phase then neutral"),
     "cond": Slot("not mapped", _BLOCKS), "wire": Slot("not mapped", _BLOCKS),
@@ -58,7 +61,7 @@ def line_offset(line: cim.ACLineSegment) -> float:
 
 def geometry_name(configuration: cim.WireConfiguration, offset: float, names: Names) -> str:
     """The DSS name of ``configuration`` at ``offset`` (m), as its record and every Line write it."""
-    suffix = "" if offset == 0 else f"_{offset!r}m".replace(".", "p")
+    suffix = "" if offset == 0 else f"_{round(offset, NAME_DECIMALS)!r}m".replace(".", "p")
     return names.name(configuration, NAMESPACE, suffix=suffix)
 
 
@@ -68,6 +71,7 @@ def export(context) -> list[schema.Linegeometry]:
     for line in context.objects(cim.ACLineSegment):
         if line.WireConfiguration is not None:
             first_line.setdefault((line.WireConfiguration, line_offset(line)), line)
+    _check_names_differ(first_line)
     records = []
     for (configuration, offset), line in first_line.items():
         positions = get_line_conductor_xy(line, UNIT)
@@ -80,6 +84,17 @@ def export(context) -> list[schema.Linegeometry]:
             positions = get_spacing_xy(configuration.WireSpacing, UNIT)
             records.append(_geometry(configuration, 0.0, positions, context.names))
     return records
+
+
+def _check_names_differ(first_line: dict) -> None:
+    """Two offsets of one configuration that round to one name raise, naming both lines."""
+    named = {}
+    for (configuration, offset), line in first_line.items():
+        key = (configuration, round(offset, NAME_DECIMALS))
+        if key in named:
+            raise ValueError(f"{describe(named[key])} and {describe(line)}: {describe(configuration)} at "
+                             f"spacingYOffset {offset} m and one within a mm of it share one LineGeometry name")
+        named[key] = line
 
 
 def _geometry(configuration: cim.WireConfiguration, offset: float, positions, names: Names) -> schema.Linegeometry:

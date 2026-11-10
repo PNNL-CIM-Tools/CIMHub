@@ -6,6 +6,11 @@ resistive. Both of CIM's states go back (E6): ``normalOpen`` -> the control's ``
 an ``Open Line.<name> 1`` command. A switch that is not a Fuse or Recloser gets a SwtControl only when it is open in
 either state. The class is lossy on the way back: every class but Fuse and Recloser comes back a LoadBreakSwitch
 (DSS-9).
+
+A Fuse or Recloser control is written disabled (V7, the user's rule until U15): cim18v17 has no home for its trip
+settings or curve, so the engine's defaults (a ~1 A recloser pickup, the default fuse curve) would trip it on the first
+snapshot and black out what is behind it. Disabled, it leaves its switch as CIM says, and the importer reads it back
+as the same Fuse or Recloser (a control's ``enabled`` is untranscribed).
 """
 
 from __future__ import annotations
@@ -37,6 +42,9 @@ _STATE = {
 _FUSE_STATE = {name: Slot(slot.kind, slot.note + "; one value per phase (the engine sets a fuse per phase)")
                for name, slot in _STATE.items()}
 _PROTECTION = "protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default"
+#: V7: a protective control is disabled until U15 gives its trip settings and curve a home
+PROTECTION_ENABLED = False
+_DISABLED = Slot("rule", "no: no trip settings or curve in CIM yet (U15), so the engine's defaults would trip it (V7)")
 _NO_HOME = "no home on a Switch (untranscribed on import)"
 
 
@@ -59,6 +67,7 @@ SLOTS = {
         "RatedCurrent": Slot("written", "Switch.ratedCurrent (A)"),
         "FuseCurve": Slot("unset", _PROTECTION),
         **_FUSE_STATE,
+        "enabled": _DISABLED,
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", _NO_HOME)),
     schema.Recloser: with_default(schema.Recloser, {
@@ -69,6 +78,7 @@ SLOTS = {
         "RecloseIntervals": Slot("written", "each RecloseSequence's recloseDelay (s), in recloseStep order; none -> "
                                             "not written"),
         **_STATE,
+        "enabled": _DISABLED,
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", _PROTECTION)),
     schema.Swtcontrol: with_default(schema.Swtcontrol, {
@@ -119,11 +129,11 @@ def _control(switch: cim.Switch, names: Names):
         phases = len(get_conductor_phases(switch))
         per_phase = {slot: [word] * phases for slot, word in state.items()}
         return schema.Fuse(name=names.name(switch, "Fuse"), MonitoredObj=target,
-                           RatedCurrent=get_qty(switch, "ratedCurrent", "A"), **per_phase)
+                           RatedCurrent=get_qty(switch, "ratedCurrent", "A"), enabled=PROTECTION_ENABLED, **per_phase)
     if isinstance(switch, cim.Recloser):
         delays = get_reclose_delays(switch)
         return schema.Recloser(name=names.name(switch, "Recloser"), MonitoredObj=target, Shots=len(delays) + 1,
-                               RecloseIntervals=list(delays) or None, **state)
+                               RecloseIntervals=list(delays) or None, enabled=PROTECTION_ENABLED, **state)
     if isinstance(switch, cim.ProtectedSwitch) and switch.RecloseSequences:
         raise ValueError(f"{describe(switch)}: RecloseSequences on a {type(switch).__name__}; only a DSS Recloser "
                          f"recloses here (a Relay's reclosing is not mapped, DSS-11)")

@@ -90,8 +90,9 @@ def winding_buses(unit_model: UnitModel, names: Names) -> list[str]:
 
 
 def winding_kv(unit_model: UnitModel, winding: Winding) -> float:
-    """A coil's ``baseU``, a 3-phase winding's ``ratedU`` (LL), in kV; an AutoTransformerEnd has only ``baseU`` (the
-    deck's kV, LL on a 3-phase unit)."""
+    """A coil's ``baseU`` (a PowerTransformerEnd's is derived from its ``ratedU``, ``get_transformer_model``), a
+    3-phase winding's ``ratedU`` (LL), in kV; an AutoTransformerEnd has only ``baseU`` (the deck's kV, LL on a 3-phase
+    unit)."""
     by_rating = unit_model.three_phase and unit_model.model.form is not TransformerForm.AUTO
     attribute = "ratedU" if by_rating else "baseU"
     value = winding.rated_u if by_rating else winding.base_u
