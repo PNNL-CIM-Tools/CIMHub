@@ -113,7 +113,7 @@ def export(regulator: cim.VoltageRegulator, context: ExportContext) -> Distribut
         coupling_sequences=[SequencePair(from_index=0, to_index=1)], winding_reactances=[impedance.x],
         is_center_tapped=False)
     return DistributionRegulator(
-        name=context.names.name(regulator, DistributionRegulator),
+        **context.names.own(regulator),
         buses=[context.gdm(end_node(winding.end)) for winding in model.windings],
         winding_phases=[winding_phases(winding, part) for winding, part in zip(model.windings, windings)],
         tap_positions=[[tap_ratio(winding.end)] for winding in model.windings],
@@ -139,7 +139,7 @@ def regulator_equipment(regulator, tap: cim.RatioTapChanger, equipment, context:
     info = tap.AssetDatasheet
     if isinstance(info, cim.TapChangerInfo):
         return shared_equipment(context, info, equipment)
-    return equipment.model_copy(update={"name": context.names.name(regulator, DistributionTransformerEquipment)})
+    return equipment.model_copy(update=context.names.part(regulator, DistributionTransformerEquipment))
 
 
 def controller(regulator, tap: cim.RatioTapChanger, tapped_winding: int, phase: cim.SinglePhaseKind,
@@ -173,7 +173,7 @@ def controller(regulator, tap: cim.RatioTapChanger, tapped_winding: int, phase: 
 
     steps = get_tap_steps(tap)
     return RegulatorController(
-        name=context.names.name(regulator, RegulatorController),
+        **context.names.part(regulator, RegulatorController),
         tapped_winding=tapped_winding,
         delay=None if settings.initial_delay is None else Time(settings.initial_delay, "second"),
         v_setpoint=secondary(control.target),

@@ -33,8 +33,8 @@ DITTO_UNWRITTEN = ((gdm_atoms.MatrixImpedanceSwitch, "brk"), (gdm_atoms.MatrixIm
 ORIGINAL_UNWRITTEN = (*DITTO_UNWRITTEN, (gdm_atoms.DistributionTransformer, "t_ln"))
 VOLTAGE_TOL_PU = 1e-4  # ditto writes BasekV with 1.732 for sqrt(3)
 
-FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_loads,
-            gdm_atoms.add_transformers)
+FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_reactors,
+            gdm_atoms.add_loads, gdm_atoms.add_transformers)
 
 def _remove(system, component) -> None:
     """``component`` and the inline parts of its equipment, which the cascade leaves behind."""

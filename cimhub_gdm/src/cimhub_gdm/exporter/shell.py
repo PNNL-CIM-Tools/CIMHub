@@ -27,6 +27,6 @@ SLOTS = {
 def export(obj, context: ExportContext):
     names = context.names
     if isinstance(obj, cim.Feeder):
-        return DistributionFeeder(name=names.name(obj, DistributionFeeder))
+        return DistributionFeeder(**names.own(obj))
     feeders = sorted((context.gdm(feeder) for feeder in obj.NormalEnergizedFeeder), key=lambda feeder: feeder.name)
-    return DistributionSubstation(name=names.name(obj, DistributionSubstation), feeders=feeders)
+    return DistributionSubstation(**names.own(obj), feeders=feeders)

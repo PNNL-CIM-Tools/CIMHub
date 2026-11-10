@@ -1,5 +1,7 @@
 """The exporter's framework: slot coverage, naming, the system name, fail-fast rules (EXPORT_MAPPING.md)."""
 
+from uuid import UUID, uuid5
+
 import cimtables
 import gdm_atoms
 import pytest
@@ -35,11 +37,24 @@ def test_names_follow_the_shared_switch():
         "src_src_C"
 
 
-def test_two_buses_on_one_name_raise():
+def test_two_buses_may_share_a_name():
+    """Names are free text; the uuid tells them apart."""
     network = _source_network()
     _node(network, "b2").name = "b1"
-    with pytest.raises(ValueError, match="both named 'b1' in GDM DistributionBus"):
-        GdmExporter().to_model(network, name_source="name", system_name="atom")
+    system = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    assert len(system.list_components_by_name(gdm_atoms.DistributionBus, "b1")) == 2
+
+
+def test_a_component_is_identified_by_its_cim_uri():
+    """A component takes its CIM object's uri(); a part, a uuid5 of its owner's on its class and suffix."""
+    network = _source_network()
+    [source] = network.graph[network.cim.EnergySource].values()
+    system = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    exported = system.get_component(gdm_atoms.DistributionVoltageSource, source.name)
+    assert exported.uuid == UUID(source.uri())
+    assert exported.equipment.sources[0].uuid == uuid5(UUID(source.uri()), "PhaseVoltageSourceEquipment_A")
+    assert {bus.uuid for bus in system.get_components(gdm_atoms.DistributionBus)} == \
+        {UUID(node.uri()) for node in network.graph[network.cim.ConnectivityNode].values()}
 
 
 def test_several_feeders_need_a_system_name():
@@ -142,10 +157,46 @@ def test_an_unnamed_inverter_is_shared():
     assert roof.inverter is roof2.inverter and roof.inverter.name == ""
 
 
+def test_a_hybrid_inverter_is_one_der_per_unit():
+    """pv_house with home's battery behind its inverter: each unit takes its maxP share (5 of 10 kW) of the 4 kW, the
+    q and the 6 kVA rating, and is named and identified by its unit; the two halves share one inverter."""
+    network = _golden("der", "der")
+    cim = network.cim
+    house, home = _named(network, cim.PowerElectronicsConnection, "house"), _named(network, cim.BatteryUnit, "home")
+    connections = network.graph[cim.PowerElectronicsConnection]
+    network.graph[cim.PowerElectronicsConnection] = {key: connection for key, connection in connections.items()
+                                                     if connection is not home.PowerElectronicsConnection}
+    home.PowerElectronicsConnection = house
+    house.PowerElectronicsUnit.append(home)
+    exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    pv = exported.get_component(gdm_atoms.DistributionSolar, "house")
+    battery = exported.get_component(gdm_atoms.DistributionBattery, "home")
+    pv_unit = house.PowerElectronicsUnit[0]
+    assert (pv.uuid, battery.uuid) == (UUID(pv_unit.uri()), UUID(home.uri()))
+    assert [der.active_power.to("kilowatt").magnitude for der in (pv, battery)] == pytest.approx([2, 2])
+    assert pv.irradiance.to("kilowatt / meter ** 2").magnitude == pytest.approx(0.4)
+    assert pv.inverter is battery.inverter
+    assert pv.inverter.rated_apparent_power.to("kilova").magnitude == pytest.approx(3)
+
+
 def test_a_battery_rated_differently_each_way_raises():
     network = _golden("der", "der")
     _named(network, network.cim.BatteryUnit, "ess").minP = network.cim.ActivePower(-100, "kW")
     with pytest.raises(ValueError, match="minP -100.0 kW is not the negative of maxP 250.0 kW"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")
+
+
+def test_a_coupled_reactor_raises():
+    network = _golden("reactor", "reactors")
+    _named(network, network.cim.SeriesCompensator, "rx3").x0 = network.cim.Reactance(30, "ohm")
+    with pytest.raises(ValueError, match="x0 30.0 ohm differ from r 0.0, x 14.8 ohm"):
+        GdmExporter().to_model(network, name_source="name", system_name="atom")
+
+
+def test_a_reactor_with_a_varistor_raises():
+    network = _golden("reactor", "reactors")
+    _named(network, network.cim.SeriesCompensator, "r1").varistorPresent = True
+    with pytest.raises(ValueError, match="has a varistor"):
         GdmExporter().to_model(network, name_source="name", system_name="atom")
 
 

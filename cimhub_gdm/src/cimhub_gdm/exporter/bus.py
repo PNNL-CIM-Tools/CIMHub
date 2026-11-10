@@ -44,7 +44,7 @@ SLOTS = {
 def export(node: cim.ConnectivityNode, context: ExportContext) -> DistributionBus:
     phases = bus_phases(node)
     return DistributionBus(
-        name=context.names.name(node, DistributionBus),
+        **context.names.own(node),
         rated_voltage=Voltage(line_to_ground(node, phases), "kilovolt"),
         voltage_type=VoltageTypes.LINE_TO_GROUND,
         phases=phases,

@@ -37,4 +37,6 @@ def slots_table(slots: dict[str, Slot]) -> str:
     return "\n".join(rows)
 
 
-UUID = Slot("unset", "GDM makes a fresh one; the importer never copies it either")
+UUID = Slot("written", "the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part "
+                       "with no CIM object of its own: a uuid5 of its owner's, on its class and suffix "
+                       "(Names.part)")

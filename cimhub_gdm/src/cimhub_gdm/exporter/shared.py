@@ -85,23 +85,26 @@ def containers(container, context: ExportContext) -> dict:
     raise ValueError(f"{describe(container)}: no GDM feeder or substation for this container class")
 
 
-def shared_equipment(context: ExportContext, catalog, equipment):
+def shared_equipment(context: ExportContext, catalog, equipment, *, unnamed: str | None = None):
     """The shared GDM equipment of the CIM ``catalog`` with ``equipment``'s values (decision X3).
 
     GDM puts some instance values on its equipment (a line's ampacity, a transformer's taps), so one GDM equipment is
-    made per (catalog, values): the first is named ``<catalog>``, each later one ``<catalog>_<n>``, in export order.
-    ``equipment`` is built with any name; an equal one already made is returned instead.
+    made per (catalog, values): the first is named ``<catalog>`` and identified by its uri() (``Names.own``), each
+    later one ``<catalog>_<n>``, a part of it (``Names.part``), in export order. ``equipment`` is built with any name
+    and uuid; an equal one already made is returned instead. ``unnamed`` names a catalog with no name (``Names``).
     """
-    key = (catalog.uri(), shared_values(equipment))
+    key = (catalog.uri(), _values(equipment))
     if key not in context.catalogs:
         variant = 1 + sum(1 for catalog_uri, _ in context.catalogs if catalog_uri == catalog.uri())
         suffix = "" if variant == 1 else f"_{variant}"
-        name = context.names.name(catalog, type(equipment), suffix=suffix)
-        context.catalogs[key] = equipment.model_copy(update={"name": name})
+        names = context.names
+        identity = (names.own(catalog, unnamed=unnamed) if variant == 1
+                    else names.part(catalog, type(equipment), suffix=suffix, unnamed=unnamed))
+        context.catalogs[key] = equipment.model_copy(update=identity)
     return context.catalogs[key]
 
 
-def shared_values(equipment) -> str:
+def _values(equipment) -> str:
     """Every field of ``equipment`` but its name and the uuids, as comparable text."""
     def without_uuids(value):
         if isinstance(value, dict):

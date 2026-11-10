@@ -67,7 +67,7 @@ def export(consumer: cim.EnergyConsumer, context: ExportContext) -> Distribution
     model = load_model(consumer, context)
     phases = gdm_phases(loads.phases, consumer)
     phase_loads = [
-        PhaseLoadEquipment(name=names.name(consumer, PhaseLoadEquipment, suffix=f"_{phase.value}"),
+        PhaseLoadEquipment(**names.part(consumer, PhaseLoadEquipment, suffix=f"_{phase.value}"),
                            real_power=ActivePower(loads.per_phase[conductor].p, "kilowatt"),
                            reactive_power=ReactivePower(loads.per_phase[conductor].q, "kilovar"),
                            num_customers=consumer.customerCount, **model)
@@ -75,10 +75,10 @@ def export(consumer: cim.EnergyConsumer, context: ExportContext) -> Distribution
     ]
     [node] = get_terminal_nodes(consumer)
     return DistributionLoad(
-        name=names.name(consumer, DistributionLoad),
+        **names.own(consumer),
         bus=context.gdm(node),
         phases=phases,
-        equipment=LoadEquipment(name=names.name(consumer, LoadEquipment), phase_loads=phase_loads,
+        equipment=LoadEquipment(**names.part(consumer, LoadEquipment), phase_loads=phase_loads,
                                 connection_type=connection_type(loads.connection, consumer)),
         in_service=in_service(consumer),
         **containers(consumer.EquipmentContainer, context),

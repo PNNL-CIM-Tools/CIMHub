@@ -137,7 +137,7 @@ def export(switch: cim.Switch, context: ExportContext):
     mixed = len(set(is_open)) > 1
 
     equipment = {
-        "name": names.name(switch, equipment_class),
+        **names.part(switch, equipment_class),
         "ampacity": Current(required_qty(switch, "ratedCurrent", "A"), "ampere"),
         **context.fill(f"{equipment_class.__name__}.r_matrix, x_matrix, c_matrix", fills.switch_matrices(len(phases))),
     }
@@ -146,7 +146,7 @@ def export(switch: cim.Switch, context: ExportContext):
             raise ValueError(f"{describe(switch)}: its normal state differs from its actual one, and GDM "
                              f"{equipment_class.__name__} holds no switch controller")
         equipment["controller"] = DistributionSwitchController(
-            name=names.name(switch, DistributionSwitchController), normal_state=NORMAL_STATE[normal_open],
+            **names.part(switch, DistributionSwitchController), normal_state=NORMAL_STATE[normal_open],
             delay=context.fill("DistributionSwitchController.delay", fills.SWITCH_CONTROLLER_DELAY),
             is_locked=context.fill("DistributionSwitchController.is_locked", fills.SWITCH_CONTROLLER_LOCKED))
     if equipment_class is CircuitBreakerEquipment:
@@ -156,16 +156,16 @@ def export(switch: cim.Switch, context: ExportContext):
         equipment |= {
             "delay": context.fill("MatrixImpedanceFuseEquipment.delay", fills.FUSE_DELAY),
             "tcc_curve": context.fill("MatrixImpedanceFuseEquipment.tcc_curve", fills.fuse_curve(
-                names.name(switch, TimeCurrentCurve, suffix="_tcc_placeholder"))),
+                names.part(switch, TimeCurrentCurve, suffix="_tcc_placeholder"))),
         }
 
     component = {}
     if component_class is MatrixImpedanceRecloser:
         component["controller"] = context.fill("MatrixImpedanceRecloser.controller", fills.recloser_controller(
-            names.name(switch, DistributionRecloserController, suffix="_ctrl_placeholder")))
+            names, switch, suffix="_ctrl_placeholder"))
     node1, node2 = get_terminal_nodes(switch)
     return component_class(
-        name=names.name(switch, component_class),
+        **names.own(switch),
         buses=[context.gdm(node1), context.gdm(node2)],
         phases=gdm_phases(phases, switch),
         is_closed=[not phase_open for phase_open in is_open],

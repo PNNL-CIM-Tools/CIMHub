@@ -1,8 +1,8 @@
 """Export every importer golden and import it again: the same golden (EXPORT_PLAN.md §4, the CIM fixed point).
 
 The golden is loaded from its ``.cimtbl``, not built, so the exporter can only see what CIM holds. Names come from
-the CIM ``name``, so the reimport compiles the same mRIDs. Families the exporter does not cover yet must raise
-(the reactor golden: X4 waits for S6e's get_series_compensator). A golden that cannot come back whole lists its differences.
+the CIM ``name``, so the reimport compiles the same mRIDs. Every family is exported (X4 done); a golden that cannot
+come back whole lists its differences.
 """
 
 import re
@@ -14,15 +14,12 @@ from cimtables.diff import diff_models
 
 from cimhub_gdm import GdmExporter, gdm_to_cim
 
-#: Families exported so far (EXPORT_PLAN.md §2); this grows phase by phase until it is every family.
-EXPORTED = {"shell", "source", "switch", "line", "load", "capacitor", "transformer", "regulator", "der", "e2e"}
-
 #: The regulator catalogs' TransformerTankConfigurations, which no VoltageRegulator links (cim18v17 has no
 #: AutoTransformer configuration), are rebuilt from the exported per-unit equipment: its rating per unit (reg3's
 #: 5000 kVA bank is 1666.67 kVA a unit) and the impedance fill, r 0.005 % a winding (EXPORT_MAPPING.md#regulators).
 CIM_DIFFERENCES = {
     #: house's InverterInfo has no name, so the importer names it by its GDM uuid rehashed (B18); the export's
-    #: InverterEquipment has a fresh uuid, so it comes back under another mRID.
+    #: InverterEquipment has the InverterInfo's uri() as uuid, whose rehash is another mRID.
     "der/der": [
         "GenerationInverterInfo 53cd40e1-4a74-56af-8ddb-273b080b75b3: missing",
         "GenerationInverterInfo 71c3a9b8-51fb-5fbf-8113-b9accca6acce: extra",
@@ -65,10 +62,6 @@ def golden_param(path):
 
 @pytest.mark.parametrize("golden", [golden_param(path) for path in GOLDENS])
 def test_golden_survives_export_and_reimport(golden):
-    if golden.parent.name not in EXPORTED:
-        with pytest.raises(ValueError, match="no GDM export yet"):
-            export_golden(golden)
-        return
     reimported = gdm_to_cim(export_golden(golden))
     differences = sorted(str(difference) for difference in diff_models(cimtables.load_model(golden), reimported))
     assert differences == sorted(CIM_DIFFERENCES.get(golden_id(golden), []))

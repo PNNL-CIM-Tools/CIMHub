@@ -10,6 +10,7 @@ Each expected difference is a loss the plan lists:
 - A capacitor's rating, state and controllers are held as CIM holds them.
 - A transformer's taps are its catalog's, and its couplings 0-based (X3, for ditto).
 - A regulator is one GDM regulator per CIM unit, and its impedance a fill (X3).
+- A reactor's length is a fill.
 """
 
 from uuid import uuid4
@@ -135,8 +136,13 @@ DER_DIFFERENCES = [
     "DistributionBus b2.phases: [A, B, C] -> [C]",
 ]
 
-FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_loads,
-            gdm_atoms.add_capacitors, gdm_atoms.add_transformers, gdm_atoms.add_regulators, gdm_atoms.add_der)
+#: The reactors put their phases on b1 and b3 and come back as they went: length is the 1 m fill, as the atoms write.
+REACTOR_DIFFERENCES = _without(SHELL_DIFFERENCES, "DistributionBus b1.phases: [A, B, C] -> []",
+                               "DistributionBus b3.phases: [A, B, C] -> []")
+
+FAMILIES = (gdm_atoms.add_source, gdm_atoms.add_switches, gdm_atoms.add_lines, gdm_atoms.add_reactors,
+            gdm_atoms.add_loads, gdm_atoms.add_capacitors, gdm_atoms.add_transformers, gdm_atoms.add_regulators,
+            gdm_atoms.add_der)
 
 
 def _export(system):
@@ -194,6 +200,11 @@ def test_regulator_differences_are_the_listed_losses():
 def test_der_differences_are_the_listed_losses():
     system = _system(gdm_atoms.add_der)
     assert gdm_differences(system, _export(system)) == sorted(DER_DIFFERENCES)
+
+
+def test_reactor_differences_are_the_listed_losses():
+    system = _system(gdm_atoms.add_reactors)
+    assert gdm_differences(system, _export(system)) == sorted(REACTOR_DIFFERENCES)
 
 
 def test_a_catalog_splits_by_tap():

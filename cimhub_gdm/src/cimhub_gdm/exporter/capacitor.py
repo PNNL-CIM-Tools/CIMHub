@@ -114,18 +114,18 @@ def export(shunt: cim.LinearShuntCompensator, context: ExportContext) -> Distrib
     phases = gdm_phases(rated.phases, shunt)
     banks_on = whole_sections(actual.sections, shunt)
     phase_capacitors = [
-        PhaseCapacitorEquipment(name=names.name(shunt, PhaseCapacitorEquipment, suffix=f"_{phase.value}"),
+        PhaseCapacitorEquipment(**names.part(shunt, PhaseCapacitorEquipment, suffix=f"_{phase.value}"),
                                 rated_reactive_power=ReactivePower(rated.per_phase[conductor], "kilovar"),
                                 num_banks_on=banks_on, num_banks=whole_sections(rated.sections, shunt))
         for conductor, phase in zip(rated.phases, phases)
     ]
     connection = connection_type(rated.connection, shunt)
-    equipment = CapacitorEquipment(name=names.name(shunt, CapacitorEquipment), phase_capacitors=phase_capacitors,
+    equipment = CapacitorEquipment(**names.part(shunt, CapacitorEquipment), phase_capacitors=phase_capacitors,
                                    connection_type=connection, rated_voltage=Voltage(rated.voltage, "kilovolt"),
                                    voltage_type=voltage_type(rated.phases, connection))
     [node] = get_terminal_nodes(shunt)
     return DistributionCapacitor(
-        name=names.name(shunt, DistributionCapacitor),
+        **names.own(shunt),
         bus=context.gdm(node),
         phases=phases,
         equipment=equipment,
@@ -171,4 +171,4 @@ def controllers(shunt: cim.LinearShuntCompensator, context: ExportContext) -> li
     values[on_slot] = quantity((settings.target - half_band) / scale, unit)
     values[off_slot] = quantity((settings.target + half_band) / scale, unit)
     delay = None if control.delay is None else Time(control.delay, "second")
-    return [controller_class(name=context.names.name(shunt, controller_class), delay_on=delay, **values)]
+    return [controller_class(**context.names.part(shunt, controller_class), delay_on=delay, **values)]

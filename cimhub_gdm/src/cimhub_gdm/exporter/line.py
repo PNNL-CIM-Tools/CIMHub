@@ -100,7 +100,7 @@ def export(line: cim.ACLineSegment, context: ExportContext):
                          "length")
     node1, node2 = get_terminal_nodes(line)
     return component_class(
-        name=context.names.name(line, component_class),
+        **context.names.own(line),
         buses=[context.gdm(node1), context.gdm(node2)],
         phases=gdm_phases(phases, line),
         length=Distance(required_qty(line, "length", "m"), "meter"),

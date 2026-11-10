@@ -73,7 +73,7 @@ def export(source: cim.EnergySource, context: ExportContext) -> DistributionVolt
     angle = 0.0 if values.angle is None else values.angle  # unset: the reference angle
     phase_sources = [
         PhaseVoltageSourceEquipment(
-            name=names.name(source, PhaseVoltageSourceEquipment, suffix=f"_{phase.value}"),
+            **names.part(source, PhaseVoltageSourceEquipment, suffix=f"_{phase.value}"),
             r0=Resistance(impedance.r0, "ohm"), r1=Resistance(impedance.r, "ohm"),
             x0=Reactance(impedance.x0, "ohm"), x1=Reactance(impedance.x, "ohm"),
             voltage=Voltage(values.magnitude, "kilovolt"), voltage_type=VoltageTypes.LINE_TO_LINE,
@@ -81,10 +81,10 @@ def export(source: cim.EnergySource, context: ExportContext) -> DistributionVolt
         for position, phase in enumerate(phases)
     ]
     return DistributionVoltageSource(
-        name=names.name(source, DistributionVoltageSource),
+        **names.own(source),
         bus=context.gdm(node),
         phases=phases,
-        equipment=VoltageSourceEquipment(name=names.name(source, VoltageSourceEquipment), sources=phase_sources),
+        equipment=VoltageSourceEquipment(**names.part(source, VoltageSourceEquipment), sources=phase_sources),
         in_service=in_service(source),
         **containers(source.EquipmentContainer, context),
     )

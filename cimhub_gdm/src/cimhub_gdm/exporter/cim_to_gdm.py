@@ -21,6 +21,7 @@ from cimhub_gdm.exporter import (
     fills,
     line,
     load,
+    reactor,
     regulator,
     shell,
     source,
@@ -31,8 +32,9 @@ from cimhub_gdm.exporter.naming import Names
 from cimhub_gdm.exporter.shared import ExportContext
 from cimhub_gdm.gdm_writer import write_gdm
 
-#: Modules in export order; each has ``CIM_CLASSES``, ``SLOTS`` and ``export(obj, context)`` -> one GDM component.
-EXPORT_ORDER = (shell, bus, source, switch, line, transformer, regulator, load, capacitor, der)
+#: Modules in export order; each has ``CIM_CLASSES``, ``SLOTS`` and ``export(obj, context)`` -> one GDM component,
+#: or a tuple of them (a connection's DER, one per unit).
+EXPORT_ORDER = (shell, bus, source, switch, line, reactor, transformer, regulator, load, capacitor, der)
 
 __all__ = ["EXPORT_ORDER", "GdmExporter", "cim_to_gdm"]
 
@@ -55,9 +57,10 @@ class GdmExporter(FormatExporter):
         for module in EXPORT_ORDER:
             for cim_class in module.CIM_CLASSES:
                 for obj in network.graph.get(cim_class, {}).values():
-                    component = module.export(obj, context)
-                    context.made[obj.uri()] = component
-                    system.add_component(component)
+                    made = module.export(obj, context)
+                    context.made[obj.uri()] = made
+                    for component in made if isinstance(made, tuple) else (made,):
+                        system.add_component(component)
         fills.warn(context.filled)
         return system
 

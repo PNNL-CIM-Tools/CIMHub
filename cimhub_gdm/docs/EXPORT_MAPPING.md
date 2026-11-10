@@ -14,8 +14,10 @@
   - each regulator unit is its own GDM regulator;
   - unset line drop R and X are 0 V.
 - X4, part one (geometry lines with bare and concentric wire; solar and batteries) built 2026-11-09, at the user's
-  "continue to next phase", after rc_1 (S6d) was merged. Reactors wait for S6e's `get_series_compensator` (X11).
-  ditto drove one rule: a PV's irradiance is its output's share of the panel's rating, not a neutral fill.
+  "continue to next phase", after rc_1 (S6d) was merged. ditto drove one rule: a PV's irradiance is its output's
+  share of the panel's rating, not a neutral fill.
+- X4, part two (reactors; a connection of several units, one GDM DER per unit) built 2026-11-09, at the user's "go
+  for the next phase", after rc_1 (S6e: `get_series_compensator`, `get_inverter_units`) was merged. X4 is complete.
 
 One section per phase ([`EXPORT_PLAN.md`](EXPORT_PLAN.md) §2). The slot tables are generated from each module's
 `SLOTS` (`exporter/slots.py` `slots_table`), and a test fails on a GDM field with no slot.
@@ -48,11 +50,20 @@ One section per phase ([`EXPORT_PLAN.md`](EXPORT_PLAN.md) §2). The slot tables 
 ## Names
 
 Decision X2: `exporter/naming.py` `Names`, on the shared switch `cimhub_core.names.export_name` (`name`, `mrid`,
-`uri`; default `mrid`). GDM names are free text, so nothing is sanitized. Two objects on one name in one GDM class
-raise, naming both mRIDs.
+`uri`; default `mrid`). GDM names are free text, so nothing is sanitized, and two components may share one (revised
+2026-11-09, user). GDM allows it: `get_component(cls, name)` then raises, and `list_components_by_name` finds them
+all. IEEE13_CDPSM needs it (`PVSystem.House` and `Storage.House`).
+- **Identity is the uuid.** A component made from a CIM object takes that object's `Identity.identifier`, its
+  `uri()` (`Names.own`). A part with no CIM object of its own takes a uuid5 of its owner's identifier, on its GDM
+  class and suffix (`Names.part`). That covers inline equipment, per-phase children, a catalog's n-th variant, a
+  controller named after its equipment, and placeholder protection with its curves. infrasys holds one component per
+  uuid, so a part can't reuse its owner's. Every export of one CIM model gives the same uuids.
 - Inline equipment, controllers included, take their instance's name (`VoltageSourceEquipment src`,
   `CapacitorEquipment vc`).
 - A per-phase child takes `<instance>_<phase>` (`src_A`).
+- An unnamed InverterInfo under name source `name` takes GDM's default inverter name, `''`, which the importer reads
+  as unnamed.
+- A DER of a connection with several units takes its unit's name and `uri()` (DER).
 - Placeholder protection takes `<fuse>_tcc_placeholder` or `<recloser>_ctrl_placeholder` (X5).
 - A shared catalog takes the catalog's name, or `<catalog>_<n>` for its n-th instance value (X3).
 - A transformer with no TankConfiguration, and a regulator with no TapChangerInfo, has its own equipment, named after
@@ -68,14 +79,14 @@ raise, naming both mRIDs.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 
 **DistributionSubstation**
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | feeders | written | the Feeders whose NormalEnergizingSubstation it is, by name |
 
@@ -107,7 +118,7 @@ Decision X6, revised in X2. `ConnectivityNode` → `DistributionBus`:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the ConnectivityNodeContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the ConnectivityNodeContainer when it is a Feeder (containers) |
@@ -133,7 +144,7 @@ phase, all with the source's values from `get_source` (kV, ohm, degrees).
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -146,7 +157,7 @@ phase, all with the source's values from `get_source` (kV, ohm, degrees).
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the source's name (X2) |
 | sources | written | one PhaseVoltageSourceEquipment per phase, all with the source's values |
 
@@ -154,7 +165,7 @@ phase, all with the source's values from `get_source` (kV, ohm, degrees).
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <source>_<phase> (X2) |
 | r0 | written | get_source.impedance.r0 (ohm); unset raises |
 | r1 | written | get_source.impedance.r (ohm); unset raises |
@@ -202,7 +213,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -218,7 +229,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -233,7 +244,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -249,7 +260,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -262,7 +273,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -275,7 +286,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -288,7 +299,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -304,7 +315,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -316,7 +327,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | construction | unset | untranscribed on import: no home on a CIM switch; GDM's default, overhead |
 | r_matrix | fill | fills.switch_matrices, 1 ohm/km diagonal: a CIM switch is ideal, and a zero matrix is singular in OpenDSS |
@@ -330,7 +341,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the switch's name (X2) |
 | delay | fill | fills.SWITCH_CONTROLLER_DELAY, 0 s: no CIM home |
 | normal_state | written | get_switch_state(which='normal'): open → 'open', closed → 'close' |
@@ -340,7 +351,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <fuse>_tcc_placeholder (X5) |
 | curve_x | fill | TimeCurrentCurve.example() |
 | curve_y | fill | TimeCurrentCurve.example() |
@@ -349,7 +360,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <recloser>_ctrl_placeholder (X5) |
 | delay | fill | DistributionRecloserController.example() |
 | ground_delayed | fill | DistributionRecloserController.example() |
@@ -366,7 +377,7 @@ Decision X5, the importer's decision 14 inverted:
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <recloser>_ctrl_placeholder, not the example's vendor model (X5) |
 
 ## Lines
@@ -410,7 +421,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -424,7 +435,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -438,7 +449,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -452,7 +463,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the catalog's name; <catalog>_<n> for its n-th ampacity (X3) |
 | construction | unset | untranscribed on import: no home on PerLengthImpedance; GDM's default |
 | r_matrix | written | get_line_phase_impedance_matrix.r (ohm/km), the lower triangle mirrored |
@@ -464,7 +475,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the catalog's name; <catalog>_<n> for its n-th ampacity (X3) |
 | pos_seq_resistance | written | get_line_sequence_impedance_per_length.r (ohm/km) |
 | zero_seq_resistance | written | get_line_sequence_impedance_per_length.r0; unset raises |
@@ -478,7 +489,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the WireConfiguration's name; <configuration>_<n> for its n-th values (X3) |
 | conductors | written | get_configuration_wires, by sequence number: one kind (bare or concentric), a tape-shield cable raises |
 | horizontal_positions | written | get_line_conductor_xy x (m) |
@@ -489,7 +500,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the OverheadWireInfo's name; <wire>_<n> for its n-th values (X3) |
 | conductor_diameter | written | 2 × get_wire_info.radius (m); unset raises |
 | conductor_gmr | written | get_wire_info.gmr (m); unset raises |
@@ -502,7 +513,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the ConcentricNeutralCableInfo's name; <cable>_<n> for its n-th values (X3) |
 | strand_diameter | written | 2 × neutral_strand_radius (m); unset raises |
 | conductor_diameter | written | 2 × radius (m); unset raises |
@@ -533,7 +544,7 @@ Decision X7. `EnergyConsumer` → `DistributionLoad` + `LoadEquipment` + one `Ph
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -546,7 +557,7 @@ Decision X7. `EnergyConsumer` → `DistributionLoad` + `LoadEquipment` + one `Ph
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the load's name (X2) |
 | phase_loads | written | one PhaseLoadEquipment per phase conductor |
 | connection_type | written | phaseConnection: Y and Yn → STAR, D → DELTA; others raise |
@@ -555,7 +566,7 @@ Decision X7. `EnergyConsumer` → `DistributionLoad` + `LoadEquipment` + one `Ph
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <load>_<phase> (X2) |
 | real_power | written | get_phase_loads.per_phase p (kW): EnergyConsumerPhase, else the even split |
 | reactive_power | written | get_phase_loads.per_phase q (kVAr) |
@@ -604,7 +615,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -619,7 +630,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the capacitor's name (X2) |
 | phase_capacitors | written | one PhaseCapacitorEquipment per phase conductor |
 | connection_type | written | phaseConnection: Y and Yn → STAR, D → DELTA; others raise |
@@ -630,7 +641,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | <capacitor>_<phase> (X2) |
 | resistance | unset | untranscribed on import: no home on LinearShuntCompensator; GDM's default 0 |
 | reactance | unset | untranscribed on import: no home on LinearShuntCompensator; GDM's default 0 |
@@ -642,7 +653,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the capacitor's name (X2) |
 | delay_on | written | get_equipment_control.delay (aVRDelay, s); unset is None |
 | delay_off | unset | untranscribed on import: CIM has one delay, aVRDelay |
@@ -655,7 +666,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the capacitor's name (X2) |
 | delay_on | written | get_equipment_control.delay (aVRDelay, s); unset is None |
 | delay_off | unset | untranscribed on import: CIM has one delay, aVRDelay |
@@ -668,7 +679,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the capacitor's name (X2) |
 | delay_on | written | get_equipment_control.delay (aVRDelay, s); unset is None |
 | delay_off | unset | untranscribed on import: CIM has one delay, aVRDelay |
@@ -680,7 +691,7 @@ Decisions X7, X8. `LinearShuntCompensator` → `DistributionCapacitor` + `Capaci
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the capacitor's name (X2) |
 | delay_on | written | get_equipment_control.delay (aVRDelay, s); unset is None |
 | delay_off | unset | untranscribed on import: CIM has one delay, aVRDelay |
@@ -732,7 +743,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2) |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -746,7 +757,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the TankConfiguration's name, <configuration>_<n> for its n-th values (X3); else the transformer's |
 | mounting | unset | untranscribed on import: no CIM home; GDM's default |
 | pct_no_load_loss | rule | get_transformer_model core g (% on winding 1's ratedS); unset is 0 |
@@ -761,7 +772,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the TankConfiguration's name, <configuration>_<n> for its n-th values (X3); else the transformer's |
 | mounting | unset | untranscribed on import: no CIM home; GDM's default |
 | pct_no_load_loss | rule | get_transformer_model core g (% on winding 1's ratedS); unset is 0 |
@@ -779,7 +790,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | unset | untranscribed on import: inline, no CIM object of its own |
 | resistance | written | the winding's r, moved to its own rated_power; unset raises (a regulator: half the mesh r) |
 | is_grounded | rule | grounded; unset is False on a delta and raises on a wye (a regulator: unset is False, B27) |
@@ -833,7 +844,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | Names (X2): one per VoltageRegulator unit |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
@@ -848,7 +859,7 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the regulator's name (X2) |
 | tapped_winding | written | the endNumber of the end the RatioTapChanger is on |
 | delay | written | initialDelay (s); unset is None |
@@ -868,14 +879,18 @@ Every tap assumption here, with why and how to revisit it, is in [`TAP_ASSUMPTIO
 
 ## DER
 
-X4, X7, X8. `PowerElectronicsConnection` → `DistributionSolar` or `DistributionBattery`, picked by its one
-PowerElectronicsUnit (`get_inverter_unit`). A PhotoVoltaicUnit gives a solar and a BatteryUnit a battery; another unit
-raises.
-- **Output.** GDM holds one output per DER: the connection's total p and q in the generation sign
-  (`get_der_output(sign='generation')`, kW and kVAr), on its phase conductors.
-- **Inverter.** `rated_apparent_power` is the connection's ratedS (`get_inverter_rating`). Its InverterInfo shares
-  it (X3); without one it is the DER's own, named after it. An unnamed InverterInfo under name source `name` keeps
-  GDM's default name `''` and the uuid of its `uri()`, so the importer (B18) names it alike on every export.
+X4, X7, X8. `PowerElectronicsConnection` → one `DistributionSolar` or `DistributionBattery` per PowerElectronicsUnit.
+A PhotoVoltaicUnit gives a solar and a BatteryUnit a battery; another unit raises.
+- **Units.** GDM holds one DC device per inverter. So a connection of several units (a PV array and a battery behind
+  one inverter) is chopped by `get_inverter_units`, the DSS exporter's rule: each unit's share is its maxP over the
+  units' total. One unit is the whole connection, and its DER takes the connection's name and uuid. Several each
+  take their unit's name and uuid (`uri()`).
+- **Output.** Each DER's p is its unit's own, else its share of the connection's p; its q is its share of the
+  connection's q. Both are in the generation sign (kW and kVAr), on the connection's phase conductors.
+- **Inverter.** `rated_apparent_power` is the unit's share of the connection's ratedS (`get_inverter_rating`). Its
+  InverterInfo shares it (X3), so units of different shares split it (`<info>_2`); without one it is the DER's own,
+  named after it. An unnamed InverterInfo under name source `name` keeps
+  GDM's default name `''` (Names).
   Cut-in, cut-out, efficiency and the ramp limits have no InverterInfo slot: fills (0 %, 0 %, 100 %, None).
 - **Rating voltage.** The equipment's `rated_voltage` is the connection's ratedU in the importer's `system_voltage`
   form, inverted. It is line to line on three phases, and otherwise line to ground: half on a split-phase leg, and
@@ -893,15 +908,15 @@ raises.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
-| name | written | Names (X2) |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
+| name | written | Names (X2): the connection's for one unit, else the unit's |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
 | in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
 | bus | written | the bus of get_terminal_nodes |
 | phases | written | get_der_output.phases: the phase conductors, no neutral (balanced ABC on none, G3) |
-| active_power | written | get_der_output(sign='generation').total p (kW) |
-| reactive_power | written | get_der_output(sign='generation').total q (kVAr) |
+| active_power | written | get_inverter_units(sign='generation') p (kW): the unit's own, else its share of the connection's |
+| reactive_power | written | get_inverter_units(sign='generation') q (kVAr): its share of the connection's |
 | controller | unset | inverter controllers are not in CIM (PENDING on import, X8) |
 | inverter | written | the InverterEquipment of the connection's InverterInfo (shared, X3), else the DER's own |
 | irradiance | rule | p / the panel's maxP × 1 kW/m² (standard test conditions): what OpenDSS makes of it (Pmpp × Irradiance) is CIM's p; untranscribed on import |
@@ -911,15 +926,15 @@ raises.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
-| name | written | Names (X2) |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
+| name | written | Names (X2): the connection's for one unit, else the unit's |
 | substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
 | feeder | written | the EquipmentContainer when it is a Feeder (containers) |
 | in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
 | bus | written | the bus of get_terminal_nodes |
 | phases | written | get_der_output.phases: the phase conductors, no neutral (balanced ABC on none, G3) |
-| active_power | written | get_der_output(sign='generation').total p (kW) |
-| reactive_power | written | get_der_output(sign='generation').total q (kVAr) |
+| active_power | written | get_inverter_units(sign='generation') p (kW): the unit's own, else its share of the connection's |
+| reactive_power | written | get_inverter_units(sign='generation') q (kVAr): its share of the connection's |
 | controller | unset | inverter controllers are not in CIM (PENDING on import, X8) |
 | inverter | written | the InverterEquipment of the connection's InverterInfo (shared, X3), else the DER's own |
 | equipment | written | the BatteryEquipment of the unit's BatteryInfo (shared, X3), else the DER's own |
@@ -928,7 +943,7 @@ raises.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the DER's name (X2) |
 | rated_power | written | get_photovoltaic_unit(sign='generation').max_p (kW); unset raises |
 | power_temp_curve | unset | untranscribed on import: until the Curve builder (B12) |
@@ -941,7 +956,7 @@ raises.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | unset | GDM makes a fresh one; the importer never copies it either |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
 | name | written | the BatteryInfo's name (X2); else the DER's |
 | rated_energy | written | get_battery_unit.rated_e (kWh); unset raises |
 | rated_power | rule | get_battery_unit(sign='generation').max_p (kW), with min_p unset or -max_p (GDM has one rating both ways); else raises |
@@ -955,9 +970,9 @@ raises.
 
 | GDM field | kind | from / why |
 |---|---|---|
-| uuid | rule | GDM makes a fresh one; an unnamed InverterInfo under name source 'name': its uri(), so the importer names it alike every time (B18) |
-| name | written | the InverterInfo's name (X2), '' when it has none under name source 'name' (GDM's default, the importer's inverse); else the DER's |
-| rated_apparent_power | written | get_inverter_rating.rated_s (kVA) |
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
+| name | written | the InverterInfo's name (X2), '' when it has none under name source 'name' (GDM's default, which the importer reads as unnamed); else the DER's |
+| rated_apparent_power | written | get_inverter_rating.rated_s × the unit's share (kVA) |
 | rise_limit | fill | fills.INVERTER_RAMP_LIMIT, None (§3.1) |
 | fall_limit | fill | fills.INVERTER_RAMP_LIMIT, None (§3.1) |
 | cutout_percent | fill | fills.INVERTER_CUTOUT_PERCENT, 0 % (§3.1) |
@@ -965,12 +980,45 @@ raises.
 | dc_to_ac_efficiency | fill | fills.INVERTER_EFFICIENCY, 100 % (§3.1) |
 | eff_curve | unset | untranscribed on import: until the Curve builder (B12) |
 
+## Reactors
+
+X4. `SeriesCompensator` → `DistributionReactor` between its two terminals' buses, the importer's §21 inverted
+(`exporter/reactor.py`).
+- **Impedance.** `get_series_compensator` gives r and x per phase, lumped, which go on an inline ReactorEquipment
+  named after the reactor (the importer builds no SeriesReactorInfo).
+- GDM's reactor has no zero sequence: an r0 or x0 other than r or x raises (no mutual coupling, as the DSS goldens
+  write r0 = r, x0 = x). It has no varistor either: `varistorPresent` raises. `compensatorType` is not read.
+- `phases` are the terminals' conductors (`get_conductor_phases`; none is ABC, G3).
+- `length` has no CIM home: a fill, 1 m. The impedance is lumped, and ditto writes no length for a reactor.
+- GDM's reactor has no ampacity, so the compensator's current limits are not exported.
+
+**DistributionReactor**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
+| name | written | Names (X2) |
+| substation | written | the EquipmentContainer when it is a Substation or VoltageLevel (containers) |
+| feeder | written | the EquipmentContainer when it is a Feeder (containers) |
+| in_service | rule | get_in_service(which='actual'); unset is in service, GDM's default |
+| buses | written | the buses of get_terminal_nodes: Terminal 1, Terminal 2 |
+| length | fill | fills.REACTOR_LENGTH, 1 m: the impedance is lumped; ditto writes no length |
+| phases | written | get_conductor_phases (balanced ABC on none, G3) |
+| equipment | written | a ReactorEquipment made for this reactor |
+
+**ReactorEquipment**
+
+| GDM field | kind | from / why |
+|---|---|---|
+| uuid | written | the uri() (Identity.identifier) of the CIM object it is made from (Names.own); a part with no CIM object of its own: a uuid5 of its owner's, on its class and suffix (Names.part) |
+| name | written | the reactor's name (X2) |
+| resistance | written | get_series_compensator.r (ohm); r0 other than r raises |
+| reactance | written | get_series_compensator.x (ohm); x0 other than x raises |
+
 ## Tests
 
 - `test_export_round_trip.py`: every importer golden is loaded, exported with CIM names, imported again, and must
-  match itself. The exceptions:
-  - Families not exported yet must raise `no GDM export yet`: the reactor golden, until S6e. The `EXPORTED` set
-    grows phase by phase. The reference system (`e2e`) is in it.
+  match itself. Every family is exported, the reference system (`e2e`) included. The exceptions:
   - Each reimport is named after its golden's `Model` header, which seeds the hashed PhaseImpedanceData
     identifiers.
   - The DER golden lists the unnamed inverter's mRID: the importer names it by the exported uuid (B18), not the
@@ -985,10 +1033,12 @@ raises.
   - the JSON round trip;
   - that the loaded golden and the built model export alike.
 - `test_export_framework.py`:
-  - slot coverage, the naming switch, a name clash, the system name, unset source impedance, `phase_angle`;
+  - slot coverage, the naming switch, a shared name, the uuids (the CIM `uri()`, and a part's uuid5), the system
+    name, unset source impedance, `phase_angle`;
   - the fills WARNING, the placeholder names, the switch controller rule;
   - fail-fast: a fuse's differing normal state, a Sectionaliser, a control on another terminal, a battery rated
-    differently each way;
+    differently each way, a coupled reactor, a reactor with a varistor;
+  - a hybrid inverter: one DER per unit, each its maxP share, named and identified by its unit;
   - a geometry line's first conductor carrying the line's ratings, the others their wire's;
   - a disabled control, and the capacitor targets;
   - a transformer under tap control, a bank of tanks, a 3-phase regulator and a regulator without an enabled control
@@ -998,7 +1048,7 @@ raises.
   - It writes, compiles and solves.
   - Without capacitors, it solves to the original's node voltages within 1e-4 pu. ditto misrates the original's
     capacitors, whose buses are line to line.
-  - The comparison includes the geometry lines and the transformers, but not t_ln: ditto can't write the original's
+  - The comparison includes the geometry lines, the reactors and the transformers, but not t_ln: ditto can't write the original's
     1-based couplings or its instance tap. It leaves out the DER: ditto writes the original's PV kV from its line to
     line bus as if line to ground, and the atoms' irradiance is not their output's share.
   - Each exported PV makes the p and q CIM holds.

@@ -124,7 +124,7 @@ def export(transformer: cim.PowerTransformer, context: ExportContext) -> Distrib
     center_tap = is_center_tap(model)
     windings = [winding_equipment(winding, model, center_tap, transformer) for winding in model.windings]
     return DistributionTransformer(
-        name=context.names.name(transformer, DistributionTransformer),
+        **context.names.own(transformer),
         buses=[context.gdm(end_node(winding.end)) for winding in model.windings],
         winding_phases=[winding_phases(winding, part) for winding, part in zip(model.windings, windings)],
         equipment=transformer_equipment(transformer, unit, model, windings, center_tap, context),
@@ -249,7 +249,7 @@ def transformer_equipment(transformer, unit, model, windings: list, center_tap: 
     config = getattr(unit, "TankConfiguration", None)
     if config is not None:
         return shared_equipment(context, config, equipment)
-    return equipment.model_copy(update={"name": context.names.name(transformer, type(equipment))})
+    return equipment.model_copy(update=context.names.part(transformer, type(equipment)))
 
 
 def full_load_loss(unit, model) -> float:

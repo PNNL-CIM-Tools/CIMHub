@@ -21,6 +21,9 @@ log = logging.getLogger(__name__)
 #: A switch, fuse or recloser has no length in CIM. GDM enforces length > 0; with zero matrices it scales nothing.
 SWITCH_LENGTH = Distance(1, "meter")
 
+#: A reactor has no length in CIM: its r and x are lumped, and ditto writes no length for one. GDM requires it.
+REACTOR_LENGTH = Distance(1, "meter")
+
 #: A switch controller's operating delay and lock have no CIM home: no delay, not locked.
 SWITCH_CONTROLLER_DELAY = Time(0, "second")
 SWITCH_CONTROLLER_LOCKED = False
@@ -52,6 +55,9 @@ INVERTER_RAMP_LIMIT = None
 #: A battery's idling efficiency has no CIM home (BatteryUnit idlingP is a power): no idling loss.
 BATTERY_IDLING_EFFICIENCY = 100.0
 
+#: The curves of GDM's example recloser controller.
+RECLOSER_CURVES = ("ground_delayed", "ground_fast", "phase_delayed", "phase_fast")
+
 #: Fields whose fill is placeholder protection, named in the WARNING (decision X5).
 PROTECTION_FIELDS = ("MatrixImpedanceFuseEquipment.tcc_curve", "MatrixImpedanceRecloser.controller")
 
@@ -68,16 +74,22 @@ def switch_matrices(size: int) -> dict:
             "c_matrix": CapacitancePULength(np.zeros((size, size)), "farad / kilometer")}
 
 
-def fuse_curve(name: str) -> TimeCurrentCurve:
-    """GDM's own example curve, named ``name``: the numbers are GDM's, not scaled to the fuse's rating (X5)."""
-    return TimeCurrentCurve.example().model_copy(update={"name": name})
+def fuse_curve(identity: dict) -> TimeCurrentCurve:
+    """GDM's own example curve, with ``identity`` (name and uuid): the numbers are GDM's, not scaled to the fuse's
+    rating (X5)."""
+    return TimeCurrentCurve.example().model_copy(update=identity)
 
 
-def recloser_controller(name: str) -> DistributionRecloserController:
-    """GDM's own example controller and its equipment, both named ``name`` (not the example's vendor model) (X5)."""
+def recloser_controller(names, recloser, *, suffix: str) -> DistributionRecloserController:
+    """GDM's own example controller and its equipment, both named ``<recloser><suffix>`` (not the example's vendor
+    model), each with its curves a part of the recloser (``Names.part``) (X5)."""
     example = DistributionRecloserController.example()
-    equipment = example.equipment.model_copy(update={"name": name})
-    return example.model_copy(update={"name": name, "equipment": equipment})
+    curves = {field: getattr(example, field).model_copy(
+                  update={"uuid": names.part(recloser, TimeCurrentCurve, suffix=f"{suffix}_{field}")["uuid"]})
+              for field in RECLOSER_CURVES}
+    equipment = example.equipment.model_copy(update=names.part(recloser, type(example.equipment), suffix=suffix))
+    return example.model_copy(update={**names.part(recloser, DistributionRecloserController, suffix=suffix),
+                                      "equipment": equipment, **curves})
 
 
 def warn(filled: Counter) -> None:
