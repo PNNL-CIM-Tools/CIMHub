@@ -1,0 +1,156 @@
+id: https://gridlabd.org/schema/glm/powerflow/vfd
+name: vfd
+description: GridLAB-D vfd class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  vfd:
+    description: 'Copyright (C) 2017 Battelle Memorial Institute
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      rated_motor_speed:
+        range: float
+        required: false
+        description: Rated speed of the VFD in RPM. Default = 1800 RPM
+        unit:
+          ucum_code: 1/min
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_motor_speed[1/min]
+      desired_motor_speed:
+        range: float
+        required: false
+        description: Desired speed of the VFD In ROM. Default = 1800 RPM (max)
+        unit:
+          ucum_code: 1/min
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: desired_motor_speed[1/min]
+      motor_poles:
+        range: float
+        required: false
+        description: Number of Motor Poles. Default = 4
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_poles
+      rated_output_voltage:
+        range: float
+        required: false
+        description: Line to Line Voltage - VFD Rated voltage. Default to TO node
+          nominal_voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_output_voltage[V]
+      rated_horse_power:
+        range: float
+        required: false
+        description: Rated Horse Power of the VFD. Default = 75 HP
+        unit:
+          ucum_code: hp
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_horse_power[hp]
+      nominal_output_frequency:
+        range: float
+        required: false
+        description: Nominal VFD output frequency. Default = 60 Hz
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_output_frequency[Hz]
+      desired_output_frequency:
+        range: float
+        required: false
+        description: VFD desired output frequency based on the desired RPM
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: desired_output_frequency[Hz]
+      current_output_frequency:
+        range: float
+        required: false
+        description: VFD currently output frequency
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_output_frequency[Hz]
+      efficiency:
+        range: float
+        required: false
+        description: Current VFD efficiency based on the load/VFD output Horsepower
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: efficiency[%]
+      stable_time:
+        range: float
+        required: false
+        description: Time taken by the VFD to reach desired frequency (based on RPM).
+          Default = 1.45 seconds
+        unit:
+          ucum_code: s
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stable_time[s]
+      vfd_state:
+        range: string
+        required: false
+        description: Current state of the VFD
+        annotations:
+          order: 11
+          value_type: string
+          separator: ','
+          native_name: vfd_state

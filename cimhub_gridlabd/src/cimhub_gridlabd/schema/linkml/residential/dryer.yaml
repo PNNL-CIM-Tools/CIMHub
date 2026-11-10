@@ -1,0 +1,602 @@
+id: https://gridlabd.org/schema/glm/residential/dryer
+name: dryer
+description: GridLAB-D dryer class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  dryer:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file dryer.cpp
+
+      @addtogroup dryer
+
+      @ingroup residential
+
+      The dryer simulation is based on an hourly demand profile attached to the object.
+
+      The internal heat gain is calculated using a specified fraction of installed
+      power.
+
+      The queue is used to determine the probability of a load being run during that
+      hour.
+
+      Demand is added to the queue until the queue becomes large enough to trigger
+      an event.
+
+      The motor model is simplified in that it assume the motor all the time during
+      the load run
+
+      (which is not really true).  The duration of the load is a configurable parameter.
+
+      Motor stalling is implemented when the voltage is below about 0.7 puV.  A stalled
+      motor
+
+      remains in the constant impedance state for about 10 seconds before tripping
+      off.  When
+
+      tripped, the motor will attempt a restart after about 60 seconds, regardless
+      of voltage.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      motor_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_power[W]
+      dryer_coil_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dryer_coil_power[W]
+      controls_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: controls_power[W]
+      circuit_split:
+        range: float
+        required: false
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circuit_split
+      queue:
+        range: float
+        required: false
+        description: number of loads accumulated
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue[unit]
+      queue_min:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_min[unit]
+      queue_max:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_max[unit]
+      stall_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stall_voltage[V]
+      start_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: start_voltage[V]
+      stall_impedance:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: stall_impedance[Ohm]
+      trip_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip_delay[s]
+      reset_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reset_delay[s]
+      total_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_power[W]
+      state:
+        range: State
+        required: false
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: state
+      energy_baseline:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_baseline[kWh]
+      energy_used:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_used[kWh]
+      next_t:
+        range: float
+        required: false
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: next_t
+      control_check:
+        range: boolean
+        required: false
+        annotations:
+          order: 18
+          value_type: bool
+          separator: ','
+          native_name: control_check
+      motor_only_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 19
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check1
+      motor_only_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 20
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check2
+      motor_only_check3:
+        range: boolean
+        required: false
+        annotations:
+          order: 21
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check3
+      motor_only_check4:
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check4
+      motor_only_check5:
+        range: boolean
+        required: false
+        annotations:
+          order: 23
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check5
+      motor_only_check6:
+        range: boolean
+        required: false
+        annotations:
+          order: 24
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check6
+      dryer_on:
+        range: boolean
+        required: false
+        annotations:
+          order: 25
+          value_type: bool
+          separator: ','
+          native_name: dryer_on
+      dryer_ready:
+        range: boolean
+        required: false
+        annotations:
+          order: 26
+          value_type: bool
+          separator: ','
+          native_name: dryer_ready
+      dryer_check:
+        range: boolean
+        required: false
+        annotations:
+          order: 27
+          value_type: bool
+          separator: ','
+          native_name: dryer_check
+      motor_coil_only_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 28
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check1
+      motor_coil_only_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 29
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check2
+      motor_coil_only_check3:
+        range: boolean
+        required: false
+        annotations:
+          order: 30
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check3
+      motor_coil_only_check4:
+        range: boolean
+        required: false
+        annotations:
+          order: 31
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check4
+      motor_coil_only_check5:
+        range: boolean
+        required: false
+        annotations:
+          order: 32
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check5
+      motor_coil_only_check6:
+        range: boolean
+        required: false
+        annotations:
+          order: 33
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check6
+      dryer_run_prob:
+        range: float
+        required: false
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dryer_run_prob
+      dryer_turn_on:
+        range: float
+        required: false
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dryer_turn_on
+      pulse_interval_1:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_1[s]
+      pulse_interval_2:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_2[s]
+      pulse_interval_3:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_3[s]
+      pulse_interval_4:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_4[s]
+      pulse_interval_5:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_5[s]
+      pulse_interval_6:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_6[s]
+      pulse_interval_7:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_7[s]
+      pulse_interval_8:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pulse interval'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_8[s]
+      pulse_interval_9:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pulse interval'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_9[s]
+      pulse_interval_10:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pulse interval'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_10[s]
+      energy_needed:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_needed[kWh]
+      daily_dryer_demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: daily_dryer_demand[kWh]
+      actual_dryer_demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_dryer_demand[kWh]
+      motor_on_off:
+        range: float
+        required: false
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_on_off
+      motor_coil_on_off:
+        range: float
+        required: false
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_coil_on_off
+      new_running_state:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for new running state'
+        annotations:
+          order: 51
+          value_type: bool
+          separator: ','
+          native_name: new_running_state
+      cycle_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for cycle time'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_time[s]
+      state_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for state time'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: state_time[s]
+      start_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for start time'
+        annotations:
+          order: 54
+          value_type: string
+          separator: ','
+          native_name: start_time
+      is_240:
+        range: boolean
+        required: false
+        description: load is 220/240 V (across both phases)
+        annotations:
+          order: 55
+          value_type: bool
+          separator: ','
+          native_name: is_240

@@ -1,0 +1,113 @@
+id: https://gridlabd.org/schema/glm/generators/central_dg_control
+name: central_dg_control
+description: GridLAB-D central_dg_control class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  central_dg_control:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file central_dg_control.cpp
+
+      @defgroup central_dg_control
+
+      @ingroup generators
+
+      @{
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    attributes:
+      controlled_dgs:
+        range: string
+        required: false
+        description: the group ID of the dg objects the controller controls.
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: controlled_dgs
+      feederhead_meter:
+        range: string
+        required: false
+        description: the name of the meter.
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: feederhead_meter
+      control_mode_0:
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: control_mode_0
+      control_mode_1:
+        range: string
+        required: false
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: control_mode_1
+      control_mode_2:
+        range: string
+        required: false
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: control_mode_2
+      control_mode_3:
+        range: string
+        required: false
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: control_mode_3
+      peak_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: peak_S[W]
+      pf_low:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_low[unit]
+      pf_high:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_high[unit]

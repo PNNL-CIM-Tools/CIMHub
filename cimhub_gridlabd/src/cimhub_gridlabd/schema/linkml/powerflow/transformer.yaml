@@ -1,0 +1,231 @@
+id: https://gridlabd.org/schema/glm/powerflow/transformer
+name: transformer
+description: GridLAB-D transformer class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  transformer:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file transformer.cpp
+
+      @addtogroup powerflow_transformer Transformer
+
+      @ingroup powerflow
+
+      The transformer is one of the more complex objects in the powerflow
+
+      network. Implemented as a link, the transformer configuration exports a type
+
+      property that allows the transformer to operate as and single phase transformer,
+
+      a wye-wye connected transformer, a delta-grounded wye tranformer, a delta-delta
+
+      transformer, and as a center-tapped transformer.
+
+      The transformer exports a phase property that is a set of phases and may
+
+      be set using the bitwise or operator (A|B|C for a 3 phase line).
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      configuration:
+        range: string
+        required: false
+        description: Configuration library used for transformer setup
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: configuration
+      climate:
+        range: string
+        required: false
+        description: climate object used to describe thermal model ambient temperature
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: climate
+      ambient_temperature:
+        range: float
+        required: false
+        description: ambient temperature in degrees C
+        unit:
+          ucum_code: degC
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ambient_temperature[degC]
+      top_oil_hot_spot_temperature:
+        range: float
+        required: false
+        description: top-oil hottest-spot temperature, degrees C
+        unit:
+          ucum_code: degC
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: top_oil_hot_spot_temperature[degC]
+      winding_hot_spot_temperature:
+        range: float
+        required: false
+        description: winding hottest-spot temperature, degrees C
+        unit:
+          ucum_code: degC
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: winding_hot_spot_temperature[degC]
+      percent_loss_of_life:
+        range: float
+        required: false
+        description: the percent loss of life
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: percent_loss_of_life
+      aging_constant:
+        range: float
+        required: false
+        description: the aging rate slope for the transformer insulation
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aging_constant
+      use_thermal_model:
+        range: boolean
+        required: false
+        description: boolean to enable use of thermal model
+        annotations:
+          order: 8
+          value_type: bool
+          separator: ','
+          native_name: use_thermal_model
+      transformer_replacement_count:
+        range: float
+        required: false
+        description: counter of the number times the transformer has been replaced
+          due to lifetime failure
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: transformer_replacement_count
+      aging_granularity:
+        range: float
+        required: false
+        description: maximum timestep before updating thermal and aging model in seconds
+        unit:
+          ucum_code: s
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aging_granularity[s]
+      phase_A_primary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase A on the primary side of
+          the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_A_primary_flux_value[Wb]
+      phase_B_primary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase B on the primary side of
+          the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_B_primary_flux_value[Wb]
+      phase_C_primary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase C on the primary side of
+          the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_C_primary_flux_value[Wb]
+      phase_A_secondary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase A on the secondary side
+          of the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_A_secondary_flux_value[Wb]
+      phase_B_secondary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase B on the secondary side
+          of the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_B_secondary_flux_value[Wb]
+      phase_C_secondary_flux_value:
+        range: float
+        required: false
+        description: instantaneous magnetic flux in phase C on the secondary side
+          of the transformer during saturation calculations
+        unit:
+          ucum_code: Wb
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_C_secondary_flux_value[Wb]

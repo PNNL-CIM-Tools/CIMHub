@@ -1,0 +1,150 @@
+id: https://gridlabd.org/schema/glm/powerflow/line_spacing
+name: line_spacing
+description: GridLAB-D line_spacing class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  line_spacing:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file line_spacing.cpp
+
+      @addtogroup line_spacing
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: powerflow_library
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      distance_AB:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_AB[ft]
+      distance_BC:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_BC[ft]
+      distance_AC:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_AC[ft]
+      distance_AN:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_AN[ft]
+      distance_BN:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_BN[ft]
+      distance_CN:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_CN[ft]
+      distance_AE:
+        range: float
+        required: false
+        description: distance between phase A wire and earth
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_AE[ft]
+      distance_BE:
+        range: float
+        required: false
+        description: distance between phase B wire and earth
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_BE[ft]
+      distance_CE:
+        range: float
+        required: false
+        description: distance between phase C wire and earth
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_CE[ft]
+      distance_NE:
+        range: float
+        required: false
+        description: distance between neutral wire and earth
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distance_NE[ft]

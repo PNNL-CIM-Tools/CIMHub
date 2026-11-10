@@ -1,0 +1,2708 @@
+id: https://gridlabd.org/schema/glm/generators/inverter
+name: inverter
+description: GridLAB-D inverter class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  inverter:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file inverter.cpp
+
+      @defgroup inverter
+
+      @ingroup generators
+
+      @{
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      inverter_type:
+        range: string
+        required: false
+        description: 'LEGACY MODEL: Sets efficiencies and other parameters; if using
+          four_quadrant_control_mode, set this to FOUR_QUADRANT'
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: inverter_type
+      four_quadrant_control_mode:
+        range: string
+        required: false
+        description: 'FOUR QUADRANT MODEL: Activates various control modes'
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: four_quadrant_control_mode
+      pf_reg:
+        range: string
+        required: false
+        description: Activate (or not) power factor regulation in four_quadrant_control_mode
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: pf_reg
+      generator_status:
+        range: string
+        required: false
+        description: describes whether the generator is online or offline
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: generator_status
+      generator_mode:
+        range: GeneratorMode
+        required: false
+        description: 'LEGACY MODEL: Selects generator control mode when using legacy
+          model; in non-legacy models, this should be SUPPLY_DRIVEN.'
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: generator_mode
+      inverter_convergence_criterion:
+        range: float
+        required: false
+        description: The maximum change in error threshold for exitting deltamode.
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inverter_convergence_criterion
+      current_convergence:
+        range: float
+        required: false
+        description: Convergence criterion for current changes on first timestep -
+          basically initialization of system
+        unit:
+          ucum_code: A
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_convergence[A]
+      V_In:
+        range: float
+        required: false
+        description: DC voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_In[V]
+      I_In:
+        range: float
+        required: false
+        description: DC current
+        unit:
+          ucum_code: A
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: I_In[A]
+      P_In:
+        range: float
+        required: false
+        description: DC power
+        unit:
+          ucum_code: W
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_In[W]
+      VA_Out:
+        range: Complex
+        required: false
+        description: AC power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: VA_Out[VA]
+      Vdc:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: DC voltage'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vdc[V]
+      phaseA_V_Out:
+        range: Complex
+        required: false
+        description: AC voltage on A phase in three-phase system; 240-V connection
+          on a triplex system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: phaseA_V_Out[V]
+      phaseB_V_Out:
+        range: Complex
+        required: false
+        description: AC voltage on B phase in three-phase system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: phaseB_V_Out[V]
+      phaseC_V_Out:
+        range: Complex
+        required: false
+        description: AC voltage on C phase in three-phase system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: phaseC_V_Out[V]
+      phaseA_I_Out:
+        range: Complex
+        required: false
+        description: AC current on A phase in three-phase system; 240-V connection
+          on a triplex system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: phaseA_I_Out[V]
+      phaseB_I_Out:
+        range: Complex
+        required: false
+        description: AC current on B phase in three-phase system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 17
+          value_type: complex
+          separator: ','
+          native_name: phaseB_I_Out[V]
+      phaseC_I_Out:
+        range: Complex
+        required: false
+        description: AC current on C phase in three-phase system
+        unit:
+          ucum_code: V
+        annotations:
+          order: 18
+          value_type: complex
+          separator: ','
+          native_name: phaseC_I_Out[V]
+      power_A:
+        range: Complex
+        required: false
+        description: AC power on A phase in three-phase system; 240-V connection on
+          a triplex system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: power_A[VA]
+      power_B:
+        range: Complex
+        required: false
+        description: AC power on B phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 20
+          value_type: complex
+          separator: ','
+          native_name: power_B[VA]
+      power_C:
+        range: Complex
+        required: false
+        description: AC power on C phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: power_C[VA]
+      curr_VA_out_A:
+        range: Complex
+        required: false
+        description: AC power on A phase in three-phase system; 240-V connection on
+          a triplex system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: curr_VA_out_A[VA]
+      curr_VA_out_B:
+        range: Complex
+        required: false
+        description: AC power on B phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 23
+          value_type: complex
+          separator: ','
+          native_name: curr_VA_out_B[VA]
+      curr_VA_out_C:
+        range: Complex
+        required: false
+        description: AC power on C phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 24
+          value_type: complex
+          separator: ','
+          native_name: curr_VA_out_C[VA]
+      prev_VA_out_A:
+        range: Complex
+        required: false
+        description: AC power on A phase in three-phase system; 240-V connection on
+          a triplex system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 25
+          value_type: complex
+          separator: ','
+          native_name: prev_VA_out_A[VA]
+      prev_VA_out_B:
+        range: Complex
+        required: false
+        description: AC power on B phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 26
+          value_type: complex
+          separator: ','
+          native_name: prev_VA_out_B[VA]
+      prev_VA_out_C:
+        range: Complex
+        required: false
+        description: AC power on C phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 27
+          value_type: complex
+          separator: ','
+          native_name: prev_VA_out_C[VA]
+      e_source_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-forming source, phase A'
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_source_A
+      e_source_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-forming source, phase B'
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_source_B
+      e_source_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-forming source, phase C'
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_source_C
+      V_angle_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle of grid-forming source, phase A'
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_angle_A
+      V_angle_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle of grid-forming source, phase B'
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_angle_B
+      V_angle_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle of grid-forming source, phase C'
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_angle_C
+      phaseA_I_Forming:
+        range: Complex
+        required: false
+        description: AC current on A phase in three-phase system, only for grid_forming
+        unit:
+          ucum_code: A
+        annotations:
+          order: 34
+          value_type: complex
+          separator: ','
+          native_name: phaseA_I_Forming[A]
+      phaseB_I_Forming:
+        range: Complex
+        required: false
+        description: AC current on B phase in three-phase system, only for grid_forming
+        unit:
+          ucum_code: A
+        annotations:
+          order: 35
+          value_type: complex
+          separator: ','
+          native_name: phaseB_I_Forming[A]
+      phaseC_I_Forming:
+        range: Complex
+        required: false
+        description: AC current on C phase in three-phase system, only for grid_forming
+        unit:
+          ucum_code: A
+        annotations:
+          order: 36
+          value_type: complex
+          separator: ','
+          native_name: phaseC_I_Forming[A]
+      phaseA_I_Following:
+        range: Complex
+        required: false
+        description: AC current on A phase in three-phase system, only for grid_following
+        unit:
+          ucum_code: A
+        annotations:
+          order: 37
+          value_type: complex
+          separator: ','
+          native_name: phaseA_I_Following[A]
+      phaseB_I_Following:
+        range: Complex
+        required: false
+        description: AC current on B phase in three-phase system, only for grid_following
+        unit:
+          ucum_code: A
+        annotations:
+          order: 38
+          value_type: complex
+          separator: ','
+          native_name: phaseB_I_Following[A]
+      phaseC_I_Following:
+        range: Complex
+        required: false
+        description: AC current on C phase in three-phase system, only for grid_following
+        unit:
+          ucum_code: A
+        annotations:
+          order: 39
+          value_type: complex
+          separator: ','
+          native_name: phaseC_I_Following[A]
+      pCircuit_V_Avg:
+        range: float
+        required: false
+        description: 'DELTAMODE: three-phase average value of terminal voltage'
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pCircuit_V_Avg
+      P_Out:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Scheduled real power out in CONSTANT_PQ
+          control mode'
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_Out[VA]
+      Q_Out:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Schedule reactive power out in CONSTANT_PQ
+          control mode'
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q_Out[VAr]
+      power_in:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: No longer used'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_in[W]
+      rated_power:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The rated power of the inverter'
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_power[VA]
+      rated_battery_power:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The rated power of battery when battery
+          is attached'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_battery_power[W]
+      inverter_efficiency:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The efficiency of the inverter'
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inverter_efficiency
+      battery_soc:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The state of charge of an attached battery'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_soc[pu]
+      soc_reserve:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The reserve state of charge of an attached
+          battery for islanding cases'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: soc_reserve[pu]
+      power_factor:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The power factor used for CONSTANT_PF control
+          mode'
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_factor[unit]
+      islanded_state:
+        range: boolean
+        required: false
+        description: 'FOUR QUADRANT MODEL: Boolean used to let control modes to act
+          under island conditions'
+        annotations:
+          order: 50
+          value_type: bool
+          separator: ','
+          native_name: islanded_state
+      nominal_frequency:
+        range: float
+        required: false
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_frequency[Hz]
+      Pref:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real power reference.'
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref
+      Qref:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive power reference.'
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qref
+      kpd:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis integration gain for the current modulation
+          PI controller.'
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpd
+      kpq:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis integration gain for the current modulation
+          PI controller.'
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpq
+      kid:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis proportional gain for the current modulation
+          PI controller.'
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kid
+      kiq:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis proportional gain for the current modulation
+          PI controller.'
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kiq
+      kdd:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis differentiator gain for the current modulation
+          PID controller'
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kdd
+      kdq:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis differentiator gain for the current modulation
+          PID controller'
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kdq
+      epA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real current error for phase A or triplex phase.'
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: epA
+      epB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real current error for phase B.'
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: epB
+      epC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real current error for phase C.'
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: epC
+      eqA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive current error for phase A or triplex
+          phase.'
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eqA
+      eqB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive current error for phase B.'
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eqB
+      eqC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive current error for phase C.'
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eqC
+      delta_epA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in real current error for phase A or triplex
+          phase.'
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_epA
+      delta_epB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in real current error for phase B.'
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_epB
+      delta_epC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in real current error for phase C.'
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_epC
+      delta_eqA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in reactive current error for phase A
+          or triplex phase.'
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_eqA
+      delta_eqB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in reactive current error for phase B.'
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_eqB
+      delta_eqC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in reactive current error for phase C.'
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_eqC
+      mdA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis current modulation for phase A or triplex
+          phase.'
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mdA
+      mdB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis current modulation for phase B.'
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mdB
+      mdC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The d-axis current modulation for phase C.'
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mdC
+      mqA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis current modulation for phase A or triplex
+          phase.'
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mqA
+      mqB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis current modulation for phase B.'
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mqB
+      mqC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The q-axis current modulation for phase C.'
+        annotations:
+          order: 77
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mqC
+      delta_mdA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in d-axis current modulation for phase
+          A or triplex phase.'
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mdA
+      delta_mdB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in d-axis current modulation for phase
+          B.'
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mdB
+      delta_mdC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in d-axis current modulation for phase
+          C.'
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mdC
+      delta_mqA:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in q-axis current modulation for phase
+          A or triplex phase.'
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mqA
+      delta_mqB:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in q-axis current modulation for phase
+          B.'
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mqB
+      delta_mqC:
+        range: float
+        required: false
+        description: 'DELTAMODE: The change in q-axis current modulation for phase
+          C.'
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mqC
+      IdqA:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: The dq-axis current for phase A or triplex phase.'
+        annotations:
+          order: 84
+          value_type: complex
+          separator: ','
+          native_name: IdqA
+      IdqB:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: The dq-axis current for phase B.'
+        annotations:
+          order: 85
+          value_type: complex
+          separator: ','
+          native_name: IdqB
+      IdqC:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: The dq-axis current for phase C.'
+        annotations:
+          order: 86
+          value_type: complex
+          separator: ','
+          native_name: IdqC
+      Tfreq_delay:
+        range: float
+        required: false
+        description: 'DELTAMODE: The time constant for delayed frequency seen by the
+          inverter'
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tfreq_delay
+      inverter_droop_fp:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter f/p droop
+          is included or not'
+        annotations:
+          order: 88
+          value_type: bool
+          separator: ','
+          native_name: inverter_droop_fp
+      R_fp:
+        range: float
+        required: false
+        description: 'DELTAMODE: The droop parameter of the f/p droop'
+        annotations:
+          order: 89
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_fp
+      kppmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: The proportional gain of Pmax controller'
+        annotations:
+          order: 90
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kppmax
+      kipmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: The integral gain of Pmax controller'
+        annotations:
+          order: 91
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kipmax
+      Pmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: power limit of grid forming inverter'
+        annotations:
+          order: 92
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pmax
+      Pmin:
+        range: float
+        required: false
+        description: 'DELTAMODE: power limit of grid forming inverter'
+        annotations:
+          order: 93
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pmin
+      Pmax_Low_Limit:
+        range: float
+        required: false
+        description: 'DELTAMODE: output limit of Pmax controller'
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pmax_Low_Limit
+      Tvol_delay:
+        range: float
+        required: false
+        description: 'DELTAMODE: The time constant for delayed voltage seen by the
+          inverter'
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tvol_delay
+      inverter_droop_vq:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter q/v droop
+          is included or not'
+        annotations:
+          order: 96
+          value_type: bool
+          separator: ','
+          native_name: inverter_droop_vq
+      R_vq:
+        range: float
+        required: false
+        description: 'DELTAMODE: The droop parameter of the v/q droop'
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_vq
+      Tp_delay:
+        range: float
+        required: false
+        description: 'DELTAMODE: The time constant for delayed real power seen by
+          the VSI droop controller'
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tp_delay
+      Tq_delay:
+        range: float
+        required: false
+        description: 'DELTAMODE: The time constant for delayed reactive power seen
+          by the VSI droop controller'
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tq_delay
+      VSI_Rfilter:
+        range: Complex
+        required: false
+        description: VSI filter resistance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 100
+          value_type: complex
+          separator: ','
+          native_name: VSI_Rfilter[pu]
+      VSI_Xfilter:
+        range: Complex
+        required: false
+        description: VSI filter inductance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 101
+          value_type: complex
+          separator: ','
+          native_name: VSI_Xfilter[pu]
+      VSI_mode:
+        range: string
+        required: false
+        description: 'VSI MODEL: Selects VSI mode for either isochronous or droop
+          one'
+        annotations:
+          order: 102
+          value_type: string
+          separator: ','
+          native_name: VSI_mode
+      VSI_freq:
+        range: float
+        required: false
+        description: VSI frequency
+        annotations:
+          order: 103
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VSI_freq
+      ki_Vterminal:
+        range: float
+        required: false
+        description: 'DELTAMODE: The integrator gain for the VSI terminal voltage
+          modulation'
+        annotations:
+          order: 104
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ki_Vterminal
+      kp_Vterminal:
+        range: float
+        required: false
+        description: 'DELTAMODE: The proportional gain for the VSI terminal voltage
+          modulation'
+        annotations:
+          order: 105
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kp_Vterminal
+      V_set_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: The voltage setpoint of droop control'
+        annotations:
+          order: 106
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_set_droop
+      V_set0:
+        range: float
+        required: false
+        description: 'DELTAMODE: The voltage setpoint of grid-following Q-V droop
+          control'
+        annotations:
+          order: 107
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_set0
+      V_set1:
+        range: float
+        required: false
+        description: 'DELTAMODE: The voltage setpoint of grid-following Q-V droop
+          control'
+        annotations:
+          order: 108
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_set1
+      V_set2:
+        range: float
+        required: false
+        description: 'DELTAMODE: The voltage setpoint of grid-following Q-V droop
+          control'
+        annotations:
+          order: 109
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_set2
+      enable_ramp_rates_real:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter ramp rate
+          is enforced or not'
+        annotations:
+          order: 110
+          value_type: bool
+          separator: ','
+          native_name: enable_ramp_rates_real
+      max_ramp_up_real:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real power ramp up rate limit'
+        unit:
+          ucum_code: W/s
+        annotations:
+          order: 111
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_ramp_up_real[W/s]
+      max_ramp_down_real:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real power ramp down rate limit'
+        unit:
+          ucum_code: W/s
+        annotations:
+          order: 112
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_ramp_down_real[W/s]
+      enable_ramp_rates_reactive:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter ramp rate
+          is enforced or not'
+        annotations:
+          order: 113
+          value_type: bool
+          separator: ','
+          native_name: enable_ramp_rates_reactive
+      max_ramp_up_reactive:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive power ramp up rate limit'
+        unit:
+          ucum_code: VAr/s
+        annotations:
+          order: 114
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_ramp_up_reactive[VAr/s]
+      max_ramp_down_reactive:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive power ramp down rate limit'
+        unit:
+          ucum_code: VAr/s
+        annotations:
+          order: 115
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_ramp_down_reactive[VAr/s]
+      dynamic_model_mode:
+        range: string
+        required: false
+        description: 'DELTAMODE: Underlying model to use for deltamode control'
+        annotations:
+          order: 116
+          value_type: string
+          separator: ','
+          native_name: dynamic_model_mode
+      enable_1547_checks:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Enable IEEE 1547-2003 disconnect checking'
+        annotations:
+          order: 117
+          value_type: bool
+          separator: ','
+          native_name: enable_1547_checks
+      reconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: Time delay after IEEE 1547-2003 violation clears
+          before resuming generation'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 118
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reconnect_time[s]
+      inverter_1547_status:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Indicator if the inverter is curtailed due to a 1547
+          violation or not'
+        annotations:
+          order: 119
+          value_type: bool
+          separator: ','
+          native_name: inverter_1547_status
+      IEEE_1547_version:
+        range: Ieee1547Version
+        required: false
+        description: 'DELTAMODE: Version of IEEE 1547 to use to populate defaults'
+        annotations:
+          order: 120
+          value_type: string
+          separator: ','
+          native_name: IEEE_1547_version
+      over_freq_high_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF2 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 121
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_high_cutout[Hz]
+      over_freq_high_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF2 clearing time for IEEE1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 122
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_high_disconnect_time[s]
+      over_freq_low_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF1 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 123
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_low_cutout[Hz]
+      over_freq_low_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF1 clearing time for IEEE 1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 124
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_low_disconnect_time[s]
+      under_freq_high_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF2 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 125
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_high_cutout[Hz]
+      under_freq_high_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF2 clearing time for IEEE1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 126
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_high_disconnect_time[s]
+      under_freq_low_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF1 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 127
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_low_cutout[Hz]
+      under_freq_low_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF1 clearing time for IEEE 1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 128
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_low_disconnect_time[s]
+      under_voltage_low_cutout:
+        range: float
+        required: false
+        description: Lowest voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 129
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_low_cutout[pu]
+      under_voltage_middle_cutout:
+        range: float
+        required: false
+        description: Middle-lowest voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 130
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_middle_cutout[pu]
+      under_voltage_high_cutout:
+        range: float
+        required: false
+        description: High value of low voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 131
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_high_cutout[pu]
+      over_voltage_low_cutout:
+        range: float
+        required: false
+        description: Lowest voltage value for overvoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 132
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_low_cutout[pu]
+      over_voltage_high_cutout:
+        range: float
+        required: false
+        description: High voltage value for overvoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 133
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_high_cutout[pu]
+      under_voltage_low_disconnect_time:
+        range: float
+        required: false
+        description: Lowest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 134
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_low_disconnect_time[s]
+      under_voltage_middle_disconnect_time:
+        range: float
+        required: false
+        description: Middle-lowest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 135
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_middle_disconnect_time[s]
+      under_voltage_high_disconnect_time:
+        range: float
+        required: false
+        description: Highest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 136
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_high_disconnect_time[s]
+      over_voltage_low_disconnect_time:
+        range: float
+        required: false
+        description: Lowest voltage clearing time for overvoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 137
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_low_disconnect_time[s]
+      over_voltage_high_disconnect_time:
+        range: float
+        required: false
+        description: Highest voltage clearing time for overvoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 138
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_high_disconnect_time[s]
+      IEEE_1547_trip_method:
+        range: Ieee1547TripMethod
+        required: false
+        description: High over-voltage level trip
+        annotations:
+          order: 139
+          value_type: string
+          separator: ','
+          native_name: IEEE_1547_trip_method
+      phases:
+        range: string
+        required: false
+        description: The phases the inverter is attached to
+        annotations:
+          order: 140
+          value_type: string
+          separator: ','
+          native_name: phases
+      use_multipoint_efficiency:
+        range: boolean
+        required: false
+        description: 'FOUR QUADRANT MODEL: boolean to used the multipoint efficiency
+          curve for the inverter when solar is attached'
+        annotations:
+          order: 141
+          value_type: bool
+          separator: ','
+          native_name: use_multipoint_efficiency
+      inverter_manufacturer:
+        range: string
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the manufacturer of the inverter
+          to setup up pre-existing efficiency curves'
+        annotations:
+          order: 142
+          value_type: string
+          separator: ','
+          native_name: inverter_manufacturer
+      maximum_dc_power:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the maximum dc power point for
+          the efficiency curve'
+        annotations:
+          order: 143
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_dc_power
+      maximum_dc_voltage:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the maximum dc voltage point for
+          the efficiency curve'
+        annotations:
+          order: 144
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_dc_voltage
+      minimum_dc_power:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the minimum dc power point for
+          the efficiency curve'
+        annotations:
+          order: 145
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: minimum_dc_power
+      c_0:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the first coefficient in the efficiency
+          curve'
+        annotations:
+          order: 146
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c_0
+      c_1:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the second coefficient in the efficiency
+          curve'
+        annotations:
+          order: 147
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c_1
+      c_2:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the third coefficient in the efficiency
+          curve'
+        annotations:
+          order: 148
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c_2
+      c_3:
+        range: float
+        required: false
+        description: 'MULTIPOINT EFFICIENCY MODEL: the fourth coefficient in the efficiency
+          curve'
+        annotations:
+          order: 149
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c_3
+      sense_object:
+        range: string
+        required: false
+        description: 'FOUR QUADRANT MODEL: name of the object the inverter is trying
+          to mitigate the load on (node/link) in LOAD_FOLLOWING'
+        annotations:
+          order: 150
+          value_type: string
+          separator: ','
+          native_name: sense_object
+      max_charge_rate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: maximum rate the battery can be charged
+          in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 151
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_charge_rate[W]
+      max_discharge_rate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: maximum rate the battery can be discharged
+          in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 152
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_discharge_rate[W]
+      charge_on_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: power level at which the inverter should
+          try charging the battery in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 153
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge_on_threshold[W]
+      charge_off_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: power level at which the inverter should
+          cease charging the battery in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 154
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge_off_threshold[W]
+      discharge_on_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: power level at which the inverter should
+          try discharging the battery in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 155
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_on_threshold[W]
+      discharge_off_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: power level at which the inverter should
+          cease discharging the battery in LOAD_FOLLOWING'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 156
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_off_threshold[W]
+      excess_input_power:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Excess power at the input of the inverter
+          that is otherwise just lost, or could be shunted to a battery'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 157
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: excess_input_power[W]
+      charge_lockout_time:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Lockout time when a charging operation
+          occurs before another LOAD_FOLLOWING dispatch operation can occur'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 158
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge_lockout_time[s]
+      discharge_lockout_time:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Lockout time when a discharging operation
+          occurs before another LOAD_FOLLOWING dispatch operation can occur'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 159
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_lockout_time[s]
+      pf_reg_activate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Lowest acceptable power-factor level below
+          which power-factor regulation will activate.'
+        annotations:
+          order: 160
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_activate
+      pf_reg_deactivate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Lowest acceptable power-factor above which
+          no power-factor regulation is needed.'
+        annotations:
+          order: 161
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_deactivate
+      pf_target:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Desired power-factor to maintain (signed)
+          positive is inductive'
+        annotations:
+          order: 162
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_target
+      pf_reg_high:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Upper limit for power-factor - if exceeds,
+          go full reverse reactive'
+        annotations:
+          order: 163
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_high
+      pf_reg_low:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Lower limit for power-factor - if exceeds,
+          stop regulating - pf_target_var is below this'
+        annotations:
+          order: 164
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_low
+      pf_reg_activate_lockout_time:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Mandatory pause between the deactivation
+          of power-factor regulation and it reactivation'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 165
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_activate_lockout_time[s]
+      disable_volt_var_if_no_input_power:
+        range: boolean
+        required: false
+        annotations:
+          order: 166
+          value_type: bool
+          separator: ','
+          native_name: disable_volt_var_if_no_input_power
+      delay_time:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 167
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delay_time[s]
+      max_var_slew_rate:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr/s
+        annotations:
+          order: 168
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_var_slew_rate[VAr/s]
+      max_pwr_slew_rate:
+        range: float
+        required: false
+        unit:
+          ucum_code: W/s
+        annotations:
+          order: 169
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_pwr_slew_rate[W/s]
+      volt_var_sched:
+        range: string
+        required: false
+        annotations:
+          order: 170
+          value_type: string
+          separator: ','
+          native_name: volt_var_sched
+      freq_pwr_sched:
+        range: string
+        required: false
+        annotations:
+          order: 171
+          value_type: string
+          separator: ','
+          native_name: freq_pwr_sched
+      charge_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Level at which all inverters in the group
+          will begin charging attached batteries. Regulated minimum load level.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 172
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge_threshold[W]
+      discharge_threshold:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Level at which all inverters in the group
+          will begin discharging attached batteries. Regulated maximum load level.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 173
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_threshold[W]
+      group_max_charge_rate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Sum of the charge rates of the batteries
+          involved in the group load-following.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 174
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: group_max_charge_rate[W]
+      group_max_discharge_rate:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Sum of the discharge rates of the batteries
+          involved in the group load-following.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 175
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: group_max_discharge_rate[W]
+      group_rated_power:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Sum of the inverter power ratings of the
+          inverters involved in the group power-factor regulation.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 176
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: group_rated_power[W]
+      V_base:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: The base voltage on the grid side of the
+          inverter. Used in VOLT_VAR control mode.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 177
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_base[V]
+      V1:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: voltage point 1 in volt/var curve. Used
+          in VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 178
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V1[pu]
+      Q1:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: VAR point 1 in volt/var curve. Used in
+          VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 179
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q1[pu]
+      V2:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: voltage point 2 in volt/var curve. Used
+          in VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 180
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V2[pu]
+      Q2:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: VAR point 2 in volt/var curve. Used in
+          VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 181
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q2[pu]
+      V3:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: voltage point 3 in volt/var curve. Used
+          in VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 182
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V3[pu]
+      Q3:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: VAR point 3 in volt/var curve. Used in
+          VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 183
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q3[pu]
+      V4:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: voltage point 4 in volt/var curve. Used
+          in VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 184
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V4[pu]
+      Q4:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: VAR point 4 in volt/var curve. Used in
+          VOLT_VAR control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 185
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q4[pu]
+      volt_var_control_lockout:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT QUADRANT MODEL: the lockout time between volt/var
+          actions.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 186
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_var_control_lockout[s]
+      number_of_phases_out:
+        range: integer
+        required: false
+        description: Exposed variable - hidden for solar
+        annotations:
+          order: 187
+          value_type: int
+          separator: ','
+          native_name: number_of_phases_out
+      efficiency_value:
+        range: float
+        required: false
+        description: Exposed variable - hidden for solar
+        annotations:
+          order: 188
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: efficiency_value
+      VW_V1:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Voltage at which power limiting begins
+          (e.g. 1.0583). Used in VOLT_WATT control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 189
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VW_V1[pu]
+      VW_V2:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Voltage at which power limiting ends. (e.g.
+          1.1000). Used in VOLT_WATT control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 190
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VW_V2[pu]
+      VW_P1:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Power limit at VW_P1 (e.g. 1). Used in
+          VOLT_WATT control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 191
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VW_P1[pu]
+      VW_P2:
+        range: float
+        required: false
+        description: 'FOUR QUADRANT MODEL: Power limit at VW_P2 (e.g. 0). Used in
+          VOLT_WATT control mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 192
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VW_P2[pu]
+      WT_is_connected:
+        range: boolean
+        required: false
+        description: Internal flag that indicates a wind turbine child is connected
+        annotations:
+          order: 193
+          value_type: bool
+          separator: ','
+          native_name: WT_is_connected
+      pf_reg_status:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pf_reg_status'
+        annotations:
+          order: 194
+          value_type: string
+          separator: ','
+          native_name: pf_reg_status
+      load_follow_status:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: Status variable for what the load_following
+          mode is doing'
+        annotations:
+          order: 195
+          value_type: string
+          separator: ','
+          native_name: load_follow_status
+      last_current_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (used to remove
+          from parent so XML files look proper) - element 0'
+        annotations:
+          order: 196
+          value_type: complex
+          separator: ','
+          native_name: last_current_A
+      last_current_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (used to remove
+          from parent so XML files look proper) - element 1'
+        annotations:
+          order: 197
+          value_type: complex
+          separator: ','
+          native_name: last_current_B
+      last_current_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (used to remove
+          from parent so XML files look proper) - element 2'
+        annotations:
+          order: 198
+          value_type: complex
+          separator: ','
+          native_name: last_current_C
+      last_current_D:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (used to remove
+          from parent so XML files look proper) - element 3'
+        annotations:
+          order: 199
+          value_type: complex
+          separator: ','
+          native_name: last_current_D
+      last_power_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (as constant
+          power) - used to remove from parent so XML looks right - element 0'
+        annotations:
+          order: 200
+          value_type: complex
+          separator: ','
+          native_name: last_power_A
+      last_power_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (as constant
+          power) - used to remove from parent so XML looks right - element 1'
+        annotations:
+          order: 201
+          value_type: complex
+          separator: ','
+          native_name: last_power_B
+      last_power_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (as constant
+          power) - used to remove from parent so XML looks right - element 2'
+        annotations:
+          order: 202
+          value_type: complex
+          separator: ','
+          native_name: last_power_C
+      last_power_D:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Previously applied power output (as constant
+          power) - used to remove from parent so XML looks right - element 3'
+        annotations:
+          order: 203
+          value_type: complex
+          separator: ','
+          native_name: last_power_D
+      inverter_first_step:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for inverter_first_step'
+        annotations:
+          order: 204
+          value_type: bool
+          separator: ','
+          native_name: inverter_first_step
+      first_iteration_current_injection:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: Initialization variable - mostly so SWING_PQ
+          buses initalize properly for deltamode'
+        annotations:
+          order: 205
+          value_type: int
+          separator: ','
+          native_name: first_iteration_current_injection
+      m12:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for m12'
+        annotations:
+          order: 206
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: m12
+      b12:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for b12'
+        annotations:
+          order: 207
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: b12
+      m23:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for m23'
+        annotations:
+          order: 208
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: m23
+      b23:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for b23'
+        annotations:
+          order: 209
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: b23
+      m34:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for m34'
+        annotations:
+          order: 210
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: m34
+      b34:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for b34'
+        annotations:
+          order: 211
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: b34
+      allowed_vv_action:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for allowed_vv_action'
+        annotations:
+          order: 212
+          value_type: string
+          separator: ','
+          native_name: allowed_vv_action
+      last_vv_check:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_vv_check'
+        annotations:
+          order: 213
+          value_type: string
+          separator: ','
+          native_name: last_vv_check
+      IEEE_1547_STATUS:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for ieee_1547_version'
+        annotations:
+          order: 214
+          value_type: string
+          separator: ','
+          native_name: IEEE_1547_STATUS
+      over_freq_high_band_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: OF2 violation accumulator'
+        annotations:
+          order: 215
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_high_band_viol_time
+      over_freq_low_band_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: OF1 violation accumulator'
+        annotations:
+          order: 216
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_low_band_viol_time
+      under_freq_low_band_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: UF1 violation accumulator'
+        annotations:
+          order: 217
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_low_band_viol_time
+      under_voltage_lowest_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Lowest low voltage threshold violation accumulator'
+        annotations:
+          order: 218
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_lowest_viol_time
+      under_voltage_middle_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Middle low voltage threshold violation accumulator'
+        annotations:
+          order: 219
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_middle_viol_time
+      under_voltage_high_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Highest low voltage threshold violation accumulator'
+        annotations:
+          order: 220
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_high_viol_time
+      over_voltage_low_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Lowest high voltage threshold violation accumulator'
+        annotations:
+          order: 221
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_low_viol_time
+      over_voltage_high_viol_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Highest high voltage threshold violation accumulator'
+        annotations:
+          order: 222
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_high_viol_time
+      lf_dispatch_power:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Amount of real power to try and dispatch to
+          meet thresholds'
+        annotations:
+          order: 223
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lf_dispatch_power
+      next_update_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: TIMESTAMP of next dispatching change allowed'
+        annotations:
+          order: 224
+          value_type: string
+          separator: ','
+          native_name: next_update_time
+      lf_dispatch_change_allowed:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: Flag to indicate if a change in dispatch is
+          allowed'
+        annotations:
+          order: 225
+          value_type: bool
+          separator: ','
+          native_name: lf_dispatch_change_allowed
+      pf_reg_dispatch_change_allowed:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: Flag to indicate if a change in dispatch is
+          allowed for power factor regulation'
+        annotations:
+          order: 226
+          value_type: bool
+          separator: ','
+          native_name: pf_reg_dispatch_change_allowed
+      pf_reg_dispatch_VAR:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: (Reactive only?) power dispatched to meet power
+          factor regulation threshold'
+        annotations:
+          order: 227
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf_reg_dispatch_VAR
+      pf_reg_next_update_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: TIMESTAMP of next dispatching change allowed'
+        annotations:
+          order: 228
+          value_type: string
+          separator: ','
+          native_name: pf_reg_next_update_time
+      prev_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: Tracking variable for previous "new time" run'
+        annotations:
+          order: 229
+          value_type: string
+          separator: ','
+          native_name: prev_time
+      prev_time_dbl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Tracking variable for 1547 checks and ramp rates'
+        annotations:
+          order: 230
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: prev_time_dbl
+      event_deltat:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Event-driven delta-t variable'
+        annotations:
+          order: 231
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: event_deltat
+      start_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: Recording start time of simulation'
+        annotations:
+          order: 232
+          value_type: string
+          separator: ','
+          native_name: start_time
+      last_I_Out_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_I_Out[0]'
+        annotations:
+          order: 233
+          value_type: complex
+          separator: ','
+          native_name: last_I_Out_A
+      last_I_Out_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_I_Out[1]'
+        annotations:
+          order: 234
+          value_type: complex
+          separator: ','
+          native_name: last_I_Out_B
+      last_I_Out_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_I_Out[2]'
+        annotations:
+          order: 235
+          value_type: complex
+          separator: ','
+          native_name: last_I_Out_C
+      last_I_In:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_I_In'
+        annotations:
+          order: 236
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_I_In
+      pa_vw_limited:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pa_vw_limited'
+        annotations:
+          order: 237
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pa_vw_limited
+      pb_vw_limited:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pb_vw_limited'
+        annotations:
+          order: 238
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pb_vw_limited
+      pc_vw_limited:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pc_vw_limited'
+        annotations:
+          order: 239
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pc_vw_limited
+      out_of_violation_time_total:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for out_of_violation_time_total'
+        annotations:
+          order: 240
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: out_of_violation_time_total
+      deltamode_inclusive:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: Boolean for deltamode calls - pulled from object
+          flags'
+        annotations:
+          order: 241
+          value_type: bool
+          separator: ','
+          native_name: deltamode_inclusive
+      first_sync_delta_enabled:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first_sync_delta_enabled'
+        annotations:
+          order: 242
+          value_type: bool
+          separator: ','
+          native_name: first_sync_delta_enabled
+      first_iter_counter:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first_iter_counter'
+        annotations:
+          order: 243
+          value_type: string
+          separator: ','
+          native_name: first_iter_counter
+      first_run:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first_run'
+        annotations:
+          order: 244
+          value_type: bool
+          separator: ','
+          native_name: first_run
+      prev_value_IGenerated_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_value_IGenerated[0]'
+        annotations:
+          order: 245
+          value_type: complex
+          separator: ','
+          native_name: prev_value_IGenerated_A
+      prev_value_IGenerated_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_value_IGenerated[1]'
+        annotations:
+          order: 246
+          value_type: complex
+          separator: ','
+          native_name: prev_value_IGenerated_B
+      prev_value_IGenerated_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_value_IGenerated[2]'
+        annotations:
+          order: 247
+          value_type: complex
+          separator: ','
+          native_name: prev_value_IGenerated_C

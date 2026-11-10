@@ -7,6 +7,7 @@ dependencies = [
     "cimhub-core",
     "cimhub-opendss",
     "cimhub-gdm",
+    "cimhub-gridlabd",
 ]
 
 [dependency-groups]
@@ -28,17 +29,19 @@ members = [
     "cimhub_core",
     "cimhub_opendss",
     "cimhub_gdm",
+    "cimhub_gridlabd",
 ]
 
 [tool.uv.sources]
 cimhub-core = { workspace = true }
 cimhub-opendss = { workspace = true }
 cimhub-gdm = { workspace = true }
+cimhub-gridlabd = { workspace = true }
 # Sibling checkouts of the cim-graph stack until they are released (rewrite plan F-end).
 # A public build cannot resolve these: switch to version pins before release.
 cim-graph = { path = "../CIM-Graph", editable = true }
 cim-profiles = { path = "../CIM-Profiles", editable = true }
-cimtables = { path = "../CIM-Tables", editable = true }
+cim-tables = { path = "../CIM-Tables", editable = true }
 cim-builder = { path = "../CIM-Builder", editable = true }
 cim-topology = { path = "../CIM-Graph-Topology-Processor", editable = true }
 

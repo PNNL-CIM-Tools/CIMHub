@@ -1,0 +1,549 @@
+id: https://gridlabd.org/schema/glm/powerflow/series_compensator
+name: series_compensator
+description: GridLAB-D series_compensator class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  series_compensator:
+    description: '**************** Code injection point *****************
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      vset_A:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase A
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_A[pu]
+      vset_B:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase B
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_B[pu]
+      vset_C:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase C
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_C[pu]
+      vset_A_0:
+        range: float
+        required: false
+        description: Voltage magnitude set point for phase A, changed by the player
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_A_0[pu]
+      vset_B_0:
+        range: float
+        required: false
+        description: Voltage magnitude set point for phase B, changed by the player
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_B_0[pu]
+      vset_C_0:
+        range: float
+        required: false
+        description: Voltage magnitude set point for phase C, changed by the player
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_C_0[pu]
+      vset_1:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase 1 of a triplex system
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_1[pu]
+      vset_2:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase 2 of a tryplex system
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_2[pu]
+      vset_1_0:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase 1 of a triplex system
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_1_0[pu]
+      vset_2_0:
+        range: float
+        required: false
+        description: Voltage magnitude reference for phase 2 of a tryplex system
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_2_0[pu]
+      frequency_regulation:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean value indicating whether the frequency regulation
+          of the series compensator is enabled or not'
+        annotations:
+          order: 11
+          value_type: bool
+          separator: ','
+          native_name: frequency_regulation
+      frequency_open_loop_control:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean value indicating whether the frequency open
+          loop control of the series compensator is enabled or not'
+        annotations:
+          order: 12
+          value_type: bool
+          separator: ','
+          native_name: frequency_open_loop_control
+      t_delay:
+        range: float
+        required: false
+        description: the controller will wait for t_delay to take actions
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: t_delay
+      t_hold:
+        range: float
+        required: false
+        description: Once the controller changes the voltage set point, it will stay
+          there for t_hold time
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: t_hold
+      recover_rate:
+        range: float
+        required: false
+        description: 'The rate that the voltage goes back to nominal, unit: pu/s'
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: recover_rate
+      frequency_low:
+        range: float
+        required: false
+        description: The low frequency that activates the controller
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_low
+      frequency_high:
+        range: float
+        required: false
+        description: The high frequency that activates the controller
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_high
+      V_error:
+        range: float
+        required: false
+        description: Make sure the voltage can go back to nominal
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_error
+      voltage_update_tolerance:
+        range: float
+        required: false
+        description: Largest absolute between vset_X and measured voltage that won't
+          force a reiteration
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_update_tolerance[pu]
+      turns_ratio_A:
+        range: float
+        required: false
+        description: Debug variable - Turns ratio for phase A series compensator equivalent
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turns_ratio_A
+      turns_ratio_B:
+        range: float
+        required: false
+        description: Debug variable - Turns ratio for phase B series compensator equivalent
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turns_ratio_B
+      turns_ratio_C:
+        range: float
+        required: false
+        description: Debug variable - Turns ratio for phase C series compensator equivalent
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turns_ratio_C
+      turns_ratio_1:
+        range: float
+        required: false
+        description: Debug variable - Turns ratio for phase 1 (triplex) series compensator
+          equivalent
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turns_ratio_1
+      turns_ratio_2:
+        range: float
+        required: false
+        description: Debug variable - Turns ratio for phase 2 (triplex) series compensator
+          equivalent
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turns_ratio_2
+      n_max_ext_A:
+        range: float
+        required: false
+        description: maximum Turn ratio for phase A
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_max_ext_A
+      n_max_ext_B:
+        range: float
+        required: false
+        description: maximum Turn ratio for phase B
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_max_ext_B
+      n_max_ext_C:
+        range: float
+        required: false
+        description: maximum Turn ratio for phase C
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_max_ext_C
+      n_min_ext_A:
+        range: float
+        required: false
+        description: minimum Turn ratio for phase A
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_min_ext_A
+      n_min_ext_B:
+        range: float
+        required: false
+        description: minimum Turn ratio for phase B
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_min_ext_B
+      n_min_ext_C:
+        range: float
+        required: false
+        description: minimum Turn ratio for phase C
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_min_ext_C
+      n_max_ext_1:
+        range: float
+        required: false
+        description: maximum Turn ratio for phase 1 (triplex)
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_max_ext_1
+      n_max_ext_2:
+        range: float
+        required: false
+        description: maximum Turn ratio for phase 2 (triplex)
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_max_ext_2
+      n_min_ext_1:
+        range: float
+        required: false
+        description: minimum Turn ratio for phase 1 (triplex)
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_min_ext_1
+      n_min_ext_2:
+        range: float
+        required: false
+        description: minimum Turn ratio for phase 2 (triplex)
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n_min_ext_2
+      kp:
+        range: float
+        required: false
+        description: proportional gain
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kp
+      ki:
+        range: float
+        required: false
+        description: integrator gain
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ki
+      kpf:
+        range: float
+        required: false
+        description: proportional gain of frequency regulation
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpf
+      f_db_max:
+        range: float
+        required: false
+        description: frequency dead band max
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: f_db_max
+      f_db_min:
+        range: float
+        required: false
+        description: frequency dead band max
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: f_db_min
+      delta_Vmax:
+        range: float
+        required: false
+        description: upper limit of the frequency regulation output
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_Vmax
+      delta_Vmin:
+        range: float
+        required: false
+        description: lower limit of the frequency regulation output
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_Vmin
+      delta_V:
+        range: float
+        required: false
+        description: frequency regulation output
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_V
+      V_bypass_max_pu:
+        range: float
+        required: false
+        description: the upper limit voltage to bypass compensator
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_bypass_max_pu
+      V_bypass_min_pu:
+        range: float
+        required: false
+        description: the lower limit voltage to bypass compensator
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_bypass_min_pu
+      phase_A_state:
+        range: PhaseAState
+        required: false
+        description: Defines if phase A is in bypass or not
+        annotations:
+          order: 45
+          value_type: string
+          separator: ','
+          native_name: phase_A_state
+      phase_B_state:
+        range: PhaseBState
+        required: false
+        description: Defines if phase B is in bypass or not
+        annotations:
+          order: 46
+          value_type: string
+          separator: ','
+          native_name: phase_B_state
+      phase_C_state:
+        range: PhaseCState
+        required: false
+        description: Defines if phase C is in bypass or not
+        annotations:
+          order: 47
+          value_type: string
+          separator: ','
+          native_name: phase_C_state
+      phase_1_state:
+        range: string
+        required: false
+        description: Defines if phase 1 is in bypass or not
+        annotations:
+          order: 48
+          value_type: string
+          separator: ','
+          native_name: phase_1_state
+      phase_2_state:
+        range: string
+        required: false
+        description: Defines if phase 2 is in bypass or not
+        annotations:
+          order: 49
+          value_type: string
+          separator: ','
+          native_name: phase_2_state
+      series_compensator_resistance:
+        range: float
+        required: false
+        description: Baseline resistance for the series compensator device - needed
+          for NR
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: series_compensator_resistance[Ohm]

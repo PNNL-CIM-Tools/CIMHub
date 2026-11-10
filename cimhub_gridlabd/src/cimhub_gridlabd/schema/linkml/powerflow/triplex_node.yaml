@@ -1,0 +1,822 @@
+id: https://gridlabd.org/schema/glm/powerflow/triplex_node
+name: triplex_node
+description: GridLAB-D triplex_node class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  triplex_node:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file triplex_node.cpp
+
+      @addtogroup triplex_node
+
+      @ingroup powerflow_node
+
+      @{
+
+
+      Inherits from: powerflow_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      bustype:
+        range: Bustype
+        required: false
+        description: defines whether the node is a PQ, PV, or SWING node
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: bustype
+      busflags:
+        range: string
+        required: false
+        description: flag indicates node has a source for voltage, i.e. connects to
+          the swing node
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: busflags
+      reference_bus:
+        range: string
+        required: false
+        description: reference bus from which frequency is defined
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: reference_bus
+      maximum_voltage_error:
+        range: float
+        required: false
+        description: convergence voltage limit or convergence criteria
+        unit:
+          ucum_code: V
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_voltage_error[V]
+      voltage_1:
+        range: Complex
+        required: false
+        description: bus voltage, phase 1 to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: voltage_1[V]
+      voltage_2:
+        range: Complex
+        required: false
+        description: bus voltage, phase 2 to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: voltage_2[V]
+      voltage_N:
+        range: Complex
+        required: false
+        description: bus voltage, phase N to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: voltage_N[V]
+      voltage_12:
+        range: Complex
+        required: false
+        description: bus voltage, phase 1 to 2
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: voltage_12[V]
+      voltage_1N:
+        range: Complex
+        required: false
+        description: bus voltage, phase 1 to N
+        unit:
+          ucum_code: V
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: voltage_1N[V]
+      voltage_2N:
+        range: Complex
+        required: false
+        description: bus voltage, phase 2 to N
+        unit:
+          ucum_code: V
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: voltage_2N[V]
+      prerotated_current_1:
+        range: Complex
+        required: false
+        description: deltamode-functionality - bus current injection (in = positive),
+          but will not be rotated by powerflow for off-nominal frequency, this an
+          accumulator only, not a output or input variable
+        unit:
+          ucum_code: A
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: prerotated_current_1[A]
+      prerotated_current_2:
+        range: Complex
+        required: false
+        description: deltamode-functionality - bus current injection (in = positive),
+          but will not be rotated by powerflow for off-nominal frequency, this an
+          accumulator only, not a output or input variable
+        unit:
+          ucum_code: A
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: prerotated_current_2[A]
+      prerotated_current_12:
+        range: Complex
+        required: false
+        description: deltamode-functionality - bus current injection (in = positive),
+          but will not be rotated by powerflow for off-nominal frequency, this an
+          accumulator only, not a output or input variable
+        unit:
+          ucum_code: A
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: prerotated_current_12[A]
+      deltamode_generator_current_12:
+        range: Complex
+        required: false
+        description: deltamode-functionality - bus current injection (in = positive),
+          direct generator injection (so may be overwritten internally), this an accumulator
+          only, not a output or input variable
+        unit:
+          ucum_code: A
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: deltamode_generator_current_12[A]
+      deltamode_PGenTotal:
+        range: Complex
+        required: false
+        description: deltamode-functionality - power value for a diesel generator
+          -- accumulator only, not an output or input
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: deltamode_PGenTotal
+      deltamode_full_Y_matrix:
+        range: string
+        required: false
+        description: deltamode-functionality full_Y matrix exposes so generator objects
+          can interact for Norton equivalents
+        annotations:
+          order: 16
+          value_type: string
+          separator: ','
+          native_name: deltamode_full_Y_matrix
+      deltamode_full_Y_all_matrix:
+        range: string
+        required: false
+        description: deltamode-functionality full_Y_all matrix exposes so generator
+          objects can interact for Norton equivalents
+        annotations:
+          order: 17
+          value_type: string
+          separator: ','
+          native_name: deltamode_full_Y_all_matrix
+      NR_powerflow_parent:
+        range: string
+        required: false
+        description: NR powerflow - actual powerflow parent - used by generators accessing
+          child objects
+        annotations:
+          order: 18
+          value_type: string
+          separator: ','
+          native_name: NR_powerflow_parent
+      residential_nominal_current_1:
+        range: Complex
+        required: false
+        description: posted current on phase 1 from a residential object, if attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: residential_nominal_current_1[A]
+      residential_nominal_current_2:
+        range: Complex
+        required: false
+        description: posted current on phase 2 from a residential object, if attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: complex
+          separator: ','
+          native_name: residential_nominal_current_2[A]
+      residential_nominal_current_12:
+        range: Complex
+        required: false
+        description: posted current on phase 1 to 2 from a residential object, if
+          attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: residential_nominal_current_12[A]
+      residential_nominal_current_1_real:
+        range: float
+        required: false
+        description: posted current on phase 1, real, from a residential object, if
+          attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_1_real[A]
+      residential_nominal_current_1_imag:
+        range: float
+        required: false
+        description: posted current on phase 1, imag, from a residential object, if
+          attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_1_imag[A]
+      residential_nominal_current_2_real:
+        range: float
+        required: false
+        description: posted current on phase 2, real, from a residential object, if
+          attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_2_real[A]
+      residential_nominal_current_2_imag:
+        range: float
+        required: false
+        description: posted current on phase 2, imag, from a residential object, if
+          attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_2_imag[A]
+      residential_nominal_current_12_real:
+        range: float
+        required: false
+        description: posted current on phase 1 to 2, real, from a residential object,
+          if attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_12_real[A]
+      residential_nominal_current_12_imag:
+        range: float
+        required: false
+        description: posted current on phase 1 to 2, imag, from a residential object,
+          if attached
+        unit:
+          ucum_code: A
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: residential_nominal_current_12_imag[A]
+      current_1:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - current load
+          on phase 1
+        unit:
+          ucum_code: A
+        annotations:
+          order: 28
+          value_type: complex
+          separator: ','
+          native_name: current_1[A]
+      current_2:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - current load
+          on phase 2
+        unit:
+          ucum_code: A
+        annotations:
+          order: 29
+          value_type: complex
+          separator: ','
+          native_name: current_2[A]
+      current_N:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - current load
+          on phase N
+        unit:
+          ucum_code: A
+        annotations:
+          order: 30
+          value_type: complex
+          separator: ','
+          native_name: current_N[A]
+      current_12:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - current load
+          on phase 1 to 2
+        unit:
+          ucum_code: A
+        annotations:
+          order: 31
+          value_type: complex
+          separator: ','
+          native_name: current_12[A]
+      power_1:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - power on
+          phase 1 (120V)
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 32
+          value_type: complex
+          separator: ','
+          native_name: power_1[VA]
+      power_2:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - power on
+          phase 2 (120V)
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 33
+          value_type: complex
+          separator: ','
+          native_name: power_2[VA]
+      power_12:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - power on
+          phase 1 to 2 (240V)
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 34
+          value_type: complex
+          separator: ','
+          native_name: power_12[VA]
+      shunt_1:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - shunt impedance
+          on phase 1
+        unit:
+          ucum_code: S
+        annotations:
+          order: 35
+          value_type: complex
+          separator: ','
+          native_name: shunt_1[S]
+      shunt_2:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - shunt impedance
+          on phase 2
+        unit:
+          ucum_code: S
+        annotations:
+          order: 36
+          value_type: complex
+          separator: ','
+          native_name: shunt_2[S]
+      shunt_12:
+        range: Complex
+        required: false
+        description: accumulator - used for debugging/interfacing only - shunt impedance
+          on phase 1 to 2
+        unit:
+          ucum_code: S
+        annotations:
+          order: 37
+          value_type: complex
+          separator: ','
+          native_name: shunt_12[S]
+      house_present:
+        range: boolean
+        required: false
+        description: boolean for detecting whether a house is attached, not an input
+        annotations:
+          order: 38
+          value_type: bool
+          separator: ','
+          native_name: house_present
+      Norton_dynamic:
+        range: boolean
+        required: false
+        description: Flag to indicate a Norton-equivalent connection -- used for generators
+          and deltamode
+        annotations:
+          order: 39
+          value_type: bool
+          separator: ','
+          native_name: Norton_dynamic
+      Norton_dynamic_child:
+        range: boolean
+        required: false
+        description: Flag to indicate a Norton-equivalent connection is made by a
+          childed node object -- used for generators and deltamode
+        annotations:
+          order: 40
+          value_type: bool
+          separator: ','
+          native_name: Norton_dynamic_child
+      generator_dynamic:
+        range: boolean
+        required: false
+        description: Flag to indicate a voltage-sourcing or swing-type generator is
+          present -- used for generators and deltamode
+        annotations:
+          order: 41
+          value_type: bool
+          separator: ','
+          native_name: generator_dynamic
+      reset_disabled_island_state:
+        range: boolean
+        required: false
+        description: Deltamode/multi-island flag -- used to reset disabled status
+          (and reform an island)
+        annotations:
+          order: 42
+          value_type: bool
+          separator: ','
+          native_name: reset_disabled_island_state
+      GFA_enable:
+        range: boolean
+        required: false
+        description: Disable/Enable Grid Friendly Applicance(TM)-type functionality
+        annotations:
+          order: 43
+          value_type: bool
+          separator: ','
+          native_name: GFA_enable
+      GFA_freq_low_trip:
+        range: float
+        required: false
+        description: Low frequency trip point for Grid Friendly Appliance(TM)-type
+          functionality
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_freq_low_trip[Hz]
+      GFA_freq_high_trip:
+        range: float
+        required: false
+        description: High frequency trip point for Grid Friendly Appliance(TM)-type
+          functionality
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_freq_high_trip[Hz]
+      GFA_volt_low_trip:
+        range: float
+        required: false
+        description: Low voltage trip point for Grid Friendly Appliance(TM)-type functionality
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_volt_low_trip[pu]
+      GFA_volt_high_trip:
+        range: float
+        required: false
+        description: High voltage trip point for Grid Friendly Appliance(TM)-type
+          functionality
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_volt_high_trip[pu]
+      GFA_reconnect_time:
+        range: float
+        required: false
+        description: Reconnect time for Grid Friendly Appliance(TM)-type functionality
+        unit:
+          ucum_code: s
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_reconnect_time[s]
+      GFA_freq_disconnect_time:
+        range: float
+        required: false
+        description: Frequency violation disconnect time for Grid Friendly Appliance(TM)-type
+          functionality
+        unit:
+          ucum_code: s
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_freq_disconnect_time[s]
+      GFA_volt_disconnect_time:
+        range: float
+        required: false
+        description: Voltage violation disconnect time for Grid Friendly Appliance(TM)-type
+          functionality
+        unit:
+          ucum_code: s
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GFA_volt_disconnect_time[s]
+      GFA_status:
+        range: boolean
+        required: false
+        description: Low frequency trip point for Grid Friendly Appliance(TM)-type
+          functionality
+        annotations:
+          order: 51
+          value_type: bool
+          separator: ','
+          native_name: GFA_status
+      GFA_trip_method:
+        range: GfaTripMethod
+        required: false
+        description: GFA trip for over-voltage
+        annotations:
+          order: 52
+          value_type: string
+          separator: ','
+          native_name: GFA_trip_method
+      service_status:
+        range: ServiceStatus
+        required: false
+        description: In and out of service flag
+        annotations:
+          order: 53
+          value_type: string
+          separator: ','
+          native_name: service_status
+      service_status_double:
+        range: float
+        required: false
+        description: In and out of service flag - type double - will indiscriminately
+          override service_status - useful for schedules
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: service_status_double
+      previous_uptime:
+        range: float
+        required: false
+        description: Previous time between disconnects of node in minutes
+        unit:
+          ucum_code: min
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: previous_uptime[min]
+      current_uptime:
+        range: float
+        required: false
+        description: Current time since last disconnect of node in minutes
+        unit:
+          ucum_code: min
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_uptime[min]
+      topological_parent:
+        range: string
+        required: false
+        description: topological parent as per GLM configuration
+        annotations:
+          order: 57
+          value_type: string
+          separator: ','
+          native_name: topological_parent
+      behaving_as_swing:
+        range: boolean
+        required: false
+        description: Indicator flag for if a bus is behaving as a reference voltage
+          source - valid for a SWING or SWING_PQ
+        annotations:
+          order: 58
+          value_type: bool
+          separator: ','
+          native_name: behaving_as_swing
+      frequency_measure_type:
+        range: FrequencyMeasureType
+        required: false
+        description: PLL frequency measurement
+        annotations:
+          order: 59
+          value_type: string
+          separator: ','
+          native_name: frequency_measure_type
+      sfm_Tf:
+        range: float
+        required: false
+        description: Transducer time constant for simplified frequency measurement
+          (seconds)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: sfm_Tf[s]
+      pll_Kp:
+        range: float
+        required: false
+        description: Proportional gain of PLL frequency measurement
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pll_Kp[pu]
+      pll_Ki:
+        range: float
+        required: false
+        description: Integration gain of PLL frequency measurement
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pll_Ki[pu]
+      measured_angle_1:
+        range: float
+        required: false
+        description: bus angle measurement, phase 1N
+        unit:
+          ucum_code: rad
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_angle_1[rad]
+      measured_frequency_1:
+        range: float
+        required: false
+        description: frequency measurement, phase 1N
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_frequency_1[Hz]
+      measured_angle_2:
+        range: float
+        required: false
+        description: bus angle measurement, phase 2N
+        unit:
+          ucum_code: rad
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_angle_2[rad]
+      measured_frequency_2:
+        range: float
+        required: false
+        description: frequency measurement, phase 2N
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_frequency_2[Hz]
+      measured_angle_12:
+        range: float
+        required: false
+        description: bus angle measurement, across the phases
+        unit:
+          ucum_code: rad
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_angle_12[rad]
+      measured_frequency_12:
+        range: float
+        required: false
+        description: frequency measurement, across the phases
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_frequency_12[Hz]
+      measured_frequency:
+        range: float
+        required: false
+        description: frequency measurement - average of present phases
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_frequency[Hz]

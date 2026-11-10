@@ -1,0 +1,2172 @@
+id: https://gridlabd.org/schema/glm/residential/house
+name: house
+description: GridLAB-D house class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  house:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file house_e.cpp
+
+      @addtogroup house_e
+
+      @ingroup residential
+
+      The house_e object implements a single family home.  The house_e
+
+      only includes the heating/cooling system and the power panel.
+
+      All other end-uses must be explicitly defined and attached to the
+
+      panel using the house_e::attach() method.
+
+      Residential panels use a split secondary transformer:
+
+      @verbatim
+
+      -----)||(------------------ 1    <-- 120V
+
+      )||(      120V         ^
+
+      1puV )||(----------- 3(N)  240V  <-- 0V
+
+      )||(      120V         v
+
+      -----)||(------------------ 2    <-- 120V
+
+      @endverbatim
+
+      120V objects are assigned alternatively to circuits 1-3 and 2-3 in the order
+
+      in which they call attach. 240V objects are assigned to circuit 1-2
+
+      Circuit breakers will open on over-current with respect to the maximum current
+
+      given by load when house_e::attach() was called.  After a breaker opens, it
+      is
+
+      reclosed within an average of 5 minutes (on an exponential distribution).  Each
+
+      time the breaker is reclosed, the breaker failure probability is increased.
+
+      The probability of failure is always 1/N where N is initially a large number
+      (e.g., 100).
+
+      N is progressively decremented until it reaches 1 and the probability of failure
+      is 100%.
+
+      The Equivalent Thermal Parameter (ETP) approach is used to model the residential
+      loads
+
+      and energy consumption.  Solving the ETP model simultaneously for T_{air} and
+      T_{mass},
+
+      the heating/cooling loads can be obtained as a function of time.
+
+      In the current implementation, the HVAC equipment is defined
+
+      as part of the house_e and attached to the electrical panel
+
+      with a 50 amp/220-240V circuit.
+
+      @par Commercial building connections
+
+      House_e is also used to represent commercial building zones.
+
+      Most commercial buildings are connected to three-phase
+
+      transformers at either 208 or 480 volts. In such cases, the
+
+      largest building loads are inherently balanced three-phase
+
+      motors or motor drives, while the single-phase building
+
+      loads are internally distributed among the phases. The
+
+      larger buildings take service at 480 volts, and have
+
+      internal transformers that step down to the single-phase
+
+      120-volt loads as needed. Single-phase loads can be served
+
+      at 120 volts line-to-neutral (as in residential buildings)
+
+      or 208 volts line-to-line, i.e., less than the 240 V in
+
+      residential buildings. Only the smaller commercial buildings
+
+      are connected directly to single-phase, split secondary
+
+      transformes as assumed in house_e, and those smaller
+
+      commercial buildings can have single-phase loads at 120 or
+
+      240 volts.
+
+      In order to accurately represent the voltage drop and load
+
+      balancing in commercial three-phase service, the house_e can
+
+      be connected to a regular load (up to 3 phases) instead of
+
+      just a triplex_meter. In such cases, ideal voltage and
+
+      current transformations occur to present average phase
+
+      voltage to the internal house_e loads, and balanced
+
+      three-phase or single-phase power to the external power
+
+      flow. commercial_load_parent is the flag indicating such
+
+      connections.
+
+      @par Implicit enduses
+
+      The use of implicit enduses is controlled globally by the #implicit_enduse global
+      variable.
+
+      All houses in the system will employ the same set of global enduses, meaning
+      that the
+
+      loadshape is controlled by the default schedule.
+
+      @par Credits
+
+      The original concept for ETP was developed by Rob Pratt and Todd Taylor around
+      1990.
+
+      The first derivation and implementation of the solution was done by Ross Guttromson
+
+      and David Chassin for PDSS in 2004.
+
+      @par Billing system
+
+      Contract terms are defined according to which contract type is being used.  For
+
+      subsidized and fixed price contracts, the terms are defined using the following
+      format:
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];energy=[c/kWh];
+
+      @endcode
+
+      Time-use contract terms are defined using
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];offpeak=[c/kWh];onpeak=[c/kWh];hours=[int24mask];
+
+      @endcode
+
+      When TOU includes critical peak pricing, use
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];offpeak=[c/kWh];onpeak=[c/kWh];hours=[int24mask]>;critical=[$/kWh];
+
+      @endcode
+
+      RTP is defined using
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];bid_fee=[$/bid];market=[name];
+
+      @endcode
+
+      Demand pricing uses
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];energy=[c/kWh];demand_limit=[kW];demand_price=[$/kW];
+
+      @endcode
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      weather:
+        range: string
+        required: false
+        description: reference to the climate object
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: weather
+      floor_area:
+        range: float
+        required: false
+        description: home conditioned floor area
+        unit:
+          ucum_code: sf
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: floor_area[sf]
+      gross_wall_area:
+        range: float
+        required: false
+        description: gross outdoor wall area
+        unit:
+          ucum_code: sf
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gross_wall_area[sf]
+      ceiling_height:
+        range: float
+        required: false
+        description: average ceiling height
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ceiling_height[ft]
+      aspect_ratio:
+        range: float
+        required: false
+        description: aspect ratio of the home's footprint
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aspect_ratio
+      envelope_UA:
+        range: float
+        required: false
+        description: overall UA of the home's envelope
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: envelope_UA[Btu/degF*h]
+      window_wall_ratio:
+        range: float
+        required: false
+        description: ratio of window area to wall area
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_wall_ratio
+      number_of_doors:
+        range: float
+        required: false
+        description: ratio of door area to wall area
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_doors
+      area_per_door:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for area per door in square
+          feet'
+        unit:
+          ucum_code: sf
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: area_per_door[sf]
+      exterior_wall_fraction:
+        range: float
+        required: false
+        description: ratio of exterior wall area to total wall area
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: exterior_wall_fraction
+      interior_exterior_wall_ratio:
+        range: float
+        required: false
+        description: ratio of interior to exterior walls
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: interior_exterior_wall_ratio
+      exterior_ceiling_fraction:
+        range: float
+        required: false
+        description: ratio of external ceiling sf to floor area
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: exterior_ceiling_fraction
+      exterior_floor_fraction:
+        range: float
+        required: false
+        description: ratio of floor area used in UA calculation
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: exterior_floor_fraction
+      window_shading:
+        range: float
+        required: false
+        description: transmission coefficient through window due to glazing
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_shading
+      window_exterior_transmission_coefficient:
+        range: float
+        required: false
+        description: coefficient for the amount of energy that passes through window
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_exterior_transmission_coefficient
+      solar_heatgain_factor:
+        range: float
+        required: false
+        description: product of the window area, window transmitivity, and the window
+          exterior transmission coefficient
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: solar_heatgain_factor
+      airchange_per_hour:
+        range: float
+        required: false
+        description: number of air-changes per hour
+        unit:
+          ucum_code: unit/h
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: airchange_per_hour[unit/h]
+      airchange_UA:
+        range: float
+        required: false
+        description: additional UA due to air infiltration
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: airchange_UA[Btu/degF*h]
+      UA:
+        range: float
+        required: false
+        description: the total UA
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: UA[Btu/degF*h]
+      internal_gain:
+        range: float
+        required: false
+        description: internal heat gains
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: internal_gain[Btu/h]
+      solar_gain:
+        range: float
+        required: false
+        description: solar heat gains
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: solar_gain[Btu/h]
+      incident_solar_radiation:
+        range: float
+        required: false
+        description: average incident solar radiation hitting the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: incident_solar_radiation[Btu/h*sf]
+      heat_cool_gain:
+        range: float
+        required: false
+        description: system heat gains(losses)
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heat_cool_gain[Btu/h]
+      include_solar_quadrant:
+        range: string
+        required: false
+        description: bit set for determining which solar incidence quadrants should
+          be included in the solar heatgain
+        annotations:
+          order: 24
+          value_type: string
+          separator: ','
+          native_name: include_solar_quadrant
+      horizontal_diffuse_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the top of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: horizontal_diffuse_solar_radiation[Btu/h*sf]
+      north_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the north side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: north_incident_solar_radiation[Btu/h*sf]
+      northwest_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the northwest side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: northwest_incident_solar_radiation[Btu/h*sf]
+      west_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the west side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: west_incident_solar_radiation[Btu/h*sf]
+      southwest_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the southwest side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: southwest_incident_solar_radiation[Btu/h*sf]
+      south_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the south side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: south_incident_solar_radiation[Btu/h*sf]
+      southeast_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the southeast side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: southeast_incident_solar_radiation[Btu/h*sf]
+      east_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the east side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: east_incident_solar_radiation[Btu/h*sf]
+      northeast_incident_solar_radiation:
+        range: float
+        required: false
+        description: incident solar radiation hitting the northeast side of the house
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: northeast_incident_solar_radiation[Btu/h*sf]
+      heating_cop_curve:
+        range: string
+        required: false
+        description: Defines the function type to use for the adjusted heating COP
+          as a function of outside air temperature.
+        annotations:
+          order: 34
+          value_type: string
+          separator: ','
+          native_name: heating_cop_curve
+      heating_cap_curve:
+        range: string
+        required: false
+        description: Defines the function type to use for the adjusted heating capacity
+          as a function of outside air temperature.
+        annotations:
+          order: 35
+          value_type: string
+          separator: ','
+          native_name: heating_cap_curve
+      cooling_cop_curve:
+        range: string
+        required: false
+        description: Defines the function type to use for the adjusted cooling COP
+          as a function of outside air temperature.
+        annotations:
+          order: 36
+          value_type: string
+          separator: ','
+          native_name: cooling_cop_curve
+      cooling_cap_curve:
+        range: string
+        required: false
+        description: Defines the function type to use for the adjusted cooling capacity
+          as a function of outside air temperature.
+        annotations:
+          order: 37
+          value_type: string
+          separator: ','
+          native_name: cooling_cap_curve
+      use_latent_heat:
+        range: boolean
+        required: false
+        description: Boolean for using the heat latency of the air to the humidity
+          when cooling.
+        annotations:
+          order: 38
+          value_type: bool
+          separator: ','
+          native_name: use_latent_heat
+      include_fan_heatgain:
+        range: boolean
+        required: false
+        description: Boolean to choose whether to include the heat generated by the
+          fan in the ETP model.
+        annotations:
+          order: 39
+          value_type: bool
+          separator: ','
+          native_name: include_fan_heatgain
+      thermostat_deadband:
+        range: float
+        required: false
+        description: deadband of thermostat control
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: thermostat_deadband[degF]
+      dlc_offset:
+        range: float
+        required: false
+        description: used as a cap to offset the thermostat deadband for direct load
+          control applications
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dlc_offset[degF]
+      thermostat_cycle_time:
+        range: integer
+        required: false
+        description: minimum time in seconds between thermostat updates
+        annotations:
+          order: 42
+          value_type: string
+          separator: ','
+          native_name: thermostat_cycle_time
+      thermostat_off_cycle_time:
+        range: integer
+        required: false
+        description: the minimum amount of time the thermostat cycle must stay in
+          the off state
+        annotations:
+          order: 43
+          value_type: string
+          separator: ','
+          native_name: thermostat_off_cycle_time
+      thermostat_on_cycle_time:
+        range: integer
+        required: false
+        description: the minimum amount of time the thermostat cycle must stay in
+          the on state
+        annotations:
+          order: 44
+          value_type: string
+          separator: ','
+          native_name: thermostat_on_cycle_time
+      thermostat_last_cycle_time:
+        range: string
+        required: false
+        description: last time the thermostat changed state
+        annotations:
+          order: 45
+          value_type: string
+          separator: ','
+          native_name: thermostat_last_cycle_time
+      heating_setpoint:
+        range: float
+        required: false
+        description: thermostat heating setpoint
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_setpoint[degF]
+      cooling_setpoint:
+        range: float
+        required: false
+        description: thermostat cooling setpoint
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_setpoint[degF]
+      TcoolOn:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tcool on in degF'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TcoolOn[degF]
+      design_heating_setpoint:
+        range: float
+        required: false
+        description: system design heating setpoint
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_heating_setpoint[degF]
+      design_cooling_setpoint:
+        range: float
+        required: false
+        description: system design cooling setpoint
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_cooling_setpoint[degF]
+      over_sizing_factor:
+        range: float
+        required: false
+        description: over sizes the heating and cooling system from standard specifications
+          (0.2 ='s 120% sizing)
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_sizing_factor
+      simulate_window_openings:
+        range: boolean
+        required: false
+        description: activates a representation of an occupant opening a window and
+          de-activating the HVAC system
+        annotations:
+          order: 52
+          value_type: bool
+          separator: ','
+          native_name: simulate_window_openings
+      is_window_open:
+        range: float
+        required: false
+        description: defines the state of the window opening, 1=open, 2=closed
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_window_open
+      window_low_temperature_cutoff:
+        range: float
+        required: false
+        description: lowest temperature at which the window opening might occur
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_low_temperature_cutoff[degF]
+      window_high_temperature_cutoff:
+        range: float
+        required: false
+        description: highest temperature at which the window opening might occur
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_high_temperature_cutoff[degF]
+      window_quadratic_coefficient:
+        range: float
+        required: false
+        description: quadratic coefficient for describing function between low and
+          high temperature cutoffs
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_quadratic_coefficient
+      window_linear_coefficient:
+        range: float
+        required: false
+        description: linear coefficient for describing function between low and high
+          temperature cutoffs
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_linear_coefficient
+      window_constant_coefficient:
+        range: float
+        required: false
+        description: constant coefficient for describing function between low and
+          high temperature cutoffs
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_constant_coefficient
+      window_temperature_delta:
+        range: float
+        required: false
+        description: change in outdoor temperature required to update the window opening
+          model
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_temperature_delta
+      last_temperature:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last temperature in degF'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_temperature[degF]
+      window_first_time_through:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for window first time through'
+        annotations:
+          order: 61
+          value_type: string
+          separator: ','
+          native_name: window_first_time_through
+      design_heating_capacity:
+        range: float
+        required: false
+        description: system heating capacity
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_heating_capacity[Btu/h]
+      design_cooling_capacity:
+        range: float
+        required: false
+        description: system cooling capacity
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_cooling_capacity[Btu/h]
+      cooling_design_temperature:
+        range: float
+        required: false
+        description: system cooling design temperature
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_design_temperature[degF]
+      heating_design_temperature:
+        range: float
+        required: false
+        description: system heating design temperature
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_design_temperature[degF]
+      design_peak_solar:
+        range: float
+        required: false
+        description: system design solar load
+        unit:
+          ucum_code: Btu/h*sf
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_peak_solar[Btu/h*sf]
+      design_internal_gains:
+        range: float
+        required: false
+        description: system design internal gains
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_internal_gains[Btu/h]
+      air_heat_fraction:
+        range: float
+        required: false
+        description: fraction of heat gain/loss that goes to air (as opposed to mass)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_heat_fraction[pu]
+      mass_solar_gain_fraction:
+        range: float
+        required: false
+        description: fraction of the heat gain/loss from the solar gains that goes
+          to the mass
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_solar_gain_fraction[pu]
+      mass_internal_gain_fraction:
+        range: float
+        required: false
+        description: fraction of heat gain/loss from the internal gains that goes
+          to the mass
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_internal_gain_fraction[pu]
+      auxiliary_heat_capacity:
+        range: float
+        required: false
+        description: installed auxiliary heating capacity
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: auxiliary_heat_capacity[Btu/h]
+      aux_heat_deadband:
+        range: float
+        required: false
+        description: temperature offset from standard heat activation to auxiliary
+          heat activation
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aux_heat_deadband[degF]
+      aux_heat_temperature_lockout:
+        range: float
+        required: false
+        description: temperature at which auxiliary heat will not engage above
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aux_heat_temperature_lockout[degF]
+      aux_heat_time_delay:
+        range: float
+        required: false
+        description: time required for heater to run until auxiliary heating engages
+        unit:
+          ucum_code: s
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aux_heat_time_delay[s]
+      cooling_supply_air_temp:
+        range: float
+        required: false
+        description: temperature of air blown out of the cooling system
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_supply_air_temp[degF]
+      heating_supply_air_temp:
+        range: float
+        required: false
+        description: temperature of air blown out of the heating system
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_supply_air_temp[degF]
+      duct_pressure_drop:
+        range: float
+        required: false
+        description: end-to-end pressure drop for the ventilation ducts, in inches
+          of water
+        unit:
+          ucum_code: inH2O
+        annotations:
+          order: 77
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: duct_pressure_drop[inH2O]
+      fan_design_power:
+        range: float
+        required: false
+        description: designed maximum power draw of the ventilation fan
+        unit:
+          ucum_code: W
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_design_power[W]
+      fan_low_power_fraction:
+        range: float
+        required: false
+        description: fraction of ventilation fan power draw during low-power mode
+          (two-speed only)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_low_power_fraction[pu]
+      fan_power:
+        range: float
+        required: false
+        description: current ventilation fan power draw
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_power[kW]
+      fan_design_airflow:
+        range: float
+        required: false
+        description: designed airflow for the ventilation system
+        unit:
+          ucum_code: cfm
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_design_airflow[cfm]
+      fan_impedance_fraction:
+        range: float
+        required: false
+        description: Impedance component of fan ZIP load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_impedance_fraction[pu]
+      fan_power_fraction:
+        range: float
+        required: false
+        description: Power component of fan ZIP load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_power_fraction[pu]
+      fan_current_fraction:
+        range: float
+        required: false
+        description: Current component of fan ZIP load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 84
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_current_fraction[pu]
+      fan_power_factor:
+        range: float
+        required: false
+        description: Power factor of the fan load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 85
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_power_factor[pu]
+      fan_heatgain_fraction:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for fan heatgain fraction
+          in pu'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fan_heatgain_fraction[pu]
+      heating_demand:
+        range: float
+        required: false
+        description: the current power draw to run the heating system
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_demand[kW]
+      cooling_demand:
+        range: float
+        required: false
+        description: the current power draw to run the cooling system
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 88
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_demand[kW]
+      heating_COP:
+        range: float
+        required: false
+        description: system heating performance coefficient
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 89
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_COP[pu]
+      cooling_COP:
+        range: float
+        required: false
+        description: system cooling performance coefficient
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 90
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_COP[pu]
+      air_temperature:
+        range: float
+        required: false
+        description: indoor air temperature
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 91
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_temperature[degF]
+      outdoor_temperature:
+        range: float
+        required: false
+        description: outdoor air temperature
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 92
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outdoor_temperature[degF]
+      outdoor_rh:
+        range: float
+        required: false
+        description: outdoor relative humidity
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 93
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outdoor_rh[%]
+      mass_heat_capacity:
+        range: float
+        required: false
+        description: interior mass heat capacity
+        unit:
+          ucum_code: Btu/degF
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_heat_capacity[Btu/degF]
+      mass_heat_coeff:
+        range: float
+        required: false
+        description: interior mass heat exchange coefficient
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_heat_coeff[Btu/degF*h]
+      mass_temperature:
+        range: float
+        required: false
+        description: interior mass temperature
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 96
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_temperature[degF]
+      air_volume:
+        range: float
+        required: false
+        description: air volume
+        unit:
+          ucum_code: cf
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_volume[cf]
+      air_mass:
+        range: float
+        required: false
+        description: air mass
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_mass[lb]
+      air_heat_capacity:
+        range: float
+        required: false
+        description: air thermal mass
+        unit:
+          ucum_code: Btu/degF
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_heat_capacity[Btu/degF]
+      latent_load_fraction:
+        range: float
+        required: false
+        description: fractional increase in cooling load due to latent heat
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 100
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: latent_load_fraction[pu]
+      total_thermal_mass_per_floor_area:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/degF*sf
+        annotations:
+          order: 101
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_thermal_mass_per_floor_area[Btu/degF*sf]
+      interior_surface_heat_transfer_coeff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/h*degF*sf
+        annotations:
+          order: 102
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: interior_surface_heat_transfer_coeff[Btu/h*degF*sf]
+      number_of_stories:
+        range: float
+        required: false
+        description: number of stories within the structure
+        annotations:
+          order: 103
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_stories
+      is_AUX_on:
+        range: float
+        required: false
+        description: logic statement to determine population statistics - is the AUX
+          on? 0 no, 1 yes
+        annotations:
+          order: 104
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_AUX_on
+      is_HEAT_on:
+        range: float
+        required: false
+        description: logic statement to determine population statistics - is the HEAT
+          on? 0 no, 1 yes
+        annotations:
+          order: 105
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_HEAT_on
+      is_COOL_on:
+        range: float
+        required: false
+        description: logic statement to determine population statistics - is the COOL
+          on? 0 no, 1 yes
+        annotations:
+          order: 106
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_COOL_on
+      thermal_storage_present:
+        range: boolean
+        required: false
+        description: logic statement for determining if energy storage is present
+        annotations:
+          order: 107
+          value_type: bool
+          separator: ','
+          native_name: thermal_storage_present
+      thermal_storage_in_use:
+        range: boolean
+        required: false
+        description: logic statement for determining if energy storage is being utilized
+        annotations:
+          order: 108
+          value_type: bool
+          separator: ','
+          native_name: thermal_storage_in_use
+      thermostat_mode:
+        range: string
+        required: false
+        description: tells the thermostat whether it is even allowed to heat or cool
+          the house.
+        annotations:
+          order: 109
+          value_type: string
+          separator: ','
+          native_name: thermostat_mode
+      system_type:
+        range: string
+        required: false
+        description: heating/cooling system type/options
+        annotations:
+          order: 110
+          value_type: string
+          separator: ','
+          native_name: system_type
+      auxiliary_strategy:
+        range: string
+        required: false
+        description: auxiliary heating activation strategies
+        annotations:
+          order: 111
+          value_type: string
+          separator: ','
+          native_name: auxiliary_strategy
+      system_mode:
+        range: string
+        required: false
+        description: heating/cooling system operation state
+        annotations:
+          order: 112
+          value_type: string
+          separator: ','
+          native_name: system_mode
+      last_system_mode:
+        range: string
+        required: false
+        description: heating/cooling system operation state
+        annotations:
+          order: 113
+          value_type: string
+          separator: ','
+          native_name: last_system_mode
+      heating_system_type:
+        range: string
+        required: false
+        annotations:
+          order: 114
+          value_type: string
+          separator: ','
+          native_name: heating_system_type
+      cooling_system_type:
+        range: string
+        required: false
+        annotations:
+          order: 115
+          value_type: string
+          separator: ','
+          native_name: cooling_system_type
+      auxiliary_system_type:
+        range: string
+        required: false
+        annotations:
+          order: 116
+          value_type: string
+          separator: ','
+          native_name: auxiliary_system_type
+      fan_type:
+        range: string
+        required: false
+        annotations:
+          order: 117
+          value_type: string
+          separator: ','
+          native_name: fan_type
+      thermal_integrity_level:
+        range: string
+        required: false
+        description: default envelope UA settings
+        annotations:
+          order: 118
+          value_type: string
+          separator: ','
+          native_name: thermal_integrity_level
+      glass_type:
+        range: string
+        required: false
+        description: glass used in the windows
+        annotations:
+          order: 119
+          value_type: string
+          separator: ','
+          native_name: glass_type
+      window_frame:
+        range: string
+        required: false
+        description: type of window frame
+        annotations:
+          order: 120
+          value_type: string
+          separator: ','
+          native_name: window_frame
+      glazing_treatment:
+        range: string
+        required: false
+        description: the treatment to increase the reflectivity of the exterior windows
+        annotations:
+          order: 121
+          value_type: string
+          separator: ','
+          native_name: glazing_treatment
+      glazing_layers:
+        range: string
+        required: false
+        description: number of layers of glass in each window
+        annotations:
+          order: 122
+          value_type: string
+          separator: ','
+          native_name: glazing_layers
+      motor_model:
+        range: string
+        required: false
+        description: indicates the level of detail used in modelling the hvac motor
+          parameters
+        annotations:
+          order: 123
+          value_type: string
+          separator: ','
+          native_name: motor_model
+      motor_efficiency:
+        range: string
+        required: false
+        description: when using motor model, describes the efficiency of the motor
+        annotations:
+          order: 124
+          value_type: string
+          separator: ','
+          native_name: motor_efficiency
+      last_mode_timer:
+        range: integer
+        required: false
+        annotations:
+          order: 125
+          value_type: int
+          separator: ','
+          native_name: last_mode_timer
+      hvac_motor_efficiency:
+        range: float
+        required: false
+        description: when using motor model, percent efficiency of hvac motor
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 126
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_motor_efficiency[unit]
+      hvac_motor_loss_power_factor:
+        range: float
+        required: false
+        description: when using motor model, power factor of motor losses
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 127
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_motor_loss_power_factor[unit]
+      Rroof:
+        range: float
+        required: false
+        description: roof R-value
+        unit:
+          ucum_code: degF*sf*h/Btu
+        annotations:
+          order: 128
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rroof[degF*sf*h/Btu]
+      Rwall:
+        range: float
+        required: false
+        description: wall R-value
+        unit:
+          ucum_code: degF*sf*h/Btu
+        annotations:
+          order: 129
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rwall[degF*sf*h/Btu]
+      Rfloor:
+        range: float
+        required: false
+        description: floor R-value
+        unit:
+          ucum_code: degF*sf*h/Btu
+        annotations:
+          order: 130
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rfloor[degF*sf*h/Btu]
+      Rwindows:
+        range: float
+        required: false
+        description: window R-value
+        unit:
+          ucum_code: degF*sf*h/Btu
+        annotations:
+          order: 131
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rwindows[degF*sf*h/Btu]
+      Rdoors:
+        range: float
+        required: false
+        description: door R-value
+        unit:
+          ucum_code: degF*sf*h/Btu
+        annotations:
+          order: 132
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rdoors[degF*sf*h/Btu]
+      hvac_breaker_rating:
+        range: float
+        required: false
+        description: determines the amount of current the HVAC circuit breaker can
+          handle
+        unit:
+          ucum_code: A
+        annotations:
+          order: 133
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_breaker_rating[A]
+      hvac_power_factor:
+        range: float
+        required: false
+        description: power factor of hvac
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 134
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_power_factor[unit]
+      external_motor_attached:
+        range: boolean
+        required: false
+        description: Flag to indicate an external powerflow:motor is being used
+        annotations:
+          order: 135
+          value_type: bool
+          separator: ','
+          native_name: external_motor_attached
+      hvac_load:
+        range: float
+        required: false
+        description: heating/cooling system load
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 136
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_load[kW]
+      last_heating_load:
+        range: float
+        required: false
+        description: stores the previous heating/cooling system load
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 137
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_heating_load[kW]
+      last_cooling_load:
+        range: float
+        required: false
+        description: stores the previous heating/cooling system load
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 138
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_cooling_load[kW]
+      hvac_power:
+        range: Complex
+        required: false
+        description: describes hvac load complex power consumption
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 139
+          value_type: complex
+          separator: ','
+          native_name: hvac_power[kVA]
+      total_load:
+        range: float
+        required: false
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 140
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_load[kVA]
+      panel:
+        range: string
+        required: false
+        description: total panel enduse load
+        annotations:
+          order: 141
+          value_type: string
+          separator: ','
+          native_name: panel
+      design_internal_gain_density:
+        range: float
+        required: false
+        description: average density of heat generating devices in the house
+        unit:
+          ucum_code: W/sf
+        annotations:
+          order: 142
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_internal_gain_density[W/sf]
+      compressor_on:
+        range: boolean
+        required: false
+        annotations:
+          order: 143
+          value_type: bool
+          separator: ','
+          native_name: compressor_on
+      compressor_count:
+        range: integer
+        required: false
+        annotations:
+          order: 144
+          value_type: int
+          separator: ','
+          native_name: compressor_count
+      hvac_last_on:
+        range: string
+        required: false
+        annotations:
+          order: 145
+          value_type: string
+          separator: ','
+          native_name: hvac_last_on
+      hvac_last_off:
+        range: string
+        required: false
+        annotations:
+          order: 146
+          value_type: string
+          separator: ','
+          native_name: hvac_last_off
+      hvac_period_on:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for hvac period on (minutes)'
+        unit:
+          ucum_code: min
+        annotations:
+          order: 147
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_period_on[min]
+      hvac_period_off:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for hvac period off (minutes)'
+        unit:
+          ucum_code: min
+        annotations:
+          order: 148
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_period_off[min]
+      hvac_period_length:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 149
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_period_length[s]
+      hvac_duty_cycle:
+        range: float
+        required: false
+        annotations:
+          order: 150
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: hvac_duty_cycle
+      a:
+        range: float
+        required: false
+        annotations:
+          order: 151
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: a
+      b:
+        range: float
+        required: false
+        annotations:
+          order: 152
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: b
+      c:
+        range: float
+        required: false
+        annotations:
+          order: 153
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c
+      d:
+        range: float
+        required: false
+        annotations:
+          order: 154
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: d
+      c1:
+        range: float
+        required: false
+        annotations:
+          order: 155
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c1
+      c2:
+        range: float
+        required: false
+        annotations:
+          order: 156
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: c2
+      A3:
+        range: float
+        required: false
+        annotations:
+          order: 157
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: A3
+      A4:
+        range: float
+        required: false
+        annotations:
+          order: 158
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: A4
+      k1:
+        range: float
+        required: false
+        annotations:
+          order: 159
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: k1
+      k2:
+        range: float
+        required: false
+        annotations:
+          order: 160
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: k2
+      r1:
+        range: float
+        required: false
+        annotations:
+          order: 161
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: r1
+      r2:
+        range: float
+        required: false
+        annotations:
+          order: 162
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: r2
+      Teq:
+        range: float
+        required: false
+        annotations:
+          order: 163
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Teq
+      Tevent:
+        range: float
+        required: false
+        annotations:
+          order: 164
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tevent
+      Qi:
+        range: float
+        required: false
+        annotations:
+          order: 165
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qi
+      Qa:
+        range: float
+        required: false
+        annotations:
+          order: 166
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qa
+      Qm:
+        range: float
+        required: false
+        annotations:
+          order: 167
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qm
+      Qh:
+        range: float
+        required: false
+        annotations:
+          order: 168
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qh
+      Qlatent:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Qlatent'
+        annotations:
+          order: 169
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qlatent
+      dTair:
+        range: float
+        required: false
+        annotations:
+          order: 170
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dTair
+      adj_cooling_cap:
+        range: float
+        required: false
+        annotations:
+          order: 171
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: adj_cooling_cap
+      adj_heating_cap:
+        range: float
+        required: false
+        annotations:
+          order: 172
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: adj_heating_cap
+      adj_cooling_cop:
+        range: float
+        required: false
+        annotations:
+          order: 173
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: adj_cooling_cop
+      adj_heating_cop:
+        range: float
+        required: false
+        annotations:
+          order: 174
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: adj_heating_cop
+      voltage_12:
+        range: Complex
+        required: false
+        annotations:
+          order: 175
+          value_type: complex
+          separator: ','
+          native_name: voltage_12
+      voltage_1N:
+        range: Complex
+        required: false
+        annotations:
+          order: 176
+          value_type: complex
+          separator: ','
+          native_name: voltage_1N
+      voltage_2N:
+        range: Complex
+        required: false
+        annotations:
+          order: 177
+          value_type: complex
+          separator: ','
+          native_name: voltage_2N
+      external_pf_mode:
+        range: string
+        required: false
+        description: set up for using ONE or TWO external_v1N and v2N from another
+          powerflow solver. v12 = v1N - v2N. If ONEV, v2N = -v1N
+        annotations:
+          order: 178
+          value_type: string
+          separator: ','
+          native_name: external_pf_mode
+      external_v1N:
+        range: Complex
+        required: false
+        description: circuit 1N voltage from external power flow
+        annotations:
+          order: 179
+          value_type: complex
+          separator: ','
+          native_name: external_v1N
+      external_v2N:
+        range: Complex
+        required: false
+        description: circuit 2N voltage from external power flow
+        annotations:
+          order: 180
+          value_type: complex
+          separator: ','
+          native_name: external_v2N
+      grid_frequency:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for grid frequency'
+        annotations:
+          order: 181
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: grid_frequency
+      value_MeterStatus:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value MeterStatus'
+        annotations:
+          order: 182
+          value_type: string
+          separator: ','
+          native_name: value_MeterStatus
+      thermostat_control:
+        range: string
+        required: false
+        description: determine level of internal thermostatic control
+        annotations:
+          order: 183
+          value_type: string
+          separator: ','
+          native_name: thermostat_control
+      dump_house_initialization_parameters:
+        range: boolean
+        required: false
+        description: bool to dump the house initialization parameters to <house object
+          name>_parameters_dump.txt
+        annotations:
+          order: 184
+          value_type: bool
+          separator: ','
+          native_name: dump_house_initialization_parameters

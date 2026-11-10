@@ -1,0 +1,246 @@
+id: https://gridlabd.org/schema/glm/generators/energy_storage
+name: energy_storage
+description: GridLAB-D energy_storage class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  energy_storage:
+    is_a: glm_object
+    description: '**** QSTS Updates might go here - this may also be called by deltamode
+
+      //******
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      output_voltage:
+        range: float
+        required: false
+        description: Energy storage DC output voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_voltage[V]
+      output_current:
+        range: float
+        required: false
+        description: Energy storage DC output current
+        unit:
+          ucum_code: A
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_current[A]
+      output_power:
+        range: float
+        required: false
+        description: Energy storage DC output power
+        unit:
+          ucum_code: W
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_power[W]
+      Vbase_ES:
+        range: float
+        required: false
+        description: Rated voltage of ES
+        unit:
+          ucum_code: V
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vbase_ES[V]
+      Sbase_ES:
+        range: float
+        required: false
+        description: Rated rating of ES
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Sbase_ES[VA]
+      Qbase_ES:
+        range: float
+        required: false
+        description: Rated capacity of ES, unit Wh
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qbase_ES[Wh]
+      SOC_0_ES:
+        range: float
+        required: false
+        description: Initial state of charge
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SOC_0_ES[pu]
+      SOC_ES:
+        range: float
+        required: false
+        description: State of charge
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SOC_ES[pu]
+      Q_ES:
+        range: float
+        required: false
+        description: Energy of ES
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q_ES[Wh]
+      E_ES_pu:
+        range: float
+        required: false
+        description: No-load voltage, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_ES_pu[pu]
+      E0_ES_pu:
+        range: float
+        required: false
+        description: Battery constant voltage, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E0_ES_pu[pu]
+      K_ES_pu:
+        range: float
+        required: false
+        description: Polarisation voltage, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: K_ES_pu[pu]
+      A_ES_pu:
+        range: float
+        required: false
+        description: Exponential zone amplitude, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: A_ES_pu[pu]
+      B_ES_pu:
+        range: float
+        required: false
+        description: Exponential zone time constant inverse, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: B_ES_pu[pu]
+      V_ES_pu:
+        range: float
+        required: false
+        description: ES terminal voltage, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_ES_pu[pu]
+      I_ES_pu:
+        range: float
+        required: false
+        description: ES output current, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: I_ES_pu[pu]
+      R_ES_pu:
+        range: float
+        required: false
+        description: ES internal resitance, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_ES_pu[pu]
+      P_ES_pu:
+        range: float
+        required: false
+        description: ES output active power, per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_ES_pu[pu]

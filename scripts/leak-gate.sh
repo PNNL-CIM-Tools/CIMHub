@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Split-readiness gate: this repo must stay publishable at every commit.
 # Fails on (1) imports of private spokes, (2) path references to private spokes or
-# local checkouts, (3) files over 10 MB. See the split-readiness skill.
+# local checkouts, (3) files over 10 MB. See the split-readiness skill. (In a git worktree .git is a file
+# holding an absolute path, so it is excluded as a file too.)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 PRIVATE='powersimulator|cyme|synergi|powerworld|pscad|arcgis|bmopf|repair|s223'
-EXCLUDE=(--exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=uv.lock --exclude=leak-gate.sh)
+EXCLUDE=(--exclude-dir=.git --exclude=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=uv.lock --exclude=leak-gate.sh)
 status=0
 
 if grep -rnIE "(from|import) +cimhub_($PRIVATE)" "${EXCLUDE[@]}" .; then

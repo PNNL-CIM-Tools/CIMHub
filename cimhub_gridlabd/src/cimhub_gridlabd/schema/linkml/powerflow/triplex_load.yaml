@@ -1,0 +1,729 @@
+id: https://gridlabd.org/schema/glm/powerflow/triplex_load
+name: triplex_load
+description: GridLAB-D triplex_load class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  triplex_load:
+    description: 'Copyright (C) 2013 Battelle Memorial Institute
+
+      @file triplex_load.cpp
+
+      @addtogroup triplex_load
+
+      @ingroup triplex_node
+
+      Triplex_load objects represent static loads and export both voltages and
+
+      current.
+
+      @{
+
+
+      Inherits from: triplex_node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: triplex_node
+    attributes:
+      load_class:
+        range: LoadClass
+        required: false
+        description: Flag to track load type, not currently used for anything except
+          sorting
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: load_class
+      load_priority:
+        range: LoadPriority
+        required: false
+        description: Load classification based on priority
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: load_priority
+      constant_power_1:
+        range: Complex
+        required: false
+        description: constant power load on split phase 1, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 3
+          value_type: complex
+          separator: ','
+          native_name: constant_power_1[VA]
+      constant_power_2:
+        range: Complex
+        required: false
+        description: constant power load on split phase 2, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 4
+          value_type: complex
+          separator: ','
+          native_name: constant_power_2[VA]
+      constant_power_12:
+        range: Complex
+        required: false
+        description: constant power load on split phase 12, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: constant_power_12[VA]
+      constant_power_1_real:
+        range: float
+        required: false
+        description: constant power load on spit phase 1, real only, specified as
+          W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_1_real[W]
+      constant_power_2_real:
+        range: float
+        required: false
+        description: constant power load on phase 2, real only, specified as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_2_real[W]
+      constant_power_12_real:
+        range: float
+        required: false
+        description: constant power load on phase 12, real only, specified as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_12_real[W]
+      constant_power_1_reac:
+        range: float
+        required: false
+        description: constant power load on phase 1, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_1_reac[VAr]
+      constant_power_2_reac:
+        range: float
+        required: false
+        description: constant power load on phase 2, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_2_reac[VAr]
+      constant_power_12_reac:
+        range: float
+        required: false
+        description: constant power load on phase 12, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_12_reac[VAr]
+      constant_current_1:
+        range: Complex
+        required: false
+        description: constant current load on phase 1, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: constant_current_1[A]
+      constant_current_2:
+        range: Complex
+        required: false
+        description: constant current load on phase 2, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: constant_current_2[A]
+      constant_current_12:
+        range: Complex
+        required: false
+        description: constant current load on phase 12, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: constant_current_12[A]
+      constant_current_1_real:
+        range: float
+        required: false
+        description: constant current load on phase 1, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_1_real[A]
+      constant_current_2_real:
+        range: float
+        required: false
+        description: constant current load on phase 2, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_2_real[A]
+      constant_current_12_real:
+        range: float
+        required: false
+        description: constant current load on phase 12, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_12_real[A]
+      constant_current_1_reac:
+        range: float
+        required: false
+        description: constant current load on phase 1, imaginary only, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_1_reac[A]
+      constant_current_2_reac:
+        range: float
+        required: false
+        description: constant current load on phase 2, imaginary only, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_2_reac[A]
+      constant_current_12_reac:
+        range: float
+        required: false
+        description: constant current load on phase 12, imaginary only, specified
+          as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_12_reac[A]
+      constant_impedance_1:
+        range: Complex
+        required: false
+        description: constant impedance load on phase 1, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_1[Ohm]
+      constant_impedance_2:
+        range: Complex
+        required: false
+        description: constant impedance load on phase 2, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_2[Ohm]
+      constant_impedance_12:
+        range: Complex
+        required: false
+        description: constant impedance load on phase 12, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 23
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_12[Ohm]
+      constant_impedance_1_real:
+        range: float
+        required: false
+        description: constant impedance load on phase 1, real only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_1_real[Ohm]
+      constant_impedance_2_real:
+        range: float
+        required: false
+        description: constant impedance load on phase 2, real only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_2_real[Ohm]
+      constant_impedance_12_real:
+        range: float
+        required: false
+        description: constant impedance load on phase 12, real only, specified as
+          Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_12_real[Ohm]
+      constant_impedance_1_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase 1, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_1_reac[Ohm]
+      constant_impedance_2_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase 2, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_2_reac[Ohm]
+      constant_impedance_12_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase 12, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_12_reac[Ohm]
+      measured_voltage_1:
+        range: Complex
+        required: false
+        description: measured voltage on phase 1
+        unit:
+          ucum_code: V
+        annotations:
+          order: 30
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_1[V]
+      measured_voltage_2:
+        range: Complex
+        required: false
+        description: measured voltage on phase 2
+        unit:
+          ucum_code: V
+        annotations:
+          order: 31
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_2[V]
+      measured_voltage_12:
+        range: Complex
+        required: false
+        description: measured voltage on phase 12
+        unit:
+          ucum_code: V
+        annotations:
+          order: 32
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_12[V]
+      indiv_measured_power_1:
+        range: Complex
+        required: false
+        description: current measured power on phase 1
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 33
+          value_type: complex
+          separator: ','
+          native_name: indiv_measured_power_1[VA]
+      indiv_measured_power_2:
+        range: Complex
+        required: false
+        description: current measured power on phase 2
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 34
+          value_type: complex
+          separator: ','
+          native_name: indiv_measured_power_2[VA]
+      indiv_measured_power_12:
+        range: Complex
+        required: false
+        description: current measured power on phase 12
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 35
+          value_type: complex
+          separator: ','
+          native_name: indiv_measured_power_12[VA]
+      measured_power:
+        range: Complex
+        required: false
+        description: current total measured power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 36
+          value_type: complex
+          separator: ','
+          native_name: measured_power[VA]
+      base_power_1:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase 1 before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_1[VA]
+      base_power_2:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase 2 before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_2[VA]
+      base_power_12:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase 12 before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_12[VA]
+      power_pf_1:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 1 constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_1[pu]
+      current_pf_1:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 1 constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_1[pu]
+      impedance_pf_1:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 1 constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_1[pu]
+      power_pf_2:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 2 constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_2[pu]
+      current_pf_2:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 2 constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_2[pu]
+      impedance_pf_2:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 2 constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_2[pu]
+      power_pf_12:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 12 constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_12[pu]
+      current_pf_12:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 12 constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_12[pu]
+      impedance_pf_12:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase 12 constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_12[pu]
+      power_fraction_1:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase 1
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_1[pu]
+      current_fraction_1:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          1
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_1[pu]
+      impedance_fraction_1:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          1
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_1[pu]
+      power_fraction_2:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase 2
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_2[pu]
+      current_fraction_2:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          2
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_2[pu]
+      impedance_fraction_2:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          2
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_2[pu]
+      power_fraction_12:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase 12
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_12[pu]
+      current_fraction_12:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          12
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_12[pu]
+      impedance_fraction_12:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          12
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_12[pu]

@@ -1,0 +1,481 @@
+id: https://gridlabd.org/schema/glm/residential/house_a
+name: house_a
+description: GridLAB-D house_a class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  house_a:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file house.cpp
+
+      @addtogroup house
+
+      @ingroup residential
+
+      The house object implements a single family home.  The house
+
+      only includes the heating/cooling system and the power panel.
+
+      All other end-uses must be explicitly defined and attached to the
+
+      panel using the house::attach() method.
+
+      Residential panels use a split secondary transformer:
+
+      @verbatim
+
+      -----)||(------------------ 1    <-- 120V
+
+      )||(      120V         ^
+
+      1puV )||(----------- 3(N)  240V  <-- 0V
+
+      )||(      120V         v
+
+      -----)||(------------------ 2    <-- 120V
+
+      @endverbatim
+
+      120V objects are assigned alternatively to circuits 1-3 and 2-3 in the
+
+      order in which they call attach. 240V objects are assigned to circuit 1-2
+
+      Circuit breakers will open on over-current with respect to the maximum
+
+      current given by load when house::attach() was called.  After a breaker opens,
+
+      it is reclosed within an average of 5 minutes (on an exponential distribution).
+
+      Each time the breaker is reclosed, the breaker failure probability is
+
+      increased. The probability of failure is always 1/N where N is initially a
+
+      large number (e.g., 100). N is progressively decremented until it reaches 1
+      and
+
+      the probability of failure is 100%.
+
+      The house model considers the following four major heat gains/losses
+
+      that contribute to the building heating/cooling load:
+
+      1.  Conduction through exterior walls, roof and fenestration (based on
+
+      envelope UA)
+
+      2.  Air infiltration (based on specified air change rate)
+
+      3.  Solar radiation (based on CLTD model and using tmy data)
+
+      4.  Internal gains from lighting, people, equipment and other end use
+
+      objects.
+
+      The heating/cooling load is calculated as below:
+
+      Q = U x A x @f$ CLTD_c @f$
+
+      where
+
+      Q = cooling load for roof, wall or fenestration (Btu/h)
+
+      U = overall heat transfer coefficient for roof, wall or
+
+      fenestration  @f$ (Btu/h.ft^2.degF) @f$
+
+      A = area of wall, roof or fenestration @f$ (ft^2) @f$
+
+      @f$ CLTD_c  @f$ = corrected cooling load temperature difference
+
+      (degF)
+
+      @f$ CLTD_c = CLTD + LM + (78 - T_{air}) + (T_{out} - 85) @f$
+
+      where
+
+      CLTD = temperature difference based on construction types (taken
+
+      from ASHRAE Handbook)
+
+      LM = correction for latitude based on tables from ASHRAE
+
+      Handbook
+
+      @f$ T_{air} @f$ = room air temperature (degF)
+
+      @f$ T_{out} @f$ = average outdoor air temperature on a design
+
+      day (degF)
+
+      The Equivalent Thermal Parameter (ETP) approach is used to model the
+
+      residential loads and energy consumption.  Solving the ETP model simultaneously
+
+      for T_{air} and T_{mass}, the heating/cooling loads can be obtained as a
+
+      function of time.
+
+      In the current implementation, the HVAC equipment is defined as part of
+
+      the house and attached to the electrical panel with a 50 amp/220-240V circuit.
+
+      @par Credits
+
+      The original concept for ETP was developed by Rob Pratt and Todd Taylor
+
+      around 1990. The first derivation and implementation of the solution was done
+
+      by Ross Guttromson and David Chassin for PDSS in 2004.
+
+      @par Billing system
+
+      Contract terms are defined according to which contract type is being
+
+      used.  For subsidized and fixed price contracts, the terms are defined using
+
+      the following format:
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];energy=[c/kWh];
+
+      @endcode
+
+      Time-use contract terms are defined using
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];offpeak=[c/kWh];onpeak=[c/kWh];hours=[int24mask];
+
+      @endcode
+
+      When TOU includes critical peak pricing, use
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];offpeak=[c/kWh];onpeak=[c/kWh];hours=[int24mask]>;critical=[$/kWh];
+
+      @endcode
+
+      RTP is defined using
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];bid_fee=[$/bid];market=[name];
+
+      @endcode
+
+      Demand pricing uses
+
+      @code
+
+      period=[YQMWDH];fee=[$/period];energy=[c/kWh];demand_limit=[kW];demand_price=[$/kW];
+
+      @endcode
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      floor_area:
+        range: float
+        required: false
+        description: area of the house's ground floor
+        unit:
+          ucum_code: sf
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: floor_area[sf]
+      gross_wall_area:
+        range: float
+        required: false
+        description: total exterior wall area
+        unit:
+          ucum_code: sf
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gross_wall_area[sf]
+      ceiling_height:
+        range: float
+        required: false
+        description: height of the house's ceiling, across all floors
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ceiling_height[ft]
+      aspect_ratio:
+        range: float
+        required: false
+        description: ratio of the length to the width of the house's ground footprint
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: aspect_ratio
+      envelope_UA:
+        range: float
+        required: false
+        description: insulative UA value of the house, based on insulation thickness
+          and surface area
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: envelope_UA[Btu/degF*h]
+      window_wall_ratio:
+        range: float
+        required: false
+        description: ratio of exterior window area to exterior wall area
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: window_wall_ratio
+      glazing_shgc:
+        range: float
+        required: false
+        description: siding glazing solar heat gain coeffient
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: glazing_shgc
+      airchange_per_hour:
+        range: float
+        required: false
+        description: volume of air exchanged between the house and exterior per hour
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: airchange_per_hour
+      solar_gain:
+        range: float
+        required: false
+        description: thermal solar input
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: solar_gain[Btu/h]
+      heat_cool_gain:
+        range: float
+        required: false
+        description: thermal gain rate of the installed HVAC
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heat_cool_gain[Btu/h]
+      thermostat_deadband:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: thermostat_deadband[degF]
+      heating_setpoint:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_setpoint[degF]
+      cooling_setpoint:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_setpoint[degF]
+      design_heating_capacity:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu*h
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_heating_capacity[Btu*h]
+      design_cooling_capacity:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu*h
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: design_cooling_capacity[Btu*h]
+      heating_COP:
+        range: float
+        required: false
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_COP
+      cooling_COP:
+        range: float
+        required: false
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooling_COP
+      COP_coeff:
+        range: float
+        required: false
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: COP_coeff
+      air_temperature:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_temperature[degF]
+      outside_temp:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outside_temp[degF]
+      mass_temperature:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_temperature[degF]
+      mass_heat_coeff:
+        range: float
+        required: false
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mass_heat_coeff
+      outdoor_temperature:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outdoor_temperature[degF]
+      house_thermal_mass:
+        range: float
+        required: false
+        description: thermal mass of the house's contained mass
+        unit:
+          ucum_code: Btu/degF
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: house_thermal_mass[Btu/degF]
+      heat_mode:
+        range: string
+        required: false
+        annotations:
+          order: 25
+          value_type: string
+          separator: ','
+          native_name: heat_mode
+      hc_mode:
+        range: string
+        required: false
+        annotations:
+          order: 26
+          value_type: string
+          separator: ','
+          native_name: hc_mode
+      houseload:
+        range: string
+        required: false
+        annotations:
+          order: 27
+          value_type: string
+          separator: ','
+          native_name: houseload

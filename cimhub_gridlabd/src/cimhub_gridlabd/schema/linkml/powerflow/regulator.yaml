@@ -1,0 +1,168 @@
+id: https://gridlabd.org/schema/glm/powerflow/regulator
+name: regulator
+description: GridLAB-D regulator class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  regulator:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file regulator.cpp
+
+      @addtogroup powerflow_regulator Regulator
+
+      @ingroup powerflow
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      configuration:
+        range: string
+        required: false
+        description: reference to the regulator_configuration object used to determine
+          regulator properties
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: configuration
+      tap_A:
+        range: integer
+        required: false
+        description: current tap position of tap A
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: tap_A
+      tap_B:
+        range: integer
+        required: false
+        description: current tap position of tap B
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: tap_B
+      tap_C:
+        range: integer
+        required: false
+        description: current tap position of tap C
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: tap_C
+      msg_mode:
+        range: string
+        required: false
+        description: messages regarding remote node voltage to come internally from
+          gridlabd or externally through co-simulation. Set to EXTERNAL only if you
+          have co-simulation enabled
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: msg_mode
+      remote_voltage_A:
+        range: Complex
+        required: false
+        description: remote node voltage, Phase A to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: remote_voltage_A[V]
+      remote_voltage_B:
+        range: Complex
+        required: false
+        description: remote node voltage, Phase B to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: remote_voltage_B[V]
+      remote_voltage_C:
+        range: Complex
+        required: false
+        description: remote node voltage, Phase C to ground
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: remote_voltage_C[V]
+      tap_A_change_count:
+        range: float
+        required: false
+        description: count of all physical tap changes on phase A since beginning
+          of simulation (plus initial value)
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tap_A_change_count
+      tap_B_change_count:
+        range: float
+        required: false
+        description: count of all physical tap changes on phase B since beginning
+          of simulation (plus initial value)
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tap_B_change_count
+      tap_C_change_count:
+        range: float
+        required: false
+        description: count of all physical tap changes on phase C since beginning
+          of simulation (plus initial value)
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tap_C_change_count
+      sense_node:
+        range: string
+        required: false
+        description: Node to be monitored for voltage control in remote sense mode
+        annotations:
+          order: 12
+          value_type: string
+          separator: ','
+          native_name: sense_node
+      regulator_resistance:
+        range: float
+        required: false
+        description: The resistance value of the regulator when it is not blown.
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: regulator_resistance[Ohm]

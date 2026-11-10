@@ -1,0 +1,883 @@
+id: https://gridlabd.org/schema/glm/residential/dishwasher
+name: dishwasher
+description: GridLAB-D dishwasher class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  dishwasher:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file dishwasher.cpp
+
+      @addtogroup dishwasher
+
+      @ingroup residential
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      control_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: control_power[W]
+      dishwasher_coil_power_1:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dishwasher_coil_power_1[W]
+      dishwasher_coil_power_2:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dishwasher_coil_power_2[W]
+      dishwasher_coil_power_3:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dishwasher_coil_power_3[W]
+      motor_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_power[W]
+      circuit_split:
+        range: float
+        required: false
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circuit_split
+      queue:
+        range: float
+        required: false
+        description: number of loads accumulated
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue[unit]
+      stall_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stall_voltage[V]
+      start_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: start_voltage[V]
+      stall_impedance:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: stall_impedance[Ohm]
+      trip_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip_delay[s]
+      reset_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reset_delay[s]
+      total_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_power[W]
+      state:
+        range: State
+        required: false
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: state
+      energy_baseline:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_baseline[kWh]
+      energy_used:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_used[kWh]
+      control_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 17
+          value_type: bool
+          separator: ','
+          native_name: control_check1
+      control_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 18
+          value_type: bool
+          separator: ','
+          native_name: control_check2
+      control_check3:
+        range: boolean
+        required: false
+        annotations:
+          order: 19
+          value_type: bool
+          separator: ','
+          native_name: control_check3
+      control_check4:
+        range: boolean
+        required: false
+        annotations:
+          order: 20
+          value_type: bool
+          separator: ','
+          native_name: control_check4
+      control_check5:
+        range: boolean
+        required: false
+        annotations:
+          order: 21
+          value_type: bool
+          separator: ','
+          native_name: control_check5
+      control_check6:
+        range: boolean
+        required: false
+        annotations:
+          order: 22
+          value_type: bool
+          separator: ','
+          native_name: control_check6
+      control_check7:
+        range: boolean
+        required: false
+        annotations:
+          order: 23
+          value_type: bool
+          separator: ','
+          native_name: control_check7
+      control_check8:
+        range: boolean
+        required: false
+        annotations:
+          order: 24
+          value_type: bool
+          separator: ','
+          native_name: control_check8
+      control_check9:
+        range: boolean
+        required: false
+        annotations:
+          order: 25
+          value_type: bool
+          separator: ','
+          native_name: control_check9
+      control_check10:
+        range: boolean
+        required: false
+        annotations:
+          order: 26
+          value_type: bool
+          separator: ','
+          native_name: control_check10
+      control_check11:
+        range: boolean
+        required: false
+        annotations:
+          order: 27
+          value_type: bool
+          separator: ','
+          native_name: control_check11
+      control_check12:
+        range: boolean
+        required: false
+        annotations:
+          order: 28
+          value_type: bool
+          separator: ','
+          native_name: control_check12
+      control_check_temp:
+        range: boolean
+        required: false
+        annotations:
+          order: 29
+          value_type: bool
+          separator: ','
+          native_name: control_check_temp
+      motor_only_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 30
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check1
+      motor_only_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 31
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check2
+      motor_only_check3:
+        range: boolean
+        required: false
+        annotations:
+          order: 32
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check3
+      motor_only_check4:
+        range: boolean
+        required: false
+        annotations:
+          order: 33
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check4
+      motor_only_check5:
+        range: boolean
+        required: false
+        annotations:
+          order: 34
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check5
+      motor_only_check6:
+        range: boolean
+        required: false
+        annotations:
+          order: 35
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check6
+      motor_only_check7:
+        range: boolean
+        required: false
+        annotations:
+          order: 36
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check7
+      motor_only_check8:
+        range: boolean
+        required: false
+        annotations:
+          order: 37
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check8
+      motor_only_check9:
+        range: boolean
+        required: false
+        annotations:
+          order: 38
+          value_type: bool
+          separator: ','
+          native_name: motor_only_check9
+      motor_only_temp1:
+        range: boolean
+        required: false
+        annotations:
+          order: 39
+          value_type: bool
+          separator: ','
+          native_name: motor_only_temp1
+      motor_only_temp2:
+        range: boolean
+        required: false
+        annotations:
+          order: 40
+          value_type: bool
+          separator: ','
+          native_name: motor_only_temp2
+      motor_coil_only_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 41
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check1
+      motor_coil_only_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 42
+          value_type: bool
+          separator: ','
+          native_name: motor_coil_only_check2
+      heateddry_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 43
+          value_type: bool
+          separator: ','
+          native_name: heateddry_check1
+      heateddry_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 44
+          value_type: bool
+          separator: ','
+          native_name: heateddry_check2
+      coil_only_check1:
+        range: boolean
+        required: false
+        annotations:
+          order: 45
+          value_type: bool
+          separator: ','
+          native_name: coil_only_check1
+      coil_only_check2:
+        range: boolean
+        required: false
+        annotations:
+          order: 46
+          value_type: bool
+          separator: ','
+          native_name: coil_only_check2
+      coil_only_check3:
+        range: boolean
+        required: false
+        annotations:
+          order: 47
+          value_type: bool
+          separator: ','
+          native_name: coil_only_check3
+      Heateddry_option_check:
+        range: boolean
+        required: false
+        annotations:
+          order: 48
+          value_type: bool
+          separator: ','
+          native_name: Heateddry_option_check
+      queue_min:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_min[unit]
+      queue_max:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_max[unit]
+      pulse_interval_1:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_1[s]
+      pulse_interval_2:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_2[s]
+      pulse_interval_3:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_3[s]
+      pulse_interval_4:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_4[s]
+      pulse_interval_5:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_5[s]
+      pulse_interval_6:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_6[s]
+      pulse_interval_7:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_7[s]
+      pulse_interval_8:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_8[s]
+      pulse_interval_9:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_9[s]
+      pulse_interval_10:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_10[s]
+      pulse_interval_11:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_11[s]
+      pulse_interval_12:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_12[s]
+      pulse_interval_13:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_13[s]
+      pulse_interval_14:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_14[s]
+      pulse_interval_15:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_15[s]
+      pulse_interval_16:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_16[s]
+      pulse_interval_17:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_17[s]
+      pulse_interval_18:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_18[s]
+      pulse_interval_19:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pulse_interval_19[s]
+      dishwasher_run_prob:
+        range: float
+        required: false
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dishwasher_run_prob
+      energy_needed:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_needed[kWh]
+      dishwasher_demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dishwasher_demand[kWh]
+      daily_dishwasher_demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: daily_dishwasher_demand[kWh]
+      actual_dishwasher_demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_dishwasher_demand[kWh]
+      motor_on_off:
+        range: float
+        required: false
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_on_off
+      motor_coil_on_off:
+        range: float
+        required: false
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_coil_on_off
+      motor_only_25_repeat_one:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal flag for motor only 25 repeat one'
+        annotations:
+          order: 77
+          value_type: bool
+          separator: ','
+          native_name: motor_only_25_repeat_one
+      controls_power:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for controls power'
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: controls_power
+      cycle_duration:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for cycle duration'
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_duration
+      count_motor_only:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for motor only cycles'
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_motor_only
+      count_motor_only1:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for motor only cycles 1'
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_motor_only1
+      count_motor_only_25:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for motor only 25'
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_motor_only_25
+      count_coil_only:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for coil only'
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_coil_only
+      count_motor_only_68:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for motor only 68'
+        annotations:
+          order: 84
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_motor_only_68
+      count_control_only:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for control only cycles'
+        annotations:
+          order: 85
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_control_only
+      count_control_only1:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal counter for control only cycles 1'
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: count_control_only1
+      heat_fraction:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for heat fraction'
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heat_fraction
+      is_240:
+        range: boolean
+        required: false
+        description: load is 220/240 V (across both phases)
+        annotations:
+          order: 88
+          value_type: bool
+          separator: ','
+          native_name: is_240

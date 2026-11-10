@@ -1,0 +1,1470 @@
+id: https://gridlabd.org/schema/glm/powerflow/load
+name: load
+description: GridLAB-D load class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  load:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file load.cpp
+
+      @addtogroup load
+
+      @ingroup node
+
+      Load objects represent static loads and export both voltages and
+
+      current.
+
+      @{
+
+
+      Inherits from: node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: node
+    attributes:
+      load_class:
+        range: string
+        required: false
+        description: Flag to track load type, not currently used for anything except
+          sorting
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: load_class
+      load_priority:
+        range: string
+        required: false
+        description: Load classification based on priority
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: load_priority
+      constant_power_A:
+        range: Complex
+        required: false
+        description: constant power load on phase A, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 3
+          value_type: complex
+          separator: ','
+          native_name: constant_power_A[VA]
+      constant_power_B:
+        range: Complex
+        required: false
+        description: constant power load on phase B, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 4
+          value_type: complex
+          separator: ','
+          native_name: constant_power_B[VA]
+      constant_power_C:
+        range: Complex
+        required: false
+        description: constant power load on phase C, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: constant_power_C[VA]
+      constant_power_A_real:
+        range: float
+        required: false
+        description: constant power load on phase A, real only, specified as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_A_real[W]
+      constant_power_B_real:
+        range: float
+        required: false
+        description: constant power load on phase B, real only, specified as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_B_real[W]
+      constant_power_C_real:
+        range: float
+        required: false
+        description: constant power load on phase C, real only, specified as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_C_real[W]
+      constant_power_A_reac:
+        range: float
+        required: false
+        description: constant power load on phase A, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_A_reac[VAr]
+      constant_power_B_reac:
+        range: float
+        required: false
+        description: constant power load on phase B, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_B_reac[VAr]
+      constant_power_C_reac:
+        range: float
+        required: false
+        description: constant power load on phase C, imaginary only, specified as
+          VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_C_reac[VAr]
+      constant_current_A:
+        range: Complex
+        required: false
+        description: constant current load on phase A, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: constant_current_A[A]
+      constant_current_B:
+        range: Complex
+        required: false
+        description: constant current load on phase B, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: constant_current_B[A]
+      constant_current_C:
+        range: Complex
+        required: false
+        description: constant current load on phase C, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: constant_current_C[A]
+      constant_current_A_real:
+        range: float
+        required: false
+        description: constant current load on phase A, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_A_real[A]
+      constant_current_B_real:
+        range: float
+        required: false
+        description: constant current load on phase B, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_B_real[A]
+      constant_current_C_real:
+        range: float
+        required: false
+        description: constant current load on phase C, real only, specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_C_real[A]
+      constant_current_A_reac:
+        range: float
+        required: false
+        description: constant current load on phase A, imaginary only, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_A_reac[A]
+      constant_current_B_reac:
+        range: float
+        required: false
+        description: constant current load on phase B, imaginary only, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_B_reac[A]
+      constant_current_C_reac:
+        range: float
+        required: false
+        description: constant current load on phase C, imaginary only, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_C_reac[A]
+      constant_impedance_A:
+        range: Complex
+        required: false
+        description: constant impedance load on phase A, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_A[Ohm]
+      constant_impedance_B:
+        range: Complex
+        required: false
+        description: constant impedance load on phase B, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_B[Ohm]
+      constant_impedance_C:
+        range: Complex
+        required: false
+        description: constant impedance load on phase C, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 23
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_C[Ohm]
+      constant_impedance_A_real:
+        range: float
+        required: false
+        description: constant impedance load on phase A, real only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_A_real[Ohm]
+      constant_impedance_B_real:
+        range: float
+        required: false
+        description: constant impedance load on phase B, real only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_B_real[Ohm]
+      constant_impedance_C_real:
+        range: float
+        required: false
+        description: constant impedance load on phase C, real only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_C_real[Ohm]
+      constant_impedance_A_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase A, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_A_reac[Ohm]
+      constant_impedance_B_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase B, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_B_reac[Ohm]
+      constant_impedance_C_reac:
+        range: float
+        required: false
+        description: constant impedance load on phase C, imaginary only, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_C_reac[Ohm]
+      constant_power_AN:
+        range: Complex
+        required: false
+        description: constant power wye-connected load on phase A, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 30
+          value_type: complex
+          separator: ','
+          native_name: constant_power_AN[VA]
+      constant_power_BN:
+        range: Complex
+        required: false
+        description: constant power wye-connected load on phase B, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 31
+          value_type: complex
+          separator: ','
+          native_name: constant_power_BN[VA]
+      constant_power_CN:
+        range: Complex
+        required: false
+        description: constant power wye-connected load on phase C, specified as VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 32
+          value_type: complex
+          separator: ','
+          native_name: constant_power_CN[VA]
+      constant_power_AN_real:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase A, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_AN_real[W]
+      constant_power_BN_real:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase B, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_BN_real[W]
+      constant_power_CN_real:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase C, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_CN_real[W]
+      constant_power_AN_reac:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase A, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_AN_reac[VAr]
+      constant_power_BN_reac:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase B, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_BN_reac[VAr]
+      constant_power_CN_reac:
+        range: float
+        required: false
+        description: constant power wye-connected load on phase C, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_CN_reac[VAr]
+      constant_current_AN:
+        range: Complex
+        required: false
+        description: constant current wye-connected load on phase A, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 39
+          value_type: complex
+          separator: ','
+          native_name: constant_current_AN[A]
+      constant_current_BN:
+        range: Complex
+        required: false
+        description: constant current wye-connected load on phase B, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 40
+          value_type: complex
+          separator: ','
+          native_name: constant_current_BN[A]
+      constant_current_CN:
+        range: Complex
+        required: false
+        description: constant current wye-connected load on phase C, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 41
+          value_type: complex
+          separator: ','
+          native_name: constant_current_CN[A]
+      constant_current_AN_real:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase A, real only, specified
+          as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_AN_real[A]
+      constant_current_BN_real:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase B, real only, specified
+          as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_BN_real[A]
+      constant_current_CN_real:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase C, real only, specified
+          as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_CN_real[A]
+      constant_current_AN_reac:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase A, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_AN_reac[A]
+      constant_current_BN_reac:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase B, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_BN_reac[A]
+      constant_current_CN_reac:
+        range: float
+        required: false
+        description: constant current wye-connected load on phase C, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_CN_reac[A]
+      constant_impedance_AN:
+        range: Complex
+        required: false
+        description: constant impedance wye-connected load on phase A, specified as
+          Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 48
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_AN[Ohm]
+      constant_impedance_BN:
+        range: Complex
+        required: false
+        description: constant impedance wye-connected load on phase B, specified as
+          Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 49
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_BN[Ohm]
+      constant_impedance_CN:
+        range: Complex
+        required: false
+        description: constant impedance wye-connected load on phase C, specified as
+          Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 50
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_CN[Ohm]
+      constant_impedance_AN_real:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase A, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_AN_real[Ohm]
+      constant_impedance_BN_real:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase B, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_BN_real[Ohm]
+      constant_impedance_CN_real:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase C, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_CN_real[Ohm]
+      constant_impedance_AN_reac:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase A, imaginary only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_AN_reac[Ohm]
+      constant_impedance_BN_reac:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase B, imaginary only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_BN_reac[Ohm]
+      constant_impedance_CN_reac:
+        range: float
+        required: false
+        description: constant impedance wye-connected load on phase C, imaginary only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_CN_reac[Ohm]
+      constant_power_AB:
+        range: Complex
+        required: false
+        description: constant power delta-connected load on phase A, specified as
+          VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 57
+          value_type: complex
+          separator: ','
+          native_name: constant_power_AB[VA]
+      constant_power_BC:
+        range: Complex
+        required: false
+        description: constant power delta-connected load on phase B, specified as
+          VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 58
+          value_type: complex
+          separator: ','
+          native_name: constant_power_BC[VA]
+      constant_power_CA:
+        range: Complex
+        required: false
+        description: constant power delta-connected load on phase C, specified as
+          VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 59
+          value_type: complex
+          separator: ','
+          native_name: constant_power_CA[VA]
+      constant_power_AB_real:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase A, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_AB_real[W]
+      constant_power_BC_real:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase B, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_BC_real[W]
+      constant_power_CA_real:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase C, real only, specified
+          as W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_CA_real[W]
+      constant_power_AB_reac:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase A, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_AB_reac[VAr]
+      constant_power_BC_reac:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase B, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_BC_reac[VAr]
+      constant_power_CA_reac:
+        range: float
+        required: false
+        description: constant power delta-connected load on phase C, imaginary only,
+          specified as VAr
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_power_CA_reac[VAr]
+      constant_current_AB:
+        range: Complex
+        required: false
+        description: constant current delta-connected load on phase A, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 66
+          value_type: complex
+          separator: ','
+          native_name: constant_current_AB[A]
+      constant_current_BC:
+        range: Complex
+        required: false
+        description: constant current delta-connected load on phase B, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 67
+          value_type: complex
+          separator: ','
+          native_name: constant_current_BC[A]
+      constant_current_CA:
+        range: Complex
+        required: false
+        description: constant current delta-connected load on phase C, specified as
+          Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 68
+          value_type: complex
+          separator: ','
+          native_name: constant_current_CA[A]
+      constant_current_AB_real:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase A, real only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_AB_real[A]
+      constant_current_BC_real:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase B, real only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_BC_real[A]
+      constant_current_CA_real:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase C, real only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_CA_real[A]
+      constant_current_AB_reac:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase A, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_AB_reac[A]
+      constant_current_BC_reac:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase B, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_BC_reac[A]
+      constant_current_CA_reac:
+        range: float
+        required: false
+        description: constant current delta-connected load on phase C, imaginary only,
+          specified as Amps
+        unit:
+          ucum_code: A
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_current_CA_reac[A]
+      constant_impedance_AB:
+        range: Complex
+        required: false
+        description: constant impedance delta-connected load on phase A, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 75
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_AB[Ohm]
+      constant_impedance_BC:
+        range: Complex
+        required: false
+        description: constant impedance delta-connected load on phase B, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 76
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_BC[Ohm]
+      constant_impedance_CA:
+        range: Complex
+        required: false
+        description: constant impedance delta-connected load on phase C, specified
+          as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 77
+          value_type: complex
+          separator: ','
+          native_name: constant_impedance_CA[Ohm]
+      constant_impedance_AB_real:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase A, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_AB_real[Ohm]
+      constant_impedance_BC_real:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase B, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_BC_real[Ohm]
+      constant_impedance_CA_real:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase C, real only,
+          specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_CA_real[Ohm]
+      constant_impedance_AB_reac:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase A, imaginary
+          only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_AB_reac[Ohm]
+      constant_impedance_BC_reac:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase B, imaginary
+          only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_BC_reac[Ohm]
+      constant_impedance_CA_reac:
+        range: float
+        required: false
+        description: constant impedance delta-connected load on phase C, imaginary
+          only, specified as Ohms
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: constant_impedance_CA_reac[Ohm]
+      measured_voltage_A:
+        range: Complex
+        required: false
+        description: current measured voltage on phase A
+        unit:
+          ucum_code: V
+        annotations:
+          order: 84
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_A[V]
+      measured_voltage_B:
+        range: Complex
+        required: false
+        description: current measured voltage on phase B
+        unit:
+          ucum_code: V
+        annotations:
+          order: 85
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_B[V]
+      measured_voltage_C:
+        range: Complex
+        required: false
+        description: current measured voltage on phase C
+        unit:
+          ucum_code: V
+        annotations:
+          order: 86
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_C[V]
+      measured_voltage_AB:
+        range: Complex
+        required: false
+        description: current measured voltage on phases AB
+        unit:
+          ucum_code: V
+        annotations:
+          order: 87
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_AB[V]
+      measured_voltage_BC:
+        range: Complex
+        required: false
+        description: current measured voltage on phases BC
+        unit:
+          ucum_code: V
+        annotations:
+          order: 88
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_BC[V]
+      measured_voltage_CA:
+        range: Complex
+        required: false
+        description: current measured voltage on phases CA
+        unit:
+          ucum_code: V
+        annotations:
+          order: 89
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_CA[V]
+      phase_loss_protection:
+        range: boolean
+        required: false
+        description: Trip all three phases of the load if a fault occurs
+        annotations:
+          order: 90
+          value_type: bool
+          separator: ','
+          native_name: phase_loss_protection
+      measured_power_A:
+        range: Complex
+        required: false
+        description: current measured power on phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 91
+          value_type: complex
+          separator: ','
+          native_name: measured_power_A[VA]
+      measured_power_B:
+        range: Complex
+        required: false
+        description: current measured power on phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 92
+          value_type: complex
+          separator: ','
+          native_name: measured_power_B[VA]
+      measured_power_C:
+        range: Complex
+        required: false
+        description: current measured power on phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 93
+          value_type: complex
+          separator: ','
+          native_name: measured_power_C[VA]
+      measured_power:
+        range: Complex
+        required: false
+        description: current total power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 94
+          value_type: complex
+          separator: ','
+          native_name: measured_power[VA]
+      base_power_A:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase A before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_A[VA]
+      base_power_B:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase B before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 96
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_B[VA]
+      base_power_C:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this represents the nominal power
+          on phase C before applying ZIP fractions
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power_C[VA]
+      power_pf_A:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase A constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_A[pu]
+      current_pf_A:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase A constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_A[pu]
+      impedance_pf_A:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase A constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 100
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_A[pu]
+      power_pf_B:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase B constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 101
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_B[pu]
+      current_pf_B:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase B constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 102
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_B[pu]
+      impedance_pf_B:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase B constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 103
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_B[pu]
+      power_pf_C:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase C constant power portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 104
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf_C[pu]
+      current_pf_C:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase C constant current portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 105
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf_C[pu]
+      impedance_pf_C:
+        range: float
+        required: false
+        description: in similar format as ZIPload, this is the power factor of the
+          phase C constant impedance portion of load
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 106
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf_C[pu]
+      power_fraction_A:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase A
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 107
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_A[pu]
+      current_fraction_A:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          A
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 108
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_A[pu]
+      impedance_fraction_A:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          A
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 109
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_A[pu]
+      power_fraction_B:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase B
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 110
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_B[pu]
+      current_fraction_B:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          B
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 111
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_B[pu]
+      impedance_fraction_B:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          B
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 112
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_B[pu]
+      power_fraction_C:
+        range: float
+        required: false
+        description: this is the constant power fraction of base power on phase C
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 113
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_fraction_C[pu]
+      current_fraction_C:
+        range: float
+        required: false
+        description: this is the constant current fraction of base power on phase
+          C
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 114
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_fraction_C[pu]
+      impedance_fraction_C:
+        range: float
+        required: false
+        description: this is the constant impedance fraction of base power on phase
+          C
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 115
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_fraction_C[pu]
+      inrush_integration_method_capacitance:
+        range: string
+        required: false
+        description: Selected integration method to use for capacitive elements of
+          the load
+        annotations:
+          order: 116
+          value_type: string
+          separator: ','
+          native_name: inrush_integration_method_capacitance
+      inrush_integration_method_inductance:
+        range: string
+        required: false
+        description: Selected integration method to use for inductive elements of
+          the load
+        annotations:
+          order: 117
+          value_type: string
+          separator: ','
+          native_name: inrush_integration_method_inductance

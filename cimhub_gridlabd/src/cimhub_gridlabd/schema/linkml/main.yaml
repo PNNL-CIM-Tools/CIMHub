@@ -1,0 +1,116 @@
+id: https://gridlabd.org/schema/glm
+name: gridlabd_glm
+title: GridLAB-D GLM File Format Schema
+description: 'Complete LinkML schema for GridLAB-D GLM (GridLAB-D Model) file format.
+
+
+  This schema defines the structure of GridLAB-D configuration files including
+
+  modules, objects, and their properties.
+
+
+  Generated from C++ source code with 45 classes from the powerflow module.
+
+
+  Features:
+
+  - Complete inheritance chains
+
+  - Property annotations for serialization
+
+  - Physical units (ft, VA, W, etc.)
+
+  - Enumeration definitions
+
+  - Documentation from source code
+
+
+  Follows the CIMHub architecture for round-trip conversion with CIM.'
+version: 1.0.0
+license: https://opensource.org/licenses/BSD-3-Clause
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+  schema: http://schema.org/
+  xsd: http://www.w3.org/2001/XMLSchema#
+default_prefix: glm
+default_range: string
+imports:
+- linkml:types
+- types/common
+- powerflow/billdump
+- powerflow/capacitor
+- powerflow/currdump
+- powerflow/emissions
+- powerflow/fault_check
+- powerflow/fuse
+- powerflow/impedance_dump
+- powerflow/jsondump
+- powerflow/line
+- powerflow/line_configuration
+- powerflow/line_spacing
+- powerflow/link
+- powerflow/load
+- powerflow/load_tracker
+- powerflow/meter
+- powerflow/motor
+- powerflow/node
+- powerflow/overhead_line
+- powerflow/overhead_line_conductor
+- powerflow/performance_motor
+- powerflow/power_metrics
+- powerflow/powerflow_object
+- powerflow/pqload
+- powerflow/recloser
+- powerflow/regulator
+- powerflow/regulator_configuration
+- powerflow/restoration
+- powerflow/sectionalizer
+- powerflow/series_compensator
+- powerflow/series_reactor
+- powerflow/substation
+- powerflow/switch
+- powerflow/sync_check
+- powerflow/transformer
+- powerflow/transformer_configuration
+- powerflow/triplex_line
+- powerflow/triplex_line_conductor
+- powerflow/triplex_line_configuration
+- powerflow/triplex_load
+- powerflow/triplex_meter
+- powerflow/triplex_node
+- powerflow/underground_line
+- powerflow/underground_line_conductor
+- powerflow/vfd
+- powerflow/volt_var_control
+- powerflow/voltdump
+- generators/battery
+- generators/central_dg_control
+- generators/controller_dg
+- generators/diesel_dg
+- generators/energy_storage
+- generators/inverter
+- generators/inverter_dyn
+- generators/rectifier
+- generators/solar
+- generators/sync_ctrl
+- generators/windturb_dg
+- residential/ZIPload
+- residential/residential_enduse
+- residential/appliance
+- residential/clotheswasher
+- residential/dishwasher
+- residential/dryer
+- residential/evcharger
+- residential/evcharger_det
+- residential/freezer
+- residential/house
+- residential/house_a
+- residential/lights
+- residential/microwave
+- residential/occupantload
+- residential/plugload
+- residential/range
+- residential/refrigerator
+- residential/thermal_storage
+- residential/waterheater

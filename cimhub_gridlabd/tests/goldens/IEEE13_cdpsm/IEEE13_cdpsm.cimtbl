@@ -1,0 +1,22 @@
+# GridLAB-D model IEEE13_cdpsm
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master
+# not mapped: battery 3, capacitor 2, fuse 1, inverter 5, line_configuration 7, load 9, meter 2, node 19,
+# overhead_line 11, recloser 1, regulator 1, regulator_configuration 1, solar 2, substation 1, switch 3, transformer
+# 3, transformer_configuration 3, triplex_load 1, triplex_meter 2, triplex_node 1
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = IEEE13_cdpsm
+
+Object Substation: mRID=sub_IEEE13_cdpsm, name=IEEE13_cdpsm
+
+Object Feeder: mRID=fdr_IEEE13_cdpsm, name=IEEE13_cdpsm, NormalEnergizingSubstation=sub_IEEE13_cdpsm
+
+# defaulted: powerflow::nominal_frequency=60.0
+Object BaseFrequency: mRID=bf_60hz, frequency (Hz)=60.0
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,  115.0
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+    bv_240v,   0.24

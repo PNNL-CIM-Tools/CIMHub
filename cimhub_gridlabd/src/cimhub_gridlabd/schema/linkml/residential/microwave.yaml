@@ -1,0 +1,127 @@
+id: https://gridlabd.org/schema/glm/residential/microwave
+name: microwave
+description: GridLAB-D microwave class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  microwave:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file microwave.cpp
+
+      @addtogroup microwave
+
+      @ingroup residential
+
+      The microwave simulation is based on a demand profile attached to the object.
+
+      The internal heat gain is calculated using a specified fraction of installed
+      power.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      installed_power:
+        range: float
+        required: false
+        description: rated microwave power level
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: installed_power[kW]
+      standby_power:
+        range: float
+        required: false
+        description: standby microwave power draw (unshaped only)
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: standby_power[kW]
+      circuit_split:
+        range: float
+        required: false
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circuit_split
+      state:
+        range: State
+        required: false
+        description: on/off state of the microwave
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: state
+      cycle_length:
+        range: float
+        required: false
+        description: length of the combined on/off cycle between uses
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_length[s]
+      runtime:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: runtime[s]
+      state_time:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: state_time[s]
+      prev_demand:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for previous demand'
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: prev_demand

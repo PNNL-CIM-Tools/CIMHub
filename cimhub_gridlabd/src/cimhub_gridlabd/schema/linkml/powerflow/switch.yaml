@@ -1,0 +1,109 @@
+id: https://gridlabd.org/schema/glm/powerflow/switch
+name: switch
+description: GridLAB-D switch class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  switch:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file switch_object.cpp
+
+      @addtogroup powerflow switch_object
+
+      @ingroup powerflow
+
+      Implements a switch object.
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      phase_A_state:
+        range: string
+        required: false
+        description: Defines the current state of the phase A switch
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: phase_A_state
+      phase_B_state:
+        range: string
+        required: false
+        description: Defines the current state of the phase B switch
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: phase_B_state
+      phase_C_state:
+        range: string
+        required: false
+        description: Defines the current state of the phase C switch
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: phase_C_state
+      operating_mode:
+        range: string
+        required: false
+        description: Defines whether the switch operates in a banked or per-phase
+          control mode
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: operating_mode
+      switch_impedance:
+        range: Complex
+        required: false
+        description: Impedance value of the swtich when closed
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: switch_impedance[Ohm]
+      switch_resistance:
+        range: float
+        required: false
+        description: Resistance portion of impedance value of the switch when it is
+          closed.
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: switch_resistance[Ohm]
+      switch_reactance:
+        range: float
+        required: false
+        description: Reactance portion of impedance value of the switch when it is
+          closed.
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: switch_reactance[Ohm]

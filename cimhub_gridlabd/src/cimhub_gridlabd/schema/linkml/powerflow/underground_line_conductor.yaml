@@ -1,0 +1,238 @@
+id: https://gridlabd.org/schema/glm/powerflow/underground_line_conductor
+name: underground_line_conductor
+description: GridLAB-D underground_line_conductor class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  underground_line_conductor:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file underground_line_conductor.cpp
+
+      @addtogroup underground_line_conductor
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: powerflow_library
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      outer_diameter:
+        range: float
+        required: false
+        description: Outer diameter of conductor and sheath
+        unit:
+          ucum_code: in
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outer_diameter[in]
+      conductor_gmr:
+        range: float
+        required: false
+        description: Geometric mean radius of the conductor
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: conductor_gmr[ft]
+      conductor_diameter:
+        range: float
+        required: false
+        description: Diameter of conductor
+        unit:
+          ucum_code: in
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: conductor_diameter[in]
+      conductor_resistance:
+        range: float
+        required: false
+        description: Resistance of conductor in ohm/mile
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: conductor_resistance[Ohm/mile]
+      neutral_gmr:
+        range: float
+        required: false
+        description: Geometric mean radius of an individual neutral conductor/strand
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: neutral_gmr[ft]
+      neutral_diameter:
+        range: float
+        required: false
+        description: Diameter of individual neutral conductor/strand of concentric
+          neutral
+        unit:
+          ucum_code: in
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: neutral_diameter[in]
+      neutral_resistance:
+        range: float
+        required: false
+        description: Resistance of an individual neutral conductor/strand in ohm/mile
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: neutral_resistance[Ohm/mile]
+      neutral_strands:
+        range: integer
+        required: false
+        description: Number of cable strands in neutral conductor
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: neutral_strands
+      shield_thickness:
+        range: float
+        required: false
+        description: The thickness of Tape shield in inches
+        unit:
+          ucum_code: in
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shield_thickness[in]
+      shield_diameter:
+        range: float
+        required: false
+        description: The outside diameter of Tape shield in inches
+        unit:
+          ucum_code: in
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shield_diameter[in]
+      insulation_relative_permitivitty:
+        range: float
+        required: false
+        description: Permitivitty of insulation, relative to air
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: insulation_relative_permitivitty[unit]
+      shield_gmr:
+        range: float
+        required: false
+        description: Geometric mean radius of shielding sheath
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shield_gmr[ft]
+      shield_resistance:
+        range: float
+        required: false
+        description: Resistance of shielding sheath in ohms/mile
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shield_resistance[Ohm/mile]
+      rating_summer_continuous:
+        range: float
+        required: false
+        description: amp rating in summer, continuous
+        unit:
+          ucum_code: A
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.continuous[A]
+      rating_summer_emergency:
+        range: float
+        required: false
+        description: amp rating in summer, short term
+        unit:
+          ucum_code: A
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.emergency[A]
+      rating_winter_continuous:
+        range: float
+        required: false
+        description: amp rating in winter, continuous
+        unit:
+          ucum_code: A
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.continuous[A]
+      rating_winter_emergency:
+        range: float
+        required: false
+        description: amp rating in winter, short term
+        unit:
+          ucum_code: A
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.emergency[A]

@@ -1,0 +1,1070 @@
+id: https://gridlabd.org/schema/glm/powerflow/emissions
+name: emissions
+description: GridLAB-D emissions class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  emissions:
+    description: 'Copyright (C) 2011 Battelle Memorial Institute
+
+      @Warning: It is still under development.
+
+      @file emissions.cpp
+
+      @addtogroup powerflow recloser
+
+      @ingroup powerflow
+
+      Implements a emissions object.
+
+      @{
+
+
+      Inherits from: powerflow_object
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      Nuclear_Order:
+        range: float
+        required: false
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_Order
+      Hydroelectric_Order:
+        range: float
+        required: false
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_Order
+      Solarthermal_Order:
+        range: float
+        required: false
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_Order
+      Biomass_Order:
+        range: float
+        required: false
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_Order
+      Wind_Order:
+        range: float
+        required: false
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_Order
+      Coal_Order:
+        range: float
+        required: false
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_Order
+      Naturalgas_Order:
+        range: float
+        required: false
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_Order
+      Geothermal_Order:
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_Order
+      Petroleum_Order:
+        range: float
+        required: false
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_Order
+      Naturalgas_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_Max_Out[kWh]
+      Coal_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_Max_Out[kWh]
+      Biomass_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_Max_Out[kWh]
+      Geothermal_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_Max_Out[kWh]
+      Hydroelectric_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_Max_Out[kWh]
+      Nuclear_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_Max_Out[kWh]
+      Wind_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_Max_Out[kWh]
+      Petroleum_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_Max_Out[kWh]
+      Solarthermal_Max_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_Max_Out[kWh]
+      Naturalgas_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_Out[kWh]
+      Coal_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_Out[kWh]
+      Biomass_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_Out[kWh]
+      Geothermal_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_Out[kWh]
+      Hydroelectric_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_Out[kWh]
+      Nuclear_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_Out[kWh]
+      Wind_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_Out[kWh]
+      Petroleum_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_Out[kWh]
+      Solarthermal_Out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_Out[kWh]
+      Naturalgas_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_Conv_Eff[Btu/kWh]
+      Coal_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_Conv_Eff[Btu/kWh]
+      Biomass_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_Conv_Eff[Btu/kWh]
+      Geothermal_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_Conv_Eff[Btu/kWh]
+      Hydroelectric_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_Conv_Eff[Btu/kWh]
+      Nuclear_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_Conv_Eff[Btu/kWh]
+      Wind_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_Conv_Eff[Btu/kWh]
+      Petroleum_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_Conv_Eff[Btu/kWh]
+      Solarthermal_Conv_Eff:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_Conv_Eff[Btu/kWh]
+      Naturalgas_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_CO2[lb/Btu]
+      Coal_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_CO2[lb/Btu]
+      Biomass_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_CO2[lb/Btu]
+      Geothermal_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_CO2[lb/Btu]
+      Hydroelectric_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_CO2[lb/Btu]
+      Nuclear_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_CO2[lb/Btu]
+      Wind_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_CO2[lb/Btu]
+      Petroleum_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_CO2[lb/Btu]
+      Solarthermal_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_CO2[lb/Btu]
+      Naturalgas_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_SO2[lb/Btu]
+      Coal_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_SO2[lb/Btu]
+      Biomass_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_SO2[lb/Btu]
+      Geothermal_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_SO2[lb/Btu]
+      Hydroelectric_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_SO2[lb/Btu]
+      Nuclear_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_SO2[lb/Btu]
+      Wind_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_SO2[lb/Btu]
+      Petroleum_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_SO2[lb/Btu]
+      Solarthermal_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_SO2[lb/Btu]
+      Naturalgas_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_NOx[lb/Btu]
+      Coal_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_NOx[lb/Btu]
+      Biomass_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_NOx[lb/Btu]
+      Geothermal_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_NOx[lb/Btu]
+      Hydroelectric_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_NOx[lb/Btu]
+      Nuclear_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_NOx[lb/Btu]
+      Wind_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_NOx[lb/Btu]
+      Petroleum_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_NOx[lb/Btu]
+      Solarthermal_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb/Btu
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_NOx[lb/Btu]
+      Naturalgas_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_emissions_CO2[lb]
+      Naturalgas_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_emissions_SO2[lb]
+      Naturalgas_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Naturalgas_emissions_NOx[lb]
+      Coal_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_emissions_CO2[lb]
+      Coal_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_emissions_SO2[lb]
+      Coal_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Coal_emissions_NOx[lb]
+      Biomass_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_emissions_CO2[lb]
+      Biomass_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_emissions_SO2[lb]
+      Biomass_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Biomass_emissions_NOx[lb]
+      Geothermal_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_emissions_CO2[lb]
+      Geothermal_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_emissions_SO2[lb]
+      Geothermal_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Geothermal_emissions_NOx[lb]
+      Hydroelectric_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_emissions_CO2[lb]
+      Hydroelectric_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 77
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_emissions_SO2[lb]
+      Hydroelectric_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Hydroelectric_emissions_NOx[lb]
+      Nuclear_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_emissions_CO2[lb]
+      Nuclear_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_emissions_SO2[lb]
+      Nuclear_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Nuclear_emissions_NOx[lb]
+      Wind_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_emissions_CO2[lb]
+      Wind_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_emissions_SO2[lb]
+      Wind_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 84
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_emissions_NOx[lb]
+      Petroleum_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 85
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_emissions_CO2[lb]
+      Petroleum_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_emissions_SO2[lb]
+      Petroleum_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Petroleum_emissions_NOx[lb]
+      Solarthermal_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 88
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_emissions_CO2[lb]
+      Solarthermal_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 89
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_emissions_SO2[lb]
+      Solarthermal_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 90
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Solarthermal_emissions_NOx[lb]
+      Total_emissions_CO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 91
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Total_emissions_CO2[lb]
+      Total_emissions_SO2:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 92
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Total_emissions_SO2[lb]
+      Total_emissions_NOx:
+        range: float
+        required: false
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 93
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Total_emissions_NOx[lb]
+      Total_energy_out:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Total_energy_out[kWh]
+      Region:
+        range: float
+        required: false
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Region
+      cycle_interval:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 96
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_interval[s]

@@ -1,0 +1,298 @@
+id: https://gridlabd.org/schema/glm/generators/sync_ctrl
+name: sync_ctrl
+description: GridLAB-D sync_ctrl class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  sync_ctrl:
+    is_a: glm_object
+    description: 'Implements sychronization control functionality for the sychronization
+      check
+
+      function. Copyright (C) 2020 Battelle Memorial Institute
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      armed:
+        range: boolean
+        required: false
+        description: Flag to arm the synchronization control functionality.
+        annotations:
+          order: 1
+          value_type: bool
+          separator: ','
+          native_name: armed
+      sync_check_object:
+        range: string
+        required: false
+        description: The object reference/name of the sync_check object, which works
+          with this sync_ctrl object.
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: sync_check_object
+      controlled_generation_unit:
+        range: string
+        required: false
+        description: The object reference/name of the controlled generation unit (i.e.,
+          a diesel_dg/inverter_dyn object), which serves as the actuator of the PI
+          controllers of this sync_ctrl object.
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: controlled_generation_unit
+      frequency_tolerance_ub_hz:
+        range: float
+        required: false
+        description: The user-specified tolerance in Hz for checking the upper bound
+          of the frequency metric.
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_tolerance_ub_hz[Hz]
+      frequency_tolerance_lb_hz:
+        range: float
+        required: false
+        description: The user-specified tolerance in Hz for checking the lower bound
+          of the frequency metric.
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_tolerance_lb_hz[Hz]
+      voltage_magnitude_tolerance_pu:
+        range: float
+        required: false
+        description: The user-specified tolerance in per unit for the difference in
+          voltage magnitudes for checking the voltage metric.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_magnitude_tolerance_pu[pu]
+      controlling_period:
+        range: float
+        required: false
+        description: The user-defined period when both metrics are satisfied and this
+          sync_ctrl object works in mode A.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: controlling_period[s]
+      monitoring_period:
+        range: float
+        required: false
+        description: The user-defined period when this sync_ctrl object keeps on monitoring
+          in mode B, if both metrics are not violated and the switch object is not
+          closed.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: monitoring_period[s]
+      pi_freq_kp:
+        range: float
+        required: false
+        description: The user-defined proportional gain constant of the PI controller
+          for adjusting the frequency setting.
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_freq_kp
+      pi_freq_ki:
+        range: float
+        required: false
+        description: The user-defined integral gain constant of the PI controller
+          for adjusting the frequency setting.
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_freq_ki
+      pi_freq_ub_pu:
+        range: float
+        required: false
+        description: The upper bound of the output (i.e., the control variable 'Pset'/'fset')
+          of the PI controller that adjusts the frequency difference in per unit.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_freq_ub_pu[pu]
+      pi_freq_lb_pu:
+        range: float
+        required: false
+        description: The lower bound of the output (i.e., the control variable 'Pset'/'fset')
+          of the PI controller that adjusts the frequency difference in per unit.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_freq_lb_pu[pu]
+      pi_volt_mag_kp:
+        range: float
+        required: false
+        description: The user-defined proportional gain constant of the PI controller
+          for adjusting the voltage magnitude setting.
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_volt_mag_kp
+      pi_volt_mag_ki:
+        range: float
+        required: false
+        description: The user-defined integral gain constant of the PI controller
+          for adjusting the voltage magnitude setting.
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_volt_mag_ki
+      pi_volt_mag_ub_pu:
+        range: float
+        required: false
+        description: The upper bound of the output (i.e., the control variable 'Vset')
+          of the PI controller that adjusts the voltage magnitude difference in per
+          unit.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_volt_mag_ub_pu[pu]
+      pi_volt_mag_lb_pu:
+        range: float
+        required: false
+        description: The lower bound of the output (i.e., the control variable 'Vset')
+          of the PI controller that adjusts the voltage magnitude difference in per
+          unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pi_volt_mag_lb_pu[pu]
+      sct_volt_cv_arm_flag:
+        range: boolean
+        required: false
+        description: True - apply the volt controlled variable, False - do not set
+          the related property.
+        annotations:
+          order: 17
+          value_type: bool
+          separator: ','
+          native_name: sct_volt_cv_arm_flag
+      cgu_volt_set_mpv:
+        range: float
+        required: false
+        description: The measured process variable (i.e., the feedback signal) of
+          the PI controller that adjusts the voltage magnitude difference.
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cgu_volt_set_mpv
+      cgu_volt_set_cv:
+        range: float
+        required: false
+        description: The output of the PI controller that adjusts the voltage magnitude
+          difference (i.e., the control variable, which is denoted as u(t) in usual).
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cgu_volt_set_cv
+      sct_freq_cv_arm_flag:
+        range: boolean
+        required: false
+        description: True - apply the freq controlled variable, False - do not set
+          the related property.
+        annotations:
+          order: 20
+          value_type: bool
+          separator: ','
+          native_name: sct_freq_cv_arm_flag
+      cgu_freq_set_mpv:
+        range: float
+        required: false
+        description: The measured process variable (i.e., the feedback signal) of
+          the PI controller that adjusts the frequency difference.
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cgu_freq_set_mpv
+      cgu_freq_set_cv:
+        range: float
+        required: false
+        description: The output of the PI controller that adjusts the frequency difference
+          (i.e., the control variable, which is denoted as u(t) in usual).
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cgu_freq_set_cv
+      mode_status:
+        range: string
+        required: false
+        description: The current working mode status.
+        annotations:
+          order: 23
+          value_type: string
+          separator: ','
+          native_name: mode_status

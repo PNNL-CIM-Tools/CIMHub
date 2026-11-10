@@ -1,0 +1,123 @@
+id: https://gridlabd.org/schema/glm/residential/lights
+name: lights
+description: GridLAB-D lights class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  lights:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file lights.cpp
+
+      @addtogroup residential_lights Lights
+
+      @ingroup residential
+
+      The residential lighting object supports the major types of residential
+
+      lights (see lights::type).  The lighting type effects the power factor
+
+      used (see lights::load.power_factor).
+
+      The lighting enduse is driven by an analog loadshape which is driven by
+
+      a general purpose schedule.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      type:
+        range: string
+        required: false
+        description: lighting type (affects power_factor)
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: type
+      placement:
+        range: string
+        required: false
+        description: lighting location (affects where heatgains go)
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: placement
+      installed_power:
+        range: float
+        required: false
+        description: installed lighting capacity
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: installed_power[kW]
+      power_density:
+        range: float
+        required: false
+        description: installed power density
+        unit:
+          ucum_code: W/sf
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_density[W/sf]
+      curtailment:
+        range: float
+        required: false
+        description: lighting curtailment factor
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: curtailment[pu]
+      demand:
+        range: float
+        required: false
+        description: the current lighting demand
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand[pu]
+      actual_power:
+        range: Complex
+        required: false
+        description: actual power demand of lights object
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: actual_power[kVA]

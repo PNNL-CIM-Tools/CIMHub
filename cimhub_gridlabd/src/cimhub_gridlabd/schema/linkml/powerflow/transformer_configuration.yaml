@@ -1,0 +1,513 @@
+id: https://gridlabd.org/schema/glm/powerflow/transformer_configuration
+name: transformer_configuration
+description: GridLAB-D transformer_configuration class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  transformer_configuration:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file transformer_configuration.cpp
+
+      @addtogroup transformer_configuration Transformer Configuration
+
+      @ingroup powerflow_transformer
+
+      The transformer configuration specifies a type of transformer.  The
+
+      total rating of the transformer must be the sum of the individual
+
+      phase ratings of the transformer.  The defaults are worked out as
+
+      follows:
+
+      - if the /e kVA_rating is omitted and some or all of the phase ratings
+
+      are provided, then the /e kVA_rating is the sum of the phase ratings.
+
+      - if the /e kVA_rating is provided and all of the phase ratings are
+
+      omitted, then the a 3 phase transformer is assumed and the phase
+
+      ratings are equal to 1/3 of the /e kVA_rating
+
+      For the forward/backsweep solver, the primary voltage must be greater
+
+      than the secondary voltage.
+
+      @{
+
+
+      Inherits from: powerflow_library
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      connect_type:
+        range: string
+        required: false
+        description: 'connect type enum: Wye-Wye, single-phase, etc.'
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: connect_type
+      install_type:
+        range: string
+        required: false
+        description: Defines location of the transformer installation
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: install_type
+      coolant_type:
+        range: string
+        required: false
+        description: coolant type, used in life time model
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: coolant_type
+      cooling_type:
+        range: string
+        required: false
+        description: type of coolant fluid used in life time model
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: cooling_type
+      primary_voltage:
+        range: float
+        required: false
+        description: primary voltage level in L-L value kV
+        unit:
+          ucum_code: V
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: primary_voltage[V]
+      secondary_voltage:
+        range: float
+        required: false
+        description: secondary voltage level kV
+        unit:
+          ucum_code: V
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: secondary_voltage[V]
+      power_rating:
+        range: float
+        required: false
+        description: kVA rating of transformer, total
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_rating[kVA]
+      powerA_rating:
+        range: float
+        required: false
+        description: kVA rating of transformer, phase A
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: powerA_rating[kVA]
+      powerB_rating:
+        range: float
+        required: false
+        description: kVA rating of transformer, phase B
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: powerB_rating[kVA]
+      powerC_rating:
+        range: float
+        required: false
+        description: kVA rating of transformer, phase C
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: powerC_rating[kVA]
+      resistance:
+        range: float
+        required: false
+        description: Series impedance, pu, real
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: resistance[pu]
+      reactance:
+        range: float
+        required: false
+        description: Series impedance, pu, imag
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactance[pu]
+      impedance:
+        range: Complex
+        required: false
+        description: Series impedance, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: impedance[pu]
+      resistance1:
+        range: float
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu, real
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: resistance1[pu]
+      reactance1:
+        range: float
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu, imag
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactance1[pu]
+      impedance1:
+        range: Complex
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: impedance1[pu]
+      resistance2:
+        range: float
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu, real
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: resistance2[pu]
+      reactance2:
+        range: float
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu, imag
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactance2[pu]
+      impedance2:
+        range: Complex
+        required: false
+        description: Secondary series impedance (only used when you want to define
+          each individual winding seperately, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: impedance2[pu]
+      shunt_resistance:
+        range: float
+        required: false
+        description: Shunt impedance on primary side, pu, real
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shunt_resistance[pu]
+      shunt_reactance:
+        range: float
+        required: false
+        description: Shunt impedance on primary side, pu, imag
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: shunt_reactance[pu]
+      shunt_impedance:
+        range: Complex
+        required: false
+        description: Shunt impedance on primary side, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: shunt_impedance[pu]
+      core_coil_weight:
+        range: float
+        required: false
+        description: The weight of the core and coil assembly in pounds
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: core_coil_weight[lb]
+      tank_fittings_weight:
+        range: float
+        required: false
+        description: The weight of the tank and fittings in pounds
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_fittings_weight[lb]
+      oil_volume:
+        range: float
+        required: false
+        description: The number of gallons of oil in the transformer
+        unit:
+          ucum_code: gal
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oil_volume[gal]
+      rated_winding_time_constant:
+        range: float
+        required: false
+        description: The rated winding time constant in hours
+        unit:
+          ucum_code: h
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_winding_time_constant[h]
+      rated_winding_hot_spot_rise:
+        range: float
+        required: false
+        description: winding hottest-spot rise over ambient temperature at rated load,
+          degrees C
+        unit:
+          ucum_code: degC
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_winding_hot_spot_rise[degC]
+      rated_top_oil_rise:
+        range: float
+        required: false
+        description: top-oil hottest-spot rise over ambient temperature at rated load,
+          degrees C
+        unit:
+          ucum_code: degC
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_top_oil_rise[degC]
+      no_load_loss:
+        range: float
+        required: false
+        description: Another method of specifying transformer impedances, defined
+          as per unit power values (shunt)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: no_load_loss[pu]
+      full_load_loss:
+        range: float
+        required: false
+        description: Another method of specifying transformer impedances, defined
+          as per unit power values (shunt and series)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: full_load_loss[pu]
+      reactance_resistance_ratio:
+        range: float
+        required: false
+        description: the reactance to resistance ratio (X/R)
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactance_resistance_ratio
+      installed_insulation_life:
+        range: float
+        required: false
+        description: the normal lifetime of the transformer insulation at rated load,
+          hours
+        unit:
+          ucum_code: h
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: installed_insulation_life[h]
+      magnetization_location:
+        range: string
+        required: false
+        description: winding to place magnetization influence for in-rush calculations
+        annotations:
+          order: 33
+          value_type: string
+          separator: ','
+          native_name: magnetization_location
+      inrush_saturation_enabled:
+        range: boolean
+        required: false
+        description: flag to include saturation effects during inrush calculations
+        annotations:
+          order: 34
+          value_type: bool
+          separator: ','
+          native_name: inrush_saturation_enabled
+      L_A:
+        range: float
+        required: false
+        description: Air core inductance of transformer
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: L_A[pu]
+      phi_K:
+        range: float
+        required: false
+        description: Knee flux value where the air core inductance interstes the flux
+          axis of the saturation curve
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phi_K[pu]
+      phi_M:
+        range: float
+        required: false
+        description: Peak magnetization flux at rated voltage of the saturation curve
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phi_M[pu]
+      I_M:
+        range: float
+        required: false
+        description: Peak magnetization current at rated voltage of the saturation
+          curve
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: I_M[pu]
+      T_D:
+        range: float
+        required: false
+        description: Inrush decay time constant for inrush current
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: T_D
