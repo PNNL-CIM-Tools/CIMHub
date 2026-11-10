@@ -56,6 +56,15 @@ def test_unset_increment_raises():
         get_tap_ratio(tap, which="actual")
 
 
+def test_fixed_tap_has_no_increment():
+    # one step at neutralU, no stepVoltageIncrement (a RAW step-up's GTAP, its fixed taps)
+    tap = _tap()
+    tap.lowStep = tap.highStep = tap.neutralStep = tap.normalStep = 1
+    tap.step, tap.stepVoltageIncrement = 1.0, None
+    assert get_tap_steps(tap, "kV") == TapSteps(1, 1, 1, 1, 1.0, None, pytest.approx(2.4))
+    assert get_tap_ratio(tap, which="actual") == 1.0
+
+
 def test_which_is_required_and_checked():
     with pytest.raises(ValueError, match="which must be one of"):
         get_tap_ratio(_tap(), which="neutral")

@@ -478,7 +478,8 @@ Blocks whose `controlEnabled` disagree raise.
   `derived.band_fractions`, the inverse of `reactive_band`. QT = QB raises, and so does a target on equipment that is
   no machine. *Amended at implementation:* the draft named `get_machine_rating` / `get_inverter_rating`, but both
   require `ratedU`, which the RAW import does not write (a RAW machine has no rated kV), so the two limits are read
-  with `get_qty`. E3 meets the same requirement.
+  with `get_qty`. *Undone by E3-1:* the importer now writes ratedU = BASKV, and QT..QB are read through
+  `get_machine_rating` / `get_inverter_rating`.
 - MODSW 6: the same over −SHMX..SHMX, SHMX = `rating_from_ka(ratedI, BASKV)` of the FACTS device.
 - A disabled control with no target (R2b-1's no-plant case): blank (PSS/E: 1.0, 1.0).
 
@@ -602,3 +603,157 @@ MODSW 3 shunt's VSWLO (R2b-1). The E0 and E1 differences are unchanged.
 | n8 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
 | b8 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
 | nreg | unset | NREG: a node of a node-breaker block, written by E5 |
+
+## E3: generator (spec approved 2026-11-09: E3-1 ratedU = BASKV, E3-2 the getter reads a star x, E3-3 a fixed tap's increment None, E3-4 IREG I; E3-5 at implementation, reversed P limits as stored; done 2026-11-09)
+
+Module: `generator.py` (`SynchronousMachine`, `PowerElectronicsConnection` → Generator). `EXPORT_ORDER` gains it
+after `switched_shunt`. Import spec: `CIMTBL_MAPPING.md#generator-r3`, R3b (step-ups), R3c (WMOD 2, 3), R6 (NREG).
+`PowerTransformer` stays E4's class: E3 exposes `step_ups(context)` (step-up → machine), which E4 leaves out, as E1's
+`branch.line_shunts` is for E2.
+
+### Machines, plants and keys
+
+| RAW | from |
+|---|---|
+| I, ID | the machine's bus: its terminal's node, or for a machine behind a step-up the node across it (`raw_bus`); ID from the mRID `sm_<I>_<ID>` / `pec_<I>_<ID>`, else the next free (X2) |
+| PG, QG | `get_der_output(machine, "MW", "MVAr", sign="generation").total` |
+| QT, QB | `get_machine_rating` / `get_inverter_rating(..., sign="generation")` max_q, min_q; unset: blank (PSS/E: ±9999) |
+| MBASE | their rated_s (MVA) |
+| PT, PB | **`get_unit_limits(unit, "MW", sign="generation")`** (new, `getters/der.py`): a `GeneratingUnit`'s `maxOperatingP`/`minOperatingP` or a `PowerElectronicsUnit`'s `maxP`/`minP`, as `(min, max)`, as stored even when the minimum is above the maximum (E3-5); the unit is the machine's `GeneratingUnit` or the connection's one unit (`get_inverter_unit`); none: blank |
+| ZR | a `SynchronousMachine`: `get_machine_impedance(machine, "pu").r`, on its ratedU and ratedS (BASKV, MBASE; E3-1); a connection: blank (R3c-3 listed it; X1) |
+| ZX | untranscribed (no machine reactance in cim18v17, UPSTREAM U13) |
+| RT, XT, GTAP | the step-up, below; without one: 0, 0, blank (R3b-4's listed GTAP is lost, X1) |
+| STAT | `get_in_service(which="actual")`: 1 when true or unset, 0 when false |
+| RMPCT | the `qPercent` of the plant's `SynchronousMachine`s (`get_machine_rating`), on every record of the plant, so a connection beside machines gets it back; a plant of connections only: blank (R3c-3, X1). *Refined at implementation:* the draft blanked every connection's |
+| WMOD | `SynchronousMachine` 0; `PowerElectronicsConnection` 3 when its control is mode `powerFactor`, else 1 (WMOD 2 comes back 1, X1) |
+| WPF | WMOD 3: the control's targetValue (signed, R3c-2); else blank |
+| IREG | the busNumber of `raw_bus` of the control's terminal node, its own bus included (E3-4, as E2-2); blank without a control and for WMOD 3 |
+| VS | mode `voltage`: `get_regulating_control(control, "kV")` target as pu of the regulated bus's BASKV (`per_unit_from_kv`); blank for WMOD 3 and without a control |
+| NREG | unset in E3: E5's (node numbers), as the switched shunt's |
+| O1..O4, F1..F4 | unset (no CIM home) |
+
+**A plant** is the machines whose bus is I. As on import, IREG, VS and RMPCT are plant quantities: machines of one
+plant that disagree on them raise. A control in any mode but `voltage` and `powerFactor` raises, and so does a
+`powerFactor` control on a `SynchronousMachine` (the import writes none). The bus's IDE (E0) is unchanged.
+
+### The step-up folded back (R3b inverted)
+
+A machine whose terminal node has no busNumber sits behind a step-up. The node must hold only the machine and one
+2-winding `PowerTransformer` whose other end is on a numbered bus; anything else raises (two machines behind one
+step-up, a third terminal, a converter). The transformer must be in service (RAW gives it no status) and have no
+core admittance. With `model = get_transformer_model(step_up, "pu", base_power=machine.ratedS)` and winding 1 the
+end on bus I (else it raises):
+- RT = r₁ + r₂, XT = the mesh (1, 2) x (pu on MBASE). Both ends' ratedU must equal their nodes' BaseVoltage (R3b-2's
+  per-unit form; another raises until a consumer has one).
+- GTAP = neutralU / ratedU₁ of the fixed `RatioTapChanger` on end 1 (`get_tap_steps`, E3-3); 1 without a tap; a tap
+  that moves (lowStep ≠ highStep) or a tap on end 2 raises.
+
+### Decisions
+
+- **E3-1. A RAW machine's `ratedU`: the importer writes BASKV(I)** (user 2026-11-09) on every `SynchronousMachine`
+  and `PowerElectronicsConnection`, amending R3 (`CIMTBL_MAPPING.md#generator-r3`). `get_machine_rating`,
+  `get_inverter_rating` and `get_machine_impedance("pu")` require it, and RAW has no machine kV. R3b-2 already puts
+  the machine at bus I's base, and the step-up's ends carry ratedU = BASKV. ZR comes back through the getter (pu on
+  BASKV, MBASE), and E2's switched shunt reads QT/QB through `get_machine_rating` / `get_inverter_rating` again (its
+  `get_qty` amendment is undone). The IEEE14 generator golden gains the column. Not chosen: an optional `ratedU` in
+  the getters (a core contract change for DSS, GDM, GLM), or RAW reading `get_qty` beside the getters.
+- **E3-2. A star impedance on a `PowerTransformerEnd`: the getter reads it** (user 2026-11-09).
+  `get_transformer_model` refused `PowerTransformerEnd.x` (G6b), but the RAW import writes every 2-winding unit's
+  r, x on end 1, step-ups (R3b-1) and transformer records (R4) alike, as the core shape `behind_transformer` and
+  CGMES do. Now, with no mesh impedance, the ends' x add by pair: (i, j) x = xᵢ + xⱼ (an unset end x is 0), each on
+  its own end's base moved to the model's; the mesh r is None, since r is per winding either way. A unit with both
+  an end x and a mesh impedance raises. E4 reads every RAW transformer this way. Not chosen: the importer writing a
+  `TransformerMeshImpedance`.
+- **E3-3. A fixed tap's increment: None** (user 2026-11-09). `get_tap_steps` and `get_tap_ratio` require
+  `stepVoltageIncrement` except on a fixed tap (lowStep = highStep, R4b-4), which has no step to increment; its ratio
+  at its one position is 1 (its voltage is its neutralU). E4's fixed taps read the same.
+- **E3-4. IREG of a plant regulating its own bus: I, always** (approved with the spec), as E2-2's SWREG. RAW writes
+  0 or I for the same meaning. The local set writes I (about 2400 a case, none 0); 20 atom generators' 0 come back
+  I (WMOD 3's excepted).
+- **E3-5. P limits reversed: as stored** (user 2026-11-09, found at implementation). One local case has 2 WMOD 0
+  records out of service with PB above PT. The import copies them, and the draft's `get_unit_limits` raised through
+  the shared order check (`der._limits`: a minimum above its maximum is a producer that wrote the load sign).
+  `get_unit_limits` now returns a unit's active power limits as stored; the reactive limits keep the check. Not
+  chosen: raising in the exporter (that case could not be exported) or at import.
+
+### Tests (E3)
+
+`tests/test_cim_to_raw.py`: the round trip with E3 added, and:
+- the generators atom (a machine and a connection in one plant, a remote IREG, a machine out of service, blank
+  MBASE/QT/PT, a plant on an IDE 1 bus), the renewables atom (WMOD 2 and 3, a connection with ZR and RMPCT listed),
+  the step-up atom (GTAP 1 and 1.025, RT only, a WMOD 1 connection behind one, a plant of three, GTAP without a
+  step-up), the plant-and-facts atom (a WMOD 1 plant of a MODSW 3 shunt);
+- `step_ups(context)` holds exactly the 4 step-ups of the step-up atom;
+- raises: plant members that disagree on (IREG, VS), a mode `reactivePower` plant control, two machines behind one
+  step-up, a step-up out of service, a step-up tap that moves, a step-up end rated off its node's BaseVoltage;
+- reversed PT/PB come back as written (E3-5);
+- the written generators, renewables and step-up models read back with the same records;
+- core (`cimhub_core/tests`): `get_unit_limits`, the star impedance (2 and 3 windings, star + mesh raises), the
+  fixed tap, against hand numbers.
+
+### Expected differences (E3)
+
+- IREG 0 comes back I (E3-4), computed in the test (`_own_bus_ireg`, as `_own_bus_swreg`): 20 atom generators; none
+  in IEEE14, IEEE118, WECC240 or the local set.
+- A blank MBASE comes back SBASE, the same meaning (the generators atom's `5 1`).
+- WMOD 2 comes back 1 (R3c-1, X1): the renewables atom's `2 W` (with its WPF, and its RMPCT: a plant of one
+  connection) and `4 W1` (WPF 1.0 already).
+- WMOD 3's listed IREG and VS are not written (R3c-2): the renewables atom's `5 S`.
+- A connection's ZR comes back blank (R3c-3, X1): the renewables atom's `6 S2`.
+- A WMOD 1 record's WPF other than 1 comes back blank: PSS/E uses WPF only for WMOD 2 and 3, and the import carries
+  it nowhere (R3c, "unused otherwise"). None in the committed cases; 18 a local case.
+- GTAP without a step-up comes back blank (R3b-4, X1): the step-up atom's `2 G2`.
+- NREG is unset until E5, not compared: the node-breaker forms atom's 2.
+- RT, XT, GTAP of a step-up and ZR, VS: rel 1e-9 (per unit → ohm, V → per unit).
+- ZX, O1..O4, F1..F4: unset, not compared.
+
+### Results
+
+IEEE14, WECC240, IEEE118 and all 18 atoms: every compared Generator slot equals the RAW as read, except the list
+above; the E0, E1 and E2 tables are as before. The written generators, renewables and step-up models read back
+unchanged. The 4 step-ups of the step-up atom (GTAP 1 and 1.025, RT only, a connection behind one) come back RT, XT,
+GTAP at rel 1e-9. IEEE14's `to_model` now names only its 3 `PowerTransformer`s as not yet exported (E4).
+
+**Local case set** (29 v34 cases of one network, never committed; 3 run, counts only): every generator (2997 to
+2998 a case: WMOD 0, 1, 2 and 3, plants of up to 8, 213 step-ups with 8 fixed taps) comes back keyed as on import,
+each case in about 70 s. Every PG, QG, QT, QB, MBASE, PT, PB, ZR (machines), RT, XT, GTAP (step-ups), STAT, IREG,
+VS and RMPCT (plants with a machine) matches at rel 1e-9. Per case the E3 differences are only the X1 and R3c ones:
+GTAP without a step-up 11, WMOD 2 → 1 24, WPF 39 (WMOD 2's 21, WMOD 1's 18), RMPCT of a connection-only plant 45,
+a connection's ZR 73 or 74, and WMOD 3's listed IREG 26 and VS 12. No IREG 0 in the set. The E0, E1 and E2
+differences are unchanged.
+
+### Slots (generated from `SLOTS`)
+
+#### GeneratorRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| bus_number | written | I: the busNumber of the machine's node, or of the bus across its step-up (raw_bus) |
+| gen_id | written | ID: the sm_<I>_<ID> / pec_<I>_<ID> key, else the next free (X2) |
+| p_output | written | PG: get_der_output(sign='generation').total p (MW) |
+| q_output | written | QG: get_der_output(sign='generation').total q (Mvar) |
+| max_q_output | written | QT: get_machine_rating / get_inverter_rating(sign='generation').max_q (Mvar) |
+| min_q_output | written | QB: get_machine_rating / get_inverter_rating(sign='generation').min_q (Mvar) |
+| regulated_voltage_setpoint | written | VS: a voltage control's get_regulating_control target as pu of the regulated bus's BASKV; blank for WMOD 3; a plant quantity: the machines at bus I must agree, else it raises |
+| regulated_bus_number | written | IREG: the busNumber of raw_bus of the voltage control's terminal, its own bus included (E3-4); blank for WMOD 3; a plant quantity: the machines at bus I must agree, else it raises |
+| rated_mva | written | MBASE: the rating's rated_s (MVA) |
+| zr | written | ZR: a SynchronousMachine's get_machine_impedance('pu').r, on its ratedU and ratedS (BASKV, MBASE; E3-1); a connection's has no CIM home (R3c-3) |
+| zx | unset | ZX: cim18v17 has no positive-sequence machine reactance (UPSTREAM U13) |
+| rt | written | RT: the step-up's winding r summed, pu on MBASE (get_transformer_model); 0 without one |
+| xt | written | XT: the step-up's mesh (1, 2) x, pu on MBASE (get_transformer_model); 0 without one |
+| gtap | written | GTAP: neutralU / ratedU1 of the step-up's fixed tap (get_tap_steps), 1 without a tap; blank without a step-up (R3b-4's GTAP has no CIM home) |
+| status | rule | STAT: 0 when inService is false, else 1 |
+| rmpct | written | RMPCT: the qPercent of the plant's SynchronousMachines (get_machine_rating), on every record of the plant; a plant of connections only has no CIM home (R3c-3); a plant quantity: the machines at bus I must agree, else it raises |
+| max_p_output | written | PT: get_unit_limits(sign='generation').max_p of the GeneratingUnit or the connection's PowerElectronicsUnit (MW) |
+| min_p_output | written | PB: get_unit_limits(sign='generation').min_p (MW) |
+| o1 | unset | ownership is an asset concept (CIM 18 gap) |
+| f1 | unset | ownership is an asset concept (CIM 18 gap) |
+| o2 | unset | ownership is an asset concept (CIM 18 gap) |
+| f2 | unset | ownership is an asset concept (CIM 18 gap) |
+| o3 | unset | ownership is an asset concept (CIM 18 gap) |
+| f3 | unset | ownership is an asset concept (CIM 18 gap) |
+| o4 | unset | ownership is an asset concept (CIM 18 gap) |
+| f4 | unset | ownership is an asset concept (CIM 18 gap) |
+| wmod | written | WMOD: SynchronousMachine 0; PowerElectronicsConnection 3 under a powerFactor control, else 1 (WMOD 2 has no CIM home, R3c-1) |
+| wpf | written | WPF: WMOD 3: the powerFactor control's target, as stored (signed, R3c-2); else blank |
+| nreg | unset | NREG: a node of a node-breaker bus, written by E5 |

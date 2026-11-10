@@ -19,6 +19,7 @@ from cimhub_core.getters.der import (
     get_machine_impedance,
     get_machine_rating,
     get_photovoltaic_unit,
+    get_unit_limits,
 )
 from cimhub_core.getters.phase_power import PhasePower
 
@@ -215,6 +216,32 @@ def test_unit_class_is_checked():
         get_photovoltaic_unit(get_inverter_unit(_inverter("storage_b1")), sign="load")
     with pytest.raises(ValueError, match="PhotoVoltaicUnit 'pv_p1_unit': is not a BatteryUnit"):
         get_battery_unit(get_inverter_unit(_inverter("pv_p1")), sign="load")
+
+
+# get_unit_limits ---------------------------------------------------------------------------------------------------
+
+
+def test_unit_limits_of_a_generating_unit_and_a_power_electronics_unit():
+    unit = cim.GeneratingUnit(mRID="gu_1", minOperatingP=cim.ActivePower(-20, "MW"),
+                              maxOperatingP=cim.ActivePower(150, "MW"))
+    assert get_unit_limits(unit, "MW", sign="generation") == pytest.approx((-20, 150))
+    assert get_unit_limits(unit, "MW", sign="load") == pytest.approx((-150, 20))
+    assert get_unit_limits(get_inverter_unit(_inverter("pv_p1")), "kW", sign="generation") == (0.0, 300.0)
+    assert get_unit_limits(cim.GeneratingUnit(mRID="gu_2"), sign="generation") == (None, None)
+
+
+def test_unit_limits_class_is_checked():
+    with pytest.raises(ValueError, match="SynchronousMachine 'gen_g3': is not a GeneratingUnit or a "
+                                         "PowerElectronicsUnit"):
+        get_unit_limits(_machine(), sign="generation")
+
+
+def test_unit_limits_come_back_as_stored_when_reversed():
+    # a RAW unit out of service with PB 1.1 above PT 0.62 MW: mapped as written, not raised
+    unit = cim.GeneratingUnit(mRID="gu_1", minOperatingP=cim.ActivePower(1.1, "MW"),
+                              maxOperatingP=cim.ActivePower(0.62, "MW"))
+    assert get_unit_limits(unit, "MW", sign="generation") == pytest.approx((1.1, 0.62))
+    assert get_unit_limits(unit, "MW", sign="load") == pytest.approx((-0.62, -1.1))
 
 
 # get_machine_rating, get_machine_impedance -------------------------------------------------------------------------

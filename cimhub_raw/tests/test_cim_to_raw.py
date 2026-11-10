@@ -19,7 +19,7 @@ import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.export_slots import check_slots
 from cimhub_core.graph_model import _get_identifier
-from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, load,
+from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, generator, load,
                                  multi_section_line, switch, switched_shunt, zone)
 from cimhub_raw.exporter.cim_to_raw import EXPORT_ORDER, RawExporter, export_context, export_tables
 from cimhub_raw.exporter.identity import keyed_ids
@@ -29,6 +29,7 @@ from cimhub_raw.importer.cimtbl import branch as import_branch
 from cimhub_raw.importer.cimtbl import bus as import_bus
 from cimhub_raw.importer.cimtbl import case_identification as import_case
 from cimhub_raw.importer.cimtbl import fixed_shunt as import_fixed_shunt
+from cimhub_raw.importer.cimtbl import generator as import_generator
 from cimhub_raw.importer.cimtbl import load as import_load
 from cimhub_raw.importer.cimtbl import multi_section_line as import_multi_section_line
 from cimhub_raw.importer.cimtbl import switch as import_switch
@@ -45,7 +46,8 @@ FIXTURES = sorted([*TESTS.glob("atoms/*/*.raw"), *TESTS.glob("cases/*/*.raw")])
 E0_MODULES = (case_identification, zone, area_interchange, bus)
 E1_MODULES = (*E0_MODULES, branch, switch, multi_section_line)
 E2_MODULES = (*E1_MODULES, load, fixed_shunt, switched_shunt)
-LANDED = E2_MODULES
+E3_MODULES = (*E2_MODULES, generator)
+LANDED = E3_MODULES
 REL_TOL = 1e-9
 
 #: export slots written although the importer lists the field untranscribed
@@ -75,10 +77,15 @@ EXPECTED = {
     "mixed_base": {_ZONE_1, ("BranchRecord", "2_3_1", "length")},  # a series capacitor's LEN (R1b-2)
     # NXFRAT 1 with nothing rated: the flag says nothing, and comes back 0
     "two_bus_node_breaker": {_ZONE_1, ("CaseIdentificationRecord", "0", "branch_ratings_units")},
-    **{stem: {_ZONE_1} for stem in ("switches", "line_shunts", "multi_section_line",
-                                    "generators", "renewables",
-                                    "step_up", "fixed_shunts", "switched_shunts", "forms_r4b",
-                                    "transformers")},
+    "generators": {_ZONE_1, ("GeneratorRecord", "5_1", "rated_mva")},  # a blank MBASE comes back SBASE
+    # WMOD 2 comes back 1 with its WPF and a connection-only plant's RMPCT blank (R3c-1, R3c-3); WMOD 3's listed
+    # IREG and VS are not written (R3c-2); a connection's ZR (R3c-3)
+    "renewables": {_ZONE_1, *(("GeneratorRecord", "2_W", slot) for slot in ("wmod", "wpf", "rmpct")),
+                   ("GeneratorRecord", "4_W1", "wmod"), ("GeneratorRecord", "5_S", "regulated_bus_number"),
+                   ("GeneratorRecord", "5_S", "regulated_voltage_setpoint"), ("GeneratorRecord", "6_S2", "zr")},
+    "step_up": {_ZONE_1, ("GeneratorRecord", "2_G2", "gtap")},  # GTAP without a step-up (R3b-4)
+    **{stem: {_ZONE_1} for stem in ("switches", "line_shunts", "multi_section_line", "fixed_shunts",
+                                    "switched_shunts", "forms_r4b", "transformers")},
     # areas and zones named by their own number come back blank
     "IEEE118_all_hydro_25_clean_4_subs": {(record, key, slot) for record, slot in
                                           (("ZoneRecord", "zone_name"), ("AreaInterchangeRecord", "name"))
@@ -129,6 +136,13 @@ def _own_bus_swreg(native) -> set[tuple[str, str, str]]:
             if not record.swreg and record.modsw != import_switched_shunt.FACTS}
 
 
+def _own_bus_ireg(native) -> set[tuple[str, str, str]]:
+    """IREG 0 (the plant's own bus) comes back I (E3-4); WMOD 3 writes no IREG (R3c-2)."""
+    return {("GeneratorRecord", str(_get_identifier(record)), "regulated_bus_number")
+            for record in native.list_by_class(schema.GeneratorRecord)
+            if not record.regulated_bus_number and record.wmod != import_generator.FIXED_POWER_FACTOR}
+
+
 def _same(left, right) -> bool:
     if isinstance(left, list) or isinstance(right, list):  # RATE1..RATE12
         return left is not None and right is not None and len(left) == len(right) and all(map(_same, left, right))
@@ -177,7 +191,7 @@ def _differences(native, exported, modules) -> set[tuple[str, str, str]]:
 def test_round_trip(path):
     native, exported = _round_trip(path, LANDED)
     assert _differences(native, exported, LANDED) == (EXPECTED.get(path.stem, set()) | _metered_off_a_tie(native)
-                                                      | _own_bus_swreg(native))
+                                                      | _own_bus_swreg(native) | _own_bus_ireg(native))
 
 
 def test_e0_wecc240_gains_the_default_rating_records():
@@ -188,7 +202,9 @@ def test_e0_wecc240_gains_the_default_rating_records():
 
 @pytest.mark.parametrize("path", [TESTS / "cases" / "WECC240" / "240busWECC_2018_PSS.raw",
                                   _atom("branch", "mixed_base"), _atom("branch", "switches"), _atom("load", "loads"),
-                                  _atom("shunt", "switched_shunts"), _atom("shunt", "plant_and_facts")],
+                                  _atom("shunt", "switched_shunts"), _atom("shunt", "plant_and_facts"),
+                                  _atom("generator", "generators"), _atom("generator", "renewables"),
+                                  _atom("generator", "step_up")],
                          ids=lambda path: path.stem)
 def test_written_case_reads_back(tmp_path, path):
     _, exported = _round_trip(path, LANDED)
@@ -202,7 +218,7 @@ def test_written_case_reads_back(tmp_path, path):
 
 def test_to_model_raises_on_equipment_not_yet_exported():
     native = Raw34Reader(str(TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw")).read_all()
-    with pytest.raises(ValueError, match=r"no RAW export yet for \{'PowerTransformer': 3, "):
+    with pytest.raises(ValueError, match=r"no RAW export yet for \{'PowerTransformer': 3\}$"):
         RawExporter().to_model(raw_to_cim(native, name="IEEE14"))
 
 
@@ -217,7 +233,8 @@ def test_slots_are_complete(module):
                                                 (branch, import_branch), (switch, import_switch),
                                                 (multi_section_line, import_multi_section_line), (load, import_load),
                                                 (fixed_shunt, import_fixed_shunt),
-                                                (switched_shunt, import_switched_shunt)],
+                                                (switched_shunt, import_switched_shunt),
+                                                (generator, import_generator)],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_untranscribed_on_import_is_unset_on_export(exporter, importer):
     untranscribed = {slot for slot, field in importer.FIELDS.items() if field.kind == "untranscribed"}
@@ -395,3 +412,77 @@ def test_e2_blocks_in_and_out_of_service_raise():
     shunts["swsh_1_b1"].inService = False
     with pytest.raises(ValueError, match="its blocks are in and out of service"):
         export_tables(network, (switched_shunt,))
+
+
+# E3
+
+
+def _generators(stem: str):
+    _, network = _network(_atom("generator", stem))
+    devices = {device.mRID: device for cim_class in generator.CIM_CLASSES
+               for device in network.graph.get(cim_class, {}).values()}
+    return network, devices
+
+
+def test_e3_step_ups_are_the_machines_transformers():
+    network, _ = _generators("step_up")
+    found = generator.step_ups(export_context(network))
+    assert {transformer.mRID: device.mRID for transformer, device in found.items()} == {
+        "sm_1_1_xf": "sm_1_1", "sm_2_G1_xf": "sm_2_G1", "sm_4_1_xf": "sm_4_1", "pec_2_PV_xf": "pec_2_PV"}
+
+
+def test_e3_plant_members_that_disagree_raise():
+    network, devices = _generators("generators")
+    control = devices["sm_2_G"].RegulatingControl
+    second = cim.RegulatingControl(name="second", mode=control.mode, enabled=True, Terminal=control.Terminal,
+                                   targetValue=control.targetValue * 1.01)
+    network.add_to_graph(second)
+    devices["pec_2_PV"].RegulatingControl = second
+    with pytest.raises(ValueError, match=r"plant 2: its machines' controls disagree on \(IREG, VS\)"):
+        export_tables(network, (generator,))
+
+
+def test_e3_a_plant_control_off_voltage_raises():
+    network, devices = _generators("generators")
+    devices["sm_1_1"].RegulatingControl.mode = cim.RegulatingControlModeKind.reactivePower
+    with pytest.raises(ValueError, match="mode .*reactivePower.*a plant regulates voltage"):
+        export_tables(network, (generator,))
+
+
+def test_e3_two_machines_behind_one_step_up_raise():
+    network, devices = _generators("step_up")
+    devices["sm_2_G2"].Terminals[0].TopologicalNode = devices["sm_2_G1"].Terminals[0].TopologicalNode
+    with pytest.raises(ValueError, match="a step-up's node holds the machine and one transformer"):
+        export_tables(network, (generator,))
+
+
+def test_e3_a_step_up_out_of_service_raises():
+    network, _ = _generators("step_up")
+    _get(network, cim.PowerTransformer, "sm_1_1_xf").inService = False
+    with pytest.raises(ValueError, match="sm_1_1_xf'.*out of service"):
+        export_tables(network, (generator,))
+
+
+def test_e3_a_step_up_tap_that_moves_raises():
+    network, _ = _generators("step_up")
+    tap = _get(network, cim.RatioTapChanger, "sm_2_G1_xf_tap1")
+    tap.highStep, tap.stepVoltageIncrement = 2, cim.PerCent(1.0)
+    with pytest.raises(ValueError, match="steps 1..2.*GTAP is one fixed ratio"):
+        export_tables(network, (generator,))
+
+
+def test_e3_a_step_up_rated_off_its_bus_voltage_raises():
+    network, _ = _generators("step_up")
+    _get(network, cim.PowerTransformerEnd, "sm_1_1_xf_2").ratedU = cim.Voltage(20.0, "kV")
+    with pytest.raises(ValueError, match="sm_1_1_xf_2'.*ratedU 20.0 kV is not its node's BaseVoltage"):
+        export_tables(network, (generator,))
+
+
+def test_e3_reversed_p_limits_come_back_as_written():
+    # PB above PT on a unit out of service: the local set has 2 in one case; mapped as written (user 2026-11-09)
+    network, devices = _generators("generators")
+    unit = devices["sm_1_1"].GeneratingUnit
+    unit.minOperatingP, unit.maxOperatingP = cim.ActivePower(1.1, "MW"), cim.ActivePower(0.62, "MW")
+    record = next(record for record in export_tables(network, (generator,)).list_by_class(schema.GeneratorRecord)
+                  if record.gen_id == "1" and record.bus_number == 1)
+    assert (record.min_p_output, record.max_p_output) == pytest.approx((1.1, 0.62))

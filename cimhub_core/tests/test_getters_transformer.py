@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
+from cimgraph.models import BusBranchModel
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
@@ -31,6 +32,15 @@ Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, x (p
     xf_3w_m12, xf_3w_1, xf_3w_2, 8
     xf_3w_m13, xf_3w_1, xf_3w_3, 10
     xf_3w_m23, xf_3w_2, xf_3w_3, 4
+"""
+
+# the same windings with a star x on every end (percent on its own end) and no mesh: on 10 MVA, x = 4, 4, 6
+STAR_THREE_WINDING = """Profile = cim18v17
+Object PowerTransformer: mRID=xf_3w, name=3w
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, ratedU (kV), ratedS (kVA), r (percent), x (percent), PowerTransformer=xf_3w
+    xf_3w_1, a, ABC, 1, D, 115,  10000, 0.4, 4
+    xf_3w_2, b, ABC, 2, Y, 13.8, 5000,  0.5, 2
+    xf_3w_3, c, ABC, 3, Y, 4.16, 5000,  0.5, 3
 """
 
 
@@ -248,10 +258,28 @@ def test_coil_across_two_ends_raises():
         get_transformer_model(_get(network, cim.TransformerTank, "xf_t3_tank"))
 
 
-def test_star_impedance_raises():
+def test_star_impedance_of_two_windings_on_end_1():
+    # behind_transformer: r, x = 0.35, 42.3 ohm on end 1 (230 kV, 150 MVA, z base 352.67 ohm); end 2 has none
+    network = load_model(SHAPES / "behind_transformer.cimtbl", model_cls=BusBranchModel)
+    model = get_transformer_model(_get(network, cim.PowerTransformer, "gen_g1_xf"), "pu")
+    assert [w.r for w in model.windings] == [pytest.approx(0.35 * 150 / 230**2), None]
+    assert _mesh(model) == {(1, 2): (None, pytest.approx(42.3 * 150 / 230**2))}
+    on_system = get_transformer_model(_get(network, cim.PowerTransformer, "gen_g1_xf"), "pu",
+                                      base_power=network.base_power)
+    assert on_system.mesh[(1, 2)].x == pytest.approx(42.3 * 100 / 230**2)
+
+
+def test_star_impedance_of_three_windings_adds_by_pair(tmp_path):
+    path = tmp_path / "star.cimtbl"
+    path.write_text(STAR_THREE_WINDING)
+    model = _model(load_model(path), "xf_3w")
+    assert _mesh(model) == {(1, 2): (None, 8.0), (1, 3): (None, 10.0), (2, 3): (None, 10.0)}
+
+
+def test_star_and_mesh_impedance_raise():
     network = _shape("transformer_by_ends")
     _get(network, cim.PowerTransformerEnd, "xf_sub_1").x = cim.Reactance(1.0)
-    with pytest.raises(ValueError, match="a star impedance"):
+    with pytest.raises(ValueError, match="both a star impedance .PowerTransformerEnd.x. and a mesh impedance"):
         get_transformer_model(_get(network, cim.PowerTransformer, "xf_sub"))
 
 

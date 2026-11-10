@@ -5,7 +5,9 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
 ``AutoTransformer`` (``get_transformer_units`` lists a transformer's). It reads five forms (``TransformerForm``):
 
 - BY_ENDS: ``PowerTransformerEnd`` ratings and ``r``, ``TransformerMeshImpedance`` between ends, the core's
-  ``g``/``b`` on one end.
+  ``g``/``b`` on one end. Without a mesh impedance, the ends' star ``x`` (CGMES's form, cim18v17's 2-winding form:
+  all on end 1) gives the mesh: (i, j) x = xᵢ + xⱼ, an unset end x 0, each on its own end's base; the mesh r is
+  None, since r is per winding either way. A unit with both an end x and a mesh impedance raises.
 - AUTO: ``AutoTransformerEnd`` (``baseU``, ``ratedS``) and a mesh between ends; no core.
 - BY_PHASE_ENDS: the tank's ``TransformerWinding``s, each a coil between two ``TransformerPhaseEnd``s (matched to
   the ``PowerTransformerEnd`` by ``endNumber``), a mesh between windings, the tank's ``noLoadLoss`` and
@@ -288,13 +290,13 @@ def _winding(number: int, coil: _Coil, r: float | None, voltage_unit: str, power
 
 
 def _mesh(unit, coils: list[_Coil], impedance) -> dict[tuple[int, int], MeshImpedance]:
-    """Every TransformerMeshImpedance from one of the unit's windings to another, in percent on its From base."""
+    """Every TransformerMeshImpedance from one of the unit's windings to another, else the ends' star x summed by
+    pair (``_star_mesh``), on the model's base."""
     numbers = {id(coil.source): number for number, coil in enumerate(coils, start=1)}
+    star = {number: impedance(coil.source, "x", coil.source) for number, coil in enumerate(coils, start=1)
+            if isinstance(coil.source, cim.PowerTransformerEnd) and coil.source.x is not None}
     mesh = {}
     for coil in coils:
-        if isinstance(coil.source, cim.PowerTransformerEnd) and coil.source.x is not None:
-            raise ValueError(f"{describe(coil.source)}: a star impedance (PowerTransformerEnd.x) is not read; "
-                             f"put the leakage reactance on a TransformerMeshImpedance")
         for impedance_object in coil.source.FromMeshImpedance:
             to = impedance_object.ToWinding or impedance_object.ToTransformerEnd
             if id(to) not in numbers:
@@ -306,7 +308,17 @@ def _mesh(unit, coils: list[_Coil], impedance) -> dict[tuple[int, int], MeshImpe
             if x is None:
                 raise ValueError(f"{describe(impedance_object)}: x is unset")
             mesh[pair] = MeshImpedance(impedance(impedance_object, "r", coil.source), x)
+    if star and mesh:
+        raise ValueError(f"{describe(unit)}: both a star impedance (PowerTransformerEnd.x) and a mesh impedance")
+    if star:
+        return _star_mesh(star, len(coils))
     return dict(sorted(mesh.items()))
+
+
+def _star_mesh(star: dict[int, float], windings: int) -> dict[tuple[int, int], MeshImpedance]:
+    """(i, j) x = xᵢ + xⱼ for every pair of windings, an unset end x 0; r is per winding, so the mesh has none."""
+    return {(i, j): MeshImpedance(None, star.get(i, 0.0) + star.get(j, 0.0))
+            for i in range(1, windings + 1) for j in range(i + 1, windings + 1)}
 
 
 def _end_core(unit, coils: list[_Coil], stored_va, result_va: float, factor: float) -> CoreAdmittance:

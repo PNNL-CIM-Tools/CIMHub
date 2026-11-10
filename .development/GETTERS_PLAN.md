@@ -34,7 +34,8 @@ exporter) may ask for signature changes before anything is frozen.
 | S6g | `get_earth_resistivity` (`getters/earth.py`: `EarthData`, rho in ohm-m from the profile's Resistance), `get_reclose_delays` (`getters/switch_state.py`) | **done 2026-11-09** with the DSS S6g slice |
 | RAW E0 | `get_node_voltage`, `get_voltage_limits` (`getters/voltage.py`, `NodeVoltage`, `VoltageLimits`; the limit-set and agreement helpers of `current_limits.py` shared); `export_slots.py` moved from the DSS exporter to core | **done 2026-11-09** with the RAW E0 exporter (`cimhub_raw/docs/EXPORT_MAPPING.md`), 6 tests |
 | RAW E1 | `get_limits_by_type` (`getters/limits_by_type.py`: limits of one class keyed by `OperationalLimitType`); `get_shunt_admittance` (`getters/shunt.py`, `ShuntAdmittance`: g, b of the sections in service, S or pu); `get_series_compensator(unit, base_power=)` (pu); `required_qty(..., **bases)` | **done 2026-11-09** with the RAW E1 exporter, 6 tests (`test_getters_bus_branch_units.py`) |
-| RAW E2 | none new. Found: `get_machine_rating` / `get_inverter_rating` require `ratedU`, which a RAW machine has none of (the E2 switched shunt reads `minQ`/`maxQ` by `get_qty`); RAW E3 needs a decision (the getter's requirement, or the importer writes one) | open, for E3 |
+| RAW E2 | none new. Found: `get_machine_rating` / `get_inverter_rating` require `ratedU`, which a RAW machine had none of | closed by RAW E3-1: the importer writes ratedU = BASKV; the getters keep the requirement |
+| RAW E3 | **`get_unit_limits`** (`der.py`: a GeneratingUnit's `minOperatingP`/`maxOperatingP` or any PowerElectronicsUnit's `minP`/`maxP`, `(min, max)` in the caller's sign, as stored: a minimum above its maximum is returned, not raised, E3-5, user 2026-11-09; the Q limits keep the check); `get_transformer_model` reads a star `PowerTransformerEnd.x` (E3-2, user 2026-11-09: with no mesh, (i, j) x = xᵢ + xⱼ, the mesh r None; star + mesh raises; was G6b's raise); `get_tap_steps` / `get_tap_ratio`: a fixed tap (lowStep = highStep) has increment None and ratio 1 (E3-3) | done 2026-11-09, on `raw-exporter` |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)
@@ -122,7 +123,7 @@ exporter) may ask for signature changes before anything is frozen.
   `TransformerWinding.connection` (GridAPPS-D) is not read; a coil's phases show phase-to-phase vs phase-to-neutral.
 - Raise: a PowerTransformer with tanks passed whole, a tank with both its own windings and a configuration, a bank
   of template tanks (which phases each serves is open until the multi-can form is settled), a coil across two ends,
-  a star `PowerTransformerEnd.x`, an unset mesh `x`, an unrated winding 1.
+  an unset mesh `x`, an unrated winding 1, and (since RAW E3-2) a star `PowerTransformerEnd.x` beside a mesh impedance; a star x alone is read (CGMES's form).
 - **Open:** mesh `r0`/`x0` and zero-sequence data are not read; `percentImpedance`/`loadLoss` (test summaries) are
   not checked against the mesh; template banks.
 

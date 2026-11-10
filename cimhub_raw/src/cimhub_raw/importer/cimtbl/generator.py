@@ -71,7 +71,8 @@ FIELDS = {
                                                      f"raises; {_PLANT}; blank: 0 (defaulted)"),
     "rated_mva": Field("copied", (("SynchronousMachine", "ratedS", "MVA"),
                                   ("PowerElectronicsConnection", "ratedS", "MVA")),
-                       note="MBASE; blank: SBASE (defaulted)"),
+                       note="MBASE, with ratedU = bus I's BASKV: RAW gives no machine kV, and MBASE and ZR are on "
+                            "BASKV (E3-1, as R3b-2); blank: SBASE (defaulted)"),
     "zr": Field("derived", note="ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE "
                                 "(ohms_from_per_unit); listed on a PowerElectronicsConnection's row when not 0 "
                                 "(R3c-3); blank: 0 (defaulted)"),
@@ -282,7 +283,7 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
             comment = "; ".join(note for note in (defaulted, _listed(generator, converter, defaults)) if note) or None
             p, q = generation_p_q(generator)
             in_service = cell(lookup(IN_SERVICE, generator.status, slot="status", record_id=record_id))
-            limits = [cell(generator.max_q_output), cell(generator.min_q_output), cell(generator.rated_mva)]
+            limits = [cell(generator.max_q_output), cell(generator.min_q_output), cell(generator.rated_mva), cell(kv)]
             if converter:
                 connection, unit, membership = (mrid(prefix, record_id) for prefix in CONVERTER_PREFIXES)
                 node = step_ups.add(connection, generator, kv, container) if has_step_up(generator) else str(bus)
@@ -318,7 +319,8 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
                                                 Column("GeneratingUnit")], machine_area_rows),
             Table("SynchronousMachine",
                   [Column("mRID"), Column("name"), Column("bus"), Column("p", "MW"), Column("q", "MVAr"),
-                   Column("maxQ", "MVAr"), Column("minQ", "MVAr"), Column("ratedS", "MVA"), Column("r", "ohm"),
+                   Column("maxQ", "MVAr"), Column("minQ", "MVAr"), Column("ratedS", "MVA"), Column("ratedU", "kV"),
+                   Column("r", "ohm"),
                    Column("qPercent"), Column("referencePriority"), Column("inService"), Column("controlEnabled"),
                    Column("RegulatingControl"), Column("GeneratingUnit"), Column("BaseVoltage"),
                    Column("EquipmentContainer")],
@@ -328,7 +330,8 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
         statements += [
             Table("PowerElectronicsConnection",
                   [Column("mRID"), Column("name"), Column("bus"), Column("p", "MW"), Column("q", "MVAr"),
-                   Column("maxQ", "MVAr"), Column("minQ", "MVAr"), Column("ratedS", "MVA"), Column("inService"),
+                   Column("maxQ", "MVAr"), Column("minQ", "MVAr"), Column("ratedS", "MVA"), Column("ratedU", "kV"),
+                   Column("inService"),
                    Column("controlEnabled"), Column("RegulatingControl"), Column("BaseVoltage"),
                    Column("EquipmentContainer")],
                   converter_rows, comment=f"WMOD 1, 2, 3; listed when not the default: zr, rmpct (no qPercent); "

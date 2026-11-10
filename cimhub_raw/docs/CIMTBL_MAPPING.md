@@ -885,6 +885,10 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
   
   Raise tests: plant records that disagree on VS, IREG, NREG or RMPCT; RT/XT ≠ 0 (until R3b); WMOD 2, 3 (until R3c) and 4; a remote IREG
   from a swing bus; an IREG that is no bus; a swing bus with only WMOD 1 records.
+- **ratedU** (amended 2026-11-09 by the exporter's E3-1, user: "importer writes BASKV"): every
+  `SynchronousMachine` and `PowerElectronicsConnection` gets ratedU = BASKV(I). RAW gives no machine kV; MBASE and
+  ZR are on BASKV, and the export getters (`get_machine_rating`, `get_inverter_rating`, `get_machine_impedance("pu")`)
+  require a ratedU. A machine behind a step-up keeps bus I's base too (R3b-2).
 - **Checks:** all 151 records bind (IEEE14 5 machines; WECC240 109 machines and 37 connections). In SI, each p =
   −PG in W, each target = VS × BASKV in V, and each unit reaches its bus's `ControlArea`. Each plant has one
   control.
@@ -899,7 +903,7 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `min_q_output` | `Optional[float]` | `-200.0`, `-357.0`, `-360.0` | copied | `SynchronousMachine.minQ` (MVAr), `PowerElectronicsConnection.minQ` (MVAr); QB; blank: -9999 (defaulted) |
 | `regulated_voltage_setpoint` | `Optional[float]` | `1.014`, `1.03`, `1.01` | derived | VS (pu): targetValue = VS x the regulated bus's BASKV, in V (volts_from_per_unit); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 1.0 (defaulted) |
 | `regulated_bus_number` | `Optional[int]` | `1002`, `1004`, `1101` | structural | IREG: the plant control's Terminal bb_<IREG>_T1, or bb_<I>_T1 when 0 (RAW-11), or the NREG node's busbar; a remote IREG from a swing bus raises; a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
-| `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE; blank: SBASE (defaulted) |
+| `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE, with ratedU = bus I's BASKV: RAW gives no machine kV, and MBASE and ZR are on BASKV (E3-1, as R3b-2); blank: SBASE (defaulted) |
 | `zr` | `Optional[float]` | `0.0` | derived | ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE (ohms_from_per_unit); listed on a PowerElectronicsConnection's row when not 0 (R3c-3); blank: 0 (defaulted) |
 | `zx` | `Optional[float]` | `0.2` | untranscribed | ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile extension, RAW-23) |
 | `rt` | `Optional[float]` | `0.0` | derived | RT (pu on MBASE): RT + jXT != 0 is an implicit step-up transformer <machine>_xf, the machine on its internal node <machine>_int (R3b-1); end 1 r (ohm) = RT x BASKV^2 / MBASE (ohms_from_per_unit); blank: 0 (defaulted) |

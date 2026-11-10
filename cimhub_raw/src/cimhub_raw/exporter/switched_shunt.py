@@ -11,13 +11,12 @@ import logging
 import re
 
 import cimprofiles.cim18.cim18v17 as cim
-from cimtables.graph_write import get_qty
-
 import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.export_slots import Slot
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.base_voltage import get_base_voltage
 from cimhub_core.getters.control import get_regulating_control
+from cimhub_core.getters.der import get_inverter_rating, get_machine_rating
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_raw.exporter import branch
 from cimhub_raw.exporter.bus import raw_bus
@@ -29,7 +28,9 @@ from cimhub_raw.importer.cimtbl.switched_shunt import BLOCKS, FACTS, PLANT, PREF
 NATIVE_CLASS = schema.SwitchedShuntRecord
 CIM_CLASSES = (cim.LinearShuntCompensator,)  # with fixed_shunt; line shunts with branch
 LOCKED, DISCRETE, CONTINUOUS = 0, 1, 2
-MACHINES = (cim.SynchronousMachine, cim.PowerElectronicsConnection)  # MODSW 3: a plant's
+#: MODSW 3: a plant's machine -> the getter of its QT, QB
+RATING = {cim.SynchronousMachine: get_machine_rating, cim.PowerElectronicsConnection: get_inverter_rating}
+MACHINES = tuple(RATING)
 FACTS_DEVICES = (cim.StaticSynchronousCompensator,)  # MODSW 6
 
 _BLOCK = Slot("written", "Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus "
@@ -160,7 +161,8 @@ def _band(control, modsw: int, context) -> tuple[float | None, float | None]:
     else:
         if not isinstance(device, MACHINES):
             raise ValueError(f"{describe(control)}: a reactive-power target on {describe(device)}, not a machine")
-        q_min, q_max = get_qty(device, "minQ", "MVAr"), get_qty(device, "maxQ", "MVAr")
+        rating = RATING[type(device)](device, "MVA", "MVAr", sign="generation")
+        q_min, q_max = rating.min_q, rating.max_q
         if q_min is None or q_max is None:
             raise ValueError(f"{describe(device)}: minQ and maxQ are needed for the band of {describe(control)}")
     return band_fractions(settings.target, settings.deadband or 0.0, q_min, q_max)

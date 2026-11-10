@@ -2,7 +2,8 @@
 
 ``TapChanger.step`` is a tap **position**, never a turns ratio (as are ``normalStep``, ``lowStep``, ``highStep`` and
 ``neutralStep``). The ratio at a position is 1 + (position - neutralStep) × stepVoltageIncrement / 100. There is no
-default increment: an unset one raises.
+default increment: an unset one raises, except on a fixed tap (lowStep = highStep), which has no step to increment:
+its increment is None and its ratio at that one position 1 (its voltage is its neutralU).
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ class TapSteps(NamedTuple):
     neutral: int
     normal: int | None
     step: float | None  # the actual position
-    increment: float  # percent per step
+    increment: float | None  # percent per step; None on a fixed tap (lowStep = highStep)
     neutral_u: float | None  # voltage_unit
 
 
@@ -47,12 +48,16 @@ def get_tap_ratio(tap: cim.RatioTapChanger, *, which: str) -> float:
     if which not in POSITION_ATTRIBUTE:
         raise ValueError(f"which must be one of {sorted(POSITION_ATTRIBUTE)}, not {which!r}")
     position = _required(tap, POSITION_ATTRIBUTE[which])
-    return 1.0 + (position - _required(tap, "neutralStep")) * _increment(tap) / 100.0
-
-
-def _increment(tap: cim.RatioTapChanger) -> float:
-    increment = get_qty(tap, "stepVoltageIncrement", "percent")
+    increment = _increment(tap)
     if increment is None:
+        return 1.0
+    return 1.0 + (position - _required(tap, "neutralStep")) * increment / 100.0
+
+
+def _increment(tap: cim.RatioTapChanger) -> float | None:
+    """Percent per step; None on a fixed tap (lowStep = highStep); unset on any other raises."""
+    increment = get_qty(tap, "stepVoltageIncrement", "percent")
+    if increment is None and _required(tap, "lowStep") != _required(tap, "highStep"):
         raise ValueError(f"{describe(tap)}: stepVoltageIncrement is unset")
     return increment
 
