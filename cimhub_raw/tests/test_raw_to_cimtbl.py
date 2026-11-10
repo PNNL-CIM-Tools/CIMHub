@@ -679,7 +679,7 @@ def test_generator_atom_comments():
 
 
 @pytest.mark.parametrize(("key", "changes", "error", "message"), [
-    ("2_G", {"wmod": 2}, NotImplementedError, "WMOD 2 .renewable, Q limits from WPF"),
+    ("2_G", {"wmod": 3}, NotImplementedError, r"plant 2: WMOD 3 \['2_G'\] shares the plant"),  # R3c-2
     ("2_G", {"wmod": 4}, NotImplementedError, "WMOD 4 .infeed"),
     ("2_G", {"nreg": 2}, ValueError, r"disagree on \(IREG, NREG, VS, RMPCT\)"),  # NREG is a plant quantity
     ("2_PV", {"regulated_voltage_setpoint": 1.0}, ValueError, "plant 2: generators 2_G and 2_PV disagree"),
@@ -772,6 +772,57 @@ def test_r3b_node_breaker_places_the_step_up_terminal():
     placements = _placements(raw_to_cim(native, name="forms"))
     assert placements["sm_1_G_xf_T1"] == "sub_s10_n2"
     assert "sm_1_G_T1" not in placements
+
+
+# -- R3c: renewables with a power factor (WMOD 2 and 3) ---------------------------------------------------------
+
+RENEWABLES_ATOM = GENERATOR_ATOMS / "renewables.raw"
+
+
+def _generator_rows(path) -> dict:
+    """mRID -> row of the generator document, defining rows only (no Update rows)."""
+    document = next(part for part in RawImporter("atom").to_cimtbl(Raw34Reader(path).read_all()).parts
+                    if part.name == "generator")
+    return {row.cells[0]: row for statement in document.statements if not statement.update
+            for row in statement.rows}
+
+
+def test_r3c_power_factor_controls():
+    """WMOD 2 a converter in its plant's voltage control, limits as written (R3c-1); WMOD 3 a powerFactor control
+    on its connection's own terminal, targetValue = WPF signed (R3c-2)."""
+    with cim_scope():
+        network = _network(RENEWABLES_ATOM)
+        converters, controls = _objects(network, "PowerElectronicsConnection"), _objects(network, "RegulatingControl")
+        limited = converters["pec_2_W"]
+        assert (limited.RegulatingControl.mode.value, limited.RegulatingControl.Terminal.mRID) == ("voltage", "bb_3_T1")
+        assert (limited.maxQ.to("MVAr"), limited.minQ.to("MVAr")) == pytest.approx((19.721, -19.721))
+        for mrid, wpf, q in (("pec_5_S", 0.99, -5.6997), ("pec_6_S2", -0.905, 14.102)):
+            connection = converters[mrid]
+            control = connection.RegulatingControl
+            assert (control.mode.value, control.discrete, control.enabled) == ("powerFactor", False, True)
+            assert (control.targetValue, control.Terminal.mRID) == (wpf, f"{mrid}_T1")
+            assert connection.q.to("MVAr") == pytest.approx(q)  # load sign: absorbing at a negative WPF
+        assert controls["gc_5"].Terminal.ConductingEquipment is converters["pec_5_S"]
+
+
+def test_r3c_comments():
+    """WMOD 2's WPF always listed (R3c-1); a WMOD 3 plant's unused VS and IREG (R3c-2); a connection's ZR and RMPCT
+    (R3c-3)."""
+    rows = _generator_rows(RENEWABLES_ATOM)
+    assert rows["pec_2_W"].comment == "untranscribed: rmpct=50.0, wpf=0.95"
+    assert rows["pec_4_W1"].comment == "untranscribed: wpf=1.0"
+    assert rows["gc_5"].comment == "untranscribed: regulated_voltage_setpoint=1.02, regulated_bus_number=3"
+    assert (rows["gc_6"].comment, rows["pec_5_S"].comment) == (None, None)
+    assert rows["pec_6_S2"].comment == "untranscribed: zr=0.01"
+
+
+def test_r3c_a_shunt_regulating_a_wmod_2_machine():
+    """A MODSW 3 shunt measures a WMOD 2 machine on its pec_ terminal (generator.machine_mrid)."""
+    native = Raw34Reader(PLANT_AND_FACTS_ATOM).read_all()
+    _replace_record(native, schema.GeneratorRecord, "1_PV", wmod=2, wpf=0.95)
+    with cim_scope():
+        controls = _objects(raw_to_cim(native, name="atom"), "RegulatingControl")
+        assert controls["cc_2"].Terminal.mRID == "pec_1_PV_T1"
 
 
 # -- R4: transformers --------------------------------------------------------------------------------------

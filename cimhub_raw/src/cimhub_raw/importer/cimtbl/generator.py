@@ -1,11 +1,12 @@
 """RAW Generator -> ``generator.cimtbl``: one ``RegulatingControl`` per plant (bus I), and per record a
 ``SynchronousMachine`` + ``GeneratingUnit`` (WMOD 0) or a ``PowerElectronicsConnection`` + ``PowerElectronicsUnit``
-(WMOD 1), each unit in its bus's ``ControlArea``. A machine with an implicit step-up transformer (RT + jXT != 0) sits
+(WMOD 1, 2, 3), each unit in its bus's ``ControlArea``. A WMOD 3 plant holds a power factor, not a voltage (R3c).
+A machine with an implicit step-up transformer (RT + jXT != 0) sits
 on an internal ``TopologicalNode`` behind a 2-winding ``PowerTransformer`` (R3b; the core shape
 ``behind_transformer.cimtbl``, plan C8).
 
 Mapping spec: ``cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3`` and
-``#generator-the-implicit-step-up-transformer-r3b``.
+``#generator-the-implicit-step-up-transformer-r3b``, ``#generator-renewables-with-a-power-factor-r3c-wmod-2-and-3``.
 """
 
 from __future__ import annotations
@@ -29,10 +30,15 @@ CONVERTER_PREFIXES = ("pec_", "pecu_", "capu_")
 #: STAT -> inService
 IN_SERVICE = {1: True, 0: False}
 #: WMOD -> is the record a converter-interfaced plant (PowerElectronicsConnection)? (RAW-24)
-CONVERTER = {0: False, 1: True}
+CONVERTER = {0: False, 1: True, 2: True, 3: True}
 #: WMOD codes that raise, with why
-UNMAPPED_WMOD = {2: "renewable, Q limits from WPF: no case has one yet",
-                 3: "renewable, fixed Q from WPF: no case has one yet", 4: "infeed, fixed Q: no case has one yet"}
+UNMAPPED_WMOD = {4: "infeed, fixed Q: no case has one yet"}
+#: renewable, Q limits from PG and WPF: WPF listed on the row (R3c-1)
+POWER_FACTOR_LIMITS = 2
+#: renewable, Q fixed from PG and WPF: a powerFactor plant control (R3c-2)
+FIXED_POWER_FACTOR = 3
+#: a power-factor plant's fields that a fixed power factor does not use, listed off their defaults (R3c-2)
+UNUSED_BY_POWER_FACTOR = ("regulated_voltage_setpoint", "regulated_bus_number", "nreg")
 #: bus IDE that regulate voltage, and the swing
 REGULATING_BUS_TYPES = (2, 3)
 SWING = 3
@@ -67,8 +73,8 @@ FIELDS = {
                                   ("PowerElectronicsConnection", "ratedS", "MVA")),
                        note="MBASE; blank: SBASE (defaulted)"),
     "zr": Field("derived", note="ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE "
-                                "(ohms_from_per_unit); untranscribed on a PowerElectronicsConnection; blank: 0 "
-                                "(defaulted)"),
+                                "(ohms_from_per_unit); listed on a PowerElectronicsConnection's row when not 0 "
+                                "(R3c-3); blank: 0 (defaulted)"),
     "zx": Field("untranscribed", note="ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile "
                                       "extension, RAW-23)"),
     "rt": Field("derived", note="RT (pu on MBASE): RT + jXT != 0 is an implicit step-up transformer <machine>_xf, "
@@ -81,7 +87,8 @@ FIELDS = {
     "status": Field("mapped", note="STAT: inService = (STAT == 1); blank: 1 (defaulted)"),
     "rmpct": Field("copied", (("SynchronousMachine", "qPercent", None),),
                    note=f"RMPCT, on every SynchronousMachine of the plant; a PowerElectronicsConnection has no "
-                        f"qPercent (CIM 18 gap); {_PLANT}; blank: 100 (defaulted)"),
+                        f"qPercent (CIM 18 gap): listed on its row when not 100 (R3c-3); {_PLANT}; blank: 100 "
+                        f"(defaulted)"),
     "max_p_output": Field("copied", (("GeneratingUnit", "maxOperatingP", "MW"), ("PowerElectronicsUnit", "maxP", "MW")),
                           note="PT, by WMOD; blank: 9999 (defaulted)"),
     "min_p_output": Field("copied", (("GeneratingUnit", "minOperatingP", "MW"), ("PowerElectronicsUnit", "minP", "MW")),
@@ -89,23 +96,26 @@ FIELDS = {
     **{f"o{n}": Field("untranscribed", note=_OWNER) for n in range(1, 5)},
     **{f"f{n}": Field("untranscribed", note=_OWNER) for n in range(1, 5)},
     "wmod": Field("mapped", note="WMOD: the class (RAW-24), 0 conventional a SynchronousMachine + GeneratingUnit, 1 "
-                                 "renewable with QT/QB limits a PowerElectronicsConnection + PowerElectronicsUnit; 2, "
-                                 "3 and 4 raise until a case has one; blank: 0 (defaulted)"),
-    "wpf": Field("untranscribed", note="WPF: used only by WMOD 2 and 3, which raise"),
+                                 "(QT/QB limits), 2 (limits from WPF) and 3 (fixed power factor) renewable a "
+                                 "PowerElectronicsConnection + PowerElectronicsUnit; 3 makes the plant control "
+                                 "powerFactor (R3c-2); 4 raises until a case has one; blank: 0 (defaulted)"),
+    "wpf": Field("mapped", note="WPF: WMOD 2, always listed on the row (no CIM limit follows P, R3c-1); WMOD 3, the "
+                                "plant control's targetValue, signed (positive: q has p's sign, R3c-2); unused "
+                                "otherwise; blank: 1.0 (defaulted)"),
     "nreg": Field("structural", note=f"NREG: a node of bus IREG; nonzero: the plant control's Terminal is that "
                                      f"node's busbar bb_s<IS>_n<NREG>_T1 (R6, RAW-11); {_PLANT}; blank: 0 "
                                      f"(defaulted)"),
 }
 
 _PROVENANCE = """PSS/E RAW Generator -> RegulatingControl per plant (bus I); SynchronousMachine + GeneratingUnit (WMOD 0)
-or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1), each with its ControlArea membership; an implicit
+or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1, 2, 3), each with its ControlArea membership; an implicit
 step-up transformer (PowerTransformer, internal TopologicalNode, fixed RatioTapChanger) per machine with RT + jXT.
 Source table: Generator (records: {count})
 Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3"""
 
 
 def machine_mrid(generator) -> str:
-    """The machine's mRID: ``sm_<I>_<ID>`` (WMOD 0) or ``pec_<I>_<ID>`` (WMOD 1); a switched shunt's plant control
+    """The machine's mRID: ``sm_<I>_<ID>`` (WMOD 0) or ``pec_<I>_<ID>`` (WMOD 1, 2, 3); a switched shunt's plant control
     measures its terminal (R2b-1)."""
     converter = lookup(CONVERTER, generator.wmod, slot="wmod", record_id=generator.ID)
     return mrid((CONVERTER_PREFIXES if converter else MACHINE_PREFIXES)[0], generator.ID)
@@ -174,6 +184,28 @@ def _check_record(generator, record_id: str) -> None:
         raise NotImplementedError(f"{record_id}: WMOD {generator.wmod} ({UNMAPPED_WMOD[generator.wmod]})")
 
 
+def _listed(generator, converter: bool, defaults: dict) -> str | None:
+    """What a machine's or connection's row lists: GTAP without a step-up (R3b-4); on a connection, ZR and RMPCT
+    off their defaults (R3c-3), and WMOD 2's WPF always, so the exporter tells WMOD 2 from 1 (R3c-1)."""
+    slots = ("zr", "rmpct") if converter else ()
+    if not has_step_up(generator):
+        slots += ("gtap",)
+    listed = listed_off_default(generator, slots, defaults)
+    if generator.wmod != POWER_FACTOR_LIMITS:
+        return listed
+    wpf = f"wpf={cell(generator.wpf)}"
+    return f"{listed}, {wpf}" if listed else f"untranscribed: {wpf}"
+
+
+def _is_power_factor_plant(members, plant_id: str) -> bool:
+    """A WMOD 3 plant holds its one connection's power factor (R3c-2); WMOD 3 beside another record raises."""
+    fixed = [generator.ID for generator, _ in members if generator.wmod == FIXED_POWER_FACTOR]
+    if fixed and len(members) > 1:
+        raise NotImplementedError(f"{plant_id}: WMOD 3 {fixed} shares the plant with other records; one control "
+                                  "holds either a voltage or one connection's power factor (no case has one yet)")
+    return bool(fixed)
+
+
 def _plant_key(generator) -> tuple[int, int, float, float]:
     """(regulated bus, NREG, VS, RMPCT): what every record of one plant must share."""
     return generator.regulated_bus_number or generator.bus_number, generator.nreg, \
@@ -213,7 +245,7 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
     plants = _plants(records, defaults)
     step_ups = StepUpRows()
 
-    control_rows, unit_rows, machine_area_rows, machine_rows = [], [], [], []
+    control_rows, terminal_updates, unit_rows, machine_area_rows, machine_rows = [], [], [], [], []
     converter_rows, converter_unit_rows, converter_area_rows = [], [], []
     for bus, members in plants.items():
         plant_id = f"plant {bus}"
@@ -226,26 +258,32 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
                              f"{bus} instead)")
         if swing and all(lookup(CONVERTER, generator.wmod, slot="wmod", record_id=generator.ID)
                          for generator, _ in members):
-            raise ValueError(f"{plant_id}: a swing bus with no SynchronousMachine (only WMOD 1 records), so no "
+            raise ValueError(f"{plant_id}: a swing bus with no SynchronousMachine (only converter records), so no "
                              "referencePriority")
         if bus_area[bus] not in control_areas:
             raise ValueError(f"{plant_id}: AREA {bus_area[bus]} has no area-interchange record (no ControlArea "
                              f"{area_mrid(bus_area[bus])})")
         control = mrid(CONTROL_PREFIX, bus)
         enabled = cell(bus_type[bus] in REGULATING_BUS_TYPES)
-        control_rows.append(Row([control, str(bus), "voltage", "false", enabled,
-                                 cell(volts_from_per_unit(setpoint, base_kv_of[regulated])),
-                                 node_breaker.regulated_terminal(regulated, node, plant_id)]))
+        if _is_power_factor_plant(members, plant_id):
+            generator = members[0][0]
+            control_rows.append(Row([control, str(bus), "powerFactor", "false", enabled, cell(generator.wpf), None],
+                                    comment=listed_off_default(generator, UNUSED_BY_POWER_FACTOR, defaults)))
+            terminal_updates.append(Row([control, f"{machine_mrid(generator)}_T1"]))
+        else:
+            control_rows.append(Row([control, str(bus), "voltage", "false", enabled,
+                                     cell(volts_from_per_unit(setpoint, base_kv_of[regulated])),
+                                     node_breaker.regulated_terminal(regulated, node, plant_id)]))
 
         kv, container, area = base_kv_of[bus], substations_by_bus[bus], area_mrid(bus_area[bus])
         for generator, defaulted in members:
             record_id = generator.ID
-            listed = None if has_step_up(generator) else listed_off_default(generator, ("gtap",), defaults)
-            comment = "; ".join(note for note in (defaulted, listed) if note) or None
+            converter = lookup(CONVERTER, generator.wmod, slot="wmod", record_id=record_id)
+            comment = "; ".join(note for note in (defaulted, _listed(generator, converter, defaults)) if note) or None
             p, q = generation_p_q(generator)
             in_service = cell(lookup(IN_SERVICE, generator.status, slot="status", record_id=record_id))
             limits = [cell(generator.max_q_output), cell(generator.min_q_output), cell(generator.rated_mva)]
-            if lookup(CONVERTER, generator.wmod, slot="wmod", record_id=record_id):
+            if converter:
                 connection, unit, membership = (mrid(prefix, record_id) for prefix in CONVERTER_PREFIXES)
                 node = step_ups.add(connection, generator, kv, container) if has_step_up(generator) else str(bus)
                 converter_rows.append(Row([connection, record_id, node, cell(p), cell(q), *limits, in_service,
@@ -269,7 +307,8 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
     statements = [Table("RegulatingControl",
                         [Column(name) for name in ("mRID", "name", "mode", "discrete", "enabled", "targetValue",
                                                    "Terminal")],
-                        control_rows, comment="one per plant (bus I); targetValue in V")]
+                        control_rows, comment="one per plant (bus I); targetValue in V (voltage) or a power "
+                                              "factor (powerFactor, a WMOD 3 plant)")]
     statements += step_ups.tables()  # the internal nodes before the machines that sit on them
     if machine_rows:
         statements += [
@@ -292,13 +331,17 @@ def map_generator(native, substations_by_bus: dict[int, str], base_kv_of: dict[i
                    Column("maxQ", "MVAr"), Column("minQ", "MVAr"), Column("ratedS", "MVA"), Column("inService"),
                    Column("controlEnabled"), Column("RegulatingControl"), Column("BaseVoltage"),
                    Column("EquipmentContainer")],
-                  converter_rows, comment=f"WMOD 1; untranscribed here also: zr, rmpct (no qPercent)\n"
-                                          f"{untranscribed}"),
+                  converter_rows, comment=f"WMOD 1, 2, 3; listed when not the default: zr, rmpct (no qPercent); "
+                                          f"WMOD 2's wpf always\n{untranscribed}"),
             Table("PowerElectronicsUnit", [Column("mRID"), Column("name"), Column("maxP", "MW"),
                                            Column("minP", "MW"), Column("PowerElectronicsConnection"),
                                            Column("EquipmentContainer")], converter_unit_rows),
             Table("ControlAreaPowerElectronicsUnit", [Column("mRID"), Column("name"), Column("ControlArea"),
                                                       Column("PowerElectronicsUnit")], converter_area_rows),
         ]
+    if terminal_updates:
+        statements.append(Table("RegulatingControl", [Column("mRID"), Column("Terminal")], terminal_updates,
+                                update=True, comment="a powerFactor control on its connection's own terminal, "
+                                                     "which binds after the control (R3c-2)"))
     return Document(name="generator", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(records)))
