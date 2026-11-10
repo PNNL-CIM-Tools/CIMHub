@@ -8,9 +8,9 @@ def describe(obj) -> str:
     return f"{type(obj).__name__} {obj.mRID!r}"
 
 
-def required_qty(obj, attribute: str, unit: str) -> float:
-    """``get_qty(obj, attribute, unit)``, raising when the attribute is unset."""
-    value = get_qty(obj, attribute, unit)
+def required_qty(obj, attribute: str, unit: str, **bases) -> float:
+    """``get_qty(obj, attribute, unit, **bases)``, raising when the attribute is unset."""
+    value = get_qty(obj, attribute, unit, **bases)
     if value is None:
         raise ValueError(f"{describe(obj)}: {attribute} is unset")
     return value

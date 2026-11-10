@@ -17,7 +17,7 @@ from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.source import get_source
 from cimhub_core.getters.terminals import get_terminal_nodes
 from cimhub_opendss.exporter.buses import bus_ref
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.EnergySource,)

@@ -30,7 +30,7 @@ FIELDS = {
     "to_bus_number": Field("structural", note="J: bus2"),
     "circuit": Field("structural", note="CKT: with I and J the key, mRID sw_<I>_<J>_<CKT>"),
     "x": Field("untranscribed", note="X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; "
-                                     "the exporter writes THRSHZ back (expected difference)"),
+                                     "the exporter writes 0.0001 (the format gives X no default)"),
     "ratings": Field("structural", note="RATE1..RATE12: as a branch's, the set sw_<key>_ratings on sw_<key>_T1 (RAW-9, "
                                         "RAW-20)"),
     "status": Field("mapped", note="STATUS: open = (STATUS == 0); blank: 1 (defaulted)"),

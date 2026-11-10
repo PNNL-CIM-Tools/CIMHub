@@ -32,6 +32,8 @@ exporter) may ask for signature changes before anything is frozen.
 | S6e | `get_inverter_units` (`InverterUnitShare`: a shared PowerElectronicsConnection chopped by maxP share, each unit's own p or its share of the connection's; `getters/der.py`), `get_series_compensator` (`getters/series_compensator.py`, ohm) | **done 2026-11-09** with the DSS S6e exporter |
 | S6f | `get_location_coordinates` (`LocationCoordinates`: a Location's points in order and each Terminal's point; `getters/location.py`) | **done 2026-11-09** with the DSS S6f exporter |
 | S6g | `get_earth_resistivity` (`getters/earth.py`: `EarthData`, rho in ohm-m from the profile's Resistance), `get_reclose_delays` (`getters/switch_state.py`) | **done 2026-11-09** with the DSS S6g slice |
+| RAW E0 | `get_node_voltage`, `get_voltage_limits` (`getters/voltage.py`, `NodeVoltage`, `VoltageLimits`; the limit-set and agreement helpers of `current_limits.py` shared); `export_slots.py` moved from the DSS exporter to core | **done 2026-11-09** with the RAW E0 exporter (`cimhub_raw/docs/EXPORT_MAPPING.md`), 6 tests |
+| RAW E1 | `get_limits_by_type` (`getters/limits_by_type.py`: limits of one class keyed by `OperationalLimitType`); `get_shunt_admittance` (`getters/shunt.py`, `ShuntAdmittance`: g, b of the sections in service, S or pu); `get_series_compensator(unit, base_power=)` (pu); `required_qty(..., **bases)` | **done 2026-11-09** with the RAW E1 exporter, 6 tests (`test_getters_bus_branch_units.py`) |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)

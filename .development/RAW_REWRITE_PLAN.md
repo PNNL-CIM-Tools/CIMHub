@@ -198,7 +198,7 @@ Each slice delivers its mappers, atoms with goldens (`tests/atoms/<table>/`), it
 | R3b | Generator forms R3 raised on: implicit step-up transformer (213 in the set), WMOD 2/3 (50). **Step-ups done 2026-11-09** (user: "let's implement the r3b transformers"; spec R3b-1..5 approved; 255 tests; atom `tests/atoms/generator/step_up.raw`): the machine on an internal node `<machine>_int` at bus I's base behind `<machine>_xf`, mapped as the R4 2-winding record PSS/E's figure describes (r, x = RT, XT on MBASE on end 1; GTAP ≠ 1 a fixed tap on end 1), following the core shape `behind_transformer.cimtbl` (C8) | WMOD 2/3: R3c, below |
 | R3c | Generator WMOD 2 (24 a case) and 3 (26). **Done 2026-11-09** (user: "let's do the wmod generator next"; spec R3c-1..3 approved; atom `tests/atoms/generator/renewables.raw`): WMOD 2 a WMOD 1 connection, QT/QB as written, WPF always listed; a WMOD 3 plant a `powerFactor` control on its connection's own terminal (targetValue = WPF signed, an `Update` row for the Terminal), its unused VS/IREG listed; every connection lists ZR and RMPCT off their defaults. IEEE14's generator golden gains `wpf=1.0` in its defaulted comments | done; one local case binds whole, nothing set aside (77 s) |
 | R1b / R2b | Branch between two base voltages (18), series capacitor with a length (1), a multi-section line holding a series capacitor (its Update clashes with the capacitor's substation, found at bind time); switched shunt MODSW 3 (25) and 6 (3, with FACTS). **Done 2026-11-09** (user: "let's implement the r1b r2b"; spec R1b-1..3, R2b-1..2 approved; 265 tests; atoms `tests/atoms/branch/mixed_base.raw`, `tests/atoms/shunt/plant_and_facts.raw`): the line at bus I's base with bus J's listed; the capacitor's LEN listed; a section in one substation stays there, listed on the Line; MODSW 3 / 6 a reactivePower control on the machine's / STATCOM's terminal, target = −midpoint in VAr; no plant: disabled; `switched_shunt.cimtbl` after `facts_device.cimtbl` | done; one local case binds whole but for WMOD 2/3 |
-| E | Exporter `cim_to_raw` on the core getters; tiers 2 and 3 | IEEE14 + WECC240 round-trip RAW → cimtbl → CIM → RAW, equal field by field minus untranscribed fields |
+| E | Exporter `cim_to_raw` on the core getters; tiers 2 and 3. **Plan approved 2026-11-09 (§9). E0 done 2026-11-09** (framework, case, zone, area, bus; `docs/EXPORT_MAPPING.md`; 32 tests). **E1 done 2026-11-09** (branch, series capacitor, switch, multi-section line, ratings; E1-1 in-substation sections grouped in their Line (`AdditionalGroupedEquipment`, import R1b-3 amended), E1-2 line shunts by mRID; 48 tests); E2 next | IEEE14 + WECC240 round-trip RAW → cimtbl → CIM → RAW, equal field by field minus untranscribed fields |
 | P2 | Phase 2, one slice per table: impedance correction (done in R4b), two-terminal DC, VSC DC, multi-terminal DC, FACTS, GNE, induction machine | each one atom-proven; new shapes requested from core first |
 | P2a | **Done 2026-11-09** (approved "profiles fixed, continue"; 239 tests; atom `tests/atoms/dc/facts_vsc.raw`; `CIMTBL_MAPPING.md#facts-devices-and-dc-lines-phase-2-p2a--p2b`): shunt FACTS → `StaticSynchronousCompensator` + `RegulatingControl`; VSC DC → `DCLine`, `DCLineSegment`, `DCTopologicalNode`s, two `VsConverter`s with `PccTerminal` and a one-point `VsCapabilityCurve` (ties via R5). The user added `ACDCConverter.PccTerminal` and made `VsCapabilityCurve` a Curve; `qPercent` on `RegulatingCondEq` not taken | the atom binds; all 29 local cases map their 25 FACTS and 2 VSC lines |
 | P2b | **Done 2026-11-09** (user: "go ahead and build the converter transformer"; 250 tests; atom `tests/atoms/dc/two_terminal.raw`): two-terminal DC → the P2a DC rows + a `CsConverter` per converter on an internal valve-side `TopologicalNode`, behind an equivalent 2-winding converter transformer (end 1 r, x = RC, XC / (NB × TR²); a `RatioTapChanger` on the STP grid from TMN), following the core shape `behind_transformer.cimtbl` (C8) | the atom binds; all 29 local cases map their 19 lines; one binds whole |
@@ -473,3 +473,49 @@ There is no open PSS/E engine. The checks are:
 - **Round trip (tier 3).** RAW → `.cimtbl` → CIM → RAW, field by field, minus the untranscribed fields.
 - **Regression.** The frozen CIMHub_2_0 converter's outputs on IEEE14 and WECC240. These are copied outputs, never
   imported code, and every difference is listed.
+
+## 9. E: the exporter (plan approved by the user 2026-11-09, X1 and X2 as recommended)
+
+`RawExporter(FormatExporter).to_model(network) -> GraphModel` is written fresh in `cimhub_raw/exporter/`, with one
+module per RAW table. It reads every value through the core getters (the `export-getters` skill). The model it
+returns has the shape `Raw34Reader.read_all()` returns (schema dataclasses), so `Raw34Writer().write(model, path)`
+gives a case that the reader reads back. `cim_to_raw(network, path)` builds and writes in one call. The old
+exporter (CIMHub_2_0, 5,300 lines, cim17v40) is only the oracle; nothing is copied from it. The pattern is DSS S6
+(`DSS_REWRITE_PLAN.md` §8): `EXPORT_ORDER`, an `ExportContext`, and a check that raises on conducting equipment no
+module exports. The spec is a new `cimhub_raw/docs/EXPORT_MAPPING.md`, one section per sub-slice, each approved
+before its code. The import spec's "the exporter writes ..." notes are collected there.
+
+### 9.1 Sub-slices
+
+| # | content | getters (new in **bold**) |
+|---|---|---|
+| E0 (**done 2026-11-09**) | framework: `RawExporter`, `EXPORT_ORDER`, identity (X2), the per-atom harness (§9.2). Case identification and system-wide data (SBASE, BASFRQ, the rating sets, THRSHZ). Bus: I, NAME, BASKV, IDE (from the plant controls and the angle reference, import spec R3), AREA (the R5 trace, X5), ZONE (its substation's Region), VM/VA (SvVoltage), NVHI..EVLO (voltage limits). Zone, area (PDES = −netInterchange, PTOL), owner | `get_base_voltage`, `get_terminal_nodes(topological=True)`, **`get_node_voltage`**, **`get_voltage_limits`** |
+| E1 (**done 2026-11-09**) | branch (per unit on bus I's base, line shunts, ratings), series capacitor, system switching device, multi-section line | `get_line_sequence_impedance(unit="pu")`, `get_series_compensator(unit="pu")`, `get_switch_state`, `get_in_service`, **`get_limits_by_type`** (one value per `OperationalLimitType`: RATE1..12; the plan's `get_rating_limits`), **`get_shunt_admittance`** (line shunts; E2's shunts) |
+| E2 | load (ZIP from the response, SCALE from Conform/NonConform, AREA/ZONE from the groups), fixed shunt, switched shunt (blocks, MODSW from the control mode) | `get_load_response`, `get_shunt_reactive_power`, `get_equipment_control` |
+| E3 | generator: machines, WMOD 1/3 connections, plants (IREG, VS, RMPCT), step-ups folded back into RT/XT/GTAP (the `behind_transformer` shape inverted) | `get_der_output`, `get_machine_rating`, `get_machine_impedance`, `get_regulating_control`, `get_transformer_model` |
+| E4 | transformer: 2- and 3-winding, CW = CZ = CM = 1 (as the import spec decided), taps and COD, phase shifters, impedance correction tables | `get_transformer_model`, `get_tap_steps`, `get_tap_changer_control` |
+| E5 | node-breaker SUBSTATION section (R6), tie flows (R5) | `get_switch_state`, `get_terminal_nodes` |
+| E6 | phase 2 as imported: FACTS, VSC DC, two-terminal DC | as needed |
+| E7 | whole cases: IEEE14, WECC240, IEEE118 (tier 3); idempotence; the local sweep (counts only) | |
+
+### 9.2 Tests
+
+- **Per atom (tier 2, every sub-slice):** the atom → `RawImporter.to_cim` → `to_model`, compared record by record
+  (matched by key) with the atom as read. Fields that the mapper's `FIELDS` marks untranscribed are skipped. The
+  expected differences are one table in `EXPORT_MAPPING.md`, mirrored by one dict in the test. Floats are compared
+  at rel 1e-9 (per unit → SI → per unit). Then write → read is lossless.
+- **Whole cases (tier 3, E7):** IEEE14, WECC240 and IEEE118, by the same comparison.
+- **Idempotence (E7):** export(import(export(import(case)))) is the same text as export(import(case)).
+- **No power flow:** neither PSS/E nor another RAW engine is in the workspace, so field equality is the check.
+
+### 9.3 Decisions
+
+| # | question | recommendation |
+|---|---|---|
+| X1 | Values with no CIM home (untranscribed, listed on cimtbl row comments) | **The exporter reads CIM only**, as DSS E4 does. The cimtables parser ignores comments, and a second path back from the artifacts would make CIM no longer the export's only input. An untranscribed field is left `None`, so the writer leaves it blank and PSS/E applies its default; the comparison fills the default (`fill_defaults`) before it compares. Import-spec promises this changes into expected differences: GTAP without a step-up (R3b-4), WMOD 2 comes back as WMOD 1 with the same QT/QB (R3c-1), ZR/RMPCT on a connection (R3c-3), OWNER/O1..O4, INTRPT, DGEN*, inter-area transfers |
+| X2 | Identity | I = `TopologicalNode.busNumber`, which must be set (raises otherwise; numbering a model from another format waits for a consumer). ID/CKT come from the importer's key in the `mRID` (`ld_<I>_<ID>`), accepted only when its bus numbers match the equipment's own buses. Otherwise the next free ID per bus (or bus pair) is used, `1`, `2`, ... (the old exporter's rule), and that is the one fallback. NAME = CIM `name`, written blank when it equals the importer's blank-NAME key, so blank comes back blank. A NAME longer than the field (12 for a bus) raises. The shared `name_source` switch (DSS E1) does not apply, because RAW's identity is the number |
+| X3 | Model form | A `BusBranchModel` (every terminal on a `TopologicalNode`); `ConnectivityNode`s inside one become the SUBSTATION section (E5). A model without `TopologicalNode`s raises until topology processing is asked for |
+| X4 | Per unit | Every value goes back on SBASE and the bus or winding base through `get_*(unit="pu", base_power=...)` or one `derived/` per-unit function, never a factor (UNITS.md). The import spec's choices hold (CZ 1 on SBASE, CW 1, CM 1, the line on bus I's base) |
+| X5 | A bus's AREA (R5 trace) | Spoke-local `exporter/area_trace.py` over the bound CIM, moved to core when a second bus-branch spoke (MATPOWER) needs it |
+| X6 | Record order | Sorted by key (buses by number, equipment by its bus keys then ID), as PSS/E writes. The comparison matches records by key, never by position |
+| X7 | Workspace | Branch `raw-exporter` off `rc_1` (b238816), in the `~/CIMHub-raw` worktree. New core getters land on this branch, each tested against hand numbers on the core shapes |

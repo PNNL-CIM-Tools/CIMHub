@@ -15,7 +15,7 @@ cimhub_opendss/src/cimhub_opendss/exporter/
     naming.py         Names: the E1 switch + dss_safe_name (kept in the writer) + the per-namespace collision check
     buses.py          bus_ref(node, phases, names) -> "650.1.2.3" (E7)
     options.py        the Options record: circuit, defaultbasefreq, voltagebases (E10)
-    slots.py          Slot, check_slots, slots_table
+    (Slot, check_slots, slots_table: cimhub_core/export_slots.py, shared with the RAW exporter)
     vsource.py        EnergySource -> Vsource (one module per DSS class from here on)
 ```
 

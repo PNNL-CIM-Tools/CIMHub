@@ -21,12 +21,22 @@ def kv_from_per_unit(per_unit: float, base_kv: float) -> float:
     return per_unit * base_kv
 
 
+def per_unit_from_kv(kv: float, base_kv: float) -> float:
+    """The exporter's inverse of ``kv_from_per_unit``: pu = kV / base."""
+    return kv / base_kv
+
+
 def ka_from_rating(rating_mva: float, base_kv: float) -> float:
     """A current in kA from a rating "in current expressed as MVA" (NXFRAT/XFRRAT > 0; RAW-9).
 
     The spec's MVA_rated = sqrt(3) x E_base x I_rated, so kA = MVA / (sqrt(3) x kV).
     """
     return rating_mva / (math.sqrt(3) * base_kv)
+
+
+def rating_from_ka(current_ka: float, base_kv: float) -> float:
+    """The exporter's inverse of ``ka_from_rating``: MVA = sqrt(3) x kV x kA."""
+    return math.sqrt(3) * base_kv * current_ka
 
 
 def volts_from_per_unit(per_unit: float, base_kv: float) -> float:
@@ -250,6 +260,11 @@ def net_import(pdes: float) -> float:
     """``ControlArea.netInterchange`` (MW, positive into the area) from PDES (MW, the desired net export): -PDES,
     written ``0.0 - PDES`` so that 0 stays ``0.0`` (R5)."""
     return 0.0 - pdes
+
+
+def net_export(net_interchange: float) -> float:
+    """The exporter's inverse of ``net_import``: PDES (MW) = -netInterchange, ``0.0 - ...`` so 0 stays ``0.0``."""
+    return 0.0 - net_interchange
 
 
 def generation_p_q(record) -> tuple[float, float]:

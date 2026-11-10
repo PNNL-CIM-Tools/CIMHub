@@ -18,7 +18,7 @@ from cimhub_core.getters.in_service import get_in_service
 from cimhub_opendss.exporter.controls import control_enabled
 from cimhub_opendss.exporter.injection import device_connection, rated_kv
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.SynchronousMachine,)

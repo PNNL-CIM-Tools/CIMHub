@@ -16,7 +16,7 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_core.getters.location import get_location_coordinates
 from cimhub_core.getters.terminals import get_terminal_nodes
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.importer.cimtbl.buscoords import COORDINATE_SYSTEMS
 from cimhub_opendss.schema import opendss_schema as schema
 

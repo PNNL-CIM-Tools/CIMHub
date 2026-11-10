@@ -372,7 +372,7 @@ Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue
   shared, so a change of class keeps the mRID. A blank or unknown STYPE raises: the spec gives no default.
 - **Status:** `open` = STATUS == 0 and `normalOpen` = NSTATUS == 0.
 - **X** is untranscribed: it is the solver's stand-in for zero impedance (X < THRSHZ), and a `Switch` has none.
-  The exporter writes THRSHZ back (expected difference).
+  The exporter writes 0.0001, since the format gives X no default (`EXPORT_MAPPING.md` E1).
 - **Ratings** as for branches (`sw_<key>_ratings` on `sw_<key>_T1`).
 - A switch across a zone boundary is not a merge edge (§3.2). Its container is bus I's substation.
 
@@ -381,7 +381,7 @@ Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue
 | `from_bus_number` | `int` | `101`, `102`, `103` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>; EquipmentContainer = bus I's substation |
 | `to_bus_number` | `int` | `102`, `103`, `104` | structural | J: bus2 |
 | `circuit` | `Optional[str]` | `1` | structural | CKT: with I and J the key, mRID sw_<I>_<J>_<CKT> |
-| `x` | `Optional[float]` | `0.0001` | untranscribed | X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; the exporter writes THRSHZ back (expected difference) |
+| `x` | `Optional[float]` | `0.0001` | untranscribed | X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; the exporter writes 0.0001 (the format gives X no default) |
 | `ratings` | `Union[float, list[float], NoneType]` | `[200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,...`, `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...` | structural | RATE1..RATE12: as a branch's, the set sw_<key>_ratings on sw_<key>_T1 (RAW-9, RAW-20) |
 | `status` | `Optional[int]` | `1`, `0` | mapped | STATUS: open = (STATUS == 0); blank: 1 (defaulted) |
 | `nstat` | `Optional[int]` | `1`, `0` | mapped | NSTATUS: normalOpen = (NSTATUS == 0); blank: 1 (defaulted) |
@@ -409,8 +409,9 @@ Update Table ACLineSegment: mRID, EquipmentContainer
 
 - **Members:** the path I, DUM1, …, J. Each consecutive pair must be joined by exactly one branch not already
   used, in either direction, and each dummy bus must have exactly two branches. Anything else raises with the
-  record. A member with both buses in one substation (a series capacitor merges its buses) stays there: it gets no
-  `Update` row and is listed on the Line's row (`# path …; in substations: sc_…`; R1b-3).
+  record. A member with both buses in one substation (a series capacitor merges its buses) stays contained there
+  and joins the Line as additional grouped equipment (`Update Table …: mRID, AdditionalEquipmentContainer`), and
+  the Line's row lists it (`# path …; in substations: sc_…`; R1b-3).
 - **Region:** bus I's zone. **Name:** ID.
 - The `msl_` prefix is requested from the translate-table owners (C3).
 - Neither public case has one; the atom `tests/atoms/branch/multi_section_line.raw` covers it.
@@ -684,10 +685,19 @@ in R3b-4. A series capacitor with B ≠ 0 still raises (no case).
 ### A multi-section line holding a series capacitor (decision R1b-3)
 
 Every capacitor section of the set (44) has both buses in one substation, which the capacitor merges; every line
-section (39) spans two. A section already in a substation stays there, with no `Update` row (an `Update` only
-adds, so it clashed with the capacitor's substation at bind time). The Line holds the rest, and its row lists the
-others for the exporter: `# path 1, 2, 3, 4; in substations: sc_2_3_1`. The rule is the same for a line section
-inside one substation (none in the set).
+section (39) spans two. A section already in a substation stays contained there, with no `EquipmentContainer`
+`Update` row (an `Update` only adds, so it clashed with the capacitor's substation at bind time). It joins its Line
+through CIM's second container association instead, `Equipment.AdditionalEquipmentContainer` ↔
+`EquipmentContainer.AdditionalGroupedEquipment` (amended 2026-11-09 for the exporter's E1, user: "AdditionalGrouped"),
+so the Line groups every section wherever it sits in the path:
+
+```
+Update Table SeriesCompensator: mRID, AdditionalEquipmentContainer
+    sc_2_3_1, msl_1_4_&1
+```
+
+The Line's row still lists it: `# path 1, 2, 3, 4; in substations: sc_2_3_1`. The rule is the same for a line
+section inside one substation (none in the set).
 
 ### MODSW 3: a plant's reactive power (decision R2b-1)
 
