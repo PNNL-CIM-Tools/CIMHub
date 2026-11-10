@@ -1,6 +1,6 @@
 ---
 name: export-getters
-description: The shared lookup layer in both directions - export getters in `cimhub_core/getters/` (one per CIM concept, NamedTuple returns, all unit and base conversion through `cimtables.graph_write.get_qty`, explicit impedance resolution order, cim18v17 only) and the import-side code tables in `cimhub_core/codes.py`. Use when writing a CIM → native exporter, adding or changing a getter, or adding a native-code → CIM-enum table.
+description: The shared lookup layer in both directions - export getters in `cimhub_core/getters/` (one per CIM concept, NamedTuple returns, all unit and base conversion through `cimtables.graph_write.get_qty`, explicit impedance resolution order, cim18v17 only) and the import-side code tables (spoke-local until two spokes share one, then `cimhub_core/codes.py`). Use when writing a CIM → native exporter, adding or changing a getter, or adding a native-code → CIM-enum table.
 ---
 
 # Export getters and code tables
@@ -93,7 +93,10 @@ This is a **caller-limited resolution order**, not hidden fallbacks:
    - DSS writes `C1=0`/`C0=0` when `b` is `None`. A blank lets the engine default in (C1=3.4, C0=1.6 nF per unit
      length, or the balanced 2.8/-0.6 C matrix on a matrix code), which silently adds line charging.
 
-## Import-side code tables (`cimhub_core/codes.py`)
+## Import-side code tables
+
+`cimhub_core/codes.py` does not exist yet: no table is shared so far. Create it with the first table a second spoke
+needs.
 
 - Plain dicts, one per CIM enum (`PhaseCode`, `WindingConnection`, `SinglePhaseKind`, `PhaseShuntConnectionKind`,
   load-model kinds), keyed by native spelling, valued by the cim18v17 enum text.

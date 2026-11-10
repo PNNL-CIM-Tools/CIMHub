@@ -3,6 +3,7 @@ name = "cimhub"
 version = "3.0.0"
 description = "CIMHub: CIM converters built on .cimtbl (development workspace)"
 requires-python = ">=3.11,<3.14"
+license = "BSD-3-Clause"
 dependencies = [
     "cimhub-core",
     "cimhub-opendss",

@@ -68,7 +68,7 @@ template: [reference.md](reference.md).
    - **fail fast:** every condition the mapper raises on;
    - **sweep result** and open points;
    - **reader/schema findings** (wrong slot types), filed against the reader, not worked around in the mapper.
-4. **Code tables:** each `lookup` table, its keys and CIM values; shared ones live in `cimhub_core.codes`.
+4. **Code tables:** each `lookup` table, its keys and CIM values; a table two spokes share moves to `cimhub_core.codes`.
 5. **CIM 18 gaps:** fields with no home that a model needs, also logged in the CIM 18 gap register.
 6. **Reference model and expected differences:** the model whose artifact directory is the committed golden, how it is
    produced and reviewed, and every known difference from a hand translation (hand translations may carry realism

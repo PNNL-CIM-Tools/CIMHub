@@ -198,21 +198,22 @@ wheels = [
 
 [[package]]
 name = "cim-builder"
-version = "0.0.1a0"
+version = "0.1.0"
 source = { editable = "../CIM-Builder" }
 dependencies = [
     { name = "cim-tables" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "graphviz", marker = "extra == 'dev'", specifier = ">=0.19.1" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.27.1" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=2.17.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
+requires-dist = [{ name = "cim-tables", editable = "../CIM-Tables" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "graphviz", specifier = ">=0.19.1" },
+    { name = "ipykernel", specifier = ">=6.27.1" },
+    { name = "pre-commit", specifier = ">=2.17.0" },
+    { name = "pytest", specifier = ">=8.3.5" },
 ]
-provides-extras = ["dev"]
 
 [[package]]
 name = "cim-graph"
@@ -378,29 +379,14 @@ name = "cimhub-gdm"
 version = "3.0.0"
 source = { editable = "cimhub_gdm" }
 dependencies = [
-    { name = "cim-tables" },
-    { name = "cim-topology" },
-    { name = "cimhub-core" },
-    { name = "pyyaml" },
     { name = "cim-builder" },
+    { name = "cim-tables" },
+    { name = "cimhub-core" },
     { name = "grid-data-models" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
-    { name = "cimhub-core", editable = "cimhub_core" },
-    { name = "pyyaml" },
-]
-
-[[package]]
-name = "cimhub-raw"
-version = "3.0.0a0"
-source = { editable = "cimhub_raw" }
-dependencies = [
-    { name = "cim-tables" },
-    { name = "cimhub-core" },
     { name = "cim-builder", editable = "../CIM-Builder" },
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
@@ -421,9 +407,24 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
+    { name = "cimhub-core", editable = "cimhub_core" },
     { name = "pyyaml" },
+]
+
+[[package]]
+name = "cimhub-raw"
+version = "3.0.0"
+source = { editable = "cimhub_raw" }
+dependencies = [
+    { name = "cim-tables" },
+    { name = "cimhub-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cimhub-core", editable = "cimhub_core" },
 ]
 
 [[package]]

@@ -181,7 +181,7 @@ Open: the tolerance at which lumped and per-length values "disagree"; a split-ph
 - Heights: modified Carson ignores them, but `b` (image distance 2h) and Deri do not. No default height.
 - A spacing getter reads positions; it never builds spacing objects or adds them to the graph.
 
-## 5. Code tables (`cimhub_core/codes.py`)
+## 5. Code tables (`cimhub_core/codes.py`, created with the first shared table)
 
 ```python
 import cimprofiles.cim18.cim18v17 as cim

@@ -93,7 +93,8 @@ def _bind(case):
     return cimtbl_to_cim(atom_documents(_map(case)), network=cimtables.load_model(ATOMS / "prereq.cimtbl"))
 ```
 
-- Shared context (a Feeder, common BaseVoltages, a two-node network) goes in `cimhub_core/tests/atoms/prereqs/`.
+- Context a whole spoke shares (a Feeder, common BaseVoltages, a two-node network) goes in
+  `cimhub_<fmt>/tests/atoms/prereqs/` (GDM: `shell.cimtbl`).
 - Prereq mRIDs follow the same prefix rules as artifacts (`fdr_`, `bv_`, `sub_`).
 - Mapper inputs that come from another step (the topology walk's `BusSystem`s) are passed explicitly in the test
   (a `BUSES` dict), so the atom tests one mapper.
@@ -118,7 +119,7 @@ def test_export_matches_native_atom():
 
 ## 4. Tier 3: round trip of a reference model
 
-- `<fmt>_to_cim(path, artifact_dir=tmp_path)` → `cim_to_<fmt>` → re-read with the native reader → compare.
+- `<fmt>_to_cim(<Fmt>Reader(path).read_all(), artifact_dir=tmp_path)` → `cim_to_<fmt>` → re-read with the native reader → compare.
 - The reference model's artifact directory is committed as a golden (D6), so an importer change shows as a text diff.
 - Expected differences from hand translations are listed in the spec; the test names them.
 

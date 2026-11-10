@@ -11,7 +11,7 @@ Serialization layer (file ↔ LinkML objects):
 Conversion layer (LinkML objects ↔ CIM graph):
     FormatImporter — native format → CIM graph
     CimtblImporter — native format → ``.cimtbl`` documents → CIM graph
-                     (the rewrite's file-format importers; CIMTBL_IMPORT_CONTRACT.md)
+                     (the file-format importers; the ``cimtbl-import-contract`` skill)
     FormatExporter — CIM graph → native format
 """
 
@@ -256,7 +256,7 @@ class FormatExporter(ABC):
 
     Each format may still expose a thin ``cim_to_<fmt>(network, path)``
     convenience function that does the build-then-write in one call. See
-    ``CONVERTER_API.md`` for the full spec.
+    ``cimhub_core/docs/CONVERTER_API.md`` for the full spec.
     """
 
     @abstractmethod

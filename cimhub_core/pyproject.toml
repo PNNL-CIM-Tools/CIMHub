@@ -8,16 +8,24 @@ description = "CIMHub core: shared .cimtbl import contract, export getters and n
 readme = "README.md"
 version = "3.0.0"
 requires-python = ">=3.11"
-license = { text = "BSD-2-Clause" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 authors = [
-  { name = "Pacific Northwest National Laboratory", email = "gridappsd@pnnl.gov" }
+  { name = "Alex Anderson", email = "19935503+AAndersn@users.noreply.github.com" },
+  { name = "Tylor Slay" },
+  { name = "Kapil Duwadi" },
+  { name = "Nathan Gray" },
+  { name = "Craig Allwardt", email = "3979063+craig8@users.noreply.github.com" },
+  { name = "Andy Fisher" },
+]
+maintainers = [
+  { name = "Pacific Northwest National Laboratory", email = "gridappsd@pnnl.gov" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: BSD License",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
