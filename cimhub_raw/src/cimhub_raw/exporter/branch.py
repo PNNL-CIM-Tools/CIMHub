@@ -12,10 +12,10 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.line_impedance import get_line_sequence_impedance
 from cimhub_core.getters.series_compensator import get_series_compensator
-from cimhub_core.getters.shunt import get_shunt_admittance
 from cimhub_raw.exporter.area_trace import metered_terminal
 from cimhub_raw.exporter.identity import keyed_ids, raw_name, terminal_buses
 from cimhub_raw.exporter.ratings import device_ratings
+from cimhub_raw.exporter.shunt_admittance import bus_base_admittance
 from cimhub_raw.importer.cimtbl.branch import LINE_PREFIX, SERIES_CAPACITOR_PREFIX, SHUNT_PREFIX
 
 NATIVE_CLASS = schema.BranchRecord
@@ -26,7 +26,7 @@ NAME_WIDTH = 40
 END_TERMINAL = {"i": 1, "j": 2}  # a line shunt's end -> the branch terminal on its bus
 
 _OWNER = Slot("unset", "ownership is an asset concept (CIM 18 gap)")
-_SHUNT = "the line shunt cap_<key>_{end} (mRID key, E1-2): get_shunt_admittance {part} (pu)"
+_SHUNT = "the line shunt cap_<key>_{end} (mRID key, E1-2): get_shunt_admittance {part} (pu on the bus base)"
 SLOTS = {NATIVE_CLASS: {
     "from_bus_number": Slot("written", "I: terminal 1's busNumber"),
     "to_bus_number": Slot("written", "J: terminal 2's busNumber"),
@@ -105,5 +105,5 @@ def _line_shunt(shunt, branch_in_service: bool, branch, base_power) -> tuple[flo
     if (get_in_service(shunt, which="actual") is not False) != branch_in_service:
         raise ValueError(f"{describe(shunt)}: in service {shunt.inService}, but its line {describe(branch)} is "
                          f"{'in' if branch_in_service else 'out of'} service; a line shunt switches with its line")
-    admittance = get_shunt_admittance(shunt, "pu", sections="actual", base_power=base_power)
+    admittance = bus_base_admittance(shunt, "actual", base_power)
     return admittance.g, admittance.b

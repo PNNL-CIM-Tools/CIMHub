@@ -19,8 +19,8 @@ import cimhub_raw.schema.raw_v34.raw34_schema as schema
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.export_slots import check_slots
 from cimhub_core.graph_model import _get_identifier
-from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, multi_section_line, switch,
-                                 zone)
+from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, load,
+                                 multi_section_line, switch, switched_shunt, zone)
 from cimhub_raw.exporter.cim_to_raw import EXPORT_ORDER, RawExporter, export_context, export_tables
 from cimhub_raw.exporter.identity import keyed_ids
 from cimhub_raw.exporter.ratings import ratings_in_current
@@ -28,9 +28,13 @@ from cimhub_raw.importer.cimtbl import area_interchange as import_area
 from cimhub_raw.importer.cimtbl import branch as import_branch
 from cimhub_raw.importer.cimtbl import bus as import_bus
 from cimhub_raw.importer.cimtbl import case_identification as import_case
+from cimhub_raw.importer.cimtbl import fixed_shunt as import_fixed_shunt
+from cimhub_raw.importer.cimtbl import load as import_load
 from cimhub_raw.importer.cimtbl import multi_section_line as import_multi_section_line
 from cimhub_raw.importer.cimtbl import switch as import_switch
+from cimhub_raw.importer.cimtbl import switched_shunt as import_switched_shunt
 from cimhub_raw.importer.cimtbl import zone as import_zone
+from cimhub_raw.importer.cimtbl.derived import band_fractions, mva_from_per_unit, per_unit_from_mva, reactive_band
 from cimhub_raw.importer.cimtbl.records import raw_defaults
 from cimhub_raw.importer.raw_to_cimtbl import raw_to_cim
 from cimhub_raw.raw34_reader import Raw34Reader
@@ -40,7 +44,8 @@ TESTS = Path(__file__).parent
 FIXTURES = sorted([*TESTS.glob("atoms/*/*.raw"), *TESTS.glob("cases/*/*.raw")])
 E0_MODULES = (case_identification, zone, area_interchange, bus)
 E1_MODULES = (*E0_MODULES, branch, switch, multi_section_line)
-LANDED = E1_MODULES
+E2_MODULES = (*E1_MODULES, load, fixed_shunt, switched_shunt)
+LANDED = E2_MODULES
 REL_TOL = 1e-9
 
 #: export slots written although the importer lists the field untranscribed
@@ -63,13 +68,16 @@ EXPECTED = {
     "areas": _ISOLATED,
     "facts_vsc": _ISOLATED,
     "two_terminal": _ISOLATED,
-    "loads": {_ZONE_1, ("ZoneRecord", "2", "<extra>"), ("BusRecord", "3", "area")},  # bus 3 untraced (area 2)
+    # bus 3 untraced (area 2); load 2 A's ZONE off its bus's (E2-1); load 3 1's blank AREA and ZONE: its group's, its bus's
+    "loads": {_ZONE_1, ("ZoneRecord", "2", "<extra>"), ("BusRecord", "3", "area"), ("LoadRecord", "2_A", "zone"),
+              ("LoadRecord", "3_1", "area"), ("LoadRecord", "3_1", "zone")},
+    "plant_and_facts": {_ZONE_1, ("SwitchedShuntRecord", "3", "vswlo")},  # no plant: VSWLO 0 listed (R2b-1)
     "mixed_base": {_ZONE_1, ("BranchRecord", "2_3_1", "length")},  # a series capacitor's LEN (R1b-2)
     # NXFRAT 1 with nothing rated: the flag says nothing, and comes back 0
     "two_bus_node_breaker": {_ZONE_1, ("CaseIdentificationRecord", "0", "branch_ratings_units")},
     **{stem: {_ZONE_1} for stem in ("switches", "line_shunts", "multi_section_line",
                                     "generators", "renewables",
-                                    "step_up", "fixed_shunts", "plant_and_facts", "switched_shunts", "forms_r4b",
+                                    "step_up", "fixed_shunts", "switched_shunts", "forms_r4b",
                                     "transformers")},
     # areas and zones named by their own number come back blank
     "IEEE118_all_hydro_25_clean_4_subs": {(record, key, slot) for record, slot in
@@ -112,6 +120,13 @@ def _metered_off_a_tie(native) -> set[tuple[str, str, str]]:
             for native_class in (schema.BranchRecord, schema.SwitchRecord)
             for record in native.list_by_class(native_class)
             if (record.metered_end or 1) >= 2 and area[record.from_bus_number] == area[record.to_bus_number]}
+
+
+def _own_bus_swreg(native) -> set[tuple[str, str, str]]:
+    """SWREG 0 (the shunt's own bus) comes back I (E2-2); MODSW 6 leaves SWREG blank."""
+    return {("SwitchedShuntRecord", str(_get_identifier(record)), "swreg")
+            for record in native.list_by_class(schema.SwitchedShuntRecord)
+            if not record.swreg and record.modsw != import_switched_shunt.FACTS}
 
 
 def _same(left, right) -> bool:
@@ -161,7 +176,8 @@ def _differences(native, exported, modules) -> set[tuple[str, str, str]]:
 @pytest.mark.parametrize("path", FIXTURES, ids=lambda path: path.stem)
 def test_round_trip(path):
     native, exported = _round_trip(path, LANDED)
-    assert _differences(native, exported, LANDED) == EXPECTED.get(path.stem, set()) | _metered_off_a_tie(native)
+    assert _differences(native, exported, LANDED) == (EXPECTED.get(path.stem, set()) | _metered_off_a_tie(native)
+                                                      | _own_bus_swreg(native))
 
 
 def test_e0_wecc240_gains_the_default_rating_records():
@@ -171,7 +187,8 @@ def test_e0_wecc240_gains_the_default_rating_records():
 
 
 @pytest.mark.parametrize("path", [TESTS / "cases" / "WECC240" / "240busWECC_2018_PSS.raw",
-                                  _atom("branch", "mixed_base"), _atom("branch", "switches")],
+                                  _atom("branch", "mixed_base"), _atom("branch", "switches"), _atom("load", "loads"),
+                                  _atom("shunt", "switched_shunts"), _atom("shunt", "plant_and_facts")],
                          ids=lambda path: path.stem)
 def test_written_case_reads_back(tmp_path, path):
     _, exported = _round_trip(path, LANDED)
@@ -185,7 +202,7 @@ def test_written_case_reads_back(tmp_path, path):
 
 def test_to_model_raises_on_equipment_not_yet_exported():
     native = Raw34Reader(str(TESTS / "cases" / "IEEE14" / "IEEE_14_bus.raw")).read_all()
-    with pytest.raises(ValueError, match=r"no RAW export yet for \{'ConformLoad': 11, "):
+    with pytest.raises(ValueError, match=r"no RAW export yet for \{'PowerTransformer': 3, "):
         RawExporter().to_model(raw_to_cim(native, name="IEEE14"))
 
 
@@ -198,7 +215,9 @@ def test_slots_are_complete(module):
 @pytest.mark.parametrize("exporter, importer", [(case_identification, import_case), (zone, import_zone),
                                                 (area_interchange, import_area), (bus, import_bus),
                                                 (branch, import_branch), (switch, import_switch),
-                                                (multi_section_line, import_multi_section_line)],
+                                                (multi_section_line, import_multi_section_line), (load, import_load),
+                                                (fixed_shunt, import_fixed_shunt),
+                                                (switched_shunt, import_switched_shunt)],
                          ids=lambda module: module.__name__.rsplit(".", 1)[1])
 def test_untranscribed_on_import_is_unset_on_export(exporter, importer):
     untranscribed = {slot for slot, field in importer.FIELDS.items() if field.kind == "untranscribed"}
@@ -293,3 +312,86 @@ def test_e1_ratings_in_mva_and_current_in_one_case_raise():
              if any(terminal.OperationalLimitSet for terminal in device.Terminals)]
     with pytest.raises(ValueError, match="ratings in MVA .* and in current"):
         ratings_in_current(rated)
+
+
+# E2
+
+
+def _switched_shunts():
+    _, network = _network(_atom("shunt", "switched_shunts"))
+    return network, {shunt.mRID: shunt for shunt in network.graph[cim.LinearShuntCompensator].values()}
+
+
+def test_e2_line_shunts_stay_on_their_branches():
+    _, network = _network(_atom("branch", "line_shunts"))
+    assert network.graph[cim.LinearShuntCompensator]
+    assert fixed_shunt.export(export_context(network)) == []
+
+
+def test_e2_derived_inverses():
+    assert mva_from_per_unit(per_unit_from_mva(19.0, 100.0), 100.0) == pytest.approx(19.0)
+    target, deadband = reactive_band(0.25, 0.75, -30.0, 50.0)
+    vars_per_mvar = 1e6
+    assert band_fractions(target / vars_per_mvar, deadband / vars_per_mvar, -30.0, 50.0) == pytest.approx((0.25, 0.75))
+    with pytest.raises(ValueError, match="has no width"):
+        band_fractions(0.0, 1.0, 5.0, 5.0)
+
+
+def test_e2_nonlinear_shunt_raises():
+    _, network = _network(_atom("shunt", "fixed_shunts"))
+    network.add_to_graph(cim.NonlinearShuntCompensator(name="nonlinear"))
+    with pytest.raises(ValueError, match="'NonlinearShuntCompensator': 1"):
+        RawExporter().to_model(network)
+
+
+def test_e2_exponent_load_raises():
+    _, network = _network(_atom("load", "loads"))
+    response = next(iter(network.graph[cim.LoadResponseCharacteristic].values()))
+    response.exponentModel, response.pVoltageExponent, response.qVoltageExponent = True, 1.0, 2.0
+    with pytest.raises(ValueError, match="an exponent load response"):
+        export_tables(network, (load,))
+
+
+def test_e2_shunt_rated_off_its_bus_voltage_raises():
+    _, network = _network(_atom("shunt", "fixed_shunts"))
+    next(iter(network.graph[cim.LinearShuntCompensator].values())).nomU = cim.Voltage(240.0, "kV")
+    with pytest.raises(ValueError, match="nomU 240.0 kV is not its BaseVoltage"):
+        export_tables(network, (fixed_shunt,))
+
+
+def test_e2_one_control_on_two_buses_raises():
+    network, shunts = _switched_shunts()
+    shunts["swsh_3_b2"].RegulatingControl = shunts["swsh_1_b1"].RegulatingControl
+    with pytest.raises(ValueError, match="controls shunts on buses"):
+        export_tables(network, (switched_shunt,))
+
+
+def test_e2_two_controls_on_one_bus_raise():
+    network, shunts = _switched_shunts()
+    control = shunts["swsh_3_b2"].RegulatingControl
+    second = cim.RegulatingControl(name="second", mode=control.mode, enabled=False, Terminal=control.Terminal)
+    network.add_to_graph(second)
+    shunts["swsh_3_b2"].RegulatingControl = second
+    with pytest.raises(ValueError, match="bus 3: .* both control switched shunts"):
+        export_tables(network, (switched_shunt,))
+
+
+def test_e2_more_blocks_than_the_record_holds_raise(monkeypatch):
+    network, _ = _switched_shunts()
+    monkeypatch.setattr(switched_shunt, "BLOCKS", 2)
+    with pytest.raises(ValueError, match="controls 3 shunts; a switched shunt has 2 blocks"):
+        export_tables(network, (switched_shunt,))
+
+
+def test_e2_block_conductance_raises():
+    network, shunts = _switched_shunts()
+    shunts["swsh_2_b1"].gPerSection = cim.Conductance(1e-5)
+    with pytest.raises(ValueError, match="swsh_2_b1'.*has no G"):
+        export_tables(network, (switched_shunt,))
+
+
+def test_e2_blocks_in_and_out_of_service_raise():
+    network, shunts = _switched_shunts()
+    shunts["swsh_1_b1"].inService = False
+    with pytest.raises(ValueError, match="its blocks are in and out of service"):
+        export_tables(network, (switched_shunt,))

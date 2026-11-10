@@ -49,7 +49,7 @@ def export(context) -> list[schema.BusRecord]:
         records.append(schema.BusRecord(
             bus_number=number, name=raw_name(node, str(number), NAME_WIDTH), base_voltage=base_kv,
             bus_type=types.get(node, LOAD), area=None if area is None else context.area_numbers[area],
-            zone=_zone(node, context),
+            zone=bus_zone(node, context),
             voltage_magnitude=None if voltage is None else per_unit_from_kv(voltage.v, base_kv),
             voltage_angle=None if voltage is None else voltage.angle,
             normal_voltage_magnitude_high_limit=_per_unit(bus_limits.normal_high, base_kv),
@@ -103,7 +103,8 @@ def _bus_limits(context) -> dict[cim.TopologicalNode, VoltageLimits]:
     return limits
 
 
-def _zone(node: cim.TopologicalNode, context) -> int | None:
+def bus_zone(node: cim.TopologicalNode, context) -> int | None:
+    """The number of the Region of the node's Substation; None without one."""
     container = node.ConnectivityNodeContainer
     region = getattr(container, "Region", None)
     return None if region is None else context.zone_numbers[region]

@@ -238,7 +238,7 @@ Multi-section line), `ratings.py` (shared: RATE1..RATE12 and the units flag). `E
 `cap_<I>_<J>_<CKT>_i` / `_j` of an exported branch, on that end's bus, is the branch's GI + jBI / GJ + jBJ: the same
 mRID key rule as X2, and the only link the importer could give it (RAW-13, CIM 18 gap). G and B come from a new core
 getter **`get_shunt_admittance(shunt, unit, *, sections, base_power=None)`** (total g, b of the `sections` in
-service; `"pu"` on the shunt's BaseVoltage and `base_power`; E2 reads fixed and switched shunts with it too). One
+service; `"pu"` on the shunt's `nomU` and `base_power`, `nomU` checked against its BaseVoltage since E2; E2 reads fixed and switched shunts with it too). One
 section is read (`sections='actual'`). Its `inService` must equal the branch's, else it raises. E2 skips the shunts
 claimed here (`branch.line_shunts(network)`). The alternative, every line shunt a fixed shunt, solves the same while
 the line is in service but loses the pairing and "switched with its line".
@@ -394,3 +394,211 @@ AREA (about 179) and IDE 4 → 1 (615 to 827, all IDE 4).
 | dum7 | written | the path's next dummy bus, blank past its end |
 | dum8 | written | the path's next dummy bus, blank past its end |
 | dum9 | written | the path's next dummy bus, blank past its end |
+
+## E2: load, fixed shunt, switched shunt (spec approved 2026-11-09: E2-1 bus's Region, E2-2 SWREG I; done 2026-11-09)
+
+Modules: `load.py` (`ConformLoad`, `NonConformLoad`, `EnergyConsumer` → Load), `fixed_shunt.py` and
+`switched_shunt.py` (`LinearShuntCompensator` → Fixed shunt or Switched shunt, split by control). `EXPORT_ORDER`
+gains them after `multi_section_line`. Import spec: `CIMTBL_MAPPING.md#load-r2`, `#fixed-shunt-r2`,
+`#switched-shunt-r2`, R2b. A `NonlinearShuntCompensator` has no module, so `to_model` raises on it (the import never
+writes one).
+
+### Which shunt is which
+
+Every `LinearShuntCompensator` goes to exactly one record:
+1. a line shunt of an exported branch (`branch.line_shunts`, E1-2): the branch's GI/BI/GJ/BJ;
+2. one with a `RegulatingControl`: a block of the Switched shunt of that control;
+3. any other: a Fixed shunt.
+
+**Per unit on the bus base.** RAW's GL, BL and Bi are MW / Mvar at 1 pu of the bus's BASKV. The pu admittance of
+`get_shunt_admittance(..., "pu", base_power=...)` is on the shunt's `nomU`, so a shunt whose `nomU` differs from its
+BaseVoltage raises (the importer writes `nomU` = BASKV; a shunt rated off its bus voltage waits for a consumer).
+The same check now guards E1's line shunts (E1's text said "on the shunt's BaseVoltage": it is `nomU`). MW / Mvar =
+pu × SBASE through a new `derived.mva_from_per_unit`, the inverse of `per_unit_from_mva`.
+
+### Load
+
+| RAW | from |
+|---|---|
+| I, ID | the terminal's bus; ID from the mRID `ld_<I>_<ID>`, else the next free `1`, `2`, ... on the bus (X2) |
+| STATUS | `get_in_service(which="actual")`: 1 when true or unset, 0 when false |
+| AREA | the load's group: `LoadGroup` → `SubLoadArea` → `LoadArea` → `ControlArea` → its number. No group: blank (PSS/E: the bus's). A group whose chain breaks raises |
+| ZONE | its bus's substation `Region` (E2-1), as the bus's ZONE |
+| PL, IP, YP | p × the p fractions: `get_phase_loads(load, "MW", "MVAr").total` and `get_load_response` (constant power, current, impedance) |
+| QL, IQ, YQ | q × the q fractions; YQ = −(q × the impedance fraction), RAW's sign (import RAW-8) |
+| SCALE | by class: `ConformLoad` 1, `NonConformLoad` 0, a plain `EnergyConsumer` blank (PSS/E: 1) |
+| OWNER, INTRPT, DGENP, DGENQ, DGENM | unset (no CIM home) |
+
+An exponent response (`exponentModel` true) raises: a v34 load is ZIP only. A load without a `LoadResponse` raises
+(the getter's rule). A zero side comes back 0, 0, 0 whatever its fractions.
+
+### Fixed shunt
+
+| RAW | from |
+|---|---|
+| I, ID | the terminal's bus; ID from the mRID `cap_<I>_<ID>`, else the next free (X2) |
+| STATUS | `get_in_service(which="actual")`, as a load's |
+| GL, BL | `get_shunt_admittance(shunt, "pu", sections="actual")` × SBASE |
+
+### Switched shunt
+
+**One record per `RegulatingControl`** over the shunts that name it; they must sit on one bus (else it raises), and
+two records on one bus raise (a v34 switched shunt's key is its bus).
+
+| RAW | from |
+|---|---|
+| I | the blocks' bus |
+| N1, B1 .. N8, B8 | one block per shunt, in the order of the mRID `swsh_<I>_b<k>`; otherwise reactors first, then capacitors, each by mRID. Ni = maximumSections; Bi = `get_shunt_admittance(block, "pu", sections="maximum")`'s b per section × SBASE. More than 8 blocks raise; a block with g ≠ 0 raises (RAW has no G here) |
+| BINIT | Σ over the blocks of sections × Bi (`sections="actual"`): the import's `block_sections` split, inverted exactly |
+| STATUS | the blocks' `inService`, which must agree (else it raises) |
+| MODSW | from the control (below) |
+| VSWHI, VSWLO | from the control's target and deadband (below) |
+| SWREG | the busNumber of the control's terminal (decision E2-2); MODSW 6: unset |
+| RMIDNT | MODSW 6: the name of the FACTS device at the control's terminal; else unset |
+| NREG | unset in E2: a terminal on a node of a node-breaker block is E5's (node numbers) |
+| ADJM, RMPCT | unset (no CIM home) |
+
+**MODSW** (the import's `CONTROL_MODE` inverted):
+
+| control | MODSW |
+|---|---|
+| mode voltage, locked (`enabled` false, or every block's `controlEnabled` false) | 0 |
+| mode voltage, `discrete` true or unset | 1 |
+| mode voltage, `discrete` false | 2 |
+| mode reactivePower on a `SynchronousMachine` or `PowerElectronicsConnection` terminal, or disabled on any other (R2b-1's no-plant case) | 3 |
+| mode reactivePower on a `StaticSynchronousCompensator` terminal | 6 |
+| any other mode | raises (MODSW 4 and 5 have no import either) |
+
+Blocks whose `controlEnabled` disagree raise.
+
+**VSWHI, VSWLO** from `get_regulating_control` (target ± deadband / 2; an unset deadband is 0):
+- mode voltage: in kV, as pu of the regulated bus's BASKV (`per_unit_from_kv`).
+- MODSW 3: the band low..high in Mvar under the output sign (−target ∓ deadband / 2) as fractions of the machine's
+  QB..QT, its `minQ`..`maxQ` (generation sign as stored): VSWLO = (low − QB) / (QT − QB). A new
+  `derived.band_fractions`, the inverse of `reactive_band`. QT = QB raises, and so does a target on equipment that is
+  no machine. *Amended at implementation:* the draft named `get_machine_rating` / `get_inverter_rating`, but both
+  require `ratedU`, which the RAW import does not write (a RAW machine has no rated kV), so the two limits are read
+  with `get_qty`. E3 meets the same requirement.
+- MODSW 6: the same over −SHMX..SHMX, SHMX = `rating_from_ka(ratedI, BASKV)` of the FACTS device.
+- A disabled control with no target (R2b-1's no-plant case): blank (PSS/E: 1.0, 1.0).
+
+### Decisions
+
+- **E2-1. A load's ZONE: the bus's substation `Region`** (user 2026-11-09), as the import spec planned. A
+  `SubLoadArea` is one (area, zone) pair with no link to a zone. `EnergyArea` holds only `ControlArea`. The new
+  `ConnectedArea` has no link to a zone or a `ControlArea`, and a zone `ConnectedArea` would duplicate each zone's
+  `SubGeographicalRegion`. A load whose ZONE differs from its bus's comes back as the bus's (none in the committed
+  cases; the loads atom 1; 2505 to 5090 a local case). This goes to the IEC committee with the rest of the
+  `ControlArea` family's gaps (plan §6a). A bus's AREA from a `transmissionArea` `ConnectedArea` is a later slice
+  (plan §9.1).
+- **E2-2. SWREG of a shunt regulating its own bus: I, always** (user 2026-11-09): the busNumber of the control's
+  terminal. RAW writes 0 or I for the same meaning, and CIM keeps neither. WECC240's 7 and the local set's (about
+  1100 a case, none 0) come back; IEEE118's 13 and 4 atom shunts' 0 come back I.
+
+### Tests (E2)
+
+`tests/test_cim_to_raw.py`: the round trip with the E2 modules added, and:
+- the loads atom (a ZIP mix, SCALE 0 and blank, an area and zone off the bus's, blank AREA/ZONE), the fixed-shunts
+  atom (GL ≠ 0, a reactor out of service), the switched-shunts atom (reactor + capacitor blocks with remote
+  regulation, MODSW 2 with 2.5 steps, a locked shunt), the plant-and-facts atom (MODSW 3 with and without a plant,
+  MODSW 6);
+- the line-shunts atom's shunts stay on their branches (no Fixed shunt);
+- raises: a `NonlinearShuntCompensator`, an exponent load, a shunt with `nomU` off its BaseVoltage, blocks of one
+  control on two buses, two controls on one bus, more blocks than the record holds, a block with g ≠ 0, blocks in
+  and out of service;
+- the written loads, switched-shunts and plant-and-facts models read back with the same records;
+- `derived`: `mva_from_per_unit`, `band_fractions` against `reactive_band`.
+
+### Expected differences (E2)
+
+- PL..YQ of a mixed load can differ in the last digit (p × fraction; rel 1e-9).
+- VSWHI/VSWLO in the last digit (the import's float residue).
+- A blank load AREA or ZONE comes back filled: AREA its group's (the importer gives every load one), ZONE its
+  bus's, the same meaning (the loads atom's `3 1`).
+- A load ZONE off its bus's comes back as the bus's (E2-1): the loads atom's `2 A`.
+- SWREG 0 comes back I (E2-2), computed in the test (`_own_bus_swreg`; MODSW 6 keeps its blank): IEEE118 13, the
+  switched-shunts atom 2, the plant-and-facts atom 1 (no plant), the node-breaker forms atom 1.
+- ADJM and RMPCT are unset, not compared: ADJM 1 (the switched-shunts atom 1, 115 a local case) and RMPCT ≠ 100
+  (46 a local case) come back as the defaults 0 and 100.
+- The no-plant MODSW 3 shunt's VSWLO 0 comes back 1.0 (R2b-1 listed it).
+- NREG is unset until E5, not compared: the node-breaker forms atom's 11 comes back blank.
+- OWNER, INTRPT, DGEN* of a load: unset, not compared.
+
+### Results
+
+IEEE14, WECC240, IEEE118 and all 18 atoms: every compared slot of Load, Fixed shunt and Switched shunt equals the RAW
+as read, except the list above; the E0 and E1 tables are as before. The written loads, switched-shunts and
+plant-and-facts models read back unchanged.
+
+**Local case set** (29 v34 cases of one network, never committed; 3 run, counts only): every load (6980 to 9566 a
+case, 755 SCALE 0), fixed shunt (806 to 811) and switched shunt (1387 to 1389: MODSW 0, 1, 2, 3 and 6, up to 8
+blocks) comes back keyed as on import, each case in about 72 s. Every PL..YQ, GL, BL, Ni, Bi, BINIT, MODSW, VSWHI,
+VSWLO and RMIDNT matches at rel 1e-9. Per case the E2 differences are only: load ZONE off its bus's (E2-1: 2505,
+5055, 5090, each exactly the case's count of such loads), SWREG 0 → I where present, and in one case the no-plant
+MODSW 3 shunt's VSWLO (R2b-1). The E0 and E1 differences are unchanged.
+
+### Slots (generated from `SLOTS`)
+
+#### LoadRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| bus_number | written | I: the terminal's busNumber |
+| load_id | written | ID: the ld_<I>_<ID> key, else the next free (X2) |
+| status | rule | STATUS: 0 when inService is false, else 1 |
+| area | written | AREA: LoadGroup -> SubLoadArea -> LoadArea -> ControlArea; blank without a group |
+| zone | written | ZONE: its bus's (E2-1; a SubLoadArea has no link to a zone, CIM 18 gap) |
+| constant_real_power | written | PL: p (get_phase_loads total, MW) x the constant power fraction (get_load_response) |
+| constant_imag_power | written | QL: q (get_phase_loads total, Mvar) x the constant power fraction (get_load_response) |
+| constant_current_real_power | written | IP: p (get_phase_loads total, MW) x the constant current fraction (get_load_response) |
+| constant_current_imag_power | written | IQ: q (get_phase_loads total, Mvar) x the constant current fraction (get_load_response) |
+| constant_admittance_real_power | written | YP: p (get_phase_loads total, MW) x the constant impedance fraction (get_load_response) |
+| constant_admittance_imag_power | written | YQ: -(q (get_phase_loads total, Mvar) x the constant impedance fraction (get_load_response)), RAW's sign |
+| owner | unset | ownership is an asset concept (CIM 18 gap) |
+| scale | written | SCALE by class: ConformLoad 1, NonConformLoad 0, EnergyConsumer blank |
+| interruptible | unset | no CIM home |
+| dgenp | unset | no CIM home |
+| dgenq | unset | no CIM home |
+| dgenf | unset | no CIM home |
+
+#### FixedShuntRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| bus_number | written | I: the terminal's busNumber |
+| shunt_id | written | ID: the cap_<I>_<ID> key, else the next free (X2) |
+| status | rule | STATUS: 0 when inService is false, else 1 |
+| gl | written | GL (MW at 1 pu): get_shunt_admittance g of the sections in service (pu on the bus base) x SBASE |
+| bl | written | BL (Mvar at 1 pu): get_shunt_admittance b of the sections in service (pu on the bus base) x SBASE |
+
+#### SwitchedShuntRecord
+
+| RAW slot | kind | from / why |
+|---|---|---|
+| bus_number | written | I: the blocks' busNumber (a v34 switched shunt's key) |
+| modsw | written | MODSW from the control: voltage 0 locked, 1 discrete, 2 continuous; reactivePower 3 on a machine (or disabled elsewhere), 6 on a FACTS device |
+| adjm | unset | ADJM: the switching-order method has no CIM home |
+| status | rule | ST: 0 when the blocks' inService is false, else 1 |
+| vswhi | written | VSWHI: the band's top from get_regulating_control target +- deadband / 2: voltage in kV over the regulated bus's BASKV; MODSW 3 and 6 as fractions of the machine's minQ..maxQ or the FACTS device's -SHMX..SHMX (band_fractions); blank for a disabled control with no target |
+| vswlo | written | VSWLO: the band's bottom from get_regulating_control target +- deadband / 2: voltage in kV over the regulated bus's BASKV; MODSW 3 and 6 as fractions of the machine's minQ..maxQ or the FACTS device's -SHMX..SHMX (band_fractions); blank for a disabled control with no target |
+| swreg | written | SWREG: the busNumber of the control's terminal, its own bus included (E2-2); blank for MODSW 6 |
+| rmpct | unset | RMPCT: a shunt's participation share has no CIM home (CIM 18 gap) |
+| rmidnt | written | RMIDNT: MODSW 6: the name of the FACTS device at the control's terminal |
+| binit | written | BINIT: the sum over the blocks of get_shunt_admittance b of the sections in service (pu on the bus base) x SBASE |
+| n1 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b1 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n2 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b2 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n3 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b3 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n4 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b4 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n5 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b5 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n6 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b6 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n7 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b7 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| n8 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| b8 | written | Ni / Bi: block i, maximumSections and get_shunt_admittance b per section (pu on the bus base) x SBASE; in the swsh_<I>_b<i> order, else reactors first, each by mRID |
+| nreg | unset | NREG: a node of a node-breaker block, written by E5 |

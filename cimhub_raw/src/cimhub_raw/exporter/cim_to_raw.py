@@ -14,8 +14,8 @@ import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatExporter
-from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, multi_section_line, switch,
-                                 zone)
+from cimhub_raw.exporter import (area_interchange, branch, bus, case_identification, fixed_shunt, load,
+                                 multi_section_line, switch, switched_shunt, zone)
 from cimhub_raw.exporter.area_trace import trace_areas
 from cimhub_raw.exporter.identity import bus_numbers, keyed_numbers
 from cimhub_raw.exporter.ratings import ratings_in_current
@@ -24,7 +24,8 @@ from cimhub_raw.schema.raw_v34 import composite_id
 
 #: Modules in export order. Each has ``NATIVE_CLASS``, ``CIM_CLASSES`` (the conducting equipment it exports, if
 #: any), ``SLOTS`` (``{native class: {slot: Slot}}``) and ``export(context) -> list[record]``.
-EXPORT_ORDER = (case_identification, zone, area_interchange, bus, branch, switch, multi_section_line)
+EXPORT_ORDER = (case_identification, zone, area_interchange, bus, branch, switch, multi_section_line, load,
+                fixed_shunt, switched_shunt)
 
 __all__ = ["EXPORT_ORDER", "ExportContext", "RawExporter", "cim_to_raw", "export_context", "export_tables"]
 

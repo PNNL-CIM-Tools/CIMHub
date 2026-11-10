@@ -53,6 +53,14 @@ def per_unit_from_mva(value_mva: float, base_mva: float) -> float:
     return value_mva / base_mva
 
 
+def mva_from_per_unit(per_unit: float, base_mva: float) -> float:
+    """"MW / Mvar at one per unit voltage" from an admittance in pu on the system base: value = pu x SBASE.
+
+    The inverse of ``per_unit_from_mva``: the exporter's fixed shunt GL/BL and switched shunt Bi/BINIT (E2).
+    """
+    return per_unit * base_mva
+
+
 def ohms_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> float:
     """An impedance in ohm from pu on a base kV and MVA: ohm = pu x kV^2 / MVA (kV^2 / MVA is exactly ohm).
 
@@ -91,6 +99,20 @@ def reactive_band(vswlo: float, vswhi: float, q_min_mvar: float, q_max_mvar: flo
     span = q_max_mvar - q_min_mvar
     low, high = q_min_mvar + vswlo * span, q_min_mvar + vswhi * span
     return vars_from_mvar(0.0 - (low + high) / 2), vars_from_mvar(high - low)
+
+
+def band_fractions(target_mvar: float, deadband_mvar: float, q_min_mvar: float,
+                   q_max_mvar: float) -> tuple[float, float]:
+    """A switched shunt's ``(VSWLO, VSWHI)`` from its reactive-power target and deadband in Mvar at the device's
+    terminal (CIM load sign), as pu of the device's range q_min..q_max (Mvar, output sign): the inverse of
+    ``reactive_band`` (the exporter's MODSW 3 and 6, E2). A range of zero width raises."""
+    span = q_max_mvar - q_min_mvar
+    if span == 0:
+        raise ValueError(f"the reactive range {q_min_mvar}..{q_max_mvar} Mvar has no width; VSWLO/VSWHI are "
+                         "fractions of it")
+    middle = 0.0 - target_mvar
+    low, high = middle - deadband_mvar / 2, middle + deadband_mvar / 2
+    return (low - q_min_mvar) / span, (high - q_min_mvar) / span
 
 
 def _per_unit_from_watts(watts: float, base_mva: float) -> float:
