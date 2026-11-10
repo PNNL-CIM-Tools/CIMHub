@@ -4,8 +4,8 @@ import math
 
 import pytest
 from cimhub_gdm.importer import shared
-from gdm.distribution.components import DistributionBus, DistributionFeeder, DistributionSubstation
-from gdm.distribution.enums import Phase, VoltageTypes
+from gdm.systems.distribution.components import DistributionBus, DistributionFeeder, DistributionSubstation
+from gdm.systems.distribution.enums import Phase, VoltageTypes
 from gdm.quantities import ActivePower, ApparentPower, CapacitancePULength, ReactivePower, Voltage
 
 LL, LG = VoltageTypes.LINE_TO_LINE, VoltageTypes.LINE_TO_GROUND

@@ -38,9 +38,9 @@ Table TapChangerInfo: mRID, name, ratedApparentPower (kVA), neutralU (kV), highS
 # untranscribed (no AutoTransformer configuration in cim18v17): the windings' r (0.005 %, 0.001 %) and x (0.01 %)
 Table VoltageRegulator: mRID, name, EquipmentContainer=fdr_atom
     vr_r1,   r1
-    vr_rb_a, rb
-    vr_rb_b, rb
-    vr_rb_c, rb
+    vr_rb_a, rb_a
+    vr_rb_b, rb_b
+    vr_rb_c, rb_c
 
 # node puts each end's Terminal on the regulator (<vr>_T1, _T2); a wye end gets N. baseU the coil; ratedS the
 # through rating per phase
@@ -87,14 +87,14 @@ Update Table VoltageRegulator: mRID, AutoTransformerWinding
 # untranscribed: max_step=16
 Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, lineDropCompensation, lineDropR (ohm), lineDropX (ohm), reversible=false, minLimitVoltage (V), maxLimitVoltage (V), Terminal
     vr_r1_ctrl,   r1, A, 2440, 40, true,  0.08571428571428572, 0.2571428571428571, 2200, 2600, vr_r1_T2
-    vr_rb_a_ctrl, rb, A, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_a_T2
-    vr_rb_b_ctrl, rb, B, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_b_T2
-    vr_rb_c_ctrl, rb, C, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_c_T2
+    vr_rb_a_ctrl, rb_a, A, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_a_T2
+    vr_rb_b_ctrl, rb_b, B, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_b_T2
+    vr_rb_c_ctrl, rb_c, C, 2440, 40, false, ,                    ,                   2200, 2600, vr_rb_c_T2
 
 # On the tapped winding's end (tapped_winding 2, L). step = (tap - 1) / 0.625 %: r1 1.0125 -> 2;
 # rb 1.00625 / 1.0125 / 1.0 -> 1, 2, 0. ctRating = ct_primary in A; initialDelay = the controller's delay
 Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, highStep=16, lowStep=-16, neutralStep=0, normalStep=0, step, stepVoltageIncrement (percent)=0.625, neutralU (kV)=2.4018, ltcFlag=true, controlEnabled=true, ptRatio=20, ctRating=700, initialDelay (s)=30, AssetDatasheet
     vr_r1_tap,   r1, vr_r1_end2,   vr_r1_ctrl,   2, tci_reg1666
-    vr_rb_a_tap, rb, vr_rb_a_end2, vr_rb_a_ctrl, 1, tci_reg3
-    vr_rb_b_tap, rb, vr_rb_b_end2, vr_rb_b_ctrl, 2, tci_reg3
-    vr_rb_c_tap, rb, vr_rb_c_end2, vr_rb_c_ctrl, 0, tci_reg3
+    vr_rb_a_tap, rb_a, vr_rb_a_end2, vr_rb_a_ctrl, 1, tci_reg3
+    vr_rb_b_tap, rb_b, vr_rb_b_end2, vr_rb_b_ctrl, 2, tci_reg3
+    vr_rb_c_tap, rb_c, vr_rb_c_end2, vr_rb_c_ctrl, 0, tci_reg3

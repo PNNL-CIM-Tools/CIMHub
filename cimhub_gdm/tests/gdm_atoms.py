@@ -11,9 +11,9 @@ from uuid import UUID
 import cimtables
 import numpy as np
 from cimtables.diff import diff_models
-from gdm.distribution import DistributionSystem
-from gdm.distribution.common import SequencePair, TimeCurrentCurve
-from gdm.distribution.components import (
+from gdm.systems.distribution import DistributionSystem
+from gdm.systems.distribution.common import SequencePair, TimeCurrentCurve
+from gdm.systems.distribution.components import (
     DistributionBattery,
     DistributionBus,
     DistributionCapacitor,
@@ -34,7 +34,7 @@ from gdm.distribution.components import (
     SequenceImpedanceBranch,
     SequenceImpedanceSwitch,
 )
-from gdm.distribution.controllers import (
+from gdm.systems.distribution.controllers import (
     ActivePowerCapacitorController,
     CurrentCapacitorController,
     DistributionRecloserController,
@@ -43,8 +43,8 @@ from gdm.distribution.controllers import (
     RegulatorController,
     VoltageCapacitorController,
 )
-from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
-from gdm.distribution.equipment import (
+from gdm.systems.distribution.enums import ConnectionType, Phase, VoltageTypes
+from gdm.systems.distribution.equipment import (
     BareConductorEquipment,
     BatteryEquipment,
     CapacitorEquipment,
@@ -576,6 +576,17 @@ def add_reactors(system) -> None:
             equipment=ReactorEquipment(name=f"{name}_eq", resistance=Resistance(r_ohm, "ohm"),
                                        reactance=Reactance(x_ohm, "ohm")),
             feeder=fdr))
+
+
+# --- export helpers (test_export_*.py) -------------------------------------------------------------------------------
+
+def type_limit_durations(network):
+    """Set ``durationKind`` on the importer's OperationalLimitTypes (``olt_normal`` → normal), as the core
+    ``common`` shape writes them. ``OperationalLimitSetBuilder.add_limit_type`` has no ``durationKind`` yet
+    (GDM_MAPPING.md §14, B22 b), and ``get_current_limits`` needs it; remove this when the builder has it."""
+    for limit_type in network.graph.get(network.cim.OperationalLimitType, {}).values():
+        limit_type.durationKind = network.cim.LimitDurationKind(limit_type.name)
+    return network
 
 
 # --- the Phase 5 reference system (tests/atoms/e2e/reference.cimtbl) -----------------------------------------------

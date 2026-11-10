@@ -6,7 +6,7 @@ module in the spoke that touches the filesystem.
 
 from __future__ import annotations
 
-from gdm.distribution import DistributionSystem
+from gdm.systems.distribution import DistributionSystem
 
 
 def read_gdm(path: str) -> DistributionSystem:

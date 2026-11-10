@@ -4,9 +4,9 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import transformer
-from gdm.distribution.components import DistributionTransformer
-from gdm.distribution.enums import ConnectionType, Phase
-from gdm.distribution.equipment import (
+from gdm.systems.distribution.components import DistributionTransformer
+from gdm.systems.distribution.enums import ConnectionType, Phase
+from gdm.systems.distribution.equipment import (
     DistributionTransformerEquipment,
     PowerTransformerEquipment,
     WindingEquipment,

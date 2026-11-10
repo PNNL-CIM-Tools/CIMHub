@@ -4,16 +4,16 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import capacitor
-from gdm.distribution.components import DistributionCapacitor
-from gdm.distribution.controllers import (
+from gdm.systems.distribution.components import DistributionCapacitor
+from gdm.systems.distribution.controllers import (
     ActivePowerCapacitorController,
     CurrentCapacitorController,
     DailyTimedCapacitorController,
     ReactivePowerCapacitorController,
     VoltageCapacitorController,
 )
-from gdm.distribution.enums import ConnectionType, Phase
-from gdm.distribution.equipment import CapacitorEquipment, PhaseCapacitorEquipment
+from gdm.systems.distribution.enums import ConnectionType, Phase
+from gdm.systems.distribution.equipment import CapacitorEquipment, PhaseCapacitorEquipment
 from gdm.quantities import Voltage
 
 from cimhub_gdm import gdm_to_cim

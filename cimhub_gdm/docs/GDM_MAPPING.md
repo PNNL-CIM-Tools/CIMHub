@@ -811,8 +811,9 @@ with no tank and no template (`regulators_transformer.cimtbl`), and leaves plain
 
 `importer/regulator.py`, after CIMTBL-Models `regulator_example.cimtbl` (OPEN_DECISIONS 7, DSS-13).
 
-- **One single-phase regulator per regulated phase:** VoltageRegulator `vr_<name>` (one phase) or
-  `vr_<name>_<phase>` (a bank), with AutoTransformerEnds `<vr>_end1` (S, bus 1) and `<vr>_end2` (L, bus 2), Terminals
+- **One single-phase regulator per regulated phase:** VoltageRegulator `vr_<name>` named `<name>` (one phase), or
+  `vr_<name>_<phase>` named `<name>_<phase>` (a unit of a bank; its tap changer and control take the unit's name too,
+  so each unit, which exports as its own GDM regulator, has a name of its own: EXPORT_MAPPING.md#regulators), with AutoTransformerEnds `<vr>_end1` (S, bus 1) and `<vr>_end2` (L, bus 2), Terminals
   `<vr>_T1`/`_T2`, phase `<phase>N` (a single-phase coil returns to N); `is_grounded` untranscribed until the end
   builder takes `grounded` (B27); baseU = the coil, ratedS = the through rating per phase. Lugs S (1, end 1),
   L (2, end 2), SL (3); the series winding `<vr>_wdg` S→SL tapped at L, ratedS = the buck/boost rating (through ×
