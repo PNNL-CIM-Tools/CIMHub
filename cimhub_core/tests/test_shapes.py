@@ -13,7 +13,7 @@ from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.load_response import zip_fractions
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
-BUS_BRANCH = {"line_bus_branch"}
+BUS_BRANCH = {"line_bus_branch", "behind_transformer"}
 
 
 @pytest.fixture(autouse=True)
@@ -76,3 +76,16 @@ def test_common_zip_rows_are_the_core_zip_fractions(tmp_path):
                 for zip_model in network.graph[network.cim.LoadResponseCharacteristic].values()}
 
     assert fractions(_load("common")) == fractions(load_model(path))
+
+
+def test_behind_transformer_puts_the_equipment_on_the_internal_node():
+    """The step-up / converter transformer joins the bus to the internal node, which only it and the equipment touch
+    (plan C8)."""
+    network = _load("behind_transformer")
+    ends = {end.mRID: end for end in network.graph[network.cim.PowerTransformerEnd].values()}
+    [converter] = network.graph[network.cim.CsConverter].values()
+    [machine] = network.graph[network.cim.SynchronousMachine].values()
+    assert converter.Terminals[0].TopologicalNode is ends["cs_c1_xf_2"].Terminal.TopologicalNode
+    assert machine.Terminals[0].TopologicalNode.mRID == "gen_g1_int"
+    assert ends["cs_c1_xf_1"].Terminal.TopologicalNode.mRID == "bus_1"
+    assert float(ends["cs_c1_xf_1"].x.to("ohm")) == pytest.approx(12.9)
