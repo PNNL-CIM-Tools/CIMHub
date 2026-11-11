@@ -1758,8 +1758,10 @@ deck (S6a, §8.2).
 
 The importer's S5-1 inverted. `get_location_coordinates(equipment)` (core) gives the Location's points in
 PositionPoint `sequenceNumber` order and each Terminal's point:
-- one point per Terminal: they pair in order (the importers' form);
+- one point per Terminal: they pair in order (a one-Terminal POINT, a two-point LINESTRING);
 - a two-terminal polyline (more than two points): its ends go to its Terminals (CIM's line route);
+- one point on equipment with several Terminals: a device point (F8), which pairs with no Terminal, so `terminals`
+  is None;
 - any other count raises, and so do a point without a sequenceNumber or a position, and two points with one
   number. No Location, or a Location without points, is None. `zPosition` is not read.
 
@@ -1768,6 +1770,14 @@ network's ConnectivityNode order:
 - Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
   (S5-3).
 - Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
+  so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
+  (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives
+  back the importer's bus to float noise (the midpoint rounded a + b once); with none placed, every bus goes at the
+  point. A device with one open bus goes first, so a chain of switches fills from its placed end. The parity and
+  atom tests compare coordinates to rel 1e-12 / abs 1e-9 (`assert_same_coordinates`) for that noise. An import
+  under `device_geometry="linestring"` (S5-9) has no device points: each device's buses pair one per Terminal and
+  come back exactly.
 - The CoordinateSystem picks the file: `urn:ogc:def:crs:OGC:1.3:CRS84` is `LatLongCoords` (x = longitude, written
   latitude first), `OpenDSSLocalBusCoordinates` is `BusCoords` (the importer's `COORDINATE_SYSTEMS` inverted).
   Another URN, or Locations in two systems, raise.
@@ -1857,6 +1867,7 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | F5 | Protection settings (**open**; reclosing closed by S6g, trip settings still open, G5) | Untranscribed for now (DSS-11), listed: the exported recloser trips at the engine's 1 A in a controls-on solve. Open: map Recloser PhaseTrip/GroundTrip (and Relay settings) once DSS-11's protection TODO picks the CIM classes |
 | F6 | Idempotence | Under `name_source="name"`, deck and coordinate files; `mrid` re-prefixes by design |
 | F7 | Decks out of parity | YYD-Master (a fault study that writes files) and IEEE8500 Master-unbal (a missing redirect): idempotence only |
+| F8 | Device points (2026-11-10, the user's pick) | A single POINT on multi-terminal equipment places only open buses, at (N · point − Σ placed) / k: reflection across the point next to a placed bus, the point itself with none. Placing every open bus at the point was the alternative: simpler and closer to real GIS, but a DSS round trip moves a bus only a device touches (a regulator's output) |
 
 ### Slot table (S6f, generated from `SLOTS`)
 
@@ -1865,8 +1876,8 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | DSS slot | kind | from / why |
 |---|---|---|
 | name | written | the bus (Names.bus) of each Terminal of located equipment |
-| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates) |
-| y | written | the Terminal's PositionPoint yPosition |
+| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a device point touches is solved from it as the centroid of the device's buses |
+| y | written | as x, from yPosition |
 | geographic | written | crsUrn CRS84 -> true (LatLongCoords), OpenDSSLocalBusCoordinates -> false; others raise |
 
 ## S6g: earth model and reclose sequences (built 2026-11-09 at the user's word, with decisions G1-G5 as recommended)

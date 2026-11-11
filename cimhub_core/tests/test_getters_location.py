@@ -29,20 +29,26 @@ def _add_point(location, number, x, y):
                                                      Location=location))
 
 
-def test_one_point_per_terminal():
-    assert get_location_coordinates(_equipment("rx_hsb")) == LocationCoordinates(
-        "OpenDSSLocalBusCoordinates", ((200.0, 400.0), (200.0, 350.0)), ((200.0, 400.0), (200.0, 350.0)))
-    assert get_location_coordinates(_equipment("ld_y1")).terminals == ((200.0, 350.0),)
+def test_line_and_load_pair_point_per_terminal():
+    assert get_location_coordinates(_equipment("ln_y")) == LocationCoordinates(
+        "OpenDSSLocalBusCoordinates", ((200.0, 350.0), (250.0, 300.0)), ((200.0, 350.0), (250.0, 300.0)))
+    assert get_location_coordinates(_equipment("ld_y1")).terminals == ((250.0, 300.0),)
+
+
+def test_device_point_pairs_with_no_terminal():
+    coordinates = get_location_coordinates(_equipment("rx_hsb"))
+    assert coordinates.points == ((200.0, 375.0),)
+    assert coordinates.terminals is None
 
 
 def test_polyline_gives_its_ends_to_two_terminals():
-    compensator = _equipment("rx_hsb")
-    location = compensator.Location
-    _add_point(location, 3, "250.0", "300.0")
-    _add_point(location, 0, "150.0", "450.0")  # the first vertex, numbered below the others
-    coordinates = get_location_coordinates(compensator)
-    assert coordinates.points == ((150.0, 450.0), (200.0, 400.0), (200.0, 350.0), (250.0, 300.0))
-    assert coordinates.terminals == ((150.0, 450.0), (250.0, 300.0))
+    line = _equipment("ln_y")
+    location = line.Location
+    _add_point(location, 2, "300.0", "300.0")
+    _add_point(location, -1, "150.0", "450.0")  # the first vertex, numbered below the others
+    coordinates = get_location_coordinates(line)
+    assert coordinates.points == ((150.0, 450.0), (200.0, 350.0), (250.0, 300.0), (300.0, 300.0))
+    assert coordinates.terminals == ((150.0, 450.0), (300.0, 300.0))
 
 
 def test_no_location_is_none():
@@ -60,8 +66,8 @@ def test_points_a_load_cannot_pair_raise():
 
 def test_two_points_with_one_number_raise():
     load = _equipment("ld_y1")
-    _add_point(load.Location, 1, "1", "1")
-    with pytest.raises(ValueError, match="two PositionPoints numbered 1"):
+    _add_point(load.Location, 0, "1", "1")
+    with pytest.raises(ValueError, match="two PositionPoints numbered 0"):
         get_location_coordinates(load)
 
 

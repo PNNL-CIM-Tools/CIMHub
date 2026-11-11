@@ -1,10 +1,12 @@
 """Equipment Locations -> OpenDSS bus coordinates, ``Buscoords`` rows (``EXPORT_MAPPING.md#buscoords``).
 
-The importer's S5-1 inverted: each located piece of equipment gives each of its Terminals' buses that Terminal's
-point (``get_location_coordinates``). Equipment without a Location gives none, so a bus no located equipment touches
-has no coordinates, as on import (S5-3). Two points for one bus raise, naming both. The CoordinateSystem picks the
-file: CRS84 is ``LatLongCoords`` (x = longitude), the importer's local URN ``BusCoords``; another URN, or two
-systems in one model, raise.
+The importer's geometry inverted (S5-8, F8). A point per Terminal, or a line's polyline ends, place their buses
+directly (``get_location_coordinates``); two such points for one bus raise, naming both. A GIS device point (one
+POINT on a switch, fuse or transformer) is its buses' centroid, so it places only the buses nothing else placed:
+next to one placed bus it reflects it across the point, which gives back the importer's midpoint exactly; with none
+placed every bus goes at the point. Equipment without a Location gives none, so a bus no located equipment touches
+has no coordinates, as on import (S5-3). The CoordinateSystem picks the file: CRS84 is ``LatLongCoords``
+(x = longitude), the importer's local URN ``BusCoords``; another URN, or two systems in one model, raise.
 """
 
 from __future__ import annotations
@@ -29,8 +31,9 @@ POINT_REL_TOL = 1e-9
 
 SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "name": Slot("written", "the bus (Names.bus) of each Terminal of located equipment"),
-    "x": Slot("written", "the Terminal's PositionPoint xPosition (get_location_coordinates)"),
-    "y": Slot("written", "the Terminal's PositionPoint yPosition"),
+    "x": Slot("written", "the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a device "
+                         "point touches is solved from it as the centroid of the device's buses"),
+    "y": Slot("written", "as x, from yPosition"),
     "geographic": Slot("written", "crsUrn CRS84 -> true (LatLongCoords), OpenDSSLocalBusCoordinates -> false; others "
                                   "raise"),
 }, Slot("unset", ""))}
@@ -39,6 +42,7 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 def export(context) -> list[schema.Buscoords]:
     """One row per bus some located equipment touches, in the network's ConnectivityNode order."""
     found = {}  # node mRID -> (x, y, the equipment that gave it)
+    devices = []  # (equipment, its Terminal nodes, its one point)
     systems = set()
     for location in context.objects(*CIM_CLASSES):
         for equipment in location.PowerSystemResources:
@@ -48,14 +52,49 @@ def export(context) -> list[schema.Buscoords]:
             if coordinates is None:
                 continue
             systems.add(coordinates.crs_urn)
-            for node, point in zip(get_terminal_nodes(equipment), coordinates.terminals, strict=True):
+            nodes = get_terminal_nodes(equipment)
+            if coordinates.terminals is None:
+                devices.append((equipment, nodes, coordinates.points[0]))
+                continue
+            for node, point in zip(nodes, coordinates.terminals, strict=True):
                 _place(found, node, point, equipment)
+    _place_devices(found, devices)
     if not found:
         return []
     geographic = _geographic(systems)
     nodes = context.network.graph.get(cim.ConnectivityNode, {}).values()
     return [NATIVE_CLASS(name=context.names.bus(node), x=found[node.mRID][0], y=found[node.mRID][1],
                          geographic=geographic) for node in nodes if node.mRID in found]
+
+
+def _unplaced(found: dict, nodes: list) -> list:
+    return [node for node in nodes if node.mRID not in found]
+
+
+def _place_devices(found: dict, devices: list) -> None:
+    """Place the buses device points leave open. A device with one open bus goes first, as the importer's midpoint solves it,
+    so a chain of devices fills from its placed end; when none is left, the first remaining device places all of
+    its open buses, and the chain goes on from there."""
+    pending = devices
+    while True:
+        pending = [device for device in pending if _unplaced(found, device[1])]
+        if not pending:
+            return
+        exact = [device for device in pending if len(_unplaced(found, device[1])) == 1]
+        device = exact[0] if exact else pending[0]
+        pending.remove(device)
+        _fill_open_buses(found, *device)
+
+
+def _fill_open_buses(found: dict, equipment, nodes: list, point: tuple[float, float]) -> None:
+    """The point is the centroid of the N Terminal buses, so with k of them open each goes at (N * point - the sum of
+    the placed ones) / k: 2 * point - the other bus for a two-terminal device, the point itself when none is placed."""
+    placed = [found[node.mRID] for node in nodes if node.mRID in found]
+    unplaced = _unplaced(found, nodes)
+    x = (len(nodes) * point[0] - sum(position[0] for position in placed)) / len(unplaced)
+    y = (len(nodes) * point[1] - sum(position[1] for position in placed)) / len(unplaced)
+    for node in unplaced:
+        found[node.mRID] = (x, y, equipment)
 
 
 def _place(found: dict, node, point: tuple[float, float], equipment) -> None:

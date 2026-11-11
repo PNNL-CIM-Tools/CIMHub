@@ -7,6 +7,8 @@ YPrim does not show (a control's, a battery's).
 """
 from __future__ import annotations
 
+import math
+
 from pathlib import Path
 
 import numpy as np
@@ -239,3 +241,18 @@ def engine_coordinates(path: Path) -> dict[str, tuple[float, float]]:
         if dss.Bus.Coorddefined():
             found[bus.lower()] = (dss.Bus.X(), dss.Bus.Y())
     return found
+
+
+#: float noise allowed on an exported bus coordinate: a bus only a device point places is solved from the
+#: importer's midpoint, (a + b) / 2, which rounded a + b once
+COORDINATE_REL_TOL, COORDINATE_ABS_TOL = 1e-12, 1e-9
+
+
+def assert_same_coordinates(written: Path, original: Path) -> None:
+    """The written deck's buses have coordinates where the original's do, equal to float noise."""
+    ours, theirs = engine_coordinates(written), engine_coordinates(original)
+    assert sorted(ours) == sorted(theirs)
+    differences = {bus: (ours[bus], theirs[bus]) for bus in theirs
+                   if not all(math.isclose(a, b, rel_tol=COORDINATE_REL_TOL, abs_tol=COORDINATE_ABS_TOL)
+                              for a, b in zip(ours[bus], theirs[bus]))}
+    assert differences == {}

@@ -2008,6 +2008,11 @@ per line. The alternative, rejected: a `Junction` per bus (the CIM note: "to ass
 ConnectivityNode"). It is closer to the native table, but it adds about 5,300 one-terminal equipment objects to
 IEEE9500, and every consumer and exporter would have to skip them. No tool reads it either.
 
+**Revised 2026-11-10 (S5-8):** the points are drawn as a GIS draws the equipment, through cimtables' `wkt` column.
+A line (`ACLineSegment`) is a `LINESTRING` through its Terminals' buses; any other equipment is one `POINT`, at its
+bus for one Terminal and at its buses' centroid for more. So a switch, fuse or transformer sits midway between its
+buses, as a GIS point feature does, rather than as a two-point polyline.
+
 ### Shape `location` (added to the catalog first)
 
 ```
@@ -2016,19 +2021,15 @@ Import common.cimtbl
 
 Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
 
-Table Location: mRID, name, CoordinateSystem=crs_bus
-    ln_650632_loc, 650632_Loc
-
-Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
-    ln_650632_loc_1, ln_650632_loc, 1, 200, 350
-    ln_650632_loc_2, ln_650632_loc, 2, 200, 300
-
-Update Table PowerSystemResource: mRID, Location
-    ln_650632, ln_650632_loc
+Update Table PowerSystemResource: mRID, wkt
+    ln_650632,  "LINESTRING (200.0 350.0, 200.0 300.0)"
+    sw_671692,  "POINT (225.0 250.0)"
+    ld_671,     "POINT (200.0 250.0)"
 ```
 
-I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `PositionPoint` is Identity-only (an
-`identifier` column, no mRID), and an `Update` on the abstract `PowerSystemResource` resolves any subclass.
+An `Update` on the abstract `PowerSystemResource` resolves any subclass. cimtables' `wkt` binding makes the Location
+(`<mRID>_loc`), one Identity-only `PositionPoint` per vertex (`<mRID>_loc_<n>`, `sequenceNumber` from 0) and points
+the Location at the CoordinateSystem declared first.
 
 ### Buscoords
 
@@ -2042,15 +2043,23 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
   a `.cimtbl` means what binding makes. The hook (`CimtblImporter.bound_parts`, `cimtbl_to_cim(bound_parts=)`) is in
   core because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). The bound Terminals equalled
   the stand-in's on IEEE13_CDPSM, IEEE8500 and IEEE9500 unbal before it was deleted.
-- **Identity:**
-  - Location: `<equipment mRID>_loc`, named `<equipment name>_Loc` (the engine's name);
-  - PositionPoint: `<location>_<n>`;
-  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords).
-- **Order:** equipment in the order its first Terminal binds, points by `sequenceNumber`.
-- **`sequenceNumber` (S5-5):** the Terminal's `sequenceNumber`, 1-based, as the engine writes it. cim18v17 gives the
-  attribute no description, and CIM16's "zero-relative" text is gone.
-- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so they
-  read back exactly. For LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
+- **Geometry (S5-8):** one `wkt` cell per equipment, from its Terminal buses in Terminal `sequenceNumber` order. An
+  `ACLineSegment` is `LINESTRING (x1 y1, x2 y2)`. Anything else is `POINT (x y)` at the buses' centroid: the bus
+  itself for a load, capacitor, PV or source, the midpoint for a switch, fuse, regulator or two-terminal
+  transformer. A center-tap transformer has two Terminals (S5-1 above), so it gets the midpoint too.
+- **`device_geometry` (S5-9):** `DssImporter(..., device_geometry="linestring")` (and `dss_to_cim`) draws every
+  two-terminal equipment as a `LINESTRING` from bus to bus, like a line: switches, fuses, transformers, regulators,
+  series reactors. Equipment with one Terminal, or three or more, stays a `POINT`. The default is `"point"`; any
+  other value raises when the importer is made. It is a keyword, not an environment variable, so a call's output
+  depends only on its arguments.
+- **Identity:** cimtables' `wkt` binding names them:
+  - Location: `<equipment mRID>_loc`, unnamed (the engine's `<name>_Loc` name is dropped with the Location table);
+  - PositionPoint: `<location>_<n>`, `sequenceNumber` = n, the vertex number from 0 (S5-5 is superseded);
+  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords), declared first in the file.
+- **Order:** equipment in the order its first Terminal binds.
+- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so a
+  line's vertices and a one-Terminal point read back exactly; a centroid is `repr` of the float mean. For
+  LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
 - **Partial coordinates (S5-3):** equipment gets a Location only if **every** one of its Terminal buses has
   coordinates. The engine writes 0, 0 for a bus without them, which would make a polyline vertex up. The file comment
   counts what is left out: `# not located: <n> of <m> equipment (a terminal bus without coordinates)`. That case is
@@ -2066,9 +2075,9 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
 
 | Buscoords field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it gets a PositionPoint; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
-| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | copied | `PositionPoint.xPosition`; on every point at the bus |
-| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | copied | `PositionPoint.yPosition`; on every point at the bus |
+| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it takes its coordinates; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
+| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | derived | geometry: a line's LINESTRING vertex at each Terminal bus, verbatim; other equipment's POINT at its Terminal buses' centroid (the bus itself for one Terminal) |
+| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | derived | as x |
 | `geographic` | `Union[bool, Bool, NoneType]` | `False`, `True` | mapped | the directive (LatLongCoords -> true) picks the CoordinateSystem: COORDINATE_SYSTEMS |
 
 
@@ -2105,8 +2114,8 @@ So 18 of 24 bind. The other 7 of the throwaway sweep's 31 decks are copies in CI
 ### Engine checks (S5)
 
 On the atom and every engine deck:
-- for each piece of equipment, each PositionPoint equals the engine's coordinates of its Terminal's bus
-  (`Circuit.SetActiveBus`, `Bus.X()`, `Bus.Y()`);
+- for each line, its PositionPoints equal the engine's coordinates of its Terminals' buses (`Circuit.SetActiveBus`,
+  `Bus.X()`, `Bus.Y()`); for other equipment, its one PositionPoint equals their centroid (S5-8);
 - every equipment whose buses all have `Bus.Coorddefined()` has a Location, and no other equipment does.
 
 For IEEE9500 the engine's x is the longitude, which also checks the reader's swap.
@@ -2117,6 +2126,7 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
   - `local.dss` + CSV: a line, a switch, a center-tap transformer, a regulator, a load, a capacitor and a PV. The CSV
     has a whitespace row, a bus the circuit doesn't have, a bus listed twice, and one bus left without coordinates.
   - `latlong.dss`: two buses, by LatLongCoords.
+  - `local_linestring.cimtbl`: `local.dss` under `device_geometry="linestring"` (S5-9).
 - **Golden:** the IEEE13_CDPSM directory (D6) gains `buscoords.cimtbl`, so it holds 14 files.
 - **G7 before S5 (2026-11-08):**
 
@@ -2139,6 +2149,13 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
 - **S5-5:** `sequenceNumber` is the Terminal number, 1-based.
 - **S5-6:** the sweep test covers the 24 `CIMHUB_DSS_DECKS` decks; the 7 CIMHub_2_0 `test_models` copies are dropped.
 - **S5-7:** the reader reads whitespace-separated coordinate rows and raises on a row it can't parse.
+- **S5-8 (2026-11-10, the user's ask):** the coordinates are GIS geometry through cimtables' `wkt` column: a line is a
+  `LINESTRING` through its Terminal buses, other equipment one `POINT` at their centroid (the midpoint for a switch
+  or transformer). It replaces the Location and PositionPoint tables and S5-5's 1-based Terminal numbering; the
+  Location loses its `<name>_Loc` name. The exporter reads it back by F8 (`EXPORT_MAPPING.md`).
+- **S5-9 (2026-11-10, the user's ask):** `device_geometry="linestring"` draws every two-terminal device bus to bus
+  instead of as a midpoint. The exporter needs nothing new: two points on two Terminals pair one per Terminal, so
+  each bus comes back exactly.
 
 ## S6g: earth model and reclose sequences (2026-11-09)
 
