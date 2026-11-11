@@ -64,6 +64,7 @@ class InverterUnitShare(NamedTuple):
 class PhotoVoltaicRating(NamedTuple):
     min_p: float | None  # active_unit, in the caller's sign
     max_p: float | None
+    irradiance: float | None  # irradiance_unit; the gridappsd extension PhotoVoltaicUnit.irradiance
 
 
 class BatteryRating(NamedTuple):
@@ -177,12 +178,14 @@ def get_inverter_units(connection: cim.PowerElectronicsConnection, active_unit: 
                  for unit, share, p in zip(units, shares, powers))
 
 
-def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", *, sign: str) -> PhotoVoltaicRating:
-    """The PV array's p limits in the ``sign`` convention."""
+def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", irradiance_unit: str = "W/m2", *,
+                          sign: str) -> PhotoVoltaicRating:
+    """The PV array's p limits in the ``sign`` convention and its irradiance."""
     _check_sign(sign)
     if not isinstance(unit, cim.PhotoVoltaicUnit):
         raise ValueError(f"{describe(unit)}: is not a PhotoVoltaicUnit")
-    return PhotoVoltaicRating(*_limits(unit, "minP", "maxP", active_unit, sign))
+    return PhotoVoltaicRating(*_limits(unit, "minP", "maxP", active_unit, sign),
+                              irradiance=get_qty(unit, "irradiance", irradiance_unit))
 
 
 def get_battery_unit(unit: cim.BatteryUnit, active_unit: str = "W", energy_unit: str = "Wh", *,

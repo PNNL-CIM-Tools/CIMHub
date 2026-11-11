@@ -193,9 +193,15 @@ def test_shared_units_need_max_p():
 
 def test_photovoltaic_limits_in_either_sign():
     unit = get_inverter_unit(_inverter("pv_p1"))
-    assert get_photovoltaic_unit(unit, "kW", sign="generation") == (0.0, 300.0)
+    assert get_photovoltaic_unit(unit, "kW", sign="generation") == (0.0, 300.0, pytest.approx(800.0))
     load = get_photovoltaic_unit(unit, "kW", sign="load")
-    assert (load, str(load.max_p)) == ((-300.0, 0.0), "0.0")
+    assert (load[:2], str(load.max_p)) == ((-300.0, 0.0), "0.0")
+
+
+def test_photovoltaic_irradiance_in_the_unit_asked_for_or_none():
+    assert get_photovoltaic_unit(get_inverter_unit(_inverter("pv_p1")), "kW", "kW/m2",
+                                 sign="generation").irradiance == pytest.approx(0.8)
+    assert get_photovoltaic_unit(get_inverter_unit(_inverter("pv_p2")), sign="generation").irradiance is None
 
 
 def test_battery():

@@ -1514,10 +1514,13 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 
 **Engine rules** (pinned with probes in `/tmp`; the defaults are the engine's readback of a bare `New`):
 - **PVSystem.**
-  - The available power is Pmpp × irradiance × %Pmpp / 100. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
+  - The panel's power is Pmpp × irradiance, and `%Pmpp` caps it: the available power is min(Pmpp × irradiance,
+    Pmpp × %Pmpp / 100). Probed 2026-11-10: Pmpp 100 at irradiance 0.5 gives 50 at %Pmpp 60 and 150, and 10 at
+    %Pmpp 10; at irradiance 1.2 it gives 120 at %Pmpp 150. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
     or from `kvar`.
   - Over kVA, P is cut to √(kVA² − q²) (var priority, the default), so Pmpp 1200 on kVA 1000 gives 1000.
-  - The PV is off (P = 0) when the available power is below `%Cutout` × kVA / 100. The initial state uses
+  - The PV is off (P = 0) when the panel's power, before the %Pmpp cap, is below `%Cutout` × kVA / 100
+    (irradiance 0.5 on Pmpp 100 and kVA 100 runs at %Pmpp 10, giving 10 under a 20 % cut-out). The initial state uses
     `%Cutout`, not `%Cutin`: 25 % with cut-in 30 / cut-out 5 runs, and with cut-in 5 / cut-out 30 it is off.
   - **`pf` and `kvar` override each other in the order given** (unlike a load, where kvar always wins).
   - Defaults: 3 phases, kV 12.47, irradiance 1, Pmpp 500, %Pmpp 100, pf 1, kVA 500, %Cutin and %Cutout 20,
@@ -1566,7 +1569,8 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 Mapper `importer/cimtbl/pvsystem.py` (`map_pvsystem`). Artifact `pvsystem.cimtbl`; shape `der`. Atom
 `tests/atoms/der/der.dss`:
 - the IEEE13_CDPSM PVs: 3-phase at irradiance 0.8, and 2-phase `s1s2` at 0.208;
-- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, and one with kvar.
+- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, one with kvar, and one
+  capped at %Pmpp (irradiance 0.9 at %Pmpp 60 gives 6 kW).
 
 **Identity.** `PowerElectronicsConnection` `pv_` + name and `PhotoVoltaicUnit` `pv_<name>_unit`, lowercased. The
 prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
@@ -1578,7 +1582,8 @@ prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
   - `p` = −P and `q` = −q, by the rules above (derived, `pv_power`);
   - `maxQ` = kvarMax, `minQ` = −kvarMaxAbs, `maxIFault` = 1 / Vminpu (the engine's export convention);
   - `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
-- **Unit:** `maxP` = Pmpp, `minP` = 0, and its connection.
+- **Unit:** `maxP` = Pmpp, `minP` = 0, `irradiance` = irradiance (kW/m2; the gridappsd extension), and its
+  connection.
 
 **What raises:**
 - `model` other than 1;
@@ -1732,16 +1737,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
 | `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
-| `irradiance` | `Optional[float]` | `0.8`, `1.0` | derived | p: Pmpp x irradiance x %Pmpp / 100 (pv_power); default 1 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2), the gridappsd extension; also p (pv_power); default 1 |
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
-| `pct_Pmpp` | `Optional[float]` |  | derived | p (pv_power); default 100 |
+| `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
 | `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
 | `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
-| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; default 20 |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20 |
 | `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
 | `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |

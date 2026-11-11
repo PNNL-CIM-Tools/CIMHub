@@ -1422,11 +1422,15 @@ Each piece's inverter slots:
 
 ### PVSystem
 
-- `Pmpp` = the unit's maxP x its 1/n share; `irradiance` = p / Pmpp, so the engine gives CIM's p at the default
-  P-T curve. `kvar` = the piece's q (generation sign).
-- `%Cutout=0` only when 0 < p < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would switch the PV off below its
-  default cut-out (S4b engine rules).
-- Raises: maxP unset or 0, minP other than 0, p into the PV.
+- `Pmpp` = the unit's maxP x its 1/n share. `irradiance` = the unit's `PhotoVoltaicUnit.irradiance` (kW/m2, the
+  gridappsd extension); unset, it falls back to p / Pmpp, so the panel gives exactly p. `kvar` = the piece's q
+  (generation sign).
+- `%Pmpp` = 100 x p / Pmpp when p is below the panel's Pmpp x irradiance (a PV cut to fit kVA, or held back); the
+  engine caps the panel at it (S4b engine rules), so it gives CIM's p at the default P-T curve. Not written when p
+  is the panel's power.
+- `%Cutout=0` only when p > 0 and Pmpp x irradiance < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would
+  switch the PV off below its default cut-out.
+- Raises: maxP unset or 0, minP other than 0, p into the PV, p above Pmpp x irradiance.
 
 ### Storage (P6)
 
@@ -1510,7 +1514,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | P2 | A unit above its share of ratedS (**confirmed by the user 2026-11-09**) | Raises, naming the unit, its output and its share. Giving each piece the whole rating was the alternative |
 | P3 | Names of the pieces | One unit: the connection's; several: the units' |
 | P4 | Unequal phases (E8) | One unit: one 1-phase device per phase, each 1/n of the connection and of the unit; several units or delta raise |
-| P5 | PV output | `irradiance` = p / Pmpp at Pmpp = maxP; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
+| P5 | PV output | `irradiance` = the unit's (the extension, 2026-11-10), else p / Pmpp, at Pmpp = maxP; `%Pmpp` holds the output at p below the panel; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
 | P6 | Storage output | `%Discharge`/`%Charge`, never `kW` (the engine's percent of the kWrated of the moment); waiting is idling at idlingP |
 | P7 | Generator model | 3 from an enabled voltage control on its own terminal; disabled → 1; model 7 → 1 (listed); reactances at the engine's defaults (U13) |
 | P8 | Reactor coupling | r0/x0 must equal r/x; a varistor raises |
@@ -1526,16 +1530,16 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | phases | written | the phase conductors; a delta across two is 1 |
 | bus1 | written | bus_ref of the phase conductors; a wye inverter's neutral is node 0 |
 | kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
-| irradiance | written | the unit's output / Pmpp (get_inverter_units p, generation sign) |
+| irradiance | written | the unit's irradiance (kW/m2); unset -> the unit's output / Pmpp (get_inverter_units p, generation sign) |
 | Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
-| pct_Pmpp | unset | untranscribed or raising on import; not in CIM |
+| pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
 | Temperature | unset | untranscribed or raising on import; not in CIM |
 | pf | not mapped | kvar carries q |
 | conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
 | kvar | written | the unit's share of q (generation sign: -q) |
 | kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
 | pct_Cutin | unset | untranscribed or raising on import; not in CIM |
-| pct_Cutout | rule | 0 when the output is above 0 and below the engine's 20 % of kVA, else not written |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
 | EffCurve | unset | untranscribed or raising on import; not in CIM |
 | P_TCurve | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |

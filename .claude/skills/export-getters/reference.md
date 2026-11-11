@@ -68,7 +68,7 @@ def get_der_output(equipment, active_unit="W", reactive_unit="VAr", *, sign) -> 
 def get_inverter_rating(connection, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> InverterRating
     # ratedS, ratedU (LL) required; (min_q, max_q) in sign; maxIFault pu
 def get_inverter_unit(connection) -> PowerElectronicsUnit   # its one unit; none or several raise
-def get_photovoltaic_unit(unit, active_unit="W", *, sign) -> PhotoVoltaicRating   # (min_p, max_p) in sign
+def get_photovoltaic_unit(unit, active_unit="W", irradiance_unit="W/m2", *, sign) -> PhotoVoltaicRating   # (min_p, max_p) in sign, irradiance
 def get_battery_unit(unit, active_unit="W", energy_unit="Wh", *, sign) -> BatteryRating
     # (min_p, max_p) in sign; energies, efficiencies (percent), idling_p (a loss, as stored), state
 def get_machine_rating(machine, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> MachineRating
