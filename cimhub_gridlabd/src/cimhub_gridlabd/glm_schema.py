@@ -82,10 +82,13 @@ def slot_for_property(native_cls: type) -> dict[str, str]:
 
 
 #: GridLAB-D unit names (its ``unitfile.txt``) that the CIM unit registry spells differently. Only the spelling
-#: changes: the number stays as written (I2).
-_REGISTRY_SPELLING = {"Ohm": "ohm", "Ohm/mile": "ohm/mile"}
+#: changes: the number stays as written (I2). ``pu`` and ``unit`` are dimensionless in GridLAB-D; pint would read
+#: them as a picounified atomic mass and a micronit. ``sf`` is a square foot, which pint does not define.
+_REGISTRY_SPELLING = {"Ohm": "ohm", "Ohm/mile": "ohm/mile", "pu": "dimensionless", "unit": "dimensionless",
+                      "sf": "ft**2", "W/sf": "W/ft**2"}
 
 
 def registry_unit(unit: str | None) -> str | None:
-    """A GridLAB-D unit as a ``.cimtbl`` header unit: ``Ohm/mile`` is ``ohm/mile``; others are the same."""
+    """A GridLAB-D unit as a ``.cimtbl`` header unit and a pint unit: ``Ohm/mile`` is ``ohm/mile``, ``pu`` is
+    ``dimensionless``, ``W/sf`` is ``W/ft**2``; others are the same."""
     return _REGISTRY_SPELLING.get(unit, unit)

@@ -58,9 +58,9 @@ def test_master_lists_every_class_no_mapper_reads(tmp_path, scope, monkeypatch):
     monkeypatch.setattr(glm_to_cimtbl, "MAPPING_ORDER", ())
     model = read(tmp_path, """
 object substation { name src; bustype SWING; phases ABCN; nominal_voltage 7200; }
-object inverter { name inv; parent src; }
+object diesel_dg { name g; parent src; }
 object recorder { name r; }
 """)
     master = GlmImporter("m").to_cimtbl(model).master
-    assert "not mapped: inverter 1, recorder 1" in master.comment  # substation is mapped (S1); inverter is S4b
+    assert "not mapped: diesel_dg 1, recorder 1" in master.comment  # substation is mapped (S1); diesel_dg is not
 

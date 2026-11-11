@@ -1,6 +1,5 @@
 # GridLAB-D model IEEE13_cdpsm
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master
-# not mapped: battery 3, inverter 5, solar 2
 
 Profile = cim18v17
 Authority = https://github.com/PNNL-CIM-Tools/CIMHub
@@ -50,3 +49,5 @@ Import load.cimtbl
 Import triplex_load.cimtbl
 
 Import capacitor.cimtbl
+
+Import inverter.cimtbl

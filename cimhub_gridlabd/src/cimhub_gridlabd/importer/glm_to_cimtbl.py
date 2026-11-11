@@ -8,7 +8,7 @@ parts in the plan's section 2 order (catalogs before the instances that use them
 comment (GLM-14), so nothing disappears silently. A value the reader kept as an expression (``LIGHTS*1.2``) in a
 slot a mapper reads raises (GLM-8): the mapper would otherwise see the slot as unset. The exception is a load's
 ``base_power``, whose mapper reads a ``<schedule>.value*K`` itself (S4a-2). A bus's own load accumulators raise
-(S4a-7).
+(S4a-7). An inverter's ``solar`` or ``battery`` is classified with it and written in ``inverter.cimtbl`` (S4b).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master``.
 """
@@ -25,8 +25,8 @@ from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_core.load_response import zip_fractions
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, line, load, regulator, spacing,
-                                            switch, transformer, transformer_configuration)
+from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, regulator,
+                                            spacing, switch, transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -70,6 +70,7 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     *((load_class.native, lambda model, site, load_class=load_class:
        load.map_loads(model, load_class, site.roots, site.buses, site.feeder)) for load_class in load.LOAD_CLASSES),
     (schema.Capacitor, lambda model, site: capacitor.map_capacitors(model, site.roots, site.buses, site.feeder)),
+    (schema.Inverter, lambda model, site: inverter.map_inverters(model, site.roots, site.buses, site.feeder)),
 )
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
@@ -79,7 +80,7 @@ CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, sc
                                             schema.Transformer: transformer.FIELDS,
                                             schema.Regulator: regulator.FIELDS,
                                             schema.RegulatorConfiguration: regulator.CONFIGURATION_FIELDS,
-                                            **load.FIELDS, schema.Capacitor: capacitor.FIELDS}
+                                            **load.FIELDS, schema.Capacitor: capacitor.FIELDS, **inverter.CLASSIFIED}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:

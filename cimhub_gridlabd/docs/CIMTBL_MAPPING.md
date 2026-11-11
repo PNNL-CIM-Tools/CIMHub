@@ -2460,3 +2460,318 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `remote_sense` | `Optional[str]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
 | `remote_sense_B` | `Optional[str]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
 | `control_level` | `Union[str, ForwardRef('ControlLevel'), NoneType]` | `INDIVIDUAL`, `BANK` | structural | the units (S4a-8): INDIVIDUAL (default) VOLT is a unit per phase |
+
+## S4b: inverters, solar and batteries (approved and built 2026-11-10)
+
+S4b maps `inverter` with its nested `solar` or `battery` (GLM-13), plan section 2 row 14. GridLAB-D citations are to
+`generators/inverter.cpp`, `solar.cpp` and `battery.cpp`.
+
+**The user's calls (2026-11-10):**
+- **S4b-2:** follow GridLAB-D's logic. The output is what GridLAB-D computes, not the `P_Out` the Java export wrote.
+  The PV's irradiance goes on `PhotoVoltaicUnit.irradiance` (an SSH extension, added to cim18v17 the same day) and
+  its panel data on `SolarArrayInfo`/`SolarPanelInfo`.
+- **A battery under `CONSTANT_PF` is a Java export defect:** GridLAB-D never dispatches it (S4b-2). It is read as
+  `CONSTANT_PQ`, the mode the Java export meant, whose set point is `P_Out`.
+- **S4b-5:** `ratedU` is the real line-to-line voltage, matching the transformer's `PowerTransformerEnd.ratedU` and
+  the bus's `BaseVoltage.nominalVoltage` (line to line). Asked whether GridLAB-D tells a wye inverter from a delta
+  one, which would put a wye inverter at 120 V: it has no delta inverter (`phases` takes A, B, C, N and S only,
+  `inverter.cpp:260-265`).
+  - **A, B, C:** wye, injecting on `voltage_A`/`_B`/`_C` (`:897`).
+  - **Split phase:** connected across the legs, on `voltage_12`/`current_12` at 240 V (`:861`, `:871`). That is
+    `s1s2` D (S4b-4), as S4a-6's 240 V load part, so its ratedU is 240 V, not a 120 V leg.
+- **The control modes** are described, at least as capabilities, by `InverterCapabilities`.
+
+The user rebuilt cim18v17 the same day. It adds `PhotoVoltaicUnit.irradiance`, the `InverterInfo` and
+`GridEdgeDeviceInfo` attributes, and `InverterInfo.InverterCapabilities` (its typo is fixed and reported upstream).
+
+| # | artifact | native class (records) | CIM | mRID |
+|---|---|---|---|---|
+| 14 | `inverter.cimtbl` | inverter (5) with its solar (2) or battery (3) | `PowerElectronicsConnection` + `PhotoVoltaicUnit` or `BatteryUnit`; the datasheets below | `pv_<inverter>` / `storage_<inverter>`, the unit `<connection>_unit` |
+
+**Datasheets** (`PowerSystemResource.AssetDatasheet`, the GDM import's pattern):
+- **The inverter:** `GenerationInverterInfo` (under PV) or `StorageInverterInfo` (under a battery), `<connection>_info`.
+  It holds `apparentPowerMaximum` = ratedS, `reactivePowerInjectedMax`/`AbsorbedMax` = ratedS, and on
+  storage `chargeRateActiveMax` = `max_charge_rate`.
+- **Its capabilities:** `InverterCapabilities` by S4b-11. Not written yet: cim-tables cannot reference an
+  `Identity` row (amended at build, below); the flag goes in the row comment.
+- **The solar:** a `SolarArrayInfo` `<connection>_array` (`tiltAngle`, `orientationAzimuth`, `shadingFactor`) with one
+  `SolarPanelInfo` `<connection>_panel` (`efficiency`, `referenceIrradiation` = `Rated_Insolation`,
+  `referenceTemperature` = 25 °C, the 77 °F GridLAB-D's temperature correction is relative to). The PhotoVoltaicUnit's
+  AssetDatasheet is the array.
+- **The battery:** a `BatteryInfo` `<connection>_battery` with `batteryType` (LI_ION → lithiumIon, LEAD_ACID →
+  leadAcid), `ratedCapacity` = `battery_capacity`, and `numberOfCells` = floor(nominal_voltage / 4.1) on LI_ION
+  (GridLAB-D's `n_series`, `battery.cpp:720`).
+
+`InverterCapabilities` is an `Identity`, not an `IdentifiedObject`; whether the binder takes it as a row, and
+`BatteryInfo.ratedCapacity`'s unit, are to be checked at build.
+
+An inverter sits on its parent's root bus (GLM-4), whose `BaseVoltage` is already in `bus.cimtbl`. Its `solar` or
+`battery` is its child: the reader gives it `parent = <inverter>`, and GridLAB-D requires a battery's parent to be an
+inverter (`battery.cpp:657`).
+
+**What the decks hold** (the 28 readable decks):
+- **IEEE13_cdpsm** (Java export from the DSS IEEE 13 with DER) has 5 inverters:
+  - **Solar:** `inv_pv_school` (ABCN) and `inv_pv_house` (BS), each with a `solar`.
+  - **Batteries:** `inv_bat_school`, `inv_bat_batidle` (ABCN) and `inv_bat_house` (BS), each with a `battery`.
+  - **Settings:** all are `FOUR_QUADRANT`, `CONSTANT_PF`, `power_factor` ±1, `generator_status ONLINE`,
+    `inverter_efficiency` 1.0 (PV) or 0.975 (storage).
+  - **Ratings and dispatch:** `rated_power` is written per phase. `V_base` is 480 or 208, and `P_Out` is the Java
+    export's snapshot.
+  - **The solars:** `SINGLE_CRYSTAL_SILICON`, `efficiency 0.2`, `derating`/`soiling 1`, `rated_power`. No area, no
+    climate object, so GridLAB-D runs on static weather.
+  - **The batteries:** each gives `battery_capacity`, `state_of_charge`, `round_trip_efficiency 0.86`, `rated_power`,
+    `nominal_voltage 48`, `LI_ION` and the internal model. Their inverters set `generator_mode CONSTANT_PQ`,
+    `sense_object` and the load-following thresholds, which `CONSTANT_PF` does not read.
+- **IEEE123_transactive** has 5 `CONSTANT_PQ` inverters, but its `Object battery` lines stop it at the reader: a
+  defect in the deck itself, since GridLAB-D's loader is case-sensitive (`gldcore/load.cpp:1393`).
+- **Not set anywhere:** other inverter types, other `four_quadrant_control_mode`s, `use_multipoint_efficiency
+  TRUE`, `climate`, other `SOLAR_POWER_MODEL`s or tilt models, `diesel_dg`, `windturb_dg`, `energy_storage` and
+  `inverter_dyn`.
+
+```
+# IEEE13_cdpsm under S4b-2: GridLAB-D's static-weather PV output; the house battery read as CONSTANT_PQ (charging)
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (VA), ratedU (V), p (W), q (VAr), maxQ (VAr), minQ (VAr), normallyInService, AssetDatasheet, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    # P_Out as written (GridLAB-D recomputes it): 240000 W
+    pv_inv_pv_school,      inv_pv_school, 634,   ,     Y, 300000, 480, -298254.5, 0, 300000, -300000, true, pv_inv_pv_school_info,      bv_480v
+    # four_quadrant_control_mode CONSTANT_PF read as CONSTANT_PQ (a Java export defect: GridLAB-D never dispatches a CONSTANT_PF battery)
+    storage_inv_bat_house, inv_bat_house, house, s1s2, D, 5000,   240, 5000,      0, 5000,   -5000,   true, storage_inv_bat_house_info, bv_240v
+Table PhotoVoltaicUnit: mRID, name, maxP (W), minP (W), irradiance (W/m^2), AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=...
+    pv_inv_pv_school_unit, pv_school, 300000, 0, 1000, pv_inv_pv_school_array, pv_inv_pv_school
+Table BatteryUnit: mRID, name, ratedE (Wh), storedE (Wh), minimumE (Wh), maxP (W), minP (W), chargingEfficiency (percent), dischargingEfficiency (percent), batteryState, AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=...
+    storage_inv_bat_house_unit, bat_house, 13500, 5000.4, 0, 5000, -5000, 92.736, 92.736, charging, storage_inv_bat_house_battery, storage_inv_bat_house
+```
+
+(The example values are illustrative; the goldens will hold the real ones.)
+
+### GridLAB-D's static-weather PV output (S4b-2)
+
+With no climate object, the default tilt model (`DEFAULT`) and the default `SOLAR_POWER_MODEL` (`BASEEFFICIENT`),
+GridLAB-D's snapshot is a closed form:
+- **Insolation:** `Insolation` = `Rated_Insolation` × `shading_factor` (`solar.cpp:1170`). By default that is
+  92.902 W/sf = 1000 W/m² × 1, and it goes on `PhotoVoltaicUnit.irradiance` (W/m² via pint).
+- **Module temperature:** `Tmodule` = `Tamb` + (NOCT - 68) / 74.32 × Insolation, with `Tamb` = 59 °F (static,
+  `solar.cpp:321`) and NOCT = 118.4 °F by default.
+- **DC output:** `P_DC` = `rated_power` × Insolation / Rated_Insolation × (1 + Pmax_temp_coeff × (Tmodule - 77)) ×
+  derating × soiling (`solar.cpp:1220`). `Pmax_temp_coeff` defaults by `panel_type`; SINGLE_CRYSTAL_SILICON's is
+  -0.00437 / 33.8 per °F (`solar.cpp:563`).
+- **AC output:** the inverter's `P_DC` × `inverter_efficiency` (`inverter.cpp:3290`), with each phase capped at
+  rated_power: \|S\| ≤ p_max = phases out × rated_power (`:1415-1427`, `:3798`). `p` = -(that) in the load sign.
+
+For IEEE 13: Tmodule = 122.0 °F, the factor is 0.99418, so `pv_school` gives -298.25 kW (P_Out written -240) and
+`pv_house` -4.97 kW (written -4). The slots this uses with no CIM home (NOCT, Pmax_temp_coeff, derating, soiling,
+inverter_efficiency) are listed as `derived` into p. A climate object, FIXED_AXIS and the other power models raise:
+they need GridLAB-D's weather and solar position (no deck).
+
+### Slots (inverter)
+
+| GLM slot | kind | target |
+|---|---|---|
+| `name` | derived | `PowerElectronicsConnection.name`; mRID `pv_`/`storage_` + name by its unit (S4b-6) |
+| `parent` | structural | `node`: the root bus (GLM-4) |
+| `phases` | structural | 3 phases: blank (balanced, no children); 1-2 phases: the letters, `Y`; `S`: `s1s2` `D` (S4b-4). GridLAB-D has no D keyword on an inverter |
+| `inverter_type` | structural | `FOUR_QUADRANT`; any other raises (S4b-1). Unset is GridLAB-D's PWM (`inverter.cpp:1350`), which also raises |
+| `four_quadrant_control_mode` | structural | dispatch: `CONSTANT_PF` (the default, `inverter.cpp:515`) on a solar, `CONSTANT_PQ` on a battery, which also takes CONSTANT_PF as the Java defect (S4b-1, S4b-2); others raise. Capability: S4b-11, the mode as read |
+| `rated_power` | derived | `ratedS` = rated_power × phases out: 3, 2, or 1 (S counts as 1; `inverter.cpp:1318-1326`, `:1415`); the per-phase cap of S4b-2; `apparentPowerMaximum`. Unset or 0 raises: GridLAB-D silently uses 25 kVA (`:1409`) |
+| `inverter_efficiency` | derived | into p (S4b-2); CIM has no inverter efficiency. 0 or unset is GridLAB-D's 0.9 (`:1398`) |
+| `P_Out` | derived | battery: the set point, p = -P_Out after GridLAB-D's CONSTANT_PQ limits (S4b-2). Solar: GridLAB-D overwrites it in CONSTANT_PF (`inverter.cpp:433`, `:3879`), so it is only listed in the row comment |
+| `power_factor` | derived | CONSTANT_PF: `q` = 0 when \|pf\| = 1; \|pf\| < 1 raises (S4b-3). Not read by CONSTANT_PQ, so on a battery read as CONSTANT_PQ it goes in the row comment |
+| `Q_Out` | derived | CONSTANT_PQ: `q` = 0 when unset or 0; any other value raises (S4b-3) |
+| `V_base` | untranscribed | read only by the volt-var and volt-watt modes (`inverter.cpp:318`); ratedU is the bus's line-to-line voltage (S4b-5) |
+| `generator_status` | derived | `normallyInService`: ONLINE (default) true, OFFLINE false |
+| `soc_reserve` | derived | `BatteryUnit.minimumE` = soc_reserve × battery_capacity; default 0 |
+| `max_charge_rate` | copied | `StorageInverterInfo.chargeRateActiveMax` (W via pint) |
+| `generator_mode`, `sense_object`, `charge_*`/`discharge_*_threshold`, `*_lockout_time`, `max_discharge_rate` | untranscribed | read only by load following and the non-four-quadrant types, which raise (to be verified slot by slot at build) |
+| volt-var, volt-watt, VSI, frequency-watt, group-PF, multipoint-efficiency and dynamic slots | untranscribed or raises | their modes raise for the dispatch. `use_multipoint_efficiency TRUE` raises |
+| solver state (`VA_Out`, `I_In`, `phaseA_I_Out`, ...) | untranscribed | solver output |
+
+### Slots (solar, battery)
+
+| GLM slot | kind | target |
+|---|---|---|
+| solar `name` | derived | `PhotoVoltaicUnit.name`; mRID `<connection>_unit` |
+| solar `rated_power` | derived | `maxP` (W via pint), `minP` 0, and P_DC (S4b-2). Unset raises (GridLAB-D derives it from area and insolation, `solar.cpp:606`) |
+| solar `Rated_Insolation`, `shading_factor` | derived | irradiance (S4b-2); `SolarPanelInfo.referenceIrradiation`; `SolarArrayInfo.shadingFactor` (percent) |
+| solar `efficiency` | copied | `SolarPanelInfo.efficiency` (percent); default by panel_type (`solar.cpp:561`) |
+| solar `tilt_angle`, `orientation_azimuth` | copied | `SolarArrayInfo.tiltAngle`, `orientationAzimuth` (defaults 45, 180: `solar.cpp:195`) |
+| solar `NOCT`, `Pmax_temp_coeff`, `derating`, `soiling`, `panel_type` | derived | into p (S4b-2) |
+| solar `SOLAR_POWER_MODEL`, `orientation`, `weather` | structural | the defaults (BASEEFFICIENT, DEFAULT, none); others raise |
+| solar DC and other model slots (`area`, `Voc`, `V_Max`, PV_CURVE parameters, ...) | untranscribed | DC side, read by no mapped path |
+| battery `name` | derived | `BatteryUnit.name`; mRID `<connection>_unit` |
+| battery `battery_capacity` | derived | `ratedE` (Wh via pint), `BatteryInfo.ratedCapacity` |
+| battery `state_of_charge` | derived | `storedE` = state_of_charge × battery_capacity |
+| battery `rated_power` | derived | `maxP` = rated_power, `minP` = -rated_power (the generation sign, as the DER getter reads it) |
+| battery `round_trip_efficiency` | derived | `chargingEfficiency` = `dischargingEfficiency` = √round_trip_efficiency, in percent: GridLAB-D applies its square root each way (`battery.cpp:2220`, `:2230`). Default by `rfb_size`, else 0.8 (`battery.cpp:661-708`) |
+| battery `battery_type`, `nominal_voltage` | derived | `BatteryInfo.batteryType`, `numberOfCells` |
+| battery `use_internal_battery_model` | structural | true; false raises (the legacy model, no deck) |
+| battery internal-model curve and DC slots | untranscribed | DC side; CIM has none |
+
+### Fail fast (S4b)
+
+The mapper raises on:
+- an inverter with no `solar` or `battery`, or with more than one;
+- a `solar` or `battery` whose parent is not an inverter;
+- every unmapped type, mode and solar model listed above, and a climate object;
+- `rated_power` unset or 0 on an inverter or a solar;
+- \|power_factor\| < 1 under CONSTANT_PF, or a non-zero `Q_Out` under CONSTANT_PQ;
+- a battery with no `battery_capacity`;
+- CONSTANT_PQ on a solar (no deck: GridLAB-D then caps P at the panel's output).
+
+### Decisions for S4b
+
+| # | topic | proposal |
+|---|---|---|
+| S4b-1 | Modes (dispatch) | `FOUR_QUADRANT` only. A solar runs `CONSTANT_PF`; a battery runs `CONSTANT_PQ`, or `CONSTANT_PF` read as CONSTANT_PQ (the Java defect, S4b-2). IEEE123_transactive's CONSTANT_PQ batteries would take the same path, but that deck stops at the reader. Every other type and mode raises for the dispatch until a deck has one, as S4a-5; S4b-11 still describes its capability |
+| **S4b-2** | **The dispatch (the user's calls: GridLAB-D's logic; the battery mode a Java defect)** | **PV: GridLAB-D's static-weather output (the section above), with the irradiance on `PhotoVoltaicUnit.irradiance`; the written P_Out is listed in the row comment. Battery: GridLAB-D's CONSTANT_PQ (`inverter.cpp:3485-3555`). The set point is P_Out (generation positive), set to 0 when charging a full battery (soc ≥ 1) or discharging at or below soc_reserve, and capped at ratedS; p = -that. A battery whose inverter says CONSTANT_PF is read as CONSTANT_PQ, with a row comment: under CONSTANT_PF GridLAB-D would never dispatch it. The inverter takes P from its DC input `V_In × I_In`, the internal battery writes back only `battery_soc` (`battery.cpp:891`), and the inverter asks for power (`power_in`) only in CONSTANT_PQ, VSI and load following (`inverter.cpp:3545`, `:3716`, `:3865`). The Java export wrote CONSTANT_PF on all three IEEE 13 batteries with P_Out as their dispatch: a producer defect (to report upstream), corrected here by the user's call** |
+| S4b-3 | q | CONSTANT_PF: q = 0 when \|pf\| = 1 (all 5); \|pf\| < 1 raises. The sign of GridLAB-D's Q there is "treat like a normal load right now" (`inverter.cpp:3466-3475`), and no deck checks it |
+| S4b-4 | Phases | GridLAB-D has no delta inverter (no D keyword, `inverter.cpp:260-265`). On A, B and C it is wye to neutral (`voltage_A`/`_B`/`_C`, `:897`): `Y`, grounded; 3 phases blank, CIM's balanced default, as the core `der` shape. Split phase `S` puts the whole output across the legs (`power_val[0]` on `voltage_12`/`current_12`, `:861`, `:871`, `:3432`): `s1s2` `D`, as S4a-6's 240 V load part. The core shape's `p2` and the DSS golden's `pv_house` say `s1s2` `Y`, two 120 V legs to neutral, which GridLAB-D's inverter is not |
+| **S4b-5** | **ratedU (the user's call)** | **Line to line, the root bus's `BaseVoltage.nominalVoltage`, which matches the transformer's `ratedU`. 3-phase wye at 634: 480 V. Split phase across the legs: 240 V. That is the voltage it sits across, so a wye reading of 120 V does not apply (S4b-4). A 1- or 2-phase wye inverter is also its bus's line-to-line voltage, the core DER getter's convention (a 1-phase wye device's kV × √3). `V_base` (480, 208) is untranscribed** |
+| S4b-6 | Shape and names | One `PowerElectronicsConnection` per inverter with its one unit. A hybrid (solar and battery under one inverter) raises: GridLAB-D has no such model. mRID `pv_<inverter>` or `storage_<inverter>` and `<connection>_unit`, the DSS import's prefixes; the datasheets `<connection>_info`, `_capabilities`, `_array`, `_panel`, `_battery`; names as written |
+| S4b-7 | q limits, fault current | `maxQ` = ratedS, `minQ` = -ratedS: GridLAB-D's four-quadrant inverter caps \|S\| at p_max = phases out × rated_power (`inverter.cpp:3798`), as the DSS golden does. `maxIFault` is blank: GLM has no fault current in CONSTANT_PF |
+| S4b-8 | Battery state | `batteryState` from the dispatch: discharging below 0 (load sign), charging above, waiting at 0. IEEE 13: school discharging (-100 kW), house charging (+5 kW), batidle charging (+1 kW: the Java export wrote DSS's idle loss as a charge). `idlingP` is blank: GLM has none |
+| S4b-9 | Battery values | ratedE = battery_capacity, storedE = soc × capacity, minimumE = the inverter's soc_reserve × capacity (default 0), maxP/minP = ±battery rated_power, efficiencies √round_trip each way |
+| S4b-10 | Order | `MAPPING_ORDER` gains `inverter` after `capacitor`. It references only buses and its own datasheets |
+| S4b-11 | Capabilities | `InverterCapabilities` holds the `four_quadrant_control_mode` as read (S4b-2: a Java-defect battery is CONSTANT_PQ) as a capability flag: CONSTANT_PF → `isModeCapableConstantPowerFactor`, CONSTANT_PQ → `isModeCapableActivePowerReactivePower`, VOLT_VAR → `isModeCapableVoltageReactivePower`, VOLT_WATT → `isModeCapableVoltageActivePower`, VOLT_VAR_FREQ_PWR → the volt-var and frequency-watt flags. LOAD_FOLLOWING, GROUP_LF and VSI have no IEEE 1547 flag, so none is set. GridLAB-D runs one mode per inverter, so the other flags are left unset, not false |
+
+**Cross-solver note on S4b-2, S4b-4 and S4b-5:** the GLM artifacts follow GridLAB-D, so the IEEE 13 DER differ from
+the DSS golden (`cimhub_opendss/tests/goldens/IEEE13_CDPSM/{pvsystem,storage}.cimtbl`):
+- **PV p:** -298.25 vs -240 kW on the school and -4.97 vs -4 kW on the house. GridLAB-D's static weather is full sun
+  at 122 °F; DSS's irradiance multiplier gives 80 %.
+- **Battery p:** equal (-100, +5, +1 kW; the school to 0.001 W, GridLAB-D's cap at 3 × 33333.333 VA), since the
+  batteries are read as CONSTANT_PQ (S4b-2). But batidle is
+  charging at 1 kW, where DSS says waiting with a 1 kW idling loss.
+- **House inverters:** `s1s2` D at 240 V vs DSS's `s1s2` Y at 208 V. The DSS exporter must write a 240 V
+  split-phase DER across the legs.
+- **Battery values:** minimumE 0 vs 40 kWh, efficiencies 92.7 % vs 90 %, idlingP blank vs 1 kW.
+- **Equal:** node, ratedS, q, maxQ/minQ, PV maxP/minP, ratedE, storedE and battery maxP/minP.
+
+A cross-format check should list these as expected divergences, as for S4a-8's capacitors. The core `der` shape's `p2`
+(`s1s2` Y, 208 V) should follow S4b-4/-5: a core follow-up (plan section 7).
+
+### Built (2026-11-10)
+
+- **Code:**
+  - `importer/cimtbl/inverter.py`: the inverter with its solar or battery, the datasheets, and GridLAB-D's output
+    (`pv_output`, `battery_output`). All 398 slots of the three classes are classified; one not in a group raises.
+  - The orchestrator maps `inverter` after `capacitor` and classifies `solar` and `battery` with it.
+  - `glm_schema.registry_unit` spells `pu` and `unit` as `dimensionless` and `sf`/`W/sf` as `ft**2`/`W/ft**2`.
+    Pint read `pu` as a picounified atomic mass and `unit` as a micronit, and did not know `sf`.
+- **Found at build (amendments):**
+  - **`InverterCapabilities` is not written.** It is an `Identity`, so cim-tables keys it by `identifier`. cim-tables
+    does not index an `Identity` row, so `InverterInfo.InverterCapabilities` cannot reference it
+    (`CIM-Tables/docs/CIMTBL_DESIGN.md:141`). The row comment names the flag (`capability: ...`) until cim-tables can
+    (plan section 7).
+  - **`phaseCount` is dropped** from the inverter datasheet. It is an enum (`singlePhase`, `threePhase`, `other`) that
+    only repeats the connection's phases.
+  - **GridLAB-D's cap is on the total:** \|S\| ≤ p_max = phases out × rated_power (`inverter.cpp:3798`), not per phase.
+    So IEEE 13's `inv_bat_school` gives -99,999.999 W, not -100 kW. Its `rated_power` is written 33333.333 per phase,
+    and its P_Out of 100 kW is above that. The row comment says the set point was limited.
+  - **The defaults are by path:** PV defaults `inverter_efficiency` and `power_factor`; a battery defaults `P_Out`,
+    `Q_Out` and `soc_reserve`.
+  - **A climate object is found by the reader's not-read count:** the schema has no `climate` class.
+  - **A battery's `maxP` is its own `rated_power`,** its nameplate as written. GridLAB-D's internal model limits the
+    battery at the inverter's `rated_battery_power`, phases out × rated_power / inverter_efficiency
+    (`battery.cpp:2206`, `inverter.cpp:1415`). That limit is untranscribed.
+- **Tests:**
+  - `tests/test_cimtbl_inverter.py`, with the atom `tests/atoms/inverter/inverter.glm`. The atom has eight
+    inverters: 3-phase, 1-phase and split-phase PV (the last capped), plus five batteries:
+    - CONSTANT_PQ discharging;
+    - the CONSTANT_PF Java defect;
+    - full;
+    - at its reserve;
+    - OFFLINE.
+  - Goldens for the atom and IEEE13_cdpsm (`inverter.cimtbl`).
+  - Every deck's inverters read back through the core DER getters (`get_der_output`, `get_inverter_rating`,
+    `get_inverter_unit`, `get_photovoltaic_unit`, `get_battery_unit`) against GridLAB-D's formulas written out again
+    in the test.
+  - IEEE13_cdpsm is checked against the DSS golden's battery dispatch and against GridLAB-D's PV output.
+- **Results:**
+  - 461 GLM tests pass with `--roundtrip` over every deck, and the core and DSS suites pass (983). The leak gate is
+    clean.
+  - 27 decks bind; the same two deck defects stop the other two. IEEE13_cdpsm is the only binding deck with DER.
+  - IEEE13_cdpsm:
+    - PV: -298.25 kW at the school and -4.97 kW at the house (GridLAB-D's static weather).
+    - Batteries: -100 kW (the school's 0.001 W under GridLAB-D's cap), +5 kW and +1 kW, as the DSS golden.
+    - The house inverters are `s1s2` D at 240 V.
+
+### Field tables (generated: `fields_table(cls, records)`, the read slots only; samples from the atom and IEEE13_cdpsm)
+**inverter** (the slots the mapper reads; the untranscribed groups follow)
+
+| Inverter field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, InverterName]` | `inv_b3`, `inv_bfull`, `inv_boff` | derived | PowerElectronicsConnection.name; mRID pv_/storage_ + name by its unit (S4b-6) |
+| `parent` | `Optional[str]` | `m3`, `m4`, `tm1` | structural | node: the parent's root bus (GLM-4) |
+| `inverter_type` | `Optional[str]` | `FOUR_QUADRANT` | structural | FOUR_QUADRANT; any other raises, unset is GridLAB-D's PWM (inverter.cpp:1350) (S4b-1) |
+| `four_quadrant_control_mode` | `Optional[str]` | `CONSTANT_PQ`, `CONSTANT_PF` | structural | CONSTANT_PF on a solar, CONSTANT_PQ on a battery, which also reads CONSTANT_PF as the Java defect (S4b-2); others raise; the capability flag goes in the row comment |
+| `pf_reg` | `Optional[str]` |  | structural | EXCLUDED (default); power-factor regulation raises when set: no deck sets it, so a mapping waits for one |
+| `generator_status` | `Optional[str]` | `OFFLINE`, `ONLINE` | derived | normallyInService: ONLINE (default) true; OFFLINE false, output 0 (inverter.cpp:2561) |
+| `P_Out` | `Optional[float]` | `50000.0`, `-20000.0`, `30000.0` | derived | battery: the CONSTANT_PQ set point (S4b-2); PV: an output GridLAB-D overwrites (inverter.cpp:3879), listed in the row comment |
+| `Q_Out` | `Optional[float]` |  | derived | CONSTANT_PQ: q = 0 when unset or 0; any other value raises (S4b-3) |
+| `rated_power` | `Optional[float]` | `33333.333`, `15000.0`, `20000.0` | derived | ratedS = rated_power x phases out (3, 2, 1; S is 1, inverter.cpp:1318); maxQ = -minQ = apparentPowerMaximum = ratedS; unset or 0 raises (GridLAB-D's silent 25 kVA, :1409) |
+| `inverter_efficiency` | `Optional[float]` | `0.95`, `1.0`, `0.975` | derived | PV: AC = DC x inverter_efficiency (inverter.cpp:3290); default 0.9 (:1398); CIM has no inverter efficiency |
+| `soc_reserve` | `Optional[float]` | `0.2`, `0.25` | derived | BatteryUnit.minimumE = soc_reserve x battery_capacity; the battery does not discharge at or below it; default 0 |
+| `power_factor` | `Optional[float]` | `-1.0`, `1.0` | derived | CONSTANT_PF: q = 0 when |pf| = 1; |pf| < 1 raises (S4b-3); not read by CONSTANT_PQ (a battery read as CONSTANT_PQ lists it in the row comment) |
+| `phases` | `Optional[str]` | `ABCN`, `ACN`, `AS` | structural | A, B, C wye to neutral (3 phases: blank); S: s1s2 D across the legs at 240 V (S4b-4). GridLAB-D has no D keyword on an inverter |
+| `use_multipoint_efficiency` | `Union[bool, Bool, NoneType]` | `False` | structural | FALSE (default); TRUE raises (no deck) |
+| `max_charge_rate` | `Optional[float]` | `80000.0`, `100000.0`, `5000.0` | copied | `StorageInverterInfo.chargeRateActiveMax` (W); nameplate; GridLAB-D reads it only in load following |
+
+
+- untranscribed, object header: 7 slots (`groupid` ... `flags`)
+- untranscribed, read only by the non-four-quadrant types (inverter.cpp:1337), which raise: 1 slots (`generator_mode`)
+- untranscribed, deltamode, VSI, droop and IEEE 1547 trip settings: dynamics, not the steady-state snapshot: 119 slots (`inverter_convergence_criterion` ... `first_iter_counter`)
+- untranscribed, solver state or output: 47 slots (`V_In` ... `prev_value_IGenerated_C`)
+- untranscribed, read only by the multipoint efficiency model, which raises: 8 slots (`inverter_manufacturer` ... `c_3`)
+- untranscribed, read only by load following and the group modes, which raise: 18 slots (`sense_object` ... `lf_dispatch_change_allowed`)
+- untranscribed, read only by power-factor regulation (pf_reg), which raises: 10 slots (`pf_reg_activate` ... `pf_reg_next_update_time`)
+- untranscribed, read only by the volt-var, volt-watt and frequency-power modes, which raise: 30 slots (`disable_volt_var_if_no_input_power` ... `pc_vw_limited`)
+- untranscribed, read only by the volt-var and volt-watt modes (inverter.cpp:318), which raise; ratedU is the bus's line-to-line voltage (S4b-5): 1 slots (`V_base`)
+
+**solar** (the slots the mapper reads; the untranscribed groups follow)
+
+| Solar field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, SolarName]` | `pv1`, `pv3`, `pvs` | derived | PhotoVoltaicUnit.name; mRID <connection>_unit |
+| `parent` | `Optional[str]` | `inv_pv1`, `inv_pv3`, `inv_pvs` | structural | its inverter; another parent raises |
+| `panel_type` | `Optional[str]` | `MULTI_CRYSTAL_SILICON`, `SINGLE_CRYSTAL_SILICON` | derived | the defaults of efficiency and Pmax_temp_coeff (solar.cpp:559); default SINGLE_CRYSTAL_SILICON |
+| `SOLAR_POWER_MODEL` | `Optional[str]` |  | structural | DEFAULT (BASEEFFICIENT); others raise |
+| `NOCT` | `Optional[float]` |  | derived | the module temperature (S4b-2); default 118.4 degF |
+| `Rated_Insolation` | `Optional[float]` |  | derived | SolarPanelInfo.referenceIrradiation; the irradiance = Rated_Insolation x shading_factor (solar.cpp:1170); default 92.902 W/sf = 1000 W/m^2 |
+| `Pmax_temp_coeff` | `Optional[float]` |  | derived | per degF, the DC output's temperature factor; default by panel_type |
+| `efficiency` | `Optional[float]` | `0.2` | copied | `SolarPanelInfo.efficiency` (percent); default by panel_type |
+| `area` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (with efficiency it can override rated_power, solar.cpp:624) |
+| `soiling` | `Optional[float]` | `1.0` | derived | a factor of the DC output; default 0.95; outside 0..1 raises |
+| `derating` | `Optional[float]` | `1.0` | derived | a factor of the DC output; default 0.95; outside 0..1 raises |
+| `rated_power` | `Optional[float]` | `8000.0`, `250000.0`, `6000.0` | derived | maxP (W via pint), minP 0, and the DC output (S4b-2); unset raises (GridLAB-D derives it from area and insolation, solar.cpp:606) |
+| `weather` | `Optional[str]` |  | structural | unset, with no climate object in the model; a climate raises (S4b-2) |
+| `shading_factor` | `Optional[float]` | `0.8` | derived | SolarArrayInfo.shadingFactor (percent) and the irradiance; default 1 |
+| `tilt_angle` | `Optional[float]` | `30.0` | copied | `SolarArrayInfo.tiltAngle` (deg); default 45 |
+| `orientation_azimuth` | `Optional[float]` | `200.0` | copied | `SolarArrayInfo.orientationAzimuth` (deg); default 180 |
+| `orientation` | `Optional[str]` |  | structural | DEFAULT; others raise (FIXED_AXIS needs a climate, solar.cpp:325) |
+
+
+- untranscribed, object header: 7 slots (`groupid` ... `flags`)
+- untranscribed, read only by the PV_CURVE and FLATPLATE models, which raise: 16 slots (`pvc_Pmax_calc_simp_mode` ... `T_coeff`)
+- untranscribed, read only with a climate object, which raises: 2 slots (`SOLAR_TILT_MODEL`, `latitude_angle_fix`)
+- untranscribed, solver state or output: 15 slots (`Tmodule` ... `last_DC_power`)
+- untranscribed, with no climate GridLAB-D uses 59 degF and still air (solar.cpp:321): 2 slots (`wind_speed`, `ambient_temperature`)
+- untranscribed, DC voltage and current: CIM has no DC array model: 5 slots (`Rinternal`, `Voc_temp_coeff`, `V_Max`, `Voc_Max`, `Voc`)
+
+**battery** (the slots the mapper reads; the untranscribed groups follow)
+
+| Battery field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, BatteryName]` | `b3`, `bfull`, `boff` | derived | BatteryUnit.name; mRID <connection>_unit |
+| `parent` | `Optional[str]` | `inv_b3`, `inv_bfull`, `inv_boff` | structural | its inverter (GridLAB-D requires one, battery.cpp:657); another raises |
+| `rfb_size` | `Optional[str]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (it overrides the battery's ratings, battery.cpp:661) |
+| `use_internal_battery_model` | `Union[bool, Bool, NoneType]` | `True` | structural | true; false (the legacy model) raises |
+| `battery_type` | `Optional[str]` | `LI_ION`, `LEAD_ACID` | derived | BatteryInfo.batteryType: LI_ION lithiumIon, LEAD_ACID leadAcid; others blank |
+| `nominal_voltage` | `Optional[float]` | `48.0` | derived | BatteryInfo.numberOfCells = floor(nominal_voltage / 4.1) on LI_ION (battery.cpp:720); default 115 V |
+| `rated_power` | `Optional[float]` | `100.0`, `30000.0`, `60000.0` | derived | maxP = rated_power, minP = -rated_power (the generation sign) |
+| `battery_capacity` | `Optional[float]` | `200.0`, `50000.0`, `100000.0` | derived | ratedE and BatteryInfo.ratedCapacity (Wh via pint); unset raises |
+| `round_trip_efficiency` | `Optional[float]` | `0.86` | derived | chargingEfficiency = dischargingEfficiency = sqrt of it, percent (battery.cpp:2220); default 0.8 |
+| `state_of_charge` | `Optional[float]` | `0.6`, `1.0`, `0.5` | derived | storedE = state_of_charge x battery_capacity; unset raises |
+
+
+- untranscribed, object header: 7 slots (`groupid` ... `flags`)
+- untranscribed, read only by the legacy battery model (use_internal_battery_model false), which raises: 31 slots (`generator_mode` ... `parasitic_power_draw`)
+- untranscribed, solver state or output: 29 slots (`V_Out` ... `climate_object_found`)
+- untranscribed, set from the inverter's soc_reserve (battery.cpp:727): 1 slots (`reserve_state_of_charge`)

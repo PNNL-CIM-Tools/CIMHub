@@ -1,0 +1,101 @@
+# GridLAB-D inverter -> PowerElectronicsConnection + PhotoVoltaicUnit or BatteryUnit (with its solar or battery and their datasheets).
+# Source table: inverter (records: 8)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4b-inverters-solar-and-batteries
+
+Profile = cim18v17
+
+# a PV inverter's nameplate: ratedS
+Table GenerationInverterInfo: mRID, name, apparentPowerMaximum (VA), reactivePowerInjectedMax (VAr), reactivePowerAbsorbedMax (VAr)
+    pv_inv_pv1_info, inv_pv1, 10000.0,  10000.0,  10000.0
+    pv_inv_pv3_info, inv_pv3, 300000.0, 300000.0, 300000.0
+    pv_inv_pvs_info, inv_pvs, 5000.0,   5000.0,   5000.0
+
+# a battery inverter's nameplate: ratedS; chargeRateActiveMax = max_charge_rate
+Table StorageInverterInfo: mRID, name, apparentPowerMaximum (VA), reactivePowerInjectedMax (VAr), reactivePowerAbsorbedMax (VAr), chargeRateActiveMax (W)
+    storage_inv_b3_info,    inv_b3,    99999.999, 99999.999, 99999.999, 80000.0
+    storage_inv_bfull_info, inv_bfull, 30000.0,   30000.0,   30000.0,
+    storage_inv_boff_info,  inv_boff,  60000.0,   60000.0,   60000.0,
+    storage_inv_bpf_info,   inv_bpf,   5000.0,    5000.0,    5000.0,
+    storage_inv_bres_info,  inv_bres,  10000.0,   10000.0,   10000.0,
+
+# the array as GridLAB-D orients it (read by its climate models only)
+Table SolarArrayInfo: mRID, name, tiltAngle (deg), orientationAzimuth (deg), shadingFactor (percent)
+    pv_inv_pv1_array, pv1, 45.0, 180.0, 100.0
+    pv_inv_pv3_array, pv3, 30.0, 200.0, 80.0
+    pv_inv_pvs_array, pvs, 45.0, 180.0, 100.0
+
+# referenceIrradiation = Rated_Insolation; referenceTemperature: the 77 degF of GridLAB-D's temperature factor
+Table SolarPanelInfo: mRID, name, efficiency (percent), referenceIrradiation (W/m^2), referenceTemperature (degC)=25, SolarArray
+    pv_inv_pv1_panel, pv1, 20.0, 999.9888055331668, pv_inv_pv1_array
+    pv_inv_pv3_panel, pv3, 15.0, 999.9888055331668, pv_inv_pv3_array
+    pv_inv_pvs_panel, pvs, 20.0, 999.9888055331668, pv_inv_pvs_array
+
+# numberOfCells = floor(nominal_voltage / 4.1) on LI_ION (battery.cpp:720)
+Table BatteryInfo: mRID, name, batteryType, ratedCapacity (Wh), numberOfCells
+    storage_inv_b3_battery,    b3,    lithiumIon, 200000.0, 11
+    storage_inv_bfull_battery, bfull, leadAcid,   50000.0,
+    storage_inv_boff_battery,  boff,  ,           100000.0,
+    storage_inv_bpf_battery,   bpf,   lithiumIon, 13500.0,  11
+    storage_inv_bres_battery,  bres,  ,           40000.0,
+
+# GridLAB-D's dispatch in the load sign (S4b-2): PV its static-weather output, a battery its CONSTANT_PQ set point; ratedU the bus's line-to-line voltage (S4b-5)
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (VA), ratedU (V), p (W), q (VAr), maxQ (VAr), minQ (VAr), normallyInService, AssetDatasheet, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: generator_status=ONLINE, Q_Out=0.0
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: max_discharge_rate=90000.0
+    storage_inv_b3,    inv_b3,    n2,  ,     Y, 99999.999, 4160.0, -50000.0,            0.0, 99999.999, -99999.999, true,  storage_inv_b3_info,    bv_4p16kv
+    # defaulted: generator_status=ONLINE, Q_Out=0.0, soc_reserve=0.0
+    # P_Out -20000.0 W limited to 0.0 W by GridLAB-D's CONSTANT_PQ (ratedS, a full battery or the reserve, inverter.cpp:3496-3540)
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    storage_inv_bfull, inv_bfull, n4,  AC,   Y, 30000.0,   4160.0, 0.0,                 0.0, 30000.0,   -30000.0,   true,  storage_inv_bfull_info, bv_4p16kv
+    # defaulted: Q_Out=0.0, soc_reserve=0.0
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    storage_inv_boff,  inv_boff,  n2,  ,     Y, 60000.0,   4160.0, 0.0,                 0.0, 60000.0,   -60000.0,   false, storage_inv_boff_info,  bv_4p16kv
+    # defaulted: generator_status=ONLINE, Q_Out=0.0, soc_reserve=0.0
+    # four_quadrant_control_mode CONSTANT_PF read as CONSTANT_PQ (a Java export defect: GridLAB-D never dispatches a CONSTANT_PF battery, S4b-2)
+    # CONSTANT_PQ: not read: power_factor=-1.0
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: generator_mode=CONSTANT_PQ, sense_object=tm1
+    storage_inv_bpf,   inv_bpf,   tm1, s1s2, D, 5000.0,    240.0,  3000.0,              0.0, 5000.0,    -5000.0,    true,  storage_inv_bpf_info,   bv_240v
+    # defaulted: generator_status=ONLINE, Q_Out=0.0
+    # P_Out 8000.0 W limited to 0.0 W by GridLAB-D's CONSTANT_PQ (ratedS, a full battery or the reserve, inverter.cpp:3496-3540)
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    storage_inv_bres,  inv_bres,  n5,  A,    Y, 10000.0,   4160.0, 0.0,                 0.0, 10000.0,   -10000.0,   true,  storage_inv_bres_info,  bv_4p16kv
+    # defaulted: four_quadrant_control_mode=CONSTANT_PF, generator_status=ONLINE, inverter_efficiency=0.9,
+    # power_factor=1.0
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): None VA; GridLAB-D's: DC 7177.992 W at Tmodule 122.001 degF
+    # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    pv_inv_pv1,        inv_pv1,   n5,  A,    Y, 10000.0,   4160.0, -6460.1931889418665, 0.0, 10000.0,   -10000.0,   true,  pv_inv_pv1_info,        bv_4p16kv
+    # defaulted: four_quadrant_control_mode=CONSTANT_PF, generator_status=ONLINE
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): 240000.0 VA; GridLAB-D's: DC 179780.197 W at Tmodule 109.401 degF
+    # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    pv_inv_pv3,        inv_pv3,   n2,  ,     Y, 300000.0,  4160.0, -170791.18756223566, 0.0, 300000.0,  -300000.0,  true,  pv_inv_pv3_info,        bv_4p16kv
+    # defaulted: generator_status=ONLINE
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): 4000.0 VA; GridLAB-D's: DC 5965.091 W at Tmodule 122.001 degF
+    # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: V_base=208.0
+    pv_inv_pvs,        inv_pvs,   tm1, s1s2, D, 5000.0,    240.0,  -5000.0,             0.0, 5000.0,    -5000.0,    true,  pv_inv_pvs_info,        bv_240v
+
+# irradiance: GridLAB-D's static weather, Rated_Insolation x shading_factor (solar.cpp:1170)
+Table PhotoVoltaicUnit: mRID, name, maxP (W), minP (W), irradiance (W/m^2), AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=fdr_atom
+    # defaulted: panel_type=SINGLE_CRYSTAL_SILICON, NOCT=118.4, Rated_Insolation=92.902,
+    # Pmax_temp_coeff=-0.00012928994082840237, efficiency=0.2, soiling=0.95, derating=0.95, shading_factor=1.0,
+    # tilt_angle=45.0, orientation_azimuth=180.0
+    pv_inv_pv1_unit, pv1, 8000.0,   0.0, 999.9888055331668, pv_inv_pv1_array, pv_inv_pv1
+    # defaulted: NOCT=118.4, Rated_Insolation=92.902, Pmax_temp_coeff=-0.00012307692307692307, efficiency=0.15,
+    # soiling=0.95, derating=0.95
+    pv_inv_pv3_unit, pv3, 250000.0, 0.0, 799.9910444265334, pv_inv_pv3_array, pv_inv_pv3
+    # defaulted: panel_type=SINGLE_CRYSTAL_SILICON, NOCT=118.4, Rated_Insolation=92.902,
+    # Pmax_temp_coeff=-0.00012928994082840237, shading_factor=1.0, tilt_angle=45.0, orientation_azimuth=180.0
+    pv_inv_pvs_unit, pvs, 6000.0,   0.0, 999.9888055331668, pv_inv_pvs_array, pv_inv_pvs
+
+# storedE = state_of_charge x capacity, minimumE = soc_reserve x capacity; efficiencies sqrt(round trip)
+Table BatteryUnit: mRID, name, ratedE (Wh), storedE (Wh), minimumE (Wh), maxP (W), minP (W), chargingEfficiency (percent), dischargingEfficiency (percent), batteryState, AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=fdr_atom
+    storage_inv_b3_unit,    b3,    200000.0, 120000.0, 40000.0, 100000.0, -100000.0, 92.73618495495704, 92.73618495495704, discharging, storage_inv_b3_battery,    storage_inv_b3
+    # defaulted: nominal_voltage=115.0, round_trip_efficiency=0.8
+    storage_inv_bfull_unit, bfull, 50000.0,  50000.0,  0.0,     30000.0,  -30000.0,  89.44271909999159, 89.44271909999159, waiting,     storage_inv_bfull_battery, storage_inv_bfull
+    # defaulted: nominal_voltage=115.0, round_trip_efficiency=0.8
+    storage_inv_boff_unit,  boff,  100000.0, 50000.0,  0.0,     60000.0,  -60000.0,  89.44271909999159, 89.44271909999159, waiting,     storage_inv_boff_battery,  storage_inv_boff
+    storage_inv_bpf_unit,   bpf,   13500.0,  4995.0,   0.0,     5000.0,   -5000.0,   92.73618495495704, 92.73618495495704, charging,    storage_inv_bpf_battery,   storage_inv_bpf
+    # defaulted: nominal_voltage=115.0, round_trip_efficiency=0.8
+    storage_inv_bres_unit,  bres,  40000.0,  10000.0,  10000.0, 10000.0,  -10000.0,  89.44271909999159, 89.44271909999159, waiting,     storage_inv_bres_battery,  storage_inv_bres
