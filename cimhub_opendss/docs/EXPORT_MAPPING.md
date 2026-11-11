@@ -145,6 +145,10 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   8. `Buscoords <stem>_buscoords.csv` (`LatLongCoords` for geographic rows), with the CSV written beside the deck.
 - `serialize(obj)` is unchanged for an ordinary record. `Options` and `Buscoords` are not ordinary records, so
   `serialize` raises on them, and `write` handles them as above.
+- `write(model, destination, per_class=True)` (also `cim_to_dss(..., per_class=True)`) writes step 4 as one file
+  per class beside the deck (`linecode.dss`, `xfmrcode.dss`, `line.dss`, ...; only classes that have records), and
+  the master `destination` has `Redirect <file>` in `WRITE_ORDER` in its place. A master named like a class file
+  (`Line.dss`) raises rather than being overwritten. The default is the single deck.
 
 **Found by the round-trip test** (atoms and the IEEE13_CDPSM, IEEE123, IEEE4 OYOD decks; each is engine-checked):
 - **`like=` is never written.** The reader has already copied the other object's values into the record. `like=`
@@ -173,6 +177,7 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   - per element, its buses (bus names and `NodeOrder`) and YPrim (rel 1e-9);
   - the node voltages, solved with `controlmode=off tolerance=1e-10` (rel 1e-8 + 10 µV). Solution settings are not
     part of the model, so the reader drops them; the tight tolerance makes both decks converge to one answer.
+  - the three decks are also written `per_class` and checked the same way (records and engine).
 - **Names:** core precedence (argument > env var > `mrid`), a bad value raises, an unset name raises, `uri` is 36
   characters. Spoke: sanitizing, dots in bus names, a collision after sanitizing raises, namespaces are separate,
   the per-phase suffix.

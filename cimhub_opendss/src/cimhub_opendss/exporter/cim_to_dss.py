@@ -59,9 +59,10 @@ class DssExporter(FormatExporter):
         return model
 
 
-def cim_to_dss(network, destination, **opts) -> None:
-    """Export ``network`` and write the deck ``destination`` (a ``.dss`` path); ``opts`` go to ``to_model``."""
-    DssWriter().write(DssExporter().to_model(network, **opts), destination)
+def cim_to_dss(network, destination, *, per_class: bool = False, **opts) -> None:
+    """Export ``network`` and write the deck ``destination`` (a ``.dss`` path), one file per DSS class beside it
+    when ``per_class`` (``DssWriter.write``); ``opts`` go to ``to_model``."""
+    DssWriter().write(DssExporter().to_model(network, **opts), destination, per_class=per_class)
 
 
 def _circuit_source(network, name_source: str, circuit_source: str) -> cim.EnergySource:

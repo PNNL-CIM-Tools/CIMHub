@@ -119,11 +119,14 @@ class DssWriter(FormatWriter):
     # FormatWriter interface
     # ------------------------------------------------------------------
 
-    def write(self, model: GraphModel, destination: str) -> None:
+    def write(self, model: GraphModel, destination: str, *, per_class: bool = False) -> None:
         """Write *model* to the deck *destination* (a ``.dss`` path), in this order: ``Clear``; ``Set
         defaultbasefreq``; ``New Circuit``; ``Set earthmodel``; the records in ``WRITE_ORDER``; ``Set voltagebases`` and
         ``CalcVoltageBases``; one ``Open`` per open terminal; ``Buscoords``/``LatLongCoords`` naming the coordinates
-        files written beside the deck (``<stem>_buscoords.csv``, ``<stem>_latlongcoords.csv``)."""
+        files written beside the deck (``<stem>_buscoords.csv``, ``<stem>_latlongcoords.csv``).
+
+        ``per_class`` writes each class's records to its own file beside the deck (``linecode.dss``, ``line.dss``,
+        ...), which *destination* (the master) ``Redirect``s in ``WRITE_ORDER``."""
         destination = Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         options = self._options(model)
@@ -138,10 +141,20 @@ class DssWriter(FormatWriter):
             lines.append(self._set(options, "earthmodel"))  # the engine needs a circuit first
         kinds = _conductor_kinds(model)
         for cls in WRITE_ORDER:
-            for obj in model.list_by_class(cls):
-                if cls is schema.Vsource and str(obj.name).lower() == CIRCUIT_SOURCE:
-                    continue
-                lines.append(self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj))
+            commands = [self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj)
+                        for obj in model.list_by_class(cls)
+                        if not (cls is schema.Vsource and str(obj.name).lower() == CIRCUIT_SOURCE)]
+            if not commands:
+                continue
+            if not per_class:
+                lines += commands
+                continue
+            class_file = destination.with_name(f"{cls.__name__.lower()}.dss")
+            if class_file.name == destination.name.lower():
+                raise ValueError(f"DssWriter: the master {destination.name} would be overwritten by the "
+                                 f"{cls.__name__} file; name it otherwise")
+            class_file.write_text("\n".join(commands) + "\n", encoding="utf-8")
+            lines.append(f"Redirect {class_file.name}")
         if options is not None and options.voltagebases:
             lines += [self._set(options, "voltagebases"), "CalcVoltageBases"]
         for terminal in (options.open_terminals if options is not None else None) or []:
