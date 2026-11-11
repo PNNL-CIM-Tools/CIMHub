@@ -26,6 +26,7 @@ from cimhub_gdm.exporter import (
     shell,
     source,
     switch,
+    time_series,
     transformer,
 )
 from cimhub_gdm.exporter.naming import Names
@@ -46,7 +47,14 @@ class GdmExporter(FormatExporter):
     ``$CIMHUB_NAME_SOURCE``, else ``'mrid'``). ``system_name`` names the system; without it, the one Feeder's
     exported name does, and several Feeders raise (X1). Conducting equipment of a class no module exports raises.
     Required GDM fields CIM cannot hold get the neutral values of ``fills.py``, with one WARNING (X4).
+
+    ``time_points``: the TimePoint tables of the network's schedules (``read_time_points``, or the dict the importer
+    filled); each EnergyConnectionSchedule becomes its load's series (``time_series.py``). Without them, schedules
+    are exported with no series and one WARNING.
     """
+
+    def __init__(self, time_points: dict | None = None):
+        self.time_points = time_points
 
     def to_model(self, network, *, name_source: str | None = None,
                  system_name: str | None = None) -> DistributionSystem:
@@ -61,13 +69,15 @@ class GdmExporter(FormatExporter):
                     context.made[obj.uri()] = made
                     for component in made if isinstance(made, tuple) else (made,):
                         system.add_component(component)
+        time_series.add_time_series(system, context, self.time_points)
         fills.warn(context.filled)
         return system
 
 
-def cim_to_gdm(network, destination, **opts) -> None:
-    """Export ``network`` and write the GDM JSON file ``destination``; ``opts`` go to ``to_model``."""
-    write_gdm(GdmExporter().to_model(network, **opts), destination)
+def cim_to_gdm(network, destination, *, time_points: dict | None = None, **opts) -> None:
+    """Export ``network`` and write the GDM JSON file ``destination``; ``time_points`` as ``GdmExporter``, ``opts``
+    go to ``to_model``."""
+    write_gdm(GdmExporter(time_points).to_model(network, **opts), destination)
 
 
 def _system_name(network, name_source: str) -> str:

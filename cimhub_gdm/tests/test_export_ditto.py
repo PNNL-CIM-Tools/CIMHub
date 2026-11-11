@@ -17,9 +17,12 @@ drop R and X, which the original's rb bank leaves unset, and r1 parallels rb_a a
 """
 
 import math
+from datetime import datetime, timedelta
 
 import gdm_atoms
 import pytest
+from gdm.quantities import ActivePower
+from infrasys.time_series_models import SingleTimeSeries
 
 from cimhub_gdm import GdmExporter, gdm_to_cim
 
@@ -91,9 +94,13 @@ def test_an_exported_regulator_bank_holds_its_band(tmp_path):
 
 
 def test_an_exported_pv_makes_its_cim_output(tmp_path):
-    """Each PV's OpenDSS output is the p and q CIM holds (generation sign), through the irradiance rule."""
+    """Each PV's OpenDSS output is the p and q CIM holds (generation sign). ditto writes no active_power, so each
+    PV's irradiance is set to its output's share of the panel first: the exporter writes the stored irradiance."""
     system = _system(gdm_atoms.add_source, gdm_atoms.add_lines, gdm_atoms.add_transformers, gdm_atoms.add_der,
                      unwritten=((gdm_atoms.DistributionTransformer, "t_ln"),))
+    for pv in system.get_components(gdm_atoms.DistributionSolar):
+        share = (pv.active_power / pv.equipment.rated_power).to("dimensionless").magnitude
+        pv.irradiance = gdm_atoms.Irradiance(share, "kilowatt/meter**2")
     expected = {f"{pv.name}.{kind}": getattr(pv, f"{kind}_power").to(unit).magnitude
                 for pv in system.get_components(gdm_atoms.DistributionSolar)
                 for kind, unit in (("active", "kilowatt"), ("reactive", "kilovar"))}
@@ -110,3 +117,29 @@ def test_an_exported_pv_makes_its_cim_output(tmp_path):
                    strict=True, raises=Exception)
 def test_breakers_and_disconnectors_compile(tmp_path):
     _solve(_export(_system(gdm_atoms.add_source, gdm_atoms.add_switches, unwritten=())), tmp_path / "exported")
+
+
+def test_exported_load_series_become_actual_loadshapes(tmp_path):
+    """T1/T6 through ditto: one LoadShape per load with UseActual=yes, holding the load's actual kW and kvar."""
+    system = _system(gdm_atoms.add_source, gdm_atoms.add_loads, unwritten=())
+    for name in ("bal", "one"):
+        series = SingleTimeSeries.from_array(data=ActivePower([0.5, 1.0, 2.0], "kilowatt"), name="active_power",
+                                             initial_timestamp=datetime(2020, 1, 1), resolution=timedelta(hours=1))
+        system.add_time_series(series, system.get_component(gdm_atoms.DistributionLoad, name),
+                               profile_type="PMult", profile_name=f"ls_{name}", use_actual=False)
+    time_points = {}
+    network = gdm_atoms.type_limit_durations(gdm_to_cim(system, time_points=time_points))
+    exported = GdmExporter(time_points).to_model(network, name_source="name", system_name=system.name)
+    _solve(exported, tmp_path / "exported")
+
+    shapes = {}
+    for name in ("ls_bal", "ls_one"):
+        opendssdirect.LoadShape.Name(name)
+        shapes[name] = (opendssdirect.LoadShape.UseActual(), opendssdirect.LoadShape.HrInterval(),
+                        list(opendssdirect.LoadShape.PMult()), list(opendssdirect.LoadShape.QMult()))
+    assert shapes == {
+        "ls_bal": (True, 1.0, pytest.approx([150, 300, 600]), pytest.approx([75, 150, 300])),
+        "ls_one": (True, 1.0, pytest.approx([25, 50, 100]), pytest.approx([12.5, 25, 50])),
+    }
+    opendssdirect.Loads.Name("bal")
+    assert opendssdirect.Loads.Yearly() == "ls_bal"

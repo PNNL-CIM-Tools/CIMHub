@@ -71,7 +71,8 @@ def _der_fields(prefix: str, unit: str) -> dict:
 
 FIELDS_DistributionSolar = {
     **_der_fields(PV_PREFIX, "PhotoVoltaicUnit"),
-    "irradiance": Field("untranscribed", note="no CIM home: p is the snapshot output"),
+    "irradiance": Field("copied", (("add_ssh", "irradiance", None),),
+                        note="PhotoVoltaicUnit.irradiance (B16b); an irradiance series stays dropped (T2)"),
 }
 FIELDS_DistributionBattery = {
     **_der_fields(STORAGE_PREFIX, "BatteryUnit"),
@@ -124,6 +125,7 @@ def add_solar(network, solar, naming: Naming) -> None:
     unit = builder.create(mRID=f"{pec}_unit", name=solar.name)
     builder.add_electrical(unit, maxP=panel_power(solar.equipment.rated_power, label),
                            PowerElectronicsConnection=pec)
+    builder.add_ssh(unit, irradiance=qty(solar.irradiance))
 
 
 def panel_power(rated_power, label: str) -> Qty:

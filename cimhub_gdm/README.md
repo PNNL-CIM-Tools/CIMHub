@@ -20,8 +20,25 @@ sequence and geometry, with their wire and cable catalogs), loads, capacitors (w
 (tank-configuration templates, center taps by lug, off-nominal taps), regulators (with their tap changers and
 controls), DER (PV and batteries, with their inverter and battery AssetInfo) and series reactors are mapped. Inverter
 controllers, the daily-timed capacitor controller and earthing switches raise as pending, naming what they wait for.
-Time series are dropped with one warning. Requires the CIM-Builder `TransformerTankEnd` method
-(`add_transformer_tank_end`) and `SeriesCompensatorBuilder`.
+Load time series map onto nc_schedule `EnergyConnectionSchedule`s when you pass a `time_points` dict (below); other
+series, and all of them without the dict, are dropped with one warning. Requires the CIM-Builder `TransformerTankEnd`
+method (`add_transformer_tank_end`), `SeriesCompensatorBuilder` and `EnergyConnectionScheduleBuilder`.
+
+**Time series** ([`docs/TIMESERIES_NEEDS.md`](docs/TIMESERIES_NEEDS.md)). The schedules go in the CIM XML; their points
+go in Parquet beside it, one row per point keyed by the schedule's uri, never as graph objects:
+
+```python
+from cimgraph.utils import write_xml
+from cimhub_gdm import GdmExporter, gdm_to_cim, read_time_points, write_time_points
+
+time_points = {}                                    # filled: {"EnergyConnectionTimePoint": pyarrow.Table}
+feeder_model = gdm_to_cim(system, time_points=time_points)
+write_xml(feeder_model, "feeder.xml")
+write_time_points(time_points, "feeder.xml")        # feeder.EnergyConnectionTimePoint.parquet
+
+time_points = read_time_points("feeder.xml", reloaded_model)     # checked against the reloaded XML
+system = GdmExporter(time_points).to_model(reloaded_model)        # each load gets its actual-value series back
+```
 
 The output is cim18v17 only, and survives a cim18v17 XML round trip unchanged. An IEEE13-like reference system
 (`tests/gdm_atoms.py`, `reference_system()`) is checked end to end against a reviewed golden. GDM fields with no

@@ -84,7 +84,7 @@ them is X11.
 | X7 | Per-phase values | GDM is per phase everywhere (`phase_loads`, `phase_capacitors`, `sources`). Loads and DER come from `get_phase_loads` / `get_der_output` (per-phase CIM values, else the total split evenly over the phase conductors: getter rule 3). The source's equal phases come from `get_source`. A capacitor's come from `get_shunt_reactive_power` per phase. |
 | X8 | Controllers | RegulatingControl → the capacitor controller class picked by mode, the exact inverse of the importer's (on and off = target ∓ deadband / 2, ÷ pt/ct ratio). TapChangerControl → RegulatorController. Inverter controllers are not in CIM (`PENDING` on import), so the DER get `controller=None`. |
 | X9 | Units | Every GDM quantity is built from a getter float in the unit that getter was asked for, e.g. `Voltage(v, "kilovolt")`. There is no `* 1e3` (cim-units skill). GDM matrices are per length; the exporter asks the getter for `ohm/mi` or `ohm/m`, never scales them itself. |
-| X10 | Time series and coordinates | None: CIM holds no time series, and bus coordinates are untranscribed on import (B14). Equipment `Location` coordinates are not GDM fields. |
+| X10 | Time series and coordinates | **Time series since 2026-11-11:** each EnergyConnectionSchedule becomes its load's actual-value series, from the `time_points` tables (`GdmExporter(time_points)`, `exporter/time_series.py`; TIMESERIES_NEEDS.md §5). Bus coordinates are untranscribed on import (B14). Equipment `Location` coordinates are not GDM fields. |
 | X11 | Scope | **Decided (user, 2026-11-09): wait for DSS S6.** This branch edits `cimhub_gdm/` only. The two getters both exporters need (`get_wire_info`, `get_series_compensator`) are written by whichever wave reaches them first, in core with their tests, and the other one consumes them. Phase X4 goes after DSS S6b and S6e have landed them on rc_1; X1-X3 don't need them. |
 
 ### 3.1 The X4 list
@@ -98,7 +98,7 @@ Required in GDM 2.4.1, untranscribed on import (found by walking the importer's 
 | `length` on MatrixImpedanceSwitch | 1 m | `length > 0` is enforced; with the switch matrices it gives 1 mΩ |
 | DistributionReactor `length` | 1 m | ReactorEquipment `resistance` / `reactance` are totals, so the length scales nothing (importer 17b) |
 | DistributionSwitchController `delay`, `is_locked` | 0 s, False | no CIM home |
-| ~~DistributionSolar `irradiance`~~ | **now a rule (X4 as built):** p / maxP × 1 kW/m² | not neutral: ditto writes no `active_power`, and OpenDSS makes Pmpp × Irradiance, so a constant would change the PV's output |
+| ~~DistributionSolar `irradiance`~~ | **now PhotoVoltaicUnit.irradiance (B16b), else a rule (X4 as built):** p / maxP × 1 kW/m² | not neutral: ditto writes no `active_power`, and OpenDSS makes Pmpp × Irradiance, so a constant would change the PV's output |
 | SolarEquipment `resistance`, `reactance` | 0 %, 0 % | no CIM home |
 | InverterEquipment `cutin_percent`, `cutout_percent`, `dc_to_ac_efficiency`; `rise_limit`, `fall_limit` | 0 %, 0 %, 100 %; None, None (the field is required but takes None) | no CIM home |
 | BatteryEquipment `idling_efficiency` | 100 % | no CIM home |

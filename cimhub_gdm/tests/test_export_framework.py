@@ -168,6 +168,7 @@ def test_a_hybrid_inverter_is_one_der_per_unit():
                                                      if connection is not home.PowerElectronicsConnection}
     home.PowerElectronicsConnection = house
     house.PowerElectronicsUnit.append(home)
+    house.PowerElectronicsUnit[0].irradiance = None  # the rule: the unit's output share of its panel
     exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
     pv = exported.get_component(gdm_atoms.DistributionSolar, "house")
     battery = exported.get_component(gdm_atoms.DistributionBattery, "home")
@@ -177,6 +178,13 @@ def test_a_hybrid_inverter_is_one_der_per_unit():
     assert pv.irradiance.to("kilowatt / meter ** 2").magnitude == pytest.approx(0.4)
     assert pv.inverter is battery.inverter
     assert pv.inverter.rated_apparent_power.to("kilova").magnitude == pytest.approx(3)
+
+
+def test_a_stored_irradiance_is_exported_as_is():
+    """B16b: PhotoVoltaicUnit.irradiance, when set, is the GDM irradiance, not the output's share of the panel."""
+    exported = GdmExporter().to_model(_golden("der", "der"), name_source="name", system_name="atom")
+    roof = exported.get_component(gdm_atoms.DistributionSolar, "roof")
+    assert roof.irradiance.to("kilowatt / meter ** 2").magnitude == pytest.approx(0.9)
 
 
 def test_a_battery_rated_differently_each_way_raises():
