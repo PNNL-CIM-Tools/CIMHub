@@ -6,7 +6,8 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
 
 - BY_ENDS: ``PowerTransformerEnd`` ratings and ``r``, ``TransformerMeshImpedance`` between ends, the core's
   ``g``/``b`` on one end.
-- AUTO: ``AutoTransformerEnd`` (``baseU``, ``ratedS``) and a mesh between ends; no core.
+- AUTO: ``AutoTransformerEnd`` (``baseU``, ``ratedS``) and a mesh between ends; no core. One with no mesh is ideal
+  (a GLM regulator: no impedance and no kVA), so it needs no ``ratedS``.
 - BY_PHASE_ENDS: the tank's ``TransformerWinding``s, each a coil between two ``TransformerPhaseEnd``s (matched to
   the ``PowerTransformerEnd`` by ``endNumber``), a mesh between windings, the tank's ``noLoadLoss`` and
   ``percentMagnetizingCurrent``.
@@ -18,7 +19,7 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   ``TransformerPhaseEnd`` it lands on (a centre tap).
 
 Every impedance and admittance comes out in percent or pu on one power base: ``base_power`` when the caller declares
-one (``network.base_power`` for RAW), else winding 1's ``ratedS`` (DSS and GLM put every percent on it). CIM stores
+one (``network.base_power`` for RAW), else winding 1's ``ratedS`` (DSS and GLM put every percent on it); an ideal AutoTransformer without one has none. CIM stores
 a percent on its From winding's own ``baseU²/baseS``, read with ``get_qty``. Moving it to the declared base changes
 only the power, because the voltage stays the From winding's: z × S_new/S_old, y × S_old/S_new. A winding's
 ``baseS`` is per phase, so its whole-unit power is winding 1's ``ratedS`` scaled by the two ``baseS``.
@@ -88,7 +89,7 @@ class TransformerModel(NamedTuple):
     windings: tuple[Winding, ...]
     mesh: dict[tuple[int, int], MeshImpedance]  # {(i, j): ...}, i < j winding numbers
     core: CoreAdmittance
-    base_power: float  # power_unit: what every percent or pu is on
+    base_power: float | None  # power_unit: what every percent or pu is on; None on an unrated ideal AutoTransformer
 
 
 class _Coil(NamedTuple):
@@ -111,14 +112,16 @@ def get_transformer_units(transformer: cim.PowerTransformer | cim.AutoTransforme
 def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=None, voltage_unit: str = "V",
                           power_unit: str = "VA") -> TransformerModel:
     """The unit's windings, mesh impedance and core. ``impedance_unit`` is ``'percent'`` or ``'pu'``, on
-    ``base_power`` (an ApparentPower such as ``network.base_power``), else on winding 1's ``ratedS``. Raises when
-    a form is ambiguous, a rating a value needs is unset, or two places that hold the same value disagree."""
+    ``base_power`` (an ApparentPower such as ``network.base_power``), else on winding 1's ``ratedS``, which only an
+    ideal AutoTransformer (no mesh) may leave unset. Raises when a form is ambiguous, a rating a value needs is
+    unset, or two places that hold the same value disagree."""
     if impedance_unit not in IMPEDANCE_UNITS:
         raise ValueError(f"impedance_unit must be one of {sorted(IMPEDANCE_UNITS)}, not {impedance_unit!r}")
     form = _form(unit)
     coils = _coils(unit, form)
     first = coils[0].source
-    first_va = required_qty(first, "ratedS", "VA")
+    ideal = form is TransformerForm.AUTO and not any(coil.source.FromMeshImpedance for coil in coils)
+    first_va = get_qty(first, "ratedS", "VA") if ideal else required_qty(first, "ratedS", "VA")
     result_va = first_va if base_power is None else base_power.to("VA")
     factor = IMPEDANCE_UNITS[impedance_unit]
 

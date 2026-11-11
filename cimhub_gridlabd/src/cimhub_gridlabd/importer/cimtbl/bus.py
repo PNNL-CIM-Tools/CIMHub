@@ -63,13 +63,21 @@ _GROUPS = (
         "momentary_count", "monthly_bill", "monthly_energy", "monthly_fee", "power_market", "pre_load",
         "previous_monthly_bill", "previous_monthly_energy", "price", "price_base", "s_flag", "sustained_count",
         "t_flag", "total_count"), ("first_tier_", "second_tier_", "third_tier_")),
-    ("a load on the bus (constant power, current or impedance): load slice S4a; until then listed, never set "
-     "silently", (), ("power_", "current_", "shunt_", "current_inj_")),
     ("substation transmission interface (co-simulation with a transmission solver)",
      ("transmission_level_constant_current_load", "transmission_level_constant_impedance_load",
       "transmission_level_constant_power_load"), ()),
     ("solver setting", ("power_convergence_value",), ()),
 )
+
+#: A bus's own load accumulators (``power_X``, ``current_X``, ``shunt_X``): no deck sets them on a bus that is not a
+#: plain ``triplex_node``, so they raise when set (S4a-7, ``check_bus_loads``).
+BUS_LOAD_PREFIXES = ("power_", "current_", "shunt_", "current_inj_")
+BUS_LOAD = Field("structural", note="a load on the bus itself: raises when set (S4a-7); a plain triplex_node's "
+                                    "power_1/_2/_12 are triplex_node.cimtbl's")
+_TRIPLEX_POWER = Field("copied", (("EnergyConsumer", "p", "{unit}"), ("EnergyConsumer", "q", "{unit}")),
+                       note="a plain triplex_node's constant power: legs 1, 2 -> s1, s2; 12 -> the 240 V consumer "
+                            "(S4a-6, triplex_node.cimtbl)")
+_NOT_A_LOAD = {f"power_{leg}": BUS_LOAD for leg in ("1", "2", "12")}
 
 _SWING_VOLTAGE = Field("derived", note="on a SWING bus only: EnergySource voltageMagnitude = line_voltage(|V|) and "
                                        "voltageAngle = arg(V) in degrees; elsewhere the solver's initial guess")
@@ -86,19 +94,26 @@ _BY_CLASS = {
         "negative_sequence_voltage": Field("untranscribed", note="solver output"),
         "zero_sequence_voltage": Field("untranscribed", note="solver output"),
     },
-    schema.TriplexNode: {"voltage_1": _SWING_VOLTAGE, "voltage_2": _INITIAL_GUESS, "voltage_N": _INITIAL_GUESS},
+    schema.TriplexNode: {"voltage_1": _SWING_VOLTAGE, "voltage_2": _INITIAL_GUESS, "voltage_N": _INITIAL_GUESS,
+                         **{f"power_{leg}": _TRIPLEX_POWER for leg in ("1", "2", "12")}},
+    schema.TriplexMeter: _NOT_A_LOAD,
+    schema.TriplexLoad: _NOT_A_LOAD,
 }
 
 
-def classify(native_cls: type) -> dict[str, Field]:
-    """``FIELDS`` of one bus class: the common and class rows, then the untranscribed groups. Raises on a slot
-    nothing claims."""
+def classify(native_cls: type, own: dict[str, Field] | None = None) -> dict[str, Field]:
+    """``FIELDS`` of one bus class: the common and class rows, ``own`` (a device's slots: a load's, a
+    capacitor's), the bus load accumulators (``BUS_LOAD``), then the untranscribed groups. Raises on a slot nothing
+    claims."""
     fields: dict[str, Field] = {}
     for klass in reversed(native_cls.__mro__):
         fields.update({slot: field for slot, field in _BY_CLASS.get(klass, {}).items()})
-    fields = {**_COMMON, **fields}
+    fields = {**_COMMON, **fields, **(own or {})}
     for slot in field_names(native_cls):
         if slot in fields:
+            continue
+        if slot.startswith(BUS_LOAD_PREFIXES) and slot not in _EXACT_NAMES:
+            fields[slot] = BUS_LOAD
             continue
         note = next((note for note, names, _ in _GROUPS if slot in names), None)  # an exact name wins
         if note is None:
@@ -109,7 +124,24 @@ def classify(native_cls: type) -> dict[str, Field]:
     return {slot: fields[slot] for slot in field_names(native_cls)}
 
 
+_EXACT_NAMES = {name for _, names, _ in _GROUPS for name in names}
+
+
+def inherited(fields: dict[str, Field], own: dict[str, Field]) -> dict[str, Field]:
+    """A device's bus slots: ``fields`` without its ``own`` (its row comments list those)."""
+    return {slot: field for slot, field in fields.items() if slot not in own}
+
 FIELDS = {native_cls: classify(native_cls) for native_cls in NATIVE_CLASSES}
+
+
+def check_bus_loads(model: GlmModel, classified: dict[type, dict[str, Field]]) -> None:
+    """Raise on a bus's own load accumulator that is set (``BUS_LOAD``, S4a-7)."""
+    for name, record in sorted(bus_records(model).items()):
+        fields = classified.get(type(record), {})
+        for slot, field in fields.items():
+            if field is BUS_LOAD and getattr(record, slot) is not None:
+                raise ValueError(f"{record.class_name} {name}: {slot} {getattr(record, slot)} is a load on the bus "
+                                 "itself; not mapped (S4a-7)")
 
 
 # ---------------------------------------------------------------------------
@@ -154,12 +186,12 @@ def _disagreement(model: GlmModel, record, bus: BusSystem) -> str | None:
     return f"{cell(record.nominal_voltage)} {unit} ({own_kv:.4g} kV {bus.system.value}) on {bus.base_voltage}"
 
 
-def _untranscribed_set(model: GlmModel, records) -> str | None:
-    """``untranscribed, set here: <class> <slot> <count>, ...``: the untranscribed slots this model sets on the S1
-    classes (D5: nothing disappears silently)."""
+def untranscribed_set(model: GlmModel, records, fields_by_class: dict[type, dict[str, Field]]) -> str | None:
+    """``untranscribed, set here: <class> <slot> <count>, ...``: the untranscribed slots of ``fields_by_class`` this
+    model sets on ``records`` (D5: nothing disappears silently)."""
     counts: Counter = Counter()
     for record in records:
-        fields = FIELDS.get(type(record))
+        fields = fields_by_class.get(type(record))
         if fields is None:
             continue
         for slot, field in fields.items():
@@ -197,7 +229,7 @@ def map_buses(model: GlmModel, buses: dict[str, BusSystem], roots: dict[str, str
         for how, names in sorted(disagreements.items()):
             comments.append(_wrap(f"nominal_voltage disagrees with the walk ({NOMINAL_TOLERANCE:.0%}): {how} "
                                   f"({len(names)}): " + ", ".join(names)))
-    untranscribed = _untranscribed_set(model, records.values())
+    untranscribed = untranscribed_set(model, records.values(), FIELDS)
     if untranscribed:
         comments.append(_wrap(untranscribed))
     table = Table("ConnectivityNode", [Column("mRID"), Column("name"), Column("BaseVoltage"),

@@ -1,0 +1,18 @@
+# GridLAB-D triplex_load -> EnergyConsumer (+ EnergyConsumerPhase values).
+# Source table: triplex_load (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
+
+Profile = cim18v17
+
+# p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_atom
+    # scheduled: base_power_1=zipsched.value*2941.18, base_power_2=zipsched.value*2941.18; the base is mapped, the
+    # schedule is not (S4a-2, TODO)
+    ld_tl_house,   tl_house,   tm2, s1s2, Y, true,  5000.005999999999, 3098.725410481542, zip_constant_i,  bv_240v
+    ld_tl_legs,    tl_legs,    tm1, s1s2, Y, true,  4500.0,            1800.0,            zip_constant_pq, bv_240v
+    ld_tl_legs_12, tl_legs_12, tm1, s1s2, D, false, 4000.0,            1500.0,            zip_constant_pq, bv_240v
+
+# the phases differ, so each child carries its own p, q (a delta child is its branch)
+Update Table EnergyConsumerPhase: mRID, p (W), q (VAr)
+    ld_tl_legs_s1, 2500.0, 1000.0
+    ld_tl_legs_s2, 2000.0, 800.0

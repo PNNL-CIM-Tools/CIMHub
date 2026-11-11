@@ -1,11 +1,14 @@
 """GridLAB-D model -> ``.cimtbl`` documents -> cim18v17: the orchestrator.
 
 The topology walk runs once (``site``). The master holds the containers, BaseFrequency and BaseVoltages, then one
-``Import`` per part: ``bus.cimtbl`` (every root bus) and ``source.cimtbl`` first, then ``MAPPING_ORDER``, the class
+``Import`` per part: ``bus.cimtbl`` (every root bus), ``source.cimtbl`` and the core ``zip_fractions.cimtbl`` (the
+shared ZIP load models) first, then ``MAPPING_ORDER``, the class
 parts in the plan's section 2 order (catalogs before the instances that use them); each slice adds its mappers.
 ``CLASSIFIED`` holds every mapped class's ``FIELDS``. A GLM class not in it is listed by count on the master's
 comment (GLM-14), so nothing disappears silently. A value the reader kept as an expression (``LIGHTS*1.2``) in a
-slot a mapper reads raises (GLM-8): the mapper would otherwise see the slot as unset.
+slot a mapper reads raises (GLM-8): the mapper would otherwise see the slot as unset. The exception is a load's
+``base_power``, whose mapper reads a ``<schedule>.value*K`` itself (S4a-2). A bus's own load accumulators raise
+(S4a-7).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master``.
 """
@@ -20,9 +23,10 @@ from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
 
 from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
+from cimhub_core.load_response import zip_fractions
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import (bus, conductor, configuration, line, regulator, spacing, switch,
-                                            transformer, transformer_configuration)
+from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, line, load, regulator, spacing,
+                                            switch, transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -63,6 +67,9 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     (schema.Transformer, lambda model, site: transformer.map_transformers(model, site.roots, site.buses,
                                                                           site.feeder)),
     (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
+    *((load_class.native, lambda model, site, load_class=load_class:
+       load.map_loads(model, load_class, site.roots, site.buses, site.feeder)) for load_class in load.LOAD_CLASSES),
+    (schema.Capacitor, lambda model, site: capacitor.map_capacitors(model, site.roots, site.buses, site.feeder)),
 )
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
@@ -71,7 +78,8 @@ CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, sc
                                             schema.TransformerConfiguration: transformer_configuration.FIELDS,
                                             schema.Transformer: transformer.FIELDS,
                                             schema.Regulator: regulator.FIELDS,
-                                            schema.RegulatorConfiguration: regulator.CONFIGURATION_FIELDS}
+                                            schema.RegulatorConfiguration: regulator.CONFIGURATION_FIELDS,
+                                            **load.FIELDS, schema.Capacitor: capacitor.FIELDS}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:
@@ -91,11 +99,15 @@ def site(model: GlmModel, name: str) -> Site:
                 base_frequency(model)[0])
 
 
-def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]]) -> None:
-    """Raise if a slot a mapper reads (not untranscribed) holds an expression the reader kept (GLM-8)."""
+def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],
+                      read_by_mapper: dict[type, set[str]]) -> None:
+    """Raise if a slot a mapper reads (not untranscribed) holds an expression the reader kept (GLM-8), unless its
+    mapper reads the expression itself (``read_by_mapper``: a load's scheduled base, S4a-2)."""
     for (name, slot), text in sorted(model.expressions.items()):
         record = model.by_name(name)
         fields = classified.get(type(record))
+        if slot in read_by_mapper.get(type(record), ()):
+            continue
         if fields is not None and fields[slot].kind != "untranscribed":
             origin = model.origins[name]
             raise ValueError(f"{record.class_name} {name} ({origin[0]}:{origin[1]}): {slot} is the expression "
@@ -154,10 +166,11 @@ class GlmImporter(CimtblImporter):
         self.authority = authority
 
     def to_cimtbl(self, model: GlmModel) -> DocumentSet:
-        check_expressions(model, CLASSIFIED)
+        check_expressions(model, CLASSIFIED, load.EXPRESSION_SLOTS)
+        bus.check_bus_loads(model, CLASSIFIED)
         walked = site(model, self.name)
         documents = [bus.map_buses(model, walked.buses, walked.roots, walked.feeder),
-                     bus.map_source(model, walked.buses, walked.substation),
+                     bus.map_source(model, walked.buses, walked.substation), zip_fractions(),
                      *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
         parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, authority=self.authority), parts=parts)

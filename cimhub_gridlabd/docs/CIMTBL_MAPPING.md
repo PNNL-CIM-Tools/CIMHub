@@ -10,7 +10,9 @@ its README).
 The master imports the parts in `MAPPING_ORDER` (`importer/glm_to_cimtbl.py`), which follows the plan's section 2.
 S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 the six catalog files; S3a the six line and switch
 files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transformer.cimtbl` (after the
-switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own).
+switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own);
+S4a the core `zip_fractions.cimtbl` (after `source.cimtbl`), then `load.cimtbl`, `triplex_load.cimtbl`,
+`triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators).
 
 ## master
 
@@ -1948,9 +1950,9 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 | S3c-6 | `REMOTE_NODE` | Raises: a `TapChangerControl.Terminal` is a terminal, and a sense node is a bus with no single terminal to name; its one deck (IEEE13_houses) stops at the walk. As the DSS import's remote `bus` |
 | S3c-7 | Ratings | Each 1-phase unit's `OperationalLimitSet` carries its own phase's ratings (6 Java-export regulators: 763.58 / 1041.25 A); a gang unit's are the link's, as S3a-5 |
 
-**Core owes (plan section 7):** the transformer getter's `AUTO` form reads `ratedS` (required) and a mesh between
-the ends; an ideal regulator (no `ratedS`, no mesh) has to read as a 1:1 unit before an exporter can read these.
-S3c's tests do not go through the getter.
+**Getter (done 2026-11-10, on this branch):** the transformer getter's `AUTO` form reads an `AutoTransformer` with
+no mesh as ideal: no `ratedS` needed, an empty mesh, no core, and `base_power` the declared one, else `None`. One
+with a mesh still requires winding 1's `ratedS`. S3c's tests read every bound unit through the getter.
 
 **Tests.** An atom `tests/atoms/regulator/regulator.glm` on the line atom: `OUTPUT_VOLTAGE` written `CAB` with a
 regulator `tap_B`, IEEE123's `MANUAL` `CA` unit (`Type A`, compensator settings), a `LINE_DROP_COMP` 1-phase unit with
@@ -2037,3 +2039,424 @@ The object header and the link slots (as S3a) are left out.
 | `tap_C_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
 | `sense_node` | `Optional[str]` |  | structural | REMOTE_NODE's monitored node; raises when set (S3c-6) |
 | `regulator_resistance` | `Optional[float]` | `0.001` | untranscribed | NR's stand-in series resistance (default powerflow::default_resistance, 1e-4 ohm); the AutoTransformerEnds are ideal (S3c-2) |
+
+## S4a: loads and capacitors (approved and built 2026-11-10)
+
+S4a maps the loads (`load`, `triplex_load`, and the power of a plain `triplex_node`) and `capacitor` with its control
+(GLM-8), plan section 2 rows 12 and 13. GridLAB-D citations are to `powerflow/load.cpp`, `triplex_load.cpp`,
+`triplex_node.cpp`, `node.cpp` and `capacitor.cpp`. **The user's calls (2026-11-10): S4a-2 approved with a TODO for
+the schedule, S4a-5 approved, S4a-8 option (a)** ("breaking away from the sloppy java converter was the right call").
+S4a-2 and S4a-5 amend GLM-8.
+
+| # | artifact | native class (records) | CIM | mRID |
+|---|---|---|---|---|
+| 12 | `load.cimtbl` | load (1,532) | `EnergyConsumer` + per-phase `EnergyConsumerPhase` values | `ld_<name>` |
+| 12 | `triplex_load.cimtbl` | triplex_load (1) | `EnergyConsumer` for the legs, a second for the 240 V part | `ld_<name>`, `ld_<name>_12` |
+| 12 | `triplex_node.cimtbl` | triplex_node with `power_1`/`_2`/`_12` (7,492) | as triplex_load | as triplex_load |
+| 13 | `capacitor.cimtbl` | capacitor (78) | `LinearShuntCompensator` per unit (S4a-8), a `RegulatingControl` per controlled unit | `cap_<name>[_<phase>]`, `cc_<name>[_<phase>]` |
+
+A load or capacitor is itself a bus in GridLAB-D (S0's amendment of section 2), so each device sits on its record's
+root bus (GLM-4), and its `BaseVoltage` is that bus's. The bus is already in `bus.cimtbl`.
+
+**What the decks hold** (the 28 readable decks):
+- **`load`** (1,532):
+  - **Given as constant power.** 1,429 taxonomy loads give `constant_power_X` in VA, with `load_class` set and the
+    parent a meter.
+  - **Given as base power with fractions.** 103 Java-export loads (IEEE13_cdpsm, IEEE13_assets, IEEE123) give
+    `base_power_X ieeezipload.value*<|S| VA>` with `current_fraction_X 1` and `current_pf_X`. `ieeezipload` is the Java
+    exporter's run-file schedule (`GldNode.java:475`); no deck defines it.
+  - **Not set anywhere:** `constant_current_X`, `constant_impedance_X`, the explicit `_AN`/`_AB` forms,
+    `power_fraction_X`, `impedance_fraction_X`, and a node's or meter's own `power_X`/`current_X`/`shunt_X`.
+  - **Phases:** wye on 1-3 phases on 1,523 loads; `ABCD` 7 and `BCD` 2 are delta.
+- **Triplex:** `power_12` on 7,492 taxonomy `triplex_node`s, each the child of a `triplex_meter`. Nothing else in the
+  `power_1`/`current_*`/`shunt_*` family is set. One `triplex_load` (IEEE13_cdpsm `ld_house`, `BS`) has
+  `base_power_1`/`_2` with `current_fraction 1`.
+- **`capacitor`** (78):
+  - `capacitor_X` is in MVAr on 70 and VAr on 4.
+  - `control` is `VOLT` 48, `MANUAL` 22, and unset (MANUAL) 8.
+  - `control_level` is `INDIVIDUAL` (the default) everywhere it is set.
+  - `pt_phase` is a single phase except `ABCN` on 2.
+  - `phases_connected` is wye everywhere (`ABC` 47, `ABCN` 5, 1-2 phases 26); none is delta.
+  - Switches: CLOSED on 32 (all three phases), unset on 45 (GridLAB-D's default OPEN), OPEN on 1 (IEEE13_assets
+    cap1).
+  - 24 taxonomy 1-phase capacitors also give `capacitor_X` on unconnected phases, which GridLAB-D ignores
+    (`capacitor.cpp:1447-1454`).
+  - No deck sets `remote_sense`, `VAR`/`VARVOLT`/`CURRENT`, a delta `pt_phase`, the `*_deadband_center` forms or
+    `lockout_time`.
+
+```
+# IEEE13_cdpsm ld_670a (one GLM load on 670, three phases) and ld_692 (delta, only phase C = branch CA)
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ld_ld_670a, ld_670a, 670, ABC, Y, true,  200000, 116000, zip_constant_i, bv_4p16kv
+    ld_ld_692,  ld_692,  692, AC,  D, false, 170000, 151000, zip_constant_i, bv_4p16kv
+Update Table EnergyConsumerPhase: mRID, p (W), q (VAr)
+    ld_ld_670a_A, 17000,  10000                        # and _B 66 + 38j, _C 117 + 68j kVA
+# taxonomy: power_12 on a triplex_node (240 V across the legs)
+Table EnergyConsumer: ...
+    ld_R1-12-47-1_tn_1_12, R1-12-47-1_tn_1_12, R1-12-47-1_tm_1, s1s2, D, false, 1530, 410, zip_constant_pq, bv_240v
+# taxonomy VOLT capacitor, phases_connected ABC, pt_phase B, switches unset (OPEN), under S4a-8 (a)
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections, BaseVoltage, EquipmentContainer
+    cap_R1-12-47-1_cap_1_B, R1-12-47-1_cap_1_B, R1-12-47-1_node_422, B, Y, true, 300000, 7200, 0.00579, 0, 0, 1, ...
+Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, Terminal
+    cc_R1-12-47-1_cap_1_B, R1-12-47-1_cap_1_B, B, 7200, 200, cap_R1-12-47-1_cap_1_B_T1
+```
+
+(Values in the example are illustrative; the goldens hold the real ones.)
+
+### Slots (load, triplex_load, triplex_node)
+
+| GLM slot | kind | target |
+|---|---|---|
+| `name` | derived | `EnergyConsumer.name`; mRID `ld_` + name (the 240 V part `_12`) |
+| `parent` / the record | structural | `node`: the root bus (GLM-4) |
+| `phases` | structural | wye unless it has D. `phases` on the consumer = the phases that carry power (S4a-1); S raises on a `load` |
+| `constant_power_X` (`power_1`/`_2`/`_12`) | copied | the phase's p + jq, VA via pint; consumption is positive p |
+| `base_power_X` + `*_fraction_X` + `*_pf_X` | derived | GridLAB-D's split at nominal voltage (S4a-3); a `<schedule>.value*K` base is K (S4a-2) |
+| `constant_current_X`, `constant_impedance_X`, `_AN`/`_AB` forms | structural | raise when set (S4a-5) |
+| `load_class`, `load_priority` | untranscribed | sorting only (`load.cpp:518`); `load_priority` is read by nothing |
+| `nominal_voltage` | structural | the bus's (S1); not read again |
+| `measured_*`, `phase_loss_protection`, `inrush_*`, frequency dependence | untranscribed | solver output or engine options |
+
+### Slots (capacitor)
+
+| GLM slot | kind | target |
+|---|---|---|
+| `name` | derived | `LinearShuntCompensator.name` = name, or name_<phase> for a per-phase unit (S4a-8); mRID `cap_` + that, the control `cc_` + that |
+| `phases_connected` (else `phases`) | structural | the unit's phases, wye and grounded (S4a-11); D raises |
+| `capacitor_X` | derived | the phase's VAr via pint; `nomQ` = the unit's sum, `bPerSection` = nomQ / nomU² (S4a-10); a phase not connected is dropped and listed in the row comment |
+| `cap_nominal_voltage` | derived | `nomU`: the phase-to-neutral rating (else the bus's `nominal_voltage`, `capacitor.cpp:376`), × √3 on a 2- or 3-phase unit (CIM's line voltage) |
+| `switchA`/`B`/`C` | derived | `sections` = `normalSections` = 1 CLOSED, 0 OPEN, default OPEN (S4a-9); `maximumSections` 1 |
+| `control` | structural | VOLT: a `RegulatingControl` (S4a-12); MANUAL (default): none; VAR, VARVOLT, CURRENT raise |
+| `control_level` | structural | the units (S4a-8) |
+| `pt_phase` | structural | which units the control switches; with D it raises |
+| `voltage_set_low`, `voltage_set_high` | derived | `targetValue` = the midpoint, `targetDeadband` = high - low (`band_from_on_off`) |
+| `dwell_time`, `time_delay` | derived | `aVRDelay` = dwell_time + time_delay (s), as S3c-5 |
+| `remote_sense`, `remote_sense_B`, `*_deadband_center`, `*_deadband` | structural | raise when set |
+| `VAr_set_*`, `current_set_*`, `lockout_time` | untranscribed | read only by the unmapped modes |
+| `cap_X_switch_count` | untranscribed | solver output |
+
+### Fail fast (S4a)
+
+The mapper raises on:
+- `base_power_X` and `constant_power_X` both set on one phase, since GridLAB-D keeps only the base form
+  (`load.cpp:984`);
+- an expression other than `<name>.value*<number>`;
+- every unmapped form listed above;
+- a capacitor with no capacitance on a connected phase, or no `cap_nominal_voltage` and no bus voltage;
+- a gang unit whose phases' switch states or kVAr differ (S4a-8, S4a-10).
+
+### Decisions for S4a
+
+| # | topic | proposal |
+|---|---|---|
+| S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is only a bus (valid GridLAB-D: the S1 bus atom has one), so it writes no consumer and is listed in the artifact header (amended at build, 2026-11-10: the draft raised). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
+| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today |
+| S4a-3 | Base power form | As GridLAB-D does at nominal voltage (`load.cpp:940-1073`, `triplex_load.cpp:410-731`). Per part k (power, current, impedance), with `pf` defaulting to 1: P_k = base × f_k × \|pf_k\| and Q_k = P_k × √(1/pf_k² - 1), negative when pf_k < 0 (leading). pf_k = 0 gives P_k = 0 and Q_k = base × f_k. When the fractions don't sum to 1, the power fraction becomes 1 - I - Z (GridLAB-D's own repair, `load.cpp:945`), noted as `defaulted:` |
+| S4a-4 | Voltage response | ZIP fractions from the load's totals (each part's P and Q over the totals). When every part is one kind, the shared `zip_constant_pq`/`_i`/`_z` row (core `zip_fractions.cimtbl`, which the master imports as DSS's does); otherwise a `zip_<pP>_<pI>_<pZ>_<qP>_<qI>_<qZ>` row in the artifact (GDM's naming; the mRID rounds the fractions to 6 places, the row holds them exactly, and two sets that round alike raise). When Q is 0, the Q fractions are the P fractions. Two artifacts that both use one mixed set would both write the row and fail to bind; no deck has a mixed set. Every deck is one kind: taxonomy constant power, Java exports constant current |
+| **S4a-5** | **Explicit current and impedance (approved)** | **`constant_current_X`, `constant_impedance_X`, the `_AN`/`_AB` forms, and `current_*`/`shunt_*` on triplex nodes raise until a deck sets them. They carry angle conventions that no deck exercises: the current is relative to the nominal phasor (0/-120/+120, +30 on delta; `solver_nr.cpp:9409`), and triplex leg 2 has reversed polarity (`node.cpp:1233`). This amends GLM-8, which said they derive** |
+| S4a-6 | Split phase | `_1` → s1 and `_2` → s2 are 120 V legs to neutral: one consumer on `s1s2` (or `s1`, `s2`), `Y`, grounded, as the core load shape and DSS's `ld_house`. `_12` is 240 V across the legs: a second consumer `ld_<name>_12` on `s1s2`, `D`, not grounded. The taxonomy has only `_12`, so one D consumer each |
+| S4a-7 | Artifacts | One per native class: `load.cimtbl`, `triplex_load.cimtbl`, `triplex_node.cimtbl` (plain `triplex_node`s that carry power). Load slots on any other bus class (node, meter, triplex_meter) raise |
+| **S4a-8** | **Capacitor units (option (a), the user's call)** | **GridLAB-D switches each phase separately. Under INDIVIDUAL (the default, all 70 that set it), VOLT switches only the `pt_phase` phases, each on its own phase voltage (`capacitor.cpp:1180-1205`). The other phases stay at their initial state, by default OPEN. (a) Recommended, as S3c's INDIVIDUAL units: one unit per set of phases that switch together. MANUAL or unset is one gang unit, whose switch states must agree (raise otherwise, as S3a's per-phase switch states). Automatic INDIVIDUAL is one 1-phase unit per connected phase, `cap_<name>_<phase>`, with a control on the units whose phase is in `pt_phase`. BANK is one gang unit (no deck). Under (a), 34 taxonomy 3-phase capacitors with `pt_phase B` have phases A and C fixed OPEN, as GridLAB-D runs them, and only B switches. (b) One gang unit per capacitor, controlled on `pt_phase`, as a DSS CapControl would be: all three phases switch on B, which GridLAB-D does not do** |
+| S4a-9 | Initial state | `sections` = `normalSections` = the switch state as GridLAB-D starts it: 1 CLOSED, 0 OPEN, OPEN when unset (`capacitor.cpp:151-195`); never overridden. 45 taxonomy capacitors start OPEN |
+| S4a-10 | Rating | `nomQ` = the sum of the unit's `capacitor_X` (VAr via pint). `nomU` = `cap_nominal_voltage` (LN) × √3 on 2-3 phases. `bPerSection` = nomQ / nomU², which the shunt getter reads back as Q = b × nomU² × sections; on one phase it is GridLAB-D's capacitor_X / Vc² (`capacitor.cpp:394`). Every gang unit in the decks is balanced, so no per-phase b is written; an unbalanced gang unit raises, and the shunt getter keeps its own raise |
+| S4a-11 | Connection | `phases_connected` without D is wye, grounded, with or without N: GridLAB-D puts the shunt phase to ground either way. Ungrounded would change the physics on export. D raises (no deck; GridLAB-D's delta rates on LN², `capacitor.cpp:1398`) |
+| S4a-12 | VOLT control | `RegulatingControl` mode voltage, discrete, enabled. It monitors the unit's own terminal (`_T1`) on the unit's phase (a gang unit's: `pt_phase`, one phase or raise). Target and deadband come from `band_from_on_off(voltage_set_low, voltage_set_high)` in primary volts, LN, with no PT: closes at or below low, opens at or above high (`capacitor.cpp:1180`). `aVRDelay` = dwell_time + time_delay, `controlEnabled` true, by the shunt shape's `Update` row. MANUAL has no control; any set points it carries go in the row comment |
+
+**Cross-solver note on S4a-8 (the user asked for it, 2026-11-10, so capacitor controls can be checked across
+solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapControl would.
+- Under option (a), the taxonomy's 3-phase VOLT capacitors with `pt_phase B` become three 1-phase units. Only B has a
+  control; A and C stay at their initial state, OPEN when the deck doesn't set it. Exported to OpenDSS, that is three
+  1-phase capacitors and one CapControl on B: GridLAB-D's behaviour, kept.
+- Option (b), not taken, was one gang unit switched on B. That is what the DSS import of a DSS-authored deck gives,
+  and likely what the taxonomy authors meant.
+- So on these 34 capacitors a GLM → CIM → DSS run and a DSS-native run of "the same" feeder are expected to differ:
+  up to two thirds of each bank's kVAr, whenever B closes.
+- A cross-format check should compare per-phase switched kVAr against GridLAB-D's own solution, not against the DSS
+  golden, and list these capacitors as an expected divergence.
+- MANUAL capacitors are one gang unit under both options, so they don't diverge.
+
+**Expected differences vs the DSS import of IEEE 13:**
+- The Java export wrote every load as constant current (its ZIP option), where DSS has PQ, Z and I.
+- GLM holds one load per node: `ld_670a` carries 670a/b/c as phases. So the comparison is per node and phase:
+  p and q agree to the Java export's 0.01 VA.
+- The house is `s1s2`, wye, 5 kW + 3.0987 kVAr in both.
+- The capacitors match: MANUAL and CLOSED, cap1 600 kVAr at 4.16 kV, cap2 100 kVAr at 2.4 kV.
+
+**Core work in S4a (plan section 7 rows 249-250):**
+- The `load` shape gains an unbalanced example with `Update Table EnergyConsumerPhase` rows, a delta branch, and a
+  240 V `s1s2` D consumer.
+- The `shunt` shape stays as is, since S4a-10 writes no per-phase b.
+
+**Tests.**
+- An atom `tests/atoms/load/load.glm` on the line atom:
+  - constant power on two wye phases;
+  - a delta load on one branch;
+  - the base form with mixed fractions and a negative pf, plus fractions that don't sum to 1;
+  - a scheduled base;
+  - a triplex_load with legs and `_12`;
+  - a triplex_node `power_12`.
+- An atom `tests/atoms/capacitor/capacitor.glm`:
+  - a MANUAL gang unit;
+  - a VOLT INDIVIDUAL 3-phase capacitor with `pt_phase B` and switches unset;
+  - a 1-phase VOLT capacitor with a value on an unconnected phase;
+  - a BANK.
+- Goldens for both atoms and for IEEE13_cdpsm.
+- GridLAB-D's math against the bound objects on every deck: per-phase p and q from the native record, b × V² =
+  capacitor_X, and controls on exactly the `pt_phase` units.
+- The fail-fast cases.
+- The deck sweep.
+
+### Built (2026-11-10)
+
+- **Code:**
+  - `importer/cimtbl/load.py`: load, triplex_load and the plain triplex_node's power.
+  - `importer/cimtbl/capacitor.py`.
+  - `bus.py`: a bus's own load accumulators raise (`BUS_LOAD`, `check_bus_loads`), and a plain triplex_node's
+    `power_1`/`_2`/`_12` are now this slice's. `classify` takes a device's own slots.
+  - The orchestrator imports the core `zip_fractions.cimtbl`, and lets a load's scheduled base through the
+    expression guard (`load.EXPRESSION_SLOTS`).
+- **Core:** the `load` shape gained an unbalanced consumer with `Update Table EnergyConsumerPhase` rows and a 240 V
+  `s1s2` D consumer, with two getter tests. The `shunt` shape is unchanged, since S4a-10 writes no per-phase b.
+- **Found at build:**
+  - A load with no power is only a bus. It is listed in the header rather than raising (S4a-1).
+  - A single delta branch and the 240 V part take no per-phase row: the load getter requires valued children to be
+    the conductors.
+  - A zip_ row holds its fractions exactly, and only its mRID is rounded (the getter checks the sum to 1e-6).
+  - Each row comment lists only the device's own untranscribed values; its inherited bus slots (the solver's initial
+    `voltage_X`) are counted once on the table comment.
+- **Tests:**
+  - `tests/test_cimtbl_load.py` and `tests/test_cimtbl_capacitor.py`, with the atoms `tests/atoms/load/`
+    (`load.glm`, `triplex.glm`) and `tests/atoms/capacitor/`.
+  - Goldens for the atoms and for IEEE13_cdpsm (`load`, `triplex_load`, `capacitor`).
+  - Every deck reads through the core load, shunt and control getters, against GridLAB-D's formulas written out
+    again in the test.
+- **Results:**
+  - 412 GLM tests pass with `--roundtrip` over every deck.
+  - 27 decks bind; the same two deck defects stop the other two.
+  - The decks give 9,025 consumers, 162 capacitor units (34 closed at start) and 46 VOLT controls.
+  - IEEE13_cdpsm matches the DSS golden per node and phase to the Java export's 0.01 VA. Its two capacitors equal
+    DSS's.
+
+### Field tables (generated: `fields_table(cls, records, fields=OWN)`, samples from tests/decks and the atoms)
+
+#### `load` (its own slots; its bus slots are S1's, with the load accumulators raising, S4a-7)
+
+| Load field | type | samples | kind | target |
+|---|---|---|---|---|
+| `load_class` | `Optional[str]` | `I`, `C`, `R` | untranscribed | for sorting only (load.cpp:518) |
+| `load_priority` | `Optional[str]` |  | untranscribed | read by nothing in powerflow |
+| `constant_power_A` | `Union[dict, Complex, NoneType]` | `Complex({'real': 585277.7504, 'imag':...`, `Complex({'real': 0.0, 'imag': 0.0})`, `Complex({'real': 110387.6944, 'imag':...` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_B` | `Union[dict, Complex, NoneType]` | `Complex({'real': 596917.157, 'imag': ...`, `Complex({'real': 9908.4297, 'imag': 3...`, `Complex({'real': 19800.0, 'imag': 600...` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_C` | `Union[dict, Complex, NoneType]` | `Complex({'real': 592476.6189, 'imag':...`, `Complex({'real': 54848.3315, 'imag': ...`, `Complex({'real': 16454.4994, 'imag': ...` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_A_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_B_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_C_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_A_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_B_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_C_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_A` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_B` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_C` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_A_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_B_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_C_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_A_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_B_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_C_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_A` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_B` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_C` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_A_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_B_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_C_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_A_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_B_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_C_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CN` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CN_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CN_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AB` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BC` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CA` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AB_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BC_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CA_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_AB_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_BC_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_CA_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AB` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BC` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CA` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AB_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BC_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CA_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_AB_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_BC_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_CA_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AB` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BC` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CA` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AB_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BC_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CA_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_AB_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_BC_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_CA_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `measured_voltage_A` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_AB` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_BC` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_CA` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `phase_loss_protection` | `Union[bool, Bool, NoneType]` |  | untranscribed | engine option |
+| `measured_power_A` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_power_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_power_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `power_pf_A` | `Optional[float]` | `0.9` | derived | with base_power; default 1 |
+| `current_pf_A` | `Optional[float]` | `0.824042`, `0.83005`, `0.861934` | derived | with base_power; default 1 |
+| `impedance_pf_A` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_pf_B` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `current_pf_B` | `Optional[float]` | `0.8`, `0.805651`, `0.867313` | derived | with base_power; default 1 |
+| `impedance_pf_B` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_pf_C` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `current_pf_C` | `Optional[float]` | `0.904819`, `0.8`, `0.864582` | derived | with base_power; default 1 |
+| `impedance_pf_C` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_fraction_A` | `Optional[float]` | `0.5` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_A` | `Optional[float]` | `1.0`, `0.3` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_A` | `Optional[float]` | `0.2` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `power_fraction_B` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_B` | `Optional[float]` | `1.0` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_B` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `power_fraction_C` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_C` | `Optional[float]` | `1.0`, `0.6` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_C` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `inrush_integration_method_capacitance` | `Optional[str]` |  | untranscribed | engine option |
+| `inrush_integration_method_inductance` | `Optional[str]` |  | untranscribed | engine option |
+
+
+#### `triplex_load` (its own slots; its bus slots are S1's, with the load accumulators raising, S4a-7)
+
+| TriplexLoad field | type | samples | kind | target |
+|---|---|---|---|---|
+| `load_class` | `Union[str, ForwardRef('LoadClass'), NoneType]` |  | untranscribed | for sorting only (load.cpp:518) |
+| `load_priority` | `Union[str, ForwardRef('LoadPriority'), NoneType]` |  | untranscribed | read by nothing in powerflow |
+| `constant_power_1` | `Union[dict, Complex, NoneType]` | `Complex({'real': 2500.0, 'imag': 1000...` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_2` | `Union[dict, Complex, NoneType]` | `Complex({'real': 2000.0, 'imag': 800.0})` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_12` | `Union[dict, Complex, NoneType]` | `Complex({'real': 4000.0, 'imag': 1500...` | copied | `EnergyConsumer.p` (VA), `EnergyConsumer.q` (VA); the phase's p + jq, VA via pint; with base_power_X raises |
+| `constant_power_1_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_2_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_12_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_1_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_2_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_power_12_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_1` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_2` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_12` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_1_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_2_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_12_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_1_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_2_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_current_12_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_1` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_2` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_12` | `Union[dict, Complex, NoneType]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_1_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_2_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_12_real` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_1_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_2_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `constant_impedance_12_reac` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one (S4a-5) |
+| `measured_voltage_1` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_2` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_voltage_12` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `indiv_measured_power_1` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `indiv_measured_power_2` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `indiv_measured_power_12` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
+| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `power_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `current_pf_1` | `Optional[float]` | `0.85` | derived | with base_power; default 1 |
+| `impedance_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_pf_2` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `current_pf_2` | `Optional[float]` | `0.85` | derived | with base_power; default 1 |
+| `impedance_pf_2` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_pf_12` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `current_pf_12` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `impedance_pf_12` | `Optional[float]` |  | derived | with base_power; default 1 |
+| `power_fraction_1` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_1` | `Optional[float]` | `1.0` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_1` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `power_fraction_2` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_2` | `Optional[float]` | `1.0` | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_2` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `power_fraction_12` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `current_fraction_12` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+| `impedance_fraction_12` | `Optional[float]` |  | derived | with base_power; default 0, the power fraction 1 - I - Z when they don't sum to 1 |
+
+
+#### `capacitor` (its own slots; its bus slots are S1's, with the load accumulators raising, S4a-7)
+
+| Capacitor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `pt_phase` | `Optional[str]` | `ABCN`, `A`, `B` | structural | VOLT: the units that get a control (INDIVIDUAL) or the gang unit's monitored phase (BANK); D raises |
+| `phases_connected` | `Optional[str]` | `ABCN`, `CN`, `AN` | structural | the connected phases (else phases): wye, grounded with or without N (S4a-11); D raises |
+| `switchA` | `Optional[str]` | `CLOSED`, `OPEN` | derived | sections = normalSections: 1 CLOSED, 0 OPEN; default OPEN (S4a-9); a gang unit's must agree |
+| `switchB` | `Optional[str]` | `CLOSED`, `OPEN` | derived | sections = normalSections: 1 CLOSED, 0 OPEN; default OPEN (S4a-9); a gang unit's must agree |
+| `switchC` | `Optional[str]` | `CLOSED`, `OPEN` | derived | sections = normalSections: 1 CLOSED, 0 OPEN; default OPEN (S4a-9); a gang unit's must agree |
+| `control` | `Union[str, ForwardRef('Control'), NoneType]` | `VOLT` | structural | VOLT: a RegulatingControl; MANUAL (default): none; VAR, VARVOLT, CURRENT raise |
+| `cap_A_switch_count` | `Optional[float]` |  | untranscribed | solver output |
+| `cap_B_switch_count` | `Optional[float]` |  | untranscribed | solver output |
+| `cap_C_switch_count` | `Optional[float]` |  | untranscribed | solver output |
+| `voltage_set_high` | `Optional[float]` | `2500.0`, `2600.0`, `7300.0` | derived | targetValue = the midpoint, targetDeadband = high - low (band_from_on_off); opens at or above it |
+| `voltage_set_low` | `Optional[float]` | `1950.0`, `2050.0`, `7200.0` | derived | with voltage_set_high; closes at or below it |
+| `voltage_deadband_center` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `voltage_deadband` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `VAr_set_high` | `Optional[float]` |  | untranscribed | read only by the VAR, VARVOLT and CURRENT modes |
+| `VAr_set_low` | `Optional[float]` |  | untranscribed | read only by the VAR, VARVOLT and CURRENT modes |
+| `VAr_deadband_center` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `VAr_deadband` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `current_set_low` | `Optional[float]` |  | untranscribed | read only by the VAR, VARVOLT and CURRENT modes |
+| `current_set_high` | `Optional[float]` |  | untranscribed | read only by the VAR, VARVOLT and CURRENT modes |
+| `current_deadband_center` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `current_deadband` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `capacitor_A` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `capacitor_B` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `capacitor_C` | `Optional[float]` | `200000.0`, `100000.0`, `0.3` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `cap_nominal_voltage` | `Optional[float]` | `2401.78`, `2400.0`, `2402.0` | derived | nomU: the phase-to-neutral rating (else nominal_voltage, capacitor.cpp:376), x sqrt 3 on 2-3 phases |
+| `time_delay` | `Optional[float]` | `0.0`, `300.0`, `30.0` | derived | aVRDelay = dwell_time + time_delay (s), as S3c-5 |
+| `dwell_time` | `Optional[float]` | `0.0`, `30.0`, `15.0` | derived | with time_delay |
+| `lockout_time` | `Optional[float]` |  | untranscribed | read only by VARVOLT |
+| `remote_sense` | `Optional[str]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `remote_sense_B` | `Optional[str]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
+| `control_level` | `Union[str, ForwardRef('ControlLevel'), NoneType]` | `INDIVIDUAL`, `BANK` | structural | the units (S4a-8): INDIVIDUAL (default) VOLT is a unit per phase |

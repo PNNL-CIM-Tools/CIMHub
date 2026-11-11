@@ -1,0 +1,12 @@
+# GridLAB-D capacitor -> LinearShuntCompensator + RegulatingControl.
+# Source table: capacitor (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
+
+Profile = cim18v17
+
+# a unit per set of phases that switch together (S4a-8); sections: the switch state GridLAB-D starts with, OPEN when unset (S4a-9)
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    # defaulted: control=MANUAL, time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
+    cap_cap_cap1, cap_cap1, 675, ,  600000.0, 4160.004988602778, 0.03467077483488329,  1, 1, bv_4p16kv
+    # defaulted: control=MANUAL, time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
+    cap_cap_cap2, cap_cap2, 611, C, 100000.0, 2400.0,            0.017361111111111112, 1, 1, bv_4p16kv

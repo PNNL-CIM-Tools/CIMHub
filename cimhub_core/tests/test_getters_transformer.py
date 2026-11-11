@@ -128,6 +128,48 @@ def test_auto_transformer():
     assert model.core == CoreAdmittance(None, None)
 
 
+# an ideal VoltageRegulator (GLM's): two AutoTransformerEnds with no ratedS and no mesh
+IDEAL_REGULATOR = """Profile = cim18v17
+Object VoltageRegulator: mRID=xf_ideal, name=ideal
+Table AutoTransformerEnd: mRID, node, phase, endNumber, grounded, baseU (V), AutoTransformer=xf_ideal
+    xf_ideal_1, n0, AN, 1, true, 2401.78
+    xf_ideal_2, n1, AN, 2, true, 2401.78
+"""
+
+
+def _ideal_regulator(tmp_path, extra=""):
+    path = tmp_path / "ideal.cimtbl"
+    path.write_text(IDEAL_REGULATOR + extra)
+    return load_model(path)
+
+
+def test_ideal_auto_transformer(tmp_path):
+    model = _model(_ideal_regulator(tmp_path), "xf_ideal", cim.VoltageRegulator)
+    assert model.form is TransformerForm.AUTO
+    assert [(w.phases, w.base_u, w.rated_s, w.r) for w in model.windings] == [((A, N), pytest.approx(2.40178), None,
+                                                                               None)] * 2
+    assert (model.mesh, model.core, model.base_power) == ({}, CoreAdmittance(None, None), None)
+
+
+def test_ideal_auto_transformer_on_a_declared_base(tmp_path):
+    model = _model(_ideal_regulator(tmp_path), "xf_ideal", cim.VoltageRegulator, base_power=cim.ApparentPower(1, "MVA"))
+    assert model.base_power == pytest.approx(1000)
+
+
+def test_unrated_auto_transformer_with_a_mesh_raises(tmp_path):
+    # the binder takes a percent only on a rated From end, so the mesh runs from a rated end 2; end 1 is the base
+    path = tmp_path / "unrated.cimtbl"
+    path.write_text("""Profile = cim18v17
+Object VoltageRegulator: mRID=xf_unrated, name=unrated
+Table AutoTransformerEnd: mRID, node, phase, endNumber, baseU (V), ratedS (kVA), AutoTransformer=xf_unrated
+    xf_unrated_1, n0, AN, 1, 2401.78,
+    xf_unrated_2, n1, AN, 2, 2401.78, 500
+Object TransformerMeshImpedance: mRID=xf_unrated_m, FromTransformerEnd=xf_unrated_2, ToTransformerEnd=xf_unrated_1, x (percent)=0.01
+""")
+    with pytest.raises(ValueError, match="AutoTransformerEnd 'xf_unrated_1': ratedS is unset"):
+        _model(load_model(path), "xf_unrated", cim.VoltageRegulator)
+
+
 def test_regulator_by_ends():
     model = _model(_shape("regulator"), "xf_reg1")
     assert [(w.phases, w.connection, w.r) for w in model.windings] == [((A,), cim.WindingConnection.Y,

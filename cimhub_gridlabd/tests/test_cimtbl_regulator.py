@@ -9,6 +9,7 @@ import pytest
 from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
+from cimhub_core.getters.transformer import TransformerForm, get_transformer_model
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
 from cimhub_gridlabd.importer.cimtbl import regulator
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
@@ -38,7 +39,8 @@ def test_every_slot_is_classified(fields, native):
 
 def assert_gridlabd_regulation(model, network) -> None:
     """Every unit's tap changer gives GridLAB-D's tap and step (``regulator.cpp:244``, ``:262``) and its control
-    GridLAB-D's band (``:245``); a unit per wired phase on INDIVIDUAL, all ideal (no mesh)."""
+    GridLAB-D's band (``:245``); a unit per wired phase on INDIVIDUAL, all ideal (no mesh) as the transformer getter
+    reads them."""
     units = {str(vr.mRID): vr for vr in network.list_by_class(cim.VoltageRegulator)}
     assert not network.list_by_class(cim.TransformerMeshImpedance) or all(
         not isinstance(m.FromTransformerEnd, cim.AutoTransformerEnd)
@@ -53,6 +55,9 @@ def assert_gridlabd_regulation(model, network) -> None:
             vr = units[name]
             assert vr.construction.value == f"type{config.Type or 'B'}"
             ends = sorted(vr.AutoTransformerEnd, key=lambda end: end.endNumber)
+            read = get_transformer_model(vr)
+            assert (read.form, read.mesh, read.base_power) == (TransformerForm.AUTO, {}, None), name
+            assert [winding.end for winding in read.windings] == ends
             assert [end.Terminal.phases.value for end in ends] == [f"{letters if bank else letter}N"] * 2
             tap = ends[1].RatioTapChanger
             given = getattr(reg, f"tap_{letter}")

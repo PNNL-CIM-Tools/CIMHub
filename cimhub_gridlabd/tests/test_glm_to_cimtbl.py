@@ -10,7 +10,7 @@ from conftest import deck, defines
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer import glm_to_cimtbl
-from cimhub_gridlabd.importer.cimtbl import bus
+from cimhub_gridlabd.importer.cimtbl import bus, load
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, base_frequency, check_expressions, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
@@ -35,11 +35,14 @@ schedule S { * * * * * 1; }
 object load { name l1; phases AN; base_power_A S*2; }
 object node { name n1; phases ABCN; voltage_B S*7200; voltage_A S*7200; }
 """)
-    fields = {schema.Node: bus.FIELDS[schema.Node]}
+    fields = {schema.Node: bus.FIELDS[schema.Node], schema.Load: load.FIELDS[schema.Load]}
+    with pytest.raises(ValueError, match=r"load l1 \(.*model.glm:3\): base_power_A is the expression 'S\*2'"):
+        check_expressions(model, fields, {})
+    # the load mapper reads its base's expression itself (S4a-2); voltage_A is read on a swing bus
     with pytest.raises(ValueError, match=r"node n1 \(.*model.glm:4\): voltage_A is the expression 'S\*7200'"):
-        check_expressions(model, fields)  # voltage_A is read on a swing bus; voltage_B (untranscribed) is not
+        check_expressions(model, fields, load.EXPRESSION_SLOTS)
     del model.expressions[("n1", "voltage_A")]
-    check_expressions(model, fields)  # load is not classified yet, voltage_B is untranscribed: nothing raises
+    check_expressions(model, fields, load.EXPRESSION_SLOTS)  # voltage_B is untranscribed: nothing raises
 
 
 def test_ieee13_cdpsm_master(scope):
@@ -55,9 +58,9 @@ def test_master_lists_every_class_no_mapper_reads(tmp_path, scope, monkeypatch):
     monkeypatch.setattr(glm_to_cimtbl, "MAPPING_ORDER", ())
     model = read(tmp_path, """
 object substation { name src; bustype SWING; phases ABCN; nominal_voltage 7200; }
-object load { name ld; parent src; phases AN; nominal_voltage 7200; }
+object inverter { name inv; parent src; }
 object recorder { name r; }
 """)
     master = GlmImporter("m").to_cimtbl(model).master
-    assert "not mapped: load 1, recorder 1" in master.comment  # substation is mapped (S1)
+    assert "not mapped: inverter 1, recorder 1" in master.comment  # substation is mapped (S1); inverter is S4b
 

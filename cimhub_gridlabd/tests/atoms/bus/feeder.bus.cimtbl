@@ -4,7 +4,7 @@
 Profile = cim18v17
 
 # nominal_voltage disagrees with the walk (10%): 480.0 V (0.8314 kV 3-phase) on bv_480v (1): meter_1
-# untranscribed, set here: substation power_convergence_value 1, triplex_node power_12 1
+# untranscribed, set here: substation power_convergence_value 1
 Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_feeder
     # children: ld_1
     n1,        n1,        bv_12p47kv
