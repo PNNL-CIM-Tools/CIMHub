@@ -21,7 +21,7 @@ from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nod
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.linecode import linecode_name, sequence_slots
 from cimhub_opendss.exporter.linegeometry import geometry_name, line_offset
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.ACLineSegment,)

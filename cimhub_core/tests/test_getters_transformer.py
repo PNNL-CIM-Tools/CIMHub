@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
+from cimgraph.models import BusBranchModel
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
@@ -31,6 +32,15 @@ Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, x (p
     xf_3w_m12, xf_3w_1, xf_3w_2, 8
     xf_3w_m13, xf_3w_1, xf_3w_3, 10
     xf_3w_m23, xf_3w_2, xf_3w_3, 4
+"""
+
+# the same windings with a star x on every end (percent on its own end) and no mesh: on 10 MVA, x = 4, 4, 6
+STAR_THREE_WINDING = """Profile = cim18v17
+Object PowerTransformer: mRID=xf_3w, name=3w
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, ratedU (kV), ratedS (kVA), r (percent), x (percent), PowerTransformer=xf_3w
+    xf_3w_1, a, ABC, 1, D, 115,  10000, 0.4, 4
+    xf_3w_2, b, ABC, 2, Y, 13.8, 5000,  0.5, 2
+    xf_3w_3, c, ABC, 3, Y, 4.16, 5000,  0.5, 3
 """
 
 
@@ -168,6 +178,39 @@ def test_network_base_power():
     assert model.mesh[(1, 2)].x == pytest.approx(160.0)
 
 
+def test_unrated_ends_read_on_a_declared_base_power(tmp_path):
+    # a RAW 3-winding unit's ends have no ratedS (E4-1): the ohms on each end's ratedU go straight onto 100 MVA, the
+    # same numbers as test_system_base_in_pu
+    network = _three_winding(tmp_path)
+    for end in network.graph[cim.PowerTransformerEnd].values():
+        end.ratedS = None
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    assert [w.r for w in model.windings] == pytest.approx([0.04, 0.1, 0.1])
+    assert [w.rated_s for w in model.windings] == [None, None, None]
+    assert model.mesh[(2, 3)].x == pytest.approx(0.8)
+    with pytest.raises(ValueError, match="PowerTransformerEnd 'xf_3w_1': ratedS is unset"):
+        _model(network, "xf_3w")
+
+
+def test_zero_end_holds_no_core(tmp_path):
+    # RAW writes end 2's g, b as 0 (CIM: the secondary end is zero, E4-2); the core is end 1's
+    network = _three_winding(tmp_path)
+    end_1, end_2 = (_get(network, cim.PowerTransformerEnd, mrid) for mrid in ("xf_3w_1", "xf_3w_2"))
+    end_1.g, end_1.b = cim.Conductance(1e-4, "S"), cim.Susceptance(-2e-4, "S")
+    end_2.g, end_2.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    z_base = 115e3 ** 2 / 100e6
+    assert model.core == pytest.approx(CoreAdmittance(1e-4 * z_base, -2e-4 * z_base))
+    end_1.g, end_1.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")
+    assert _model(network, "xf_3w").core == CoreAdmittance(0.0, 0.0)  # zeros on two ends: one zero core
+
+
+def test_phase_shift_of_an_end(tmp_path):
+    network = _three_winding(tmp_path)
+    _get(network, cim.PowerTransformerEnd, "xf_3w_2").phaseShift = cim.AngleDegrees(-30.0)
+    assert [w.phase_shift for w in _model(network, "xf_3w").windings] == [None, pytest.approx(-30.0), None]
+
+
 def test_core_on_an_end_moves_by_its_rating(tmp_path):
     network = _three_winding(tmp_path)
     end = _get(network, cim.PowerTransformerEnd, "xf_3w_2")
@@ -248,10 +291,28 @@ def test_coil_across_two_ends_raises():
         get_transformer_model(_get(network, cim.TransformerTank, "xf_t3_tank"))
 
 
-def test_star_impedance_raises():
+def test_star_impedance_of_two_windings_on_end_1():
+    # behind_transformer: r, x = 0.35, 42.3 ohm on end 1 (230 kV, 150 MVA, z base 352.67 ohm); end 2 has none
+    network = load_model(SHAPES / "behind_transformer.cimtbl", model_cls=BusBranchModel)
+    model = get_transformer_model(_get(network, cim.PowerTransformer, "gen_g1_xf"), "pu")
+    assert [w.r for w in model.windings] == [pytest.approx(0.35 * 150 / 230**2), None]
+    assert _mesh(model) == {(1, 2): (None, pytest.approx(42.3 * 150 / 230**2))}
+    on_system = get_transformer_model(_get(network, cim.PowerTransformer, "gen_g1_xf"), "pu",
+                                      base_power=network.base_power)
+    assert on_system.mesh[(1, 2)].x == pytest.approx(42.3 * 100 / 230**2)
+
+
+def test_star_impedance_of_three_windings_adds_by_pair(tmp_path):
+    path = tmp_path / "star.cimtbl"
+    path.write_text(STAR_THREE_WINDING)
+    model = _model(load_model(path), "xf_3w")
+    assert _mesh(model) == {(1, 2): (None, 8.0), (1, 3): (None, 10.0), (2, 3): (None, 10.0)}
+
+
+def test_star_and_mesh_impedance_raise():
     network = _shape("transformer_by_ends")
     _get(network, cim.PowerTransformerEnd, "xf_sub_1").x = cim.Reactance(1.0)
-    with pytest.raises(ValueError, match="a star impedance"):
+    with pytest.raises(ValueError, match="both a star impedance .PowerTransformerEnd.x. and a mesh impedance"):
         get_transformer_model(_get(network, cim.PowerTransformer, "xf_sub"))
 
 

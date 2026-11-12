@@ -21,12 +21,22 @@ def kv_from_per_unit(per_unit: float, base_kv: float) -> float:
     return per_unit * base_kv
 
 
+def per_unit_from_kv(kv: float, base_kv: float) -> float:
+    """The exporter's inverse of ``kv_from_per_unit``: pu = kV / base."""
+    return kv / base_kv
+
+
 def ka_from_rating(rating_mva: float, base_kv: float) -> float:
     """A current in kA from a rating "in current expressed as MVA" (NXFRAT/XFRRAT > 0; RAW-9).
 
     The spec's MVA_rated = sqrt(3) x E_base x I_rated, so kA = MVA / (sqrt(3) x kV).
     """
     return rating_mva / (math.sqrt(3) * base_kv)
+
+
+def rating_from_ka(current_ka: float, base_kv: float) -> float:
+    """The exporter's inverse of ``ka_from_rating``: MVA = sqrt(3) x kV x kA."""
+    return math.sqrt(3) * base_kv * current_ka
 
 
 def volts_from_per_unit(per_unit: float, base_kv: float) -> float:
@@ -43,6 +53,14 @@ def per_unit_from_mva(value_mva: float, base_mva: float) -> float:
     return value_mva / base_mva
 
 
+def mva_from_per_unit(per_unit: float, base_mva: float) -> float:
+    """"MW / Mvar at one per unit voltage" from an admittance in pu on the system base: value = pu x SBASE.
+
+    The inverse of ``per_unit_from_mva``: the exporter's fixed shunt GL/BL and switched shunt Bi/BINIT (E2).
+    """
+    return per_unit * base_mva
+
+
 def ohms_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> float:
     """An impedance in ohm from pu on a base kV and MVA: ohm = pu x kV^2 / MVA (kV^2 / MVA is exactly ohm).
 
@@ -57,6 +75,24 @@ def siemens_from_per_unit(per_unit: float, base_kv: float, base_mva: float) -> f
     Transformer MAG1/MAG2 (CM 1, R4).
     """
     return per_unit * base_mva / base_kv ** 2
+
+
+def per_unit_from_ohms(ohms: float, base_kv: float, base_mva: float) -> float:
+    """An impedance in pu on a base kV and MVA from ohm: ``ohms_from_per_unit`` inverted (the exporter's transformer
+    CR/CX, E4)."""
+    return ohms * base_mva / base_kv ** 2
+
+
+def impedance_on_bus_base(per_unit: float, rated_kv: float, bus_kv: float) -> float:
+    """A transformer impedance in pu on a winding's ratedU moved to its bus's BASKV, at the same power:
+    pu x (ratedU / BASKV)^2. The exporter's CZ 1 (E4), ``transformer_ohms`` CZ 1 inverted; 1 when NOMV = BASKV."""
+    return per_unit * (rated_kv / bus_kv) ** 2
+
+
+def admittance_on_bus_base(per_unit: float, rated_kv: float, bus_kv: float) -> float:
+    """A transformer admittance in pu on a winding's ratedU moved to its bus's BASKV, at the same power:
+    pu x (BASKV / ratedU)^2. The exporter's CM 1 (E4), ``magnetizing_siemens`` CM 1 inverted."""
+    return per_unit * (bus_kv / rated_kv) ** 2
 
 
 def watts_from_mw(value_mw: float) -> float:
@@ -81,6 +117,20 @@ def reactive_band(vswlo: float, vswhi: float, q_min_mvar: float, q_max_mvar: flo
     span = q_max_mvar - q_min_mvar
     low, high = q_min_mvar + vswlo * span, q_min_mvar + vswhi * span
     return vars_from_mvar(0.0 - (low + high) / 2), vars_from_mvar(high - low)
+
+
+def band_fractions(target_mvar: float, deadband_mvar: float, q_min_mvar: float,
+                   q_max_mvar: float) -> tuple[float, float]:
+    """A switched shunt's ``(VSWLO, VSWHI)`` from its reactive-power target and deadband in Mvar at the device's
+    terminal (CIM load sign), as pu of the device's range q_min..q_max (Mvar, output sign): the inverse of
+    ``reactive_band`` (the exporter's MODSW 3 and 6, E2). A range of zero width raises."""
+    span = q_max_mvar - q_min_mvar
+    if span == 0:
+        raise ValueError(f"the reactive range {q_min_mvar}..{q_max_mvar} Mvar has no width; VSWLO/VSWHI are "
+                         "fractions of it")
+    middle = 0.0 - target_mvar
+    low, high = middle - deadband_mvar / 2, middle + deadband_mvar / 2
+    return (low - q_min_mvar) / span, (high - q_min_mvar) / span
 
 
 def _per_unit_from_watts(watts: float, base_mva: float) -> float:
@@ -171,7 +221,7 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     - step = neutralStep + (WINDV - the neutral ratio) / the step size, a float (CIM allows a non-integer
       step); measured from the neutral, so a WINDV at ratio 1 is exactly neutralStep;
     - a WINDV outside RMI..RMA extends lowStep below 1 or highStep above NTP to the first whole step past it
-      (R4b-5; CIM: lowStep <= step <= highStep).
+      (R4b-5; CIM: lowStep <= step <= highStep); one at RMA or RMI is step NTP or 1, not a rounding past it.
 
     NTP < 2 or RMA <= RMI raises.
     """
@@ -184,6 +234,8 @@ def ratio_tap(windv: float, rma: float, rmi: float, ntp: int, *, unit_kv: float,
     neutral_offset = min(max(nearest, 0), ntp - 1)
     neutral = rmi + step_size * neutral_offset
     step = 1 + neutral_offset + (windv - neutral) / step_size
+    if rmi <= windv <= rma:  # on the grid's range: a WINDV at RMA or RMI is an end step, whatever the rounding
+        step = min(max(step, 1.0), float(ntp))
     return TapPosition(
         low_step=min(1, math.floor(step)),
         high_step=max(ntp, math.ceil(step)),
@@ -199,6 +251,12 @@ def cim_angle(angle_degrees: float) -> float:
     internal voltage; CIM's ``phaseShift`` and ``PhaseTapChanger`` angles are positive from the terminal into the
     transformer, the opposite. Used for ANGk, a shifter's step, and an impedance table's angle points."""
     return 0.0 - angle_degrees  # not -angle: 0.0 stays 0.0, not -0.0
+
+
+def raw_angle(cim_degrees: float) -> float:
+    """A CIM angle in PSS/E's sign: ``cim_angle`` inverted (the sign turned back; the exporter's ANGk and an angle
+    table's T, E4)."""
+    return 0.0 - cim_degrees
 
 
 class PhaseTap(NamedTuple):
@@ -240,6 +298,12 @@ def impedance_deviation_percent(factor: float) -> float:
     return ureg.Quantity(factor - 1.0, "").to("percent").magnitude
 
 
+def impedance_factor(deviation_percent: float) -> float:
+    """CIM's impedance deviation in percent as PSS/E's factor F, 1 + deviation / 100, through the units library:
+    ``impedance_deviation_percent`` inverted (the exporter's impedance correction, E4)."""
+    return 1.0 + ureg.Quantity(deviation_percent, "percent").to("").magnitude
+
+
 def is_angle_table(t_values: list[float]) -> bool:
     """PSS/E's rule for an impedance correction table (R4b-10): a first T below 0.5 or a last T above 1.5 makes it
     a table of phase shift angles (deg); otherwise of off-nominal turns ratios."""
@@ -250,6 +314,11 @@ def net_import(pdes: float) -> float:
     """``ControlArea.netInterchange`` (MW, positive into the area) from PDES (MW, the desired net export): -PDES,
     written ``0.0 - PDES`` so that 0 stays ``0.0`` (R5)."""
     return 0.0 - pdes
+
+
+def net_export(net_interchange: float) -> float:
+    """The exporter's inverse of ``net_import``: PDES (MW) = -netInterchange, ``0.0 - ...`` so 0 stays ``0.0``."""
+    return 0.0 - net_interchange
 
 
 def generation_p_q(record) -> tuple[float, float]:

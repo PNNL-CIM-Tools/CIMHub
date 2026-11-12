@@ -18,7 +18,7 @@ from cimhub_opendss.exporter import line, switch
 from cimhub_opendss.exporter.capacitor import capacitor_name
 from cimhub_opendss.exporter.controls import control_enabled, pt_phase
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.RegulatingControl,)

@@ -18,7 +18,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.der import get_battery_unit
 from cimhub_core.getters.phase_power import SUM_REL_TOL
 from cimhub_opendss.exporter.inverter import inverter_pieces
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.PowerElectronicsConnection,)

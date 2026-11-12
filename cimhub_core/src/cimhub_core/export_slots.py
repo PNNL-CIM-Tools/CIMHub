@@ -1,7 +1,7 @@
-"""What an exporter module does with each slot of its DSS class (``EXPORT_MAPPING.md#layout``).
+"""What an exporter module does with each slot of its native class: the export mirror of the importer's ``FIELDS``.
 
-The export mirror of the importer's ``FIELDS``: every schema slot is listed, so nothing is dropped unnoticed, and
-the spec's tables are generated from it (``slots_table``).
+Every schema slot is listed, so nothing is dropped unnoticed, and each spoke's spec tables are generated from it
+(``slots_table``). Shared by the DSS and RAW exporters (``EXPORT_MAPPING.md#layout`` in each).
 """
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import NamedTuple
 
-#: ``written``: from a getter; ``rule``: a CIM ``None`` DSS needs (decision E4); ``unset``: CIM cannot hold it, the
-#: engine default applies; ``not mapped``: a form of the same data that is not written.
+#: ``written``: from a getter; ``rule``: a CIM ``None`` the format needs (DSS E4); ``unset``: CIM cannot hold it, the
+#: format's default applies; ``not mapped``: a form of the same data that is not written.
 KINDS = ("written", "rule", "unset", "not mapped")
 
 
@@ -35,8 +35,8 @@ def with_default(native_class: type, written: dict[str, Slot], other: Slot) -> d
     return {f.name: written.get(f.name, other) for f in fields(native_class)}
 
 
-def slots_table(slots: dict[str, Slot]) -> str:
-    """The spec's markdown table of ``slots``."""
-    rows = ["| DSS slot | kind | from / why |", "|---|---|---|"]
+def slots_table(slots: dict[str, Slot], format_name: str) -> str:
+    """The spec's markdown table of ``slots``, headed ``<format_name> slot``."""
+    rows = [f"| {format_name} slot | kind | from / why |", "|---|---|---|"]
     rows += [f"| {name} | {slot.kind} | {slot.note} |" for name, slot in slots.items()]
     return "\n".join(rows)

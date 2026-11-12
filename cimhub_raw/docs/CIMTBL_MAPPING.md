@@ -372,7 +372,7 @@ Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue
   shared, so a change of class keeps the mRID. A blank or unknown STYPE raises: the spec gives no default.
 - **Status:** `open` = STATUS == 0 and `normalOpen` = NSTATUS == 0.
 - **X** is untranscribed: it is the solver's stand-in for zero impedance (X < THRSHZ), and a `Switch` has none.
-  The exporter writes THRSHZ back (expected difference).
+  The exporter writes 0.0001, since the format gives X no default (`EXPORT_MAPPING.md` E1).
 - **Ratings** as for branches (`sw_<key>_ratings` on `sw_<key>_T1`).
 - A switch across a zone boundary is not a merge edge (§3.2). Its container is bus I's substation.
 
@@ -381,7 +381,7 @@ Table CurrentLimit: mRID, OperationalLimitSet, OperationalLimitType, normalValue
 | `from_bus_number` | `int` | `101`, `102`, `103` | structural | I: bus1; BaseVoltage = bus I's bv_<BASKV>; EquipmentContainer = bus I's substation |
 | `to_bus_number` | `int` | `102`, `103`, `104` | structural | J: bus2 |
 | `circuit` | `Optional[str]` | `1` | structural | CKT: with I and J the key, mRID sw_<I>_<J>_<CKT> |
-| `x` | `Optional[float]` | `0.0001` | untranscribed | X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; the exporter writes THRSHZ back (expected difference) |
+| `x` | `Optional[float]` | `0.0001` | untranscribed | X: the solver's stand-in for zero impedance (X < THRSHZ); a Switch has none; the exporter writes 0.0001 (the format gives X no default) |
 | `ratings` | `Union[float, list[float], NoneType]` | `[200.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,...`, `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0...` | structural | RATE1..RATE12: as a branch's, the set sw_<key>_ratings on sw_<key>_T1 (RAW-9, RAW-20) |
 | `status` | `Optional[int]` | `1`, `0` | mapped | STATUS: open = (STATUS == 0); blank: 1 (defaulted) |
 | `nstat` | `Optional[int]` | `1`, `0` | mapped | NSTATUS: normalOpen = (NSTATUS == 0); blank: 1 (defaulted) |
@@ -409,8 +409,9 @@ Update Table ACLineSegment: mRID, EquipmentContainer
 
 - **Members:** the path I, DUM1, …, J. Each consecutive pair must be joined by exactly one branch not already
   used, in either direction, and each dummy bus must have exactly two branches. Anything else raises with the
-  record. A member with both buses in one substation (a series capacitor merges its buses) stays there: it gets no
-  `Update` row and is listed on the Line's row (`# path …; in substations: sc_…`; R1b-3).
+  record. A member with both buses in one substation (a series capacitor merges its buses) stays contained there
+  and joins the Line as additional grouped equipment (`Update Table …: mRID, AdditionalEquipmentContainer`), and
+  the Line's row lists it (`# path …; in substations: sc_…`; R1b-3).
 - **Region:** bus I's zone. **Name:** ID.
 - The `msl_` prefix is requested from the translate-table owners (C3).
 - Neither public case has one; the atom `tests/atoms/branch/multi_section_line.raw` covers it.
@@ -684,10 +685,19 @@ in R3b-4. A series capacitor with B ≠ 0 still raises (no case).
 ### A multi-section line holding a series capacitor (decision R1b-3)
 
 Every capacitor section of the set (44) has both buses in one substation, which the capacitor merges; every line
-section (39) spans two. A section already in a substation stays there, with no `Update` row (an `Update` only
-adds, so it clashed with the capacitor's substation at bind time). The Line holds the rest, and its row lists the
-others for the exporter: `# path 1, 2, 3, 4; in substations: sc_2_3_1`. The rule is the same for a line section
-inside one substation (none in the set).
+section (39) spans two. A section already in a substation stays contained there, with no `EquipmentContainer`
+`Update` row (an `Update` only adds, so it clashed with the capacitor's substation at bind time). It joins its Line
+through CIM's second container association instead, `Equipment.AdditionalEquipmentContainer` ↔
+`EquipmentContainer.AdditionalGroupedEquipment` (amended 2026-11-09 for the exporter's E1, user: "AdditionalGrouped"),
+so the Line groups every section wherever it sits in the path:
+
+```
+Update Table SeriesCompensator: mRID, AdditionalEquipmentContainer
+    sc_2_3_1, msl_1_4_&1
+```
+
+The Line's row still lists it: `# path 1, 2, 3, 4; in substations: sc_2_3_1`. The rule is the same for a line
+section inside one substation (none in the set).
 
 ### MODSW 3: a plant's reactive power (decision R2b-1)
 
@@ -875,6 +885,10 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
   
   Raise tests: plant records that disagree on VS, IREG, NREG or RMPCT; RT/XT ≠ 0 (until R3b); WMOD 2, 3 (until R3c) and 4; a remote IREG
   from a swing bus; an IREG that is no bus; a swing bus with only WMOD 1 records.
+- **ratedU** (amended 2026-11-09 by the exporter's E3-1, user: "importer writes BASKV"): every
+  `SynchronousMachine` and `PowerElectronicsConnection` gets ratedU = BASKV(I). RAW gives no machine kV; MBASE and
+  ZR are on BASKV, and the export getters (`get_machine_rating`, `get_inverter_rating`, `get_machine_impedance("pu")`)
+  require a ratedU. A machine behind a step-up keeps bus I's base too (R3b-2).
 - **Checks:** all 151 records bind (IEEE14 5 machines; WECC240 109 machines and 37 connections). In SI, each p =
   −PG in W, each target = VS × BASKV in V, and each unit reaches its bus's `ControlArea`. Each plant has one
   control.
@@ -889,7 +903,7 @@ Table ControlAreaPowerElectronicsUnit: mRID, name, ControlArea, PowerElectronics
 | `min_q_output` | `Optional[float]` | `-200.0`, `-357.0`, `-360.0` | copied | `SynchronousMachine.minQ` (MVAr), `PowerElectronicsConnection.minQ` (MVAr); QB; blank: -9999 (defaulted) |
 | `regulated_voltage_setpoint` | `Optional[float]` | `1.014`, `1.03`, `1.01` | derived | VS (pu): targetValue = VS x the regulated bus's BASKV, in V (volts_from_per_unit); a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 1.0 (defaulted) |
 | `regulated_bus_number` | `Optional[int]` | `1002`, `1004`, `1101` | structural | IREG: the plant control's Terminal bb_<IREG>_T1, or bb_<I>_T1 when 0 (RAW-11), or the NREG node's busbar; a remote IREG from a swing bus raises; a plant quantity, shared by every machine at bus I (they must agree, else raise); blank: 0 (defaulted) |
-| `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE; blank: SBASE (defaulted) |
+| `rated_mva` | `Optional[float]` | `873.0`, `1050.0`, `638.0` | copied | `SynchronousMachine.ratedS` (MVA), `PowerElectronicsConnection.ratedS` (MVA); MBASE, with ratedU = bus I's BASKV: RAW gives no machine kV, and MBASE and ZR are on BASKV (E3-1, as R3b-2); blank: SBASE (defaulted) |
 | `zr` | `Optional[float]` | `0.0` | derived | ZR (pu on MBASE): SynchronousMachine r (ohm) = ZR x BASKV^2 / MBASE (ohms_from_per_unit); listed on a PowerElectronicsConnection's row when not 0 (R3c-3); blank: 0 (defaulted) |
 | `zx` | `Optional[float]` | `0.2` | untranscribed | ZX: cim18v17 has no positive-sequence machine reactance (TODO: a profile extension, RAW-23) |
 | `rt` | `Optional[float]` | `0.0` | derived | RT (pu on MBASE): RT + jXT != 0 is an implicit step-up transformer <machine>_xf, the machine on its internal node <machine>_int (R3b-1); end 1 r (ohm) = RT x BASKV^2 / MBASE (ohms_from_per_unit); blank: 0 (defaulted) |
@@ -1443,7 +1457,8 @@ highStep = neutralStep = step = 1, `neutralU` = WINDVk in kV (`winding_kv`), `st
   them at COD 0). A COD 0 winding with a usable range keeps R4's stepped tap changer.
 - **A phase shifter's winding, off nominal:** no control (the phase tap changer has it).
 
-Exporter: WINDVk = neutralU / the winding unit; no `RatioTapChanger` → WINDV 1.
+Exporter: WINDVk = neutralU / the winding unit; no `RatioTapChanger` → the end's ratedU / the winding unit (1 only
+when NOMV = BASKV; corrected by E4, `EXPORT_MAPPING.md#e4-transformer-impedance-correction`).
 
 ### A voltage control's WINDV outside its range (decision R4b-5)
 
@@ -1451,6 +1466,8 @@ COD ±1 with WINDV outside RMI..RMA (1 winding in the set): CIM needs lowStep �
 increment stay, and lowStep extends below 1 or highStep above NTP to the first whole step past the position
 (`ratio_tap`). The same holds for COD ±2, the other stepped control (none in the set). RMA and RMI are listed on the
 row, and the exporter's RMA/RMI come from the extended steps (expected difference).
+*Fixed 2026-11-09 (E4):* a WINDV exactly at RMA or RMI is that end's step, not an extension; rounding had put
+its step a hair past the end, so `ratio_tap` added a step (about 50 local windings a case).
 
 ### One winding out, STAT 2 / 3 / 4 (decision R4b-6)
 
