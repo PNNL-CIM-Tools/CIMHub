@@ -6,7 +6,8 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
 from cimhub_core.getters import describe
-from cimhub_core.getters.earth import get_earth_resistivity
+from cimhub_core.getters.earth import get_earth_resistivity, get_network_earth
+from cimhub_opendss.exporter.linegeometry import is_spacing_line
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -44,15 +45,18 @@ EARTH_MODELS = {cim.EarthModelKind.carson: "Carson", cim.EarthModelKind.deri: "D
 
 
 def earth_model(network) -> str | None:
-    """The one earth model of every WireConfiguration (``get_earth_resistivity``); DSS's earthmodel is the deck's.
-    None when no configuration names one (the engine's Deri). Configurations that differ raise, and so does one
-    without an EarthResistivity beside one with: it would take the other's model."""
+    """The one earth model of every WireConfiguration (``get_earth_resistivity``) and, when there are spacing lines,
+    of the network's one EarthResistivity (``get_network_earth``); DSS's earthmodel is the deck's. None when none
+    names one (the engine's Deri). Models that differ raise, and so does a configuration without an
+    EarthResistivity beside one with: it would take the other's model."""
     found = {}
     for configuration in network.graph.get(cim.WireConfiguration, {}).values():
         earth = get_earth_resistivity(configuration)
-        found.setdefault(earth.model if earth is not None else None, configuration)
+        found.setdefault(earth.model if earth is not None else None, describe(configuration))
+    if any(is_spacing_line(line) for line in network.graph.get(cim.ACLineSegment, {}).values()):
+        found.setdefault(get_network_earth(network).model, "the spacing lines' EarthResistivity")
     if len(found) > 1:
-        shown = {model.value if model is not None else None: describe(obj) for model, obj in found.items()}
+        shown = {model.value if model is not None else None: owner for model, owner in found.items()}
         raise ValueError(f"WireConfigurations over earth models {shown}; a DSS deck has one earthmodel")
     if not found:
         return None

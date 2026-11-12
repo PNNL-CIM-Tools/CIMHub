@@ -198,7 +198,7 @@ are at the end of this section.
 cimhub_opendss/src/cimhub_opendss/exporter/
     wire.py           OverheadWireInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
     linecode.py       PerLengthPhaseImpedance / PerLengthSequenceImpedance -> Linecode
-    linegeometry.py   (WireConfiguration, spacingYOffset) -> Linegeometry, inline positions (B2)
+    linegeometry.py   (WireConfiguration, spacingYOffset) and spacing lines -> Linegeometry, inline positions (B2)
     line.py           ACLineSegment -> Line
     switch.py         Switch subclasses -> Line Switch=y + Fuse / Recloser / Swtcontrol; open_terminals()
 ```
@@ -303,19 +303,31 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
   mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
   default).
+- **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
+  ACLineSegmentPhase) gets one record per (spacing, spacingYOffset, conductors), the conductors being each phase's
+  sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
+  The spacing may hold several circuits (a double circuit, a secondary bundle under a primary): the line takes the
+  positions of its own phases' sequence numbers. `circuitNumber` is not read, since cim18v17 says a line's need not
+  match its positions'.
 - **Positions:**
-  - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m. They are written as `xs`
-    / `hs` with the conductor names in `wires`, and the writer emits the cond blocks;
-  - the wires are matched to positions by sequence number from `get_configuration_wires`.
+  - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m: phase conductors, then
+    neutrals. A bundle (`RegularBundlePosition` triplex, `BundlePosition` quadruplex) is expanded into its
+    sub-conductors. They are written as `xs` / `hs` with the conductor names in `wires`, and the writer emits the
+    cond blocks;
+  - the wires are matched to positions by sequence number from `get_configuration_wires`, or a spacing line's
+    `get_line_phase_wires`.
 - **The other slots:**
   - nconds = the positions;
-  - nphases = `numberOfPhases` (required). Position kinds, where set, must be `phase` for 1..nphases and `neutral`
-    after;
+  - nphases = `numberOfPhases` (required), or a spacing line's phases other than N. Position kinds, where set, must
+    be `phase` for 1..nphases and `neutral` after;
   - `reduce=y`: the neutrals are Kron-reduced, i.e. grounded at both ends, as the impedance getters assume (G2;
     242 of 243 sweep geometries set it). The import left `reduce` untranscribed for that reason.
+- **The earth of a spacing line.** cim18v17 associates an EarthResistivity only with a WireConfiguration or a
+  PerLengthImpedance, so a spacing line takes the network's one EarthResistivity (`get_network_earth`) for its
+  `rho` and the deck's earthmodel. None or several raise.
 - **Raises:**
-  - a line with `ACLineSegment.WireSpacing` and no WireConfiguration, or per-phase `ACLineSegmentPhase.WireInfo`.
-    No producer writes either: the DSS importer turns `spacing=` + `wires=` into a WireConfiguration (B2);
+  - a spacing line with a phase without a WireInfo, or a phase whose sequence number its spacing has no conductor
+    for; a line with both a WireConfiguration and a phase WireInfo;
   - a phase count on the line other than nphases.
 - **The importer's spacing sharing.** The importer shares `spc_500` among 601, 602, ...; each geometry now carries
   its own positions, so a re-import gives `wc_<name>_spc` per geometry. That is a listed difference, equal in the
@@ -329,7 +341,8 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 |---|---|
 | bus1 / bus2 | `bus_ref` over `get_terminal_nodes`, with the phase conductors of `get_conductor_phases` in order (645 CB is `.3.2`). The neutral is not on the bus: it is reduced (B4) |
 | phases | the phase conductors' count |
-| linecode / geometry | the code's name, or the (configuration, offset) geometry's name. Geometry wins when both are set (skill `conductor-geometry`) |
+| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry wins when both are set (skill `conductor-geometry`) |
+| rho | the configuration's EarthResistivity, or a spacing line's network EarthResistivity (ohm-m) |
 | length, units | `required_qty(line, "length", "m")`, `units=m` |
 | normamps / emergamps | `get_current_limits(line)` normal / emergency. Unset is left unset, and the engine copies the code's or geometry's. `short_term` and seasonal limits are not mapped |
 | enabled | `get_in_service(which="normal")`; unset is not written |
@@ -429,7 +442,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | # | question | decision |
 |---|---|---|
 | B1 | Deck units | Every length in metres (Line/LineCode `units=m`, geometry `units=m`, wire `Runits/GMRunits/radunits=m`); B6's lumped lines are the one exception |
-| B2 | Geometry form | Inline positions (cond blocks) per (WireConfiguration, offset); no LineSpacing is written. A bare-spacing line raises until a producer writes one |
+| B2 | Geometry form | Inline positions (cond blocks) per (WireConfiguration, offset), and per (spacing, offset, conductors) for a spacing line (a direct WireSpacing and a WireInfo on each phase, the EPRI shape); no LineSpacing is written |
 | B3 | Switch impedance (amended by the user) | A small invented impedance: 1 mOhm resistive, `r1=r0=1e-3 x1=x0=0 C1=C0=0 length=1 units=m` |
 | B4 | Line neutrals (approved by the user 2026-11-09, as recommended and built) | Geometry `reduce=y`, and the neutral is not written on the bus. Engine probe (2026-11-09, geometry 601 under an unbalanced load): `reduce=y` gives the same voltages, to 1e-9 V, as `reduce=n` with the neutral on node 0 at both ends. So `reduce=y` is exactly a neutral grounded at both ends, and it keeps a 3x3 YPrim. `reduce=n` on a `.1.2.3` bus puts the neutral on node 4, ungrounded: it floats (292 V in the probe), and the phase voltages move by up to 4 %. CIM has no per-conductor neutral grounding to export, so `reduce=n` has nothing to carry. A code line with a neutral row raises |
 | B5 | Code values | Code-level getters; a code no line uses is still exported |
@@ -551,9 +564,9 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p') |
-| nconds | written | the spacing's positions |
-| nphases | written | WireConfiguration.numberOfPhases, required; position kinds phase then neutral |
+| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, offset and conductors |
+| nconds | written | the spacing's positions; a spacing line's: its phases' positions |
+| nphases | written | WireConfiguration.numberOfPhases, required; a spacing line's: its phases other than N; position kinds phase then neutral |
 | cond | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | wire | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | x | not mapped | the writer folds wires/xs/hs into cond= blocks |
@@ -563,7 +576,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | emergamps | unset | no rating on a WireConfiguration (D9); the Line carries its own |
 | reduce | written | y: the neutrals grounded at both ends, as the impedance getters assume (B4) |
 | spacing | not mapped | positions are written inline (B2) |
-| wires | written | get_configuration_wires, by sequence number; any of the three catalogs |
+| wires | written | get_configuration_wires, or a spacing line's get_line_phase_wires, by sequence number; any of the three catalogs |
 | cncable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | tscable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | cncables | not mapped | wires carries every kind (the writer names each block's kind) |
@@ -598,13 +611,13 @@ code-level tests in `test_getters_line_impedance.py`):
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
-| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m); unset -> not written |
-| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name |
+| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth |
+| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner |
 | units | written | m (B1); lumped: km (B6) |
-| spacing | not mapped | a line with WireSpacing and no WireConfiguration raises (B2) |
-| cncables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
-| tscables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
-| wires | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
+| spacing | not mapped | positions are written inline in the LineGeometry (B2) |
+| cncables | not mapped | the LineGeometry carries the conductors (B2) |
+| tscables | not mapped | the LineGeometry carries the conductors (B2) |
+| wires | not mapped | the LineGeometry carries the conductors (B2) |
 | EarthModel | not mapped | the deck's Set earthmodel carries it (options.py: one model per deck) |
 | B1 | not mapped | C1 carries the susceptance |
 | B0 | not mapped | C0 carries the susceptance |

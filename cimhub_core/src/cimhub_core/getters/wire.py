@@ -1,4 +1,5 @@
-"""A conductor catalog entry (a WireInfo) and a WireConfiguration's conductors (skill `export-getters`).
+"""A conductor catalog entry (a WireInfo), and a WireConfiguration's or a line's per-phase conductors (skill
+`export-getters`).
 
 Three WireInfo kinds are read: ``OverheadWireInfo`` (a bare wire), ``ConcentricNeutralCableInfo`` and
 ``TapeShieldCableInfo``. Every value is as stored, in the caller's units; unset is None. Only ``rAC25`` of the
@@ -89,6 +90,23 @@ def get_configuration_wires(configuration: cim.WireConfiguration) -> tuple[tuple
             raise ValueError(f"{describe(configuration)}: {describe(sequence)} has no WireInfo")
         wires[number] = sequence.WireInfo
     return tuple(sorted(wires.items()))
+
+
+def get_line_phase_wires(line: cim.ACLineSegment) -> tuple[tuple[int, cim.WireInfo], ...]:
+    """``(sequenceNumber, WireInfo)`` of each ACLineSegmentPhase, in sequence-number order; empty when no phase
+    names a WireInfo. A phase without one beside a phase with one, or an unset or repeated sequence number, raises."""
+    phases = line.ACLineSegmentPhases
+    if not any(phase.WireInfo is not None for phase in phases):
+        return ()
+    wires = {}
+    for phase in phases:
+        number = phase.sequenceNumber
+        if number is None or number in wires:
+            raise ValueError(f"{describe(line)}: {describe(phase)} has sequence number {number!r}, unset or repeated")
+        if phase.WireInfo is None:
+            raise ValueError(f"{describe(line)}: {describe(phase)} has no WireInfo, and other phases have one")
+        wires[number] = phase.WireInfo
+    return tuple(sorted(wires.items(), key=lambda item: item[0]))
 
 
 def _cable(cable: cim.CableInfo, length_unit: str, resistance_unit: str) -> CableValues:
