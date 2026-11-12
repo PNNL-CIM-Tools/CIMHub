@@ -1,0 +1,15 @@
+# GridLAB-D underground_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# Source table: underground_line (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_line
+    ln_line_u1, line_u1, n2, n6, AN, 800.0, wc_lcon_607, bv_4p16kv
+
+Table OperationalLimitSet: mRID, Equipment
+    ln_line_u1_limits, ln_line_u1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_line_u1_norm,  165.0, olt_normal,    ln_line_u1_limits
+    ln_line_u1_emerg, 247.5, olt_emergency, ln_line_u1_limits

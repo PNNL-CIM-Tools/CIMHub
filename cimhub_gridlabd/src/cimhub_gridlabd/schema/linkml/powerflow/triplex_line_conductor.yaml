@@ -1,0 +1,108 @@
+id: https://gridlabd.org/schema/glm/powerflow/triplex_line_conductor
+name: triplex_line_conductor
+description: GridLAB-D triplex_line_conductor class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  triplex_line_conductor:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file triplex_line_conductor.cpp
+
+      @addtogroup triplex_line_conductor
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: powerflow_library
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      resistance:
+        range: float
+        required: false
+        description: resistance of cable in ohm/mile
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: resistance[Ohm/mile]
+      geometric_mean_radius:
+        range: float
+        required: false
+        description: geometric mean radius of the cable
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: geometric_mean_radius[ft]
+      rating_summer_continuous:
+        range: float
+        required: false
+        description: amp ratings for the cable during continuous operation in summer
+        unit:
+          ucum_code: A
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.continuous[A]
+      rating_summer_emergency:
+        range: float
+        required: false
+        description: amp ratings for the cable during short term operation in summer
+        unit:
+          ucum_code: A
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.emergency[A]
+      rating_winter_continuous:
+        range: float
+        required: false
+        description: amp ratings for the cable during continuous operation in winter
+        unit:
+          ucum_code: A
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.continuous[A]
+      rating_winter_emergency:
+        range: float
+        required: false
+        description: amp ratings for the cable during short term operation in winter
+        unit:
+          ucum_code: A
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.emergency[A]

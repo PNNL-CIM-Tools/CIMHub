@@ -1,0 +1,46 @@
+// S4b atom: every inverter form, on the S3a line atom (n2 ABCN, n4 ACN, n5 AN at 2401.78 V; tm1 AS at 120 V).
+// Values after IEEE13_cdpsm. GridLAB-D puts an inverter on a meter.
+#include "../line/line.glm"
+
+object meter { name m3; parent n2; phases ABCN; nominal_voltage 2401.78; }
+object meter { name m4; parent n4; phases ACN; nominal_voltage 2401.78; }
+object meter { name m5; parent n5; phases AN; nominal_voltage 2401.78; }
+
+// 3-phase PV, CONSTANT_PF (the default), a multi-crystal panel with GridLAB-D's derating and soiling 0.95, shaded
+object inverter { name inv_pv3; parent m3; phases ABCN; inverter_type FOUR_QUADRANT; inverter_efficiency 0.95;
+  rated_power 100000; P_Out 240000; power_factor 1.0;
+  object solar { name pv3; panel_type MULTI_CRYSTAL_SILICON; rated_power 250000; shading_factor 0.8; tilt_angle 30;
+    orientation_azimuth 200; }; }
+// 1-phase PV with every default: SINGLE_CRYSTAL_SILICON, inverter_efficiency 0.9
+object inverter { name inv_pv1; parent m5; phases AN; inverter_type FOUR_QUADRANT; rated_power 10000;
+  object solar { name pv1; rated_power 8000; }; }
+// split-phase PV across the legs (s1s2 D, 240 V): the DC output is above rated_power, so GridLAB-D caps it
+object inverter { name inv_pvs; parent tm1; phases AS; inverter_type FOUR_QUADRANT; inverter_efficiency 1.0;
+  rated_power 5000; V_base 208; P_Out 4000; four_quadrant_control_mode CONSTANT_PF; power_factor -1.0;
+  object solar { name pvs; rated_power 6000; derating 1.0; soiling 1.0; efficiency 0.2; }; }
+
+// 3-phase battery, CONSTANT_PQ, discharging 50 kW, above its reserve
+object inverter { name inv_b3; parent m3; phases ABCN; inverter_type FOUR_QUADRANT; four_quadrant_control_mode CONSTANT_PQ;
+  rated_power 33333.333; P_Out 50000; soc_reserve 0.2; max_charge_rate 80000; max_discharge_rate 90000;
+  object battery { name b3; use_internal_battery_model true; battery_type LI_ION; nominal_voltage 48;
+    battery_capacity 200 kWh; state_of_charge 0.6; round_trip_efficiency 0.86; rated_power 100 kW; }; }
+// split-phase battery, CONSTANT_PF with P_Out its dispatch: the Java export's defect, read as CONSTANT_PQ (charging)
+object inverter { name inv_bpf; parent tm1; phases AS; inverter_type FOUR_QUADRANT; four_quadrant_control_mode CONSTANT_PF;
+  rated_power 5000; P_Out -3000; power_factor -1.0; generator_mode CONSTANT_PQ; sense_object tm1;
+  object battery { name bpf; use_internal_battery_model true; battery_type LI_ION; nominal_voltage 48;
+    battery_capacity 13500; state_of_charge 0.37; round_trip_efficiency 0.86; rated_power 5000; }; }
+// 2-phase battery asked to charge while full: GridLAB-D gives 0 (waiting); unset round trip is 0.8
+object inverter { name inv_bfull; parent m4; phases ACN; inverter_type FOUR_QUADRANT; four_quadrant_control_mode CONSTANT_PQ;
+  rated_power 15000; P_Out -20000;
+  object battery { name bfull; use_internal_battery_model true; battery_type LEAD_ACID; battery_capacity 50000;
+    state_of_charge 1.0; rated_power 30000; }; }
+// 1-phase battery asked to discharge at its reserve: 0
+object inverter { name inv_bres; parent m5; phases AN; inverter_type FOUR_QUADRANT; four_quadrant_control_mode CONSTANT_PQ;
+  rated_power 10000; P_Out 8000; soc_reserve 0.25;
+  object battery { name bres; use_internal_battery_model true; battery_capacity 40000; state_of_charge 0.25;
+    rated_power 10000; }; }
+// OFFLINE: no output, not in service
+object inverter { name inv_boff; parent m3; phases ABCN; inverter_type FOUR_QUADRANT; four_quadrant_control_mode CONSTANT_PQ;
+  generator_status OFFLINE; rated_power 20000; P_Out 30000;
+  object battery { name boff; use_internal_battery_model true; battery_capacity 100000; state_of_charge 0.5;
+    rated_power 60000; }; }

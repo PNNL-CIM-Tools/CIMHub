@@ -1,0 +1,118 @@
+# GridLAB-D transformer_configuration -> TransformerTankConfiguration (catalog; %Z on the tank's own nameplate).
+# Source table: transformer_configuration (records: 11)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3b-transformers
+# no instance (built from its own ratings): xc_unused
+
+Profile = cim18v17
+
+Table TransformerBankConfiguration: mRID, name
+    xb_xc_bank2, xc_bank2
+    xb_xc_bank3, xc_bank3
+
+Table TransformerTankConfiguration: mRID, name, percentImpedance (percent), loadLoss (kW), noLoadLoss (kW), percentMagnetizingCurrent (percent)
+    # untranscribed: install_type=PADMOUNT
+    xc_transformer_configuration:1, transformer_configuration:1, 2.04039260927891,   0.29925,             0.056317722060778085, 0.07853337354242058
+    # untranscribed: install_type=PADMOUNT
+    xc_transformer_configuration:3, transformer_configuration:3, 0.7211102550927979, 0.15,                0.07361385118223844,  0.3482124513808365
+    # untranscribed: install_type=POLETOP
+    xc_xc_ct,                       xc_ct,                       1.4864723340849637, 0.15,                ,
+    xc_xc_dd,                       xc_dd,                       3.0018827425467505, 1.905,               ,
+    xc_xc_dg,                       xc_dg,                       5.099019513592785,  1.5,                 ,
+    # untranscribed (one tank of power_rating on ABC, S3b-9): powerA_rating=15.0, powerB_rating=0.0, powerC_rating=0.0
+    xc_xc_unrated,                  xc_unrated,                  1.8027756377319946, 0.22499999999999998, ,
+    xc_xc_unused,                   xc_unused,                   4.123105625617661,  3.0,                 ,
+    xc_xcon_ct5B,                   xcon_ct5B,                   2.080865204668481,  0.06,                0.01,                 0.5
+    xc_xcon_xfm1,                   xcon_xfm1,                   2.2825424421026654, 5.5,                 ,
+
+Table TransformerTankConfiguration: mRID, name, percentImpedance (percent), loadLoss (kW), noLoadLoss (kW), percentMagnetizingCurrent (percent), BankConfiguration
+    xc_xc_bank2_A, xc_bank2_A, 1.434099238197971,   0.042187499999999996, ,                     ,                    xb_xc_bank2
+    xc_xc_bank2_C, xc_bank2_C, 2.3901653969966183,  0.1171875,            ,                     ,                    xb_xc_bank2
+    xc_xc_bank3_A, xc_bank3_A, 0.7486313634675927,  0.054964285714285716, 0.062058718186041396, 0.1826112363302446,  xb_xc_bank3
+    xc_xc_bank3_B, xc_bank3_B, 0.49908757564506173, 0.024428571428571424, 0.062058718186041396, 0.27391685449536685, xb_xc_bank3
+    xc_xc_bank3_C, xc_bank3_C, 0.49908757564506173, 0.024428571428571424, 0.062058718186041396, 0.27391685449536685, xb_xc_bank3
+
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind
+    xc_transformer_configuration:1_end_1, xc_transformer_configuration:1, 1, Y
+    xc_transformer_configuration:1_end_2, xc_transformer_configuration:1, 2, Y
+    xc_xc_dd_end_1,                       xc_xc_dd,                       1, D
+    xc_xc_dd_end_2,                       xc_xc_dd,                       2, D
+    xc_xc_dg_end_1,                       xc_xc_dg,                       1, D
+    xc_xc_dg_end_2,                       xc_xc_dg,                       2, Y
+    xc_xc_unrated_end_1,                  xc_xc_unrated,                  1, Y
+    xc_xc_unrated_end_2,                  xc_xc_unrated,                  2, Y
+    xc_xc_unused_end_1,                   xc_xc_unused,                   1, Y
+    xc_xc_unused_end_2,                   xc_xc_unused,                   2, Y
+    xc_xcon_xfm1_end_1,                   xc_xcon_xfm1,                   1, Y
+    xc_xcon_xfm1_end_2,                   xc_xcon_xfm1,                   2, Y
+
+Table TransformerLug: mRID, TankConfiguration, designation, sequenceNumber
+    xc_transformer_configuration:3_lug_h1, xc_transformer_configuration:3, H1, 1
+    xc_transformer_configuration:3_lug_h2, xc_transformer_configuration:3, H2, 2
+    xc_transformer_configuration:3_lug_x1, xc_transformer_configuration:3, X1, 3
+    xc_transformer_configuration:3_lug_x3, xc_transformer_configuration:3, X3, 4
+    xc_transformer_configuration:3_lug_x2, xc_transformer_configuration:3, X2, 5
+    xc_xc_bank2_A_lug_h1,                  xc_xc_bank2_A,                  H1, 1
+    xc_xc_bank2_A_lug_h2,                  xc_xc_bank2_A,                  H2, 3
+    xc_xc_bank2_A_lug_x1,                  xc_xc_bank2_A,                  X1, 4
+    xc_xc_bank2_A_lug_x2,                  xc_xc_bank2_A,                  X2, 6
+    xc_xc_bank2_C_lug_h1,                  xc_xc_bank2_C,                  H1, 2
+    xc_xc_bank2_C_lug_h2,                  xc_xc_bank2_C,                  H2, 3
+    xc_xc_bank2_C_lug_x1,                  xc_xc_bank2_C,                  X1, 5
+    xc_xc_bank2_C_lug_x2,                  xc_xc_bank2_C,                  X2, 6
+    xc_xc_bank3_A_lug_h1,                  xc_xc_bank3_A,                  H1, 1
+    xc_xc_bank3_A_lug_h2,                  xc_xc_bank3_A,                  H2, 4
+    xc_xc_bank3_A_lug_x1,                  xc_xc_bank3_A,                  X1, 5
+    xc_xc_bank3_A_lug_x2,                  xc_xc_bank3_A,                  X2, 8
+    xc_xc_bank3_B_lug_h1,                  xc_xc_bank3_B,                  H1, 2
+    xc_xc_bank3_B_lug_h2,                  xc_xc_bank3_B,                  H2, 4
+    xc_xc_bank3_B_lug_x1,                  xc_xc_bank3_B,                  X1, 6
+    xc_xc_bank3_B_lug_x2,                  xc_xc_bank3_B,                  X2, 8
+    xc_xc_bank3_C_lug_h1,                  xc_xc_bank3_C,                  H1, 3
+    xc_xc_bank3_C_lug_h2,                  xc_xc_bank3_C,                  H2, 4
+    xc_xc_bank3_C_lug_x1,                  xc_xc_bank3_C,                  X1, 7
+    xc_xc_bank3_C_lug_x2,                  xc_xc_bank3_C,                  X2, 8
+    xc_xc_ct_lug_h1,                       xc_xc_ct,                       H1, 1
+    xc_xc_ct_lug_h2,                       xc_xc_ct,                       H2, 2
+    xc_xc_ct_lug_x1,                       xc_xc_ct,                       X1, 3
+    xc_xc_ct_lug_x3,                       xc_xc_ct,                       X3, 4
+    xc_xc_ct_lug_x2,                       xc_xc_ct,                       X2, 5
+    xc_xcon_ct5B_lug_h1,                   xc_xcon_ct5B,                   H1, 1
+    xc_xcon_ct5B_lug_h2,                   xc_xcon_ct5B,                   H2, 2
+    xc_xcon_ct5B_lug_x1,                   xc_xcon_ct5B,                   X1, 3
+    xc_xcon_ct5B_lug_x3,                   xc_xcon_ct5B,                   X3, 4
+    xc_xcon_ct5B_lug_x2,                   xc_xcon_ct5B,                   X2, 5
+
+Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerEnd
+    xc_transformer_configuration:1_wdg_1, xc_transformer_configuration:1, 4160.0, 2401.7771198288433, 75.0,  75.0,               xc_transformer_configuration:1_end_1
+    xc_transformer_configuration:1_wdg_2, xc_transformer_configuration:1, 480.0,  277.1281292110204,  75.0,  75.0,               xc_transformer_configuration:1_end_2
+    xc_xc_dd_wdg_1,                       xc_xc_dd,                       4160.0, 4160.0,             150.0, 50.0,               xc_xc_dd_end_1
+    xc_xc_dd_wdg_2,                       xc_xc_dd,                       480.0,  480.0,              150.0, 50.0,               xc_xc_dd_end_2
+    xc_xc_dg_wdg_1,                       xc_xc_dg,                       4160.0, 4160.0,             150.0, 50.0,               xc_xc_dg_end_1
+    xc_xc_dg_wdg_2,                       xc_xc_dg,                       480.0,  277.1281292110204,  150.0, 50.0,               xc_xc_dg_end_2
+    xc_xc_unrated_wdg_1,                  xc_xc_unrated,                  4160.0, 2401.7771198288433, 15.0,  5.0,                xc_xc_unrated_end_1
+    xc_xc_unrated_wdg_2,                  xc_xc_unrated,                  480.0,  277.1281292110204,  15.0,  5.0,                xc_xc_unrated_end_2
+    xc_xc_unused_wdg_1,                   xc_xc_unused,                   4160.0, 2401.7771198288433, 300.0, 100.0,              xc_xc_unused_end_1
+    xc_xc_unused_wdg_2,                   xc_xc_unused,                   480.0,  277.1281292110204,  300.0, 100.0,              xc_xc_unused_end_2
+    xc_xcon_xfm1_wdg_1,                   xc_xcon_xfm1,                   4160.0, 2401.7771198288433, 500.0, 166.66666666666666, xc_xcon_xfm1_end_1
+    xc_xcon_xfm1_wdg_2,                   xc_xcon_xfm1,                   480.0,  277.1281292110204,  500.0, 166.66666666666666, xc_xcon_xfm1_end_2
+
+Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerLug, ToTransformerLug
+    xc_transformer_configuration:3_wdg_1, xc_transformer_configuration:3, 4160.004988602778, 2401.78,            25.0, 25.0, xc_transformer_configuration:3_lug_h1, xc_transformer_configuration:3_lug_h2
+    xc_transformer_configuration:3_wdg_2, xc_transformer_configuration:3, 240.0,             120.0,              12.5, 25.0, xc_transformer_configuration:3_lug_x1, xc_transformer_configuration:3_lug_x2
+    xc_transformer_configuration:3_wdg_3, xc_transformer_configuration:3, 240.0,             120.0,              12.5, 25.0, xc_transformer_configuration:3_lug_x2, xc_transformer_configuration:3_lug_x3
+    xc_xc_bank2_A_wdg_1,                  xc_xc_bank2_A,                  4160.0,            2401.7771198288433, 15.0, 15.0, xc_xc_bank2_A_lug_h1,                  xc_xc_bank2_A_lug_h2
+    xc_xc_bank2_A_wdg_2,                  xc_xc_bank2_A,                  480.0,             277.1281292110204,  15.0, 15.0, xc_xc_bank2_A_lug_x1,                  xc_xc_bank2_A_lug_x2
+    xc_xc_bank2_C_wdg_1,                  xc_xc_bank2_C,                  4160.0,            2401.7771198288433, 25.0, 25.0, xc_xc_bank2_C_lug_h1,                  xc_xc_bank2_C_lug_h2
+    xc_xc_bank2_C_wdg_2,                  xc_xc_bank2_C,                  480.0,             277.1281292110204,  25.0, 25.0, xc_xc_bank2_C_lug_x1,                  xc_xc_bank2_C_lug_x2
+    xc_xc_bank3_A_wdg_1,                  xc_xc_bank3_A,                  4160.0,            2401.7771198288433, 37.5, 37.5, xc_xc_bank3_A_lug_h1,                  xc_xc_bank3_A_lug_h2
+    xc_xc_bank3_A_wdg_2,                  xc_xc_bank3_A,                  480.0,             277.1281292110204,  37.5, 37.5, xc_xc_bank3_A_lug_x1,                  xc_xc_bank3_A_lug_x2
+    xc_xc_bank3_B_wdg_1,                  xc_xc_bank3_B,                  4160.0,            2401.7771198288433, 25.0, 25.0, xc_xc_bank3_B_lug_h1,                  xc_xc_bank3_B_lug_h2
+    xc_xc_bank3_B_wdg_2,                  xc_xc_bank3_B,                  480.0,             277.1281292110204,  25.0, 25.0, xc_xc_bank3_B_lug_x1,                  xc_xc_bank3_B_lug_x2
+    xc_xc_bank3_C_wdg_1,                  xc_xc_bank3_C,                  4160.0,            2401.7771198288433, 25.0, 25.0, xc_xc_bank3_C_lug_h1,                  xc_xc_bank3_C_lug_h2
+    xc_xc_bank3_C_wdg_2,                  xc_xc_bank3_C,                  480.0,             277.1281292110204,  25.0, 25.0, xc_xc_bank3_C_lug_x1,                  xc_xc_bank3_C_lug_x2
+    xc_xc_ct_wdg_1,                       xc_xc_ct,                       4160.004988602778, 2401.78,            25.0, 25.0, xc_xc_ct_lug_h1,                       xc_xc_ct_lug_h2
+    xc_xc_ct_wdg_2,                       xc_xc_ct,                       240.0,             120.0,              12.5, 25.0, xc_xc_ct_lug_x1,                       xc_xc_ct_lug_x2
+    xc_xc_ct_wdg_3,                       xc_xc_ct,                       240.0,             120.0,              12.5, 25.0, xc_xc_ct_lug_x2,                       xc_xc_ct_lug_x3
+    xc_xcon_ct5B_wdg_1,                   xc_xcon_ct5B,                   4156.921938165306, 2400.0,             5.0,  5.0,  xc_xcon_ct5B_lug_h1,                   xc_xcon_ct5B_lug_h2
+    xc_xcon_ct5B_wdg_2,                   xc_xcon_ct5B,                   240.0,             120.0,              2.5,  5.0,  xc_xcon_ct5B_lug_x1,                   xc_xcon_ct5B_lug_x2
+    xc_xcon_ct5B_wdg_3,                   xc_xcon_ct5B,                   240.0,             120.0,              2.5,  5.0,  xc_xcon_ct5B_lug_x2,                   xc_xcon_ct5B_lug_x3

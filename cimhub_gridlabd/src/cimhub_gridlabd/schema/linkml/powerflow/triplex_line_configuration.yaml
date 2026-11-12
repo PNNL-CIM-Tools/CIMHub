@@ -1,0 +1,187 @@
+id: https://gridlabd.org/schema/glm/powerflow/triplex_line_configuration
+name: triplex_line_configuration
+description: GridLAB-D triplex_line_configuration class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  triplex_line_configuration:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file triplex_line_configuration.cpp
+
+      @addtogroup triplex_line_configuration
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: line_configuration
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD'
+    is_a: line_configuration
+    attributes:
+      conductor_1:
+        range: string
+        required: false
+        description: conductor type for phase 1
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: conductor_1
+      conductor_2:
+        range: string
+        required: false
+        description: conductor type for phase 2
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: conductor_2
+      conductor_N:
+        range: string
+        required: false
+        description: conductor type for phase N
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: conductor_N
+      insulation_thickness:
+        range: float
+        required: false
+        description: thickness of insulation around cabling
+        unit:
+          ucum_code: in
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: insulation_thickness[in]
+      diameter:
+        range: float
+        required: false
+        description: total diameter of cable
+        unit:
+          ucum_code: in
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: diameter[in]
+      spacing:
+        range: string
+        required: false
+        description: defines the line spacing configuration
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: spacing
+      z11:
+        range: Complex
+        required: false
+        description: phase 1 self-impedance, used for direct entry of impedance values
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: z11[Ohm/mile]
+      z12:
+        range: Complex
+        required: false
+        description: phase 1-2 induced impedance, used for direct entry of impedance
+          values
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: z12[Ohm/mile]
+      z21:
+        range: Complex
+        required: false
+        description: phase 2-1 induced impedance, used for direct entry of impedance
+          values
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: z21[Ohm/mile]
+      z22:
+        range: Complex
+        required: false
+        description: phase 2 self-impedance, used for direct entry of impedance values
+        unit:
+          ucum_code: Ohm/mile
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: z22[Ohm/mile]
+      rating_summer_continuous:
+        range: float
+        required: false
+        description: amp rating in summer, continuous
+        unit:
+          ucum_code: A
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.continuous[A]
+      rating_summer_emergency:
+        range: float
+        required: false
+        description: amp rating in summer, short term
+        unit:
+          ucum_code: A
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.summer.emergency[A]
+      rating_winter_continuous:
+        range: float
+        required: false
+        description: amp rating in winter, continuous
+        unit:
+          ucum_code: A
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.continuous[A]
+      rating_winter_emergency:
+        range: float
+        required: false
+        description: amp rating in winter, short term
+        unit:
+          ucum_code: A
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rating.winter.emergency[A]

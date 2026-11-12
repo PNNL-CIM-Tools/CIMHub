@@ -1,0 +1,112 @@
+id: https://gridlabd.org/schema/glm/powerflow/load_tracker
+name: load_tracker
+description: GridLAB-D load_tracker class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  load_tracker:
+    is_a: glm_object
+    description: 'GridLAB-D load_tracker class
+
+
+      Inherits from: gld_object
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in powerflow module)'
+    attributes:
+      target:
+        range: string
+        required: false
+        description: target object to track the load of
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: target
+      target_property:
+        range: string
+        required: false
+        description: property on the target object representing the load
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: target_property
+      operation:
+        range: string
+        required: false
+        description: operation to perform on complex property types
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: operation
+      full_scale:
+        range: float
+        required: false
+        description: magnitude of the load at full load, used for feed-forward control
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: full_scale
+      setpoint:
+        range: float
+        required: false
+        description: load setpoint to track to
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: setpoint
+      deadband:
+        range: float
+        required: false
+        description: percentage deadband
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: deadband
+      damping:
+        range: float
+        required: false
+        description: load setpoint to track to
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: damping
+      output:
+        range: float
+        required: false
+        description: output scaling value
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output
+      feedback:
+        range: float
+        required: false
+        description: the feedback signal, for reference purposes
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: feedback

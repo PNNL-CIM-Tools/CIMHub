@@ -1,0 +1,112 @@
+id: https://gridlabd.org/schema/glm/powerflow/line
+name: line
+description: GridLAB-D line class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  line:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file line.cpp
+
+      @addtogroup line
+
+      @ingroup powerflow
+
+      This file contains the definition for 4 types of lines, their
+
+      configurations and the conductors associated with these lines.  The line is
+      one
+
+      of the major parts of the method used for solving a powerflow network.  In
+
+      essense the distribution network can be seen as a series of nodes and links.
+      The
+
+      links (or lines as in this file) do most of the work, solving a series of 3
+
+      dimensional matrices, while the nodes (defined in node.cpp) are
+
+      containers and aggregators, storing the values to be used in the equation
+
+      solvers.
+
+      In general, a line contains a configuration that contains a spacing
+
+      object, and one or more conductor objects, exported as phaseA_conductor,
+
+      phaseB_conductor, phaseC_conductor, and phaseN_conductor.  The line spacing
+
+      object hold information about the distances between each of the phase
+
+      conductors, while the conductor objects contain the information on the specifics
+
+      of the conductor (resistance, diameter, etc...)
+
+      Line itself is not exported, and cannot be used in a model.  Instead one
+
+      of 3 types of lines are exported for use in models; underground lines, overhead
+
+      lines, and triplex (or secondary) lines.  Underground lines and overhead lines
+
+      use the basic line configuration and line spacing objects, but have different
+
+      conductor classes defined for them.  The overhead line conductor is the simplest
+
+      of these with just a resistance and a geometric mean radius defined.  The
+
+      underground line conductor is more complex, due to the fact that each phase
+
+      conductor may have its own neutral.
+
+      Triplex lines are the third type of line exported.  A special triplex
+
+      line configuration is also exported which presents 3 line conductors;
+
+      l1_conductor, l2_conductor, and lN_conductor.  Also exported is a general
+
+      insulation thickness and the total diameter of the line.  The conductor for
+
+      triplex lines is much the same as the overhead line conductor.
+
+      All line objects export a phase property that is a set of phases and may
+
+      be set using the bitwise or operator (A|B|C for a 3 phase line).
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      configuration:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: configuration
+      length:
+        range: float
+        required: false
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: length[ft]

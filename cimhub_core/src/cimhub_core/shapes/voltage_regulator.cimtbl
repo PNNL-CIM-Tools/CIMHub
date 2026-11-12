@@ -1,7 +1,8 @@
 # Shape: voltage regulator. A VoltageRegulator (an AutoTransformer) with two AutoTransformerEnds that carry
 # the nameplate (baseU = coil voltage, ratedS = through rating) and a real PhaseCode phase, which goes on
 # each end's Terminal. The mesh impedance is a solver stand-in (a regulator nameplate has no %Z); its percent
-# base is end 1's baseU/ratedS. RatioTapChanger on the tap-side end + TapChangerControl monitoring that
+# base is end 1's baseU/ratedS. Both are optional: without a mesh the ends are ideal and need no ratedS (GLM's
+# regulator has neither impedance nor kVA). RatioTapChanger on the tap-side end + TapChangerControl monitoring that
 # end's generated Terminal. step is a tap position, never a ratio. A step-down LTC is the regulator shape.
 
 Profile = cim18v17

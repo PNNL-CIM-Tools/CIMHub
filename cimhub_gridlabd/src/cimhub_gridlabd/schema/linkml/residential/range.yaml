@@ -1,0 +1,712 @@
+id: https://gridlabd.org/schema/glm/residential/range
+name: range
+description: GridLAB-D range class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  range:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file range.cpp
+
+      @addtogroup range
+
+      @ingroup residential
+
+      The range simulation is based on a demand profile attached to the object.
+
+      The internal heat gain is calculated as the demand fraction of installed power.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      oven_volume:
+        range: float
+        required: false
+        description: the volume of the oven
+        unit:
+          ucum_code: gal
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_volume[gal]
+      oven_UA:
+        range: float
+        required: false
+        description: the UA of the oven (surface area divided by R-value)
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_UA[Btu/degF*h]
+      oven_diameter:
+        range: float
+        required: false
+        description: the diameter of the oven
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_diameter[ft]
+      oven_demand:
+        range: float
+        required: false
+        description: the hot food take out from the oven
+        unit:
+          ucum_code: gpm
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_demand[gpm]
+      heating_element_capacity:
+        range: float
+        required: false
+        description: the power of the heating element
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_element_capacity[kW]
+      inlet_food_temperature:
+        range: float
+        required: false
+        description: the inlet temperature of the food
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inlet_food_temperature[degF]
+      heat_mode:
+        range: HeatMode
+        required: false
+        description: the energy source for heating the oven
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: heat_mode
+      location:
+        range: string
+        required: false
+        description: whether the range is inside or outside
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: location
+      oven_setpoint:
+        range: float
+        required: false
+        description: the temperature around which the oven will heat its contents
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_setpoint[degF]
+      thermostat_deadband:
+        range: float
+        required: false
+        description: the degree to heat the food in the oven, when needed
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: thermostat_deadband[degF]
+      temperature:
+        range: float
+        required: false
+        description: the outlet temperature of the oven
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: temperature[degF]
+      height:
+        range: float
+        required: false
+        description: the height of the oven
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: height[ft]
+      food_density:
+        range: float
+        required: false
+        description: food density
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: food_density
+      specificheat_food:
+        range: float
+        required: false
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: specificheat_food
+      queue_cooktop:
+        range: float
+        required: false
+        description: number of loads accumulated
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_cooktop[unit]
+      queue_oven:
+        range: float
+        required: false
+        description: number of loads accumulated
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_oven[unit]
+      queue_min:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_min[unit]
+      queue_max:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_max[unit]
+      time_cooktop_operation:
+        range: float
+        required: false
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_cooktop_operation
+      time_cooktop_setting:
+        range: float
+        required: false
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_cooktop_setting
+      cooktop_run_prob:
+        range: float
+        required: false
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_run_prob
+      oven_run_prob:
+        range: float
+        required: false
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_run_prob
+      cooktop_coil_setting_1:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_coil_setting_1[kW]
+      cooktop_coil_setting_2:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_coil_setting_2[kW]
+      cooktop_coil_setting_3:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_coil_setting_3[kW]
+      total_power_oven:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_power_oven[kW]
+      total_power_cooktop:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_power_cooktop[kW]
+      total_power_range:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_power_range[kW]
+      demand_cooktop:
+        range: float
+        required: false
+        description: number of loads accumulating daily
+        unit:
+          ucum_code: unit/day
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand_cooktop[unit/day]
+      demand_oven:
+        range: float
+        required: false
+        description: number of loads accumulating daily
+        unit:
+          ucum_code: unit/day
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand_oven[unit/day]
+      stall_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stall_voltage[V]
+      start_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: start_voltage[V]
+      stall_impedance:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 33
+          value_type: complex
+          separator: ','
+          native_name: stall_impedance[Ohm]
+      trip_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip_delay[s]
+      reset_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reset_delay[s]
+      time_oven_operation:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_oven_operation[s]
+      time_oven_setting:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_oven_setting[s]
+      state_cooktop:
+        range: string
+        required: false
+        annotations:
+          order: 38
+          value_type: string
+          separator: ','
+          native_name: state_cooktop
+      cooktop_energy_baseline:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_energy_baseline[kWh]
+      cooktop_energy_used:
+        range: float
+        required: false
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_energy_used
+      Toff:
+        range: float
+        required: false
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Toff
+      Ton:
+        range: float
+        required: false
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ton
+      cooktop_interval_setting_1:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_interval_setting_1[s]
+      cooktop_interval_setting_2:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_interval_setting_2[s]
+      cooktop_interval_setting_3:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_interval_setting_3[s]
+      cooktop_energy_needed:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cooktop_energy_needed[kWh]
+      heat_needed:
+        range: boolean
+        required: false
+        annotations:
+          order: 47
+          value_type: bool
+          separator: ','
+          native_name: heat_needed
+      oven_check:
+        range: boolean
+        required: false
+        annotations:
+          order: 48
+          value_type: bool
+          separator: ','
+          native_name: oven_check
+      remainon:
+        range: boolean
+        required: false
+        annotations:
+          order: 49
+          value_type: bool
+          separator: ','
+          native_name: remainon
+      cooktop_check:
+        range: boolean
+        required: false
+        annotations:
+          order: 50
+          value_type: bool
+          separator: ','
+          native_name: cooktop_check
+      actual_load:
+        range: float
+        required: false
+        description: the actual load based on the current voltage across the coils
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_load[kW]
+      previous_load:
+        range: float
+        required: false
+        description: the actual load based on current voltage stored for use in controllers
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: previous_load[kW]
+      actual_power:
+        range: Complex
+        required: false
+        description: the actual power based on the current voltage across the coils
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 53
+          value_type: complex
+          separator: ','
+          native_name: actual_power[kVA]
+      is_range_on:
+        range: float
+        required: false
+        description: simple logic output to determine state of range (1-on, 0-off)
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_range_on
+      time_to_transition:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for time to transition'
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_to_transition
+      cycle_duration_cooktop:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for cycle duration cooktop'
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_duration_cooktop
+      cycle_time_cooktop:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for cycle time cooktop'
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_time_cooktop
+      state_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for state time'
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: state_time
+      Tlower:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tlower'
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tlower
+      Tlower_old:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tlower_old'
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tlower_old
+      Tupper:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tupper'
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tupper
+      Tupper_old:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tupper_old'
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tupper_old
+      Tw_old:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tw_old'
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tw_old
+      oven_demand_old:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for oven_demand_old'
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: oven_demand_old

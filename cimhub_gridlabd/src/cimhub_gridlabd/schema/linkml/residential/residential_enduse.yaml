@@ -1,0 +1,210 @@
+id: https://gridlabd.org/schema/glm/residential/residential_enduse
+name: residential_enduse
+description: 'GridLAB-D residential_enduse class (hand-written: the C++ scrape does
+  not expand PT_enduse)'
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  residential_enduse:
+    is_a: glm_object
+    abstract: true
+    description: 'The base of every residential enduse (ZIPload, waterheater, lights,
+      house, ...). It publishes the enduse load struct with an empty prefix (gldcore/enduse.cpp),
+      so its fields are direct properties of each subclass. Hand-written: the C++
+      scrape does not expand PT_enduse; keep it when re-scraping the residential module.'
+    attributes:
+      shape:
+        range: string
+        required: false
+        description: the loadshape driving the enduse
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: shape
+      override:
+        range: string
+        required: false
+        description: 'override the load state: NORMAL, ON or OFF'
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: override
+      power_state:
+        range: string
+        required: false
+        description: 'the power state: OFF, ON or UNKNOWN'
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: power_state
+      energy:
+        range: Complex
+        required: false
+        description: the total energy consumed since the last meter reading
+        unit:
+          ucum_code: kVA.h
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: energy
+      power:
+        range: Complex
+        required: false
+        description: the total power consumption of the load
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: power
+      peak_demand:
+        range: Complex
+        required: false
+        description: the peak power consumption since the last meter reading
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: peak_demand
+      heatgain:
+        range: float
+        required: false
+        description: the heat transferred from the enduse to the parent
+        unit:
+          ucum_code: '[Btu_IT]/h'
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          native_name: heatgain
+      cumulative_heatgain:
+        range: float
+        required: false
+        description: the cumulative heatgain from the enduse to the parent
+        unit:
+          ucum_code: '[Btu_IT]'
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          native_name: cumulative_heatgain
+      heatgain_fraction:
+        range: float
+        required: false
+        description: the fraction of the heat that goes to the parent (pu)
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          native_name: heatgain_fraction
+      current_fraction:
+        range: float
+        required: false
+        description: the fraction of total power that is constant current (pu)
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          native_name: current_fraction
+      impedance_fraction:
+        range: float
+        required: false
+        description: the fraction of total power that is constant impedance (pu)
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          native_name: impedance_fraction
+      power_fraction:
+        range: float
+        required: false
+        description: the fraction of the total power that is constant power (pu)
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          native_name: power_fraction
+      power_factor:
+        range: float
+        required: false
+        description: the power factor of the load
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          native_name: power_factor
+      constant_power:
+        range: Complex
+        required: false
+        description: the constant power portion of the total load
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: constant_power
+      constant_current:
+        range: Complex
+        required: false
+        description: the constant current portion of the total load
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 15
+          value_type: string
+          separator: ','
+          native_name: constant_current
+      constant_admittance:
+        range: Complex
+        required: false
+        description: the constant admittance portion of the total load
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 16
+          value_type: string
+          separator: ','
+          native_name: constant_admittance
+      voltage_factor:
+        range: float
+        required: false
+        description: the voltage change factor (pu)
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          native_name: voltage_factor
+      breaker_amps:
+        range: float
+        required: false
+        description: the rated breaker amperage
+        unit:
+          ucum_code: A
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          native_name: breaker_amps
+      configuration:
+        range: string
+        required: false
+        description: 'the load configuration options: IS110, IS220'
+        annotations:
+          order: 19
+          value_type: string
+          separator: ','
+          native_name: configuration

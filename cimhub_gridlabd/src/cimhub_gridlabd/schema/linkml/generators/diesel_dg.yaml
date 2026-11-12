@@ -1,0 +1,2882 @@
+id: https://gridlabd.org/schema/glm/generators/diesel_dg
+name: diesel_dg
+description: GridLAB-D diesel_dg class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  diesel_dg:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file diesel_dg.cpp
+
+      @defgroup diesel_dg Diesel gensets
+
+      @ingroup generators
+
+      @{
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      Gen_type:
+        range: string
+        required: false
+        description: Dynamics-capable implementation of synchronous diesel generator
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: Gen_type
+      Rated_V:
+        range: float
+        required: false
+        description: nominal line-line voltage in Volts
+        unit:
+          ucum_code: V
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rated_V[V]
+      Rated_VA:
+        range: float
+        required: false
+        description: nominal capacity in VA
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rated_VA[VA]
+      overload_limit:
+        range: float
+        required: false
+        description: per-unit value of the maximum power the generator can provide
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: overload_limit[pu]
+      deltamode_only_changes:
+        range: boolean
+        required: false
+        description: Flag to prevent reinitialization of dynamic equations - implies
+          all changes are in deltamode
+        annotations:
+          order: 5
+          value_type: bool
+          separator: ','
+          native_name: deltamode_only_changes
+      current_out_A:
+        range: Complex
+        required: false
+        description: Output current of phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: current_out_A[A]
+      current_out_B:
+        range: Complex
+        required: false
+        description: Output current of phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: current_out_B[A]
+      current_out_C:
+        range: Complex
+        required: false
+        description: Output current of phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: current_out_C[A]
+      power_out_A:
+        range: Complex
+        required: false
+        description: Output power of phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: power_out_A[VA]
+      power_out_B:
+        range: Complex
+        required: false
+        description: Output power of phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: power_out_B[VA]
+      power_out_C:
+        range: Complex
+        required: false
+        description: Output power of phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: power_out_C[VA]
+      real_power_out_A:
+        range: float
+        required: false
+        description: Real power output of phase A
+        unit:
+          ucum_code: W
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: real_power_out_A[W]
+      real_power_out_B:
+        range: float
+        required: false
+        description: Real power output of phase B
+        unit:
+          ucum_code: W
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: real_power_out_B[W]
+      real_power_out_C:
+        range: float
+        required: false
+        description: Real power output of phase C
+        unit:
+          ucum_code: W
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: real_power_out_C[W]
+      reactive_power_out_A:
+        range: float
+        required: false
+        description: Reactive power output of phase A
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactive_power_out_A[VAr]
+      reactive_power_out_B:
+        range: float
+        required: false
+        description: Reactive power output of phase B
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactive_power_out_B[VAr]
+      reactive_power_out_C:
+        range: float
+        required: false
+        description: Reactive power output of phase C
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactive_power_out_C[VAr]
+      omega_ref:
+        range: float
+        required: false
+        description: Reference frequency of generator (rad/s)
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: omega_ref[rad/s]
+      inertia:
+        range: float
+        required: false
+        description: Inertial constant (H) of generator
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inertia
+      damping:
+        range: float
+        required: false
+        description: Damping constant (D) of generator
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: damping
+      number_poles:
+        range: float
+        required: false
+        description: Number of poles in the generator
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_poles
+      Ra:
+        range: float
+        required: false
+        description: Stator resistance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ra[pu]
+      Xd:
+        range: float
+        required: false
+        description: d-axis reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xd[pu]
+      Xq:
+        range: float
+        required: false
+        description: q-axis reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xq[pu]
+      Xdp:
+        range: float
+        required: false
+        description: d-axis transient reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xdp[pu]
+      Xqp:
+        range: float
+        required: false
+        description: q-axis transient reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xqp[pu]
+      Xdpp:
+        range: float
+        required: false
+        description: d-axis subtransient reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xdpp[pu]
+      Xqpp:
+        range: float
+        required: false
+        description: q-axis subtransient reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xqpp[pu]
+      Xl:
+        range: float
+        required: false
+        description: Leakage reactance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xl[pu]
+      Tdp:
+        range: float
+        required: false
+        description: d-axis short circuit time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tdp[s]
+      Tdop:
+        range: float
+        required: false
+        description: d-axis open circuit time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tdop[s]
+      Tqop:
+        range: float
+        required: false
+        description: q-axis open circuit time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tqop[s]
+      Tdopp:
+        range: float
+        required: false
+        description: d-axis open circuit subtransient time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tdopp[s]
+      Tqopp:
+        range: float
+        required: false
+        description: q-axis open circuit subtransient time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tqopp[s]
+      Ta:
+        range: float
+        required: false
+        description: Armature short-circuit time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ta[s]
+      X0:
+        range: Complex
+        required: false
+        description: Zero sequence impedance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 36
+          value_type: complex
+          separator: ','
+          native_name: X0[pu]
+      X2:
+        range: Complex
+        required: false
+        description: Negative sequence impedance (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 37
+          value_type: complex
+          separator: ','
+          native_name: X2[pu]
+      rotor_speed_convergence:
+        range: float
+        required: false
+        description: Convergence criterion on rotor speed used to determine when to
+          exit deltamode
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rotor_speed_convergence[rad/s]
+      voltage_convergence:
+        range: float
+        required: false
+        description: Convergence criterion for voltage changes (if exciter present)
+          to determine when to exit deltamode
+        unit:
+          ucum_code: V
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_convergence[V]
+      current_convergence:
+        range: float
+        required: false
+        description: Convergence criterion for current changes on first timestep -
+          basically initialization of system
+        unit:
+          ucum_code: A
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_convergence[A]
+      rotor_speed_convergence_enabled:
+        range: boolean
+        required: false
+        description: Uses rotor_speed_convergence to determine if an exit of deltamode
+          is needed
+        annotations:
+          order: 41
+          value_type: bool
+          separator: ','
+          native_name: rotor_speed_convergence_enabled
+      voltage_magnitude_convergence_enabled:
+        range: boolean
+        required: false
+        description: Uses voltage_convergence to determine if an exit of deltamode
+          is needed - only works if an exciter is present
+        annotations:
+          order: 42
+          value_type: bool
+          separator: ','
+          native_name: voltage_magnitude_convergence_enabled
+      rotor_angle:
+        range: float
+        required: false
+        description: rotor angle state variable
+        unit:
+          ucum_code: rad
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rotor_angle[rad]
+      rotor_speed:
+        range: float
+        required: false
+        description: machine speed state variable
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rotor_speed[rad/s]
+      field_voltage:
+        range: float
+        required: false
+        description: machine field voltage state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: field_voltage[pu]
+      flux1d:
+        range: float
+        required: false
+        description: machine transient flux on d-axis state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: flux1d[pu]
+      flux2q:
+        range: float
+        required: false
+        description: machine subtransient flux on q-axis state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: flux2q[pu]
+      EpRotated:
+        range: Complex
+        required: false
+        description: d-q rotated E-prime internal voltage state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 48
+          value_type: complex
+          separator: ','
+          native_name: EpRotated[pu]
+      VintRotated:
+        range: Complex
+        required: false
+        description: d-q rotated Vint voltage state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 49
+          value_type: complex
+          separator: ','
+          native_name: VintRotated[pu]
+      Eint_A:
+        range: Complex
+        required: false
+        description: Unrotated, unsequenced phase A internal voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 50
+          value_type: complex
+          separator: ','
+          native_name: Eint_A[V]
+      Eint_B:
+        range: Complex
+        required: false
+        description: Unrotated, unsequenced phase B internal voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 51
+          value_type: complex
+          separator: ','
+          native_name: Eint_B[V]
+      Eint_C:
+        range: Complex
+        required: false
+        description: Unrotated, unsequenced phase C internal voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 52
+          value_type: complex
+          separator: ','
+          native_name: Eint_C[V]
+      Irotated:
+        range: Complex
+        required: false
+        description: d-q rotated sequence current state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 53
+          value_type: complex
+          separator: ','
+          native_name: Irotated[pu]
+      pwr_electric:
+        range: Complex
+        required: false
+        description: Current electrical output of machine
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 54
+          value_type: complex
+          separator: ','
+          native_name: pwr_electric[VA]
+      pwr_mech:
+        range: float
+        required: false
+        description: Current mechanical output of machine
+        unit:
+          ucum_code: W
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pwr_mech[W]
+      torque_mech:
+        range: float
+        required: false
+        description: Current mechanical torque of machine
+        unit:
+          ucum_code: N*m
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: torque_mech[N*m]
+      torque_elec:
+        range: float
+        required: false
+        description: Current electrical torque output of machine
+        unit:
+          ucum_code: N*m
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: torque_elec[N*m]
+      wref:
+        range: float
+        required: false
+        description: wref input to governor controls (per-unit)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: wref[pu]
+      w_ref:
+        range: float
+        required: false
+        description: w_ref input to governor controls (rad/s) - takes priority over
+          wref
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: w_ref[rad/s]
+      vset:
+        range: float
+        required: false
+        description: vset input to AVR controls (per-unit)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset[pu]
+      Vset:
+        range: float
+        required: false
+        description: Vset input to AVR controls (per-unit)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vset[pu]
+      Pref:
+        range: float
+        required: false
+        description: Pref input to governor controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref[pu]
+      Pset:
+        range: float
+        required: false
+        description: Pset input to governor controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pset[pu]
+      fset:
+        range: float
+        required: false
+        description: fset input to governor controls (Hz) - takes priority over wref
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fset[Hz]
+      Qref:
+        range: float
+        required: false
+        description: Qref input to govornor or AVR controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qref[pu]
+      pdispatch:
+        range: float
+        required: false
+        description: Desired generator dispatch set point in p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch[pu]
+      pdispatch_offset:
+        range: float
+        required: false
+        description: Desired offset to generator dispatch in p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch_offset[pu]
+      Exciter_type:
+        range: string
+        required: false
+        description: Simplified Excitation System
+        annotations:
+          order: 68
+          value_type: string
+          separator: ','
+          native_name: Exciter_type
+      SEXS_mode:
+        range: string
+        required: false
+        description: Q-V droop function
+        annotations:
+          order: 69
+          value_type: string
+          separator: ','
+          native_name: SEXS_mode
+      KA:
+        range: float
+        required: false
+        description: Exciter gain (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: KA[pu]
+      TA:
+        range: float
+        required: false
+        description: Exciter time constant (seconds)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TA[s]
+      TB:
+        range: float
+        required: false
+        description: Exciter transient gain reduction time constant (seconds)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TB[s]
+      TC:
+        range: float
+        required: false
+        description: Exciter transient gain reduction time constant (seconds)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TC[s]
+      EMAX:
+        range: float
+        required: false
+        description: Exciter upper limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: EMAX[pu]
+      EMIN:
+        range: float
+        required: false
+        description: Exciter lower limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: EMIN[pu]
+      Vterm_max:
+        range: float
+        required: false
+        description: Upper voltage limit for super-second (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vterm_max[pu]
+      Vterm_min:
+        range: float
+        required: false
+        description: Lower voltage limit for super-second (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 77
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vterm_min[pu]
+      mq_QV_Droop:
+        range: float
+        required: false
+        description: Q-V droop slope
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mq_QV_Droop[pu]
+      SEXS_Q_V_droop:
+        range: float
+        required: false
+        description: Q-V droop slope
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SEXS_Q_V_droop[pu]
+      Vset_QV_droop:
+        range: float
+        required: false
+        description: Voltage setpoint of QV droop
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vset_QV_droop[pu]
+      SEXS_Vset:
+        range: float
+        required: false
+        description: Voltage setpoint of QV droop
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SEXS_Vset[pu]
+      Vref_SEXS:
+        range: float
+        required: false
+        description: Voltage reference for SEXS exciter
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vref_SEXS[pu]
+      bias:
+        range: float
+        required: false
+        description: Exciter bias state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: bias[pu]
+      xe:
+        range: float
+        required: false
+        description: Exciter state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 84
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: xe[pu]
+      xb:
+        range: float
+        required: false
+        description: Exciter state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 85
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: xb[pu]
+      x_cvr1:
+        range: float
+        required: false
+        description: Exciter state variable - CVR mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: x_cvr1[pu]
+      x_cvr2:
+        range: float
+        required: false
+        description: Exciter state variable - CVR mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: x_cvr2[pu]
+      Vref:
+        range: float
+        required: false
+        description: Exciter CVR control voltage reference value
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 88
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vref[pu]
+      CVR_mode:
+        range: string
+        required: false
+        description: First order control mode with feedback loop
+        annotations:
+          order: 89
+          value_type: string
+          separator: ','
+          native_name: CVR_mode
+      P_CONSTANT_ki:
+        range: float
+        required: false
+        description: parameter of the integration control for constant P mode
+        annotations:
+          order: 90
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_ki
+      P_CONSTANT_kp:
+        range: float
+        required: false
+        description: parameter of the proportional control for constant P mode
+        annotations:
+          order: 91
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_kp
+      Exciter_Q_constant_ki:
+        range: float
+        required: false
+        description: parameter of the integration control for constant Q mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 92
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Exciter_Q_constant_ki[pu]
+      Exciter_Q_constant_kp:
+        range: float
+        required: false
+        description: parameter of the propotional control for constant Q mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 93
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Exciter_Q_constant_kp[pu]
+      P_CONSTANT_Pref:
+        range: float
+        required: false
+        description: Pref input to governor controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Pref[pu]
+      Exciter_Q_constant_Qref:
+        range: float
+        required: false
+        description: Qref input to AVR controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Exciter_Q_constant_Qref[pu]
+      CVR_enabled:
+        range: boolean
+        required: false
+        description: True if the CVR control is enabled in the exciter
+        annotations:
+          order: 96
+          value_type: bool
+          separator: ','
+          native_name: CVR_enabled
+      CVR_ki_cvr:
+        range: float
+        required: false
+        description: parameter of the integration control for CVR control
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_ki_cvr[pu]
+      CVR_kp_cvr:
+        range: float
+        required: false
+        description: parameter of the proportional control for CVR control
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_kp_cvr[pu]
+      CVR_kd_cvr:
+        range: float
+        required: false
+        description: parameter of the deviation control for CVR control
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_kd_cvr[pu]
+      CVR_kt_cvr:
+        range: float
+        required: false
+        description: parameter of the gain in feedback loop for CVR control
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 100
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_kt_cvr[pu]
+      CVR_kw_cvr:
+        range: float
+        required: false
+        description: parameter of the gain in feedback loop for CVR control
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 101
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_kw_cvr[pu]
+      CVR_PI:
+        range: boolean
+        required: false
+        description: True if the PI controller is implemented in CVR control
+        annotations:
+          order: 102
+          value_type: bool
+          separator: ','
+          native_name: CVR_PI
+      CVR_PID:
+        range: boolean
+        required: false
+        description: True if the PID controller is implemented in CVR control
+        annotations:
+          order: 103
+          value_type: bool
+          separator: ','
+          native_name: CVR_PID
+      CVR_Kd1:
+        range: float
+        required: false
+        description: parameter of the second order transfer function for CVR control
+        annotations:
+          order: 104
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_Kd1
+      CVR_Kd2:
+        range: float
+        required: false
+        description: parameter of the second order transfer function for CVR control
+        annotations:
+          order: 105
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_Kd2
+      CVR_Kd3:
+        range: float
+        required: false
+        description: parameter of the second order transfer function for CVR control
+        annotations:
+          order: 106
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_Kd3
+      CVR_Kn1:
+        range: float
+        required: false
+        description: parameter of the second order transfer function for CVR control
+        annotations:
+          order: 107
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_Kn1
+      CVR_Kn2:
+        range: float
+        required: false
+        description: parameter of the second order transfer function for CVR control
+        annotations:
+          order: 108
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CVR_Kn2
+      vset_delta_MAX:
+        range: float
+        required: false
+        description: Maximum delta Vset limit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 109
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_delta_MAX[pu]
+      vset_delta_MIN:
+        range: float
+        required: false
+        description: Minimum delta Vset limit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 110
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vset_delta_MIN[pu]
+      vadd:
+        range: float
+        required: false
+        description: Delta Vset
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 111
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vadd[pu]
+      vadd_a:
+        range: float
+        required: false
+        description: Delta Vset before going into bound check
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 112
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: vadd_a[pu]
+      Governor_type:
+        range: string
+        required: false
+        description: P_CONSTANT mode Governor Model
+        annotations:
+          order: 113
+          value_type: string
+          separator: ','
+          native_name: Governor_type
+      P_f_droop_setting_mode:
+        range: PFDroopSettingMode
+        required: false
+        description: Definition of P-f droop curve
+        annotations:
+          order: 114
+          value_type: string
+          separator: ','
+          native_name: P_f_droop_setting_mode
+      DEGOV1_R:
+        range: float
+        required: false
+        description: Governor droop constant (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 115
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_R[pu]
+      DEGOV1_T1:
+        range: float
+        required: false
+        description: Governor electric control box time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 116
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T1[s]
+      DEGOV1_T2:
+        range: float
+        required: false
+        description: Governor electric control box time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 117
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T2[s]
+      DEGOV1_T3:
+        range: float
+        required: false
+        description: Governor electric control box time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 118
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T3[s]
+      DEGOV1_T4:
+        range: float
+        required: false
+        description: Governor actuator time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 119
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T4[s]
+      DEGOV1_T5:
+        range: float
+        required: false
+        description: Governor actuator time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 120
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T5[s]
+      DEGOV1_T6:
+        range: float
+        required: false
+        description: Governor actuator time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 121
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_T6[s]
+      DEGOV1_K:
+        range: float
+        required: false
+        description: Governor actuator gain
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 122
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_K[pu]
+      DEGOV1_TMAX:
+        range: float
+        required: false
+        description: Governor actuator upper limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 123
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_TMAX[pu]
+      DEGOV1_TMIN:
+        range: float
+        required: false
+        description: Governor actuator lower limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 124
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_TMIN[pu]
+      DEGOV1_TD:
+        range: float
+        required: false
+        description: Governor combustion delay (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 125
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_TD[s]
+      DEGOV1_x1:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 126
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_x1[pu]
+      DEGOV1_x2:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 127
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_x2[pu]
+      DEGOV1_x4:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 128
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_x4[pu]
+      DEGOV1_x5:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 129
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_x5[pu]
+      DEGOV1_x6:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 130
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_x6[pu]
+      DEGOV1_throttle:
+        range: float
+        required: false
+        description: Governor throttle state variable
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 131
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DEGOV1_throttle[pu]
+      GAST_R:
+        range: float
+        required: false
+        description: Governor droop constant (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 132
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_R[pu]
+      GAST_T1:
+        range: float
+        required: false
+        description: Governor electric control box time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 133
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_T1[s]
+      GAST_T2:
+        range: float
+        required: false
+        description: Governor electric control box time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 134
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_T2[s]
+      GAST_T3:
+        range: float
+        required: false
+        description: Governor temperature limiter time constant (s)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 135
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_T3[s]
+      GAST_AT:
+        range: float
+        required: false
+        description: Governor Ambient Temperature load limit (units)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 136
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_AT[s]
+      GAST_KT:
+        range: float
+        required: false
+        description: Governor temperature control loop gain
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 137
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_KT[pu]
+      GAST_VMAX:
+        range: float
+        required: false
+        description: Governor actuator upper limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 138
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_VMAX[pu]
+      GAST_VMIN:
+        range: float
+        required: false
+        description: Governor actuator lower limit (p.u.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 139
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_VMIN[pu]
+      GAST_x1:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        annotations:
+          order: 140
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_x1
+      GAST_x2:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        annotations:
+          order: 141
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_x2
+      GAST_x3:
+        range: float
+        required: false
+        description: Governor electric box state variable
+        annotations:
+          order: 142
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_x3
+      GAST_throttle:
+        range: float
+        required: false
+        description: Governor throttle state variable
+        annotations:
+          order: 143
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GAST_throttle
+      GGOV1_R:
+        range: float
+        required: false
+        description: Permanent droop, p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 144
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_R[pu]
+      GGOV1_Rselect:
+        range: integer
+        required: false
+        description: Feedback signal for droop, = 1 selected electrical power, = 0
+          none (isochronous governor), = -1 fuel valve stroke ( true stroke),= -2
+          governor output ( requested stroke)
+        annotations:
+          order: 145
+          value_type: int
+          separator: ','
+          native_name: GGOV1_Rselect
+      GGOV1_Tpelec:
+        range: float
+        required: false
+        description: Electrical power transducer time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 146
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tpelec[s]
+      GGOV1_maxerr:
+        range: float
+        required: false
+        description: Maximum value for speed error signal
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 147
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_maxerr[pu]
+      GGOV1_minerr:
+        range: float
+        required: false
+        description: Minimum value for speed error signal
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 148
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_minerr[pu]
+      GGOV1_Kpgov:
+        range: float
+        required: false
+        description: Governor proportional gain
+        annotations:
+          order: 149
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kpgov
+      GGOV1_Kigov:
+        range: float
+        required: false
+        description: Governor integral gain
+        annotations:
+          order: 150
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kigov
+      GGOV1_Kdgov:
+        range: float
+        required: false
+        description: Governor derivative gain
+        annotations:
+          order: 151
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kdgov
+      GGOV1_Tdgov:
+        range: float
+        required: false
+        description: Governor derivative controller time constant, sec.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 152
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tdgov[s]
+      GGOV1_vmax:
+        range: float
+        required: false
+        description: Maximum valve position limit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 153
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_vmax[pu]
+      GGOV1_vmin:
+        range: float
+        required: false
+        description: Minimum valve position limit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 154
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_vmin[pu]
+      GGOV1_Tact:
+        range: float
+        required: false
+        description: Actuator time constant
+        unit:
+          ucum_code: s
+        annotations:
+          order: 155
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tact[s]
+      GGOV1_Kturb:
+        range: float
+        required: false
+        description: Turbine gain (>0.)
+        annotations:
+          order: 156
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kturb
+      GGOV1_wfnl:
+        range: float
+        required: false
+        description: No load fuel flow, p.u
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 157
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_wfnl[pu]
+      GGOV1_Tb:
+        range: float
+        required: false
+        description: Turbine lag time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 158
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tb[s]
+      GGOV1_Tc:
+        range: float
+        required: false
+        description: Turbine lead time constant, sec.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 159
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tc[s]
+      GGOV1_Fuel_lag:
+        range: integer
+        required: false
+        description: Switch for fuel source characteristic, = 0 for fuel flow independent
+          of speed, = 1 fuel flow proportional to speed
+        annotations:
+          order: 160
+          value_type: int
+          separator: ','
+          native_name: GGOV1_Fuel_lag
+      GGOV1_Teng:
+        range: float
+        required: false
+        description: Transport lag time constant for diesel engine
+        unit:
+          ucum_code: s
+        annotations:
+          order: 161
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Teng[s]
+      GGOV1_Tfload:
+        range: float
+        required: false
+        description: Load Limiter time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 162
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tfload[s]
+      GGOV1_Kpload:
+        range: float
+        required: false
+        description: Load limiter proportional gain for PI controller
+        annotations:
+          order: 163
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kpload
+      GGOV1_Kiload:
+        range: float
+        required: false
+        description: Load limiter integral gain for PI controller
+        annotations:
+          order: 164
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kiload
+      GGOV1_Ldref:
+        range: float
+        required: false
+        description: Load limiter reference value p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 165
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Ldref[pu]
+      GGOV1_Dm:
+        range: float
+        required: false
+        description: Speed sensitivity coefficient, p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 166
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Dm[pu]
+      GGOV1_ropen:
+        range: float
+        required: false
+        description: Maximum valve opening rate, p.u./sec.
+        unit:
+          ucum_code: pu/s
+        annotations:
+          order: 167
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_ropen[pu/s]
+      GGOV1_rclose:
+        range: float
+        required: false
+        description: Minimum valve closing rate, p.u./sec.
+        unit:
+          ucum_code: pu/s
+        annotations:
+          order: 168
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_rclose[pu/s]
+      GGOV1_Kimw:
+        range: float
+        required: false
+        description: Power controller (reset) gain
+        annotations:
+          order: 169
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Kimw
+      GGOV1_Pmwset:
+        range: float
+        required: false
+        description: Power controller setpoint, MW
+        unit:
+          ucum_code: MW
+        annotations:
+          order: 170
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Pmwset[MW]
+      GGOV1_aset:
+        range: float
+        required: false
+        description: Acceleration limiter setpoint, p.u. / sec.
+        unit:
+          ucum_code: pu/s
+        annotations:
+          order: 171
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_aset[pu/s]
+      GGOV1_Ka:
+        range: float
+        required: false
+        description: Acceleration limiter Gain
+        annotations:
+          order: 172
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Ka
+      GGOV1_Ta:
+        range: float
+        required: false
+        description: Acceleration limiter time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 173
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Ta[s]
+      GGOV1_db:
+        range: float
+        required: false
+        description: Speed governor dead band
+        annotations:
+          order: 174
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_db
+      GGOV1_Tsa:
+        range: float
+        required: false
+        description: Temperature detection lead time constant, sec.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 175
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tsa[s]
+      GGOV1_Tsb:
+        range: float
+        required: false
+        description: Temperature detection lag time constant, sec.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 176
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Tsb[s]
+      GGOV1_Pset:
+        range: float
+        required: false
+        description: GGOV1_Pset input to governor controls (per-unit), if supported
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 177
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_Pset[pu]
+      GGOV1_fset:
+        range: float
+        required: false
+        description: fset input to governor controls (Hz) - takes priority over wref
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 178
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_fset[Hz]
+      GGOV1_Load_Limit_enable:
+        range: boolean
+        required: false
+        description: Enables/disables load limiter (fsrt) of low-value-select
+        annotations:
+          order: 179
+          value_type: bool
+          separator: ','
+          native_name: GGOV1_Load_Limit_enable
+      GGOV1_Acceleration_Limit_enable:
+        range: boolean
+        required: false
+        description: Enables/disables acceleration limiter (fsra) of low-value-select
+        annotations:
+          order: 180
+          value_type: bool
+          separator: ','
+          native_name: GGOV1_Acceleration_Limit_enable
+      GGOV1_PID_enable:
+        range: boolean
+        required: false
+        description: Enables/disables PID controller (fsrn) of low-value-select
+        annotations:
+          order: 181
+          value_type: bool
+          separator: ','
+          native_name: GGOV1_PID_enable
+      GGOV1_fsrt:
+        range: float
+        required: false
+        description: Load limiter block input to low-value-select
+        annotations:
+          order: 182
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_fsrt
+      GGOV1_fsra:
+        range: float
+        required: false
+        description: Acceleration limiter block input to low-value-select
+        annotations:
+          order: 183
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_fsra
+      GGOV1_fsrn:
+        range: float
+        required: false
+        description: PID block input to low-value-select
+        annotations:
+          order: 184
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_fsrn
+      GGOV1_speed_error:
+        range: float
+        required: false
+        description: Speed difference in per-unit for input to PID controller
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 185
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_speed_error[pu]
+      GGOV1_x1:
+        range: float
+        required: false
+        annotations:
+          order: 186
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x1
+      GGOV1_x2:
+        range: float
+        required: false
+        annotations:
+          order: 187
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x2
+      GGOV1_x2a:
+        range: float
+        required: false
+        annotations:
+          order: 188
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x2a
+      GGOV1_x3:
+        range: float
+        required: false
+        annotations:
+          order: 189
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x3
+      GGOV1_x3a:
+        range: float
+        required: false
+        annotations:
+          order: 190
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x3a
+      GGOV1_x4:
+        range: float
+        required: false
+        annotations:
+          order: 191
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x4
+      GGOV1_x4a:
+        range: float
+        required: false
+        annotations:
+          order: 192
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x4a
+      GGOV1_x4b:
+        range: float
+        required: false
+        annotations:
+          order: 193
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x4b
+      GGOV1_x5:
+        range: float
+        required: false
+        annotations:
+          order: 194
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x5
+      GGOV1_x5a:
+        range: float
+        required: false
+        annotations:
+          order: 195
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x5a
+      GGOV1_x5b:
+        range: float
+        required: false
+        annotations:
+          order: 196
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x5b
+      GGOV1_x6:
+        range: float
+        required: false
+        annotations:
+          order: 197
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x6
+      GGOV1_x7:
+        range: float
+        required: false
+        annotations:
+          order: 198
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x7
+      GGOV1_x7a:
+        range: float
+        required: false
+        annotations:
+          order: 199
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x7a
+      GGOV1_x8:
+        range: float
+        required: false
+        annotations:
+          order: 200
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x8
+      GGOV1_x8a:
+        range: float
+        required: false
+        annotations:
+          order: 201
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x8a
+      GGOV1_x9:
+        range: float
+        required: false
+        annotations:
+          order: 202
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x9
+      GGOV1_x9a:
+        range: float
+        required: false
+        annotations:
+          order: 203
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x9a
+      GGOV1_x10:
+        range: float
+        required: false
+        annotations:
+          order: 204
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x10
+      GGOV1_x10a:
+        range: float
+        required: false
+        annotations:
+          order: 205
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x10a
+      GGOV1_x10b:
+        range: float
+        required: false
+        annotations:
+          order: 206
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_x10b
+      GGOV1_ValveStroke:
+        range: float
+        required: false
+        annotations:
+          order: 207
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_ValveStroke
+      GGOV1_FuelFlow:
+        range: float
+        required: false
+        annotations:
+          order: 208
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_FuelFlow
+      GGOV1_GovOutPut:
+        range: float
+        required: false
+        annotations:
+          order: 209
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_GovOutPut
+      GGOV1_RselectValue:
+        range: float
+        required: false
+        annotations:
+          order: 210
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_RselectValue
+      GGOV1_fsrtNoLim:
+        range: float
+        required: false
+        annotations:
+          order: 211
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_fsrtNoLim
+      GGOV1_err2:
+        range: float
+        required: false
+        annotations:
+          order: 212
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_err2
+      GGOV1_err2a:
+        range: float
+        required: false
+        annotations:
+          order: 213
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_err2a
+      GGOV1_err3:
+        range: float
+        required: false
+        annotations:
+          order: 214
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_err3
+      GGOV1_err4:
+        range: float
+        required: false
+        annotations:
+          order: 215
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_err4
+      GGOV1_err7:
+        range: float
+        required: false
+        annotations:
+          order: 216
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_err7
+      GGOV1_LowValSelect1:
+        range: float
+        required: false
+        annotations:
+          order: 217
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_LowValSelect1
+      GGOV1_LowValSelect:
+        range: float
+        required: false
+        annotations:
+          order: 218
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GGOV1_LowValSelect
+      P_CONSTANT_Tpelec:
+        range: float
+        required: false
+        description: Electrical power transducer time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 219
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Tpelec[s]
+      P_CONSTANT_Tact:
+        range: float
+        required: false
+        description: Actuator time constant
+        unit:
+          ucum_code: s
+        annotations:
+          order: 220
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Tact[s]
+      P_CONSTANT_Kturb:
+        range: float
+        required: false
+        description: Turbine gain (>0.)
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 221
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Kturb[pu]
+      P_CONSTANT_wfnl:
+        range: float
+        required: false
+        description: No load fuel flow, p.u
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 222
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_wfnl[pu]
+      P_CONSTANT_Tb:
+        range: float
+        required: false
+        description: Turbine lag time constant, sec. (>0.)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 223
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Tb[s]
+      P_CONSTANT_Tc:
+        range: float
+        required: false
+        description: Turbine lead time constant, sec.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 224
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Tc[s]
+      P_CONSTANT_Teng:
+        range: float
+        required: false
+        description: Transport lag time constant for diesel engine
+        unit:
+          ucum_code: s
+        annotations:
+          order: 225
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_Teng[s]
+      P_CONSTANT_ropen:
+        range: float
+        required: false
+        description: Maximum valve opening rate, p.u./sec.
+        unit:
+          ucum_code: pu/s
+        annotations:
+          order: 226
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_ropen[pu/s]
+      P_CONSTANT_rclose:
+        range: float
+        required: false
+        description: Minimum valve closing rate, p.u./sec.
+        unit:
+          ucum_code: pu/s
+        annotations:
+          order: 227
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_rclose[pu/s]
+      P_CONSTANT_x1:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 228
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x1[pu]
+      P_CONSTANT_x4:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 229
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x4[pu]
+      P_CONSTANT_x4a:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 230
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x4a[pu]
+      P_CONSTANT_x4b:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 231
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x4b[pu]
+      P_CONSTANT_x5:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 232
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x5[pu]
+      P_CONSTANT_x5a:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 233
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x5a[pu]
+      P_CONSTANT_x5b:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 234
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x5b[pu]
+      P_CONSTANT_x_Pconstant:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 235
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_x_Pconstant[pu]
+      P_CONSTANT_err4:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 236
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_err4[pu]
+      P_CONSTANT_ValveStroke:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 237
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_ValveStroke[pu]
+      P_CONSTANT_FuelFlow:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 238
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_FuelFlow[pu]
+      P_CONSTANT_GovOutPut:
+        range: float
+        required: false
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 239
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_CONSTANT_GovOutPut[pu]
+      fuelEmissionCal:
+        range: boolean
+        required: false
+        description: Boolean value indicating whether fuel and emission calculations
+          are used or not
+        annotations:
+          order: 240
+          value_type: bool
+          separator: ','
+          native_name: fuelEmissionCal
+      outputEnergy:
+        range: float
+        required: false
+        description: Total energy(kWh) output from the generator
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 241
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: outputEnergy[kWh]
+      FuelUse:
+        range: float
+        required: false
+        description: Total fuel usage (gal) based on kW power output
+        unit:
+          ucum_code: gal
+        annotations:
+          order: 242
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: FuelUse[gal]
+      efficiency:
+        range: float
+        required: false
+        description: Total energy output per fuel usage (kWh/gal)
+        unit:
+          ucum_code: kWh/gal
+        annotations:
+          order: 243
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: efficiency[kWh/gal]
+      CO2_emission:
+        range: float
+        required: false
+        description: Total CO2 emissions (lbs) based on fuel usage
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 244
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CO2_emission[lb]
+      SOx_emission:
+        range: float
+        required: false
+        description: Total SOx emissions (lbs) based on fuel usage
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 245
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SOx_emission[lb]
+      NOx_emission:
+        range: float
+        required: false
+        description: Total NOx emissions (lbs) based on fuel usage
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 246
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NOx_emission[lb]
+      PM10_emission:
+        range: float
+        required: false
+        description: Total PM-10 emissions (lbs) based on fuel usage
+        unit:
+          ucum_code: lb
+        annotations:
+          order: 247
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PM10_emission[lb]
+      frequency_deviation:
+        range: float
+        required: false
+        description: Frequency deviation of diesel_dg
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 248
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_deviation[pu]
+      frequency_deviation_energy:
+        range: float
+        required: false
+        description: Frequency deviation accumulation of diesel_dg
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 249
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_deviation_energy[pu]
+      frequency_deviation_max:
+        range: float
+        required: false
+        description: Frequency deviation of diesel_dg
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 250
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_deviation_max[pu]
+      realPowerChange:
+        range: float
+        required: false
+        description: Real power output change of diesel_dg
+        unit:
+          ucum_code: W
+        annotations:
+          order: 251
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: realPowerChange[W]
+      ratio_f_p:
+        range: float
+        required: false
+        description: Ratio of frequency deviation to real power output change of diesel_dg
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 252
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ratio_f_p[pu]
+      real_power_generation:
+        range: float
+        required: false
+        description: The total real power generation
+        unit:
+          ucum_code: W
+        annotations:
+          order: 253
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: real_power_generation[W]
+      reactive_power_generation:
+        range: float
+        required: false
+        description: The total reactive power generation
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 254
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reactive_power_generation[VAr]
+      last_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last_time'
+        annotations:
+          order: 255
+          value_type: string
+          separator: ','
+          native_name: last_time
+      pwr_electric_init:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for pwr_electric_init'
+        annotations:
+          order: 256
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pwr_electric_init

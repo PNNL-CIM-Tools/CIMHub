@@ -1,0 +1,17 @@
+# GridLAB-D triplex_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# Source table: triplex_line (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_line
+    ln_tl_1, tl_1, tn1, tm1, s1s2N, 30.0, wc_triplex_line_configuration:1, bv_240v
+    ln_tl_2, tl_2, tn1, tm2, s1s2N, 30.0, wc_tc_rated,                     bv_240v
+
+Table OperationalLimitSet: mRID, Equipment
+    # ratings: from triplex_line_configuration tc_rated
+    ln_tl_2_limits, ln_tl_2
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ln_tl_2_norm,  1200.0, olt_normal,    ln_tl_2_limits
+    ln_tl_2_emerg, 1200.0, olt_emergency, ln_tl_2_limits

@@ -1,0 +1,165 @@
+id: https://gridlabd.org/schema/glm/powerflow/restoration
+name: restoration
+description: GridLAB-D restoration class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  restoration:
+    is_a: glm_object
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+
+      Inherits from: Chain
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from Chain (not in powerflow module)'
+    attributes:
+      reconfig_attempts:
+        range: integer
+        required: false
+        description: Number of reconfigurations/timestep to try before giving up
+        annotations:
+          order: 1
+          value_type: int
+          separator: ','
+          native_name: reconfig_attempts
+      reconfig_iteration_limit:
+        range: integer
+        required: false
+        description: Number of iterations to let PF go before flagging this as a bad
+          reconfiguration
+        annotations:
+          order: 2
+          value_type: int
+          separator: ','
+          native_name: reconfig_iteration_limit
+      source_vertex:
+        range: string
+        required: false
+        description: Source vertex object for reconfiguration
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: source_vertex
+      faulted_section:
+        range: string
+        required: false
+        description: Faulted section for reconfiguration
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: faulted_section
+      feeder_power_limit:
+        range: string
+        required: false
+        description: Comma-separated power limit (VA) for feeders during reconfiguration
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: feeder_power_limit
+      feeder_power_links:
+        range: string
+        required: false
+        description: Comma-separated list of link-based objects for monitoring power
+          through
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: feeder_power_links
+      feeder_vertex_list:
+        range: string
+        required: false
+        description: Comma-separated object list that defines the feeder vertices
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: feeder_vertex_list
+      microgrid_power_limit:
+        range: string
+        required: false
+        description: Comma-separated power limit (complex VA) for microgrids during
+          reconfiguration
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: microgrid_power_limit
+      microgrid_power_links:
+        range: string
+        required: false
+        description: Comma-separated list of link-based objects for monitoring power
+          through
+        annotations:
+          order: 9
+          value_type: string
+          separator: ','
+          native_name: microgrid_power_links
+      microgrid_vertex_list:
+        range: string
+        required: false
+        description: Comma-separated object list that defines the microgrid vertices
+        annotations:
+          order: 10
+          value_type: string
+          separator: ','
+          native_name: microgrid_vertex_list
+      lower_voltage_limit:
+        range: float
+        required: false
+        description: Lower voltage limit for the reconfiguration validity checks -
+          per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lower_voltage_limit[pu]
+      upper_voltage_limit:
+        range: float
+        required: false
+        description: Upper voltage limit for the reconfiguration validity checks -
+          per unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: upper_voltage_limit[pu]
+      output_filename:
+        range: string
+        required: false
+        description: Output text file name to describe final or attempted switching
+          operations
+        annotations:
+          order: 13
+          value_type: string
+          separator: ','
+          native_name: output_filename
+      generate_all_scenarios:
+        range: boolean
+        required: false
+        description: Flag to determine if restoration reconfiguration and continues,
+          or explores the full space
+        annotations:
+          order: 14
+          value_type: bool
+          separator: ','
+          native_name: generate_all_scenarios

@@ -1,0 +1,70 @@
+id: https://gridlabd.org/schema/glm/residential/occupantload
+name: occupantload
+description: GridLAB-D occupantload class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  occupantload:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file occupantload.cpp
+
+      @addtogroup occupantload
+
+      @ingroup residential
+
+      The occupantload model is based on occupancy fraction/schedule.
+
+      DOE-2 assumptions are used for calculating the internal gain from occupant load.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      number_of_occupants:
+        range: integer
+        required: false
+        annotations:
+          order: 1
+          value_type: int
+          separator: ','
+          native_name: number_of_occupants
+      occupancy_fraction:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: occupancy_fraction[unit]
+      heatgain_per_person:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heatgain_per_person[Btu/h]

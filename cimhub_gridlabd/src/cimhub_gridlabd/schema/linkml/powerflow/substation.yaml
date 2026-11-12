@@ -1,0 +1,297 @@
+id: https://gridlabd.org/schema/glm/powerflow/substation
+name: substation
+description: GridLAB-D substation class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  substation:
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+      @file substation.cpp
+
+      @addtogroup powerflow_meter Substation
+
+      @ingroup powerflow
+
+      Substation object serves as a connecting object between the powerflow
+
+      and network solvers.  The three-phase unbalanced connections of the
+
+      distribution solver are posted as an equivalent per-unit load on the network
+
+      solver.  The network solver per-unit voltage is translated into a balanced
+
+      three-phase voltage for the distribution solver.  This functionality assumes
+
+      the substation is treated as the swing bus for the distribution solver.
+
+      Total cumulative energy, instantantenous power and peak demand are
+
+      metered.
+
+      @{
+
+
+      Inherits from: node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: node
+    attributes:
+      zero_sequence_voltage:
+        range: Complex
+        required: false
+        description: The zero sequence representation of the voltage for the substation
+          object.
+        unit:
+          ucum_code: V
+        annotations:
+          order: 1
+          value_type: complex
+          separator: ','
+          native_name: zero_sequence_voltage[V]
+      positive_sequence_voltage:
+        range: Complex
+        required: false
+        description: The positive sequence representation of the voltage for the substation
+          object.
+        unit:
+          ucum_code: V
+        annotations:
+          order: 2
+          value_type: complex
+          separator: ','
+          native_name: positive_sequence_voltage[V]
+      negative_sequence_voltage:
+        range: Complex
+        required: false
+        description: The negative sequence representation of the voltage for the substation
+          object.
+        unit:
+          ucum_code: V
+        annotations:
+          order: 3
+          value_type: complex
+          separator: ','
+          native_name: negative_sequence_voltage[V]
+      base_power:
+        range: float
+        required: false
+        description: The 3 phase VA power rating of the substation.
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power[VA]
+      power_convergence_value:
+        range: float
+        required: false
+        description: Default convergence criterion before power is posted to pw_load
+          objects if connected, otherwise ignored
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_convergence_value[VA]
+      reference_phase:
+        range: string
+        required: false
+        description: The reference phase for the positive sequence voltage.
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: reference_phase
+      transmission_level_constant_power_load:
+        range: Complex
+        required: false
+        description: the average constant power load to be posted directly to the
+          pw_load object.
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: transmission_level_constant_power_load[VA]
+      transmission_level_constant_current_load:
+        range: Complex
+        required: false
+        description: the average constant current load at nominal voltage to be posted
+          directly to the pw_load object.
+        unit:
+          ucum_code: A
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: transmission_level_constant_current_load[A]
+      transmission_level_constant_impedance_load:
+        range: Complex
+        required: false
+        description: the average constant impedance load at nominal voltage to be
+          posted directly to the pw_load object.
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: transmission_level_constant_impedance_load[Ohm]
+      distribution_load:
+        range: Complex
+        required: false
+        description: The total load of all three phases at the substation object.
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: distribution_load[VA]
+      distribution_power_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: distribution_power_A[VA]
+      distribution_power_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: distribution_power_B[VA]
+      distribution_power_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: distribution_power_C[VA]
+      distribution_voltage_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_A[V]
+      distribution_voltage_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_B[V]
+      distribution_voltage_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_C[V]
+      distribution_voltage_AB:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 17
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_AB[V]
+      distribution_voltage_BC:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 18
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_BC[V]
+      distribution_voltage_CA:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: distribution_voltage_CA[V]
+      distribution_current_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: complex
+          separator: ','
+          native_name: distribution_current_A[A]
+      distribution_current_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: distribution_current_B[A]
+      distribution_current_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: distribution_current_C[A]
+      distribution_real_energy:
+        range: float
+        required: false
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: distribution_real_energy[Wh]
