@@ -4,8 +4,8 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import source
-from gdm.distribution.components import DistributionVoltageSource
-from gdm.distribution.equipment import PhaseVoltageSourceEquipment, VoltageSourceEquipment
+from gdm.systems.distribution.components import DistributionVoltageSource
+from gdm.systems.distribution.equipment import PhaseVoltageSourceEquipment, VoltageSourceEquipment
 from gdm.quantities import Voltage
 
 from cimhub_gdm import gdm_to_cim

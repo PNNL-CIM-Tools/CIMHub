@@ -15,7 +15,7 @@ from cimbuilder.object_builder import (
     LoadResponseCharacteristicBuilder,
 )
 from cimhub_core.cimtbl import Field, lookup
-from gdm.distribution.enums import ConnectionType, Phase
+from gdm.systems.distribution.enums import ConnectionType, Phase
 
 from cimhub_gdm.importer.shared import (
     SHUNT_CONNECTION,

@@ -4,11 +4,13 @@ CIM's sign is the load's: p and q are positive into the equipment, so generation
 caller names the sign it wants: ``'load'`` as stored, ``'generation'`` negated (positive output), so no spoke negates
 on its own.
 
-The nameplate limits (``maxQ``/``minQ``, ``maxP``/``minP``) are written in the generation sign: a PV unit's maxP is
-its output, a battery's minP its charging (negative). Every limit pair comes back as ``(min, max)`` in the caller's
-``sign``: as stored for ``'generation'``, negated and swapped for ``'load'``. A minimum above its maximum raises (a
-producer that wrote the load sign). ``BatteryUnit.idlingP`` is a loss, "consumed while idling", and is returned as
-stored in either sign.
+The nameplate limits (``maxQ``/``minQ``, ``maxP``/``minP``, a GeneratingUnit's ``maxOperatingP``/``minOperatingP``)
+are written in the generation sign: a PV unit's maxP is its output, a battery's minP its charging (negative).
+Every limit pair comes back as ``(min, max)`` in the caller's ``sign``: as stored for ``'generation'``, negated and
+swapped for ``'load'``. A minimum above its maximum raises (a producer that wrote the load sign), except a unit's
+active power limits (``get_unit_limits``), which come back as stored: a source can hold PB above PT on a unit out of
+service, and an exporter maps it as written.
+``BatteryUnit.idlingP`` is a loss, "consumed while idling", and is returned as stored in either sign.
 
 ``ratedU`` is line to line, as stored (the DSS importer writes a 1-phase wye device's kV x sqrt 3; its exporter
 undoes that). ``ratedS`` and ``ratedU`` are required.
@@ -36,6 +38,9 @@ from cimhub_core.getters.phase_power import SUM_REL_TOL, PhasePower, device_powe
 SIGNS = ("load", "generation")
 IMPEDANCE_UNITS = ("ohm", "pu")
 MACHINE_IMPEDANCE_ATTRIBUTES = ("r", "r0", "x0", "r2", "x2")
+#: a unit class -> its (minimum, maximum) active power attributes, in the generation sign
+UNIT_LIMIT_ATTRIBUTES = {cim.GeneratingUnit: ("minOperatingP", "maxOperatingP"),
+                         cim.PowerElectronicsUnit: ("minP", "maxP")}
 
 
 class DerOutput(NamedTuple):
@@ -62,6 +67,12 @@ class InverterUnitShare(NamedTuple):
 
 
 class PhotoVoltaicRating(NamedTuple):
+    min_p: float | None  # active_unit, in the caller's sign
+    max_p: float | None
+    irradiance: float | None  # irradiance_unit; the gridappsd extension PhotoVoltaicUnit.irradiance
+
+
+class UnitLimits(NamedTuple):
     min_p: float | None  # active_unit, in the caller's sign
     max_p: float | None
 
@@ -177,12 +188,26 @@ def get_inverter_units(connection: cim.PowerElectronicsConnection, active_unit: 
                  for unit, share, p in zip(units, shares, powers))
 
 
-def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", *, sign: str) -> PhotoVoltaicRating:
-    """The PV array's p limits in the ``sign`` convention."""
+def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", irradiance_unit: str = "W/m2", *,
+                          sign: str) -> PhotoVoltaicRating:
+    """The PV array's p limits in the ``sign`` convention and its irradiance."""
     _check_sign(sign)
     if not isinstance(unit, cim.PhotoVoltaicUnit):
         raise ValueError(f"{describe(unit)}: is not a PhotoVoltaicUnit")
-    return PhotoVoltaicRating(*_limits(unit, "minP", "maxP", active_unit, sign))
+    return PhotoVoltaicRating(*_limits(unit, "minP", "maxP", active_unit, sign),
+                              irradiance=get_qty(unit, "irradiance", irradiance_unit))
+
+
+def get_unit_limits(unit: cim.GeneratingUnit | cim.PowerElectronicsUnit, active_unit: str = "W", *,
+                    sign: str) -> UnitLimits:
+    """A GeneratingUnit's ``minOperatingP``/``maxOperatingP`` or any PowerElectronicsUnit's ``minP``/``maxP``, as
+    ``(min, max)`` in the ``sign`` convention, as stored: a minimum above its maximum is returned, not raised (user
+    2026-11-09, RAW E3: PB > PT on units out of service)."""
+    _check_sign(sign)
+    for unit_class, (low, high) in UNIT_LIMIT_ATTRIBUTES.items():
+        if isinstance(unit, unit_class):
+            return UnitLimits(*_signed(get_qty(unit, low, active_unit), get_qty(unit, high, active_unit), sign))
+    raise ValueError(f"{describe(unit)}: is not a GeneratingUnit or a PowerElectronicsUnit")
 
 
 def get_battery_unit(unit: cim.BatteryUnit, active_unit: str = "W", energy_unit: str = "Wh", *,
@@ -240,6 +265,11 @@ def _limits(obj, low_attribute: str, high_attribute: str, unit: str, sign: str) 
     low, high = get_qty(obj, low_attribute, unit), get_qty(obj, high_attribute, unit)
     if low is not None and high is not None and low > high:
         raise ValueError(f"{describe(obj)}: {low_attribute} {low} is above {high_attribute} {high}")
+    return _signed(low, high, sign)
+
+
+def _signed(low: float | None, high: float | None, sign: str) -> tuple[float | None, float | None]:
+    """A ``(min, max)`` stored in the generation sign, in the caller's ``sign``: negated and swapped for 'load'."""
     if sign == "generation":
         return low, high
     return _negated(high), _negated(low)

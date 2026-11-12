@@ -15,7 +15,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.spacing import get_line_conductor_xy, get_spacing_xy
 from cimhub_core.getters.wire import get_configuration_wires
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.exporter.wire import wire_name
 from cimhub_opendss.schema import opendss_schema as schema
 

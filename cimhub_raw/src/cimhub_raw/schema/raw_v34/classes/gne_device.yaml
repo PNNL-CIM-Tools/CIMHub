@@ -1,0 +1,157 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/gne_device
+name: gne_device
+title: GNE Device Record
+description: raw RAW General Network Element (GNE) Device Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  GneDeviceRecord:
+    description: General network element device data record
+    attributes:
+      name:
+        description: NAME - GNE device name
+        range: string
+        required: true
+        annotations:
+          order: 1
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      model:
+        description: MODEL - BOSL model root name (.mac or .xmac file)
+        range: string
+        required: true
+        annotations:
+          order: 2
+          value_type: string
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      nterm:
+        description: NTERM - Number of terminal buses (1 or 2)
+        range: integer
+        required: true
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      bus_numbers:
+        description: BUS1...BUSNTERM - Terminal bus numbers or extended bus names
+        range: integer
+        multivalued: true
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      nreal:
+        description: NREAL - Number of real data values
+        range: integer
+        required: false
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      nintg:
+        description: NINTG - Number of bus data values
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      nchar:
+        description: NCHAR - Number of two-character identifier values
+        range: integer
+        required: false
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      status:
+        description: STATUS - Device status (1 in-service, 0 out-of-service)
+        range: integer
+        required: false
+        annotations:
+          order: 8
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      owner:
+        description: OWNER - Owner number (1 through 9999)
+        range: integer
+        required: false
+        annotations:
+          order: 9
+          value_type: int
+          separator: ","
+          raw_default_rule: "owner of BUS1"
+
+      nmetr:
+        description: NMETR - Bus number or extended bus name of the non-metered end bus (for NTERM > 1)
+        range: integer
+        required: false
+        annotations:
+          order: 10
+          value_type: int
+          separator: ","
+          raw_default_rule: "BUSNTERM"
+
+      real_data:
+        description: REAL1...REAL(NREAL) - Real data values, 10 per line
+        range: float
+        multivalued: true
+        required: false
+        annotations:
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      integer_data:
+        description: INTG1...INTG(NINTG) - Bus numbers or extended bus names used by the model, 10 per line
+        range: integer
+        multivalued: true
+        required: false
+        annotations:
+          order: 12
+          value_type: int
+          separator: ","
+          raw_default_rule: "BUS1"
+
+      character_data:
+        description: CHAR1...CHAR(NCHAR) - Two-character identifiers, 10 per line
+        range: string
+        multivalued: true
+        required: false
+        annotations:
+          order: 13
+          value_type: string
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: "1"

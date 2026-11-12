@@ -1,4 +1,4 @@
-# OpenDSS bus coordinates -> a Location per equipment, a PositionPoint per Terminal at its bus.
+# OpenDSS bus coordinates -> a wkt geometry per equipment: a line's LINESTRING, others a POINT.
 # Source table: Buscoords (records: 6)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#buscoords
 # not located: 1 of 9 equipment (a terminal bus without coordinates)
@@ -8,37 +8,13 @@ Profile = cim18v17
 
 Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
 
-Table Location: mRID, name, CoordinateSystem=crs_bus
-    src_source_loc, source_Loc
-    ln_l1_loc,      l1_Loc
-    sw_sw1_loc,     sw1_Loc
-    xf_ct_loc,      ct_Loc
-    xf_reg_loc,     reg_Loc
-    ld_house_loc,   house_Loc
-    cap_c1_loc,     c1_Loc
-    pv_pv_loc,      pv_Loc
-
-# copied: x, y of the Terminal's bus; sequenceNumber = the Terminal's
-Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
-    src_source_loc_1, src_source_loc, 1, 0.0,   0.0
-    ln_l1_loc_1,      ln_l1_loc,      1, 0.0,   0.0
-    ln_l1_loc_2,      ln_l1_loc,      2, 50.0,  0.0
-    sw_sw1_loc_1,     sw_sw1_loc,     1, 50.0,  0.0
-    sw_sw1_loc_2,     sw_sw1_loc,     2, 100.0, 0.0
-    xf_ct_loc_1,      xf_ct_loc,      1, 100.0, 0.0
-    xf_ct_loc_2,      xf_ct_loc,      2, 110.0, -5.0
-    xf_reg_loc_1,     xf_reg_loc,     1, 100.0, 0.0
-    xf_reg_loc_2,     xf_reg_loc,     2, 105.0, 5.0
-    ld_house_loc_1,   ld_house_loc,   1, 110.0, -5.0
-    cap_c1_loc_1,     cap_c1_loc,     1, 100.0, 0.0
-    pv_pv_loc_1,      pv_pv_loc,      1, 110.0, -5.0
-
-Update Table PowerSystemResource: mRID, Location
-    src_source, src_source_loc
-    ln_l1,      ln_l1_loc
-    sw_sw1,     sw_sw1_loc
-    xf_ct,      xf_ct_loc
-    xf_reg,     xf_reg_loc
-    ld_house,   ld_house_loc
-    cap_c1,     cap_c1_loc
-    pv_pv,      pv_pv_loc
+# a line's LINESTRING through its Terminal buses; other equipment a POINT at their centroid
+Update Table PowerSystemResource: mRID, wkt
+    src_source, "POINT (0.0 0.0)"
+    ln_l1,      "LINESTRING (0.0 0.0, 50.0 0.0)"
+    sw_sw1,     "POINT (75.0 0.0)"
+    xf_ct,      "POINT (105.0 -2.5)"
+    xf_reg,     "POINT (102.5 2.5)"
+    ld_house,   "POINT (110.0 -5.0)"
+    cap_c1,     "POINT (100.0 0.0)"
+    pv_pv,      "POINT (110.0 -5.0)"

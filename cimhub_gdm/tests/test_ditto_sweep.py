@@ -55,7 +55,7 @@ def test_ditto_deck(deck):
 def test_gdmloader_system(dataset):
     source = pytest.importorskip("gdmloader.source")
     constants = pytest.importorskip("gdmloader.constants")
-    from gdm.distribution import DistributionSystem
+    from gdm.systems.distribution import DistributionSystem
     loader = source.SystemLoader()
     loader.add_source(constants.GCS_CASE_SOURCE)
     system = loader.load_dataset(system_type=DistributionSystem, source_name=constants.GCS_CASE_SOURCE.name,

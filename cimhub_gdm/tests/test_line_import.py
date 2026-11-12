@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import line, switch
-from gdm.distribution.components import GeometryBranch, GeometrySwitch, MatrixImpedanceBranch, SequenceImpedanceBranch
-from gdm.distribution.equipment import (
+from gdm.systems.distribution.components import GeometryBranch, GeometrySwitch, MatrixImpedanceBranch, SequenceImpedanceBranch
+from gdm.systems.distribution.equipment import (
     BareConductorEquipment,
     ConcentricCableEquipment,
     GeometryBranchEquipment,

@@ -1,0 +1,33 @@
+id: https://gridappsd.org/cimhub/raw_v34/types/common_types
+name: common_types
+title: Common Types for raw RAW v34
+description: Common type definitions used across raw RAW v34 schema
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+types:
+  BusNumber:
+    description: Bus number identifier
+    typeof: integer
+
+  BusId:
+    description: Bus identifier (can be number or extended string)
+    typeof: string
+
+  CircuitId:
+    description: Circuit identifier (1 or 2 characters)
+    typeof: string
+    pattern: "^.{1,2}$"
+
+  Status:
+    description: Status flag (0=out of service, 1=in service)
+    typeof: integer
+    minimum_value: 0
+    maximum_value: 1

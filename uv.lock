@@ -17,6 +17,7 @@ members = [
     "cimhub-gdm",
     "cimhub-gridlabd",
     "cimhub-opendss",
+    "cimhub-raw",
 ]
 
 [[package]]
@@ -312,13 +313,14 @@ dev = [
 
 [[package]]
 name = "cimhub"
-version = "3.0.0a0"
+version = "3.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cimhub-core" },
     { name = "cimhub-gdm" },
     { name = "cimhub-gridlabd" },
     { name = "cimhub-opendss" },
+    { name = "cimhub-raw" },
 ]
 
 [package.dev-dependencies]
@@ -337,6 +339,7 @@ requires-dist = [
     { name = "cimhub-gdm", editable = "cimhub_gdm" },
     { name = "cimhub-gridlabd", editable = "cimhub_gridlabd" },
     { name = "cimhub-opendss", editable = "cimhub_opendss" },
+    { name = "cimhub-raw", editable = "cimhub_raw" },
 ]
 
 [package.metadata.requires-dev]
@@ -351,7 +354,7 @@ dev = [
 
 [[package]]
 name = "cimhub-core"
-version = "3.0.0a0"
+version = "3.0.0"
 source = { editable = "cimhub_core" }
 dependencies = [
     { name = "cim-graph" },
@@ -376,13 +379,14 @@ requires-dist = [
 
 [[package]]
 name = "cimhub-gdm"
-version = "3.0.0a0"
+version = "3.0.0"
 source = { editable = "cimhub_gdm" }
 dependencies = [
     { name = "cim-builder" },
     { name = "cim-tables" },
     { name = "cimhub-core" },
     { name = "grid-data-models" },
+    { name = "pyarrow" },
 ]
 
 [package.metadata]
@@ -391,6 +395,7 @@ requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "grid-data-models", specifier = "~=2.4" },
+    { name = "pyarrow", specifier = ">=18" },
 ]
 
 [[package]]
@@ -416,7 +421,7 @@ requires-dist = [
 
 [[package]]
 name = "cimhub-opendss"
-version = "3.0.0a0"
+version = "3.0.0"
 source = { editable = "cimhub_opendss" }
 dependencies = [
     { name = "cim-tables" },
@@ -433,6 +438,20 @@ requires-dist = [
     { name = "pyyaml" },
 ]
 
+[[package]]
+name = "cimhub-raw"
+version = "3.0.0"
+source = { editable = "cimhub_raw" }
+dependencies = [
+    { name = "cim-tables" },
+    { name = "cimhub-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cimhub-core", editable = "cimhub_core" },
+]
 [[package]]
 name = "click"
 version = "8.5.1"

@@ -4,9 +4,9 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import regulator
-from gdm.distribution.components import DistributionRegulator
-from gdm.distribution.controllers import RegulatorController
-from gdm.distribution.enums import Phase
+from gdm.systems.distribution.components import DistributionRegulator
+from gdm.systems.distribution.controllers import RegulatorController
+from gdm.systems.distribution.enums import Phase
 from gdm.quantities import Voltage
 
 from cimhub_gdm import gdm_to_cim

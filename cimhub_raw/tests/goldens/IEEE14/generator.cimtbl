@@ -1,0 +1,43 @@
+# PSS/E RAW Generator -> RegulatingControl per plant (bus I); SynchronousMachine + GeneratingUnit (WMOD 0)
+# or PowerElectronicsConnection + PowerElectronicsUnit (WMOD 1, 2, 3), each with its ControlArea membership; an implicit
+# step-up transformer (PowerTransformer, internal TopologicalNode, fixed RatioTapChanger) per machine with RT + jXT.
+# Source table: Generator (records: 5)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#generator-r3
+
+Profile = cim18v17
+
+# one per plant (bus I); targetValue in V (voltage) or a power factor (powerFactor, a WMOD 3 plant)
+Table RegulatingControl: mRID, name, mode, discrete, enabled, targetValue, Terminal
+    gc_1, 1, voltage, false, true, 146280.0,           bb_1_T1
+    gc_2, 2, voltage, false, true, 144209.99999999997, bb_2_T1
+    gc_3, 3, voltage, false, true, 139380.0,           bb_3_T1
+    gc_6, 6, voltage, false, true, 147660.0,           bb_6_T1
+    gc_8, 8, voltage, false, true, 150420.00000000003, bb_8_T1
+
+Table GeneratingUnit: mRID, name, maxOperatingP (MW), minOperatingP (MW), EquipmentContainer
+    gu_1_1, 1_1, 10000.0, -10000.0, sub_1
+    gu_2_1, 2_1, 10000.0, -10000.0, sub_2
+    gu_3_1, 3_1, 10000.0, -10000.0, sub_3
+    gu_6_1, 6_1, 10000.0, -10000.0, sub_5
+    gu_8_1, 8_1, 10000.0, -10000.0, sub_8
+
+Table ControlAreaGeneratingUnit: mRID, name, ControlArea, GeneratingUnit
+    cagu_1_1, 1_1, ca_1, gu_1_1
+    cagu_2_1, 2_1, ca_1, gu_2_1
+    cagu_3_1, 3_1, ca_1, gu_3_1
+    cagu_6_1, 6_1, ca_1, gu_6_1
+    cagu_8_1, 8_1, ca_1, gu_8_1
+
+# WMOD 0
+# untranscribed: zx, o1, o2, o3, o4, f1, f2, f3, f4
+Table SynchronousMachine: mRID, name, bus, p (MW), q (MVAr), maxQ (MVAr), minQ (MVAr), ratedS (MVA), ratedU (kV), r (ohm), qPercent, referencePriority, inService, controlEnabled, RegulatingControl, GeneratingUnit, BaseVoltage, EquipmentContainer
+    # defaulted: wmod=0, wpf=1.0, nreg=0
+    sm_1_1, 1_1, 1, -232.392, 16.549,  0.0,  0.0,   615.0, 138.0, 0.0, 100.0, 1, true, true, gc_1, gu_1_1, bv_138kv, sub_1
+    # defaulted: wmod=0, wpf=1.0, nreg=0
+    sm_2_1, 2_1, 2, -40.0,    -43.556, 50.0, -40.0, 60.0,  138.0, 0.0, 100.0, ,  true, true, gc_2, gu_2_1, bv_138kv, sub_2
+    # defaulted: wmod=0, wpf=1.0, nreg=0
+    sm_3_1, 3_1, 3, 0.0,      -25.075, 40.0, 0.0,   60.0,  138.0, 0.0, 100.0, ,  true, true, gc_3, gu_3_1, bv_138kv, sub_3
+    # defaulted: wmod=0, wpf=1.0, nreg=0
+    sm_6_1, 6_1, 6, 0.0,      -12.73,  24.0, -6.0,  25.0,  138.0, 0.0, 100.0, ,  true, true, gc_6, gu_6_1, bv_138kv, sub_5
+    # defaulted: wmod=0, wpf=1.0, nreg=0
+    sm_8_1, 8_1, 8, 0.0,      -17.623, 24.0, -6.0,  25.0,  138.0, 0.0, 100.0, ,  true, true, gc_8, gu_8_1, bv_138kv, sub_8

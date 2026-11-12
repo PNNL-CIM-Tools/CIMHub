@@ -17,7 +17,7 @@ new Line.sw_sect phases=3 Switch=Yes bus1=n1.1.2.3 bus2=n7.1.2.3 length=1 r1=0.0
 new Line.sw_sw1 phases=3 Switch=Yes bus1=n1.1.2.3 bus2=n3.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Line.sw_tie phases=1 Switch=Yes bus1=n2.3 bus2=n6.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Fuse.sw_fuse1 MonitoredObj=Line.sw_fuse1 RatedCurrent=100
-new Recloser.sw_rec1 MonitoredObj=Line.sw_rec1
+new Recloser.sw_rec1 MonitoredObj=Line.sw_rec1 Shots=3 RecloseIntervals=[0.5 2]
 new Swtcontrol.sw_sect SwitchedObj=Line.sw_sect Normal=open State=open
 new Swtcontrol.sw_tie SwitchedObj=Line.sw_tie Normal=open State=open
 Set voltagebases=[4.16]

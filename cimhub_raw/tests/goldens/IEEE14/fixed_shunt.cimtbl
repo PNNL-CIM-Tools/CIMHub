@@ -1,0 +1,8 @@
+# PSS/E RAW Fixed shunt -> LinearShuntCompensator (one section, always in).
+# Source table: Fixed shunt (records: 1)
+# Mapping: cimhub_raw/docs/CIMTBL_MAPPING.md#fixed-shunt
+
+Profile = cim18v17
+
+Table LinearShuntCompensator: mRID, name, bus, gPerSection (pu system), bPerSection (pu system), nomU (kV), maximumSections, normalSections, sections, inService, BaseVoltage, EquipmentContainer
+    cap_9_1, 9_1, 9, 0.0, 0.19, 138.0, 1, 1, 1, true, bv_138kv, sub_4

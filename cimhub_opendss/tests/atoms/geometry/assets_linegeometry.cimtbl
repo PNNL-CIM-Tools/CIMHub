@@ -1,11 +1,15 @@
-# OpenDSS LineGeometry -> WireConfiguration + WireSequenceConfiguration (catalog). No impedance is computed: geometry stays geometry.
+# OpenDSS LineGeometry -> EarthResistivity, WireConfiguration + WireSequenceConfiguration (catalog). No impedance is computed: geometry stays geometry.
 # Source table: LineGeometry (records: 3)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry
 
 Profile = cim18v17
 
+# the deck's earthmodel and its geometry lines' rho (ohm-m: the profile types rho Resistance)
+# defaulted: earthmodel=Deri, rho=100.0
+Object EarthResistivity: mRID=earth, name=deri, earthModelType=deri, rho (ohm)=100.0
+
 # untranscribed: reduce=true
-Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500
+Object WireConfiguration: mRID=wc_601, name=601, numberOfPhases=3, WireSpacing=spc_500, EarthResistivity=earth
 
 Table WireSequenceConfiguration: mRID, WireConfiguration=wc_601, sequenceNumber, WireInfo
     wc_601_1, 1, wire_acsr_556_5
@@ -22,7 +26,7 @@ Table XYConductorPosition: mRID, XYSpacing=wc_606_spc, sequenceNumber, xCoord (f
     wc_606_spc_3, 3, 0.5,  -4.0, phase
 
 # untranscribed: reduce=true
-Object WireConfiguration: mRID=wc_606, name=606, numberOfPhases=3, WireSpacing=wc_606_spc
+Object WireConfiguration: mRID=wc_606, name=606, numberOfPhases=3, WireSpacing=wc_606_spc, EarthResistivity=earth
 
 Table WireSequenceConfiguration: mRID, WireConfiguration=wc_606, sequenceNumber, WireInfo
     wc_606_1, 1, cn_cn_250
@@ -37,7 +41,7 @@ Table XYConductorPosition: mRID, XYSpacing=wc_607_spc, sequenceNumber, xCoord (f
     wc_607_spc_2, 2, 0.25, -4.0, neutral
 
 # untranscribed: reduce=true
-Object WireConfiguration: mRID=wc_607, name=607, numberOfPhases=1, WireSpacing=wc_607_spc
+Object WireConfiguration: mRID=wc_607, name=607, numberOfPhases=1, WireSpacing=wc_607_spc, EarthResistivity=earth
 
 Table WireSequenceConfiguration: mRID, WireConfiguration=wc_607, sequenceNumber, WireInfo
     wc_607_1, 1, ts_ts_1/0

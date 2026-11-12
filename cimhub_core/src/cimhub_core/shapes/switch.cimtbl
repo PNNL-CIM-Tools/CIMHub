@@ -13,5 +13,9 @@ Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseV
     sw_s1, s1, n4, n7,    , true, true
 Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
     sw_r1, r1, n5, n8,    , false, false
+# Each automatic reclosure of a ProtectedSwitch, in order (OpenDSS Recloser Shots - 1 intervals).
+Table RecloseSequence: mRID, ProtectedSwitch=sw_r1, recloseStep, recloseDelay (s)
+    sw_r1_rs1, 1, 0.5
+    sw_r1_rs2, 2, 2.0
 Table Disconnector: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
     sw_d1, d1, n6, n9, C, false, false

@@ -31,12 +31,13 @@ Table PowerElectronicsConnection: mRID, name, node, phases, ratedS (kVA), ratedU
     storage_ess,  ess,     b4, ,     250, 0.48,             -150, 0,  inv_inv250,                           bv_480v
     storage_home, home,    b5, s1s2, 5,   0.24,             3,    0,  inv_inv5,                             bv_240v
 
-# maxP = the panel's rated_power. untranscribed on every panel: resistance=0.5, reactance=5
-Table PhotoVoltaicUnit: mRID, name, maxP (kW), PowerElectronicsConnection
-    pv_roof_unit,    roof,    30,  pv_roof
-    pv_roof2_unit,   roof2,   30,  pv_roof2
-    pv_house_unit,   house,   5,   pv_house
-    pv_primary_unit, primary, 120, pv_primary
+# maxP = the panel's rated_power; irradiance = the DER's (B16b). untranscribed on every panel: resistance=0.5,
+# reactance=5
+Table PhotoVoltaicUnit: mRID, name, maxP (kW), irradiance (kW/m^2), PowerElectronicsConnection
+    pv_roof_unit,    roof,    30,  0.9, pv_roof
+    pv_roof2_unit,   roof2,   30,  0.9, pv_roof2
+    pv_house_unit,   house,   5,   0.9, pv_house
+    pv_primary_unit, primary, 120, 0.9, pv_primary
 
 Table BatteryInfo: mRID, name, ratedCapacity (kWh)
     batt_bess500, bess500, 500

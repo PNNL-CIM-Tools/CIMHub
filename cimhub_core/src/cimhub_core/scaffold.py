@@ -262,7 +262,7 @@ def _create_importer_tree(conv_dir: Path, fmt: str, pkg: str) -> None:
 
 
 def _create_exporter_tree(conv_dir: Path, fmt: str) -> None:
-    """Registry, writer stub, orchestrator and one stub converter per CIM class (CONVERTER_API.md)."""
+    """Registry, writer stub, orchestrator and one stub converter per CIM class (cimhub_core/docs/CONVERTER_API.md)."""
     pkg = f"cimhub_{fmt}"
     direction = "exporter"
     conv_dir.mkdir(parents=True, exist_ok=True)
@@ -445,7 +445,7 @@ def _create_exporter_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str, reg_n
         "",
         "",
         f"class {exporter_cls}(FormatExporter):",
-        f'    """CIM → {fmt.upper()} exporter (see CONVERTER_API.md)."""',
+        f'    """CIM → {fmt.upper()} exporter (see cimhub_core/docs/CONVERTER_API.md)."""',
         "",
         "    def to_model(self, network, **opts) -> GraphModel:",
         "        model = GraphModel()",
@@ -486,8 +486,6 @@ def _create_cimtbl_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str) -> None
         from cimhub_core import CimtblImporter, GraphModel
         from cimhub_core.cimtbl import CIM_PROFILE
 
-        from {pkg}.importer.{fmt}_reader import {cls_base}Reader
-
         __all__ = ["MAPPING_ORDER", "{cls_base}Importer", "{fmt}_to_cim"]
 
         #: The master's Import order: catalogs before instances. One mapper per native table,
@@ -514,9 +512,9 @@ def _create_cimtbl_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str) -> None
                 return DocumentSet(master=map_master(model, parts), parts=parts)
 
 
-        def {fmt}_to_cim(path, *, artifact_dir=None):
-            \"\"\"Read ``path``, write the artifacts to ``artifact_dir`` (a temporary one when None), load CIM.\"\"\"
-            return {cls_base}Importer().to_cim({cls_base}Reader(path).read_all(), artifact_dir=artifact_dir)
+        def {fmt}_to_cim(model: GraphModel, *, artifact_dir=None):
+            \"\"\"Write the artifacts to ``artifact_dir`` (a temporary one when None), then load CIM from them.\"\"\"
+            return {cls_base}Importer().to_cim(model, artifact_dir=artifact_dir)
     """))
 
 

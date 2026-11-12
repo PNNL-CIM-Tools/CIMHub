@@ -165,8 +165,11 @@ GDM carries several values per phase where CIM has one per object:
 
 ## 8. Time series
 
-Dropped in the first pass (OPEN_DECISIONS 2). One `WARNING` lists every component with `system.has_time_series(c)`:
-class, name, and each series' variable name, type and features. In p5r this is two loads × (`active_power` PMult,
+Mapped since 2026-11-11 (`importer/time_series.py`, [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) §5) when the caller
+passes `time_points`: a load's `active_power` / `reactive_power` go to one `EnergyConnectionSchedule` `<ld>_pq`
+(`_p` / `_q` when their times differ), named by the series' `profile_name`, else the load's. The points go to the
+`EnergyConnectionTimePoint` table. Any other series is dropped with one `WARNING` listing class, name, and each
+series' variable name, type and features; without `time_points`, all of them are. In p5r this is two loads × (`active_power` PMult,
 `reactive_power` QMult) and two PV systems × `irradiance` PMult, all `use_actual=False` multipliers.
 
 ## 9. Shared CIM models with the DSS wave
@@ -811,8 +814,9 @@ with no tank and no template (`regulators_transformer.cimtbl`), and leaves plain
 
 `importer/regulator.py`, after CIMTBL-Models `regulator_example.cimtbl` (OPEN_DECISIONS 7, DSS-13).
 
-- **One single-phase regulator per regulated phase:** VoltageRegulator `vr_<name>` (one phase) or
-  `vr_<name>_<phase>` (a bank), with AutoTransformerEnds `<vr>_end1` (S, bus 1) and `<vr>_end2` (L, bus 2), Terminals
+- **One single-phase regulator per regulated phase:** VoltageRegulator `vr_<name>` named `<name>` (one phase), or
+  `vr_<name>_<phase>` named `<name>_<phase>` (a unit of a bank; its tap changer and control take the unit's name too,
+  so each unit, which exports as its own GDM regulator, has a name of its own: EXPORT_MAPPING.md#regulators), with AutoTransformerEnds `<vr>_end1` (S, bus 1) and `<vr>_end2` (L, bus 2), Terminals
   `<vr>_T1`/`_T2`, phase `<phase>N` (a single-phase coil returns to N); `is_grounded` untranscribed until the end
   builder takes `grounded` (B27); baseU = the coil, ratedS = the through rating per phase. Lugs S (1, end 1),
   L (2, end 2), SL (3); the series winding `<vr>_wdg` S→SL tapped at L, ratedS = the buck/boost rating (through ×
@@ -916,7 +920,7 @@ gang), with the stand-in impedance as an end-to-end mesh and no lugs or winding.
 InverterInfo classes at once); a power in the wrong quantity (§4), except the panel's kVA above.
 
 **p5r** (the only sample with DER): 2 PVs at 2.5 kW on 2.5 kVA inverters, 480 V; both panels rated in kVA, so 2
-warnings; their irradiance time series are dropped with the others (§8).
+warnings; their irradiance time series are dropped (§8, T2).
 
 **`DistributionSolar`**
 
@@ -929,7 +933,7 @@ warnings; their irradiance time series are dropped with the others (§8).
 | `in_service` | `bool` |  | structural | False raises: no CIM home |
 | `bus` | `DistributionBus` |  | structural | the Terminal's ConnectivityNode; BaseVoltage |
 | `phases` | `list[Phase]` |  | structural | PowerElectronicsConnectionPhase children; none for ABC (G3); N raises |
-| `irradiance` | `Irradiance` |  | untranscribed | no CIM home: p is the snapshot output |
+| `irradiance` | `Irradiance` |  | copied | `add_ssh.irradiance`: PhotoVoltaicUnit.irradiance (B16b); an irradiance series stays dropped (T2) |
 | `active_power` | `ActivePower` |  | derived | PowerElectronicsConnection p = -active_power (injection) |
 | `reactive_power` | `ReactivePower` |  | derived | PowerElectronicsConnection q = -reactive_power (injection) |
 | `controller` | `InverterController | None` |  | structural | an InverterController is PENDING (OPEN_DECISIONS 12) |

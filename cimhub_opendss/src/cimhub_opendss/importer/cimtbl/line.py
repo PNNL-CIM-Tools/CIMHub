@@ -68,7 +68,8 @@ FIELDS = {
     "Ratings": Field("structural", note=_NOT_MAPPED + " (with Seasons)"),
     "Rg": Field("structural", note=_NOT_MAPPED + " (Carson earth return; the consumer's choice for geometry)"),
     "Xg": Field("structural", note=_NOT_MAPPED + " (Carson earth return; the consumer's choice for geometry)"),
-    "rho": Field("structural", note=_NOT_MAPPED + " (earth resistivity; home EarthResistivity)"),
+    "rho": Field("structural", note="the deck's EarthResistivity.rho (ohm-m), which every geometry line must "
+                                    "agree on (geometry.earth_statement); on another line it raises"),
     "EarthModel": Field("untranscribed", note="the earth model of the impedance calculation; the consumer's choice"),
     "EpsRmedium": Field("structural", note=_NOT_MAPPED),
     "HeightOffset": Field("structural", note=_NOT_MAPPED),
@@ -83,7 +84,10 @@ FIELDS = {
 }
 
 _SWITCHED = "the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises"
-_PROTECTION = "protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11)"
+_PROTECTION = "protection setting; no home in cim18v17's protection function blocks (DSS-11)"
+_RECLOSE = ("one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] "
+            "(s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and "
+            "so does Shots above 4 without intervals (the engine reads past its defaults)")
 _STATE = ("Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree")
 
 
@@ -115,10 +119,11 @@ RECLOSER_FIELDS = {
     **_control_fields("Recloser"),
     "MonitoredObj": Field("structural", note=_SWITCHED),
     "MonitoredTerm": Field("untranscribed", note=_CONTROL_TERMINAL),
+    "Shots": Field("structural", note=_RECLOSE),
+    "RecloseIntervals": Field("structural", note=_RECLOSE),
     **{slot: Field("untranscribed", note=_PROTECTION)
        for slot in ("NumFast", "PhaseFast", "PhaseDelayed", "GroundFast", "GroundDelayed", "PhaseTrip", "GroundTrip",
-                    "PhaseInst", "GroundInst", "Reset", "Shots", "RecloseIntervals", "TDPhFast", "TDGrFast",
-                    "TDPhDelayed", "TDGrDelayed")},
+                    "PhaseInst", "GroundInst", "Reset", "TDPhFast", "TDGrFast", "TDPhDelayed", "TDGrDelayed")},
 }
 
 SWTCONTROL_FIELDS = {
@@ -155,6 +160,32 @@ Source table: Line (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches"""
 
 
+class Reclose(NamedTuple):
+    """A Recloser's reclosures: the delay (s) before each, and what was defaulted."""
+    delays: tuple[float, ...]
+    defaulted: str | None
+
+
+def reclose(recloser) -> Reclose:
+    """``Shots`` - 1 reclosures at ``RecloseIntervals``, the engine's defaults filling either (DSS-6). The engine
+    keeps the first Shots - 1 intervals, and giving intervals sets Shots, so both given must agree."""
+    defaults = dss_defaults(schema.Recloser)
+    shots, intervals = recloser.Shots, recloser.RecloseIntervals or None
+    if shots is not None and intervals is not None and shots - 1 != len(intervals):
+        raise ValueError(f"Recloser {recloser.name}: Shots={shots} with {len(intervals)} RecloseIntervals; the "
+                         "engine's result depends on their order")
+    if intervals is not None:
+        return Reclose(tuple(float(interval) for interval in intervals), None)
+    defaulted = [] if shots is not None else [f"Shots={defaults['Shots']}"]
+    shots = shots if shots is not None else defaults["Shots"]
+    if shots - 1 > len(defaults["RecloseIntervals"]):
+        raise ValueError(f"Recloser {recloser.name}: Shots={shots} without RecloseIntervals; the engine has "
+                         f"{len(defaults['RecloseIntervals'])} default intervals and reads past them")
+    delays = tuple(defaults["RecloseIntervals"][:shots - 1])
+    defaulted.append(f"RecloseIntervals=({' '.join(cell(delay) for delay in delays)})")
+    return Reclose(delays, "defaulted: " + ", ".join(defaulted))
+
+
 class SwitchControl(NamedTuple):
     """What the Fuse, Recloser and SwtControl objects say about the line they switch."""
     cim_class: str
@@ -162,6 +193,7 @@ class SwitchControl(NamedTuple):
     normal_open: bool | None
     open: bool | None
     fuse_phase_states: int | None = None  # how many per-phase values a Fuse's Normal/State give (engine: per phase)
+    reclose: Reclose | None = None  # a Recloser's reclosures
 
 
 def _switched_line(control, target) -> str:
@@ -209,10 +241,12 @@ def switch_controls(native) -> dict[str, SwitchControl]:
             if cim_class and old.cim_class != "LoadBreakSwitch" and old.cim_class != cim_class:
                 raise ValueError(f"Line {key}: switched by a {old.cim_class} and a {cim_class}")
             rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent else None
+            recloses = reclose(control) if native_class is schema.Recloser else None
             result[key] = SwitchControl(cim_class or old.cim_class, _merged(key, "ratedCurrent", old.rated_current, rated),
                                         _merged(key, "Normal", old.normal_open, _is_open(control, "Normal")),
                                         _merged(key, "State", old.open, _is_open(control, "State")),
-                                        _merged(key, "Fuse Normal/State values", old.fuse_phase_states, states))
+                                        _merged(key, "Fuse Normal/State values", old.fuse_phase_states, states),
+                                        _merged(key, "reclosures", old.reclose, recloses))
     return result
 
 
@@ -339,6 +373,7 @@ class _Document:
         self.limit_sets: list[Row] = []
         self.limits: list[Row] = []
         self.switches: dict[str, list[Row]] = {}
+        self.reclose_sequences: list[Row] = []
 
 
 def code_ratings(code) -> dict[str, tuple[float, str]]:
@@ -437,6 +472,13 @@ def _switch_row(line, phases: str, bus1: str, bus2: str, control: SwitchControl,
                                        untranscribed_values(FIELDS, line)))
 
 
+def reclose_rows(switch: str, recloses: Reclose) -> list[Row]:
+    """One ``RecloseSequence`` row per reclosure of ``switch``, steps from 1."""
+    return [Row([f"{switch}_rs{step}", switch, str(step), cell(delay)],
+                comment=recloses.defaulted if step == 1 else None)
+            for step, delay in enumerate(recloses.delays, 1)]
+
+
 def _switch_columns(cim_class: str, container: str) -> list[Column]:
     columns = [Column("mRID"), Column("name"), Column("node1"), Column("node2"), Column("phases")]
     if cim_class == "Fuse":
@@ -487,8 +529,14 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
                                  "whole switch's")
             document.switches.setdefault(control.cim_class, []).append(
                 _switch_row(line, letters, bus1, bus2, control, key in opened, buses, container))
+            if control.reclose is not None:
+                document.reclose_sequences += reclose_rows(mrid(SWITCH_PREFIX, line.name, lowercase=True),
+                                                           control.reclose)
             continue
         kind = _template_kind(line)
+        if line.rho is not None and kind not in ("geometry", "spacing"):
+            raise ValueError(f"Line {line.name}: rho={line.rho} without a geometry; the earth model computes nothing "
+                             "there (not mapped)")
         notes: list[str] = []
         if kind == "linecode":
             code = codes.get(str(line.linecode).lower())
@@ -531,7 +579,8 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
                     ObjectStatement("WireConfiguration", [
                         (Column("mRID"), reference), (Column("name"), str(line.name)),
                         (Column("numberOfPhases"), cell(source.nphases)),
-                        (Column("WireSpacing"), mrid("spc_", source.name, lowercase=True))],
+                        (Column("WireSpacing"), mrid("spc_", source.name, lowercase=True)),
+                        (Column("EarthResistivity"), geometry_mapper.EARTH_MRID)],
                         comment=f"synthesized: the spacing and conductors of Line {line.name}"),
                     geometry_mapper.wire_sequence_table(reference,
                                                         geometry_mapper.conductor_infos(line, source.nconds, infos)),
@@ -582,4 +631,8 @@ def _statements(document: _Document, container: str) -> list:
             statements.append(Table(cim_class, _switch_columns(cim_class, container), document.switches[cim_class],
                                     comment="open: an Open command or the control's State; normalOpen: the "
                                             "control's Normal, else open"))
+    if document.reclose_sequences:
+        statements.append(Table("RecloseSequence", [Column("mRID"), Column("ProtectedSwitch"), Column("recloseStep"),
+                                                    Column("recloseDelay", "s")], document.reclose_sequences,
+                                comment="a Recloser's Shots - 1 reclosures at its RecloseIntervals"))
     return statements

@@ -14,13 +14,14 @@ from cimtables.graph_write import get_qty
 
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.current_limits import get_current_limits
+from cimhub_core.getters.earth import get_earth_resistivity
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.line_impedance import get_line_sequence_impedance
 from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.linecode import linecode_name, sequence_slots
 from cimhub_opendss.exporter.linegeometry import geometry_name, line_offset
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.ACLineSegment,)
@@ -47,14 +48,15 @@ SLOTS = {NATIVE_CLASS: {
     "xmatrix": Slot("not mapped", "a phase matrix is always a LineCode"),
     "cmatrix": Slot("not mapped", "a phase matrix is always a LineCode"),
     "Switch": Slot("not mapped", "a Switch is exported by switch.py"),
-    "Rg": Slot("unset", _NOT_IN_CIM), "Xg": Slot("unset", _NOT_IN_CIM), "rho": Slot("unset", _NOT_IN_CIM),
+    "Rg": Slot("unset", _NOT_IN_CIM), "Xg": Slot("unset", _NOT_IN_CIM),
+    "rho": Slot("written", "a geometry line's WireConfiguration EarthResistivity.rho (ohm-m); unset -> not written"),
     "geometry": Slot("written", "the (WireConfiguration, spacingYOffset) LineGeometry name"),
     "units": Slot("written", "m (B1); lumped: km (B6)"),
     "spacing": Slot("not mapped", "a line with WireSpacing and no WireConfiguration raises (B2)"),
     "cncables": Slot("not mapped", "per-phase ACLineSegmentPhase.WireInfo raises (B2)"),
     "tscables": Slot("not mapped", "per-phase ACLineSegmentPhase.WireInfo raises (B2)"),
     "wires": Slot("not mapped", "per-phase ACLineSegmentPhase.WireInfo raises (B2)"),
-    "EarthModel": Slot("unset", _NOT_IN_CIM),
+    "EarthModel": Slot("not mapped", "the deck's Set earthmodel carries it (options.py: one model per deck)"),
     "B1": Slot("not mapped", "C1 carries the susceptance"), "B0": Slot("not mapped", "C0 carries the susceptance"),
     "Seasons": Slot("unset", _NOT_IN_CIM), "Ratings": Slot("unset", _NOT_IN_CIM),
     "LineType": Slot("unset", _NOT_IN_CIM), "EpsRmedium": Slot("unset", _NOT_IN_CIM),
@@ -105,8 +107,10 @@ def _line(line: cim.ACLineSegment, context) -> schema.Line:
         if configuration.numberOfPhases != len(conductors):
             raise ValueError(f"{describe(line)}: {len(conductors)} phase conductors on {describe(configuration)} "
                              f"of {configuration.numberOfPhases} phases")
+        earth = get_earth_resistivity(configuration)
         slots.update(geometry=geometry_name(configuration, line_offset(line), names),
-                     length=required_qty(line, "length", UNIT), units=UNIT)
+                     length=required_qty(line, "length", UNIT), units=UNIT,
+                     rho=earth.rho if earth is not None else None)
     elif line.WireSpacing is not None:
         raise ValueError(f"{describe(line)}: a WireSpacing without a WireConfiguration is not exported; no producer "
                          f"writes one (B2)")

@@ -43,11 +43,7 @@ class ConverterRegistry:
     # -- Lookup -------------------------------------------------------------
 
     def get(self, cls: type):
-        """Return the converter function for *cls*.
-
-        Raises:
-            KeyError: If no converter has been registered for *cls*.
-        """
+        """Return the converter function for *cls*, or ``None`` if none is registered."""
         return self._registry.get(cls)
 
     def classes(self):

@@ -4,9 +4,9 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import load
-from gdm.distribution.components import DistributionLoad
-from gdm.distribution.enums import ConnectionType, Phase
-from gdm.distribution.equipment import LoadEquipment, PhaseLoadEquipment
+from gdm.systems.distribution.components import DistributionLoad
+from gdm.systems.distribution.enums import ConnectionType, Phase
+from gdm.systems.distribution.equipment import LoadEquipment, PhaseLoadEquipment
 from gdm.quantities import ReactivePower
 
 from cimhub_gdm import gdm_to_cim

@@ -9,7 +9,7 @@ description: The four-ABC converter contract (FormatReader, FormatWriter, Cimtbl
 
 ```python
 native  = DssReader("Master.dss").read_all()      # parse    file → native GraphModel
-feeder  = DssImporter().to_cim(native)            # convert  native → .cimtbl documents → cim18v17 model
+feeder  = DssImporter("Master").to_cim(native)    # convert  native → .cimtbl documents → cim18v17 model
 out     = DssExporter().to_model(feeder)          # convert  cim18v17 model → native GraphModel
 DssWriter().write(out, "out_dir")                 # persist  native GraphModel → file(s)
 ```

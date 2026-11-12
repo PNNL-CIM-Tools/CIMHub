@@ -1,9 +1,10 @@
 # Shape: equipment coordinates (a DSS BusCoords/LatLongCoords file, a GLM node's latitude/longitude, a CYME
-# section's polyline). Each ConductingEquipment gets one Location with a PositionPoint per vertex: for bus
-# coordinates, one per Terminal (sequenceNumber = the Terminal's, 1-based), so a line is a two-point polyline and a
-# load one point. PositionPoint is Identity-only (identifier, no mRID). The Location names its CoordinateSystem;
-# an Update on the abstract PowerSystemResource points each equipment at its Location. Written after every
-# equipment file, which the Update names.
+# section's polyline), drawn as a GIS draws them. Each ConductingEquipment gets one Location through the wkt
+# column: a line is a LINESTRING from its first Terminal's bus to its last; any other equipment is one POINT, at
+# its bus for one Terminal and at its buses' centroid for more (a switch or transformer midway). cimtables makes
+# the Location (<mRID>_loc) and a PositionPoint per vertex; the Location takes the CoordinateSystem declared
+# first. An Update on the abstract PowerSystemResource reaches any equipment, so this is written after every
+# equipment file.
 
 Profile = cim18v17
 
@@ -11,20 +12,14 @@ Import common.cimtbl
 
 Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), BaseVoltage, EquipmentContainer=fdr_shapes
     rx_hsb, hsb, n0, n1, 0, 14.798307, bv_4p16kv
+Table ACLineSegment: mRID, name, node1, node2, r (ohm), x (ohm), BaseVoltage, EquipmentContainer=fdr_shapes
+    ln_y, y, n1, n2, 0.1, 0.2, bv_4p16kv
 Table EnergyConsumer: mRID, name, node, p (kW), q (kVAr), BaseVoltage, EquipmentContainer=fdr_shapes
-    ld_y1, y1, n1, 1155, 660, bv_4p16kv
+    ld_y1, y1, n2, 1155, 660, bv_4p16kv
 
 Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
 
-Table Location: mRID, name, CoordinateSystem=crs_bus
-    rx_hsb_loc, hsb_Loc
-    ld_y1_loc,  y1_Loc
-
-Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
-    rx_hsb_loc_1, rx_hsb_loc, 1, 200.0, 400.0
-    rx_hsb_loc_2, rx_hsb_loc, 2, 200.0, 350.0
-    ld_y1_loc_1,  ld_y1_loc,  1, 200.0, 350.0
-
-Update Table PowerSystemResource: mRID, Location
-    rx_hsb, rx_hsb_loc
-    ld_y1,  ld_y1_loc
+Update Table PowerSystemResource: mRID, wkt
+    rx_hsb, "POINT (200.0 375.0)"
+    ln_y,   "LINESTRING (200.0 350.0, 250.0 300.0)"
+    ld_y1,  "POINT (250.0 300.0)"

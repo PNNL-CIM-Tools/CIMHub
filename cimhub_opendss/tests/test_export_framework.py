@@ -12,7 +12,7 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.cim_to_dss import EXPORT_ORDER, DssExporter
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import check_slots
+from cimhub_core.export_slots import check_slots
 from cimhub_opendss.schema import opendss_schema as schema
 
 ATOMS = Path(__file__).parent / "atoms"

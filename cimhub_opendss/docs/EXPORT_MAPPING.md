@@ -15,7 +15,7 @@ cimhub_opendss/src/cimhub_opendss/exporter/
     naming.py         Names: the E1 switch + dss_safe_name (kept in the writer) + the per-namespace collision check
     buses.py          bus_ref(node, phases, names) -> "650.1.2.3" (E7)
     options.py        the Options record: circuit, defaultbasefreq, voltagebases (E10)
-    slots.py          Slot, check_slots, slots_table
+    (Slot, check_slots, slots_table: cimhub_core/export_slots.py, shared with the RAW exporter)
     vsource.py        EnergySource -> Vsource (one module per DSS class from here on)
 ```
 
@@ -72,7 +72,7 @@ and an `N` before then raises.
 One `Options(name="options", circuit=..., defaultbasefreq=..., voltagebases=[...])` record:
 - `defaultbasefreq` = `network.base_frequency` in Hz;
 - `voltagebases` = the distinct `BaseVoltage.nominalVoltage` values in kV, sorted ascending;
-- `earthmodel` not set (engine default);
+- `earthmodel` the WireConfigurations' one EarthResistivity model (`options.earth_model`, S6g); none -> not set;
 - `open_terminals` filled by S6b's switches.
 
 `network.base_frequency` follows the graph's `BaseFrequency` (U14, closed 2026-11-09 in CIM-Graph), so a 50 Hz
@@ -145,6 +145,10 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   8. `Buscoords <stem>_buscoords.csv` (`LatLongCoords` for geographic rows), with the CSV written beside the deck.
 - `serialize(obj)` is unchanged for an ordinary record. `Options` and `Buscoords` are not ordinary records, so
   `serialize` raises on them, and `write` handles them as above.
+- `write(model, destination, per_class=True)` (also `cim_to_dss(..., per_class=True)`) writes step 4 as one file
+  per class beside the deck (`linecode.dss`, `xfmrcode.dss`, `line.dss`, ...; only classes that have records), and
+  the master `destination` has `Redirect <file>` in `WRITE_ORDER` in its place. A master named like a class file
+  (`Line.dss`) raises rather than being overwritten. The default is the single deck.
 
 **Found by the round-trip test** (atoms and the IEEE13_CDPSM, IEEE123, IEEE4 OYOD decks; each is engine-checked):
 - **`like=` is never written.** The reader has already copied the other object's values into the record. `like=`
@@ -173,6 +177,7 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   - per element, its buses (bus names and `NodeOrder`) and YPrim (rel 1e-9);
   - the node voltages, solved with `controlmode=off tolerance=1e-10` (rel 1e-8 + 10 µV). Solution settings are not
     part of the model, so the reader drops them; the tight tolerance makes both decks converge to one answer.
+  - the three decks are also written `per_class` and checked the same way (records and engine).
 - **Names:** core precedence (argument > env var > `mrid`), a bad value raises, an unset name raises, `uri` is 36
   characters. Spoke: sanitizing, dots in bus names, a collision after sanitizing raises, namespaces are separate,
   the per-phase suffix.
@@ -596,14 +601,14 @@ code-level tests in `test_getters_line_impedance.py`):
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
-| rho | unset | not in CIM (untranscribed or raising on import) |
+| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m); unset -> not written |
 | geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name |
 | units | written | m (B1); lumped: km (B6) |
 | spacing | not mapped | a line with WireSpacing and no WireConfiguration raises (B2) |
 | cncables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
 | tscables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
 | wires | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
-| EarthModel | unset | not in CIM (untranscribed or raising on import) |
+| EarthModel | not mapped | the deck's Set earthmodel carries it (options.py: one model per deck) |
 | B1 | not mapped | C1 carries the susceptance |
 | B0 | not mapped | C0 carries the susceptance |
 | Seasons | unset | not in CIM (untranscribed or raising on import) |
@@ -679,7 +684,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | MonitoredTerm | unset | no home on a Switch (untranscribed on import) |
 | SwitchedObj | not mapped | the engine takes MonitoredObj |
 | SwitchedTerm | unset | no home on a Switch (untranscribed on import) |
-| FuseCurve | unset | protection setting; untranscribed on import (DSS-11) |
+| FuseCurve | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
 | RatedCurrent | written | Switch.ratedCurrent (A) |
 | Delay | unset | no home on a Switch (untranscribed on import) |
 | Action | unset | no home on a Switch (untranscribed on import) |
@@ -695,31 +700,31 @@ code-level tests in `test_getters_line_impedance.py`):
 |---|---|---|
 | name | written | Names, the switch's |
 | MonitoredObj | written | Line.<the switch's Line name> |
-| MonitoredTerm | unset | protection setting; untranscribed on import (DSS-11) |
+| MonitoredTerm | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
 | SwitchedObj | not mapped | the engine takes MonitoredObj |
-| SwitchedTerm | unset | protection setting; untranscribed on import (DSS-11) |
-| NumFast | unset | protection setting; untranscribed on import (DSS-11) |
-| PhaseFast | unset | protection setting; untranscribed on import (DSS-11) |
-| PhaseDelayed | unset | protection setting; untranscribed on import (DSS-11) |
-| GroundFast | unset | protection setting; untranscribed on import (DSS-11) |
-| GroundDelayed | unset | protection setting; untranscribed on import (DSS-11) |
-| PhaseTrip | unset | protection setting; untranscribed on import (DSS-11) |
-| GroundTrip | unset | protection setting; untranscribed on import (DSS-11) |
-| PhaseInst | unset | protection setting; untranscribed on import (DSS-11) |
-| GroundInst | unset | protection setting; untranscribed on import (DSS-11) |
-| Reset | unset | protection setting; untranscribed on import (DSS-11) |
-| Shots | unset | protection setting; untranscribed on import (DSS-11) |
-| RecloseIntervals | unset | protection setting; untranscribed on import (DSS-11) |
-| Delay | unset | protection setting; untranscribed on import (DSS-11) |
-| Action | unset | protection setting; untranscribed on import (DSS-11) |
-| TDPhFast | unset | protection setting; untranscribed on import (DSS-11) |
-| TDGrFast | unset | protection setting; untranscribed on import (DSS-11) |
-| TDPhDelayed | unset | protection setting; untranscribed on import (DSS-11) |
-| TDGrDelayed | unset | protection setting; untranscribed on import (DSS-11) |
+| SwitchedTerm | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| NumFast | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| PhaseFast | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| PhaseDelayed | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| GroundFast | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| GroundDelayed | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| PhaseTrip | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| GroundTrip | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| PhaseInst | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| GroundInst | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| Reset | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| Shots | written | the RecloseSequences + 1 (get_reclose_delays); none -> 1, no reclosure |
+| RecloseIntervals | written | each RecloseSequence's recloseDelay (s), in recloseStep order; none -> not written |
+| Delay | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| Action | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| TDPhFast | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| TDGrFast | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| TDPhDelayed | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| TDGrDelayed | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
 | Normal | written | get_switch_state(which='normal'); written only when open in either state |
 | State | written | get_switch_state(which='actual'); written only when open in either state |
-| basefreq | unset | protection setting; untranscribed on import (DSS-11) |
-| enabled | unset | protection setting; untranscribed on import (DSS-11) |
+| basefreq | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| enabled | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
 | like | not mapped | the writer never writes like= |
 
 **Swtcontrol** (`exporter/switch.py`)
@@ -1074,7 +1079,7 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | inversetime | unset | untranscribed or raising on import; not in CIM |
 | tapwinding | not mapped | the tap winding is the monitored one |
 | vlimit | not mapped | maxLimitVoltage raises (untranscribed on import) |
-| PTphase | written | 1-based place of monitoredPhase among the winding's phase conductors |
+| PTphase | written | 1-based place of monitoredPhase among the winding's phase conductors; 1 on a 1-phase winding, whichever of its conductors CIM names |
 | revThreshold | written | reversingPowerThreshold (kW) |
 | revDelay | written | reversingDelay (s) |
 | revNeutral | written | reverseToNeutral |
@@ -1358,3 +1363,639 @@ As built (`tests/test_export_injection.py`, 24 tests; core `test_derived_control
 | basefreq | unset | untranscribed or raising on import; not in CIM |
 | enabled | written | the control's enabled; the shunt's controlEnabled must agree |
 | like | not mapped | the writer never writes like= |
+
+## S6e: DER and reactors (built 2026-11-09 at the user's word, with decisions P1-P9 as recommended; P2 confirmed by the user)
+
+Content: PowerElectronicsConnection → one PVSystem per PhotoVoltaicUnit and one Storage per BatteryUnit,
+SynchronousMachine → Generator, SeriesCompensator → series Reactor. Plan §8.1 row S6e; S4b, E4, E8 and E9 apply.
+The user asked for S6e with the old GDM code's chop of a shared inverter ("CIM permits multiple DC devices behind
+single inverter, so we will need to chop up the inverter same way previous code did"), and with cim18v17's new
+unit attributes (`PowerElectronicsUnit.p`, `idlingP`). The spec was written alongside the code. Its decisions, P1-P9,
+are at the end of this section; the user confirmed P2 (the raise above a unit's share) on 2026-11-09.
+
+### Layout
+
+```
+cimhub_opendss/src/cimhub_opendss/exporter/
+    injection.py     + rated_kv (a DER's kv from ratedU), equal_phases (E8; shared with load.py)
+    inverter.py      a PowerElectronicsConnection chopped into one InverterPiece per unit (or per phase)
+    pvsystem.py      PhotoVoltaicUnit -> PVSystem
+    storage.py       BatteryUnit -> Storage
+    generator.py     SynchronousMachine -> Generator (model 3 from its own voltage control)
+    reactor.py       SeriesCompensator -> Reactor
+```
+
+`EXPORT_ORDER` gains `pvsystem, storage, generator, reactor` after `capcontrol`. `capcontrol` skips a
+RegulatingControl that regulates one SynchronousMachine: the Generator carries it.
+
+### Inverters: the chop (P1-P4)
+
+A DSS PVSystem or Storage is one inverter with one DC device. CIM lets several PowerElectronicsUnits share one
+PowerElectronicsConnection (a PV array and a battery behind one inverter). `get_inverter_units` (core) chops the
+connection the way the old GDM exporter did:
+- **Share:** each unit's maxP / the units' total maxP (1 for one unit). Each unit takes its share of the
+  connection's ratedS, q, maxQ and minQ. With several units, every maxP must be above 0.
+- **p:** each unit's own `PowerElectronicsUnit.p` (new in cim18v17) when every unit has one. Their sum must be the
+  connection's p (rel `SUM_REL_TOL`). When no unit has p, each takes its share of the connection's p (the GDM rule).
+  Some with p and some without raises.
+- **Names (P3):** one unit keeps the connection's name (a round trip of a DSS deck is unchanged); several take their
+  units' names.
+- **Above the share (P2):** a piece whose output is above its share of ratedS (`KVA_REL_TOL` 1e-9) raises, because
+  the engine would cut it. A DC-coupled PV that feeds its battery is the case: `hybrid_h1`'s PV at 80 kW of a
+  100 kW maxP is inside its 100 kVA share, but the same PV at 300 kW on a 225 kVA share is not. The alternative,
+  each piece keeping the whole rating, was offered and not taken.
+- **Per phase (E8, P4):** a connection with one unit and unequal phases gives one 1-phase device per phase,
+  `<name>_<phase>`. Each is a 1/n share of the connection and of the unit's own ratings (Pmpp, kWrated, the
+  energies, idlingP). Several units with unequal phases raise, and so does a delta inverter with unequal phases.
+- A unit of another class (a PowerElectronicsWindUnit) raises: DSS has no class for it.
+
+Each piece's inverter slots:
+
+| DSS slot | from |
+|---|---|
+| `bus1`, `phases`, `conn` | `device_connection`; cim18v17's connection has no `grounded`, so a wye inverter's neutral is node 0, as on import |
+| `kv` | `ratedU` (kV, LL), / sqrt 3 for a 1-phase wye device (`rated_kv`, S4b-4 inverted). Not the bus's: a 240 V inverter on 120 V legs stays 240 V |
+| `kVA` | share x ratedS |
+| `kvarMax`, `kvarMaxAbs` | share x maxQ, share x -minQ; unset → not written |
+| `Vminpu` | 1 / maxIFault (the importer's rule inverted) |
+| `enabled` | `get_in_service(which='normal')` |
+
+### PVSystem
+
+- `Pmpp` = the unit's maxP x its 1/n share. `irradiance` = the unit's `PhotoVoltaicUnit.irradiance` (kW/m2, the
+  gridappsd extension); unset, it falls back to p / Pmpp, so the panel gives exactly p. `kvar` = the piece's q
+  (generation sign).
+- `%Pmpp` = 100 x p / Pmpp when p is below the panel's Pmpp x irradiance (a PV cut to fit kVA, or held back); the
+  engine caps the panel at it (S4b engine rules), so it gives CIM's p at the default P-T curve. Not written when p
+  is the panel's power.
+- `%Cutout=0` only when p > 0 and Pmpp x irradiance < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would
+  switch the PV off below its default cut-out.
+- Raises: maxP unset or 0, minP other than 0, p into the PV, p above Pmpp x irradiance.
+
+### Storage (P6)
+
+- `State` from batteryState: discharging, charging, waiting → idling. full, empty and unset raise. An output of the
+  wrong sign for the state raises, and so do charging a full battery and discharging at or below its reserve (the
+  engine idles both, S4b).
+- **The output is `%Discharge`/`%Charge`** = |p| / kWrated x 100, and `kW` is never written. The engine keeps the
+  setpoint as a percent of the kWrated at the moment `kW` is assigned, and the writer puts kW before kWrated.
+  Probe: `kW=-5` then `kWrated=5` charges at 1 kW.
+- `kWrated` = maxP x 1/n; minP must be -maxP (one kWrated both ways). `kWhrated`, `kWhstored` scaled likewise;
+  `%reserve` = minimumE / ratedE x 100; `%EffCharge`, `%EffDischarge` from the efficiencies.
+- `%IdlingkW` = idlingP / kWrated x 100 (new in cim18v17). A waiting battery's p must equal its idlingP (scaled)
+  when both are set; otherwise its p is the idling loss.
+- q must be 0, as on import.
+- The writer's order puts the energies before `State`, which the engine checks when the state is assigned.
+
+### Generator (P7)
+
+- `kW` = -p and `kvar` = -q, kW first (S4b-8); `kVA` = ratedS; `conn` from `earthing` (true wye, false delta,
+  unset raises; S4b-5); `kv` by `rated_kv`.
+- **Model 3** when the machine's enabled RegulatingControl is a voltage control on its own terminal: `Vpu` =
+  target / ratedU, `Maxkvar`/`Minkvar` = maxQ/minQ. A disabled control gives model 1, since DSS has no disabled
+  PV bus. A control on another terminal, another mode, or a nonzero deadband, allowed limit or reverse target
+  raises. Model 7 comes back as model 1 (CIM has no current limit; listed).
+- `Xd`, `Xdp`, `Xdpp`, `H`, `D`, `XRdp` are unset: cim18v17 has no machine reactance or inertia (U13), so they
+  take the engine's defaults (E4).
+
+### Reactor (P8)
+
+- `R`, `X` from `get_series_compensator` (ohm); `bus1`/`bus2` from `line.terminal_buses`; `normamps`/`emergamps`
+  from `line.ratings`.
+- A DSS Reactor has no mutual coupling: r0 or x0 other than r/x raises. A varistor raises.
+
+### Core changes
+
+- **`getters/der.py`:** `get_inverter_units(connection, active_unit, reactive_unit, *, sign)` →
+  `InverterUnitShare(unit, share, p, q)` per unit, the chop above.
+- **`getters/series_compensator.py`** (new): `get_series_compensator` → `SeriesCompensatorData(r, x, r0, x0,
+  compensator_type, varistor_present, varistor_rated_current, varistor_voltage_threshold)`, in ohm, A and V; r and
+  x are required. Per unit is not offered: a SeriesCompensator has no base of its own.
+- **`shapes/der.cimtbl`:** `hybrid_h1`, a 150 kVA two-unit inverter (a 100 kW PV at 80 kW and a 50 kW battery
+  charging at 20 kW, net 60 kW out).
+
+### Findings
+
+- **A model 3 Generator's YPrim depends on `Xdp`.** IEEE8500's `SteamGen1` sets 0.27 against the 0.28 default, a
+  listed U13 difference in the solved state (S6f).
+- **IEEE9500's Fuses come back named by the switch line they switch** (a CIM Fuse is the switch, S6b), and E6
+  drops a SwtControl on a switch closed in both states. The deck test maps them.
+- **IEEE9500's regulator taps are moved by its in-deck `Solve`,** and the original does not converge with
+  controls off at tolerance 1e-10. Its YPrim and voltages wait for S6f.
+- **IEEE8500's `Master-unbal`** redirects a file the original does not have; the test uses `Master.dss`.
+- **A battery capped by its kVA** keeps only the capped output in CIM, so its `%Discharge` differs (listed).
+- **The `der` atom's XfmrCode `ct`** left its reactances unset (the S6d finding); it now sets them.
+
+### Tests
+
+As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `test_getters_series_compensator.py`):
+- **Per atom, in the engine** (§8.3), under `name`: per element, buses, NodeOrder and YPrim, then the voltages.
+  Under `mrid`/`uri` only the voltages. Atoms `der/der`, `generator/gens`, `reactor/reactors` (listed: the reactor
+  atom's `load.l3`, kV 2.4 → 2.40178, S6d L1).
+- **Settings in the engine:** every PVSystem, Storage, Generator and Reactor slot the importer maps, and each PV's
+  dispatch after Compile (`PVsystems.kW`/`kvar`; irradiance and pf may come back otherwise for the same output).
+- **Whole decks** (`CIMHUB_DSS_DECKS`, `--roundtrip` but CDPSM): IEEE13_CDPSM, IEEE123_PV, IEEE8500, IEEE9500,
+  ACEP_PSIL. The same elements on the same buses, and every DER and reactor set alike. Listed: classes the importer
+  does not map (`relay.brkr1`, the EnergyMeters, DSS-11) and the switch controls above.
+- **Spoke unit tests:** the hybrid inverter (records, then 200 kW PV and 40 kW storage in the engine at its
+  shares), shares without p, the above-share raise, per phase, a wind unit, a full battery, a battery with q,
+  idling, a disabled machine control (model 1), a control of another terminal, unset earthing, a coupled reactor.
+- **Harness:** `engine_compare.engine_buses` (compile only; a disabled element is `("disabled",)`),
+  `engine_settings` and `assert_same_settings`, shared with `test_export_injection.py`.
+- **Goldens:** `export/der.dss`, `export/gens.dss`, `export/reactors.dss` (mrid).
+- **Suite:** 1,157 passed, 80 skipped, 2 xfailed; every binding sweep deck (18) exports with its elements on the
+  same buses.
+
+### Decisions for S6e (recommended; built at the user's word 2026-11-09)
+
+| # | question | recommendation |
+|---|---|---|
+| P1 | Chopping a shared inverter | The GDM rule: share = maxP / the units' total; ratedS, q and the q limits by share; each unit's own p when all have one (summing to the connection's), else its share of the connection's p; a partial set raises |
+| P2 | A unit above its share of ratedS (**confirmed by the user 2026-11-09**) | Raises, naming the unit, its output and its share. Giving each piece the whole rating was the alternative |
+| P3 | Names of the pieces | One unit: the connection's; several: the units' |
+| P4 | Unequal phases (E8) | One unit: one 1-phase device per phase, each 1/n of the connection and of the unit; several units or delta raise |
+| P5 | PV output | `irradiance` = the unit's (the extension, 2026-11-10), else p / Pmpp, at Pmpp = maxP; `%Pmpp` holds the output at p below the panel; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
+| P6 | Storage output | `%Discharge`/`%Charge`, never `kW` (the engine's percent of the kWrated of the moment); waiting is idling at idlingP |
+| P7 | Generator model | 3 from an enabled voltage control on its own terminal; disabled → 1; model 7 → 1 (listed); reactances at the engine's defaults (U13) |
+| P8 | Reactor coupling | r0/x0 must equal r/x; a varistor raises |
+| P9 | DER kv | ratedU (S4b-4 inverted), not the bus's |
+
+### Slot tables (S6e, generated from `SLOTS`)
+
+**PVSystem** (`exporter/pvsystem.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names: the connection's for one unit, the unit's for several, <name>_<phase> per phase |
+| phases | written | the phase conductors; a delta across two is 1 |
+| bus1 | written | bus_ref of the phase conductors; a wye inverter's neutral is node 0 |
+| kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
+| irradiance | written | the unit's irradiance (kW/m2); unset -> the unit's output / Pmpp (get_inverter_units p, generation sign) |
+| Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
+| pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
+| Temperature | unset | untranscribed or raising on import; not in CIM |
+| pf | not mapped | kvar carries q |
+| conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
+| kvar | written | the unit's share of q (generation sign: -q) |
+| kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
+| pct_Cutin | unset | untranscribed or raising on import; not in CIM |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
+| EffCurve | unset | untranscribed or raising on import; not in CIM |
+| P_TCurve | unset | untranscribed or raising on import; not in CIM |
+| pct_R | unset | untranscribed or raising on import; not in CIM |
+| pct_X | unset | untranscribed or raising on import; not in CIM |
+| model | not mapped | model 1, the engine's default; others raise on import |
+| Vminpu | written | 1 / maxIFault (the importer's rule inverted); unset -> not written |
+| Vmaxpu | unset | untranscribed or raising on import; not in CIM |
+| Balanced | unset | untranscribed or raising on import; not in CIM |
+| LimitCurrent | unset | untranscribed or raising on import; not in CIM |
+| yearly | unset | untranscribed or raising on import; not in CIM |
+| daily | unset | untranscribed or raising on import; not in CIM |
+| duty | unset | untranscribed or raising on import; not in CIM |
+| Tyearly | unset | untranscribed or raising on import; not in CIM |
+| Tdaily | unset | untranscribed or raising on import; not in CIM |
+| Tduty | unset | untranscribed or raising on import; not in CIM |
+| class_class | unset | untranscribed or raising on import; not in CIM |
+| UserModel | unset | untranscribed or raising on import; not in CIM |
+| UserData | unset | untranscribed or raising on import; not in CIM |
+| debugtrace | unset | untranscribed or raising on import; not in CIM |
+| VarFollowInverter | unset | untranscribed or raising on import; not in CIM |
+| DutyStart | unset | untranscribed or raising on import; not in CIM |
+| WattPriority | unset | untranscribed or raising on import; not in CIM |
+| PFPriority | unset | untranscribed or raising on import; not in CIM |
+| pct_PminNoVars | unset | untranscribed or raising on import; not in CIM |
+| pct_PminkvarMax | unset | untranscribed or raising on import; not in CIM |
+| kvarMax | written | maxQ, the connection's, by the unit's share (inverter_pieces); unset -> not written |
+| kvarMaxAbs | written | -minQ, the connection's, by the unit's share (inverter_pieces); unset -> not written |
+| kVDC | unset | untranscribed or raising on import; not in CIM |
+| Kp | unset | untranscribed or raising on import; not in CIM |
+| PITol | unset | untranscribed or raising on import; not in CIM |
+| SafeVoltage | unset | untranscribed or raising on import; not in CIM |
+| SafeMode | unset | untranscribed or raising on import; not in CIM |
+| DynamicEq | unset | untranscribed or raising on import; not in CIM |
+| DynOut | unset | untranscribed or raising on import; not in CIM |
+| ControlMode | unset | untranscribed or raising on import; not in CIM |
+| AmpLimit | unset | untranscribed or raising on import; not in CIM |
+| AmpLimitGain | unset | untranscribed or raising on import; not in CIM |
+| spectrum | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**Storage** (`exporter/storage.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names: the connection's for one unit, the unit's for several, <name>_<phase> per phase |
+| phases | written | the phase conductors; a delta across two is 1 |
+| bus1 | written | bus_ref of the phase conductors; a wye inverter's neutral is node 0 |
+| kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
+| conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
+| kW | not mapped | %Discharge/%Charge carry the output: the engine makes kW a percent of the kWrated of the moment, and kWrated is written after kW |
+| kvar | not mapped | q must be 0 (it raises on import); another raises |
+| pf | not mapped | q is 0 |
+| kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
+| pct_Cutin | unset | untranscribed or raising on import; not in CIM |
+| pct_Cutout | unset | untranscribed or raising on import; not in CIM |
+| EffCurve | unset | untranscribed or raising on import; not in CIM |
+| VarFollowInverter | unset | untranscribed or raising on import; not in CIM |
+| kvarMax | written | maxQ, the connection's, by the unit's share (inverter_pieces); unset -> not written |
+| kvarMaxAbs | written | -minQ, the connection's, by the unit's share (inverter_pieces); unset -> not written |
+| WattPriority | unset | untranscribed or raising on import; not in CIM |
+| PFPriority | unset | untranscribed or raising on import; not in CIM |
+| pct_PminNoVars | unset | untranscribed or raising on import; not in CIM |
+| pct_PminkvarMax | unset | untranscribed or raising on import; not in CIM |
+| kWrated | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than -maxP raises |
+| pct_kWrated | unset | untranscribed or raising on import; not in CIM |
+| kWhrated | written | ratedE (kWh), x 1/n for one of n phases; unset -> not written |
+| kWhstored | written | storedE (kWh), x 1/n for one of n phases; unset -> not written |
+| pct_stored | not mapped | kWhstored carries the energy |
+| pct_reserve | written | minimumE / ratedE x 100; either unset -> not written |
+| State | written | batteryState charging, discharging, waiting -> charging, discharging, idling; others raise, and so does an output of the wrong sign |
+| pct_Discharge | written | discharging: the unit's output / kWrated x 100 |
+| pct_Charge | written | charging: -(the unit's output) / kWrated x 100 |
+| pct_EffCharge | written | chargingEfficiency (percent); unset -> not written |
+| pct_EffDischarge | written | dischargingEfficiency (percent); unset -> not written |
+| pct_IdlingkW | written | idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be) |
+| pct_Idlingkvar | unset | untranscribed or raising on import; not in CIM |
+| pct_R | unset | untranscribed or raising on import; not in CIM |
+| pct_X | unset | untranscribed or raising on import; not in CIM |
+| model | not mapped | model 1, the engine's default; others raise on import |
+| Vminpu | written | 1 / maxIFault (the importer's rule inverted); unset -> not written |
+| Vmaxpu | unset | untranscribed or raising on import; not in CIM |
+| Balanced | unset | untranscribed or raising on import; not in CIM |
+| LimitCurrent | unset | untranscribed or raising on import; not in CIM |
+| yearly | unset | untranscribed or raising on import; not in CIM |
+| daily | unset | untranscribed or raising on import; not in CIM |
+| duty | unset | untranscribed or raising on import; not in CIM |
+| DispMode | unset | untranscribed or raising on import; not in CIM |
+| DischargeTrigger | unset | untranscribed or raising on import; not in CIM |
+| ChargeTrigger | unset | untranscribed or raising on import; not in CIM |
+| TimeChargeTrig | unset | untranscribed or raising on import; not in CIM |
+| class_class | unset | untranscribed or raising on import; not in CIM |
+| DynaDLL | unset | untranscribed or raising on import; not in CIM |
+| DynaData | unset | untranscribed or raising on import; not in CIM |
+| UserModel | unset | untranscribed or raising on import; not in CIM |
+| UserData | unset | untranscribed or raising on import; not in CIM |
+| debugtrace | unset | untranscribed or raising on import; not in CIM |
+| kVDC | unset | untranscribed or raising on import; not in CIM |
+| Kp | unset | untranscribed or raising on import; not in CIM |
+| PITol | unset | untranscribed or raising on import; not in CIM |
+| SafeVoltage | unset | untranscribed or raising on import; not in CIM |
+| SafeMode | unset | untranscribed or raising on import; not in CIM |
+| DynamicEq | unset | untranscribed or raising on import; not in CIM |
+| DynOut | unset | untranscribed or raising on import; not in CIM |
+| ControlMode | unset | untranscribed or raising on import; not in CIM |
+| AmpLimit | unset | untranscribed or raising on import; not in CIM |
+| AmpLimitGain | unset | untranscribed or raising on import; not in CIM |
+| spectrum | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**Generator** (`exporter/generator.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the Generator namespace |
+| phases | written | the phase conductors; a delta across two is 1 |
+| bus1 | written | bus_ref of the phase conductors; a wye machine's neutral is node 0 |
+| kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
+| kW | written | get_der_output total p (kW, generation sign) |
+| pf | not mapped | kvar carries q |
+| kvar | written | get_der_output total q (kVAr, generation sign), after kW |
+| model | written | 3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1 |
+| Vminpu | unset | untranscribed or raising on import; not in CIM |
+| Vmaxpu | unset | untranscribed or raising on import; not in CIM |
+| yearly | unset | untranscribed or raising on import; not in CIM |
+| daily | unset | untranscribed or raising on import; not in CIM |
+| duty | unset | untranscribed or raising on import; not in CIM |
+| dispmode | unset | untranscribed or raising on import; not in CIM |
+| dispvalue | unset | untranscribed or raising on import; not in CIM |
+| conn | written | earthing true -> wye, false -> delta; unset raises |
+| status | unset | untranscribed or raising on import; not in CIM |
+| gen_class | unset | untranscribed or raising on import; not in CIM |
+| Vpu | written | model 3: the control's target / ratedU |
+| maxkvar | written | model 3: maxQ (kVAr); unset -> not written |
+| minkvar | written | model 3: minQ (kVAr); unset -> not written |
+| pvfactor | unset | untranscribed or raising on import; not in CIM |
+| forceon | unset | untranscribed or raising on import; not in CIM |
+| kVA | written | ratedS (kVA) |
+| MVA | not mapped | kVA carries ratedS |
+| Xd | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| Xdp | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| Xdpp | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| H | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| D | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| UserModel | unset | untranscribed or raising on import; not in CIM |
+| UserData | unset | untranscribed or raising on import; not in CIM |
+| ShaftModel | unset | untranscribed or raising on import; not in CIM |
+| ShaftData | unset | untranscribed or raising on import; not in CIM |
+| DutyStart | unset | untranscribed or raising on import; not in CIM |
+| debugtrace | unset | untranscribed or raising on import; not in CIM |
+| Balanced | unset | untranscribed or raising on import; not in CIM |
+| XRdp | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
+| UseFuel | unset | untranscribed or raising on import; not in CIM |
+| FuelkWh | unset | untranscribed or raising on import; not in CIM |
+| pct_Fuel | unset | untranscribed or raising on import; not in CIM |
+| pct_Reserve | unset | untranscribed or raising on import; not in CIM |
+| Refuel | unset | untranscribed or raising on import; not in CIM |
+| DynamicEq | unset | untranscribed or raising on import; not in CIM |
+| DynOut | unset | untranscribed or raising on import; not in CIM |
+| spectrum | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+**Reactor** (`exporter/reactor.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | Names, the Reactor namespace |
+| bus1 | written | terminal_buses (line.py): the first terminal on the phase conductors |
+| bus2 | written | terminal_buses: the second terminal |
+| phases | written | the phase conductors |
+| kvar | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| kv | unset | untranscribed or raising on import; not in CIM |
+| conn | unset | untranscribed or raising on import; not in CIM |
+| Rmatrix | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Xmatrix | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Parallel | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| R | written | get_series_compensator r (ohm) |
+| X | written | get_series_compensator x (ohm) |
+| Rp | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Z1 | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Z2 | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Z0 | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| Z | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| RCurve | unset | untranscribed or raising on import; not in CIM |
+| LCurve | unset | untranscribed or raising on import; not in CIM |
+| LmH | not mapped | R and X carry the impedance; r0/x0 other than r/x raise |
+| normamps | written | get_current_limits normal (A); unset -> not written |
+| emergamps | written | get_current_limits emergency (A); unset -> not written |
+| faultrate | unset | untranscribed or raising on import; not in CIM |
+| pctperm | unset | untranscribed or raising on import; not in CIM |
+| repair | unset | untranscribed or raising on import; not in CIM |
+| basefreq | unset | untranscribed or raising on import; not in CIM |
+| enabled | written | get_in_service(which='normal'); unset -> not written |
+| like | not mapped | the writer never writes like= |
+
+## S6f: bus coordinates, power flow parity, idempotence (built 2026-11-09 at the user's word, with decisions F1-F7 as recommended)
+
+Content: equipment Locations → `Buscoords` rows; whole-deck power flow parity in the engine (plan §5, §8.3); the
+idempotence sweep. Plan §8.1 row S6f. The user asked for "the next phase" after confirming S6e's P2, so this spec
+was written alongside the code. Its decisions, F1-F7, are at the end of this section; F3 and F5 carry an open
+question each.
+
+### Layout
+
+```
+cimhub_core/src/cimhub_core/getters/location.py    get_location_coordinates (new)
+cimhub_opendss/src/cimhub_opendss/exporter/
+    buscoords.py     equipment Locations -> Buscoords rows (last in EXPORT_ORDER)
+    regcontrol.py    PTphase 1 on a 1-phase winding (a fix the idempotence sweep found)
+cimhub_opendss/tests/
+    engine_compare.py         + assert_same_power_flow, engine_coordinates
+    test_export_buscoords.py  the coordinate atoms
+    test_export_decks.py      parity and coordinates on 16 decks, idempotence on the 18 binding decks
+```
+
+The writer already writes `Buscoords <stem>_buscoords.csv` or `LatLongCoords <stem>_latlongcoords.csv` beside the
+deck (S6a, §8.2).
+
+### Coordinates (F1)
+
+The importer's S5-1 inverted. `get_location_coordinates(equipment)` (core) gives the Location's points in
+PositionPoint `sequenceNumber` order and each Terminal's point:
+- one point per Terminal: they pair in order (a one-Terminal POINT, a two-point LINESTRING);
+- a two-terminal polyline (more than two points): its ends go to its Terminals (CIM's line route);
+- one point on equipment with several Terminals: a device point (F8), which pairs with no Terminal, so `terminals`
+  is None;
+- any other count raises, and so do a point without a sequenceNumber or a position, and two points with one
+  number. No Location, or a Location without points, is None. `zPosition` is not read.
+
+`buscoords.export` gives each Terminal's bus of located equipment that Terminal's point, one row per bus in the
+network's ConnectivityNode order:
+- Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
+  (S5-3).
+- Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
+  so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
+  (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives
+  back the importer's bus to float noise (the midpoint rounded a + b once); with none placed, every bus goes at the
+  point. A device with one open bus goes first, so a chain of switches fills from its placed end. The parity and
+  atom tests compare coordinates to rel 1e-12 / abs 1e-9 (`assert_same_coordinates`) for that noise. An import
+  under `device_geometry="linestring"` (S5-9) has no device points: each device's buses pair one per Terminal and
+  come back exactly.
+- The CoordinateSystem picks the file: `urn:ogc:def:crs:OGC:1.3:CRS84` is `LatLongCoords` (x = longitude, written
+  latitude first), `OpenDSSLocalBusCoordinates` is `BusCoords` (the importer's `COORDINATE_SYSTEMS` inverted).
+  Another URN, or Locations in two systems, raise.
+- Non-conducting resources with a Location (a Substation) are skipped: they have no bus.
+
+### Power flow parity (F2-F4)
+
+`engine_compare.assert_same_power_flow(original, written)`: every node voltage within 0.1 % of its bus's base
+(the original's `kVBase`), both decks solved with **controls off** at the original's control state and
+untranscribed settings. What the written deck had otherwise is returned, and each deck's set is listed in the test
+so the list stays true:
+
+| copied from the original | why | decks |
+|---|---|---|
+| `Transformer.taps`, `Capacitor.states` | an in-deck `Solve` moves them; the importer reads the deck's text (F2) | IEEE13_original, IEEE37, IEEE13_Assets (caps), IEEE123_PV, IEEE123_deconfliction, IEEE9500 |
+| `earthmodel` | not in CIM (E10); Carson against the engine's Deri moves a geometry line's YPrim by 0.6 % | IEEE13_CDPSM, IEEE13_Assets, IEEE4 Bal (DY, GrdYD, YD, YY), IEEE123_PV, IEEE9500, ACEP_PSIL |
+| `Load.Vminpu`/`Vmaxpu` | not in CIM (L6); below Vminpu a load turns constant Z | IEEE13_CDPSM, every IEEE4 deck, IEEE8500 (all 1,177 loads `Vminpu=.88`), IEEE9500 |
+| `Transformer.ppm_antifloat` | not in CIM; `ppm=0` against the engine's 1 ppm moves a floating delta's voltage to ground | IEEE123, 4bus-OYOD-UnBal, IEEE123_PV, IEEE123_deconfliction, IEEE8500, IEEE9500 |
+
+`earthmodel` goes into a copy of the written deck after `New Circuit` (after Compile the lines are built); the
+others are set after Compile. Results (worst node, % of the bus base):
+
+| deck | nodes | worst |
+|---|---|---|
+| IEEE13_CDPSM | 57 | 0.056 % (675.3; the loads' kV 2.4 → 2.40178, L1) |
+| IEEE13_original | 41 | 0.009 % |
+| IEEE13_Assets | 41 | 0.010 % |
+| IEEE123 | 278 | 0.015 % |
+| IEEE123_PV | 442 | 0.017 % |
+| IEEE123_deconfliction | 271 | 0.020 % |
+| IEEE37 | 117 | 0.0003 % |
+| IEEE4: DY, GrdYD, OYOD, YD, YY (Bal), OYOD-UnBal | 12-13 | 0.003-0.018 % |
+| IEEE8500 | 8,531 | 0.072 % (a secondary; not traced further) |
+| IEEE9500 | 9,536 | 0.095 % (m2001-mt1: B3's 1 mOhm switch against the original's 1e-6 ohm, 300 A from a 250 kVA microturbine) |
+| ACEP_PSIL | 24 | 0.000 % |
+
+Every deck's bus coordinates come back as the engine had them (`engine_coordinates`, compile only). Not in parity:
+YYD-Master (it ends in a fault study with every load disabled, and its `Export` commands write files beside it)
+and IEEE8500 `Master-unbal` (it redirects a file the original lacks).
+
+### Idempotence (F6)
+
+export(import(export(import(deck)))) is the same text as export(import(deck)), deck and coordinate files, on all
+18 binding sweep decks, under `name_source="name"`. Under `mrid` it cannot be: the importer compiles an mRID from
+the native name, so a second pass prefixes again (`ln_ln_632633`).
+
+The sweep found one bug: **IEEE37's `creg1c`** (coil C → B) comes back `.2.3`, and the exporter wrote `PTphase=2`,
+the place of C among the coil's conductors. A 1-phase DSS winding has one phase, and the importer raises on 2. The
+exporter now writes 1 on a 1-phase winding; the re-import then monitors B, the same coil voltage.
+
+### Findings
+
+- **Protection has no trip settings (F5).** Recloser `PhaseTrip`/`GroundTrip` and Relay settings are untranscribed
+  (DSS-11's protection TODO). In a controls-on solve of the exported IEEE13_CDPSM, `Recloser.Rec1` trips at the
+  engine's 1 A default, recloses and locks out after 7 control iterations. Parity runs controls off, so protection
+  does not act there.
+- **Controls on is fragile for parity (F2).** From the same starting state, IEEE9500's `vreg3_a` ends on tap 3 in the
+  original and 4 in the export: the 0.095 % differences tip one band decision. IEEE13_CDPSM's deck itself ends in
+  `Set Controlmode=OFF` with taps set by hand.
+- **Untranscribed solution settings move voltages by percent (F3).** Without them a plain solve of the exported
+  IEEE8500 is 5.8 % off on its secondaries (Vminpu), the IEEE4 decks 2-9 % (earthmodel, Vminpu), 4bus-OYOD-UnBal
+  9 % (Vminpu 0.7, ppm).
+- YYD-Master writes `YYDTestCase_*` result files beside itself whenever the engine compiles it; the tests never
+  compile it.
+
+### Tests
+
+As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoords.py`, 7; `test_export_decks.py`,
+34):
+- **Getter:** one point per Terminal, a polyline's ends, no Location, and the raises (a count the Terminals cannot
+  pair, a repeated number, a missing position).
+- **Coordinate atoms** (`buscoords/local`, `buscoords/latlong`): the engine's coordinates equal the original's
+  (far stays without, ghost is no bus); lat-long written latitude first under `LatLongCoords`; b1's last row; the
+  raises (two points for one bus, an unmapped crsUrn, two systems).
+- **Parity and coordinates** on the 16 decks above; **idempotence** on the 18 binding sweep decks. The external
+  decks are marked `roundtrip`.
+- **Suite:** 1,194 passed. With the external decks and `--roundtrip`, every opendss test passes.
+
+### Decisions for S6f (recommended; built at the user's word 2026-11-09)
+
+| # | question | recommendation |
+|---|---|---|
+| F1 | Bus coordinates | Each Terminal's point from its equipment's Location (one per Terminal, or a two-terminal polyline's ends); conflicting points raise; CRS84 → LatLongCoords, the local URN → BusCoords, others raise |
+| F2 | Parity solve | Controls off, from the original's compiled taps and capacitor states; control settings are compared one by one (S6c, S6d). Controls on was the alternative: deterministic only when no band decision is near its edge |
+| F3 | Untranscribed settings that move voltages (**open**; earthmodel closed by S6g) | The harness copies earthmodel, load Vminpu/Vmaxpu and transformer ppm_antifloat, listed per deck; the exporter leaves them at the engine's defaults (E4, E10, L6). Open: whether to give them a home (a CIMHub extension, or an exporter option such as `load_vminpu=`), since IEEE8500's export solves 5.8 % off without Vminpu |
+| F4 | Tolerance | 0.1 % of the bus base (plan §5); the largest residual is B3's switch impedance on IEEE9500 (0.095 %) |
+| F5 | Protection settings (**open**; reclosing closed by S6g, trip settings still open, G5) | Untranscribed for now (DSS-11), listed: the exported recloser trips at the engine's 1 A in a controls-on solve. Open: map Recloser PhaseTrip/GroundTrip (and Relay settings) once DSS-11's protection TODO picks the CIM classes |
+| F6 | Idempotence | Under `name_source="name"`, deck and coordinate files; `mrid` re-prefixes by design |
+| F7 | Decks out of parity | YYD-Master (a fault study that writes files) and IEEE8500 Master-unbal (a missing redirect): idempotence only |
+| F8 | Device points (2026-11-10, the user's pick) | A single POINT on multi-terminal equipment places only open buses, at (N · point − Σ placed) / k: reflection across the point next to a placed bus, the point itself with none. Placing every open bus at the point was the alternative: simpler and closer to real GIS, but a DSS round trip moves a bus only a device touches (a regulator's output) |
+
+### Slot table (S6f, generated from `SLOTS`)
+
+**Buscoords** (`exporter/buscoords.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | the bus (Names.bus) of each Terminal of located equipment |
+| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a device point touches is solved from it as the centroid of the device's buses |
+| y | written | as x, from yPosition |
+| geographic | written | crsUrn CRS84 -> true (LatLongCoords), OpenDSSLocalBusCoordinates -> false; others raise |
+
+## S6g: earth model and reclose sequences (built 2026-11-09 at the user's word, with decisions G1-G5 as recommended)
+
+Content: the user added `EarthResistivity` (WiresEXT) and rebuilt the protection profile with
+`RecloseSequence.ProtectedSwitch` (2026-11-09). That gives two of S6f's open items a home: F3's `earthmodel`, and
+the reclosing part of F5. Both directions are changed here, because each value must come back.
+
+### Layout
+
+```
+cimhub_core/src/cimhub_core/
+    getters/earth.py             get_earth_resistivity (new): EarthData(model, rho ohm-m, earth_return_gmr m)
+    getters/switch_state.py      + get_reclose_delays: the recloseDelay of each RecloseSequence, in step order
+    shapes/line_by_wire_configuration.cimtbl   + EarthResistivity earth_carson on wc_601
+    shapes/switch.cimtbl         + RecloseSequence sw_r1_rs1, sw_r1_rs2 (0.5 s, 2 s)
+cimhub_opendss/src/cimhub_opendss/
+    schema/linkml/controls/recloser.yaml       + dss_default Shots 4, RecloseIntervals [0.5 2 2] (DSS-6)
+    importer/cimtbl/geometry.py  earth_statement: the deck's EarthResistivity, first in linegeometry.cimtbl
+    importer/cimtbl/line.py      RecloseSequence rows; rho on a geometry line; spacing= configurations name the earth
+    exporter/options.py          earthmodel = the configurations' one model
+    exporter/line.py             rho on a geometry line
+    exporter/switch.py           Recloser Shots and RecloseIntervals
+```
+
+### Earth model (G1, G2)
+
+**Import.** A deck with geometry (a LineGeometry, or a Line by `spacing=`) gets one `EarthResistivity`, mRID
+`earth`, written first in `linegeometry.cimtbl`. Every WireConfiguration names it, the `spacing=` lines' synthesized
+ones too.
+- `earthModelType` comes from `Set earthmodel`: Carson → carson, Deri → deri. `FullCarson` raises, because
+  EarthModelKind has no member for it.
+- `rho` is the geometry lines' `rho`, which must all agree.
+- Unset values take the engine's defaults, Deri and 100 ohm-m, listed as `# defaulted:` (DSS-6).
+- `rho` on a line without geometry raises: it computes nothing there.
+- A deck without geometry gets no EarthResistivity, since its earth model computes nothing. Its `Set earthmodel` is
+  then lost; the parity harness still lists it for IEEE13_CDPSM, IEEE123_PV, IEEE9500 and ACEP_PSIL.
+
+**Export.**
+- `Set earthmodel` is the one model of every WireConfiguration (`options.earth_model`). DSS's earthmodel is the
+  deck's, so configurations over different models raise. So does one without an EarthResistivity beside one with,
+  which would silently take the other's model.
+- Each geometry line writes `rho` from its configuration's EarthResistivity. DSS's LineGeometry has no rho.
+- `earthReturnGMR` is not written: DSS derives Carson's earth return from rho and the frequency.
+- The per-line `EarthModel` slot is not written; the deck's `Set earthmodel` carries it.
+
+**Profile note:** `EarthResistivity.rho` is typed `Resistance` (ohm). A resistivity is ohm-m, and the profile has no
+CIMUnit for it, so the value is read in ohm and stands for ohm-m (`get_earth_resistivity`).
+
+### Reclose sequences (G3, G4)
+
+**Import.** A Recloser's `Shots` - 1 reclosures become one `RecloseSequence` each, `<switch>_rs<n>`, with
+`ProtectedSwitch` the switch, `recloseStep` n and `recloseDelay` = `RecloseIntervals[n]` (s). The engine's rules,
+probed:
+- `RecloseIntervals` defaults to (0.5, 2, 2) and `Shots` to 4, and the engine keeps the first `Shots` - 1 intervals.
+  Unset values are defaulted from the schema's new `dss_default`s and listed on the first row.
+- Giving the intervals sets `Shots` to their count + 1, so both given and disagreeing raise: the engine's result
+  depends on their order.
+- `Shots` above 4 without intervals raises: the engine reads past its three defaults (probe: `5.5e-310`).
+- `Shots=1` gives no sequence.
+
+All 53 IEEE9500 reclosers set `Shots=3`: two reclosures at 0.5 s and 2 s.
+
+**Export.** A Recloser writes `Shots` = its RecloseSequences + 1 and `RecloseIntervals` their delays in step order
+(`get_reclose_delays`; the steps must be 1..n, each with a delay). A recloser without sequences writes `Shots=1`: no
+reclosure, as CIM says (G4). RecloseSequences on another ProtectedSwitch (a Breaker) raise: in DSS a Relay recloses
+a breaker, and Relay is not mapped (DSS-11).
+
+### What is still open (G5)
+
+- **Trip settings.** The pickups (`PhaseTrip`, `GroundTrip`, `PhaseInst`, `GroundInst`), the curves
+  (`PhaseFast`/`PhaseDelayed`/`GroundFast`/`GroundDelayed`), the time dials and `NumFast` still have no attribute. In
+  cim18v17 the overcurrent function blocks carry only `operatingQuantityType`. So the exported recloser still trips
+  at the engine's 1 A default in a controls-on solve (S6f F5). CIM17's `RecloserInfo` had `phaseTripRating`,
+  `groundTripRating` and `recloseLockoutCount`. A pickup (and a time-current curve link) on
+  `OverCurrentProtectionFunctionBlock`, or an extension on the Recloser, would close it.
+- `EarthModelKind` has no `fullCarson`.
+- Fuse's minimum-melt association is spelled `MiinimumMeltCurve` in the profile.
+
+### Findings
+
+- The parity harness compared the original's earth model with the engine's Deri, not with the written deck. It now
+  compiles the written deck and reads its earthmodel. With S6g, `earthmodel` drops from the parity lists of every
+  deck with geometry: IEEE13_Assets and the IEEE4 Bal decks (DY, GrdYD, YD, YY).
+
+### Tests
+
+- Core: `test_getters_earth.py` (2) and `test_getters_reclose.py` (4): model and rho; no earth; delays in order and in
+  ms; no sequence; a missing step; an unset delay.
+- Import:
+  - goldens: `line/codes` (`sw_rec1`'s two sequences), `line/geometry`, `geometry/assets_linegeometry`
+    (`EarthResistivity earth`), IEEE13_CDPSM's `line.cimtbl`;
+  - `test_cimtbl_line.py`: the four reclose rules, and three new raises (Shots=6 without intervals, Shots and
+    intervals disagreeing, rho without geometry);
+  - `test_cimtbl_geometry.py`: the deck's model and rho, the defaults, FullCarson, disagreeing rho, no geometry.
+- Export:
+  - goldens: `line/codes`, `line/geometry`, `line/cables`, `line/states` (`Set earthmodel=Deri`, `rho=100`,
+    `Shots=3 RecloseIntervals=[0.5 2]`);
+  - `test_export_line.py`: the engine's `Shots`/`RecloseIntervals` equal the original's on `codes` and `states`; a
+    recloser without sequences is `Shots=1`; sequences on a Breaker raise; geometry lines write their earth; two
+    earth models raise.
+- Every atom's YPrim and voltages are still equal in the engine.
+
+### Decisions for S6g (recommended; built at the user's word 2026-11-09)
+
+| # | question | recommendation |
+|---|---|---|
+| G1 | Where the earth goes | One EarthResistivity per deck (DSS's earthmodel is global), named by every WireConfiguration; rho from the geometry lines, which must agree; defaults listed (DSS-6) |
+| G2 | Earth on export | `Set earthmodel` from the configurations' one model (several raise); `rho` on each geometry line |
+| G3 | Reclosures on import | Shots - 1 RecloseSequences at RecloseIntervals, the engine's defaults filling either; the cases the engine resolves by order or by reading past its defaults raise |
+| G4 | A recloser with no RecloseSequence | `Shots=1`, no reclosure, as CIM says, rather than the engine's 4 |
+| G5 | Trip settings (**open**, TODO U15) | Still untranscribed: they need an attribute in the profile (see "What is still open"). Tracked as `.development/UPSTREAM_REQUESTS.md` U15 until the user repairs the FunctionBlock package in the UML |

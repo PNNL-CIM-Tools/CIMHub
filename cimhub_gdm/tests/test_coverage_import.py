@@ -11,10 +11,10 @@ import pytest
 from cimgraph.models import FeederModel
 from cimhub_core.base import FormatImporter
 from cimhub_gdm.importer.gdm_to_cim import INLINE, ORDER, PENDING, SHELL, UNTRANSCRIBED
-from gdm.distribution import common, components, controllers, equipment
-from gdm.distribution.components import DistributionFeeder, DistributionVoltageSource
-from gdm.distribution.controllers import PowerfactorControlSetting
-from gdm.distribution.equipment import VoltageSourceEquipment
+from gdm.systems.distribution import common, components, controllers, equipment
+from gdm.systems.distribution.components import DistributionFeeder, DistributionVoltageSource
+from gdm.systems.distribution.controllers import PowerfactorControlSetting
+from gdm.systems.distribution.equipment import VoltageSourceEquipment
 from infrasys.time_series_models import SingleTimeSeries
 
 from cimhub_gdm import GdmImporter, gdm_to_cim

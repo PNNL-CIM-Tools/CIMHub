@@ -6,7 +6,7 @@
 Profile = cim18v17
 
 # synthesized: the spacing and conductors of Line s510
-Object WireConfiguration: mRID=ln_s510_wc, name=s510, numberOfPhases=1, WireSpacing=spc_510
+Object WireConfiguration: mRID=ln_s510_wc, name=s510, numberOfPhases=1, WireSpacing=spc_510, EarthResistivity=earth
 
 Table WireSequenceConfiguration: mRID, WireConfiguration=ln_s510_wc, sequenceNumber, WireInfo
     ln_s510_wc_1, 1, wire_acsr_1/0

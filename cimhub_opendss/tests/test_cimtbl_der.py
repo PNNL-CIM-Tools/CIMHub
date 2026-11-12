@@ -53,6 +53,11 @@ def test_derived_dispatch():
     power = pvsystem.pv_power("pv", pmpp=10, irradiance=1, pct_pmpp=100, kva=10, pct_cutout=20, pf=0.9, kvar=None)
     assert power == pytest.approx((8.748898, 4.843221, False), rel=1e-6)
     assert pvsystem.pv_power("pv", pmpp=10, irradiance=0.1, pct_pmpp=100, kva=12, pct_cutout=20, pf=1, kvar=None).off
+    # %Pmpp caps the panel's power; %Cutout is on the panel's power (both as the engine, probed)
+    capped = pvsystem.pv_power("pv", pmpp=100, irradiance=0.5, pct_pmpp=10, kva=100, pct_cutout=20, pf=1, kvar=None)
+    assert capped == pytest.approx((10, 0, False))
+    assert pvsystem.pv_power("pv", pmpp=100, irradiance=1.2, pct_pmpp=150, kva=200, pct_cutout=20, pf=1,
+                             kvar=None).kw == pytest.approx(120)
     assert injection.line_kv(2.4, injection.DeviceTerminal("b", "C", 1, False, None)) == pytest.approx(4.156922)
     assert storage.engine_state("charge", name="x") == "charging"
     common = dict(kw_rated=250, kva=250, pct_charge=100, pct_discharge=100, idling_kw=2.5, stored=500, minimum=150,
@@ -72,7 +77,9 @@ def test_der_binds(der):
     assert_base_voltages_agree(network)
     cim = network.cim
     connections = {pec.mRID: pec for pec in network.graph[cim.PowerElectronicsConnection].values()}
-    assert len(connections) == 20
+    assert len(connections) == 21
+    assert float(connections["pv_school"].PowerElectronicsUnit[0].irradiance.to("kW/m**2")) == pytest.approx(0.8)
+    assert float(connections["pv_pmppcap"].p.to("kW")) == pytest.approx(-6)
     house = connections["pv_house"]
     assert house.Terminals[0].phases.value == "s12" and float(house.p.to("kW")) == pytest.approx(-4)
     assert house.PowerElectronicsUnit[0].mRID == "pv_house_unit"
@@ -134,6 +141,7 @@ def _engine_differences(network) -> list[str]:
             check(f"{name} kvar", -float(connection.q.to("kVAr")), dss.PVsystems.kvar())
             check(f"{name} kVA", float(connection.ratedS.to("kVA")), dss.PVsystems.kVARated())
             check(f"{name} Pmpp", float(unit.maxP.to("kW")), dss.PVsystems.Pmpp())
+            check(f"{name} irradiance", float(unit.irradiance.to("kW/m**2")), dss.PVsystems.Irradiance())
             check(f"{name} kV", _engine_kv(connection, count), float(_ask(f"pvsystem.{name}.kV")))
             continue
         element = f"storage.{name}"

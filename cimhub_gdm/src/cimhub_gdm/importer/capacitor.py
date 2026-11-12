@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from cimbuilder.object_builder import LinearShuntCompensatorBuilder, RegulatingControlBuilder
 from cimhub_core.cimtbl import Field, lookup
-from gdm.distribution.controllers import (
+from gdm.systems.distribution.controllers import (
     ActivePowerCapacitorController,
     CurrentCapacitorController,
     ReactivePowerCapacitorController,
     VoltageCapacitorController,
 )
-from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
+from gdm.systems.distribution.enums import ConnectionType, Phase, VoltageTypes
 
 from cimhub_gdm.importer.shared import (
     PHASE,

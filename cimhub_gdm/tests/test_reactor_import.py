@@ -4,8 +4,8 @@ import gdm_atoms
 import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_gdm.importer import reactor
-from gdm.distribution.components import DistributionReactor
-from gdm.distribution.equipment import ReactorEquipment
+from gdm.systems.distribution.components import DistributionReactor
+from gdm.systems.distribution.equipment import ReactorEquipment
 
 
 def reactor_system():

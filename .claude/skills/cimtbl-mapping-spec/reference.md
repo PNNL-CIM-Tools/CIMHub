@@ -77,7 +77,7 @@ neither; a nonzero C without `baseFreq`; a matrix whose length does not fit `nph
 | nonzero `cmatrix` without `baseFreq` | ieee9500, IEEE8500 and EPRI K1 triplex | DSS takes the circuit's default base frequency: take it from the deck's `Circuit`/`Set DefaultBaseFrequency`, else 60 Hz? |
 | `units` unset | IEEE13_original, IEEE123, EPRI M1 and J1 | DSS reads the values per unit of the *line's* length, so the unit belongs to the instance: defer to the `Line` mapper, or require `units`? |
 | 1-/2-phase sequence code | EPRI J1 (17 codes) | the engine builds a 1-phase line from Z1 alone and a 2-phase one from Zs = (2Z1 + Z0)/3, Zm = (Z0 - Z1)/3; neither is the CIM sequence convention |
-| two mRIDs give one UUID | IEEE8500 (`lc_1p_#2acsr_#2n` vs `lc_1p_#2arv_#2n`) | upstream bug: the mRID seed drops text up to the last `#` (filed in `.development/CIMTABLES_REQUESTS.md`, R10) |
+| two mRIDs give one UUID | IEEE8500 (`lc_1p_#2acsr_#2n` vs `lc_1p_#2arv_#2n`) | upstream bug: the mRID seed drops text up to the last `#` (filed in `.development/UPSTREAM_REQUESTS.md`, R10) |
 | `nphases=4` read as 3 | IEEE13_OCHRE | reader bug: it limits nphases to 1..3, so the 10-value `rmatrix` no longer fits; filed against the reader |
 
 **Reader/schema findings.** `faultrate` is typed `int` (so `0.1` reads as `0`); `LineType` is typed `float` (DSS

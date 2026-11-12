@@ -1,0 +1,162 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/bus
+name: bus
+title: Bus Record
+description: raw RAW Bus Record
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  BusRecord:
+    description: Bus data record
+    attributes:
+      bus_number:
+        description: I - Bus number (1-999997)
+        range: integer
+        required: true
+        identifier: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: NAME - Bus name (12 characters max)
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+
+      base_voltage:
+        description: BASKV - Bus base voltage in kV
+        range: float
+        required: false
+        unit:
+          ucum_code: "kV"
+        annotations:
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      bus_type:
+        description: IDE - Bus type code (1=PQ, 2=PV, 3=swing, 4=isolated)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      area:
+        description: AREA - Area number
+        range: integer
+        required: false
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      zone:
+        description: ZONE - Zone number
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      owner:
+        description: OWNER - Owner number
+        range: integer
+        required: false
+        annotations:
+          order: 7
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      voltage_magnitude:
+        description: VM - Voltage magnitude in pu
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 1.0
+
+      voltage_angle:
+        description: VA - Voltage angle in degrees
+        range: float
+        required: false
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 9
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      normal_voltage_magnitude_high_limit:
+        description: NVHI - Normal voltage magnitude high limit in pu
+        range: float
+        required: false
+        annotations:
+          order: 10
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 1.1
+
+      normal_voltage_magnitude_low_limit:
+        description: NVLO - Normal voltage magnitude low limit in pu
+        range: float
+        required: false
+        annotations:
+          order: 11
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.9
+
+      emergency_voltage_magnitude_high_limit:
+        description: EVHI - Emergency voltage magnitude high limit in pu
+        range: float
+        required: false
+        annotations:
+          order: 12
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 1.1
+
+      emergency_voltage_magnitude_low_limit:
+        description: EVLO - Emergency voltage magnitude low limit in pu
+        range: float
+        required: false
+        annotations:
+          order: 13
+          value_type: float
+          precision: 5
+          separator: ""  # No separator after last field
+          raw_default: 0.9

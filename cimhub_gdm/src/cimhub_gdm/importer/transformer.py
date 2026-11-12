@@ -32,8 +32,8 @@ from cimbuilder.object_builder import (
 )
 from cimhub_core.cimtbl import Field, lookup
 from cimtables.units import Qty
-from gdm.distribution.enums import ConnectionType, Phase, VoltageTypes
-from gdm.distribution.equipment import PowerTransformerEquipment
+from gdm.systems.distribution.enums import ConnectionType, Phase, VoltageTypes
+from gdm.systems.distribution.equipment import PowerTransformerEquipment
 
 from cimhub_gdm.importer.shared import (
     PHASE,
