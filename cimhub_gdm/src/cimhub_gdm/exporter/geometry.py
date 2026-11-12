@@ -92,7 +92,7 @@ def geometry_equipment(line: cim.ACLineSegment, phase_count: int, context: Expor
     wires = dict(get_configuration_wires(configuration))
     positions = get_line_conductor_xy(line, LENGTH_UNIT)
     numbers = [position.sequence_number for position in positions]
-    if sorted(wires) != numbers:
+    if sorted(wires) != sorted(numbers):
         raise ValueError(f"{describe(configuration)}: wires on sequence numbers {sorted(wires)}, positions on "
                          f"{numbers}")
     if len(numbers) != phase_count:

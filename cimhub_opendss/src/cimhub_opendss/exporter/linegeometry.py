@@ -100,7 +100,7 @@ def _check_names_differ(first_line: dict) -> None:
 def _geometry(configuration: cim.WireConfiguration, offset: float, positions, names: Names) -> schema.Linegeometry:
     wires = dict(get_configuration_wires(configuration))
     numbers = [position.sequence_number for position in positions]
-    if sorted(wires) != numbers:
+    if sorted(wires) != sorted(numbers):
         raise ValueError(f"{describe(configuration)}: wires on sequence numbers {sorted(wires)}, positions on "
                          f"{numbers}")
     phases = configuration.numberOfPhases
