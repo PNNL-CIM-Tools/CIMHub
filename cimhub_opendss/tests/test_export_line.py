@@ -9,6 +9,8 @@ import numpy as np
 import opendssdirect as dss
 import pytest
 
+from cimtables import load_model
+
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.line_impedance import ImpedanceSource, get_line_sequence_impedance
 from cimhub_opendss import DssImporter, DssReader
@@ -188,11 +190,11 @@ def test_geometry_neutral_is_reduced_and_off_the_bus():
     assert (line.bus1, line.phases) == ("sourcebus.1.2.3", 3)
 
 
-def test_bare_spacing_line_raises():
+def test_bare_spacing_line_without_wire_info_raises():
     network = _network("geometry")
     line = _object(network, cim.ACLineSegment, "g601")
     line.WireSpacing, line.WireConfiguration = line.WireConfiguration.WireSpacing, None
-    with pytest.raises(ValueError, match="a WireSpacing without a WireConfiguration is not exported"):
+    with pytest.raises(ValueError, match="has a WireSpacing but no ACLineSegmentPhase.WireInfo"):
         _model(network)
 
 
@@ -329,3 +331,127 @@ def test_two_earth_models_raise():
                                                           earthModelType=cim.EarthModelKind.carson)
     with pytest.raises(ValueError, match="WireConfigurations over earth models"):
         _model(network)
+
+
+# B2b: direct WireSpacing + ACLineSegmentPhase.WireInfo ---------------------------------------------------------------
+
+# A 3-phase overhead line: XYSpacing with WirePosition rows (all circuit 1) + 1 neutral (circuit 0, shared).
+# Corresponds to richland_spacings.cimtbl primary circuit 1: A=seq1, B=seq2, C=seq3, N=seq4.
+_B2B_CIMTBL = """\
+Profile = cim18v17
+
+Object BaseVoltage: mRID=bv_12p47kv, name=12.47kV, nominalVoltage (kV)=12.47
+Object Feeder: mRID=fdr_b2b, name=b2b
+Object EnergySource: mRID=src, name=src, node=src_bus, nominalVoltage (kV)=12.47, voltageMagnitude (kV)=12.47, voltageAngle (deg)=0, r (ohm)=0, x (ohm)=1, r0 (ohm)=0, x0 (ohm)=1, BaseVoltage=bv_12p47kv, EquipmentContainer=fdr_b2b
+
+Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), rAC25 (ohm/mi), gmr (ft), radius (in), ratedCurrent (A)
+    wire_acsr_4/0, ACSR_4/0, 0.303, 0.303, 0.09768, 0.281, 340.0
+    wire_acsr_1/0, ACSR_1/0, 0.695, 0.695, 0.05352, 0.199, 230.0
+
+Object XYSpacing: mRID=spc_std3ph, name=std3ph, isTemplate=true
+Table WirePosition: mRID, XYSpacing=spc_std3ph, sequenceNumber, xCoord (ft), yCoord (ft), kind, circuitNumber
+    spc_std3ph_1, 1, 0.0, 0.0, phase, 1
+    spc_std3ph_2, 2, 2.5, 0.0, phase, 1
+    spc_std3ph_3, 3, 7.0, 0.0, phase, 1
+    spc_std3ph_4, 4, 4.0, -4.0, neutral, 0
+
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), spacingYOffset (ft), WireSpacing, BaseVoltage, EquipmentContainer
+    ln_b2b1, b2b1, src_bus, n1, ABCN, 500.0, 28.0, spc_std3ph, bv_12p47kv, fdr_b2b
+
+Update Table ACLineSegmentPhase: mRID, WireInfo
+    ln_b2b1_A, wire_acsr_4/0
+    ln_b2b1_B, wire_acsr_4/0
+    ln_b2b1_C, wire_acsr_4/0
+    ln_b2b1_N, wire_acsr_1/0
+"""
+
+
+def _b2b_network(tmp_path):
+    path = tmp_path / "b2b.cimtbl"
+    path.write_text(_B2B_CIMTBL)
+    return load_model(path)
+
+
+def _b2b_model(network):
+    return _model(network, name_source="mrid")
+
+
+def test_b2b_line_has_geometry_reference(tmp_path):
+    """A B2b line (direct WireSpacing + WireInfo phases) writes a geometry= slot, not linecode=."""
+    network = _b2b_network(tmp_path)
+    model = _b2b_model(network)
+    line_rec = _b2b_line(model)
+    assert line_rec.geometry is not None
+    assert line_rec.linecode is None
+
+
+def test_b2b_geometry_name_includes_offset(tmp_path):
+    """The geometry name encodes the spacing mRID and the spacingYOffset."""
+    network = _b2b_network(tmp_path)
+    model = _b2b_model(network)
+    line_rec = _b2b_line(model)
+    # offset 28 ft -> 8.5344 m (rounds to 3 decimals = 8.534); spacing mRID is spc_std3ph
+    assert "spc_std3ph" in line_rec.geometry.lower()
+    assert "8p534" in line_rec.geometry.lower()
+
+
+def _b2b_line(model):
+    # name_source=mrid -> line name is its mRID "ln_b2b1"
+    return next(r for r in model.list_by_class(schema.Line) if str(r.name).lower() == "ln_b2b1")
+
+
+def _b2b_geo(model):
+    line_rec = _b2b_line(model)
+    return next(r for r in model.list_by_class(schema.Linegeometry)
+                if str(r.name).lower() == line_rec.geometry.lower())
+
+
+def test_b2b_geometry_positions_raised_by_offset(tmp_path):
+    """spacingYOffset lifts the spacing origin; h[0] should equal 28 ft above ground in metres."""
+    network = _b2b_network(tmp_path)
+    geo = _b2b_geo(_b2b_model(network))
+    # positions in metres; spacing yCoords are 0, 0, 0, -4 ft; offset 28 ft -> 8.5344 m
+    # phase conductors: 28+0 = 28 ft = 8.5344 m; neutral: 28-4 = 24 ft = 7.3152 m
+    assert geo.hs[0] == pytest.approx(28 * 0.3048, rel=1e-5)
+    assert geo.hs[3] == pytest.approx(24 * 0.3048, rel=1e-5)
+
+
+def test_b2b_geometry_wires_in_sequence_number_order(tmp_path):
+    """Wires in the LineGeometry are ordered by sequenceNumber: phase wire first, neutral last."""
+    network = _b2b_network(tmp_path)
+    geo = _b2b_geo(_b2b_model(network))
+    assert len(geo.wires) == 4
+    wire_names_lower = [str(w).lower() for w in geo.wires]
+    # name_source=mrid: wire names are the wire mRIDs
+    assert wire_names_lower[:3] == ["wire_acsr_4/0"] * 3
+    assert wire_names_lower[3] == "wire_acsr_1/0"
+
+
+def test_b2b_geometry_nconds_and_nphases(tmp_path):
+    """nconds = all positions (4), nphases = phase conductors only (3), reduce=True."""
+    network = _b2b_network(tmp_path)
+    geo = _b2b_geo(_b2b_model(network))
+    assert (geo.nconds, geo.nphases, geo.reduce) == (4, 3, True)
+
+
+def test_b2b_missing_wire_info_on_sequencenumber_raises(tmp_path):
+    """A position in the spacing with no matching WireInfo raises with the missing sequence number."""
+    network = _b2b_network(tmp_path)
+    line = next(iter(network.graph[cim.ACLineSegment].values()))
+    for phase in line.ACLineSegmentPhases:
+        if phase.sequenceNumber == 4:
+            phase.WireInfo = None
+    with pytest.raises(ValueError, match="sequenceNumbers \\[4\\] have no ACLineSegmentPhase.WireInfo"):
+        _b2b_model(network)
+
+
+def test_b2b_phase_wire_info_without_sequence_number_raises(tmp_path):
+    """A phase with WireInfo but no sequenceNumber raises before geometry is built."""
+    network = _b2b_network(tmp_path)
+    line = next(iter(network.graph[cim.ACLineSegment].values()))
+    for phase in line.ACLineSegmentPhases:
+        if phase.sequenceNumber == 1:
+            phase.WireInfo = next(iter(network.graph[cim.OverheadWireInfo].values()))
+            phase.sequenceNumber = None
+    with pytest.raises(ValueError, match="has no sequenceNumber"):
+        _b2b_model(network)

@@ -55,6 +55,8 @@ class DssExporter(FormatExporter):
         for module in EXPORT_ORDER:
             for record in module.export(context):
                 model.add_to_graph(record)
+        for record in line.export_direct_geometries(context):
+            model.add_to_graph(record)
         model.add_to_graph(options_record(network, names, switch.open_terminals(context)))
         return model
 
