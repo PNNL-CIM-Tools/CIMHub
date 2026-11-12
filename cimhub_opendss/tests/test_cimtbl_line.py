@@ -98,6 +98,12 @@ def test_geometry_binds():
      "give 1 values for 3 phases"),
     ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Fuse.f MonitoredObj=Line.a State=[open open open] Normal=open\n",
      "different phase counts"),
+    # the engine has 3 default intervals and reads past them for more reclosures
+    ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Recloser.r MonitoredObj=Line.a Shots=6\n",
+     "Shots=6 without RecloseIntervals"),
+    ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Recloser.r MonitoredObj=Line.a Shots=4 RecloseIntervals=(1, 2)\n",
+     "Shots=4 with 2 RecloseIntervals"),
+    ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 rho=50\n", "rho=50.0 without a geometry"),
 ])
 def test_unmapped_lines_fail_fast(tmp_path, text, message):
     with pytest.raises(ValueError, match=message):
@@ -186,3 +192,20 @@ def test_lines_match_the_engine(relative):
         raise
     compile_deck(path)
     assert _engine_line_differences(network) == []
+
+
+@pytest.mark.parametrize("slots, delays, defaulted", [
+    ("", ["0.5", "2.0", "2.0"], "defaulted: Shots=4, RecloseIntervals=(0.5 2.0 2.0)"),
+    ("Shots=2", ["0.5"], "defaulted: RecloseIntervals=(0.5)"),
+    ("Shots=1", [], None),
+    ("RecloseIntervals=(1, 5)", ["1.0", "5.0"], None),
+])
+def test_reclosures_are_reclose_sequences(tmp_path, slots, delays, defaulted):
+    document = _map(_read(tmp_path, f"New Line.a bus1=sourcebus bus2=b switch=y\n"
+                                    f"New Recloser.r MonitoredObj=Line.a {slots}\n"))
+    tables = [statement for statement in document.statements if getattr(statement, "cim_class", None) ==
+              "RecloseSequence"]
+    rows = tables[0].rows if tables else []
+    assert [row.cells for row in rows] == [[f"sw_a_rs{step}", "sw_a", str(step), delay]
+                                           for step, delay in enumerate(delays, 1)]
+    assert (rows[0].comment if rows else None) == defaulted

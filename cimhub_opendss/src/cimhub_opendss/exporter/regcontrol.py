@@ -43,7 +43,8 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "tapdelay": Slot("written", "subsequentDelay (s); unset -> not written"),
     "tapwinding": Slot("not mapped", "the tap winding is the monitored one"),
     "vlimit": Slot("not mapped", "maxLimitVoltage raises (untranscribed on import)"),
-    "PTphase": Slot("written", "1-based place of monitoredPhase among the winding's phase conductors"),
+    "PTphase": Slot("written", "1-based place of monitoredPhase among the winding's phase conductors; 1 on a "
+                               "1-phase winding, whichever of its conductors CIM names"),
     "revThreshold": Slot("written", "reversingPowerThreshold (kW)"),
     "revDelay": Slot("written", "reversingDelay (s)"),
     "revNeutral": Slot("written", "reverseToNeutral"),
@@ -62,7 +63,7 @@ def _regcontrol(control: cim.TapChangerControl, names: Names) -> schema.Regcontr
         mode = control.mode.value if control.mode is not None else None
         raise ValueError(f"{describe(control)}: mode {mode}; a RegControl regulates voltage")
     tap = _tap(control)
-    transformer_name, winding = _tap_winding(tap, names)
+    transformer_name, winding, three_phase = _tap_winding(tap, names)
     settings = get_tap_changer_control(tap, unit="V", time_unit="s", power_unit="kW")
     regulating = settings.control
     if regulating.terminal is not winding.end.Terminal:
@@ -89,8 +90,7 @@ def _regcontrol(control: cim.TapChangerControl, names: Names) -> schema.Regcontr
         reversible=settings.reversible,
         revvreg=_secondary(regulating.reverse_target, pt_ratio),
         revband=_secondary(regulating.reverse_deadband, pt_ratio),
-        PTphase=pt_phase(control, regulating.monitored_phases,
-                         [phase for phase in winding.phases if phase is not windings.N]),
+        PTphase=_pt_phase(control, regulating.monitored_phases, winding, three_phase),
         revThreshold=settings.reversing_power_threshold,
         revDelay=settings.reversing_delay,
         revNeutral=settings.reverse_to_neutral,
@@ -105,8 +105,15 @@ def _tap(control: cim.TapChangerControl) -> cim.RatioTapChanger:
     return taps[0]
 
 
+def _pt_phase(control, monitored, winding, three_phase: bool) -> int | None:
+    """``PTphase``: the monitored phase's place on a 3-phase winding. A 1-phase DSS winding has one phase, 1, even
+    across two conductors: IEEE37's coil C -> B comes back B -> C (its PhaseCode BC), monitoring C."""
+    place = pt_phase(control, monitored, [phase for phase in winding.phases if phase is not windings.N])
+    return place if three_phase or place is None else 1
+
+
 def _tap_winding(tap: cim.RatioTapChanger, names: Names):
-    """``(DSS Transformer name, winding)`` of the tap's end."""
+    """``(DSS Transformer name, winding, 3-phase)`` of the tap's end."""
     end = tap.TransformerEnd
     transformer = end.PowerTransformer if isinstance(end, cim.PowerTransformerEnd) else end.AutoTransformer
     if transformer is None:
@@ -115,9 +122,9 @@ def _tap_winding(tap: cim.RatioTapChanger, names: Names):
     if len(units) != 1:
         raise ValueError(f"{describe(tap)}: a tap changer on a several-tank transformer is not mapped (T4)")
     [unit] = units
-    [(winding, _)] = [(winding, found) for winding, found in windings.tap_windings(windings.read_unit(unit))
-                      if found is tap]
-    return windings.unit_name(transformer, unit, names), winding
+    unit_model = windings.read_unit(unit)
+    [winding] = [winding for winding, found in windings.tap_windings(unit_model) if found is tap]
+    return windings.unit_name(transformer, unit, names), winding, unit_model.three_phase
 
 
 def _secondary(volts: float | None, pt_ratio: float) -> float | None:

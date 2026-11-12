@@ -72,8 +72,8 @@ class DssImporter(CimtblImporter):
         # map_master: the spoke's master document (containers, BaseVoltages, then one Import per part)
         return DocumentSet(master=map_master(model, parts), parts=parts)
 
-def dss_to_cim(path, *, artifact_dir=None):
-    return DssImporter().to_cim(DssReader(path).read_all(), artifact_dir=artifact_dir)
+def dss_to_cim(model, *, name, artifact_dir=None):   # a parsed model, never a path (I7)
+    return DssImporter(name).to_cim(model, artifact_dir=artifact_dir)
 ```
 
 - `CimtblImporter.model_cls`: `None` (the master's one Feeder or Substation decides) for distribution formats;

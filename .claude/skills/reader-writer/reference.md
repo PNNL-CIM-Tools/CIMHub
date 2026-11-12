@@ -157,8 +157,8 @@ class RawImporter(CimtblImporter):
         ...
 
 
-def raw_to_cim(model: GraphModel, *, network=None):
-    return RawImporter().to_cim(model, network=network)
+def raw_to_cim(model: GraphModel, *, name: str, network=None):
+    return RawImporter(name).to_cim(model, network=network)
 
 
 class RawExporter(FormatExporter):

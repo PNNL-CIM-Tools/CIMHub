@@ -13,7 +13,7 @@ loaded by cimtables.
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.<ext>     # native atom: the real reader parses it
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.cimtbl    # golden artifact, reviewed by a human
 cimhub_<fmt>/tests/test_cimtbl_<native_table>.py         # tiers 1, 1b, spec + mapper unit tests
-cimhub_core/tests/atoms/prereqs/*.cimtbl                 # shared context: container, BaseVoltages, nodes
+cimhub_<fmt>/tests/atoms/<native_table>/prereq.cimtbl    # context the atoms reference: container, BaseVoltages, nodes
 ```
 
 Example: `cimhub_opendss/tests/atoms/linecode/mtx601.dss` + `mtx601.cimtbl`, tested by
@@ -41,8 +41,8 @@ Example: `cimhub_opendss/tests/atoms/linecode/mtx601.dss` + `mtx601.cimtbl`, tes
    scope process-wide.
 4. **Prerequisites are `.cimtbl`, not Python.** An atom that references objects it does not declare (a template, a
    BaseVoltage, a Feeder) binds onto a network loaded from prereqs:
-   `cimtbl_to_cim(atom_documents(document), network=cimtables.load_model(prereq))`. Shared prereqs live in
-   `cimhub_core/tests/atoms/prereqs/`; a prereq only one table needs sits next to its atoms as `prereq.cimtbl`.
+   `cimtbl_to_cim(atom_documents(document), network=cimtables.load_model(prereq))`. A prereq sits next to its
+   atoms as `prereq.cimtbl`; context a whole spoke shares goes in `cimhub_<fmt>/tests/atoms/prereqs/`.
 5. **Assert values in SI or a named unit**, never against a raw CIMUnit: `float(data.r.to("ohm/mi")) == approx(0.1535)`.
 6. **Expected derived values come from an independent formula** written in the test (`0.02 * 4160**2 / 500e3`), or
    from the named function's own unit test. Never paste numbers the mapper printed.

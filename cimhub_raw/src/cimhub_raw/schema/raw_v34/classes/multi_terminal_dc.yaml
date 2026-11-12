@@ -1,0 +1,440 @@
+id: https://gridappsd.org/cimhub/raw_v34/classes/multi_terminal_dc
+name: multi_terminal_dc
+title: Multi-Terminal DC Transmission Line Record
+description: raw RAW Multi-Terminal DC Transmission Line Records (header, then NCONV converter, NDCBS dc bus and NDCLN dc link records)
+
+imports:
+  - linkml:types
+  - ../types/common_types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  raw: https://gridappsd.org/cimhub/raw_v34
+
+default_prefix: raw
+
+classes:
+  MultiTerminalDCRecord:
+    description: |
+      Multi-terminal DC transmission line system definition record (one per line).
+      Followed by NCONV MultiTerminalConverterRecord, NDCBS MultiTerminalDCBusRecord
+      and NDCLN MultiTerminalDCLinkRecord records, in that order.
+    attributes:
+      name:
+        description: NAME - Multi-terminal DC line name (12 characters)
+        range: string
+        required: true
+        annotations:
+          order: 1
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+
+      nconv:
+        description: NCONV - Number of AC converter station buses
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      ndcbs:
+        description: NDCBS - Number of DC buses
+        range: integer
+        required: true
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+
+      ndcln:
+        description: NDCLN - Number of DC links
+        range: integer
+        required: true
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+
+      mdc:
+        description: MDC - Control mode (0=blocked, 1=power, 2=current)
+        range: integer
+        required: false
+        annotations:
+          order: 5
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      vconv:
+        description: VCONV - Bus number of the converter controlling DC voltage on the positive pole (a positive pole inverter)
+        range: integer
+        required: true
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+
+      vcmod:
+        description: VCMOD - Mode switch DC voltage in kV
+        range: float
+        required: false
+        unit:
+          ucum_code: "kV"
+        annotations:
+          order: 7
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      vconvn:
+        description: VCONVN - Bus number of the converter controlling DC voltage on the negative pole (0 if no negative pole)
+        range: integer
+        required: false
+        annotations:
+          order: 8
+          value_type: int
+          separator: ""
+          raw_default: 0
+
+  MultiTerminalConverterRecord:
+    description: |
+      Converter station record of a multi-terminal DC line (NCONV per line).
+    attributes:
+      ib:
+        description: IB - AC converter bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      n:
+        description: N - Number of bridges in series
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      angmx:
+        description: ANGMX - Nominal maximum ALPHA or GAMMA firing angle in degrees
+        range: float
+        required: true
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 3
+          value_type: float
+          precision: 4
+          separator: ","
+
+      angmn:
+        description: ANGMN - Minimum steady-state ALPHA or GAMMA firing angle in degrees
+        range: float
+        required: true
+        unit:
+          ucum_code: "deg"
+        annotations:
+          order: 4
+          value_type: float
+          precision: 4
+          separator: ","
+
+      rc:
+        description: RC - Commutating resistance per bridge in ohms
+        range: float
+        required: true
+        unit:
+          ucum_code: "ohm"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 5
+          separator: ","
+
+      xc:
+        description: XC - Commutating reactance per bridge in ohms
+        range: float
+        required: true
+        unit:
+          ucum_code: "ohm"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 5
+          separator: ","
+
+      ebas:
+        description: EBAS - Primary base AC voltage in kV
+        range: float
+        required: true
+        unit:
+          ucum_code: "kV"
+        annotations:
+          order: 7
+          value_type: float
+          precision: 4
+          separator: ","
+
+      tr:
+        description: TR - Actual transformer ratio (pu)
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      tap:
+        description: TAP - Tap setting
+        range: float
+        required: false
+        annotations:
+          order: 9
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      tpmx:
+        description: TPMX - Maximum tap setting
+        range: float
+        required: false
+        annotations:
+          order: 10
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.5
+
+      tpmn:
+        description: TPMN - Minimum tap setting
+        range: float
+        required: false
+        annotations:
+          order: 11
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.51
+
+      tstp:
+        description: TSTP - Tap step (must be positive)
+        range: float
+        required: false
+        annotations:
+          order: 12
+          value_type: float
+          precision: 5
+          separator: ","
+          raw_default: 0.00625
+
+      setvl:
+        description: SETVL - Converter setpoint; DC voltage in kV for the converters at VCONV/VCONVN, otherwise current in A (+ rectifier, - inverter) or power in MW
+        range: float
+        required: true
+        annotations:
+          order: 13
+          value_type: float
+          precision: 4
+          separator: ","
+
+      dcpf:
+        description: DCPF - Converter participation factor for sharing order reductions on the same pole
+        range: float
+        required: false
+        annotations:
+          order: 14
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 1.0
+
+      marg:
+        description: MARG - Rectifier margin as per-unit fraction of desired DC power or current (rectifiers only)
+        range: float
+        required: false
+        annotations:
+          order: 15
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      cnvcod:
+        description: CNVCOD - Converter code (zero or positive for positive pole, negative for negative pole)
+        range: integer
+        required: false
+        annotations:
+          order: 16
+          value_type: int
+          separator: ""
+          raw_default: 1
+
+  MultiTerminalDCBusRecord:
+    description: |
+      DC bus record of a multi-terminal DC line (NDCBS per line).
+    attributes:
+      idc:
+        description: IDC - DC bus number (1 to NDCBS)
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      ib:
+        description: IB - AC converter bus number this DC bus connects to (0 if none)
+        range: integer
+        required: false
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      area:
+        description: AREA - Area number (1 to 9999)
+        range: integer
+        required: false
+        annotations:
+          order: 3
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      zone:
+        description: ZONE - Zone number (1 to 9999)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      dcname:
+        description: DCNAME - DC bus name (12 characters)
+        range: string
+        required: false
+        annotations:
+          order: 5
+          value_type: string
+          width: 12
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: ""
+
+      idc2:
+        description: IDC2 - Second DC bus the converter connects to (0 if connected directly to ground)
+        range: integer
+        required: false
+        annotations:
+          order: 6
+          value_type: int
+          separator: ","
+          raw_default: 0
+
+      rgrnd:
+        description: RGRND - Resistance to ground at this DC bus in ohms
+        range: float
+        required: false
+        unit:
+          ucum_code: "ohm"
+        annotations:
+          order: 7
+          value_type: float
+          precision: 4
+          separator: ","
+          raw_default: 0.0
+
+      owner:
+        description: OWNER - Owner number (1 to 9999)
+        range: integer
+        required: false
+        annotations:
+          order: 8
+          value_type: int
+          separator: ""
+          raw_default: 1
+
+  MultiTerminalDCLinkRecord:
+    description: |
+      DC link record of a multi-terminal DC line (NDCLN per line).
+    attributes:
+      idc:
+        description: IDC - From DC bus number
+        range: integer
+        required: true
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      jdc:
+        description: JDC - To DC bus number
+        range: integer
+        required: true
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      ckt:
+        description: CKT - One-character circuit identifier
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          width: 1
+          quote: true
+          quote_char: "'"
+          separator: ","
+          raw_default: "1"
+
+      met:
+        description: MET - Metered end (1 or less = IDC, 2 or more = JDC)
+        range: integer
+        required: false
+        annotations:
+          order: 4
+          value_type: int
+          separator: ","
+          raw_default: 1
+
+      rdc:
+        description: RDC - DC link resistance in ohms
+        range: float
+        required: true
+        unit:
+          ucum_code: "ohm"
+        annotations:
+          order: 5
+          value_type: float
+          precision: 4
+          separator: ","
+
+      ldc:
+        description: LDC - DC link inductance in mH (not used by power flow)
+        range: float
+        required: false
+        unit:
+          ucum_code: "mH"
+        annotations:
+          order: 6
+          value_type: float
+          precision: 4
+          separator: ""
+          raw_default: 0.0

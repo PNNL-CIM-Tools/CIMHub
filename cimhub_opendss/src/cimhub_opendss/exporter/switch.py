@@ -14,7 +14,8 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
 from cimhub_core.getters.in_service import get_in_service
-from cimhub_core.getters.switch_state import get_switch_state
+from cimhub_core.getters import describe
+from cimhub_core.getters.switch_state import get_reclose_delays, get_switch_state
 from cimhub_core.getters.terminals import get_conductor_phases
 from cimhub_opendss.exporter.line import terminal_buses, ratings
 from cimhub_opendss.exporter.naming import Names
@@ -35,7 +36,7 @@ _STATE = {
 }
 _FUSE_STATE = {name: Slot(slot.kind, slot.note + "; one value per phase (the engine sets a fuse per phase)")
                for name, slot in _STATE.items()}
-_PROTECTION = "protection setting; untranscribed on import (DSS-11)"
+_PROTECTION = "protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default"
 _NO_HOME = "no home on a Switch (untranscribed on import)"
 
 
@@ -64,6 +65,9 @@ SLOTS = {
         "name": Slot("written", "Names, the switch's"),
         "MonitoredObj": Slot("written", "Line.<the switch's Line name>"),
         "SwitchedObj": Slot("not mapped", "the engine takes MonitoredObj"),
+        "Shots": Slot("written", "the RecloseSequences + 1 (get_reclose_delays); none -> 1, no reclosure"),
+        "RecloseIntervals": Slot("written", "each RecloseSequence's recloseDelay (s), in recloseStep order; none -> "
+                                            "not written"),
         **_STATE,
         "like": Slot("not mapped", "the writer never writes like="),
     }, Slot("unset", _PROTECTION)),
@@ -117,7 +121,12 @@ def _control(switch: cim.Switch, names: Names):
         return schema.Fuse(name=names.name(switch, "Fuse"), MonitoredObj=target,
                            RatedCurrent=get_qty(switch, "ratedCurrent", "A"), **per_phase)
     if isinstance(switch, cim.Recloser):
-        return schema.Recloser(name=names.name(switch, "Recloser"), MonitoredObj=target, **state)
+        delays = get_reclose_delays(switch)
+        return schema.Recloser(name=names.name(switch, "Recloser"), MonitoredObj=target, Shots=len(delays) + 1,
+                               RecloseIntervals=list(delays) or None, **state)
+    if isinstance(switch, cim.ProtectedSwitch) and switch.RecloseSequences:
+        raise ValueError(f"{describe(switch)}: RecloseSequences on a {type(switch).__name__}; only a DSS Recloser "
+                         f"recloses here (a Relay's reclosing is not mapped, DSS-11)")
     if not state:
         return None
     return schema.Swtcontrol(name=names.name(switch, "SwtControl"), SwitchedObj=target, **state)

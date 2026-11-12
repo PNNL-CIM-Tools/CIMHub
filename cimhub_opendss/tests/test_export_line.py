@@ -12,13 +12,14 @@ import pytest
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.line_impedance import ImpedanceSource, get_line_sequence_impedance
 from cimhub_opendss import DssImporter, DssReader
+from cimhub_opendss.exporter import switch
 from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.exporter.linegeometry import geometry_name
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import compile_deck
-from engine_compare import assert_same_engine_state
+from engine_compare import assert_same_engine_state, engine_settings
 from export_atoms import assert_matches_dss_golden, bus_names, export_atom, export_network
 
 ATOMS = Path(__file__).parent / "atoms" / "line"
@@ -272,3 +273,46 @@ def test_closed_switches_get_no_swtcontrol():
     model = _model(_network("codes"))
     assert sorted(record.name for record in model.list_by_class(schema.Swtcontrol)) == ["sect", "tie"]
     assert not _record(model, schema.Fuse, "fuse1").State
+
+
+# earth model and reclosures (EXPORT_MAPPING.md S6g) -------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("case", ["codes", "states"])
+def test_reclosures_match_the_engine(case, tmp_path):
+    atom = ATOMS / f"{case}.dss"
+    properties = {"Recloser": ("Shots", "RecloseIntervals")}
+    assert engine_settings(export_atom(atom, tmp_path, name_source="name"), properties) == \
+        engine_settings(atom, properties)
+
+
+def test_recloser_without_sequences_does_not_reclose():
+    network = _network("codes")
+    recloser = _object(network, cim.Recloser, "rec1")
+    recloser.RecloseSequences.clear()
+    record = _record(_model(network), schema.Recloser, "rec1")
+    assert (record.Shots, record.RecloseIntervals) == (1, [])
+
+
+def test_reclosures_on_another_switch_raise():
+    breaker = cim.Breaker(mRID="sw_b1", name="b1", open=False, normalOpen=False)
+    breaker.RecloseSequences.append(cim.RecloseSequence(mRID="sw_b1_rs1", recloseStep=1, ProtectedSwitch=breaker))
+    with pytest.raises(ValueError, match="RecloseSequences on a Breaker"):
+        switch._control(breaker, Names("name"))
+
+
+def test_geometry_lines_write_their_earth():
+    network = _network("geometry")
+    model = _model(network)
+    [options] = model.list_by_class(schema.Options)
+    assert str(options.earthmodel) == "Deri"
+    assert _record(model, schema.Line, "g601").rho == 100.0
+
+
+def test_two_earth_models_raise():
+    network = _network("geometry")
+    configuration = next(iter(network.graph[cim.WireConfiguration].values()))
+    configuration.EarthResistivity = cim.EarthResistivity(mRID="earth_carson",
+                                                          earthModelType=cim.EarthModelKind.carson)
+    with pytest.raises(ValueError, match="WireConfigurations over earth models"):
+        _model(network)

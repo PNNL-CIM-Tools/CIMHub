@@ -13,6 +13,7 @@ from __future__ import annotations
 from cimtables.document import Column, Document, ObjectStatement, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, lookup, mrid, untranscribed_values
+from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl import wire
 from cimhub_opendss.importer.cimtbl.linecode import LENGTH_UNIT
 from cimhub_opendss.schema import opendss_schema as schema
@@ -82,6 +83,10 @@ CATALOGS = (
 )
 
 _SPACING_PREFIX, _GEOMETRY_PREFIX = "spc_", "wc_"
+#: the deck's one EarthResistivity, which every WireConfiguration names (EXPORT_MAPPING.md S6g, G1)
+EARTH_MRID = "earth"
+#: DSS earthmodel (lowered) -> EarthModelKind; FullCarson has none and raises
+EARTH_MODELS = {"carson": "carson", "deri": "deri"}
 _FOLDED_SLOTS = ("cond", "wire", "cncable", "tscable", "x", "h")
 _NAME_ARRAYS = ("wires", "cncables", "tscables")
 
@@ -191,7 +196,8 @@ def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[st
     statements += [
         ObjectStatement("WireConfiguration", [(Column("mRID"), configuration), (Column("name"), str(geometry.name)),
                                               (Column("numberOfPhases"), cell(geometry.nphases)),
-                                              (Column("WireSpacing"), spacing)],
+                                              (Column("WireSpacing"), spacing),
+                                              (Column("EarthResistivity"), EARTH_MRID)],
                         comment=untranscribed_values(LINEGEOMETRY_FIELDS, geometry)),
         wire_sequence_table(configuration, conductor_infos(geometry, geometry.nconds, infos)),
     ]
@@ -199,13 +205,57 @@ def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[st
 
 
 def map_linegeometry(native) -> Document:
-    """Every ``LineGeometry`` as a ``WireConfiguration`` in one ``linegeometry`` document."""
+    """Every ``LineGeometry`` as a ``WireConfiguration`` in one ``linegeometry`` document, after the deck's
+    ``EarthResistivity`` that they and the ``spacing=`` lines' configurations name (``earth_statement``)."""
     geometries = native.list_by_class(schema.Linegeometry)
     infos = wire_infos(native)
     spacings = {str(spacing.name).lower() for spacing in native.list_by_class(schema.Linespacing)}
-    statements = [statement for geometry in geometries
-                  for statement in _geometry_statements(geometry, infos, spacings)]
+    earth = earth_statement(native)
+    statements = [*([earth] if earth is not None else []),
+                  *(statement for geometry in geometries for statement in _geometry_statements(geometry, infos, spacings))]
     return Document(name="linegeometry", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(native="LineGeometry",
-                                               targets="WireConfiguration + WireSequenceConfiguration",
-                                               count=len(geometries)) if geometries else None)
+                                               targets="EarthResistivity, WireConfiguration + WireSequenceConfiguration",
+                                               count=len(geometries)) if statements else None)
+
+
+def uses_geometry(native) -> bool:
+    """The deck gives a WireConfiguration: a LineGeometry, or a Line by ``spacing=``."""
+    return bool(native.list_by_class(schema.Linegeometry)) or any(
+        line.spacing for line in native.list_by_class(schema.Line))
+
+
+def _text(value) -> str:
+    return str(getattr(value, "text", value))
+
+
+def earth_statement(native) -> ObjectStatement | None:
+    """The deck's ``EarthResistivity`` for its geometries: ``Set earthmodel`` and the geometry lines' ``rho``
+    (ohm-m; they must agree), the engine's Deri and 100 when unset (DSS-6). None for a deck without geometry, whose
+    earth model computes nothing."""
+    if not uses_geometry(native):
+        return None
+    defaulted = []
+    options = native.list_by_class(schema.Options)  # none in a model of geometry alone: no Set earthmodel
+    model = options[0].earthmodel if options else None
+    if model is None:
+        model = dss_defaults(schema.Options)["earthmodel"]
+        defaulted.append(f"earthmodel={_text(model)}")
+    kind = EARTH_MODELS.get(_text(model).lower())
+    if kind is None:
+        raise ValueError(f"earthmodel={_text(model)}: EarthModelKind has {sorted(EARTH_MODELS)}")
+    rhos = {float(line.rho) for line in native.list_by_class(schema.Line)
+            if (line.geometry or line.spacing) and line.rho is not None}
+    if len(rhos) > 1:
+        raise ValueError(f"geometry lines give rho {sorted(rhos)}; one EarthResistivity per deck is mapped")
+    if rhos:
+        rho = rhos.pop()
+    else:
+        rho = float(dss_defaults(schema.Line)["rho"])
+        defaulted.append(f"rho={cell(rho)}")
+    comment = "the deck's earthmodel and its geometry lines' rho (ohm-m: the profile types rho Resistance)"
+    if defaulted:
+        comment += f"\ndefaulted: {', '.join(defaulted)}"
+    return ObjectStatement("EarthResistivity", [(Column("mRID"), EARTH_MRID), (Column("name"), kind),
+                                                (Column("earthModelType"), kind), (Column("rho", "ohm"), cell(rho))],
+                           comment=comment)

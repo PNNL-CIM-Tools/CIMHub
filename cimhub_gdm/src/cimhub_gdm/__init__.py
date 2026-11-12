@@ -1,7 +1,9 @@
 """CIMHub GDM: grid-data-models DistributionSystem <-> cim18v17 (importer builder-native, exporter on the core
 getters)."""
 
-__version__ = "3.0.0a0"
+import importlib.metadata
+
+__version__ = importlib.metadata.version("cimhub_gdm")
 
 from cimhub_gdm.exporter import GdmExporter, cim_to_gdm
 from cimhub_gdm.gdm_reader import read_gdm

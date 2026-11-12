@@ -73,3 +73,10 @@ Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseV
     sw_brkr1,  Brkr1,  650, brkr, ,  false, false, bv_4p16kv,
     # untranscribed (a switch): rmatrix=[0.0001], xmatrix=[0.0], cmatrix=[0.0]
     sw_sect1,  Sect1,  684, tap,  C, false, false, bv_4p16kv,
+
+# a Recloser's Shots - 1 reclosures at its RecloseIntervals
+Table RecloseSequence: mRID, ProtectedSwitch, recloseStep, recloseDelay (s)
+    # defaulted: Shots=4, RecloseIntervals=(0.5 2.0 2.0)
+    sw_rec1_rs1, sw_rec1, 1, 0.5
+    sw_rec1_rs2, sw_rec1, 2, 2.0
+    sw_rec1_rs3, sw_rec1, 3, 2.0

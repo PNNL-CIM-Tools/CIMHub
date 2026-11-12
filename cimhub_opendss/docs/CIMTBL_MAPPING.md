@@ -917,7 +917,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
 | `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
 | `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
-| `rho` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (earth resistivity; home EarthResistivity) |
+| `rho` | `Optional[float]` |  | structural | the deck's EarthResistivity.rho (ohm-m), which every geometry line must agree on (geometry.earth_statement); on another line it raises |
 | `geometry` | `Optional[str]` | `602`, `603`, `601` | structural | ACLineSegment.WireConfiguration = wc_<geometry> |
 | `units` | `Union[str, ForwardRef('LengthUnit'), NoneType]` | `Ft`, `mi`, `km` | mapped | the length unit (LENGTH_UNIT); unset: the template's unit (DSS-3) |
 | `spacing` | `Optional[str]` | `510` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
@@ -950,7 +950,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `SwitchedObj` | `Optional[str]` | `Line.2002200004641085_sw`, `Line.2002200004868472_sw`, `Line.200220000499_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
-| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `RatedCurrent` | `Optional[float]` | `100.0`, `65.0`, `15.0` | copied | `Fuse.ratedCurrent` (A) |
 | `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
@@ -967,24 +967,24 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `SwitchedObj` | `Optional[str]` | `Line.A333_48332_sw`, `Line.G9343_48332_sw`, `Line.L5397_48332_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
-| `NumFast` | `Optional[int]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `Reset` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `Shots` | `Optional[int]` | `3` | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `NumFast` | `Optional[int]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `Reset` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `Shots` | `Optional[int]` | `3` | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
+| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
 | `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
-| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
-| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; untranscribed until FuseCharacteristicCurve / RecloseSequence are mapped (DSS-11) |
+| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `Normal` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `State` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
@@ -1514,10 +1514,13 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 
 **Engine rules** (pinned with probes in `/tmp`; the defaults are the engine's readback of a bare `New`):
 - **PVSystem.**
-  - The available power is Pmpp × irradiance × %Pmpp / 100. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
+  - The panel's power is Pmpp × irradiance, and `%Pmpp` caps it: the available power is min(Pmpp × irradiance,
+    Pmpp × %Pmpp / 100). Probed 2026-11-10: Pmpp 100 at irradiance 0.5 gives 50 at %Pmpp 60 and 150, and 10 at
+    %Pmpp 10; at irradiance 1.2 it gives 120 at %Pmpp 150. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
     or from `kvar`.
   - Over kVA, P is cut to √(kVA² − q²) (var priority, the default), so Pmpp 1200 on kVA 1000 gives 1000.
-  - The PV is off (P = 0) when the available power is below `%Cutout` × kVA / 100. The initial state uses
+  - The PV is off (P = 0) when the panel's power, before the %Pmpp cap, is below `%Cutout` × kVA / 100
+    (irradiance 0.5 on Pmpp 100 and kVA 100 runs at %Pmpp 10, giving 10 under a 20 % cut-out). The initial state uses
     `%Cutout`, not `%Cutin`: 25 % with cut-in 30 / cut-out 5 runs, and with cut-in 5 / cut-out 30 it is off.
   - **`pf` and `kvar` override each other in the order given** (unlike a load, where kvar always wins).
   - Defaults: 3 phases, kV 12.47, irradiance 1, Pmpp 500, %Pmpp 100, pf 1, kVA 500, %Cutin and %Cutout 20,
@@ -1566,7 +1569,8 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 Mapper `importer/cimtbl/pvsystem.py` (`map_pvsystem`). Artifact `pvsystem.cimtbl`; shape `der`. Atom
 `tests/atoms/der/der.dss`:
 - the IEEE13_CDPSM PVs: 3-phase at irradiance 0.8, and 2-phase `s1s2` at 0.208;
-- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, and one with kvar.
+- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, one with kvar, and one
+  capped at %Pmpp (irradiance 0.9 at %Pmpp 60 gives 6 kW).
 
 **Identity.** `PowerElectronicsConnection` `pv_` + name and `PhotoVoltaicUnit` `pv_<name>_unit`, lowercased. The
 prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
@@ -1578,7 +1582,8 @@ prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
   - `p` = −P and `q` = −q, by the rules above (derived, `pv_power`);
   - `maxQ` = kvarMax, `minQ` = −kvarMaxAbs, `maxIFault` = 1 / Vminpu (the engine's export convention);
   - `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
-- **Unit:** `maxP` = Pmpp, `minP` = 0, and its connection.
+- **Unit:** `maxP` = Pmpp, `minP` = 0, `irradiance` = irradiance (kW/m2; the gridappsd extension), and its
+  connection.
 
 **What raises:**
 - `model` other than 1;
@@ -1732,16 +1737,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
 | `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
-| `irradiance` | `Optional[float]` | `0.8`, `1.0` | derived | p: Pmpp x irradiance x %Pmpp / 100 (pv_power); default 1 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2), the gridappsd extension; also p (pv_power); default 1 |
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
-| `pct_Pmpp` | `Optional[float]` |  | derived | p (pv_power); default 100 |
+| `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
 | `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
 | `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
-| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; default 20 |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20 |
 | `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
 | `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -2008,6 +2013,11 @@ per line. The alternative, rejected: a `Junction` per bus (the CIM note: "to ass
 ConnectivityNode"). It is closer to the native table, but it adds about 5,300 one-terminal equipment objects to
 IEEE9500, and every consumer and exporter would have to skip them. No tool reads it either.
 
+**Revised 2026-11-10 (S5-8):** the points are drawn as a GIS draws the equipment, through cimtables' `wkt` column.
+A line (`ACLineSegment`) is a `LINESTRING` through its Terminals' buses; any other equipment is one `POINT`, at its
+bus for one Terminal and at its buses' centroid for more. So a switch, fuse or transformer sits midway between its
+buses, as a GIS point feature does, rather than as a two-point polyline.
+
 ### Shape `location` (added to the catalog first)
 
 ```
@@ -2016,19 +2026,15 @@ Import common.cimtbl
 
 Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
 
-Table Location: mRID, name, CoordinateSystem=crs_bus
-    ln_650632_loc, 650632_Loc
-
-Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
-    ln_650632_loc_1, ln_650632_loc, 1, 200, 350
-    ln_650632_loc_2, ln_650632_loc, 2, 200, 300
-
-Update Table PowerSystemResource: mRID, Location
-    ln_650632, ln_650632_loc
+Update Table PowerSystemResource: mRID, wkt
+    ln_650632,  "LINESTRING (200.0 350.0, 200.0 300.0)"
+    sw_671692,  "POINT (225.0 250.0)"
+    ld_671,     "POINT (200.0 250.0)"
 ```
 
-I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `PositionPoint` is Identity-only (an
-`identifier` column, no mRID), and an `Update` on the abstract `PowerSystemResource` resolves any subclass.
+An `Update` on the abstract `PowerSystemResource` resolves any subclass. cimtables' `wkt` binding makes the Location
+(`<mRID>_loc`), one Identity-only `PositionPoint` per vertex (`<mRID>_loc_<n>`, `sequenceNumber` from 0) and points
+the Location at the CoordinateSystem declared first.
 
 ### Buscoords
 
@@ -2042,15 +2048,23 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
   a `.cimtbl` means what binding makes. The hook (`CimtblImporter.bound_parts`, `cimtbl_to_cim(bound_parts=)`) is in
   core because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). The bound Terminals equalled
   the stand-in's on IEEE13_CDPSM, IEEE8500 and IEEE9500 unbal before it was deleted.
-- **Identity:**
-  - Location: `<equipment mRID>_loc`, named `<equipment name>_Loc` (the engine's name);
-  - PositionPoint: `<location>_<n>`;
-  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords).
-- **Order:** equipment in the order its first Terminal binds, points by `sequenceNumber`.
-- **`sequenceNumber` (S5-5):** the Terminal's `sequenceNumber`, 1-based, as the engine writes it. cim18v17 gives the
-  attribute no description, and CIM16's "zero-relative" text is gone.
-- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so they
-  read back exactly. For LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
+- **Geometry (S5-8):** one `wkt` cell per equipment, from its Terminal buses in Terminal `sequenceNumber` order. An
+  `ACLineSegment` is `LINESTRING (x1 y1, x2 y2)`. Anything else is `POINT (x y)` at the buses' centroid: the bus
+  itself for a load, capacitor, PV or source, the midpoint for a switch, fuse, regulator or two-terminal
+  transformer. A center-tap transformer has two Terminals (S5-1 above), so it gets the midpoint too.
+- **`device_geometry` (S5-9):** `DssImporter(..., device_geometry="linestring")` (and `dss_to_cim`) draws every
+  two-terminal equipment as a `LINESTRING` from bus to bus, like a line: switches, fuses, transformers, regulators,
+  series reactors. Equipment with one Terminal, or three or more, stays a `POINT`. The default is `"point"`; any
+  other value raises when the importer is made. It is a keyword, not an environment variable, so a call's output
+  depends only on its arguments.
+- **Identity:** cimtables' `wkt` binding names them:
+  - Location: `<equipment mRID>_loc`, unnamed (the engine's `<name>_Loc` name is dropped with the Location table);
+  - PositionPoint: `<location>_<n>`, `sequenceNumber` = n, the vertex number from 0 (S5-5 is superseded);
+  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords), declared first in the file.
+- **Order:** equipment in the order its first Terminal binds.
+- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so a
+  line's vertices and a one-Terminal point read back exactly; a centroid is `repr` of the float mean. For
+  LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
 - **Partial coordinates (S5-3):** equipment gets a Location only if **every** one of its Terminal buses has
   coordinates. The engine writes 0, 0 for a bus without them, which would make a polyline vertex up. The file comment
   counts what is left out: `# not located: <n> of <m> equipment (a terminal bus without coordinates)`. That case is
@@ -2066,9 +2080,9 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
 
 | Buscoords field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it gets a PositionPoint; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
-| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | copied | `PositionPoint.xPosition`; on every point at the bus |
-| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | copied | `PositionPoint.yPosition`; on every point at the bus |
+| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it takes its coordinates; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
+| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | derived | geometry: a line's LINESTRING vertex at each Terminal bus, verbatim; other equipment's POINT at its Terminal buses' centroid (the bus itself for one Terminal) |
+| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | derived | as x |
 | `geographic` | `Union[bool, Bool, NoneType]` | `False`, `True` | mapped | the directive (LatLongCoords -> true) picks the CoordinateSystem: COORDINATE_SYSTEMS |
 
 
@@ -2105,8 +2119,8 @@ So 18 of 24 bind. The other 7 of the throwaway sweep's 31 decks are copies in CI
 ### Engine checks (S5)
 
 On the atom and every engine deck:
-- for each piece of equipment, each PositionPoint equals the engine's coordinates of its Terminal's bus
-  (`Circuit.SetActiveBus`, `Bus.X()`, `Bus.Y()`);
+- for each line, its PositionPoints equal the engine's coordinates of its Terminals' buses (`Circuit.SetActiveBus`,
+  `Bus.X()`, `Bus.Y()`); for other equipment, its one PositionPoint equals their centroid (S5-8);
 - every equipment whose buses all have `Bus.Coorddefined()` has a Location, and no other equipment does.
 
 For IEEE9500 the engine's x is the longitude, which also checks the reader's swap.
@@ -2117,6 +2131,7 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
   - `local.dss` + CSV: a line, a switch, a center-tap transformer, a regulator, a load, a capacitor and a PV. The CSV
     has a whitespace row, a bus the circuit doesn't have, a bus listed twice, and one bus left without coordinates.
   - `latlong.dss`: two buses, by LatLongCoords.
+  - `local_linestring.cimtbl`: `local.dss` under `device_geometry="linestring"` (S5-9).
 - **Golden:** the IEEE13_CDPSM directory (D6) gains `buscoords.cimtbl`, so it holds 14 files.
 - **G7 before S5 (2026-11-08):**
 
@@ -2139,3 +2154,21 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
 - **S5-5:** `sequenceNumber` is the Terminal number, 1-based.
 - **S5-6:** the sweep test covers the 24 `CIMHUB_DSS_DECKS` decks; the 7 CIMHub_2_0 `test_models` copies are dropped.
 - **S5-7:** the reader reads whitespace-separated coordinate rows and raises on a row it can't parse.
+- **S5-8 (2026-11-10, the user's ask):** the coordinates are GIS geometry through cimtables' `wkt` column: a line is a
+  `LINESTRING` through its Terminal buses, other equipment one `POINT` at their centroid (the midpoint for a switch
+  or transformer). It replaces the Location and PositionPoint tables and S5-5's 1-based Terminal numbering; the
+  Location loses its `<name>_Loc` name. The exporter reads it back by F8 (`EXPORT_MAPPING.md`).
+- **S5-9 (2026-11-10, the user's ask):** `device_geometry="linestring"` draws every two-terminal device bus to bus
+  instead of as a midpoint. The exporter needs nothing new: two points on two Terminals pair one per Terminal, so
+  each bus comes back exactly.
+
+## S6g: earth model and reclose sequences (2026-11-09)
+
+Specified with the export in `EXPORT_MAPPING.md#s6g-earth-model-and-reclose-sequences`. On import:
+- A deck with geometry gets one `EarthResistivity` (`earth`), first in `linegeometry.cimtbl`, from `Set earthmodel`
+  and the geometry lines' `rho` (the engine's Deri and 100 ohm-m when unset, listed). Every WireConfiguration names
+  it. FullCarson, disagreeing rho, and rho on a line without geometry raise.
+- A Recloser's `Shots` - 1 reclosures are `RecloseSequence` rows `<switch>_rs<n>` in `line.cimtbl`, at its
+  `RecloseIntervals` (the engine's defaults filling either, listed). Both given and disagreeing raise, and so does
+  Shots above 4 without intervals.
+

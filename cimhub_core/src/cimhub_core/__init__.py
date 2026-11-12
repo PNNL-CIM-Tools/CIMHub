@@ -15,7 +15,9 @@ Public API:
     scaffold_package               generate a new spoke package
 """
 
-__version__ = "3.0.0a0"
+import importlib.metadata
+
+__version__ = importlib.metadata.version("cimhub_core")
 
 from cimhub_core.base import CimtblImporter, FormatExporter, FormatImporter, FormatReader, FormatWriter
 from cimhub_core.graph_model import GraphModel

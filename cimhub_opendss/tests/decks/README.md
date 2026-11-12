@@ -3,7 +3,7 @@
 Small public decks used by the reader, topology and sweep tests. Large decks (EPRI J1, IEEE8500, IEEE9500,
 IEEE123_PV, ...) are not vendored: set `CIMHUB_DSS_DECKS` to a directory with the same layout to run their tests.
 
-Copied 2026-11-07 from the CIMHub_2_0 test data, without the CIMHub 1.x `*_uuids.dat`, `convert.json` and meter
+Copied 2026-11-07 from the CIMHub 2.0 test data, without the CIMHub 1.x `*_uuids.dat`, `convert.json` and meter
 export files. No other local edits. **Origins to confirm at release review** (split-readiness rule 4).
 
 | deck | origin | license |

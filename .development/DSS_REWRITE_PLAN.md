@@ -4,7 +4,7 @@
 CIMHub_2_0 (seeded here in F2): the Phase 1 `LineCode` slice, the inline `Transformer` mapper, the DSS bus graph
 (`importer/cimtbl/bus_graph.py`, to be rewritten on `cimtopology.core`, §3.1) and four reader fixes (§3.4).
 Every decision in §6 is made; DSS-10 is deferred. Slices are built and approved one at a time (DSS-12).
-**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is planned in §8, approved 2026-11-09; S6a (framework, writer, Vsource) done 2026-11-09; S6b (lines, wire catalogs, switches) done 2026-11-09; S6c (transformers, XfmrCode, regulators, RegControl) done 2026-11-09; S6d (Load, Capacitor, CapControl) done 2026-11-09; S6e next.
+**S0, S1 and S2 done 2026-11-07; S3a done 2026-11-08** (§4); S3b (XfmrCode templates) done 2026-11-08; S4a (Load, Capacitor, CapControl) done 2026-11-08; S4b (PVSystem, Storage, Generator, Reactor) done 2026-11-08; S5 (bus coordinates, the deck sweep test, G7) done 2026-11-08. The importer is complete for every mapped class; S6 (the exporter) is planned in §8, approved 2026-11-09; S6a (framework, writer, Vsource) done 2026-11-09; S6b (lines, wire catalogs, switches) done 2026-11-09; S6c (transformers, XfmrCode, regulators, RegControl) done 2026-11-09; S6d (Load, Capacitor, CapControl) done 2026-11-09; S6e (PVSystem, Storage, Generator, Reactor; the shared-inverter chop) done 2026-11-09; S6f (bus coordinates, power flow parity on 16 decks, idempotence on the 18 binding decks) done 2026-11-09. S6g (EarthResistivity and RecloseSequence, both directions, on the user's new profile classes) done 2026-11-09. S6 is complete; S7 (switch over, delete the old code) next.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (this is its F2 wave for `cimhub_opendss`). **Contract,
 shapes, spec format:** the `cimtbl-import-contract`, `cimtbl-shapes` and `cimtbl-mapping-spec` skills.
 **Mapping spec:** `cimhub_opendss/docs/CIMTBL_MAPPING.md`, grown one section per slice.
@@ -229,7 +229,7 @@ in one change.
   with an error listed in the sweep table. A new stop fails the test, so the table stays true.
 - **Bus voltages vs the engine** (§3.1) on every sweep deck.
 - **Power flow parity:** run the original deck, then deck → artifacts → CIM → `cim_to_dss` → engine. Compare bus
-  voltages within 0.1 %, using the existing `tests/powerflow_harness.py`. This is the end-to-end check the per-class
+  voltages within 0.1 %, using `engine_compare.assert_same_power_flow` (S6f; the old `powerflow_harness.py` was not ported). This is the end-to-end check the per-class
   goldens cannot give, and it replaces the old roundtrip tests in S7.
 - **Baseline today:** 11 failures in the old suite (5 `line_roundtrip`, 6 `linegeometry`). They are not fixed; S7 deletes
   them with the code they test.
@@ -290,8 +290,9 @@ Each one has its own spec section in `cimhub_opendss/docs/EXPORT_MAPPING.md`, ap
 | S6b (**done 2026-11-09**) | lines: WireData/CNData/TSData, LineSpacing, LineGeometry, LineCode, Line, switches (Line `switch=y` + Fuse/Recloser/SwtControl, `Open`), ratings | **`get_wire_info`**, **b → C** (`derived/`), `get_spacing_xy`, `get_line_conductor_xy`, `get_line_*_impedance*`, `get_switch_state`, `get_current_limits` |
 | S6c (**done 2026-11-09**) | transformers: inline Transformer (every form), XfmrCode from a `TransformerTankConfiguration`, center taps, VoltageRegulator/LTC + RegControl | `get_transformer_units`, `get_transformer_model`, `get_tap_steps`, `get_tap_changer_control` |
 | S6d (**done 2026-11-09**) | Load, Capacitor, CapControl; whole-deck elements and settings on IEEE13_original, IEEE123, IEEE37, IEEE13_Assets (IEEE13_CDPSM waits for S6e: PVSystem, Storage) | `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`, `get_regulating_control`, `get_equipment_control` |
-| S6e | PVSystem, Storage, Generator, Reactor | `get_der_output`, G6d rating getters, **`get_series_compensator`** |
-| S6f | Buscoords; whole-deck power flow parity on the engine decks; the idempotence sweep | **`get_location_coordinates`** |
+| S6e (**done 2026-11-09**) | PVSystem, Storage, Generator, Reactor; a PowerElectronicsConnection with several units chopped by maxP share (the GDM rule, P1); whole-deck elements and settings on IEEE13_CDPSM, IEEE123_PV, IEEE8500, IEEE9500, ACEP_PSIL | `get_der_output`, G6d rating getters, **`get_inverter_units`**, **`get_series_compensator`** |
+| S6f (**done 2026-11-09**) | Buscoords; whole-deck power flow parity (16 decks within 0.1 %, controls off at the original's control state and untranscribed settings, F2-F3); the idempotence sweep (18 decks) | **`get_location_coordinates`** |
+| S6g (**done 2026-11-09**) | earth model (`EarthResistivity` on every WireConfiguration ↔ `Set earthmodel` + geometry-line `rho`) and reclosing (`RecloseSequence` ↔ Recloser `Shots`/`RecloseIntervals`), import and export; trip settings still have no home (G5) | **`get_earth_resistivity`**, **`get_reclose_delays`** |
 
 ### 8.2 Writer fixes (S6a)
 

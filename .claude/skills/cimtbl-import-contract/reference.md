@@ -8,7 +8,7 @@ relying on a detail that is not listed here.
 | lives in | what |
 |---|---|
 | **cimtables** (format owner) | `cimtables.document` (document model, `format_document`, `write_documents`), parser, validation, `bind_row`, `load`, `load_model`, `graph_write.set_attr`/`get_qty`, `impedance.z_base`, `diff_models` |
-| **cimhub_core** | `cimhub_core.cimtbl`, `cimhub_core.base` (`FormatImporter`, `CimtblImporter`), `cimhub_core.cimtbl_testing`, `cimhub_core.scaffold`, `cimhub_core.topology` (native bus graph), `cimhub_core.codes` (shared code tables), the shapes in `cimhub_core/src/cimhub_core/shapes/` |
+| **cimhub_core** | `cimhub_core.cimtbl`, `cimhub_core.base` (`FormatImporter`, `CimtblImporter`), `cimhub_core.cimtbl_testing`, `cimhub_core.scaffold`, `cimhub_core.getters`, `cimhub_core.derived`, `cimhub_core.codes` (shared code tables, once two spokes share one), the shapes in `cimhub_core/src/cimhub_core/shapes/` |
 | **spoke** | mapper modules, format-only code tables, derived-value functions, `MAPPING_ORDER`, `docs/CIMTBL_MAPPING.md` |
 
 A core change a spoke session needs goes back to the core owner. A missing upstream capability goes to that repo's
