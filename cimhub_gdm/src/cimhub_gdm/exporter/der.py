@@ -11,9 +11,9 @@ BatteryInfo, shared, else its own. The equipment's rating is ``ratedU`` in the i
 inverted: line to line on three phases, else line to ground (a split-phase leg is half, any other phase ratedU / √3).
 Inverter controllers are not in CIM, so ``controller`` is None (X8).
 
-A PV's irradiance has no CIM home, but it is not neutral: ditto 0.1.8 writes no ``active_power``, and OpenDSS makes
-``Pmpp × Irradiance``. So irradiance is the output's share of the panel's rating at standard test conditions
-(p / maxP × 1 kW/m²), and the PV makes CIM's p.
+A PV's irradiance is ``PhotoVoltaicUnit.irradiance`` when set (B16b). When it is not, it is not neutral: ditto 0.1.8
+writes no ``active_power``, and OpenDSS makes ``Pmpp × Irradiance``. So irradiance is then the output's share of the
+panel's rating at standard test conditions (p / maxP × 1 kW/m²), and the PV makes CIM's p.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from __future__ import annotations
 import math
 
 import cimprofiles.cim18.cim18v17 as cim
+from cimtables.graph_write import get_qty
 from cimhub_core.getters import describe
 from cimhub_core.getters.der import (
     get_battery_unit,
@@ -76,8 +77,8 @@ _DER_SLOTS = {
 
 SLOTS = {
     DistributionSolar: _DER_SLOTS | {
-        "irradiance": Slot("rule", "p / the panel's maxP × 1 kW/m² (standard test conditions): what OpenDSS makes "
-                                   "of it (Pmpp × Irradiance) is CIM's p; untranscribed on import"),
+        "irradiance": Slot("rule", "PhotoVoltaicUnit.irradiance; unset, p / the panel's maxP × 1 kW/m² (standard "
+                                   "test conditions): what OpenDSS makes of it (Pmpp × Irradiance) is CIM's p"),
         "equipment": Slot("written", "a SolarEquipment made for this DER"),
     },
     DistributionBattery: _DER_SLOTS | {
@@ -183,7 +184,11 @@ def inverter(connection, owner, rated_s: float, context: ExportContext) -> Inver
 
 
 def irradiance(output_kw: float, panel: SolarEquipment, unit: cim.PhotoVoltaicUnit) -> Irradiance:
-    """The irradiance at which the panel makes ``output_kw``: its share of the rating, at 1 kW/m² for the rating."""
+    """The unit's irradiance; unset, the irradiance at which the panel makes ``output_kw``: its share of the rating,
+    at 1 kW/m² for the rating."""
+    stored = get_qty(unit, "irradiance", "kW/m^2")
+    if stored is not None:
+        return Irradiance(stored, "kilowatt / meter ** 2")
     rated_kw = panel.rated_power.to("kilowatt").magnitude
     if rated_kw <= 0:
         raise ValueError(f"{describe(unit)}: maxP is {rated_kw} kW; GDM's irradiance is the output's share of it")

@@ -247,12 +247,16 @@ wave, and that restores the GDM round trip; until then there is none.
 
 **Exit:** `scripts/test-all.sh` green; the only `xfail`s are documented upstream ones.
 
-## Later: time series
+## Time series (built 2026-11-11, uncommitted)
 
-When the user's Curve + RegularIntervalSchedule profile and its builders (B16) land, per
-[`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) §4:
-- one RegularIntervalSchedule per infrasys `time_series_uuid`, values verbatim in their units (unit `none` for
-  multipliers), RegularTimePoints with deterministic identifiers;
-- the link to each component's CIM equipment and scheduled attribute (N4);
-- `NonSequentialTimeSeries` and `Deterministic` per N2 and N8;
-- `drop_time_series_warning` is deleted, and the drop test becomes the family's atom.
+Per [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) §5, on B16 / B16b (built in CIM-Builder, uncommitted there):
+- `importer/time_series.py`: one `EnergyConnectionSchedule` per load, in actual values (multipliers × the load's
+  p / q, T1); its points are rows of a `pyarrow.Table` in the caller's `time_points` dict
+  (`gdm_to_cim(system, time_points=...)`), never graph objects (T6). Without the dict, every series is dropped with
+  one WARNING, as before.
+- `time_points.py`: `write_time_points` / `read_time_points`, `<stem>.EnergyConnectionTimePoint.parquet` beside the
+  XML; orphan rows and repeated points raise, a schedule with no rows warns.
+- `exporter/time_series.py`: `GdmExporter(time_points)` gives each load its actual-value series back.
+- irradiance and `pu_voltage` series keep the drop warning (T2, T3); `Deterministic` raises; the static PV
+  irradiance goes to `PhotoVoltaicUnit.irradiance` and back (B16b).
+- Tests: `test_time_series.py` (16), plus a ditto loadshape test in `test_export_ditto.py`.

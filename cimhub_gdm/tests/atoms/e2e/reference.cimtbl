@@ -254,5 +254,5 @@ Table PowerElectronicsConnection: mRID, name, node, ratedS (kVA), ratedU (kV), p
     pv_pv680,       pv680,  680, 500, 4.16, -300, 0, inv_inv500, bv_4p16kv
     storage_bat634, bat634, 634, 100, 0.48, -50,  0, inv_inv100, bv_480v
 
-Object PhotoVoltaicUnit: mRID=pv_pv680_unit, name=pv680, maxP (kW)=400, PowerElectronicsConnection=pv_pv680
+Object PhotoVoltaicUnit: mRID=pv_pv680_unit, name=pv680, maxP (kW)=400, irradiance (kW/m^2)=1, PowerElectronicsConnection=pv_pv680
 Object BatteryUnit: mRID=storage_bat634_unit, name=bat634, maxP (kW)=100, minP (kW)=-100, ratedE (kWh)=250, chargingEfficiency (percent)=95, dischargingEfficiency (percent)=95, batteryState=discharging, AssetDatasheet=batt_bess250, PowerElectronicsConnection=storage_bat634
