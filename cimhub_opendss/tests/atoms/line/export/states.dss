@@ -4,8 +4,8 @@ New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=2
 new Line.sw_f_open phases=3 Switch=Yes bus1=sourcebus.1.2.3 bus2=n1.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Line.sw_n_open phases=3 Switch=Yes bus1=sourcebus.1.2.3 bus2=n3.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Line.sw_r_open phases=3 Switch=Yes bus1=sourcebus.1.2.3 bus2=n2.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
-new Fuse.sw_f_open MonitoredObj=Line.sw_f_open RatedCurrent=65 Normal=[open open open] State=[open open open]
-new Recloser.sw_r_open MonitoredObj=Line.sw_r_open Shots=4 RecloseIntervals=[0.5 2 2] Normal=open State=open
+new Fuse.sw_f_open MonitoredObj=Line.sw_f_open RatedCurrent=65 Normal=[open open open] State=[open open open] enabled=No
+new Recloser.sw_r_open MonitoredObj=Line.sw_r_open Shots=4 RecloseIntervals=[0.5 2 2] Normal=open State=open enabled=No
 new Swtcontrol.sw_n_open SwitchedObj=Line.sw_n_open Normal=open State=closed
 Set voltagebases=[4.16]
 CalcVoltageBases

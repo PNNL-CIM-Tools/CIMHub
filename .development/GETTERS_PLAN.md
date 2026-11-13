@@ -112,6 +112,10 @@ exporter) may ask for signature changes before anything is frozen.
   matched to the `PowerTransformerEnd` by `endNumber`), BY_TANK_ENDS (template end n = instance end n), BY_LUGS
   (a lug's `sequenceNumber` names the instance phase end on the ends' Terminals).
 - Winding order: end number, then a coil's lowest phase-end `sequenceNumber` (H, X1-X2, X2-X3).
+- **Coil voltage on BY_ENDS (user, 2026-11-09, for a GIS spoke):** a PowerTransformerEnd has no `baseU`, so an end
+  of two conductors (a single-phase coil) takes `Winding.base_u` from `ratedU`, kept as the phase-to-phase
+  nameplate: as is between two phases (AB, s1s2), over √3 from a phase to the neutral (CN). A 12470GY/7200
+  pole-top is `ratedU=12.47` on CN. An end of three or more conductors has none.
 - **Base:** every percent/pu is on `base_power` (e.g. `network.base_power`), else winding 1's `ratedS`, the base DSS
   (`%R`, `XHL`, `%noloadloss`, `%imag`) and GLM put everything on. The stored percent is read on its From winding with
   `get_qty`, then moved by the power ratio only (UPSTREAM_REQUESTS U12). A winding's `baseS` is per phase, so its
@@ -124,7 +128,36 @@ exporter) may ask for signature changes before anything is frozen.
   `TransformerWinding.connection` (GridAPPS-D) is not read; a coil's phases show phase-to-phase vs phase-to-neutral.
 - Raise: a PowerTransformer with tanks passed whole, a tank with both its own windings and a configuration, a bank
   of template tanks (which phases each serves is open until the multi-can form is settled), a coil across two ends,
-  an unset mesh `x`, an unrated winding 1, and (since RAW E3-2) a star `PowerTransformerEnd.x` beside a mesh impedance; a star x alone is read (CGMES's form).
+  a star `PowerTransformerEnd.x`, an unset mesh `x`, an unrated winding 1.
+- **BY_TANK_IMPEDANCE (user, 2026-11-09, for a GIS spoke; IEC approved the tank `percentImpedance` for this
+  style):**
+  - **Shape:** two PowerTransformerEnds and one TransformerTank carrying `percentImpedance` (and `loadLoss`), with no
+    TankConfiguration, windings or mesh. A tank with its own windings stays BY_PHASE_ENDS.
+  - **Impedance:** |z| is on end 1's `ratedS`; r = loadLoss / ratedS × 100 (0 when unset); x = √(z² − r²). r > z
+    raises, and so does an end `r`/`x`/`g`/`b` or a mesh beside the tank's %Z.
+  - **Split:** a two-winding unit halves r over its windings (DSS's %loadloss). An end on s1s2N with kind I is a
+    center tap: halves s1→N and N→s2 at ratedU/2 and ratedS/2, `base_s` the can's kVA. It is split by Hopkinson's
+    rule (winding r R/2, R, R; x 1.2X, 1.2X, 0.8X), as the `transformer_template_1ph` shape and the CIMTBL-Models
+    bank templates. A test checks it equals the template's model for one can.
+  - **Core:** `noLoadLoss`/`percentMagnetizingCurrent` from the tank.
+  - **Banks (built 2026-11-09 on U16 `TransformerTank.baseS`, in the user's local CIM-Profiles branch):** the user
+    chose every bank, with cans in tank order and the CIMTBL-Models `cimtbl-transformer-template` skill's
+    conventions. Each tank is one unit (`get_transformer_units`) and one DSS Transformer, named by the tank:
+    - **Can kVA:** each can's %Z and loadLoss are on its `baseS`. The ends' `ratedS` is the bank's total and must
+      equal the sum of the cans' `baseS`.
+    - **Primary:** can i sits on end 1's phase conductor i (tank order), from the phase to N on a wye or grounded
+      wye end. A delta primary raises until a census shows one.
+    - **Secondary:**
+      - Wye (YNyn0): can i runs from end 2's phase i to N, which needs one phase per can (open wye with 2).
+      - Closed delta, 3 cans (ANSI YNd1): can i spans phases (i, i+1): a-b, b-c, c-a.
+      - Open delta, 2 cans (bank_oyod): can 1 is the lighting leg L (a-N-b), can 2 the power leg T (b-c). c is the
+        power leg, so it sits at 207.8 V to N.
+    - **Center tap:** on a delta end with N (4-wire), the can on a-b is the lighting leg, center-tapped to N (split by
+      Hopkinson's rule). Every other can is a two-winding coil with r halved.
+    - **Raises:** any bank shape the rules don't name: a wye secondary without one phase per can, four cans, a
+      delta primary, a tank without `baseS`, a bank mixing forms, or cans not adding up to end 1's `ratedS`. A
+      single can's `baseS`, when set, must equal end 1's `ratedS`.
+    - **Shape:** `transformer_by_tank_impedance.cimtbl` (a center-tap can and an open wye - open delta bank).
 - **Open:** mesh `r0`/`x0` and zero-sequence data are not read; `percentImpedance`/`loadLoss` (test summaries) are
   not checked against the mesh; template banks.
 

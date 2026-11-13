@@ -31,7 +31,7 @@ classifiers = [
 dependencies = [
   "cim-graph>=0.6.0a1,<0.7",
   "cim-topology>=0.1.0a2,<0.2",
-  "cim-profiles>=0.1.0a2,<0.2",  # 0.1.0a1 lacks RecloseSequence and EarthResistivity
+  "cim-profiles>=0.2.0a1,<0.3",
   "cim-tables>=0.1.0a1,<0.2",
   "linkml-runtime~=1.9.5",
   "pyyaml",

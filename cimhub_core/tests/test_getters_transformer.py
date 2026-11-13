@@ -1,5 +1,6 @@
 """cimhub_core.getters.transformer: one model of windings, mesh and core from each CIM transformer form."""
 
+import math
 from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
@@ -186,6 +187,195 @@ def test_regulator_by_ends():
                                                                          pytest.approx(0.005))] * 2
     assert _mesh(model) == {(1, 2): (None, 0.01)}
 
+
+# a single-phase unit by PowerTransformerEnds alone: ratedU is the phase-to-phase nameplate on both ends
+SINGLE_PHASE_BY_ENDS = """Profile = cim18v17
+Object PowerTransformer: mRID=xf_1ph, name=1ph
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), PowerTransformer=xf_1ph
+    xf_1ph_1, hv,  CN,   1, Y, true, 12.47, 15
+    xf_1ph_2, lv,  s1s2, 2, Y, true, 0.24,  15
+    xf_1ph_3, lv2, AB,   3, Y, true, 0.48,  15
+Object TransformerMeshImpedance: mRID=xf_1ph_m12, FromTransformerEnd=xf_1ph_1, ToTransformerEnd=xf_1ph_2, x (percent)=2.3
+"""
+
+
+def test_single_phase_end_coil_voltage_comes_from_rated_u(tmp_path):
+    """Phase to neutral is ratedU / sqrt(3); between two phases (s1s2, AB) it is ratedU."""
+    path = tmp_path / "1ph.cimtbl"
+    path.write_text(SINGLE_PHASE_BY_ENDS)
+    model = _model(load_model(path), "xf_1ph")
+    assert model.form is TransformerForm.BY_ENDS
+    assert [w.rated_u for w in model.windings] == pytest.approx([12.47, 0.24, 0.48])
+    assert [w.base_u for w in model.windings] == pytest.approx([12.47 / 3 ** 0.5, 0.24, 0.48])
+
+
+# BY_TANK_IMPEDANCE: a GIS's nameplate kVA and %Z on two ends and one tank. The centre tap is the core shape's xf_t2
+# (transformer_template_1ph): R = 1.2 %, X = 1.7 % on 5 kVA, so %Z = hypot(1.2, 1.7) and loadLoss = 60 W.
+TANK_IMPEDANCE = f"""Profile = cim18v17
+Table PowerTransformer: mRID, name
+    xf_ct, ct
+    xf_3p, 3p
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), PowerTransformer
+    xf_ct_1, n1,    BN,    1, Y,  true, 4.16, 5,   xf_ct
+    xf_ct_2, house, s1s2N, 2, I,  true, 0.24, 5,   xf_ct
+    xf_3p_1, n2,    ABCN,  1, Y,  true, 12.47, 300, xf_3p
+    xf_3p_2, lv,    ABCN,  2, Yn, true, 0.48,  300, xf_3p
+Table TransformerTank: mRID, percentImpedance, loadLoss (W), noLoadLoss (W), percentMagnetizingCurrent, PowerTransformer
+    xf_ct_tank, {math.hypot(1.2, 1.7)}, 60,   10, 0.5, xf_ct
+    xf_3p_tank, 4.5,                    , , , xf_3p
+"""
+
+
+def _tank_impedance(tmp_path):
+    path = tmp_path / "tank.cimtbl"
+    path.write_text(TANK_IMPEDANCE)
+    return load_model(path)
+
+
+def test_tank_impedance_center_tap_is_the_template_s(tmp_path):
+    model = _model(_tank_impedance(tmp_path), "xf_ct")
+    template = _model(_shape("transformer_by_template"), "xf_t2")
+    assert model.form is TransformerForm.BY_TANK_IMPEDANCE
+    assert [w.phases for w in model.windings] == [(B, N), (S1, N), (N, S2)]
+    assert [w.end.mRID for w in model.windings] == ["xf_ct_1", "xf_ct_2", "xf_ct_2"]
+    for field in ("rated_u", "rated_s", "r"):
+        assert [getattr(w, field) for w in model.windings] == pytest.approx([getattr(w, field) for w in
+                                                                             template.windings]), field
+    assert [w.base_u for w in model.windings] == pytest.approx([4.16 / 3 ** 0.5, 0.12, 0.12])
+    assert [w.base_s for w in model.windings[1:]] == pytest.approx([5, 5])
+    assert _mesh(model) == CENTER_TAP_MESH
+    assert (model.core, model.base_power) == (pytest.approx(template.core), pytest.approx(5))
+
+
+def test_tank_impedance_two_windings_without_load_loss_is_a_pure_reactance(tmp_path):
+    model = _model(_tank_impedance(tmp_path), "xf_3p")
+    assert [w.phases for w in model.windings] == [ABC + (N,), ABC + (N,)]
+    assert [w.r for w in model.windings] == [0.0, 0.0]
+    assert _mesh(model) == {(1, 2): (None, 4.5)}
+    assert model.core == CoreAdmittance(None, None)
+
+
+def test_tank_impedance_on_a_system_base(tmp_path):
+    model = _model(_tank_impedance(tmp_path), "xf_ct", impedance_unit="pu", base_power=cim.ApparentPower(10, "kVA"))
+    assert [w.r for w in model.windings] == pytest.approx([0.012, 0.024, 0.024])
+    assert model.mesh[(1, 2)].x == pytest.approx(0.0408)
+
+
+def test_tank_load_loss_above_its_impedance_raises(tmp_path):
+    network = _tank_impedance(tmp_path)
+    _get(network, cim.TransformerTank, "xf_ct_tank").loadLoss = cim.ActivePower(200, "W")
+    with pytest.raises(ValueError, match=r"loadLoss 200 W is 4 % of 5 kVA, above its percentImpedance 2.08"):
+        _model(network, "xf_ct")
+
+
+@pytest.mark.parametrize("held", ["r", "mesh"])
+def test_tank_impedance_beside_an_end_or_mesh_impedance_raises(held, tmp_path):
+    network = _tank_impedance(tmp_path)
+    first, second = (_get(network, cim.PowerTransformerEnd, mrid) for mrid in ("xf_3p_1", "xf_3p_2"))
+    if held == "r":
+        first.r = cim.PerCent(0.5)
+    else:
+        mesh = cim.TransformerMeshImpedance(mRID="m", FromTransformerEnd=first, ToTransformerEnd=[second],
+                                            x=cim.PerCent(4.5))
+        first.FromMeshImpedance.append(mesh)
+    with pytest.raises(ValueError, match="beside TransformerTank 'xf_3p_tank''s percentImpedance"):
+        _model(network, "xf_3p")
+
+
+def test_single_can_base_s_must_be_its_end_s(tmp_path):
+    network = _tank_impedance(tmp_path)
+    _get(network, cim.TransformerTank, "xf_3p_tank").baseS = cim.ApparentPower(250, "kVA")
+    with pytest.raises(ValueError, match="baseS 250 kVA is not PowerTransformerEnd 'xf_3p_1''s ratedS 300 kVA"):
+        _model(network, "xf_3p")
+
+
+# banks of BY_TANK_IMPEDANCE cans (GETTERS_PLAN bank rules): cans in tank order onto end 1's phases, each on its baseS
+BANKS = """Profile = cim18v17
+Table PowerTransformer: mRID, name
+    xf_yy,   yy
+    xf_yd,   yd
+    xf_oyod, oyod
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), PowerTransformer
+    xf_yy_1,   p1, ABCN, 1, Y,  true, 12.47, 75,  xf_yy
+    xf_yy_2,   s1, ABCN, 2, Yn, true, 0.208, 75,  xf_yy
+    xf_yd_1,   p2, ABCN, 1, Y,  true, 12.47, 100, xf_yd
+    xf_yd_2,   s2, ABCN, 2, D,  true, 0.24,  100, xf_yd
+    xf_oyod_1, p3, ABN,  1, Y,  true, 12.47, 100, xf_oyod
+    xf_oyod_2, s3, ABCN, 2, D,  true, 0.24,  100, xf_oyod
+Table TransformerTank: mRID, baseS (kVA), percentImpedance, loadLoss (W), PowerTransformer
+    xf_yy_a,   25, 2.0, 200, xf_yy
+    xf_yy_b,   25, 2.0, 200, xf_yy
+    xf_yy_c,   25, 2.0, 200, xf_yy
+    xf_yd_a,   50, 2.0, 540, xf_yd
+    xf_yd_b,   25, 2.0, 200, xf_yd
+    xf_yd_c,   25, 2.0, 200, xf_yd
+    xf_oyod_l, 50, 2.0, 540, xf_oyod
+    xf_oyod_t, 50, 2.0, 540, xf_oyod
+"""
+C = cim.SinglePhaseKind.C
+
+
+def _banks(tmp_path):
+    path = tmp_path / "banks.cimtbl"
+    path.write_text(BANKS)
+    return load_model(path)
+
+
+def _can(network, mrid):
+    return get_transformer_model(_get(network, cim.TransformerTank, mrid), voltage_unit="kV", power_unit="kVA")
+
+
+@pytest.mark.parametrize(("mrid", "phases", "base_u", "base_s"), [
+    ("xf_yy_b", [(B, N), (B, N)], [12.47 / 3 ** 0.5, 0.208 / 3 ** 0.5], [25, 25]),  # wye-wye: phase i to N
+    ("xf_yd_a", [(A, N), (A, N), (N, B)], [12.47 / 3 ** 0.5, 0.12, 0.12], [50, 50, 50]),  # the lighting leg
+    ("xf_yd_b", [(B, N), (B, C)], [12.47 / 3 ** 0.5, 0.24], [25, 25]),  # YNd1: B drives b-c
+    ("xf_yd_c", [(C, N), (C, A)], [12.47 / 3 ** 0.5, 0.24], [25, 25]),
+    ("xf_oyod_l", [(A, N), (A, N), (N, B)], [12.47 / 3 ** 0.5, 0.12, 0.12], [50, 50, 50]),  # L: a-N-b
+    ("xf_oyod_t", [(B, N), (B, C)], [12.47 / 3 ** 0.5, 0.24], [50, 50]),  # T: b-c, the power leg
+])
+def test_bank_can_lands_in_tank_order(mrid, phases, base_u, base_s, tmp_path):
+    model = _can(_banks(tmp_path), mrid)
+    assert model.form is TransformerForm.BY_TANK_IMPEDANCE
+    assert [w.phases for w in model.windings] == phases
+    assert [w.base_u for w in model.windings] == pytest.approx(base_u)
+    assert [w.base_s for w in model.windings] == pytest.approx(base_s)
+    assert model.base_power == pytest.approx(base_s[0])
+
+
+def test_bank_can_impedance_is_on_its_own_kva(tmp_path):
+    """The 25 kVA can's 200 W is 0.8 %, not 0.8 % of the bank's 100 kVA."""
+    model = _can(_banks(tmp_path), "xf_yd_b")
+    assert [w.r for w in model.windings] == pytest.approx([0.4, 0.4])
+    assert model.mesh[(1, 2)].x == pytest.approx((2.0 ** 2 - 0.8 ** 2) ** 0.5)
+
+
+def test_bank_tank_without_base_s_raises(tmp_path):
+    network = _banks(tmp_path)
+    _get(network, cim.TransformerTank, "xf_yy_c").baseS = None
+    with pytest.raises(ValueError, match="TransformerTank 'xf_yy_c': a tank in a bank needs its baseS"):
+        _can(network, "xf_yy_a")
+
+
+def test_bank_cans_must_add_up_to_the_ends(tmp_path):
+    network = _banks(tmp_path)
+    _get(network, cim.TransformerTank, "xf_yy_c").baseS = cim.ApparentPower(50, "kVA")
+    with pytest.raises(ValueError, match="its tanks' baseS add up to 100 kVA, not PowerTransformerEnd 'xf_yy_1''s "
+                                         "ratedS 75 kVA"):
+        _can(network, "xf_yy_a")
+
+
+def test_two_cans_on_a_closed_wye_secondary_raise(tmp_path):
+    network = _banks(tmp_path)
+    _get(network, cim.PowerTransformerEnd, "xf_oyod_2").connectionKind = cim.WindingConnection.Yn
+    with pytest.raises(ValueError, match="a bank of 2 cans is read onto a wye end with a neutral and one phase"):
+        _can(network, "xf_oyod_l")
+
+
+def test_bank_mixing_forms_raises(tmp_path):
+    network = _banks(tmp_path)
+    _get(network, cim.TransformerTank, "xf_yy_c").percentImpedance = None
+    with pytest.raises(ValueError, match="a bank mixes tanks by percentImpedance with TransformerTank 'xf_yy_c'"):
+        _can(network, "xf_yy_a")
 
 def test_units():
     template = _shape("transformer_by_template")

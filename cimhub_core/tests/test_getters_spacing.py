@@ -110,7 +110,7 @@ def test_unset_coordinate_raises():
 def test_duplicate_sequence_number_raises():
     spacing = _spacing_500()
     spacing.XYConductorPosition[3].sequenceNumber = 1
-    with pytest.raises(ValueError, match="two positions have sequenceNumber 1"):
+    with pytest.raises(ValueError, match="two conductors have sequenceNumber 1; parallel conductors are not read"):
         get_spacing_distances(spacing)
 
 
@@ -217,6 +217,127 @@ def test_offset_on_a_distance_spacing_line_raises(tmp_path):
     with pytest.raises(ValueError, match="has a spacingYOffset, but its ConductorDistanceSpacing 'cds' holds "
                                          "heights above ground"):
         get_line_conductor_xy(spacing.ACLineSegment[0])
+
+
+# bundles and multi-circuit spacings ------------------------------------------------------------------------------
+
+# a double circuit: circuit 1 on the arm, circuit 3 below it, a shared neutral, and a triplex secondary bundle
+DOUBLE = """Object XYSpacing: mRID=spc_dbl, name=dbl, isTemplate=true
+Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind, xCoord (ft), yCoord (ft)
+    spc_dbl_1,  1,  1, phase,   -4, 0
+    spc_dbl_2,  2,  1, phase,    0, 0
+    spc_dbl_3,  3,  1, phase,    4, 0
+    spc_dbl_8,  8,  3, phase,   -4, -4
+    spc_dbl_9,  9,  3, phase,    0, -4
+    spc_dbl_10, 10, 3, phase,    4, -4
+    spc_dbl_4,  4,  0, neutral,  0, -8
+Table RegularBundlePosition: mRID, XYSpacing=spc_dbl, circuitNumber, kind, xCoord (ft), yCoord (ft), subConductorCount, subConductorSpacing (ft), orientation (deg)
+    spc_dbl_tx, 2, mixed, 0, -10, 3, 0.1, 0
+Table SubConductorPosition: mRID, ConductorGroupPosition=spc_dbl_tx, subConductorNumber, sequenceNumber, kind
+    spc_dbl_tx_5, 3, 5, phase
+    spc_dbl_tx_6, 1, 6, phase
+    spc_dbl_tx_7, 2, 7, neutral
+"""
+TRIPLEX_SIDE = 0.1
+
+
+def _double_line(tmp_path, phases, numbers):
+    """A line on ``spc_dbl`` with its ACLineSegmentPhases renumbered by phase (the phases shorthand numbers 1..n)."""
+    network = _atom(tmp_path, DOUBLE + f"Object ACLineSegment: mRID=ln_x, name=x, node1=a, node2=b, phases={phases}, "
+                                       f"WireSpacing=spc_dbl\n")
+    line = _get(network, cim.ACLineSegment, "ln_x")
+    for phase in line.ACLineSegmentPhases:
+        phase.sequenceNumber = numbers[phase.phase.value]
+    return network, line
+
+
+def _numbers(positions):
+    return [position.sequence_number for position in positions]
+
+
+def test_regular_bundle_sub_conductors_are_at_its_polygon_corners(tmp_path):
+    positions = {p.sequence_number: p for p in get_spacing_xy(_get(_atom(tmp_path, DOUBLE), cim.XYSpacing, "spc_dbl"),
+                                                              "ft")}
+    assert sorted(positions) == list(range(1, 11))
+    # three touching sub-conductors: 1 at -30 deg, 2 at 90 deg, 3 at 210 deg from the bundle's reference point
+    half, low, high = TRIPLEX_SIDE / 2, -10 - TRIPLEX_SIDE / (2 * math.sqrt(3)), -10 + TRIPLEX_SIDE / math.sqrt(3)
+    assert _flat([positions[6], positions[7], positions[5]]) == pytest.approx([half, low, 0.0, high, -half, low])
+    assert [positions[n].kind for n in (5, 6, 7)] == [PHASE, PHASE, NEUTRAL]
+    assert math.dist((positions[5].x, positions[5].y), (positions[6].x, positions[6].y)) == pytest.approx(TRIPLEX_SIDE)
+
+
+def test_orientation_rotates_a_bundle(tmp_path):
+    network = _atom(tmp_path, DOUBLE)
+    _get(network, cim.RegularBundlePosition, "spc_dbl_tx").orientation = cim.AngleDegrees(90.0)
+    neutral = {p.sequence_number: p for p in get_spacing_xy(_get(network, cim.XYSpacing, "spc_dbl"), "ft")}[7]
+    assert (neutral.x, neutral.y) == pytest.approx((-TRIPLEX_SIDE / math.sqrt(3), -10.0))
+
+
+def test_bundle_sub_conductors_are_at_their_own_coordinates(tmp_path):
+    network = _atom(tmp_path, """Object XYSpacing: mRID=spc_q, name=q, isTemplate=true
+Object BundlePosition: mRID=spc_q_b, XYSpacing=spc_q, kind=mixed, xCoord (ft)=1, yCoord (ft)=-5, orientation (deg)=90
+Table SubConductorPosition: mRID, ConductorGroupPosition=spc_q_b, sequenceNumber, kind, xCoord (in), yCoord (in)
+    spc_q_b_8, 8, neutral, 0, 0
+    spc_q_b_5, 5, phase,   6, 0
+""")
+    positions = get_spacing_xy(_get(network, cim.XYSpacing, "spc_q"), "ft")
+    assert _numbers(positions) == [5, 8]
+    assert _flat(positions) == pytest.approx([1.0, -4.5, 1.0, -5.0])
+
+
+def test_a_line_takes_its_own_circuit_from_a_double_circuit(tmp_path):
+    _, line = _double_line(tmp_path, "ABCN", {"A": 8, "B": 9, "C": 10, "N": 4})
+    positions = get_line_conductor_xy(line, "ft")
+    # phases first, in the order of the terminal phases, then the shared neutral
+    assert _numbers(positions) == [8, 9, 10, 4]
+    assert [position.y for position in positions] == pytest.approx([-4.0, -4.0, -4.0, -8.0])
+
+
+def test_a_secondary_takes_the_bundle(tmp_path):
+    _, line = _double_line(tmp_path, "s1s2N", {"s1": 5, "s2": 6, "N": 7})
+    assert _numbers(get_line_conductor_xy(line, "ft")) == [5, 6, 7]
+
+
+def test_a_single_phase_line_takes_only_its_positions(tmp_path):
+    _, line = _double_line(tmp_path, "CN", {"C": 3, "N": 4})
+    assert _numbers(get_line_conductor_xy(line, "ft")) == [3, 4]
+
+
+def test_a_phase_without_a_position_raises(tmp_path):
+    _, line = _double_line(tmp_path, "AN", {"A": 11, "N": 4})
+    with pytest.raises(ValueError, match=r"has ACLineSegmentPhases on sequence numbers \[11\], which XYSpacing "
+                                         r"'spc_dbl' has no conductor for"):
+        get_line_conductor_xy(line)
+
+
+def test_a_sub_conductor_without_a_sequence_number_raises(tmp_path):
+    network = _atom(tmp_path, DOUBLE)
+    _get(network, cim.SubConductorPosition, "spc_dbl_tx_6").sequenceNumber = None
+    with pytest.raises(ValueError, match="'spc_dbl_tx_6' of RegularBundlePosition 'spc_dbl_tx': sequenceNumber is "
+                                         "unset on it and its group"):
+        get_spacing_xy(_get(network, cim.XYSpacing, "spc_dbl"))
+
+
+def test_a_sub_conductor_of_a_mixed_group_needs_its_own_kind(tmp_path):
+    network = _atom(tmp_path, DOUBLE)
+    _get(network, cim.SubConductorPosition, "spc_dbl_tx_7").kind = None
+    with pytest.raises(ValueError, match="its group is mixed, so it needs its own kind"):
+        get_spacing_xy(_get(network, cim.XYSpacing, "spc_dbl"))
+
+
+def test_a_regular_bundle_missing_a_sub_conductor_raises(tmp_path):
+    network = _atom(tmp_path, DOUBLE)
+    bundle = _get(network, cim.RegularBundlePosition, "spc_dbl_tx")
+    bundle.SubConductorPosition.remove(_get(network, cim.SubConductorPosition, "spc_dbl_tx_7"))
+    with pytest.raises(ValueError, match=r"needs one SubConductorPosition per subConductorNumber 1..3, has \[1, 3\]"):
+        get_spacing_xy(_get(network, cim.XYSpacing, "spc_dbl"))
+
+
+def test_parallel_sub_conductors_raise(tmp_path):
+    network = _atom(tmp_path, DOUBLE)
+    _get(network, cim.SubConductorPosition, "spc_dbl_tx_6").sequenceNumber = 5
+    with pytest.raises(ValueError, match="two conductors have sequenceNumber 5; parallel conductors are not read"):
+        get_spacing_xy(_get(network, cim.XYSpacing, "spc_dbl"))
 
 
 # derived.spacing -------------------------------------------------------------------------------------------------

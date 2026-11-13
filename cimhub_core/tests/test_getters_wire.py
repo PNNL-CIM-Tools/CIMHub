@@ -29,6 +29,8 @@ Table OverheadWireInfo: mRID, name, rDC20 (ohm/mi), gmr (in), radius (in), rated
     wire_cu, CU_1/0, 0.607, 0.13356, 0.184, 100.0
 Table ConcentricNeutralCableInfo: mRID, name, rAC25 (ohm/mi), gmr (in), radius (in), ratedCurrent (A), insulationThickness (in), diameterOverInsulation (in), diameterOverJacket (in), diameterOverNeutral (in), neutralStrandCount, neutralStrandRadius (in), neutralStrandGmr (in), neutralStrandRDC20 (ohm/mi), OperationalLimitSet
     cn_250, CN_250, 0.41, 0.2052, 0.2835, 260.0, 0.22, 1.06, 1.29, 1.29, 13, 0.03205, 0.02496, 14.8722, cn_limits
+Table CableInfo: mRID, name, rAC25 (ohm/mi), gmr (in), radius (in), insulated, insulationThickness (in), diameterOverInsulation (in)
+    cb_40, UG_4/0, 0.44, 0.1892, 0.2608, true, 0.06, 0.6416
 Table TapeShieldCableInfo: mRID, name, rAC25 (ohm/mi), gmr (in), radius (in), diameterOverJacket (in), diameterOverScreen (in), tapeThickness (in), tapeLap (percent)
     ts_1, TS_1/0, 0.97, 0.1332, 0.184, 1.06, 0.87, 0.005, 20.0
 Object XYSpacing: mRID=spc, name=spc, isTemplate=true
@@ -74,6 +76,14 @@ def test_concentric_neutral_cable_in_the_callers_units(network):
     assert (cable.diameter_over_neutral, cable.diameter_over_jacket, cable.tape_thickness) == \
         (pytest.approx(1.29), pytest.approx(1.29), None)
     assert values.limits == CurrentLimits(260.0, None, 390.0)
+
+
+def test_plain_cable(network):
+    values = get_wire_info(_wire(network, cim.CableInfo, "cb_40"), "in", "ohm/mi")
+    assert values.kind is cim.CableInfo and values.r_ac25 == pytest.approx(0.44)
+    assert (values.cable.insulation_thickness, values.cable.diameter_over_insulation) == \
+        (pytest.approx(0.06), pytest.approx(0.6416))
+    assert (values.cable.neutral_strand_count, values.cable.tape_thickness) == (None, None)
 
 
 def test_tape_shield_cable(network):

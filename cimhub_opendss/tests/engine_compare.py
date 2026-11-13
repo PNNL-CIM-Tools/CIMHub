@@ -15,7 +15,24 @@ import numpy as np
 import opendssdirect as dss
 import pytest
 
+from cimhub_opendss.exporter.switch import PROTECTION_ENABLED
+
 from conftest import compile_deck
+
+#: V7: the exporter writes Fuse and Recloser controls disabled until U15 gives their settings a home, so the
+#: original's are compared as disabled
+PROTECTION_CONTROLS = ("fuse.", "recloser.")
+
+
+def as_exported(elements: dict, disabled) -> dict:
+    """``elements`` of the original with its protection controls as the exporter writes them (``disabled``)."""
+    if PROTECTION_ENABLED:
+        return elements
+    return {name: disabled if name.startswith(PROTECTION_CONTROLS) else value for name, value in elements.items()}
+
+
+DISABLED_BUSES = ("disabled",)
+DISABLED_STATE = (DISABLED_BUSES, np.array([]))
 
 
 def engine_buses(path: Path) -> dict[str, tuple]:
@@ -25,7 +42,7 @@ def engine_buses(path: Path) -> dict[str, tuple]:
     for name in dss.Circuit.AllElementNames():
         dss.Circuit.SetActiveElement(name)
         if not dss.CktElement.Enabled():  # no nodes, as in _engine_state
-            found[name.lower()] = ("disabled",)
+            found[name.lower()] = DISABLED_BUSES
             continue
         found[name.lower()] = (tuple(bus.split(".")[0].lower() for bus in dss.CktElement.BusNames()),
                                tuple(dss.CktElement.NodeOrder()))
@@ -42,7 +59,7 @@ def _engine_state(path: Path) -> tuple[dict[str, tuple], dict[str, complex]]:
     for name in dss.Circuit.AllElementNames():
         dss.Circuit.SetActiveElement(name)
         if not dss.CktElement.Enabled():  # a disabled element has no nodes and no YPrim: both decks must disable it
-            elements[name.lower()] = (("disabled",), np.array([]))
+            elements[name.lower()] = DISABLED_STATE
             continue
         # the engine's own connection: bus names and the node of each conductor (bare `650` = `650.1.2.3`)
         buses = (tuple(bus.split(".")[0].lower() for bus in dss.CktElement.BusNames()),
@@ -55,13 +72,17 @@ def _engine_state(path: Path) -> tuple[dict[str, tuple], dict[str, complex]]:
 
 def assert_same_engine_state(original: Path, written: Path, *, by_element: bool = True,
                              bus_names: dict[str, str] | None = None, yprim_differs: frozenset[str] = frozenset(),
-                             added: frozenset[str] = frozenset()) -> None:
+                             added: frozenset[str] = frozenset(), exported: bool = True) -> None:
     """The same elements (buses, YPrim) and node voltages. ``by_element=False`` compares the voltages only, for an
     export under another name source, which renames the elements; ``bus_names`` (original -> written, lowercased)
     maps its buses when it renames them too (``uri``). The listed differences (``Class.name``, lowercased):
     ``yprim_differs`` keep their buses but not their YPrim (a switch's invented impedance, B3), ``added`` are only in
-    the written deck (a SwtControl for an open switch, E6)."""
+    the written deck (a SwtControl for an open switch, E6). ``exported``: the written deck is the exporter's, so the
+    original's protection controls are compared as disabled (``as_exported``); False for a deck the writer wrote back
+    as read."""
     elements, voltages = _engine_state(original)
+    if exported:
+        elements = as_exported(elements, DISABLED_STATE)
     written_elements, written_voltages = _engine_state(written)
     if by_element:
         _assert_same_elements(elements, written_elements, yprim_differs, added)

@@ -1,0 +1,100 @@
+# CIM-first export atom (no DSS original): one Substation's EnergySource feeding two Feeders, each a single-phase
+# pole-top transformer by PowerTransformerEnds alone (ratedU the phase-to-phase nameplate) and a 240 V load.
+# One deck per substation: the circuit is the Substation (E10).
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_1, name=sub1
+Table Feeder: mRID, name, NormalEnergizingSubstation
+    fdr_1, f1, sub_1
+    fdr_2, f2, sub_1
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_12p47kv, 12.47
+    bv_240v,    0.24
+
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_constant_pq, false, 1, 0, 0, 1, 0, 0
+
+Object EnergySource: mRID=src_1, name=src1, node=head, nominalVoltage (kV)=12.47, voltageMagnitude (kV)=12.47, voltageAngle (deg)=0, r (ohm)=0.1, x (ohm)=0.5, r0 (ohm)=0.2, x0 (ohm)=1.0, BaseVoltage=bv_12p47kv, EquipmentContainer=sub_1
+
+Table PowerTransformer: mRID, name, EquipmentContainer
+    xf_1, t1, fdr_1
+    xf_2, t2, fdr_2
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer
+    xf_1_1, head,   CN,   1, Y, true, 12.47, 15, 0.4, bv_12p47kv, xf_1
+    xf_1_2, house1, s1s2, 2, Y, true, 0.24,  15, 0.4, bv_240v,    xf_1
+    xf_2_1, head,   AN,   1, Y, true, 12.47, 25, 0.4, bv_12p47kv, xf_2
+    xf_2_2, house2, s1s2, 2, Y, true, 0.24,  25, 0.4, bv_240v,    xf_2
+Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, x (percent)
+    xf_1_m12, xf_1_1, xf_1_2, 2.3
+    xf_2_m12, xf_2_1, xf_2_2, 2.0
+
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer
+    ld_1, l1, house1, s1s2, Y, true, 6, 2, zip_constant_pq, bv_240v, fdr_1
+    ld_2, l2, house2, s1s2, Y, true, 8, 2, zip_constant_pq, bv_240v, fdr_2
+
+# A small wind turbine behind an inverter on feeder f1: a Generator at the connection's p (CIM load sign)
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), BaseVoltage, EquipmentContainer
+    der_w1, w1, head, , Y, 10, 12.47, -10, 0, bv_12p47kv, fdr_1
+Table PowerElectronicsWindUnit: mRID, maxP (kW), minP (kW), PowerElectronicsConnection, EquipmentContainer
+    der_w1_unit, 10, 0, der_w1, fdr_1
+
+# A GIS's cans: two PowerTransformerEnds and one tank with the nameplate %Z and load loss, no template or mesh
+# (BY_TANK_IMPEDANCE). t3 is a 25 kVA center tap on f2, t4 a 300 kVA three-phase can on f1.
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_480v, 0.48
+Table PowerTransformer: mRID, name, EquipmentContainer
+    xf_3, t3, fdr_2
+    xf_4, t4, fdr_1
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), BaseVoltage, PowerTransformer
+    xf_3_1, head,   BN,    1, Y,  true, 12.47, 25,  bv_12p47kv, xf_3
+    xf_3_2, house3, s1s2N, 2, I,  true, 0.24,  25,  bv_240v,    xf_3
+    xf_4_1, head,   ABCN,  1, Y,  true, 12.47, 300, bv_12p47kv, xf_4
+    xf_4_2, shop,   ABCN,  2, Yn, true, 0.48,  300, bv_480v,    xf_4
+Table TransformerTank: mRID, name, percentImpedance, loadLoss (W), PowerTransformer, EquipmentContainer
+    xf_3_tank, t3, 2.3, 124,  xf_3, fdr_2
+    xf_4_tank, t4, 4.5, 3300, xf_4, fdr_1
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer
+    ld_3, l3, house3, s1s2, Y, true, 10, 3,  zip_constant_pq, bv_240v, fdr_2
+    ld_4, l4, shop,   ,     Y, true, 150, 50, zip_constant_pq, bv_480v, fdr_1
+
+# Banks of a GIS's cans, one tank per can on its baseS (the can's kVA), in tank order onto end 1's phases:
+# t5 wye-wye 3 x 25 kVA 208Y/120, t6 wye-delta 50 + 25 + 25 kVA with the a-b lighting leg center-tapped (4-wire),
+# t7 open wye - open delta 2 x 50 kVA (L a-N-b, T b-c: c is the 208 V power leg).
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_208v, 0.208
+Table PowerTransformer: mRID, name, EquipmentContainer
+    xf_5, t5, fdr_1
+    xf_6, t6, fdr_2
+    xf_7, t7, fdr_2
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), BaseVoltage, PowerTransformer
+    xf_5_1, head,  ABCN, 1, Y,  true, 12.47, 75,  bv_12p47kv, xf_5
+    xf_5_2, bank5, ABCN, 2, Yn, true, 0.208, 75,  bv_208v,    xf_5
+    xf_6_1, head,  ABCN, 1, Y,  true, 12.47, 100, bv_12p47kv, xf_6
+    xf_6_2, bank6, ABCN, 2, D,  true, 0.24,  100, bv_240v,    xf_6
+    xf_7_1, head,  ABN,  1, Y,  true, 12.47, 100, bv_12p47kv, xf_7
+    xf_7_2, bank7, ABCN, 2, D,  true, 0.24,  100, bv_240v,    xf_7
+Table TransformerTank: mRID, name, baseS (kVA), percentImpedance, loadLoss (W), PowerTransformer, EquipmentContainer
+    xf_5_a, t5a, 25, 2.0, 200, xf_5, fdr_1
+    xf_5_b, t5b, 25, 2.0, 200, xf_5, fdr_1
+    xf_5_c, t5c, 25, 2.0, 200, xf_5, fdr_1
+    xf_6_a, t6a, 50, 2.0, 540, xf_6, fdr_2
+    xf_6_b, t6b, 25, 2.0, 200, xf_6, fdr_2
+    xf_6_c, t6c, 25, 2.0, 200, xf_6, fdr_2
+    xf_7_l, t7l, 50, 2.0, 540, xf_7, fdr_2
+    xf_7_t, t7t, 50, 2.0, 540, xf_7, fdr_2
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer
+    ld_5, l5, bank5, , Y, true, 30, 10, zip_constant_pq, bv_208v, fdr_1
+    ld_6, l6, bank6, , D, false, 30, 10, zip_constant_pq, bv_240v, fdr_2
+    ld_7, l7, bank7, , D, false, 20, 6,  zip_constant_pq, bv_240v, fdr_2
+
+# V7: a closed head recloser and a fuse with no trip settings or curve (none has a home in cim18v17 yet, U15). They are
+# written disabled, so a controls-on solve keeps what is behind them energized: the fuse carries about 46 A, above
+# its 40 A rating.
+Table Recloser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer
+    sw_r1, r1, head, rhead, , false, false, bv_12p47kv, fdr_1
+Table Fuse: mRID, name, node1, node2, phases, open, normalOpen, ratedCurrent (A), BaseVoltage, EquipmentContainer
+    sw_f1, f1, rhead, fload, , false, false, 40, bv_12p47kv, fdr_1
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer
+    ld_8, l8, fload, , Y, true, 1000, 100, zip_constant_pq, bv_12p47kv, fdr_1

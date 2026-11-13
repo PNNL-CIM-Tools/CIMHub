@@ -26,8 +26,10 @@ CIM_CLASSES = (cim.Location,)
 NATIVE_CLASS = schema.Buscoords
 #: crsUrn -> geographic (LatLongCoords), the importer's COORDINATE_SYSTEMS inverted
 GEOGRAPHIC = {urn: geographic for geographic, (_, _, urn) in COORDINATE_SYSTEMS.items()}
-#: float noise allowed between two points of one bus
-POINT_REL_TOL = 1e-9
+#: float noise allowed between two points of one bus.
+#: GIS device symbols are positioned by a drafter and may be tens of metres from the span endpoint
+#: they logically occupy the same bus as; 1e-4 relative (≈ 7–11 m at mid-latitudes) accepts that.
+POINT_REL_TOL = 1e-4
 
 SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "name": Slot("written", "the bus (Names.bus) of each Terminal of located equipment"),

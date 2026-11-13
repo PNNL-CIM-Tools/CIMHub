@@ -63,7 +63,7 @@ def test_deck_reads_back_the_same_and_solves_the_same(relative, tmp_path):
     source = deck(relative)
     written, original, reread = _round_trip(source, tmp_path)
     assert _records(reread) == _records(original)
-    assert_same_engine_state(source, written)
+    assert_same_engine_state(source, written, exported=False)
 
 
 def test_deck_layout(tmp_path):

@@ -203,10 +203,14 @@ version = "0.1.0"
 source = { editable = "../CIM-Builder" }
 dependencies = [
     { name = "cim-tables" },
+    { name = "pyarrow" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "cim-tables", editable = "../CIM-Tables" }]
+requires-dist = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "pyarrow", specifier = ">=18" },
+]
 
 [package.metadata.requires-dev]
 dev = [
@@ -228,7 +232,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", extras = ["sparql", "neo4j", "mysql", "gridappsd", "rdflib"], marker = "extra == 'all'" },
-    { name = "cim-profiles", specifier = ">=0.1.0a1,<0.2" },
+    { name = "cim-profiles", specifier = ">=0.2.0a1,<0.3" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "gridappsd-python", marker = "extra == 'gridappsd'", specifier = ">=2026.2.1" },
     { name = "mysql-connector-python", marker = "extra == 'mysql'", specifier = ">=9.2.0" },
@@ -250,7 +254,7 @@ dev = [
 
 [[package]]
 name = "cim-profiles"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "../CIM-Profiles" }
 dependencies = [
     { name = "pint", version = "0.25.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
