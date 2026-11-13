@@ -1,0 +1,36 @@
+# GridLAB-D line_configuration -> WireConfiguration + WireSequenceConfiguration, PerLengthPhaseImpedance + PhaseImpedanceData (catalog).
+# Source table: line_configuration (records: 4)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+Object WireConfiguration: mRID=wc_lcon_601, name=lcon_601, numberOfPhases=3, WireSpacing=spc_spc_601_ABCN
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_lcon_601, sequenceNumber, WireInfo
+    wc_lcon_601_A, 1, ohc_wire_acsr_556_5
+    wc_lcon_601_B, 2, ohc_wire_acsr_556_5
+    wc_lcon_601_C, 3, ohc_wire_acsr_556_5
+    wc_lcon_601_N, 4, ohc_overhead_line_conductor:3
+
+Object WireConfiguration: mRID=wc_lcon_607, name=lcon_607, numberOfPhases=1, WireSpacing=spc_spc_607_AN
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_lcon_607, sequenceNumber, WireInfo
+    wc_lcon_607_A, 1, ugc_tscab_ts_1/0
+    wc_lcon_607_N, 2, ugc_ugwire_cu_1/0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx604_AC_11, 1, 1, 1.3238, 1.3569, 1775.6658669207939
+    # z31 (CA); defaulted: c = 0
+    lc_lcon_mtx604_AC_21, 2, 1, 0.2066, 0.4591, 0.0
+    # z33 (C)
+    lc_lcon_mtx604_AC_22, 2, 2, 1.3294, 1.3471, 1713.424633267873
+
+Object WireConfiguration: mRID=wc_line_configuration:18, name=line_configuration:18, numberOfPhases=1, WireSpacing=spc_line_spacing:10
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_line_configuration:18, sequenceNumber, WireInfo
+    wc_line_configuration:18_A, 1, ohc_overhead_line_conductor:3
+    wc_line_configuration:18_N, 2, ohc_overhead_line_conductor:3

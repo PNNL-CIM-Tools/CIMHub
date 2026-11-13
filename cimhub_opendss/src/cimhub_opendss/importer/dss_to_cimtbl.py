@@ -166,12 +166,18 @@ class DssImporter(CimtblImporter):
 
     ``name`` is the master's ``Model`` and file stem (the deck's name, e.g. ``IEEE13_CDPSM``). ``length_unit``
     is the per-length unit of line codes with no units on code or line, overriding the magnitude gate (DSS-3).
+    ``device_geometry`` draws a two-terminal device's coordinates as a ``"point"`` midway between its buses (the
+    default, as a GIS does) or a ``"linestring"`` from bus to bus (S5-9).
     """
 
-    def __init__(self, name: str, *, authority: str = AUTHORITY, length_unit: str | None = None):
+    def __init__(self, name: str, *, authority: str = AUTHORITY, length_unit: str | None = None,
+                 device_geometry: str = "point"):
+        if device_geometry not in buscoords.DEVICE_GEOMETRIES:
+            raise ValueError(f"device_geometry {device_geometry!r} is not one of {buscoords.DEVICE_GEOMETRIES}")
         self.name = name
         self.authority = authority
         self.length_unit = length_unit
+        self.device_geometry = device_geometry
 
     def to_cimtbl(self, model) -> DocumentSet:
         walked = site(model, self.length_unit)
@@ -183,11 +189,11 @@ class DssImporter(CimtblImporter):
 
     def bound_parts(self, model, network) -> list[Document]:
         """``buscoords.cimtbl``: each piece of equipment located at its bound Terminals' buses (S5-2)."""
-        return [buscoords.map_buscoords(model, network)]
+        return [buscoords.map_buscoords(model, network, self.device_geometry)]
 
 
-def dss_to_cim(model, *, name: str, authority: str = AUTHORITY, length_unit: str | None = None, network=None,
-               artifact_dir=None):
+def dss_to_cim(model, *, name: str, authority: str = AUTHORITY, length_unit: str | None = None,
+               device_geometry: str = "point", network=None, artifact_dir=None):
     """A DSS model (``DssReader(path).read_all()``) as a cim18v17 network, built from its written artifacts."""
-    return DssImporter(name, authority=authority, length_unit=length_unit).to_cim(model, network=network,
-                                                                                artifact_dir=artifact_dir)
+    importer = DssImporter(name, authority=authority, length_unit=length_unit, device_geometry=device_geometry)
+    return importer.to_cim(model, network=network, artifact_dir=artifact_dir)

@@ -15,7 +15,7 @@ cimhub_opendss/src/cimhub_opendss/exporter/
     naming.py         Names: the E1 switch + dss_safe_name (kept in the writer) + the per-namespace collision check
     buses.py          bus_ref(node, phases, names) -> "650.1.2.3" (E7)
     options.py        the Options record: circuit, defaultbasefreq, voltagebases (E10)
-    slots.py          Slot, check_slots, slots_table
+    (Slot, check_slots, slots_table: cimhub_core/export_slots.py, shared with the RAW exporter)
     vsource.py        EnergySource -> Vsource (one module per DSS class from here on)
 ```
 
@@ -147,6 +147,10 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   8. `Buscoords <stem>_buscoords.csv` (`LatLongCoords` for geographic rows), with the CSV written beside the deck.
 - `serialize(obj)` is unchanged for an ordinary record. `Options` and `Buscoords` are not ordinary records, so
   `serialize` raises on them, and `write` handles them as above.
+- `write(model, destination, per_class=True)` (also `cim_to_dss(..., per_class=True)`) writes step 4 as one file
+  per class beside the deck (`linecode.dss`, `xfmrcode.dss`, `line.dss`, ...; only classes that have records), and
+  the master `destination` has `Redirect <file>` in `WRITE_ORDER` in its place. A master named like a class file
+  (`Line.dss`) raises rather than being overwritten. The default is the single deck.
 
 **Found by the round-trip test** (atoms and the IEEE13_CDPSM, IEEE123, IEEE4 OYOD decks; each is engine-checked):
 - **`like=` is never written.** The reader has already copied the other object's values into the record. `like=`
@@ -175,6 +179,7 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   - per element, its buses (bus names and `NodeOrder`) and YPrim (rel 1e-9);
   - the node voltages, solved with `controlmode=off tolerance=1e-10` (rel 1e-8 + 10 µV). Solution settings are not
     part of the model, so the reader drops them; the tight tolerance makes both decks converge to one answer.
+  - the three decks are also written `per_class` and checked the same way (records and engine).
 - **Names:** core precedence (argument > env var > `mrid`), a bad value raises, an unset name raises, `uri` is 36
   characters. Spoke: sanitizing, dots in bus names, a collision after sanitizing raises, namespaces are separate,
   the per-phase suffix.
@@ -1436,11 +1441,15 @@ Each piece's inverter slots:
 
 ### PVSystem
 
-- `Pmpp` = the unit's maxP x its 1/n share; `irradiance` = p / Pmpp, so the engine gives CIM's p at the default
-  P-T curve. `kvar` = the piece's q (generation sign).
-- `%Cutout=0` only when 0 < p < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would switch the PV off below its
-  default cut-out (S4b engine rules).
-- Raises: maxP unset or 0, minP other than 0, p into the PV.
+- `Pmpp` = the unit's maxP x its 1/n share. `irradiance` = the unit's `PhotoVoltaicUnit.irradiance` (kW/m2, the
+  gridappsd extension); unset, it falls back to p / Pmpp, so the panel gives exactly p. `kvar` = the piece's q
+  (generation sign).
+- `%Pmpp` = 100 x p / Pmpp when p is below the panel's Pmpp x irradiance (a PV cut to fit kVA, or held back); the
+  engine caps the panel at it (S4b engine rules), so it gives CIM's p at the default P-T curve. Not written when p
+  is the panel's power.
+- `%Cutout=0` only when p > 0 and Pmpp x irradiance < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would
+  switch the PV off below its default cut-out.
+- Raises: maxP unset or 0, minP other than 0, p into the PV, p above Pmpp x irradiance.
 
 ### Storage (P6)
 
@@ -1528,7 +1537,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | P2 | A unit above its share of ratedS (**confirmed by the user 2026-11-09**) | Raises, naming the unit, its output and its share. Giving each piece the whole rating was the alternative |
 | P3 | Names of the pieces | One unit: the connection's; several: the units' |
 | P4 | Unequal phases (E8) | One unit: one 1-phase device per phase, each 1/n of the connection and of the unit; several units or delta raise |
-| P5 | PV output | `irradiance` = p / Pmpp at Pmpp = maxP; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
+| P5 | PV output | `irradiance` = the unit's (the extension, 2026-11-10), else p / Pmpp, at Pmpp = maxP; `%Pmpp` holds the output at p below the panel; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
 | P6 | Storage output | `%Discharge`/`%Charge`, never `kW` (the engine's percent of the kWrated of the moment); waiting is idling at idlingP |
 | P7 | Generator model | 3 from an enabled voltage control on its own terminal; disabled → 1; model 7 → 1 (listed); reactances at the engine's defaults (U13) |
 | P8 | Reactor coupling | r0/x0 must equal r/x; a varistor raises |
@@ -1544,16 +1553,16 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | phases | written | the phase conductors; a delta across two is 1 |
 | bus1 | written | bus_ref of the phase conductors; a wye inverter's neutral is node 0 |
 | kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
-| irradiance | written | the unit's output / Pmpp (get_inverter_units p, generation sign) |
+| irradiance | written | the unit's irradiance (kW/m2); unset -> the unit's output / Pmpp (get_inverter_units p, generation sign) |
 | Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
-| pct_Pmpp | unset | untranscribed or raising on import; not in CIM |
+| pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
 | Temperature | unset | untranscribed or raising on import; not in CIM |
 | pf | not mapped | kvar carries q |
 | conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
 | kvar | written | the unit's share of q (generation sign: -q) |
 | kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
 | pct_Cutin | unset | untranscribed or raising on import; not in CIM |
-| pct_Cutout | rule | 0 when the output is above 0 and below the engine's 20 % of kVA, else not written |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
 | EffCurve | unset | untranscribed or raising on import; not in CIM |
 | P_TCurve | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |
@@ -1781,8 +1790,10 @@ deck (S6a, §8.2).
 
 The importer's S5-1 inverted. `get_location_coordinates(equipment)` (core) gives the Location's points in
 PositionPoint `sequenceNumber` order and each Terminal's point:
-- one point per Terminal: they pair in order (the importers' form);
+- one point per Terminal: they pair in order (a one-Terminal POINT, a two-point LINESTRING);
 - a two-terminal polyline (more than two points): its ends go to its Terminals (CIM's line route);
+- one point on equipment with several Terminals: a device point (F8), which pairs with no Terminal, so `terminals`
+  is None;
 - any other count raises, and so do a point without a sequenceNumber or a position, and two points with one
   number. No Location, or a Location without points, is None. `zPosition` is not read.
 
@@ -1791,6 +1802,14 @@ network's ConnectivityNode order:
 - Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
   (S5-3).
 - Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
+  so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
+  (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives
+  back the importer's bus to float noise (the midpoint rounded a + b once); with none placed, every bus goes at the
+  point. A device with one open bus goes first, so a chain of switches fills from its placed end. The parity and
+  atom tests compare coordinates to rel 1e-12 / abs 1e-9 (`assert_same_coordinates`) for that noise. An import
+  under `device_geometry="linestring"` (S5-9) has no device points: each device's buses pair one per Terminal and
+  come back exactly.
 - The CoordinateSystem picks the file: `urn:ogc:def:crs:OGC:1.3:CRS84` is `LatLongCoords` (x = longitude, written
   latitude first), `OpenDSSLocalBusCoordinates` is `BusCoords` (the importer's `COORDINATE_SYSTEMS` inverted).
   Another URN, or Locations in two systems, raise.
@@ -1887,6 +1906,7 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | F5 | Protection settings (**open**; reclosing closed by S6g, trip settings still open, G5) | Untranscribed for now (DSS-11), listed: the exported recloser trips at the engine's 1 A in a controls-on solve. Open: map Recloser PhaseTrip/GroundTrip (and Relay settings) once DSS-11's protection TODO picks the CIM classes |
 | F6 | Idempotence | Under `name_source="name"`, deck and coordinate files; `mrid` re-prefixes by design |
 | F7 | Decks out of parity | YYD-Master (a fault study that writes files) and IEEE8500 Master-unbal (a missing redirect): idempotence only |
+| F8 | Device points (2026-11-10, the user's pick) | A single POINT on multi-terminal equipment places only open buses, at (N · point − Σ placed) / k: reflection across the point next to a placed bus, the point itself with none. Placing every open bus at the point was the alternative: simpler and closer to real GIS, but a DSS round trip moves a bus only a device touches (a regulator's output) |
 
 ### Slot table (S6f, generated from `SLOTS`)
 
@@ -1895,8 +1915,8 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | DSS slot | kind | from / why |
 |---|---|---|
 | name | written | the bus (Names.bus) of each Terminal of located equipment |
-| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates) |
-| y | written | the Terminal's PositionPoint yPosition |
+| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a device point touches is solved from it as the centroid of the device's buses |
+| y | written | as x, from yPosition |
 | geographic | written | crsUrn CRS84 -> true (LatLongCoords), OpenDSSLocalBusCoordinates -> false; others raise |
 
 ## S6g: earth model and reclose sequences (built 2026-11-09 at the user's word, with decisions G1-G5 as recommended)

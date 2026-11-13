@@ -1,0 +1,103 @@
+id: https://gridlabd.org/schema/glm/powerflow/fuse
+name: fuse
+description: GridLAB-D fuse class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  fuse:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file fuse.cpp
+
+      @addtogroup powerflow_fuse Fuse
+
+      @ingroup powerflow
+
+      @todo fuse do not reclose ever once blown, implement fuse restoration
+
+      scheme (e.g., scale of hours with circuit outage)
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      phase_A_status:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: phase_A_status
+      phase_B_status:
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: phase_B_status
+      phase_C_status:
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: phase_C_status
+      repair_dist_type:
+        range: string
+        required: false
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: repair_dist_type
+      current_limit:
+        range: float
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_limit[A]
+      mean_replacement_time:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mean_replacement_time[s]
+      fuse_resistance:
+        range: float
+        required: false
+        description: The resistance value of the fuse when it is not blown.
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fuse_resistance[Ohm]

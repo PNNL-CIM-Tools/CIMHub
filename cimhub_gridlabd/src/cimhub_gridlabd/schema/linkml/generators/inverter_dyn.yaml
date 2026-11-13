@@ -1,0 +1,2088 @@
+id: https://gridlabd.org/schema/glm/generators/inverter_dyn
+name: inverter_dyn
+description: GridLAB-D inverter_dyn class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  inverter_dyn:
+    is_a: glm_object
+    description: 'Common items ***
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      control_mode:
+        range: string
+        required: false
+        description: 'Inverter control mode: grid-forming or grid-following'
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: control_mode
+      grid_following_mode:
+        range: string
+        required: false
+        description: grid-following mode, positive sequency or balanced three phase
+          power
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: grid_following_mode
+      grid_forming_mode:
+        range: string
+        required: false
+        description: grid-forming mode, CONSTANT_DC_BUS or DYNAMIC_DC_BUS
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: grid_forming_mode
+      P_f_droop_setting_mode:
+        range: string
+        required: false
+        description: Definition of P-f droop curve
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: P_f_droop_setting_mode
+      phaseA_I_Out:
+        range: Complex
+        required: false
+        description: AC current on A phase in three-phase system
+        unit:
+          ucum_code: A
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: phaseA_I_Out[A]
+      phaseB_I_Out:
+        range: Complex
+        required: false
+        description: AC current on B phase in three-phase system
+        unit:
+          ucum_code: A
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: phaseB_I_Out[A]
+      phaseC_I_Out:
+        range: Complex
+        required: false
+        description: AC current on C phase in three-phase system
+        unit:
+          ucum_code: A
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: phaseC_I_Out[A]
+      phaseA_I_Out_PU:
+        range: Complex
+        required: false
+        description: AC current on A phase in three-phase system, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: phaseA_I_Out_PU[pu]
+      phaseB_I_Out_PU:
+        range: Complex
+        required: false
+        description: AC current on B phase in three-phase system, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: phaseB_I_Out_PU[pu]
+      phaseC_I_Out_PU:
+        range: Complex
+        required: false
+        description: AC current on C phase in three-phase system, pu
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: phaseC_I_Out_PU[pu]
+      IA_Out_PU_temp:
+        range: Complex
+        required: false
+        description: ' Phase A current for current limiting calculation of a grid-forming
+          inverter, pu'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: IA_Out_PU_temp[pu]
+      IB_Out_PU_temp:
+        range: Complex
+        required: false
+        description: ' Phase B current for current limiting calculation of a grid-forming
+          inverter, pu'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: IB_Out_PU_temp[pu]
+      IC_Out_PU_temp:
+        range: Complex
+        required: false
+        description: ' Phase C current for current limiting calculation of a grid-forming
+          inverter, pu'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: IC_Out_PU_temp[pu]
+      power_A:
+        range: Complex
+        required: false
+        description: AC power on A phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: power_A[VA]
+      power_B:
+        range: Complex
+        required: false
+        description: AC power on B phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: power_B[VA]
+      power_C:
+        range: Complex
+        required: false
+        description: AC power on C phase in three-phase system
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: power_C[VA]
+      VA_Out:
+        range: Complex
+        required: false
+        description: AC power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 17
+          value_type: complex
+          separator: ','
+          native_name: VA_Out[VA]
+      e_source_A:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, phase
+          A'
+        annotations:
+          order: 18
+          value_type: complex
+          separator: ','
+          native_name: e_source_A
+      e_source_B:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, phase
+          B'
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: e_source_B
+      e_source_C:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, phase
+          C'
+        annotations:
+          order: 20
+          value_type: complex
+          separator: ','
+          native_name: e_source_C
+      e_source_A_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, per
+          unit, phase A'
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: e_source_A_PU
+      e_source_B_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, per
+          unit, phase B'
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: e_source_B_PU
+      e_source_C_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Actual internal voltage of grid-forming source, per
+          unit, phase C'
+        annotations:
+          order: 23
+          value_type: complex
+          separator: ','
+          native_name: e_source_C_PU
+      e_droop_A:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase A'
+        annotations:
+          order: 24
+          value_type: complex
+          separator: ','
+          native_name: e_droop_A
+      e_droop_B:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase B'
+        annotations:
+          order: 25
+          value_type: complex
+          separator: ','
+          native_name: e_droop_B
+      e_droop_C:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase C'
+        annotations:
+          order: 26
+          value_type: complex
+          separator: ','
+          native_name: e_droop_C
+      e_droop_A_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase A'
+        annotations:
+          order: 27
+          value_type: complex
+          separator: ','
+          native_name: e_droop_A_PU
+      e_droop_B_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase B'
+        annotations:
+          order: 28
+          value_type: complex
+          separator: ','
+          native_name: e_droop_B_PU
+      e_droop_C_PU:
+        range: Complex
+        required: false
+        description: 'DELTAMODE: Internal voltage of given by the grid-forming droop
+          controller, phase C'
+        annotations:
+          order: 29
+          value_type: complex
+          separator: ','
+          native_name: e_droop_C_PU
+      e_droop_angle_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle given by the droop controller, phase
+          A'
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_droop_angle_A
+      e_droop_angle_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle given by the droop controller, phase
+          B'
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_droop_angle_B
+      e_droop_angle_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal angle given by the droop controller, phase
+          C'
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: e_droop_angle_C
+      pCircuit_V_Avg_pu:
+        range: float
+        required: false
+        description: 'DELTAMODE: three-phase average value of terminal voltage, per
+          unit value'
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pCircuit_V_Avg_pu
+      E_mag:
+        range: float
+        required: false
+        description: 'DELTAMODE: magnitude of internal voltage of grid-forming inverter'
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_mag
+      rated_power:
+        range: float
+        required: false
+        description: ' The rated power of the inverter'
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_power[VA]
+      rated_DC_Voltage:
+        range: float
+        required: false
+        description: ' The rated dc bus of the inverter'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_DC_Voltage[V]
+      Xfilter:
+        range: float
+        required: false
+        description: 'DELTAMODE:  per-unit values of inverter filter.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xfilter[pu]
+      Rfilter:
+        range: float
+        required: false
+        description: 'DELTAMODE:  per-unit values of inverter filter.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rfilter[pu]
+      pdispatch:
+        range: float
+        required: false
+        description: Desired generator dispatch set point in p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch[pu]
+      pdispatch_offset:
+        range: float
+        required: false
+        description: Desired offset to generator dispatch in p.u.
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch_offset[pu]
+      Pref:
+        range: float
+        required: false
+        description: 'DELTAMODE: The real power reference.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref[W]
+      Qref:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reactive power reference.'
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qref[VAr]
+      kpc:
+        range: float
+        required: false
+        description: 'DELTAMODE: Proportional gain of the current loop.'
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpc
+      kic:
+        range: float
+        required: false
+        description: 'DELTAMODE: Integral gain of the current loop.'
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kic
+      F_current:
+        range: float
+        required: false
+        description: 'DELTAMODE: feed forward term gain in current loop.'
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: F_current
+      Tif:
+        range: float
+        required: false
+        description: 'DELTAMODE: time constant of first-order low-pass filter of current
+          loop when using current source representation.'
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tif
+      ugd_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, d-axis,
+          phase A'
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugd_pu_A
+      ugd_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, d-axis,
+          phase B'
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugd_pu_B
+      ugd_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, d-axis,
+          phase C'
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugd_pu_C
+      ugq_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, q-axis,
+          phase A'
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugq_pu_A
+      ugq_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, q-axis,
+          phase B'
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugq_pu_B
+      ugq_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal voltage of grid-following inverter, q-axis,
+          phase C'
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ugq_pu_C
+      ed_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, d-axis,
+          phase A'
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ed_pu_A
+      ed_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, d-axis,
+          phase B'
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ed_pu_B
+      ed_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, d-axis,
+          phase C'
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ed_pu_C
+      eq_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, q-axis,
+          phase A'
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eq_pu_A
+      eq_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, q-axis,
+          phase B'
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eq_pu_B
+      eq_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: Internal voltage of grid-following inverter, q-axis,
+          phase C'
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: eq_pu_C
+      igd_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase A'
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_A
+      igd_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase B'
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_B
+      igd_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase C'
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_C
+      igq_pu_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase A'
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_A
+      igq_pu_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase B'
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_B
+      igq_pu_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase C'
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_C
+      igd_pu_A_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase A, current source representation'
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_A_filter
+      igd_pu_B_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase B, current source representation'
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_B_filter
+      igd_pu_C_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, d-axis,
+          phase C, current source representation'
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_pu_C_filter
+      igq_pu_A_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase A, current source representation'
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_A_filter
+      igq_pu_B_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase B, current source representation'
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_B_filter
+      igq_pu_C_filter:
+        range: float
+        required: false
+        description: 'DELTAMODE: terminal current of grid-following inverter, q-axis,
+          phase C, current source representation'
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_pu_C_filter
+      igd_ref_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, d-axis,
+          phase A'
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_ref_A
+      igd_ref_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, d-axis,
+          phase B'
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_ref_B
+      igd_ref_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, d-axis,
+          phase C'
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_ref_C
+      igq_ref_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, q-axis,
+          phase A'
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_ref_A
+      igq_ref_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, q-axis,
+          phase B'
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_ref_B
+      igq_ref_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: reference current of grid-following inverter, q-axis,
+          phase C'
+        annotations:
+          order: 76
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_ref_C
+      igd_ref_max:
+        range: float
+        required: false
+        description: 'DELTAMODE: Upper limit of igd_ref of grid-following inverter,
+          d-axis'
+        annotations:
+          order: 77
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_ref_max
+      igd_ref_min:
+        range: float
+        required: false
+        description: 'DELTAMODE: Lower limit of igd_ref of grid-following inverter,
+          d-axis'
+        annotations:
+          order: 78
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igd_ref_min
+      igq_ref_max:
+        range: float
+        required: false
+        description: 'DELTAMODE: Upper limit of igq_ref of grid-following inverter,
+          q-axis'
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_ref_max
+      igq_ref_min:
+        range: float
+        required: false
+        description: 'DELTAMODE: Lower limit of igq_ref of grid-following inverter,
+          q-axis'
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: igq_ref_min
+      Angle_PLL_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: phase angle of terminal voltage measured by PLL,
+          phase A'
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Angle_PLL_A
+      Angle_PLL_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: phase angle of terminal voltage measured by PLL,
+          phase B'
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Angle_PLL_B
+      Angle_PLL_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: phase angle of terminal voltage measured by PLL,
+          phase C'
+        annotations:
+          order: 83
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Angle_PLL_C
+      f_PLL_A:
+        range: float
+        required: false
+        description: 'DELTAMODE: frequency of terminal voltage measured by PLL, phase
+          A'
+        annotations:
+          order: 84
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: f_PLL_A
+      f_PLL_B:
+        range: float
+        required: false
+        description: 'DELTAMODE: frequency of terminal voltage measured by PLL, phase
+          B'
+        annotations:
+          order: 85
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: f_PLL_B
+      f_PLL_C:
+        range: float
+        required: false
+        description: 'DELTAMODE: frequency of terminal voltage measured by PLL, phase
+          C'
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: f_PLL_C
+      frequency_watt:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter f/p droop
+          is included or not'
+        annotations:
+          order: 87
+          value_type: bool
+          separator: ','
+          native_name: frequency_watt
+      checkRampRate_real:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether check the ramp rate'
+        annotations:
+          order: 88
+          value_type: bool
+          separator: ','
+          native_name: checkRampRate_real
+      volt_var:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter volt-var
+          droop is included or not'
+        annotations:
+          order: 89
+          value_type: bool
+          separator: ','
+          native_name: volt_var
+      checkRampRate_reactive:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether check the ramp rate'
+        annotations:
+          order: 90
+          value_type: bool
+          separator: ','
+          native_name: checkRampRate_reactive
+      Tpf:
+        range: float
+        required: false
+        description: 'DELTAMODE: the time constant of power measurement low pass filter
+          in frequency-watt.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 91
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tpf[s]
+      Tff:
+        range: float
+        required: false
+        description: 'DELTAMODE: the time constant of frequency measurement low pass
+          filter in frequency-watt.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 92
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tff[s]
+      Tqf:
+        range: float
+        required: false
+        description: 'DELTAMODE: the time constant of low pass filter in volt-var.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 93
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tqf[s]
+      Tvf:
+        range: float
+        required: false
+        description: 'DELTAMODE: the time constant of low pass filter in volt-var.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tvf[s]
+      Pref_max:
+        range: float
+        required: false
+        description: 'DELTAMODE: the upper and lower limits of power references in
+          grid-following mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref_max[pu]
+      Pref_min:
+        range: float
+        required: false
+        description: 'DELTAMODE: the upper and lower limits of power references in
+          grid-following mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 96
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref_min[pu]
+      Qref_max:
+        range: float
+        required: false
+        description: 'DELTAMODE: the upper and lower limits of reactive power references
+          in grid-following mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qref_max[pu]
+      Qref_min:
+        range: float
+        required: false
+        description: 'DELTAMODE: the upper and lower limits of reactive power references
+          in grid-following mode.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qref_min[pu]
+      Rp:
+        range: float
+        required: false
+        description: 'DELTAMODE: p-f droop gain in frequency-watt.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rp[pu]
+      frequency_watt_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: p-f droop gain in frequency-watt.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 100
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_watt_droop[pu]
+      db_UF:
+        range: float
+        required: false
+        description: 'DELTAMODE: upper dead band for frequency-watt control, UF for
+          under-frequency'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 101
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: db_UF[Hz]
+      db_OF:
+        range: float
+        required: false
+        description: 'DELTAMODE: lower dead band for frequency-watt control, OF for
+          over-frequency'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 102
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: db_OF[Hz]
+      Rq:
+        range: float
+        required: false
+        description: 'DELTAMODE: Q-V droop gain in volt-var.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 103
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rq[pu]
+      volt_var_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: Q-V droop gain in volt-var.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 104
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_var_droop[pu]
+      db_UV:
+        range: float
+        required: false
+        description: 'DELTAMODE: dead band for volt-var control, UV for under-voltage'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 105
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: db_UV[pu]
+      db_OV:
+        range: float
+        required: false
+        description: 'DELTAMODE: dead band for volt-var control, OV for over-voltage'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 106
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: db_OV[pu]
+      rampUpRate_real:
+        range: float
+        required: false
+        description: 'DELTAMODE: ramp rate for grid-following frequency-watt'
+        annotations:
+          order: 107
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rampUpRate_real
+      rampDownRate_real:
+        range: float
+        required: false
+        description: 'DELTAMODE: ramp rate for grid-following frequency-watt'
+        annotations:
+          order: 108
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rampDownRate_real
+      rampUpRate_reactive:
+        range: float
+        required: false
+        description: 'DELTAMODE: ramp rate for grid-following volt-var'
+        annotations:
+          order: 109
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rampUpRate_reactive
+      rampDownRate_reactive:
+        range: float
+        required: false
+        description: 'DELTAMODE: ramp rate for grid-following volt-var'
+        annotations:
+          order: 110
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rampDownRate_reactive
+      Pref_droop_pu:
+        range: float
+        required: false
+        description: 'DELTAMODE: power reference in frequency-watt'
+        annotations:
+          order: 111
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pref_droop_pu
+      frequency_convergence_criterion:
+        range: float
+        required: false
+        description: Max frequency update for grid-forming inverters to return to
+          QSTS
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 112
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_convergence_criterion[rad/s]
+      voltage_convergence_criterion:
+        range: float
+        required: false
+        description: Max voltage update for grid-forming inverters to return to QSTS
+        unit:
+          ucum_code: V
+        annotations:
+          order: 113
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_convergence_criterion[V]
+      current_convergence_criterion:
+        range: float
+        required: false
+        description: Max current magnitude update for grid-following inverters to
+          return to QSTS, or initialize
+        unit:
+          ucum_code: A
+        annotations:
+          order: 114
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_convergence_criterion[A]
+      kpPLL:
+        range: float
+        required: false
+        description: 'DELTAMODE: Proportional gain of the PLL.'
+        annotations:
+          order: 115
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpPLL
+      kiPLL:
+        range: float
+        required: false
+        description: 'DELTAMODE: Proportional gain of the PLL.'
+        annotations:
+          order: 116
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kiPLL
+      Tp:
+        range: float
+        required: false
+        description: 'DELTAMODE: time constant of low pass filter, P calculation.'
+        annotations:
+          order: 117
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tp
+      Tq:
+        range: float
+        required: false
+        description: 'DELTAMODE: time constant of low pass filter, Q calculation.'
+        annotations:
+          order: 118
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tq
+      Tv:
+        range: float
+        required: false
+        description: 'DELTAMODE: time constant of low pass filter, V calculation.'
+        annotations:
+          order: 119
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tv
+      Vset:
+        range: float
+        required: false
+        description: 'DELTAMODE: voltage set point in grid-forming inverter, usually
+          1 pu.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 120
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vset[pu]
+      kpv:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional gain and integral gain of voltage loop.'
+        annotations:
+          order: 121
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpv
+      kiv:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional gain and integral gain of voltage loop.'
+        annotations:
+          order: 122
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kiv
+      mq:
+        range: float
+        required: false
+        description: 'DELTAMODE: Q-V droop gain, usually 0.05 pu.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 123
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mq[pu]
+      Q_V_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: Q-V droop gain, usually 0.05 pu.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 124
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Q_V_droop[pu]
+      E_max:
+        range: float
+        required: false
+        description: 'DELTAMODE: E_max and E_min are the maximum and minimum of the
+          output of voltage controller.'
+        annotations:
+          order: 125
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_max
+      E_min:
+        range: float
+        required: false
+        description: 'DELTAMODE: E_max and E_min are the maximum and minimum of the
+          output of voltage controller.'
+        annotations:
+          order: 126
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_min
+      Emax:
+        range: float
+        required: false
+        description: 'DELTAMODE: E_max and E_min are the maximum and minimum of the
+          output of voltage controller.'
+        annotations:
+          order: 127
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Emax
+      Emin:
+        range: float
+        required: false
+        description: 'DELTAMODE: E_max and E_min are the maximum and minimum of the
+          output of voltage controller.'
+        annotations:
+          order: 128
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Emin
+      Pset:
+        range: float
+        required: false
+        description: 'DELTAMODE: power set point in P-f droop.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 129
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pset[pu]
+      fset:
+        range: float
+        required: false
+        description: 'DELTAMODE: frequency set point in P-f droop.'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 130
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fset[Hz]
+      mp:
+        range: float
+        required: false
+        description: 'DELTAMODE: P-f droop gain, usually 3.77 rad/s/pu.'
+        unit:
+          ucum_code: rad/s/pu
+        annotations:
+          order: 131
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mp[rad/s/pu]
+      P_f_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: P-f droop gain in per unit value, usually 0.01.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 132
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_f_droop[pu]
+      kppmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional and integral gains for Pmax controller.'
+        annotations:
+          order: 133
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kppmax
+      kipmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional and integral gains for Pmax controller.'
+        annotations:
+          order: 134
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kipmax
+      w_lim:
+        range: float
+        required: false
+        description: 'DELTAMODE: saturation limit of Pmax controller.'
+        annotations:
+          order: 135
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: w_lim
+      Pmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: maximum limit and minimum limit of Pmax controller
+          and Pmin controller.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 136
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pmax[pu]
+      Pmin:
+        range: float
+        required: false
+        description: 'DELTAMODE: maximum limit and minimum limit of Pmax controller
+          and Pmin controller.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 137
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pmin[pu]
+      w_ref:
+        range: float
+        required: false
+        description: 'DELTAMODE: the rated frequency, usually 376.99 rad/s.'
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 138
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: w_ref[rad/s]
+      freq:
+        range: float
+        required: false
+        description: 'DELTAMODE: the frequency obtained from the P-f droop controller.'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 139
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: freq[Hz]
+      Imax:
+        range: float
+        required: false
+        description: 'DELTAMODE: the maximum current of a grid-forming inverter.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 140
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Imax[pu]
+      kpqmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional and integral gains for Qmax controller.'
+        annotations:
+          order: 141
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpqmax
+      kiqmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional and integral gains for Qmax controller.'
+        annotations:
+          order: 142
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kiqmax
+      Qmax:
+        range: float
+        required: false
+        description: 'DELTAMODE: maximum limit and minimum limit of Qmax controller
+          and Qmin controller.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 143
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qmax[pu]
+      Qmin:
+        range: float
+        required: false
+        description: 'DELTAMODE: maximum limit and minimum limit of Qmax controller
+          and Qmin controller.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 144
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Qmin[pu]
+      delta_w_droop:
+        range: float
+        required: false
+        description: 'DELTAMODE: delta omega fro p-f droop'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 145
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_w_droop[pu]
+      VFlag:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Voltage flag to choose between PI control or direct
+          control.'
+        annotations:
+          order: 146
+          value_type: bool
+          separator: ','
+          native_name: VFlag
+      Vdc_pu:
+        range: float
+        required: false
+        description: 'DELTAMODE: dc bus voltage of PV panel when using grid-forming
+          PV Inverter'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 147
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vdc_pu[pu]
+      Vdc_min_pu:
+        range: float
+        required: false
+        description: 'DELTAMODE: The reference voltage of the Vdc_min controller'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 148
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Vdc_min_pu[pu]
+      C_pu:
+        range: float
+        required: false
+        description: 'DELTAMODE: capacitance of dc bus'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 149
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: C_pu[pu]
+      mdc:
+        range: float
+        required: false
+        description: 'DELTAMODE: saturation limit of modulation index'
+        annotations:
+          order: 150
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mdc
+      kpVdc:
+        range: float
+        required: false
+        description: 'DELTAMODE: proportional gain of Vdc_min controller'
+        annotations:
+          order: 151
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kpVdc
+      kiVdc:
+        range: float
+        required: false
+        description: 'DELTAMODE: integral gain of Vdc_min controller'
+        annotations:
+          order: 152
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kiVdc
+      kdVdc:
+        range: float
+        required: false
+        description: 'DELTAMODE: derivative gain of Vdc_min controller'
+        annotations:
+          order: 153
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kdVdc
+      p_measure:
+        range: float
+        required: false
+        description: 'DELTAMODE: filtered active power for grid-forming inverter'
+        annotations:
+          order: 154
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: p_measure
+      q_measure:
+        range: float
+        required: false
+        description: 'DELTAMODE: filtered reactive power for grid-forming inverter'
+        annotations:
+          order: 155
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: q_measure
+      v_measure:
+        range: float
+        required: false
+        description: 'DELTAMODE: filtered voltage for grid-forming inverter'
+        annotations:
+          order: 156
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: v_measure
+      V_In:
+        range: float
+        required: false
+        description: DC input voltage
+        unit:
+          ucum_code: V
+        annotations:
+          order: 157
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_In[V]
+      I_In:
+        range: float
+        required: false
+        description: DC input current
+        unit:
+          ucum_code: A
+        annotations:
+          order: 158
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: I_In[A]
+      P_In:
+        range: float
+        required: false
+        description: DC input power
+        unit:
+          ucum_code: W
+        annotations:
+          order: 159
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_In[W]
+      pvc_Pmax:
+        range: float
+        required: false
+        description: P max from the PV curve
+        unit:
+          ucum_code: W
+        annotations:
+          order: 160
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pvc_Pmax[W]
+      enable_1547_checks:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Enable IEEE 1547-2003 disconnect checking'
+        annotations:
+          order: 161
+          value_type: bool
+          separator: ','
+          native_name: enable_1547_checks
+      reconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: Time delay after IEEE 1547-2003 violation clears
+          before resuming generation'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 162
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reconnect_time[s]
+      inverter_1547_status:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Indicator if the inverter is curtailed due to a 1547
+          violation or not'
+        annotations:
+          order: 163
+          value_type: bool
+          separator: ','
+          native_name: inverter_1547_status
+      IEEE_1547_version:
+        range: string
+        required: false
+        description: 'DELTAMODE: Version of IEEE 1547 to use to populate defaults'
+        annotations:
+          order: 164
+          value_type: string
+          separator: ','
+          native_name: IEEE_1547_version
+      over_freq_high_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF2 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 165
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_high_cutout[Hz]
+      over_freq_high_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF2 clearing time for IEEE1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 166
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_high_disconnect_time[s]
+      over_freq_low_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF1 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 167
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_low_cutout[Hz]
+      over_freq_low_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: OF1 clearing time for IEEE 1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 168
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_freq_low_disconnect_time[s]
+      under_freq_high_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF2 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 169
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_high_cutout[Hz]
+      under_freq_high_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF2 clearing time for IEEE1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 170
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_high_disconnect_time[s]
+      under_freq_low_cutout:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF1 set point for IEEE 1547a'
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 171
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_low_cutout[Hz]
+      under_freq_low_disconnect_time:
+        range: float
+        required: false
+        description: 'DELTAMODE: UF1 clearing time for IEEE 1547a'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 172
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_freq_low_disconnect_time[s]
+      under_voltage_low_cutout:
+        range: float
+        required: false
+        description: Lowest voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 173
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_low_cutout[pu]
+      under_voltage_middle_cutout:
+        range: float
+        required: false
+        description: Middle-lowest voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 174
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_middle_cutout[pu]
+      under_voltage_high_cutout:
+        range: float
+        required: false
+        description: High value of low voltage threshold for undervoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 175
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_high_cutout[pu]
+      over_voltage_low_cutout:
+        range: float
+        required: false
+        description: Lowest voltage value for overvoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 176
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_low_cutout[pu]
+      over_voltage_high_cutout:
+        range: float
+        required: false
+        description: High voltage value for overvoltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 177
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_high_cutout[pu]
+      under_voltage_low_disconnect_time:
+        range: float
+        required: false
+        description: Lowest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 178
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_low_disconnect_time[s]
+      under_voltage_middle_disconnect_time:
+        range: float
+        required: false
+        description: Middle-lowest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 179
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_middle_disconnect_time[s]
+      under_voltage_high_disconnect_time:
+        range: float
+        required: false
+        description: Highest voltage clearing time for undervoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 180
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: under_voltage_high_disconnect_time[s]
+      over_voltage_low_disconnect_time:
+        range: float
+        required: false
+        description: Lowest voltage clearing time for overvoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 181
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_low_disconnect_time[s]
+      over_voltage_high_disconnect_time:
+        range: float
+        required: false
+        description: Highest voltage clearing time for overvoltage
+        unit:
+          ucum_code: s
+        annotations:
+          order: 182
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: over_voltage_high_disconnect_time[s]
+      IEEE_1547_trip_method:
+        range: string
+        required: false
+        description: High over-voltage level trip
+        annotations:
+          order: 183
+          value_type: string
+          separator: ','
+          native_name: IEEE_1547_trip_method
+      phase_angle_correction:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter applies
+          phase angle correction during current limiting'
+        annotations:
+          order: 184
+          value_type: bool
+          separator: ','
+          native_name: phase_angle_correction
+      virtual_resistance_correction:
+        range: boolean
+        required: false
+        description: 'DELTAMODE: Boolean used to indicate whether inverter applies
+          virtual resistance correction during current limiting'
+        annotations:
+          order: 185
+          value_type: bool
+          separator: ','
+          native_name: virtual_resistance_correction

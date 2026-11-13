@@ -1,0 +1,781 @@
+id: https://gridlabd.org/schema/glm/generators/battery
+name: battery
+description: GridLAB-D battery class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  battery:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file battery.cpp
+
+      @defgroup battery
+
+      @ingroup generators
+
+      @{
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      generator_mode:
+        range: GeneratorMode
+        required: false
+        description: 'LEGACY MODEL: Selects generator control mode when using legacy
+          model; in non-legacy models, this should be SUPPLY_DRIVEN.'
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: generator_mode
+      additional_controls:
+        range: string
+        required: false
+        description: 'LEGACY MODEL: In conjunction with POWER_DRIVEN, VOLTAGE_CONTROLLED,
+          and POWER_VOLTAGE_HYBRID, this will activate control set points that adjust
+          with temperature'
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: additional_controls
+      generator_status:
+        range: GeneratorStatus
+        required: false
+        description: describes whether the generator is online or offline
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: generator_status
+      rfb_size:
+        range: string
+        required: false
+        description: Default settings for certain sizes of batteries
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: rfb_size
+      power_type:
+        range: string
+        required: false
+        description: 'LEGACY MODEL: Not currently used'
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: power_type
+      battery_state:
+        range: string
+        required: false
+        description: Describes the current state of the battery
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: battery_state
+      number_battery_state_changes:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: Number of times battery switches between charging
+          and discharging'
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_battery_state_changes
+      monitored_power:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: output only; power output value of parent meter
+          when performing load following modes (POWER_DRIVEN)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: monitored_power[W]
+      power_set_high:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: high set point of dead band for load following
+          (POWER_DRIVEN)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_set_high[W]
+      power_set_low:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: low set point of dead band for load following
+          (POWER_DRIVEN)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_set_low[W]
+      power_set_high_highT:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: high set point of dead band for load following
+          at higher temperatures (POWER_DRIVEN + LINEAR_TEMPERATURE)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_set_high_highT[W]
+      power_set_low_highT:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: low set point of dead band for load following
+          at higher temperatures (POWER_DRIVEN + LINEAR_TEMPERATURE)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_set_low_highT[W]
+      check_power_low:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: high set point of dead band for load following
+          at lower temperatures (POWER_DRIVEN + LINEAR_TEMPERATURE)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: check_power_low[W]
+      check_power_high:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: low set point of dead band for load following
+          at lower temperatures (POWER_DRIVEN + LINEAR_TEMPERATURE)'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: check_power_high[W]
+      voltage_set_high:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: high set point for voltage control'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_set_high[V]
+      voltage_set_low:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: low set point for voltage control'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_set_low[V]
+      deadband:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: voltage deadband'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: deadband[V]
+      sensitivity:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: describes how sensitive the control is to temperature
+          excursions; defines slope of linear control'
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: sensitivity
+      high_temperature:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: high temperature of linear control; defines slope'
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: high_temperature
+      midpoint_temperature:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: midpoint temperature of linear control; defines
+          slope'
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: midpoint_temperature
+      low_temperature:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: low temperature of linear control; defines slope'
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: low_temperature
+      scheduled_power:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: real power output of battery/inverter system'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: scheduled_power[W]
+      Rinternal:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the internal resistance of the battery.'
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rinternal[Ohm]
+      V_Max:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the maximum terminal voltage of the battery.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_Max[V]
+      I_Max:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the maximum current output of the battery.'
+        unit:
+          ucum_code: A
+        annotations:
+          order: 25
+          value_type: complex
+          separator: ','
+          native_name: I_Max[A]
+      E_Max:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the maximum capacity of the battery.'
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_Max[Wh]
+      P_Max:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the maximum power output of the battery.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_Max[W]
+      power_factor:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the power factor output of the battery.'
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_factor
+      Energy:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the available capacity of the battery.'
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Energy[Wh]
+      efficiency:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the efficiency of the battery.'
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: efficiency[unit]
+      base_efficiency:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the efficiency of the battery at rated voltaged
+          and current.'
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_efficiency[unit]
+      parasitic_power_draw:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the parasytic power draw of the battery when idle.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: parasitic_power_draw[W]
+      V_Out:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the AC voltage at the terminals of the battery.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 33
+          value_type: complex
+          separator: ','
+          native_name: V_Out[V]
+      I_Out:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the AC current output of the battery.'
+        unit:
+          ucum_code: A
+        annotations:
+          order: 34
+          value_type: complex
+          separator: ','
+          native_name: I_Out[A]
+      VA_Out:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the power output of the battery.'
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 35
+          value_type: complex
+          separator: ','
+          native_name: VA_Out[VA]
+      I_In:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the current flowing into the battery of the battery.'
+        unit:
+          ucum_code: A
+        annotations:
+          order: 36
+          value_type: complex
+          separator: ','
+          native_name: I_In[A]
+      V_Internal:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the internal voltage of the battery.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 37
+          value_type: complex
+          separator: ','
+          native_name: V_Internal[V]
+      I_Internal:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the internal current of the battery.'
+        unit:
+          ucum_code: A
+        annotations:
+          order: 38
+          value_type: complex
+          separator: ','
+          native_name: I_Internal[A]
+      I_Prev:
+        range: Complex
+        required: false
+        description: 'LEGACY MODEL: the previous current output of the battery.'
+        unit:
+          ucum_code: A
+        annotations:
+          order: 39
+          value_type: complex
+          separator: ','
+          native_name: I_Prev[A]
+      power_transferred:
+        range: float
+        required: false
+        description: 'LEGACY MODEL: the power output of the battery.'
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_transferred
+      use_internal_battery_model:
+        range: boolean
+        required: false
+        description: Enables the INTERNAL BATTERY MODEL.
+        annotations:
+          order: 41
+          value_type: bool
+          separator: ','
+          native_name: use_internal_battery_model
+      battery_type:
+        range: string
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the type of the battery. Used to determine
+          the soc vs voltage curve.'
+        annotations:
+          order: 42
+          value_type: string
+          separator: ','
+          native_name: battery_type
+      nominal_voltage:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the rated DC voltage at the terminals
+          of the battery.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_voltage[V]
+      rated_power:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the rated power output of the battery.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_power[W]
+      battery_capacity:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the rated battery capacity of the battery.'
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_capacity[Wh]
+      round_trip_efficiency:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the round trip efficiency of the battery
+          according to a full discharge/charge cycle.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: round_trip_efficiency[pu]
+      state_of_charge:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the current state of charge of the battery.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: state_of_charge[pu]
+      battery_load:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the current power output of the battery.'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_load[W]
+      reserve_state_of_charge:
+        range: float
+        required: false
+        description: 'INTERNAL BATTERY MODEL: the reserve state of charge the battery
+          can reach.'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reserve_state_of_charge[pu]
+      state_change_time_delta:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for state_change_time_delta'
+        annotations:
+          order: 50
+          value_type: int
+          separator: ','
+          native_name: state_change_time_delta
+      margin:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for margin'
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: margin
+      E_Next:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for E_Next'
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: E_Next
+      recalculate:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for recalculate'
+        annotations:
+          order: 53
+          value_type: bool
+          separator: ','
+          native_name: recalculate
+      prev_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_time'
+        annotations:
+          order: 54
+          value_type: string
+          separator: ','
+          native_name: prev_time
+      first_time_step:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first_time_step'
+        annotations:
+          order: 55
+          value_type: int
+          separator: ','
+          native_name: first_time_step
+      prev_state:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: 1 is charging, 0 is nothing, -1 is discharging'
+        annotations:
+          order: 56
+          value_type: int
+          separator: ','
+          native_name: prev_state
+      internal_battery_load:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: the power out of the battery on the source side
+          of the internal resistance'
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: internal_battery_load
+      value_Circuit_V_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Circuit_V[0]'
+        annotations:
+          order: 58
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_A
+      value_Circuit_V_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Circuit_V[1]'
+        annotations:
+          order: 59
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_B
+      value_Circuit_V_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Circuit_V[2]'
+        annotations:
+          order: 60
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_C
+      value_Line_I_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Line_I[0]'
+        annotations:
+          order: 61
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_A
+      value_Line_I_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Line_I[1]'
+        annotations:
+          order: 62
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_B
+      value_Line_I_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Line_I[2]'
+        annotations:
+          order: 63
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_C
+      value_Line12:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Line12'
+        annotations:
+          order: 64
+          value_type: complex
+          separator: ','
+          native_name: value_Line12
+      value_Tout:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for value_Tout'
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: value_Tout
+      parent_is_meter:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for parent_is_meter'
+        annotations:
+          order: 66
+          value_type: bool
+          separator: ','
+          native_name: parent_is_meter
+      parent_is_triplex:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for parent_is_triplex'
+        annotations:
+          order: 67
+          value_type: bool
+          separator: ','
+          native_name: parent_is_triplex
+      parent_is_inverter:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for parent_is_inverter'
+        annotations:
+          order: 68
+          value_type: bool
+          separator: ','
+          native_name: parent_is_inverter
+      climate_object_found:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for climate_object_found'
+        annotations:
+          order: 69
+          value_type: bool
+          separator: ','
+          native_name: climate_object_found

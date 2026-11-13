@@ -168,6 +168,7 @@ def _hybrid(pv_kw: float, battery_kw: float):
     the battery's in the load sign."""
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     pv = connection.PowerElectronicsUnit[0]
     pv.name, pv.p = "roof", cim.ActivePower(pv_kw, "kW")
     battery = cim.BatteryUnit(mRID="bank", name="bank", maxP=cim.ActivePower(100, "kW"),
@@ -200,6 +201,7 @@ def test_hybrid_inverter_is_one_device_per_unit(tmp_path):
 def test_units_without_p_take_their_share_of_it():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     connection.PowerElectronicsUnit[0].name = "roof"
     carport = cim.PhotoVoltaicUnit(mRID="carport", name="carport", maxP=cim.ActivePower(100, "kW"),
                                    PowerElectronicsConnection=connection)
@@ -219,6 +221,7 @@ def test_unit_above_its_share_of_the_inverter_raises():
 def test_unequal_phases_give_one_inverter_per_phase():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     for phase, p in ((cim.SinglePhaseKind.A, -100.0), (cim.SinglePhaseKind.B, -80.0), (cim.SinglePhaseKind.C, -60.0)):
         child = cim.PowerElectronicsConnectionPhase(mRID=f"pv_school_{phase.value}", phase=phase,
                                                     PowerElectronicsConnection=connection,
@@ -229,6 +232,22 @@ def test_unequal_phases_give_one_inverter_per_phase():
         "School_a": ("b2.1", 1, 100, 100, 1.0), "School_b": ("b2.2", 1, 100, 100, 0.8),
         "School_c": ("b2.3", 1, 100, 100, 0.6)}
     assert pvs["School_a"].kv == pytest.approx(0.48 / 3 ** 0.5)
+
+
+def test_irradiance_is_written_and_pct_pmpp_holds_the_output_below_the_panel():
+    pvs = _records("der/der", schema.Pvsystem)
+    found = {name: (pvs[name].Pmpp, pvs[name].irradiance, pvs[name].pct_Pmpp) for name in ("school", "farm", "pmppcap")}
+    assert found == {"school": (300, pytest.approx(0.8), None),
+                     "farm": (1200, pytest.approx(1.0), pytest.approx(100 * 1000 / 1200)),
+                     "pmppcap": (10, pytest.approx(0.9), pytest.approx(60))}
+
+
+def test_output_above_the_panel_raises():
+    network = _network(ATOMS / "der" / "der.dss")
+    unit = _object(network, cim.PowerElectronicsConnection, "pv_school").PowerElectronicsUnit[0]
+    unit.irradiance = cim.ActivePowerPerArea(0.5, "kW/m2")
+    with pytest.raises(ValueError, match=r"p 240.0 kW is above the panel's 150.0 kW \(maxP x irradiance 0.5"):
+        _model(network)
 
 
 def test_unit_of_no_dss_class_raises():

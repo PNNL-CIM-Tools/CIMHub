@@ -1,0 +1,603 @@
+id: https://gridlabd.org/schema/glm/powerflow/pqload
+name: pqload
+description: GridLAB-D pqload class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  pqload:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file pqload.cpp
+
+      @addtogroup pqload
+
+      @ingroup node
+
+      Load objects represent static loads and export both voltages and
+
+      current.
+
+      @{
+
+
+      Inherits from: load
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: load
+    attributes:
+      weather:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: weather
+      T_nominal:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: T_nominal[degF]
+      Zp_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm/degF
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp_T[ohm/degF]
+      Zp_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm/%
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp_H[ohm/%]
+      Zp_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm*h/Btu
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp_S[ohm*h/Btu]
+      Zp_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm/mph
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp_W[ohm/mph]
+      Zp_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm*h/in
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp_R[ohm*h/in]
+      Zp:
+        range: float
+        required: false
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zp[ohm]
+      Zq_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: F/degF
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq_T[F/degF]
+      Zq_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: F/%
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq_H[F/%]
+      Zq_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: F*h/Btu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq_S[F*h/Btu]
+      Zq_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: F/mph
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq_W[F/mph]
+      Zq_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: F*h/in
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq_R[F*h/in]
+      Zq:
+        range: float
+        required: false
+        unit:
+          ucum_code: F
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Zq[F]
+      Im_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: A/degF
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im_T[A/degF]
+      Im_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: A/%
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im_H[A/%]
+      Im_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: A*h/Btu
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im_S[A*h/Btu]
+      Im_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: A/mph
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im_W[A/mph]
+      Im_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: A*h/in
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im_R[A*h/in]
+      Im:
+        range: float
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Im[A]
+      Ia_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg/degF
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia_T[deg/degF]
+      Ia_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg/%
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia_H[deg/%]
+      Ia_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg*h/Btu
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia_S[deg*h/Btu]
+      Ia_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg/mph
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia_W[deg/mph]
+      Ia_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg*h/in
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia_R[deg*h/in]
+      Ia:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ia[deg]
+      Pp_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: W/degF
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp_T[W/degF]
+      Pp_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: W/%
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp_H[W/%]
+      Pp_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: W*h/Btu
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp_S[W*h/Btu]
+      Pp_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: W/mph
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp_W[W/mph]
+      Pp_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: W*h/in
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp_R[W*h/in]
+      Pp:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pp[W]
+      Pq_T:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr/degF
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq_T[VAr/degF]
+      Pq_H:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr/%
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq_H[VAr/%]
+      Pq_S:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr*h/Btu
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq_S[VAr*h/Btu]
+      Pq_W:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr/mph
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq_W[VAr/mph]
+      Pq_R:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr*h/in
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq_R[VAr*h/in]
+      Pq:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pq[VAr]
+      input_temp:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: input_temp[degF]
+      input_humid:
+        range: float
+        required: false
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: input_humid[%]
+      input_solar:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: input_solar[Btu/h]
+      input_wind:
+        range: float
+        required: false
+        unit:
+          ucum_code: mph
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: input_wind[mph]
+      input_rain:
+        range: float
+        required: false
+        unit:
+          ucum_code: in/h
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: input_rain[in/h]
+      output_imped_p:
+        range: float
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_imped_p[Ohm]
+      output_imped_q:
+        range: float
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_imped_q[Ohm]
+      output_current_m:
+        range: float
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_current_m[A]
+      output_current_a:
+        range: float
+        required: false
+        unit:
+          ucum_code: deg
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_current_a[deg]
+      output_power_p:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_power_p[W]
+      output_power_q:
+        range: float
+        required: false
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output_power_q[VAr]
+      output_impedance:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 50
+          value_type: complex
+          separator: ','
+          native_name: output_impedance[ohm]
+      output_current:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 51
+          value_type: complex
+          separator: ','
+          native_name: output_current[A]
+      output_power:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 52
+          value_type: complex
+          separator: ','
+          native_name: output_power[VA]

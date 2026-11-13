@@ -1,0 +1,100 @@
+// S3c atom: every regulator form, on the S3a line atom (its src, n1-n10). Values from IEEE13_cdpsm, IEEE123 and
+// the taxonomy feeders.
+#include "../line/line.glm"
+
+object node { name r1; phases ABCN; nominal_voltage 2401.78; }
+object node { name r2; phases ACN; nominal_voltage 2401.78; }
+object node { name r3; phases AN; nominal_voltage 2401.78; }
+object node { name r4; phases ABCN; nominal_voltage 2401.78; }
+
+// INDIVIDUAL (by default) OUTPUT_VOLTAGE, written CAB: three units; the regulator's tap_B over tap_pos_B
+object regulator_configuration {
+  name rc_output;
+  connect_type WYE_WYE;
+  Control OUTPUT_VOLTAGE;
+  band_center 2440.0;
+  band_width 40.0;
+  time_delay 30;
+  dwell_time 15;
+  raise_taps 16;
+  lower_taps 16;
+  regulation 0.10;
+  tap_pos_A 2;
+  tap_pos_B -1;
+}
+object regulator {
+  name reg_output;
+  from n2;
+  to r1;
+  phases CAB;
+  configuration rc_output;
+  tap_B 3;
+  continuous_rating_A 763.58;
+  continuous_rating_B 763.58;
+  continuous_rating_C 763.58;
+  emergency_rating_A 1041.25;
+  emergency_rating_B 1041.25;
+  emergency_rating_C 1041.25;
+}
+
+// the Java export's MANUAL, written CA, Type A, with the IEEE123 compensator settings it carries
+object regulator_configuration {
+  name rcon_creg3c;
+  connect_type WYE_WYE;
+  Control MANUAL;
+  current_transducer_ratio 250.000000;
+  power_transducer_ratio 20.000000;
+  dwell_time 15.000000;
+  raise_taps 16;
+  lower_taps 16;
+  regulation 0.100000;
+  Type A;
+  compensator_r_setting_C 0.400000;
+  compensator_x_setting_C 0.400000;
+  tap_pos_C 0;
+  compensator_r_setting_A 0.400000;
+  compensator_x_setting_A 0.400000;
+  tap_pos_A 2;
+}
+object regulator { name xf_reg3; from n4; to r2; phases CA; configuration rcon_creg3c; }
+
+// LINE_DROP_COMP on one phase: band on the PT secondary; NR's stand-in resistance is listed on the row
+object regulator_configuration {
+  name rc_ldc;
+  connect_type WYE_WYE;
+  Control LINE_DROP_COMP;
+  band_center 122.0;
+  band_width 2.0;
+  current_transducer_ratio 700;
+  power_transducer_ratio 20;
+  compensator_r_setting_A 3.0;
+  compensator_x_setting_A 9.0;
+  raise_taps 16;
+  lower_taps 16;
+  regulation 0.10;
+  tap_pos_A 5;
+}
+object regulator { name reg_ldc; from n5; to r3; phases AN; configuration rc_ldc; regulator_resistance 0.001; }
+
+// BANK: one gang unit, monitoring B
+object regulator_configuration {
+  name rc_bank;
+  connect_type WYE_WYE;
+  Control OUTPUT_VOLTAGE;
+  control_level BANK;
+  PT_phase B;
+  CT_phase B;
+  band_center 2440.0;
+  band_width 40.0;
+  time_delay 30;
+  raise_taps 16;
+  lower_taps 16;
+  regulation 0.10;
+  tap_pos_A 4;
+  tap_pos_B 4;
+  tap_pos_C 4;
+}
+object regulator { name reg_bank; from n2; to r4; phases ABC; configuration rc_bank; }
+
+// no regulator names it: listed on the file's comment
+object regulator_configuration { name rc_unused; connect_type WYE_WYE; raise_taps 16; lower_taps 16; }

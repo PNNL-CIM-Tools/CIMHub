@@ -1,0 +1,711 @@
+id: https://gridlabd.org/schema/glm/powerflow/link
+name: link
+description: GridLAB-D link class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  link:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file link.cpp
+
+      @addtogroup powerflow_link Link
+
+      @ingroup powerflow_object
+
+      @par Fault support
+
+      The following conditions are used to describe a fault impedance @e X
+
+      (e.g., 1e-6), between phase @e x and neutral or group, or between phases @e
+      x
+
+      and @e y, and leaving phase @e z unaffected at iteration @e t:
+
+      - @e phase-to-phase contact on the link
+
+      - @e Forward-sweep: @f$
+
+      V_x(t) = V_y(t) = 0,
+
+      A = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 \
+
+      0 & 0 & 1 @end{array} @right) ,
+
+      B = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 \
+
+      0 & 0 & p @end{array} @right)
+
+      @f$
+
+      where @e p is the previous value
+
+      when @e x = phase A and @e y = phase B;
+
+      - @e Back-sweep: @f$
+
+      c = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 @end{array} @right) ,
+
+      d = @left( @begin{array}{ccc}
+
+      @frac{1}{X} & 0 & 0 \
+
+      0 & @frac{1}{X} & 0 \
+
+      0 & 0 & p @end{array} @right)
+
+      @f$ when @e x = phase A and @e y = phase B;
+
+      - @e phase-to-ground contact on the link
+
+      - @e Forward-sweep: @f$
+
+      V_x(t) = 0,
+
+      A = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 1 & 0 \
+
+      0 & 0 & 1 @end{array} @right) ,
+
+      B = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & p & p \
+
+      0 & p & p @end{array} @right)
+
+      @f$
+
+      where @e p is the previous value
+
+      when @e x = phase A;
+
+      - @e Back-sweep: @f$
+
+      c = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 @end{array} @right) ,
+
+      d = @left( @begin{array}{ccc}
+
+      @frac{1}{X} & 0 & 0 \
+
+      0 & p & 0 \
+
+      0 & 0 & p @end{array} @right)
+
+      @f$ when @e x = phase A;
+
+      - @e phase-to-neutral contact on the link
+
+      - @e Forward-sweep: @f$
+
+      V_x(t) = -V_N,
+
+      A = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 1 & 0 \
+
+      0 & 0 & 1 @end{array} @right) ,
+
+      B = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & p & p \
+
+      0 & p & p @end{array} @right)
+
+      @f$
+
+      where @e p is the previous value
+
+      when @e x = phase A;
+
+      - @e Back-sweep: @f$
+
+      c = @left( @begin{array}{ccc}
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 \
+
+      0 & 0 & 0 @end{array} @right) ,
+
+      d = @left( @begin{array}{ccc}
+
+      @frac{1}{X} & 0 & 0 \
+
+      0 & p & 0 \
+
+      0 & 0 & p @end{array} @right)
+
+      @f$ when @e x = phase A;
+
+      @{
+
+
+      Inherits from: powerflow_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      status:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: status
+      from_node:
+        range: string
+        required: false
+        description: from_node - source node
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: from
+      to:
+        range: string
+        required: false
+        description: to_node - load node
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: to
+      power_in:
+        range: Complex
+        required: false
+        description: power flow in (w.r.t from node)
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 4
+          value_type: complex
+          separator: ','
+          native_name: power_in[VA]
+      power_out:
+        range: Complex
+        required: false
+        description: power flow out (w.r.t to node)
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: power_out[VA]
+      power_out_real:
+        range: float
+        required: false
+        description: power flow out (w.r.t to node), real
+        unit:
+          ucum_code: W
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_out_real[W]
+      power_losses:
+        range: Complex
+        required: false
+        description: power losses
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: power_losses[VA]
+      power_in_A:
+        range: Complex
+        required: false
+        description: power flow in (w.r.t from node), phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: power_in_A[VA]
+      power_in_B:
+        range: Complex
+        required: false
+        description: power flow in (w.r.t from node), phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: power_in_B[VA]
+      power_in_C:
+        range: Complex
+        required: false
+        description: power flow in (w.r.t from node), phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: power_in_C[VA]
+      power_out_A:
+        range: Complex
+        required: false
+        description: power flow out (w.r.t to node), phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: power_out_A[VA]
+      power_out_B:
+        range: Complex
+        required: false
+        description: power flow out (w.r.t to node), phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: power_out_B[VA]
+      power_out_C:
+        range: Complex
+        required: false
+        description: power flow out (w.r.t to node), phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: power_out_C[VA]
+      power_losses_A:
+        range: Complex
+        required: false
+        description: power losses, phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: power_losses_A[VA]
+      power_losses_B:
+        range: Complex
+        required: false
+        description: power losses, phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: power_losses_B[VA]
+      power_losses_C:
+        range: Complex
+        required: false
+        description: power losses, phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: power_losses_C[VA]
+      current_out_A:
+        range: Complex
+        required: false
+        description: current flow out of link (w.r.t. to node), phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 17
+          value_type: complex
+          separator: ','
+          native_name: current_out_A[A]
+      current_out_B:
+        range: Complex
+        required: false
+        description: current flow out of link (w.r.t. to node), phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 18
+          value_type: complex
+          separator: ','
+          native_name: current_out_B[A]
+      current_out_C:
+        range: Complex
+        required: false
+        description: current flow out of link (w.r.t. to node), phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: current_out_C[A]
+      current_in_A:
+        range: Complex
+        required: false
+        description: current flow to link (w.r.t from node), phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: complex
+          separator: ','
+          native_name: current_in_A[A]
+      current_in_B:
+        range: Complex
+        required: false
+        description: current flow to link (w.r.t from node), phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 21
+          value_type: complex
+          separator: ','
+          native_name: current_in_B[A]
+      current_in_C:
+        range: Complex
+        required: false
+        description: current flow to link (w.r.t from node), phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 22
+          value_type: complex
+          separator: ','
+          native_name: current_in_C[A]
+      fault_current_in_A:
+        range: Complex
+        required: false
+        description: fault current flowing in, phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 23
+          value_type: complex
+          separator: ','
+          native_name: fault_current_in_A[A]
+      fault_current_in_B:
+        range: Complex
+        required: false
+        description: fault current flowing in, phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 24
+          value_type: complex
+          separator: ','
+          native_name: fault_current_in_B[A]
+      fault_current_in_C:
+        range: Complex
+        required: false
+        description: fault current flowing in, phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 25
+          value_type: complex
+          separator: ','
+          native_name: fault_current_in_C[A]
+      fault_current_out_A:
+        range: Complex
+        required: false
+        description: fault current flowing out, phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 26
+          value_type: complex
+          separator: ','
+          native_name: fault_current_out_A[A]
+      fault_current_out_B:
+        range: Complex
+        required: false
+        description: fault current flowing out, phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 27
+          value_type: complex
+          separator: ','
+          native_name: fault_current_out_B[A]
+      fault_current_out_C:
+        range: Complex
+        required: false
+        description: fault current flowing out, phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 28
+          value_type: complex
+          separator: ','
+          native_name: fault_current_out_C[A]
+      pdispatch:
+        range: float
+        required: false
+        description: Scheduled flow from->to in W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch[W]
+      pdispatch_offset:
+        range: float
+        required: false
+        description: Offset to scheduled flow from->to in W
+        unit:
+          ucum_code: W
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pdispatch_offset[W]
+      set_pdispatch:
+        range: boolean
+        required: false
+        description: trigger to set pdispatch equal to (power_in + power_out)/2
+        annotations:
+          order: 31
+          value_type: bool
+          separator: ','
+          native_name: set_pdispatch
+      fault_voltage_A:
+        range: Complex
+        required: false
+        description: fault voltage, phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 32
+          value_type: complex
+          separator: ','
+          native_name: fault_voltage_A[A]
+      fault_voltage_B:
+        range: Complex
+        required: false
+        description: fault voltage, phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 33
+          value_type: complex
+          separator: ','
+          native_name: fault_voltage_B[A]
+      fault_voltage_C:
+        range: Complex
+        required: false
+        description: fault voltage, phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 34
+          value_type: complex
+          separator: ','
+          native_name: fault_voltage_C[A]
+      overloaded_status:
+        range: boolean
+        required: false
+        description: overloaded status (true/false)
+        annotations:
+          order: 35
+          value_type: bool
+          separator: ','
+          native_name: overloaded_status
+      flow_direction:
+        range: string
+        required: false
+        description: flag used for describing direction of the flow of power
+        annotations:
+          order: 36
+          value_type: string
+          separator: ','
+          native_name: flow_direction
+      mean_repair_time:
+        range: float
+        required: false
+        description: Time after a fault clears for the object to be back in service
+        unit:
+          ucum_code: s
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mean_repair_time[s]
+      continuous_rating_A:
+        range: float
+        required: false
+        description: Continuous rating for phase A of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: continuous_rating_A[A]
+      continuous_rating_B:
+        range: float
+        required: false
+        description: Continuous rating for phase B of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: continuous_rating_B[A]
+      continuous_rating_C:
+        range: float
+        required: false
+        description: Continuous rating for phase C of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: continuous_rating_C[A]
+      emergency_rating_A:
+        range: float
+        required: false
+        description: Emergency rating for phase A of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: emergency_rating_A[A]
+      emergency_rating_B:
+        range: float
+        required: false
+        description: Emergency rating for phase B of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: emergency_rating_B[A]
+      emergency_rating_C:
+        range: float
+        required: false
+        description: Emergency rating for phase C of this link object (set individual
+          line segments)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: emergency_rating_C[A]
+      inrush_convergence_value:
+        range: float
+        required: false
+        description: Tolerance, as change in line voltage drop between iterations,
+          for deltamode in-rush completion
+        unit:
+          ucum_code: V
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inrush_convergence_value[V]
+      triplex_neutral_1_value:
+        range: Complex
+        required: false
+        annotations:
+          order: 45
+          value_type: complex
+          separator: ','
+          native_name: triplex_neutral_1_value
+      triplex_neutral_2_value:
+        range: Complex
+        required: false
+        annotations:
+          order: 46
+          value_type: complex
+          separator: ','
+          native_name: triplex_neutral_2_value
+      inrush_integration_method_capacitance:
+        range: InrushIntegrationMethodCapacitance
+        required: false
+        description: Selected integration method to use for capacitive elements of
+          the link
+        annotations:
+          order: 47
+          value_type: string
+          separator: ','
+          native_name: inrush_integration_method_capacitance
+      inrush_integration_method_inductance:
+        range: InrushIntegrationMethodInductance
+        required: false
+        description: Selected integration method to use for inductive elements of
+          the link
+        annotations:
+          order: 48
+          value_type: string
+          separator: ','
+          native_name: inrush_integration_method_inductance

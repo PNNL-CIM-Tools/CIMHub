@@ -1,0 +1,28 @@
+# GridLAB-D load -> EnergyConsumer (+ EnergyConsumerPhase values).
+# Source table: load (records: 6)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
+# no power on any phase (only a bus, not written): ld_none
+
+Profile = cim18v17
+
+# the loads' own ZIP fractions of P and Q (S4a-4)
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_0.572687_0.251101_0.176211_0.513694_0.486306_0, false, 0.5726872246696035, 0.2511013215859031, 0.1762114537444934, 0.5136940129839815, 0.48630598701601846, 0.0
+
+# p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_atom
+    ld_ld_bal,   ld_bal,   n2, ,   Y, true,  300000.0,       150000.0,           zip_constant_pq,                                    bv_4p16kv
+    ld_ld_delta, ld_delta, n2, AC, D, false, 170000.0,       151000.0,           zip_constant_pq,                                    bv_4p16kv
+    # scheduled: base_power_A=zipsched.value*19723.08; the base is mapped, the schedule is not (S4a-2, TODO)
+    ld_ld_sched, ld_sched, n5, A,  Y, true,  16999.99323672, 10000.005731892072, zip_constant_i,                                     bv_4p16kv
+    # untranscribed: load_class=R
+    ld_ld_wye,   ld_wye,   n2, AC, Y, true,  20000.0,        7000.0,             zip_constant_pq,                                    bv_4p16kv
+    # defaulted: power_fraction_C=0.4 (the fractions did not sum to 1: GridLAB-D's repair, load.cpp:945)
+    ld_ld_zip,   ld_zip,   n4, AC, Y, true,  113500.0,       42426.99772010576,  zip_0.572687_0.251101_0.176211_0.513694_0.486306_0, bv_4p16kv
+
+# the phases differ, so each child carries its own p, q (a delta child is its branch)
+Update Table EnergyConsumerPhase: mRID, p (W), q (VAr)
+    ld_ld_wye_A, 12000.0, 4000.0
+    ld_ld_wye_C, 8000.0,  3000.0
+    ld_ld_zip_A, 93500.0, 12426.997720105763
+    ld_ld_zip_C, 20000.0, 30000.0

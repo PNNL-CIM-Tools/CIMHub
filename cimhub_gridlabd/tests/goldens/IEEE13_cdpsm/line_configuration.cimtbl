@@ -1,0 +1,92 @@
+# GridLAB-D line_configuration -> WireConfiguration + WireSequenceConfiguration, PerLengthPhaseImpedance + PhaseImpedanceData (catalog).
+# Source table: line_configuration (records: 7)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx601_ABC, name=lcon_mtx601_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx601_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx601_ABC_11, 1, 1, 0.3465, 1.0179, 0.0
+    # z21 (BA)
+    lc_lcon_mtx601_ABC_21, 2, 1, 0.1535, 0.3849, 0.0
+    # z22 (B)
+    lc_lcon_mtx601_ABC_22, 2, 2, 0.3375, 1.0478, 0.0
+    # z31 (CA)
+    lc_lcon_mtx601_ABC_31, 3, 1, 0.158,  0.4236, 0.0
+    # z32 (CB)
+    lc_lcon_mtx601_ABC_32, 3, 2, 0.156,  0.5017, 0.0
+    # z33 (C)
+    lc_lcon_mtx601_ABC_33, 3, 3, 0.3414, 1.0348, 0.0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx602_ABC, name=lcon_mtx602_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx602_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx602_ABC_11, 1, 1, 0.7526, 1.1814, 0.0
+    # z21 (BA)
+    lc_lcon_mtx602_ABC_21, 2, 1, 0.1535, 0.3849, 0.0
+    # z22 (B)
+    lc_lcon_mtx602_ABC_22, 2, 2, 0.7475, 1.1983, 0.0
+    # z31 (CA)
+    lc_lcon_mtx602_ABC_31, 3, 1, 0.156,  0.5017, 0.0
+    # z32 (CB)
+    lc_lcon_mtx602_ABC_32, 3, 2, 0.158,  0.4236, 0.0
+    # z33 (C)
+    lc_lcon_mtx602_ABC_33, 3, 3, 0.7436, 1.2112, 0.0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx603_CB, name=lcon_mtx603_CB, conductorCount=2, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx603_CB, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z22 (B)
+    lc_lcon_mtx603_CB_11, 1, 1, 1.3294, 1.3471, 0.0
+    # z32 (CB)
+    lc_lcon_mtx603_CB_21, 2, 1, 0.2066, 0.4591, 0.0
+    # z33 (C)
+    lc_lcon_mtx603_CB_22, 2, 2, 1.3238, 1.3569, 0.0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx604_AC_11, 1, 1, 1.3238, 1.3569, 0.0
+    # z31 (CA)
+    lc_lcon_mtx604_AC_21, 2, 1, 0.2066, 0.4591, 0.0
+    # z33 (C)
+    lc_lcon_mtx604_AC_22, 2, 2, 1.3294, 1.3471, 0.0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx605_C, name=lcon_mtx605_C, conductorCount=1, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx605_C, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z33 (C)
+    lc_lcon_mtx605_C_11, 1, 1, 1.3292, 1.3475, 0.0
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx606_ABC, name=lcon_mtx606_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx606_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx606_ABC_11, 1, 1, 0.791721, 0.438352,   144744.98593925923
+    # z21 (BA)
+    lc_lcon_mtx606_ABC_21, 2, 1, 0.318476, 0.0276838,  0.0
+    # z22 (B)
+    lc_lcon_mtx606_ABC_22, 2, 2, 0.781649, 0.396697,   144744.98593925923
+    # z31 (CA)
+    lc_lcon_mtx606_ABC_31, 3, 1, 0.28345,  -0.0184204, 0.0
+    # z32 (CB)
+    lc_lcon_mtx606_ABC_32, 3, 2, 0.318476, 0.0276838,  0.0
+    # z33 (C)
+    lc_lcon_mtx606_ABC_33, 3, 3, 0.791721, 0.438352,   144744.98593925923
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx607_A, name=lcon_mtx607_A, conductorCount=1, calculatedFrequency (Hz)=60.0
+
+# derived: b = 2 pi f c (b_from_c)
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx607_A, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    # z11 (A)
+    lc_lcon_mtx607_A_11, 1, 1, 1.3425, 0.5124, 88969.90394966294

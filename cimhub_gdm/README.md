@@ -23,6 +23,25 @@ system.name = system.name or "my_feeder"     # the CIM Model name; a system save
 network = gdm_to_cim(system)
 ```
 
+## Time series
+
+Load time series map onto nc_schedule `EnergyConnectionSchedule`s when you pass a `time_points` dict. The schedules go
+in the CIM XML; their points go in Parquet beside it, one row per point keyed by the schedule's uri, never as graph
+objects. See [`docs/TIMESERIES_NEEDS.md`](docs/TIMESERIES_NEEDS.md).
+
+```python
+from cimgraph.utils import write_xml
+from cimhub_gdm import GdmExporter, gdm_to_cim, read_time_points, write_time_points
+
+time_points = {}  # filled: {"EnergyConnectionTimePoint": pyarrow.Table}
+feeder_model = gdm_to_cim(system, time_points=time_points)
+write_xml(feeder_model, "feeder.xml")
+write_time_points(time_points, "feeder.xml")
+
+time_points = read_time_points("feeder.xml", reloaded_model)
+system = GdmExporter(time_points).to_model(reloaded_model)
+```
+
 Export goes the other way:
 
 | Function | Purpose |
@@ -52,15 +71,16 @@ system; without it the model's one Feeder names it, and a model with several Fee
 What raises or is dropped:
 
 - Import: inverter controllers, the daily-timed capacitor controller and earthing switches raise as pending, naming
-  what they wait for. Time series are dropped with one warning. GDM fields with no cim18v17 home are untranscribed
-  (logged at `DEBUG`); the list is in [GDM_MAPPING.md](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_gdm/docs/GDM_MAPPING.md) section 10.
+  what they wait for. Other time series, and load time series imported without a `time_points` dict, are dropped with
+  one warning. GDM fields with no cim18v17 home are untranscribed (logged at `DEBUG`); the list is in
+  [GDM_MAPPING.md](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_gdm/docs/GDM_MAPPING.md) section 10.
 - Export: a tape-shield cable raises, because GDM has no class for one. Exporting a model that `gdm_to_cim` built can
   raise on its current limits, because CIM-Builder's `add_limit_type` has no `durationKind` yet (see
   [GDM_MAPPING.md](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_gdm/docs/GDM_MAPPING.md) section 14, item B22 b).
 - The exported system writes and solves through ditto's OpenDSS writer, which has no battery writer.
 
-The import needs CIM-Builder's `add_transformer_tank_end` method and `SeriesCompensatorBuilder`. The output survives a
-cim18v17 XML round trip unchanged.
+The import needs CIM-Builder's `add_transformer_tank_end` method, `SeriesCompensatorBuilder` and
+`EnergyConnectionScheduleBuilder`. The output survives a cim18v17 XML round trip unchanged.
 
 ## Documentation
 

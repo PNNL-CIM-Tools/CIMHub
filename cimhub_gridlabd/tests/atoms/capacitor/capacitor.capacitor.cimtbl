@@ -1,0 +1,31 @@
+# GridLAB-D capacitor -> LinearShuntCompensator + RegulatingControl.
+# Source table: capacitor (records: 4)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
+
+Profile = cim18v17
+
+# a unit per set of phases that switch together (S4a-8); sections: the switch state GridLAB-D starts with, OPEN when unset (S4a-9)
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: switchA=OPEN, switchB=OPEN, switchC=OPEN, time_delay=0.0, dwell_time=0.0
+    cap_c_bank,   c_bank,   n2, ,  300000.0, 4160.004988602778, 0.017335387417441644, 0, 0, bv_4p16kv
+    # defaulted: control=MANUAL, time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
+    cap_c_manual, c_manual, n2, ,  600000.0, 4160.004988602778, 0.03467077483488329,  1, 1, bv_4p16kv
+    # defaulted: time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
+    # not connected (GridLAB-D ignores it): capacitor_B=0.05 MVAr, capacitor_C=0.05 MVAr
+    cap_c_one_A,  c_one_A,  n5, A, 50000.0,  2401.78,           0.008667693708720822, 1, 1, bv_4p16kv
+    # defaulted: switchA=OPEN, switchB=OPEN, switchC=OPEN
+    cap_c_volt_A, c_volt_A, n2, A, 150000.0, 2401.78,           0.026003081126162467, 0, 0, bv_4p16kv
+    cap_c_volt_B, c_volt_B, n2, B, 150000.0, 2401.78,           0.026003081126162467, 0, 0, bv_4p16kv
+    cap_c_volt_C, c_volt_C, n2, C, 150000.0, 2401.78,           0.026003081126162467, 0, 0, bv_4p16kv
+
+# VOLT: the unit's own terminal, primary phase-to-neutral volts, no PT; closes at or below target - deadband/2, opens at or above target + deadband/2 (capacitor.cpp:1180)
+Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, Terminal
+    cc_c_bank,   c_bank,   A, 2425.0, 150.0, cap_c_bank_T1
+    cc_c_one_A,  c_one_A,  A, 2425.0, 150.0, cap_c_one_A_T1
+    cc_c_volt_B, c_volt_B, B, 2425.0, 150.0, cap_c_volt_B_T1
+
+# aVRDelay = dwell_time + time_delay
+Update Table LinearShuntCompensator: mRID, RegulatingControl, aVRDelay (s), controlEnabled=true
+    cap_c_bank,   cc_c_bank,   0.0
+    cap_c_one_A,  cc_c_one_A,  0.0
+    cap_c_volt_B, cc_c_volt_B, 45.0

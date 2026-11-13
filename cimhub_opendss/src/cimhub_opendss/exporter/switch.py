@@ -24,7 +24,7 @@ from cimhub_core.getters.switch_state import get_reclose_delays, get_switch_stat
 from cimhub_core.getters.terminals import get_conductor_phases
 from cimhub_opendss.exporter.line import terminal_buses, ratings
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.Switch, cim.AirBreakSwitch, cim.Breaker, cim.Cut, cim.DisconnectingCircuitBreaker, cim.Disconnector,

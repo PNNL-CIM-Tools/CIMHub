@@ -1,0 +1,83 @@
+id: https://gridlabd.org/schema/glm/residential/plugload
+name: plugload
+description: GridLAB-D plugload class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  plugload:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file plugload.cpp
+
+      @addtogroup plugload
+
+      @ingroup residential
+
+      The plugload simulation is based on demand profile of the connected plug loads.
+
+      Heat fraction ratio is used to calculate the internal gain from plug loads.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      circuit_split:
+        range: float
+        required: false
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circuit_split
+      demand:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand[unit]
+      installed_power:
+        range: float
+        required: false
+        description: installed plugs capacity
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: installed_power[kW]
+      actual_power:
+        range: Complex
+        required: false
+        description: actual power demand
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 4
+          value_type: complex
+          separator: ','
+          native_name: actual_power[kVA]

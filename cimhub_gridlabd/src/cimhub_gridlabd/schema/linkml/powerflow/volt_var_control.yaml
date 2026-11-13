@@ -1,0 +1,217 @@
+id: https://gridlabd.org/schema/glm/powerflow/volt_var_control
+name: volt_var_control
+description: GridLAB-D volt_var_control class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  volt_var_control:
+    description: 'Implemented integrated Volt-VAr control scheme detailed in:
+
+      Baran, M.E. and M.Y Hsu, "Volt/Var Control at Distribution Substations,"
+
+      in IEEE Transactions on Power Systems, vol. 14, no. 1, February 1999, pp.
+
+      312-318.
+
+      Borozan, V., M.E. Baran, and D. Novosel, "Integrated Volt/Var Control in
+
+      Distribution Systems," in Proceedings of the 2001 Power Engineering Society
+
+      Winter Meeting, vol. 3, Jan. 28-Feb. 01, 2001, Columbus, OH, USA, pp. 1485-1490.
+
+      Copyright (C) 2010 Battelle Memorial Institute
+
+
+      Inherits from: powerflow_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      control_method:
+        range: string
+        required: false
+        description: IVVC activated or in standby
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: control_method
+      capacitor_delay:
+        range: float
+        required: false
+        description: Default capacitor time delay - overridden by local defintions
+        unit:
+          ucum_code: s
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacitor_delay[s]
+      regulator_delay:
+        range: float
+        required: false
+        description: Default regulator time delay - overriden by local definitions
+        unit:
+          ucum_code: s
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: regulator_delay[s]
+      desired_pf:
+        range: float
+        required: false
+        description: Desired power-factor magnitude at the substation transformer
+          or regulator
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: desired_pf
+      d_max:
+        range: float
+        required: false
+        description: Scaling constant for capacitor switching on - typically 0.3 -
+          0.6
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: d_max
+      d_min:
+        range: float
+        required: false
+        description: Scaling constant for capacitor switching off - typically 0.1
+          - 0.4
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: d_min
+      substation_link:
+        range: string
+        required: false
+        description: Substation link, transformer, or regulator to measure power factor
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: substation_link
+      pf_phase:
+        range: string
+        required: false
+        description: Phase to include in power factor monitoring
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: pf_phase
+      regulator_list:
+        range: string
+        required: false
+        description: List of voltage regulators for the system, separated by commas
+        annotations:
+          order: 9
+          value_type: string
+          separator: ','
+          native_name: regulator_list
+      capacitor_list:
+        range: string
+        required: false
+        description: List of controllable capacitors on the system separated by commas
+        annotations:
+          order: 10
+          value_type: string
+          separator: ','
+          native_name: capacitor_list
+      voltage_measurements:
+        range: string
+        required: false
+        description: List of voltage measurement devices, separated by commas
+        annotations:
+          order: 11
+          value_type: string
+          separator: ','
+          native_name: voltage_measurements
+      minimum_voltages:
+        range: string
+        required: false
+        description: Minimum voltages allowed for feeder, separated by commas
+        annotations:
+          order: 12
+          value_type: string
+          separator: ','
+          native_name: minimum_voltages
+      maximum_voltages:
+        range: string
+        required: false
+        description: Maximum voltages allowed for feeder, separated by commas
+        annotations:
+          order: 13
+          value_type: string
+          separator: ','
+          native_name: maximum_voltages
+      desired_voltages:
+        range: string
+        required: false
+        description: Desired operating voltages for the regulators, separated by commas
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: desired_voltages
+      max_vdrop:
+        range: string
+        required: false
+        description: Maximum voltage drop between feeder and end measurements for
+          each regulator, separated by commas
+        annotations:
+          order: 15
+          value_type: string
+          separator: ','
+          native_name: max_vdrop
+      high_load_deadband:
+        range: string
+        required: false
+        description: High loading case voltage deadband for each regulator, separated
+          by commas
+        annotations:
+          order: 16
+          value_type: string
+          separator: ','
+          native_name: high_load_deadband
+      low_load_deadband:
+        range: string
+        required: false
+        description: Low loading case voltage deadband for each regulator, separated
+          by commas
+        annotations:
+          order: 17
+          value_type: string
+          separator: ','
+          native_name: low_load_deadband
+      pf_signed:
+        range: boolean
+        required: false
+        description: Set to true to consider the sign on the power factor.  Otherwise,
+          it just maintains the deadband of +/-desired_pf
+        annotations:
+          order: 18
+          value_type: bool
+          separator: ','
+          native_name: pf_signed

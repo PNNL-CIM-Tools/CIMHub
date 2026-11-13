@@ -350,14 +350,18 @@ def test_r1b_a_capacitor_section_stays_in_its_substation(mixed_base_network):
 
 
 def test_r1b_comments():
-    """Bus J's base and the capacitor's LEN are listed (R1b-1, R1b-2); the Line lists its capacitor (R1b-3)."""
+    """Bus J's base and the capacitor's LEN are listed (R1b-1, R1b-2); the Line lists its capacitor and groups it
+    (R1b-3)."""
     parts = {part.name: part for part in RawImporter("atom").to_cimtbl(Raw34Reader(MIXED_BASE_ATOM).read_all()).parts}
-    rows = {row.cells[0]: row for name in ("branch", "multi_section_line")
-            for statement in parts[name].statements for row in statement.rows}
+    rows = {row.cells[0]: row for statement in parts["branch"].statements for row in statement.rows}
     assert rows["ln_4_5_1"].comment == "BASKV 240.0 at bus J"
     assert rows["sc_2_3_1"].comment == "untranscribed: length=1.0"
     assert rows["ln_1_2_1"].comment is None
-    assert rows["msl_1_4_&1"].comment == "path 1, 2, 3, 4; in substations: sc_2_3_1"
+    grouping = {(statement.cim_class, tuple(column.name for column in statement.columns)): statement
+                for statement in parts["multi_section_line"].statements}
+    assert grouping[("Line", ("mRID", "name", "Region"))].rows[0].comment == "path 1, 2, 3, 4; in substations: sc_2_3_1"
+    additions = grouping[("SeriesCompensator", ("mRID", "AdditionalEquipmentContainer"))]
+    assert additions.update and [row.cells for row in additions.rows] == [["sc_2_3_1", "msl_1_4_&1"]]
 
 
 # -- R2: loads, fixed shunts, switched shunts -------------------------------------------------------------
@@ -871,6 +875,17 @@ def test_ratio_tap(windv, rma, rmi, ntp, units, expected):
     assert tap.neutral_step == neutral_step
     assert tap.neutral_kv == pytest.approx(neutral * unit_kv)
     assert (tap.increment_percent, tap.step) == (pytest.approx(increment), pytest.approx(step))
+
+
+@pytest.mark.parametrize(("windv", "rma", "rmi", "ntp"), [
+    (1.07203, 1.07203, 0.8771, 31),  # WINDV at RMA: rounding put the step a hair above NTP (found by the E4 export)
+    (0.8891, 1.1316, 0.8891, 33),  # at RMI
+    (1.12, 1.12, 0.88, 33),
+])
+def test_ratio_tap_at_an_end_of_its_range_is_not_extended(windv, rma, rmi, ntp):
+    tap = ratio_tap(windv, rma, rmi, ntp, unit_kv=1.0, rated_kv=1.0, record_id="x")
+    assert (tap.low_step, tap.high_step) == (1, ntp)
+    assert tap.step == pytest.approx(ntp if windv == rma else 1)
 
 
 @pytest.mark.parametrize(("windv", "rma", "rmi", "ntp", "message"), [

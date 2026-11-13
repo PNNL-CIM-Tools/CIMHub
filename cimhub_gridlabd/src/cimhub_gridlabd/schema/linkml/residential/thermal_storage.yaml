@@ -1,0 +1,213 @@
+id: https://gridlabd.org/schema/glm/residential/thermal_storage
+name: thermal_storage
+description: GridLAB-D thermal_storage class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  thermal_storage:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file lights.cpp
+
+      @addtogroup residential_lights Lights
+
+      @ingroup residential
+
+      The thermal storage unit is a model of an air conditioning unit that
+
+      shifts some load from peak to off peak load times.  The model is based
+
+      on the Ice Bear unit manufactured by Ice Energy.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      total_capacity:
+        range: float
+        required: false
+        description: total storage capacity of unit
+        unit:
+          ucum_code: Btu
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_capacity[Btu]
+      stored_capacity:
+        range: float
+        required: false
+        description: amount of capacity that is stored
+        unit:
+          ucum_code: Btu
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stored_capacity[Btu]
+      recharge_power:
+        range: float
+        required: false
+        description: installed compressor power usage
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: recharge_power[kW]
+      discharge_power:
+        range: float
+        required: false
+        description: installed pump power usage
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_power[kW]
+      recharge_pf:
+        range: float
+        required: false
+        description: installed compressor power factor
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: recharge_pf
+      discharge_pf:
+        range: float
+        required: false
+        description: installed pump power factor
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_pf
+      discharge_schedule_type:
+        range: string
+        required: false
+        description: Scheduling method for discharging
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: discharge_schedule_type
+      recharge_schedule_type:
+        range: string
+        required: false
+        description: Scheduling method for charging
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: recharge_schedule_type
+      recharge_time:
+        range: float
+        required: false
+        description: Flag indicating if recharging is available at the current time
+          (1 or 0)
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: recharge_time
+      discharge_time:
+        range: float
+        required: false
+        description: Flag indicating if discharging is available at the current time
+          (1 or 0)
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_time
+      discharge_rate:
+        range: float
+        required: false
+        description: rating of discharge or cooling
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discharge_rate[Btu/h]
+      SOC:
+        range: float
+        required: false
+        description: state of charge as percentage of total capacity
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SOC[%]
+      recharge:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for recharge'
+        annotations:
+          order: 13
+          value_type: bool
+          separator: ','
+          native_name: recharge
+      last_timestep:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last timestep'
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: last_timestep
+      next_timestep:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for next timestep'
+        annotations:
+          order: 15
+          value_type: string
+          separator: ','
+          native_name: next_timestep
+      k:
+        range: float
+        required: false
+        description: coefficient of thermal conductivity (W/m/K)
+        unit:
+          ucum_code: W/m/K
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: k[W/m/K]

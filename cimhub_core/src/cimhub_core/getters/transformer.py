@@ -26,10 +26,13 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   such tank per can, each on its own ``baseS`` (the can's kVA), placed in tank order (``_bank_windings``).
 
 Every impedance and admittance comes out in percent or pu on one power base: ``base_power`` when the caller declares
-one (``network.base_power`` for RAW), else winding 1's ``ratedS`` (DSS and GLM put every percent on it). CIM stores
-a percent on its From winding's own ``baseU²/baseS``, read with ``get_qty``. Moving it to the declared base changes
-only the power, because the voltage stays the From winding's: z × S_new/S_old, y × S_old/S_new. A winding's
-``baseS`` is per phase, so its whole-unit power is winding 1's ``ratedS`` scaled by the two ``baseS``.
+one (``network.base_power`` for RAW), else winding 1's ``ratedS`` (DSS and GLM put every percent on it); an ideal
+AutoTransformer without one has none. The voltage is always the From winding's own (``ratedU``, or a coil's
+``baseU``). An end form with a declared ``base_power`` reads each ohm and siemens on that power directly
+(``get_qty(power_base=)``), so its ends need no ``ratedS`` (a RAW 3-winding unit's have none). Otherwise CIM's
+value is read as a percent on its From winding's own ``baseU²/baseS`` and moved to the declared base by the power
+only: z × S_new/S_old, y × S_old/S_new. A winding's ``baseS`` is per phase, so its whole-unit power is winding 1's
+``ratedS`` scaled by the two ``baseS``.
 """
 
 from __future__ import annotations
@@ -87,6 +90,7 @@ class Winding(NamedTuple):
     base_u: float | None  # the coil voltage; a PowerTransformerEnd's is derived for a coil, else None
     base_s: float | None  # per phase; a PowerTransformerEnd has none
     r: float | None  # on the model's base_power
+    phase_shift: float | None  # deg: the instance PowerTransformerEnd's fixed phaseShift
 
 
 class MeshImpedance(NamedTuple):
@@ -108,7 +112,7 @@ class TransformerModel(NamedTuple):
     windings: tuple[Winding, ...]
     mesh: dict[tuple[int, int], MeshImpedance]  # {(i, j): ...}, i < j winding numbers
     core: CoreAdmittance
-    base_power: float  # power_unit: what every percent or pu is on
+    base_power: float | None  # power_unit: what every percent or pu is on; None on an unrated ideal AutoTransformer
 
 
 class _Coil(NamedTuple):
@@ -131,8 +135,9 @@ def get_transformer_units(transformer: cim.PowerTransformer | cim.AutoTransforme
 def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=None, voltage_unit: str = "V",
                           power_unit: str = "VA") -> TransformerModel:
     """The unit's windings, mesh impedance and core. ``impedance_unit`` is ``'percent'`` or ``'pu'``, on
-    ``base_power`` (an ApparentPower such as ``network.base_power``), else on winding 1's ``ratedS``. Raises when
-    a form is ambiguous, a rating a value needs is unset, or two places that hold the same value disagree."""
+    ``base_power`` (an ApparentPower such as ``network.base_power``), else on winding 1's ``ratedS``, which only an
+    ideal AutoTransformer (no mesh) may leave unset. Raises when a form is ambiguous, a rating a value needs is
+    unset, or two places that hold the same value disagree."""
     if impedance_unit not in IMPEDANCE_UNITS:
         raise ValueError(f"impedance_unit must be one of {sorted(IMPEDANCE_UNITS)}, not {impedance_unit!r}")
     form = _form(unit)
@@ -140,7 +145,14 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=N
         return _tank_impedance_model(unit, impedance_unit, base_power, voltage_unit, power_unit)
     coils = _coils(unit, form)
     first = coils[0].source
-    first_va = required_qty(first, "ratedS", "VA")
+    direct = base_power is not None and form in END_FORMS  # ohm and S read on base_power: no ratedS needed
+    ideal = form is TransformerForm.AUTO and not any(coil.source.FromMeshImpedance for coil in coils)
+    if ideal:
+        first_va = get_qty(first, "ratedS", "VA")
+    elif direct:
+        first_va = None
+    else:
+        first_va = required_qty(first, "ratedS", "VA")
     result_va = first_va if base_power is None else base_power.to("VA")
     factor = IMPEDANCE_UNITS[impedance_unit]
 
@@ -151,8 +163,18 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=N
         return first_va * required_qty(source, "baseS", "VA") / required_qty(first, "baseS", "VA")
 
     def impedance(holder, attribute: str, source) -> float | None:
+        if direct:
+            value = get_qty(holder, attribute, "percent", power_base=base_power)
+            return None if value is None else value * factor
         value = get_qty(holder, attribute, "percent")
         return None if value is None else value * result_va / stored_va(source) * factor
+
+    def admittance(holder, attribute: str) -> float | None:
+        if direct:
+            value = get_qty(holder, attribute, "percent", power_base=base_power)
+            return None if value is None else value * factor
+        value = get_qty(holder, attribute, "percent")
+        return None if value is None else value * stored_va(holder) / result_va * factor
 
     windings = []
     for number, coil in enumerate(coils, start=1):
@@ -160,7 +182,7 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=N
         windings.append(_winding(number, coil, r, voltage_unit, power_unit))
     mesh = _mesh(unit, coils, impedance)
     if form is TransformerForm.BY_ENDS:
-        core = _end_core(unit, coils, stored_va, result_va, factor)
+        core = _end_core(unit, coils, admittance)
     elif form is TransformerForm.AUTO:
         core = CoreAdmittance(None, None)
     else:
@@ -430,6 +452,7 @@ def _winding(number: int, coil: _Coil, r: float | None, voltage_unit: str, power
         base_u=_coil_voltage(coil, voltage_unit),
         base_s=get_qty(source, "baseS", power_unit) if _has(source, "baseS") else None,
         r=r,
+        phase_shift=get_qty(coil.end, "phaseShift", "deg") if isinstance(coil.end, cim.PowerTransformerEnd) else None,
     )
 
 
@@ -447,13 +470,13 @@ def _coil_voltage(coil: _Coil, voltage_unit: str) -> float | None:
 
 
 def _mesh(unit, coils: list[_Coil], impedance) -> dict[tuple[int, int], MeshImpedance]:
-    """Every TransformerMeshImpedance from one of the unit's windings to another, in percent on its From base."""
+    """Every TransformerMeshImpedance from one of the unit's windings to another, else the ends' star x summed by
+    pair (``_star_mesh``), on the model's base."""
     numbers = {id(coil.source): number for number, coil in enumerate(coils, start=1)}
+    star = {number: impedance(coil.source, "x", coil.source) for number, coil in enumerate(coils, start=1)
+            if isinstance(coil.source, cim.PowerTransformerEnd) and coil.source.x is not None}
     mesh = {}
     for coil in coils:
-        if isinstance(coil.source, cim.PowerTransformerEnd) and coil.source.x is not None:
-            raise ValueError(f"{describe(coil.source)}: a star impedance (PowerTransformerEnd.x) is not read; "
-                             f"put the leakage reactance on a TransformerMeshImpedance")
         for impedance_object in coil.source.FromMeshImpedance:
             to = impedance_object.ToWinding or impedance_object.ToTransformerEnd
             if id(to) not in numbers:
@@ -465,24 +488,31 @@ def _mesh(unit, coils: list[_Coil], impedance) -> dict[tuple[int, int], MeshImpe
             if x is None:
                 raise ValueError(f"{describe(impedance_object)}: x is unset")
             mesh[pair] = MeshImpedance(impedance(impedance_object, "r", coil.source), x)
+    if star and mesh:
+        raise ValueError(f"{describe(unit)}: both a star impedance (PowerTransformerEnd.x) and a mesh impedance")
+    if star:
+        return _star_mesh(star, len(coils))
     return dict(sorted(mesh.items()))
 
 
-def _end_core(unit, coils: list[_Coil], stored_va, result_va: float, factor: float) -> CoreAdmittance:
-    """g and b of the one PowerTransformerEnd that holds them, moved from its own base."""
-    holders = [coil.source for coil in coils if coil.source.g is not None or coil.source.b is not None]
+def _star_mesh(star: dict[int, float], windings: int) -> dict[tuple[int, int], MeshImpedance]:
+    """(i, j) x = xᵢ + xⱼ for every pair of windings, an unset end x 0; r is per winding, so the mesh has none."""
+    return {(i, j): MeshImpedance(None, star.get(i, 0.0) + star.get(j, 0.0))
+            for i in range(1, windings + 1) for j in range(i + 1, windings + 1)}
+
+
+def _end_core(unit, coils: list[_Coil], admittance) -> CoreAdmittance:
+    """g and b of the one PowerTransformerEnd that holds them, on the model's base. An end whose g and b are zero
+    holds none (CIM: the secondary end is zero), so zeros on several ends are one zero core."""
+    set_ends = [coil.source for coil in coils if coil.source.g is not None or coil.source.b is not None]
+    holders = [end for end in set_ends if get_qty(end, "g", "S") or get_qty(end, "b", "S")] or set_ends[:1]
     if not holders:
         return CoreAdmittance(None, None)
     if len(holders) > 1:
         raise ValueError(f"{describe(unit)}: more than one end holds the core admittance "
                          f"{[holder.mRID for holder in holders]}")
     [end] = holders
-
-    def admittance(attribute: str) -> float | None:
-        value = get_qty(end, attribute, "percent")
-        return None if value is None else value * stored_va(end) / result_va * factor
-
-    return CoreAdmittance(admittance("g"), admittance("b"))
+    return CoreAdmittance(admittance(end, "g"), admittance(end, "b"))
 
 
 def _tank_core(tank: cim.TransformerTank, first_va: float, result_va: float, factor: float) -> CoreAdmittance:

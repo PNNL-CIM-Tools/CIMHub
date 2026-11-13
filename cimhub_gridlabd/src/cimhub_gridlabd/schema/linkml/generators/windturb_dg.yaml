@@ -1,0 +1,1076 @@
+id: https://gridlabd.org/schema/glm/generators/windturb_dg
+name: windturb_dg
+description: GridLAB-D windturb_dg class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  windturb_dg:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file windturb_dg.cpp
+
+      @defgroup windturb_dg Wind Turbine gensets
+
+      @ingroup generators
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      Gen_status:
+        range: string
+        required: false
+        description: 'COP: Generator is currently available to supply power'
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: Gen_status
+      Gen_type:
+        range: GenType
+        required: false
+        description: 'COP: Standard synchronous generator; is also used to ''fake''
+          a doubly-fed induction generator for now'
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: Gen_type
+      Gen_mode:
+        range: string
+        required: false
+        description: 'COP: Maintains the real and reactive output at the terminals
+          - currently unsupported'
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: Gen_mode
+      Turbine_Model:
+        range: string
+        required: false
+        description: Generic model for a 1.5MW turbine, power curve implementation
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: Turbine_Model
+      Turbine_implementation:
+        range: string
+        required: false
+        description: Wind turbine implementation based on Generic Power Curve
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: Turbine_implementation
+      Wind_speed_source:
+        range: string
+        required: false
+        description: The climate data specifying the wind speed
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: Wind_speed_source
+      turbine_height:
+        range: float
+        required: false
+        description: Describes the height of the wind turbine hub above the ground
+        unit:
+          ucum_code: m
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: turbine_height[m]
+      roughness_length_factor:
+        range: float
+        required: false
+        description: European Wind Atlas unitless correction factor for adjusting
+          wind speed at various heights above ground and terrain types, default=0.055
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: roughness_length_factor
+      blade_diam:
+        range: float
+        required: false
+        description: 'COP: Diameter of blades'
+        unit:
+          ucum_code: m
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: blade_diam[m]
+      blade_diameter:
+        range: float
+        required: false
+        description: 'COP: Diameter of blades'
+        unit:
+          ucum_code: m
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: blade_diameter[m]
+      cut_in_ws:
+        range: float
+        required: false
+        description: 'COP: Minimum wind speed for generator operation'
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cut_in_ws[m/s]
+      cut_out_ws:
+        range: float
+        required: false
+        description: 'COP: Maximum wind speed for generator operation'
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cut_out_ws[m/s]
+      ws_rated:
+        range: float
+        required: false
+        description: 'COP: Rated wind speed for generator operation'
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ws_rated[m/s]
+      ws_maxcp:
+        range: float
+        required: false
+        description: 'COP: Wind speed at which generator reaches maximum Cp'
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ws_maxcp[m/s]
+      Cp_max:
+        range: float
+        required: false
+        description: 'COP: Maximum coefficient of performance'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Cp_max[pu]
+      Cp_rated:
+        range: float
+        required: false
+        description: 'COP: Rated coefficient of performance'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Cp_rated[pu]
+      Cp:
+        range: float
+        required: false
+        description: 'COP: Calculated coefficient of performance'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Cp[pu]
+      Rated_VA:
+        range: float
+        required: false
+        description: Rated generator power output
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rated_VA[VA]
+      Rated_V:
+        range: float
+        required: false
+        description: 'COP: Rated generator terminal voltage'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rated_V[V]
+      Pconv:
+        range: float
+        required: false
+        description: 'COP: Amount of electrical power converted from mechanical power
+          delivered'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Pconv[W]
+      P_converted:
+        range: float
+        required: false
+        description: 'COP: Amount of electrical power converted from mechanical power
+          delivered'
+        unit:
+          ucum_code: W
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: P_converted[W]
+      GenElecEff:
+        range: float
+        required: false
+        description: 'COP: Calculated generator electrical efficiency'
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GenElecEff[%]
+      generator_efficiency:
+        range: float
+        required: false
+        description: 'COP: Calculated generator electrical efficiency'
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: generator_efficiency[%]
+      TotalRealPow:
+        range: float
+        required: false
+        description: Total real power output
+        unit:
+          ucum_code: W
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TotalRealPow[W]
+      total_real_power:
+        range: float
+        required: false
+        description: Total real power output
+        unit:
+          ucum_code: W
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_real_power[W]
+      TotalReacPow:
+        range: float
+        required: false
+        description: Total reactive power output
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: TotalReacPow[VA]
+      total_reactive_power:
+        range: float
+        required: false
+        description: Total reactive power output
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_reactive_power[VA]
+      power_A:
+        range: Complex
+        required: false
+        description: Total complex power injected on phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 28
+          value_type: complex
+          separator: ','
+          native_name: power_A[VA]
+      power_B:
+        range: Complex
+        required: false
+        description: Total complex power injected on phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 29
+          value_type: complex
+          separator: ','
+          native_name: power_B[VA]
+      power_C:
+        range: Complex
+        required: false
+        description: Total complex power injected on phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 30
+          value_type: complex
+          separator: ','
+          native_name: power_C[VA]
+      power_12:
+        range: Complex
+        required: false
+        description: Triplex mode - Total complex power on line 1 and 2
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 31
+          value_type: complex
+          separator: ','
+          native_name: power_12[VA]
+      WSadj:
+        range: float
+        required: false
+        description: Speed of wind at hub height
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: WSadj[m/s]
+      wind_speed_adjusted:
+        range: float
+        required: false
+        description: Speed of wind at hub height
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: wind_speed_adjusted[m/s]
+      Wind_Speed:
+        range: float
+        required: false
+        description: Wind speed at 5-15m level (typical measurement height)
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Wind_Speed[m/s]
+      wind_speed:
+        range: float
+        required: false
+        description: Wind speed at 5-15m level (typical measurement height)
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: wind_speed[m/s]
+      air_density:
+        range: float
+        required: false
+        description: 'COP: Estimated air density'
+        unit:
+          ucum_code: kg/m^3
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: air_density[kg/m^3]
+      wind_speed_hub_ht:
+        range: float
+        required: false
+        description: Wind speed at hub height. This is an input
+        unit:
+          ucum_code: m/s
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: wind_speed_hub_ht[m/s]
+      R_stator:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary stator resistance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_stator[pu*Ohm]
+      X_stator:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary stator reactance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: X_stator[pu*Ohm]
+      R_rotor:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary rotor resistance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_rotor[pu*Ohm]
+      X_rotor:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary rotor reactance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: X_rotor[pu*Ohm]
+      R_core:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary core resistance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: R_core[pu*Ohm]
+      X_magnetic:
+        range: float
+        required: false
+        description: 'COP: Induction generator primary core reactance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: X_magnetic[pu*Ohm]
+      Max_Vrotor:
+        range: float
+        required: false
+        description: 'COP: Induction generator maximum induced rotor voltage in p.u.,
+          e.g. 1.2'
+        unit:
+          ucum_code: pu*V
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Max_Vrotor[pu*V]
+      Min_Vrotor:
+        range: float
+        required: false
+        description: 'COP: Induction generator minimum induced rotor voltage in p.u.,
+          e.g. 0.8'
+        unit:
+          ucum_code: pu*V
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Min_Vrotor[pu*V]
+      Rs:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator primary stator resistance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rs[pu*Ohm]
+      Xs:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator primary stator reactance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xs[pu*Ohm]
+      Rg:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator grounding resistance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rg[pu*Ohm]
+      Xg:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator grounding reactance in p.u.'
+        unit:
+          ucum_code: pu*Ohm
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xg[pu*Ohm]
+      Max_Ef:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator maximum induced rotor voltage in
+          p.u., e.g. 0.8'
+        unit:
+          ucum_code: pu*V
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Max_Ef[pu*V]
+      Min_Ef:
+        range: float
+        required: false
+        description: 'COP: Synchronous generator minimum induced rotor voltage in
+          p.u., e.g. 0.8'
+        unit:
+          ucum_code: pu*V
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Min_Ef[pu*V]
+      pf:
+        range: float
+        required: false
+        description: 'COP: Desired power factor in CONSTANTP mode (can be modified
+          over time)'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: pf[pu]
+      power_factor:
+        range: float
+        required: false
+        description: 'COP: Desired power factor in CONSTANTP mode (can be modified
+          over time)'
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_factor[pu]
+      power_curve_csv:
+        range: string
+        required: false
+        description: Name of .csv file containing user defined power curve
+        annotations:
+          order: 54
+          value_type: string
+          separator: ','
+          native_name: power_curve_csv
+      power_curve_pu:
+        range: boolean
+        required: false
+        description: Flag when set indicates that user provided power curve has power
+          values in p.u. Defaults to false
+        annotations:
+          order: 55
+          value_type: bool
+          separator: ','
+          native_name: power_curve_pu
+      voltage_A:
+        range: Complex
+        required: false
+        description: Terminal voltage on phase A
+        unit:
+          ucum_code: V
+        annotations:
+          order: 56
+          value_type: complex
+          separator: ','
+          native_name: voltage_A[V]
+      voltage_B:
+        range: Complex
+        required: false
+        description: Terminal voltage on phase B
+        unit:
+          ucum_code: V
+        annotations:
+          order: 57
+          value_type: complex
+          separator: ','
+          native_name: voltage_B[V]
+      voltage_C:
+        range: Complex
+        required: false
+        description: Terminal voltage on phase C
+        unit:
+          ucum_code: V
+        annotations:
+          order: 58
+          value_type: complex
+          separator: ','
+          native_name: voltage_C[V]
+      voltage_12:
+        range: Complex
+        required: false
+        description: Triplex mode - Voltage between line 1 and line 2
+        unit:
+          ucum_code: V
+        annotations:
+          order: 59
+          value_type: complex
+          separator: ','
+          native_name: voltage_12[V]
+      voltage_1N:
+        range: Complex
+        required: false
+        description: Triplex mode - Voltage between line 1 and the neutral N
+        unit:
+          ucum_code: V
+        annotations:
+          order: 60
+          value_type: complex
+          separator: ','
+          native_name: voltage_1N[V]
+      voltage_2N:
+        range: Complex
+        required: false
+        description: Triplex mode - Voltage between line 2 and the neutral N
+        unit:
+          ucum_code: V
+        annotations:
+          order: 61
+          value_type: complex
+          separator: ','
+          native_name: voltage_2N[V]
+      current_A:
+        range: Complex
+        required: false
+        description: Calculated terminal current on phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 62
+          value_type: complex
+          separator: ','
+          native_name: current_A[A]
+      current_B:
+        range: Complex
+        required: false
+        description: Calculated terminal current on phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 63
+          value_type: complex
+          separator: ','
+          native_name: current_B[A]
+      current_C:
+        range: Complex
+        required: false
+        description: Calculated terminal current on phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 64
+          value_type: complex
+          separator: ','
+          native_name: current_C[A]
+      current_12:
+        range: Complex
+        required: false
+        description: Triplex mode - Calculated line current 12
+        unit:
+          ucum_code: A
+        annotations:
+          order: 65
+          value_type: complex
+          separator: ','
+          native_name: current_12[A]
+      EfA:
+        range: Complex
+        required: false
+        description: 'COP: Synchronous generator induced voltage on phase A'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 66
+          value_type: complex
+          separator: ','
+          native_name: EfA[V]
+      EfB:
+        range: Complex
+        required: false
+        description: 'COP: Synchronous generator induced voltage on phase B'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 67
+          value_type: complex
+          separator: ','
+          native_name: EfB[V]
+      EfC:
+        range: Complex
+        required: false
+        description: 'COP: Synchronous generator induced voltage on phase C'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 68
+          value_type: complex
+          separator: ','
+          native_name: EfC[V]
+      Vrotor_A:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced voltage on phase A in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 69
+          value_type: complex
+          separator: ','
+          native_name: Vrotor_A[V]
+      Vrotor_B:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced voltage on phase B in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 70
+          value_type: complex
+          separator: ','
+          native_name: Vrotor_B[V]
+      Vrotor_C:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced voltage on phase C in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 71
+          value_type: complex
+          separator: ','
+          native_name: Vrotor_C[V]
+      Irotor_A:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced current on phase A in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 72
+          value_type: complex
+          separator: ','
+          native_name: Irotor_A[V]
+      Irotor_B:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced current on phase B in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 73
+          value_type: complex
+          separator: ','
+          native_name: Irotor_B[V]
+      Irotor_C:
+        range: Complex
+        required: false
+        description: 'COP: Induction generator induced current on phase C in p.u.'
+        unit:
+          ucum_code: V
+        annotations:
+          order: 74
+          value_type: complex
+          separator: ','
+          native_name: Irotor_C[V]
+      internal_model_current_convergence:
+        range: float
+        required: false
+        description: Convergence value for internal current calculations
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 75
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: internal_model_current_convergence[pu]
+      Vapu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Vapu'
+        annotations:
+          order: 76
+          value_type: complex
+          separator: ','
+          native_name: Vapu
+      Vbpu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Vbpu'
+        annotations:
+          order: 77
+          value_type: complex
+          separator: ','
+          native_name: Vbpu
+      Vcpu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Vcpu'
+        annotations:
+          order: 78
+          value_type: complex
+          separator: ','
+          native_name: Vcpu
+      Iapu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Iapu'
+        annotations:
+          order: 79
+          value_type: complex
+          separator: ','
+          native_name: Iapu
+      Ibpu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Ibpu'
+        annotations:
+          order: 80
+          value_type: complex
+          separator: ','
+          native_name: Ibpu
+      Icpu:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: Per unit voltage and current for Induction Generator
+          at terminals - Icpu'
+        annotations:
+          order: 81
+          value_type: complex
+          separator: ','
+          native_name: Icpu
+      value_Circuit_V_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for voltage values - element 0'
+        annotations:
+          order: 82
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_A
+      value_Circuit_V_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for voltage values - element 1'
+        annotations:
+          order: 83
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_B
+      value_Circuit_V_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for voltage values - element 2'
+        annotations:
+          order: 84
+          value_type: complex
+          separator: ','
+          native_name: value_Circuit_V_C
+      value_Line_I_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for current values - element 0'
+        annotations:
+          order: 85
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_A
+      value_Line_I_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for current values - element 1'
+        annotations:
+          order: 86
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_B
+      value_Line_I_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for current values - element 2'
+        annotations:
+          order: 87
+          value_type: complex
+          separator: ','
+          native_name: value_Line_I_C
+      value_Line12:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: value holder for line current 12 in triplex
+          metering'
+        annotations:
+          order: 88
+          value_type: complex
+          separator: ','
+          native_name: value_Line12
+      prev_current_A:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_current[0]'
+        annotations:
+          order: 89
+          value_type: complex
+          separator: ','
+          native_name: prev_current_A
+      prev_current_B:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_current[1]'
+        annotations:
+          order: 90
+          value_type: complex
+          separator: ','
+          native_name: prev_current_B
+      prev_current_C:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_current[2]'
+        annotations:
+          order: 91
+          value_type: complex
+          separator: ','
+          native_name: prev_current_C
+      NR_first_run:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for NR_first_run'
+        annotations:
+          order: 92
+          value_type: bool
+          separator: ','
+          native_name: NR_first_run
+      prev_current12:
+        range: Complex
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for prev_current12'
+        annotations:
+          order: 93
+          value_type: complex
+          separator: ','
+          native_name: prev_current12
+      phases:
+        range: string
+        required: false
+        description: Specifies which phases to connect to - currently triplex mode
+          is only supported for power curve implementation
+        annotations:
+          order: 94
+          value_type: string
+          separator: ','
+          native_name: phases

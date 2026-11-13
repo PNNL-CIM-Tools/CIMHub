@@ -16,7 +16,7 @@ from cimhub_core.getters.series_compensator import get_series_compensator
 from cimhub_core.getters.terminals import get_conductor_phases
 from cimhub_opendss.exporter.line import ratings, terminal_buses
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.SeriesCompensator,)

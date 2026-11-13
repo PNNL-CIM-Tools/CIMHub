@@ -1,0 +1,20 @@
+// S4a atom: every capacitor form, on the S3a line atom (its n2-n10). Values from IEEE13_cdpsm and the taxonomy.
+#include "../line/line.glm"
+
+// MANUAL (unset) gang unit, CLOSED, in VAr (IEEE13_cdpsm cap1)
+object capacitor { name c_manual; parent n2; phases ABCN; phases_connected ABCN; cap_nominal_voltage 2401.78;
+  nominal_voltage 2401.78; capacitor_A 200000; capacitor_B 200000; capacitor_C 200000;
+  switchA CLOSED; switchB CLOSED; switchC CLOSED; }
+// VOLT INDIVIDUAL on ABC with pt_phase B and the switches unset (the taxonomy): three units, a control on B only,
+// A and C fixed OPEN as GridLAB-D runs them (S4a-8)
+object capacitor { name c_volt; parent n3; phases ABCN; pt_phase B; phases_connected ABC; control VOLT;
+  voltage_set_high 2500; voltage_set_low 2350; capacitor_A 0.15 MVAr; capacitor_B 0.15 MVAr; capacitor_C 0.15 MVAr;
+  control_level INDIVIDUAL; time_delay 30.0; dwell_time 15.0; cap_nominal_voltage 2401.78; nominal_voltage 2401.78; }
+// 1-phase VOLT, CLOSED, values on unconnected phases (GridLAB-D ignores them), no cap_nominal_voltage
+object capacitor { name c_one; parent n5; phases AN; pt_phase A; phases_connected A; control VOLT;
+  voltage_set_high 2500; voltage_set_low 2350; capacitor_A 0.05 MVAr; capacitor_B 0.05 MVAr; capacitor_C 0.05 MVAr;
+  switchA CLOSED; nominal_voltage 2401.78; }
+// BANK: one gang unit monitoring pt_phase A
+object capacitor { name c_bank; parent n2; phases ABCN; pt_phase A; phases_connected ABCN; control VOLT;
+  control_level BANK; voltage_set_high 2500; voltage_set_low 2350; capacitor_A 100 kVAr; capacitor_B 100 kVAr;
+  capacitor_C 100 kVAr; cap_nominal_voltage 2401.78; nominal_voltage 2401.78; }

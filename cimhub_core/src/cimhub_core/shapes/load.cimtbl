@@ -1,8 +1,11 @@
 # Shape: load. EnergyConsumer on a node with its phases and connection; its BaseVoltage is its node's. The ZIP
 # models are the shared LoadResponseCharacteristics (common, from cimhub_core.load_response); an exponential model
 # is a row of the spoke's own, written before the loads that name it. CIM load sign: consumption is positive p.
-# On a split-phase secondary, s1s2 wye is two 120 V legs to neutral; s1 is one leg.
-# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default.
+# On a split-phase secondary, s1s2 wye is two 120 V legs to neutral; s1 is one leg; s1s2 delta is 240 V across
+# the legs (GridLAB-D's power_12).
+# A balanced three-phase device leaves phases blank: no per-phase children, CIM's three-phase default. An unbalanced
+# one writes its phases, and an Update gives each generated child (<mRID>_<phase>) its own p and q; the children's
+# sum is the total. A single child (one delta branch, the 240 V part) takes no row: the total is its value.
 
 Profile = cim18v17
 
@@ -17,3 +20,10 @@ Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW
     ld_c1, c1, n3,    C,    Y, true,  170,  80,  1, zip_constant_i,  bv_4p16kv
     ld_s1, s1, house, s1s2, Y, true,  5,    1,   1, exp_0.8_3,       bv_240v
     ld_s2, s2, house, s2,   Y, true,  2,    0.5, 3, zip_constant_pq, bv_240v
+    ld_u1, u1, n1,    ABC,  Y, true,  200,  116, 1, zip_constant_i,  bv_4p16kv
+    ld_s12, s12, house, s1s2, D, false, 4,  1.5, 1, zip_constant_pq, bv_240v
+
+Update Table EnergyConsumerPhase: mRID, p (kW), q (kVAr)
+    ld_u1_A, 17,  10
+    ld_u1_B, 66,  38
+    ld_u1_C, 117, 68

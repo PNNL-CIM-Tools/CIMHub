@@ -11,7 +11,7 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_opendss.exporter import windings
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.exporter.transformer import xfmrcode_name
 from cimhub_opendss.schema import opendss_schema as schema
 

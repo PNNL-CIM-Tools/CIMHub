@@ -58,16 +58,24 @@ def _merge_edges(native, threshold: float) -> list[tuple[str, int, int]]:
     return edges
 
 
+def islands(nodes, edges) -> list[list]:
+    """The groups of ``nodes`` (any hashables) joined by ``edges`` ``(name, node, node)``, each group in the order of
+    ``nodes``; a node on no edge is its own group. Shared with the exporter's AREA trace."""
+    key = {node: str(index) for index, node in enumerate(nodes)}
+    # cimtopology wants unique equipment names; a 3-winding transformer gives two edges
+    network = Network(sources=(), transformers=(), nodes=tuple(key.values()),
+                      branches=tuple(Branch(f"{name}#{index}", key[first], key[second])
+                                     for index, (name, first, second) in enumerate(edges)))
+    root_of = Topology(network).islands()
+    members: dict[str, list] = {}
+    for node in nodes:
+        members.setdefault(root_of[key[node]], []).append(node)
+    return list(members.values())
+
+
 def _islands(buses, edges: list[tuple[str, int, int]]) -> list[list[int]]:
     """The bus groups joined by ``edges``, each in ascending order; a bus on no edge is its own group."""
-    # cimtopology wants unique equipment names; a 3-winding transformer gives two edges
-    network = Network(sources=(), transformers=(), nodes=tuple(str(bus) for bus in sorted(buses)),
-                      branches=tuple(Branch(f"{name}#{index}", str(first), str(second))
-                                     for index, (name, first, second) in enumerate(edges)))
-    members: dict[str, list[int]] = {}
-    for bus, root in Topology(network).islands().items():
-        members.setdefault(root, []).append(int(bus))
-    return [sorted(group) for group in members.values()]
+    return islands(sorted(buses), edges)
 
 
 def _block_edges(block_of_bus: dict[int, int], zones: dict[int, int]) -> list[tuple[str, int, int]]:

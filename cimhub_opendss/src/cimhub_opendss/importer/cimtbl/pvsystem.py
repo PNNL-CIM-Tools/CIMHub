@@ -1,7 +1,8 @@
 """OpenDSS ``PVSystem`` -> ``pvsystem.cimtbl``: a ``PowerElectronicsConnection`` and its ``PhotoVoltaicUnit``.
 
-p is the engine's snapshot dispatch at rated voltage: Pmpp x irradiance x %Pmpp, off below %Cutout of kVA, and
-cut to fit kVA with q kept (``pv_power``). q is kvar or comes from pf, whichever the deck assigned last (the
+p is the engine's snapshot dispatch at rated voltage: the panel's Pmpp x irradiance capped at Pmpp x %Pmpp, off
+when the panel is below %Cutout of kVA, and cut to fit kVA with q kept (``pv_power``). irradiance is also copied, to
+the gridappsd extension ``PhotoVoltaicUnit.irradiance``. q is kvar or comes from pf, whichever the deck assigned last (the
 engine's rule; S4b-8). The load sign:
 generation is negative p, q = -kvar (S4b-1).
 
@@ -37,9 +38,9 @@ FIELDS = {
     "bus1": Field("structural", note="node and phases, by the S4 shared phase rule"),
     "kv": Field("derived", note="ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the "
                                 "bus; default 12.47"),
-    "irradiance": Field("derived", note="p: Pmpp x irradiance x %Pmpp / 100 (pv_power); default 1"),
+    "irradiance": Field("copied", ((_UNIT, "irradiance", "kW/m2"),), "also p (pv_power); default 1"),
     "Pmpp": Field("copied", ((_UNIT, "maxP", "kW"),), "also p (pv_power); default 500"),
-    "pct_Pmpp": Field("derived", note="p (pv_power); default 100"),
+    "pct_Pmpp": Field("derived", note="p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100"),
     "Temperature": Field("untranscribed", note="acts only through a P-TCurve, which raises"),
     "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it "
                                 "(the last of the two wins, S4b-8); default 1"),
@@ -48,8 +49,7 @@ FIELDS = {
     "kVA": Field("copied", ((CONNECTION, "ratedS", "kVA"),), "also caps p (var priority); default 500"),
     "pct_Cutin": Field("untranscribed", note="acts only after the inverter turns off; the snapshot state uses "
                                              "%Cutout"),
-    "pct_Cutout": Field("derived", note="p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; "
-                                        "default 20"),
+    "pct_Cutout": Field("derived", note="p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20"),
     "EffCurve": Field("structural", note="raises: an efficiency curve changes the snapshot power"),
     "P_TCurve": Field("structural", note="raises: a temperature curve changes the snapshot power"),
     "pct_R": Field("untranscribed", note=_DYNAMICS),
@@ -112,11 +112,13 @@ class PvPower(NamedTuple):
 
 def pv_power(label: str, *, pmpp: float, irradiance: float, pct_pmpp: float, kva: float, pct_cutout: float,
              pf: float, kvar: float | None) -> PvPower:
-    """The engine's snapshot output of a PV (generator sign): off below %Cutout of kVA, else the available
-    power with its kvar (``kvar``, or from ``pf`` when it is ``None``), cut to fit kVA (var priority)."""
-    available = pmpp * irradiance * pct_pmpp / 100
-    if available < pct_cutout / 100 * kva:
+    """The engine's snapshot output of a PV (generator sign): off when the panel's power (Pmpp x irradiance) is
+    below %Cutout of kVA, else that power capped at %Pmpp of Pmpp, with its kvar (``kvar``, or from ``pf`` when it
+    is ``None``), cut to fit kVA (var priority)."""
+    panel = pmpp * irradiance
+    if panel < pct_cutout / 100 * kva:
         return PvPower(0.0, 0.0, True)
+    available = min(panel, pmpp * pct_pmpp / 100)
     q = float(kvar) if kvar is not None else reactive_power(available, pf)
     return PvPower(inverter_power(label, available, q, kva), q, False)
 
@@ -155,12 +157,13 @@ def map_pvsystem(native, buses: Mapping[str, BusSystem], container: str) -> Docu
         notes = ["off: below %Cutout of kVA" if power.off else None, defaulted, untranscribed_values(FIELDS, pv)]
         connections.append(connection_row(PREFIX, pv, terminal, kva=kva, p=-power.kw, q=-power.kvar,
                                           comment="\n".join(note for note in notes if note) or None))
-        units.append(Row([unit_id(PREFIX, pv), cell(float(pv.Pmpp)), cell(0.0), connections[-1].cells[0]]))
+        units.append(Row([unit_id(PREFIX, pv), cell(float(pv.Pmpp)), cell(0.0), cell(float(pv.irradiance)),
+                          connections[-1].cells[0]]))
     statements = [
         Table(CONNECTION, connection_columns(container), connections,
-              comment="derived: p = -(Pmpp x irradiance x %Pmpp, cut to fit kVA), 0 below %Cutout (pv_power); "
-                      "q = -kvar"),
-        Table(_UNIT, [Column("mRID"), Column("maxP", "kW"), Column("minP", "kW"),
+              comment="derived: p = -(Pmpp x irradiance, capped at %Pmpp of Pmpp, cut to fit kVA), 0 when "
+                      "Pmpp x irradiance is below %Cutout (pv_power); q = -kvar"),
+        Table(_UNIT, [Column("mRID"), Column("maxP", "kW"), Column("minP", "kW"), Column("irradiance", "kW/m2"),
                       Column("PowerElectronicsConnection"), Column("EquipmentContainer", default=container)], units),
     ]
     return Document(name="pvsystem", statements=statements, profile=CIM_PROFILE,

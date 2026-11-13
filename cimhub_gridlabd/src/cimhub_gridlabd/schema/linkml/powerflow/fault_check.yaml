@@ -1,0 +1,89 @@
+id: https://gridlabd.org/schema/glm/powerflow/fault_check
+name: fault_check
+description: GridLAB-D fault_check class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  fault_check:
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+
+      Inherits from: powerflow_object
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      check_mode:
+        range: string
+        required: false
+        description: Frequency of fault checks
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: check_mode
+      output_filename:
+        range: string
+        required: false
+        description: Output filename for list of unsupported nodes
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: output_filename
+      reliability_mode:
+        range: boolean
+        required: false
+        description: General flag indicating if fault_check is operating under faulting
+          or restoration mode -- reliability set this
+        annotations:
+          order: 3
+          value_type: bool
+          separator: ','
+          native_name: reliability_mode
+      strictly_radial:
+        range: boolean
+        required: false
+        description: Flag to indicate if a system is known to be strictly radial --
+          uses radial assumptions for reliability alterations
+        annotations:
+          order: 4
+          value_type: bool
+          separator: ','
+          native_name: strictly_radial
+      full_output_file:
+        range: boolean
+        required: false
+        description: Flag to indicate if the output_filename report contains both
+          supported and unsupported nodes -- if false, just does unsupported
+        annotations:
+          order: 5
+          value_type: bool
+          separator: ','
+          native_name: full_output_file
+      grid_association:
+        range: boolean
+        required: false
+        description: Flag to indicate if multiple, distinct grids are allowed in a
+          GLM, or if anything not attached to the master swing is removed
+        annotations:
+          order: 6
+          value_type: bool
+          separator: ','
+          native_name: grid_association
+      eventgen_object:
+        range: string
+        required: false
+        description: Link to generic eventgen object to handle unexpected faults
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: eventgen_object

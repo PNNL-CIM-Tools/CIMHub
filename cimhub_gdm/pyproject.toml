@@ -33,6 +33,7 @@ dependencies = [
   "cim-builder>=0.1.0a1,<0.2",
   "cim-tables>=0.1.0a1,<0.2",
   "grid-data-models~=2.4",
+  "pyarrow>=18",
 ]
 
 [project.urls]

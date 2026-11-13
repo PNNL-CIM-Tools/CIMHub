@@ -896,8 +896,9 @@ A PhotoVoltaicUnit gives a solar and a BatteryUnit a battery; another unit raise
   form, inverted. It is line to line on three phases, and otherwise line to ground: half on a split-phase leg, and
   ratedU / √3 on any other phase.
 - **Solar.** `rated_power` is the PhotoVoltaicUnit's maxP; unset raises. The panel's resistance and reactance are
-  fills (0 %). **Irradiance is a rule, not a fill.** ditto 0.1.8 writes no `active_power`, and OpenDSS makes
-  `Pmpp × Irradiance`. So irradiance is p / maxP × 1 kW/m², and the PV makes CIM's p (`test_export_ditto.py`).
+  fills (0 %). **Irradiance** is `PhotoVoltaicUnit.irradiance` when set (B16b). Unset, it is a rule, not a fill:
+  ditto 0.1.8 writes no `active_power`, and OpenDSS makes `Pmpp × Irradiance`, so irradiance is p / maxP × 1 kW/m²,
+  and the PV makes CIM's p (`test_export_ditto.py` sets the atoms' irradiance to that share).
 - **Battery.** `rated_power` is the BatteryUnit's maxP, with minP unset or −maxP (GDM has one rating both ways);
   otherwise it raises. ratedE and the two efficiencies are required; idling efficiency is a fill (100 %: idlingP is
   a power). The unit's BatteryInfo shares the equipment; without one it is the DER's own. ditto 0.1.8 has no battery
@@ -919,7 +920,7 @@ A PhotoVoltaicUnit gives a solar and a BatteryUnit a battery; another unit raise
 | reactive_power | written | get_inverter_units(sign='generation') q (kVAr): its share of the connection's |
 | controller | unset | inverter controllers are not in CIM (PENDING on import, X8) |
 | inverter | written | the InverterEquipment of the connection's InverterInfo (shared, X3), else the DER's own |
-| irradiance | rule | p / the panel's maxP × 1 kW/m² (standard test conditions): what OpenDSS makes of it (Pmpp × Irradiance) is CIM's p; untranscribed on import |
+| irradiance | rule | PhotoVoltaicUnit.irradiance; unset, p / the panel's maxP × 1 kW/m² (standard test conditions): what OpenDSS makes of it (Pmpp × Irradiance) is CIM's p |
 | equipment | written | a SolarEquipment made for this DER |
 
 **DistributionBattery**
@@ -1051,7 +1052,8 @@ X4. `SeriesCompensator` → `DistributionReactor` between its two terminals' bus
   - The comparison includes the geometry lines, the reactors and the transformers, but not t_ln: ditto can't write the original's
     1-based couplings or its instance tap. It leaves out the DER: ditto writes the original's PV kV from its line to
     line bus as if line to ground, and the atoms' irradiance is not their output's share.
-  - Each exported PV makes the p and q CIM holds.
+  - Each exported PV makes the p and q CIM holds, its irradiance set to its output's share of the panel.
+  - Exported load series become one LoadShape per load, `UseActual=yes`, in kW and kvar (T1, T6).
   - With capacitors and t_ln, it still solves.
   - An exported regulator bank (rb alone) holds its band, 121–123 V on its PT.
   - A strict xfail pins ditto 0.1.8's missing CircuitBreaker and Disconnector equipment writers. ditto writes their

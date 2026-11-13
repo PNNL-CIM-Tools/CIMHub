@@ -1,0 +1,597 @@
+id: https://gridlabd.org/schema/glm/residential/clotheswasher
+name: clotheswasher
+description: GridLAB-D clotheswasher class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  clotheswasher:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file clotheswasher.cpp
+
+      @addtogroup clotheswasher
+
+      @ingroup residential
+
+      The clotheswasher simulation is based on an hourly demand profile attached to
+      the object.
+
+      The internal heat gain is calculated using a specified fraction of installed
+      power.
+
+      The queue is used to determine the probability of a load being run during that
+      hour.
+
+      Demand is added to the queue until the queue becomes large enough to trigger
+      an event.
+
+      The motor model is simplified in that it assume the motor all the time during
+      the load run
+
+      (which is not really true).  The duration of the load is a configurable parameter.
+
+      Motor stalling is implemented when the voltage is below about 0.7 puV.  A stalled
+      motor
+
+      remains in the constant impedance state for about 10 seconds before tripping
+      off.  When
+
+      tripped, the motor will attempt a restart after about 60 seconds, regardless
+      of voltage.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      motor_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: motor_power[kW]
+      circuit_split:
+        range: float
+        required: false
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circuit_split
+      queue:
+        range: float
+        required: false
+        description: the total laundry accumulated
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue[unit]
+      demand:
+        range: float
+        required: false
+        description: the amount of laundry accumulating daily
+        unit:
+          ucum_code: unit/day
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand[unit/day]
+      cycle_duration:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for cycle duration'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_duration[s]
+      energy_meter:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: energy_meter[kWh]
+      stall_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: stall_voltage[V]
+      start_voltage:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: start_voltage[V]
+      clothesWasherPower:
+        range: float
+        required: false
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: clothesWasherPower
+      stall_impedance:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: stall_impedance[Ohm]
+      trip_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip_delay[s]
+      reset_delay:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reset_delay[s]
+      Is_on:
+        range: float
+        required: false
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Is_on
+      normal_perc:
+        range: float
+        required: false
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: normal_perc
+      perm_press_perc:
+        range: float
+        required: false
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: perm_press_perc
+      NORMAL_PREWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_PREWASH_POWER
+      NORMAL_WASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_WASH_POWER
+      NORMAL_SPIN_LOW_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_LOW_POWER
+      NORMAL_SPIN_MEDIUM_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_MEDIUM_POWER
+      NORMAL_SPIN_HIGH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_HIGH_POWER
+      NORMAL_SMALLWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SMALLWASH_POWER
+      NORMAL_PREWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_PREWASH_ENERGY
+      NORMAL_WASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_WASH_ENERGY
+      NORMAL_SPIN_LOW_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_LOW_ENERGY
+      NORMAL_SPIN_MEDIUM_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_MEDIUM_ENERGY
+      NORMAL_SPIN_HIGH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SPIN_HIGH_ENERGY
+      NORMAL_SMALLWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: NORMAL_SMALLWASH_ENERGY
+      PERMPRESS_PREWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_PREWASH_POWER
+      PERMPRESS_WASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_WASH_POWER
+      PERMPRESS_SPIN_LOW_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_LOW_POWER
+      PERMPRESS_SPIN_MEDIUM_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_MEDIUM_POWER
+      PERMPRESS_SPIN_HIGH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_HIGH_POWER
+      PERMPRESS_SMALLWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SMALLWASH_POWER
+      PERMPRESS_PREWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_PREWASH_ENERGY
+      PERMPRESS_WASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_WASH_ENERGY
+      PERMPRESS_SPIN_LOW_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_LOW_ENERGY
+      PERMPRESS_SPIN_MEDIUM_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_MEDIUM_ENERGY
+      PERMPRESS_SPIN_HIGH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SPIN_HIGH_ENERGY
+      PERMPRESS_SMALLWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: PERMPRESS_SMALLWASH_ENERGY
+      GENTLE_PREWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_PREWASH_POWER
+      GENTLE_WASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_WASH_POWER
+      GENTLE_SPIN_LOW_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_LOW_POWER
+      GENTLE_SPIN_MEDIUM_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_MEDIUM_POWER
+      GENTLE_SPIN_HIGH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_HIGH_POWER
+      GENTLE_SMALLWASH_POWER:
+        range: float
+        required: false
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SMALLWASH_POWER
+      GENTLE_PREWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_PREWASH_ENERGY
+      GENTLE_WASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_WASH_ENERGY
+      GENTLE_SPIN_LOW_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_LOW_ENERGY
+      GENTLE_SPIN_MEDIUM_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_MEDIUM_ENERGY
+      GENTLE_SPIN_HIGH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SPIN_HIGH_ENERGY
+      GENTLE_SMALLWASH_ENERGY:
+        range: float
+        required: false
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: GENTLE_SMALLWASH_ENERGY
+      queue_min:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_min[unit]
+      queue_max:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: queue_max[unit]
+      clotheswasher_run_prob:
+        range: float
+        required: false
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: clotheswasher_run_prob
+      state:
+        range: State
+        required: false
+        annotations:
+          order: 55
+          value_type: string
+          separator: ','
+          native_name: state
+      spin_mode:
+        range: string
+        required: false
+        annotations:
+          order: 56
+          value_type: string
+          separator: ','
+          native_name: spin_mode
+      wash_mode:
+        range: string
+        required: false
+        annotations:
+          order: 57
+          value_type: string
+          separator: ','
+          native_name: wash_mode

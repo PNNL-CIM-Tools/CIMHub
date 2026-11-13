@@ -12,7 +12,7 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_core.getters.wire import WIRE_KINDS, get_wire_info
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = WIRE_KINDS

@@ -1,0 +1,135 @@
+id: https://gridlabd.org/schema/glm/powerflow/jsondump
+name: jsondump
+description: GridLAB-D jsondump class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  jsondump:
+    is_a: glm_object
+    description: 'Copyright (C) 2017 Battelle Memorial Institute
+
+
+      Inherits from: gld_object
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in powerflow module)'
+    attributes:
+      group:
+        range: string
+        required: false
+        description: the group ID to output data for (all objects if empty)
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: group
+      filename_dump_system:
+        range: string
+        required: false
+        description: the file to dump the current data into
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: filename_dump_system
+      filename_dump_reliability:
+        range: string
+        required: false
+        description: the file to dump the current data into
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: filename_dump_reliability
+      runtime:
+        range: string
+        required: false
+        description: the time to check voltage data
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: runtime
+      runcount:
+        range: integer
+        required: false
+        description: the number of times the file has been written to
+        annotations:
+          order: 5
+          value_type: int
+          separator: ','
+          native_name: runcount
+      write_system_info:
+        range: boolean
+        required: false
+        description: Flag indicating whether system information will be written into
+          JSON file or not
+        annotations:
+          order: 6
+          value_type: bool
+          separator: ','
+          native_name: write_system_info
+      write_reliability:
+        range: boolean
+        required: false
+        description: Flag indicating whether reliabililty information will be written
+          into JSON file or not
+        annotations:
+          order: 7
+          value_type: bool
+          separator: ','
+          native_name: write_reliability
+      write_per_unit:
+        range: boolean
+        required: false
+        description: Output the quantities as per-unit values
+        annotations:
+          order: 8
+          value_type: bool
+          separator: ','
+          native_name: write_per_unit
+      system_base:
+        range: float
+        required: false
+        description: System base power rating for per-unit calculations
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: system_base[VA]
+      min_node_voltage:
+        range: float
+        required: false
+        description: Per-unit minimum voltage level allowed for nodes
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: min_node_voltage[pu]
+      max_node_voltage:
+        range: float
+        required: false
+        description: Per-unit maximum voltage level allowed for nodes
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_node_voltage[pu]

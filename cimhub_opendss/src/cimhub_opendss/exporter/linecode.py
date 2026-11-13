@@ -17,7 +17,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.line_impedance import get_phase_impedance_code, get_sequence_impedance_code
 from cimhub_opendss.dss_writer import format_float
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot
+from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.PerLengthPhaseImpedance, cim.PerLengthSequenceImpedance)

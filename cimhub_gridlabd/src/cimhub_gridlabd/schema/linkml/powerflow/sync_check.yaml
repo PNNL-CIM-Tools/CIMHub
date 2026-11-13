@@ -1,0 +1,372 @@
+id: https://gridlabd.org/schema/glm/powerflow/sync_check
+name: sync_check
+description: GridLAB-D sync_check class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  sync_check:
+    description: 'Implements sychronization check functionality for switches to close
+
+      when two grids are within parameters
+
+      Copyright (C) 2020 Battelle Memorial Institute
+
+
+      Inherits from: powerflow_object
+
+
+      CIM Mapping: TBD'
+    is_a: powerflow_object
+    attributes:
+      armed:
+        range: boolean
+        required: false
+        description: Flag to arm the synchronization close
+        annotations:
+          order: 1
+          value_type: bool
+          separator: ','
+          native_name: armed
+      frequency_tolerance:
+        range: float
+        required: false
+        description: tolerance for checking the frequency metric
+        unit:
+          ucum_code: Hz
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: frequency_tolerance[Hz]
+      voltage_tolerance_pu:
+        range: float
+        required: false
+        description: voltage_tolerance in per-unit - used in MAG_DIFF mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_tolerance_pu[pu]
+      voltage_tolerance:
+        range: float
+        required: false
+        description: voltage_tolerance in Volts - used in MAG_DIFF mode - prioritized
+          over voltage_tolerance_pu
+        unit:
+          ucum_code: V
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_tolerance[V]
+      metrics_period:
+        range: float
+        required: false
+        description: period when both metrics are satisfied
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: metrics_period[s]
+      volt_compare_mode:
+        range: string
+        required: false
+        description: Determines which voltage difference calculation approach is used
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: volt_compare_mode
+      voltage_magnitude_tolerance_pu:
+        range: float
+        required: false
+        description: tolerance in per-unit for the difference in voltage magnitudes
+          - used in SEP_DIFF mode
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_magnitude_tolerance_pu[pu]
+      voltage_magnitude_tolerance:
+        range: float
+        required: false
+        description: tolerance in Volts for the difference in voltage magnitudes -
+          used in SEP_DIFF mode - prioritized over voltage_magnitude_tolerance_pu
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_magnitude_tolerance[V]
+      voltage_angle_tolerance:
+        range: float
+        required: false
+        description: tolerance in degrees for the difference in voltage angles - used
+          in SEP_DIFF mode
+        unit:
+          ucum_code: deg
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_angle_tolerance[deg]
+      delta_trigger_mult:
+        range: float
+        required: false
+        description: multiplier against voltage and frequency tolerances to trigger/maintain
+          deltamode
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_trigger_mult
+      freq_diff_noabs_hz:
+        range: float
+        required: false
+        description: 'Measurement property: frequency difference in Hz without abs()'
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: freq_diff_noabs_hz
+      volt_A_mag_diff_noabs_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase A voltage magnitude
+          in pu without abs()'
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_mag_diff_noabs_pu
+      volt_B_mag_diff_noabs_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase B voltage magnitude
+          in pu without abs()'
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_mag_diff_noabs_pu
+      volt_C_mag_diff_noabs_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase C voltage magnitude
+          in pu without abs()'
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_mag_diff_noabs_pu
+      freq_diff_hz:
+        range: float
+        required: false
+        description: 'Measurement property: frequency difference in Hz'
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: freq_diff_hz
+      volt_A_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase A voltage phasor difference
+          in volt'
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_diff
+      volt_B_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase B voltage phasor difference
+          in volt'
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_diff
+      volt_C_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase C voltage phasor difference
+          in volt'
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_diff
+      volt_A_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase A voltage phasor difference
+          in pu'
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_diff_pu
+      volt_B_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase B voltage phasor difference
+          in pu'
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_diff_pu
+      volt_C_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Magnitude of phase C voltage phasor difference
+          in pu'
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_diff_pu
+      volt_A_mag_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase A voltage magnitude
+          in volt'
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_mag_diff
+      volt_B_mag_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase B voltage magnitude
+          in volt'
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_mag_diff
+      volt_C_mag_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase C voltage magnitude
+          in volt'
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_mag_diff
+      volt_A_mag_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase A voltage magnitude
+          in pu'
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_mag_diff_pu
+      volt_B_mag_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase B voltage magnitude
+          in pu'
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_mag_diff_pu
+      volt_C_mag_diff_pu:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase C voltage magnitude
+          in pu'
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_mag_diff_pu
+      volt_A_ang_deg_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase A voltage angle in
+          degree'
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_A_ang_deg_diff
+      volt_B_ang_deg_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase B voltage angle in
+          degree'
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_B_ang_deg_diff
+      volt_C_ang_deg_diff:
+        range: float
+        required: false
+        description: 'Measurement property: Difference of phase C voltage angle in
+          degree'
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: volt_C_ang_deg_diff
+      nominal_volt_v:
+        range: float
+        required: false
+        description: 'Measurement Property: Nominal voltage of from/to node of the
+          parent switch'
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_volt_v
