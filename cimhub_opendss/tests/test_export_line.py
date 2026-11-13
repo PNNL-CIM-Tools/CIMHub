@@ -505,3 +505,46 @@ def test_spacing_line_with_a_phase_off_its_spacing_raises(tmp_path):
     _mrid(network, cim.ACLineSegmentPhase, "ln_1_C").sequenceNumber = 9
     with pytest.raises(ValueError, match=r"on sequence numbers \[9\], which XYSpacing 'spc_arm' has no conductor"):
         _spacing_model(network)
+
+
+# a plain CableInfo (an underground secondary's insulated conductors) is a WireData mirrored above grade (B7) ----------
+BURIED = """Profile = cim18v17
+Object BaseVoltage: mRID=bv, name=bv, nominalVoltage (kV)=0.208
+Object Feeder: mRID=fdr, name=fdr
+Object EarthResistivity: mRID=earth, name=earth, earthModelType=carson, rho (ohm)=100
+Object EnergySource: mRID=src, name=src, node=n0, nominalVoltage (kV)=0.208, voltageMagnitude (kV)=0.208, voltageAngle (deg)=0, r (ohm)=0, x (ohm)=0.01, r0 (ohm)=0, x0 (ohm)=0.01, BaseVoltage=bv, EquipmentContainer=fdr
+Table {wire_class}: mRID, name, rAC25 (ohm/mi), gmr (in), radius (in), insulated, insulationThickness (in)
+    wire_ug, ug_4/0, 0.44, 0.1892, 0.2608, true, 0.06
+Object XYSpacing: mRID=spc_ug, name=ug, isTemplate=true
+Table WirePosition: mRID, XYSpacing=spc_ug, sequenceNumber, kind, xCoord (in), yCoord (ft)
+    spc_ug_1, 1, phase,   -0.5, {y}
+    spc_ug_2, 2, phase,    0.5, {y}
+    spc_ug_3, 3, phase,    0,   {y_up}
+    spc_ug_4, 4, neutral,  0,   {y_down}
+Object ACLineSegment: mRID=ln_ug, name=ln_ug, node1=n0, node2=n1, phases=ABCN, length (ft)=100, WireSpacing=spc_ug, BaseVoltage=bv, EquipmentContainer=fdr
+Update Table ACLineSegmentPhase: mRID, WireInfo
+    ln_ug_A, wire_ug
+    ln_ug_B, wire_ug
+    ln_ug_C, wire_ug
+    ln_ug_N, wire_ug
+"""
+
+
+def _buried_network(tmp_path, wire_class, sign):
+    path = tmp_path / f"{wire_class}_{sign}.cimtbl"
+    path.write_text(BURIED.format(wire_class=wire_class, y=sign * 2.5, y_up=sign * 2.45, y_down=sign * 2.55))
+    return load_model(path)
+
+
+def test_buried_plain_cable_is_wiredata_above_grade(tmp_path):
+    model = _spacing_model(_buried_network(tmp_path, "CableInfo", -1))
+    [wire] = model.list_by_class(schema.Wiredata)
+    assert str(wire.name) == "wire_ug"
+    assert _geometries(model)["ln_ug_geometry"].hs == pytest.approx([0.762, 0.762, 0.74676, 0.77724])
+
+
+def test_buried_plain_cable_matches_the_wire_above_grade_in_the_engine(tmp_path):
+    buried, above = tmp_path / "buried.dss", tmp_path / "above.dss"
+    cim_to_dss(_buried_network(tmp_path, "CableInfo", -1), buried, name_source="mrid")
+    cim_to_dss(_buried_network(tmp_path, "OverheadWireInfo", 1), above, name_source="mrid")
+    assert_same_engine_state(above, buried)

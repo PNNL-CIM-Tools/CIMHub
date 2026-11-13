@@ -10,6 +10,9 @@ geometry: no impedance is computed (skill ``conductor-geometry``). Two CIM shape
   one geometry per (spacing, offset, conductors), the conductors being each phase's sequence number, wire and
   whether it is the neutral. The spacing may hold several circuits; the line takes the positions of its own
   phases. The geometry is named after the first line that has it (``<line>_geometry``).
+
+DSS takes a WireData only above grade, so a plain CableInfo (a WireData, B7) below grade is written at the same
+height above it.
 """
 
 from __future__ import annotations
@@ -54,7 +57,7 @@ SLOTS = {NATIVE_CLASS: {
     "cncables": Slot("not mapped", "wires carries every kind (the writer names each block's kind)"),
     "tscables": Slot("not mapped", "wires carries every kind (the writer names each block's kind)"),
     "xs": Slot("written", "get_line_conductor_xy x (m); an unused configuration: get_spacing_xy"),
-    "hs": Slot("written", "get_line_conductor_xy y, above ground (m)"),
+    "hs": Slot("written", "get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7)"),
     "Seasons": Slot("unset", _NOT_IN_CIM), "Ratings": Slot("unset", _NOT_IN_CIM),
     "LineType": Slot("unset", _NOT_IN_CIM),
     "conductors": Slot("not mapped", "wires carries the names"),
@@ -173,8 +176,13 @@ def _record(owner, name: str, positions: tuple[ConductorXY, ...], wires: list[ci
         reduce=True,  # B4
         wires=[wire_name(wire, names) for wire in wires],
         xs=[position.x for position in positions],
-        hs=[position.y for position in positions],
+        hs=[_height(position, wire) for position, wire in zip(positions, wires, strict=True)],
     )
+
+
+def _height(position: ConductorXY, wire: cim.WireInfo) -> float:
+    """B7: a buried plain CableInfo is mirrored above grade, the one place DSS takes its WireData."""
+    return abs(position.y) if type(wire) is cim.CableInfo else position.y
 
 
 def _check_kinds(owner, positions: tuple[ConductorXY, ...], phases: int) -> None:

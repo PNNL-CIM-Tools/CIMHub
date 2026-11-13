@@ -1,8 +1,8 @@
 """A conductor catalog entry (a WireInfo), and a WireConfiguration's or a line's per-phase conductors (skill
 `export-getters`).
 
-Three WireInfo kinds are read: ``OverheadWireInfo`` (a bare wire), ``ConcentricNeutralCableInfo`` and
-``TapeShieldCableInfo``. Every value is as stored, in the caller's units; unset is None. Only ``rAC25`` of the
+Four WireInfo kinds are read: ``OverheadWireInfo`` (a bare or covered wire), a plain ``CableInfo`` (an insulated,
+unshielded cable: an underground secondary's conductors), ``ConcentricNeutralCableInfo`` and ``TapeShieldCableInfo``. Every value is as stored, in the caller's units; unset is None. Only ``rAC25`` of the
 three AC resistances is read (the one the DSS importer writes); a set ``rAC50``/``rAC75`` raises until a producer
 writes one. The ratings are ``ratedCurrent`` and the limits of the wire's own ``AssetInfo.OperationalLimitSet``;
 a ``ratedCurrent`` and a normal limit that are both set must agree.
@@ -19,7 +19,7 @@ from cimtables.graph_write import get_qty
 from cimhub_core.getters import describe
 from cimhub_core.getters.current_limits import CurrentLimits, get_asset_info_current_limits
 
-WIRE_KINDS = (cim.OverheadWireInfo, cim.ConcentricNeutralCableInfo, cim.TapeShieldCableInfo)
+WIRE_KINDS = (cim.OverheadWireInfo, cim.CableInfo, cim.ConcentricNeutralCableInfo, cim.TapeShieldCableInfo)
 UNREAD_RESISTANCES = ("rAC50", "rAC75")
 
 

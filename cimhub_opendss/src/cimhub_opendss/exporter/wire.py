@@ -2,6 +2,7 @@
 
 Every WireInfo in the network is written, used or not (E3), in metres (B1): ``Runits=m GMRunits=m radunits=m``.
 The three catalogs share one name namespace, because a LineGeometry names its conductors without their catalog.
+DSS has no unshielded cable, so a plain CableInfo is a WireData, its insulation unmodelled (B7).
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from cimhub_opendss.schema import opendss_schema as schema
 CIM_CLASSES = WIRE_KINDS
 NATIVE = {
     cim.OverheadWireInfo: schema.Wiredata,
+    cim.CableInfo: schema.Wiredata,  # B7
     cim.ConcentricNeutralCableInfo: schema.Cndata,
     cim.TapeShieldCableInfo: schema.Tsdata,
 }
@@ -93,7 +95,7 @@ def _record(wire: cim.WireInfo, names: Names):
         emergamps=values.limits.emergency,
     )
     cable = values.cable
-    if cable is not None:
+    if native is not schema.Wiredata:
         slots.update(InsLayer=cable.insulation_thickness, DiaIns=cable.diameter_over_insulation)
     if native is schema.Cndata:
         if cable.diameter_over_neutral is None:

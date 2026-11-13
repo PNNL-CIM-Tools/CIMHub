@@ -196,7 +196,7 @@ are at the end of this section.
 
 ```
 cimhub_opendss/src/cimhub_opendss/exporter/
-    wire.py           OverheadWireInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
+    wire.py           OverheadWireInfo and CableInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
     linecode.py       PerLengthPhaseImpedance / PerLengthSequenceImpedance -> Linecode
     linegeometry.py   (WireConfiguration, spacingYOffset) and spacing lines -> Linegeometry, inline positions (B2)
     line.py           ACLineSegment -> Line
@@ -258,7 +258,7 @@ deck's own units, and one fixed unit makes a second export the same text (S6f id
 
 One record per WireInfo in the network, used or not (E3). The three DSS classes share one name namespace (`wire`):
 a LineGeometry's conductor list names a wire without saying its catalog, so the writer's `_conductor_kinds` needs
-each name in only one catalog.
+each name in only one catalog. A plain CableInfo (no neutral or shield) is a WireData, its insulation unmodelled (B7).
 
 | DSS slot | from |
 |---|---|
@@ -315,7 +315,9 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
     sub-conductors. They are written as `xs` / `hs` with the conductor names in `wires`, and the writer emits the
     cond blocks;
   - the wires are matched to positions by sequence number from `get_configuration_wires`, or a spacing line's
-    `get_line_phase_wires`.
+    `get_line_phase_wires`;
+  - a plain CableInfo below grade is written at the same height above it (B7): DSS takes a WireData only above
+    grade.
 - **The other slots:**
   - nconds = the positions;
   - nphases = `numberOfPhases` (required), or a spacing line's phases other than N. Position kinds, where set, must
@@ -447,6 +449,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | B4 | Line neutrals (approved by the user 2026-11-09, as recommended and built) | Geometry `reduce=y`, and the neutral is not written on the bus. Engine probe (2026-11-09, geometry 601 under an unbalanced load): `reduce=y` gives the same voltages, to 1e-9 V, as `reduce=n` with the neutral on node 0 at both ends. So `reduce=y` is exactly a neutral grounded at both ends, and it keeps a 3x3 YPrim. `reduce=n` on a `.1.2.3` bus puts the neutral on node 4, ungrounded: it floats (292 V in the probe), and the phase voltages move by up to 4 %. CIM has no per-conductor neutral grounding to export, so `reduce=n` has nothing to carry. A code line with a neutral row raises |
 | B5 | Code values | Code-level getters; a code no line uses is still exported |
 | B6 | Lumped-only lines (amended by the user) | Written inline: the whole-line values divided by the length, `r1 x1 r0 x0` in ohm/km and `C1 C0` in nF/km, `units=km`; with no length, `length=1` |
+| B7 | Unshielded cable (user, 2026-11-12) | A plain CableInfo (insulated, no neutral or shield: an underground secondary's conductors) is a WireData, its insulation not modelled. DSS takes a WireData only above grade, so a buried one is written at the same height above (`hs` = abs(y)). The series impedance is close: the earth-return depth (about 850 m at 100 ohm-m) dwarfs a few feet |
 
 ### Slot tables (generated from `SLOTS`)
 
@@ -582,7 +585,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | cncables | not mapped | wires carries every kind (the writer names each block's kind) |
 | tscables | not mapped | wires carries every kind (the writer names each block's kind) |
 | xs | written | get_line_conductor_xy x (m); an unused configuration: get_spacing_xy |
-| hs | written | get_line_conductor_xy y, above ground (m) |
+| hs | written | get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7) |
 | Seasons | unset | not in CIM (untranscribed on import) |
 | Ratings | unset | not in CIM (untranscribed on import) |
 | LineType | unset | not in CIM (untranscribed on import) |

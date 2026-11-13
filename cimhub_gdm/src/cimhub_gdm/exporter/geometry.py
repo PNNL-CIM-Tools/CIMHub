@@ -118,6 +118,8 @@ def conductor(wire: cim.WireInfo, line: cim.ACLineSegment, line_limits: CurrentL
     values = get_wire_info(wire, LENGTH_UNIT, RESISTANCE_UNIT, "A")
     if values.kind is cim.TapeShieldCableInfo:
         raise ValueError(f"{describe(wire)}: GDM has no tape-shield cable")
+    if values.kind is cim.CableInfo:
+        raise ValueError(f"{describe(wire)}: GDM has no unshielded cable")
     normal, emergency = ratings(wire, values, line_limits)
     common = {"conductor_diameter": _distance(2 * _required(values.radius, "radius", wire)),
               "conductor_gmr": _distance(_required(values.gmr, "gmr", wire)),
