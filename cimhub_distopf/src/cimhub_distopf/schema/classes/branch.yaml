@@ -1,0 +1,706 @@
+id: https://gridappsd.org/cimhub/distopf/classes/branch
+name: branch
+title: Branch Record
+description: DistOPF branch record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  BranchRecord:
+    description: >-
+      Branch data record for DistOPF. A single record type represents lines,
+      triplex lines, switches, transformers, and center-tap transformers,
+      distinguished by the branch_type field.
+
+      Impedances r_aa..r_cc and x_aa..x_cc are the upper-triangle elements of the
+      3x3 symmetric impedance matrix (r_s1s1..x_s2s2 the 2x2 triplex matrix), in
+      per-unit (base z_base).
+    related_mappings:
+      - cim:ACLineSegment
+      - cim:LoadBreakSwitch
+      - cim:PowerTransformer
+    comments:
+      - >-
+        DistOPF BranchRecord maps to one of three CIM classes depending on
+        branch_type. Import: line and triplex_line create an ACLineSegment
+        with one ACLineSegmentPhase per phase, switch creates a
+        LoadBreakSwitch, and transformer/center_tap_xfmr create a two-winding
+        PowerTransformer with two PowerTransformerEnds. Export: ACLineSegment
+        and SeriesCompensator (as a line), LoadBreakSwitch/Breaker/Fuse/
+        Recloser, and PowerTransformer each have their own registered
+        exporter. A PowerTransformer produces one BranchRecord per winding
+        bus pair (PowerTransformerEnd 1 to each other end, or each tank's
+        first two ends); single-phase tanks between the same buses collapse
+        into one branch, and a center-tap tank becomes a center_tap_xfmr.
+
+    attributes:
+      fb:
+        description: From-bus integer index.
+        range: integer
+        required: true
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Structural mapping via traversal: fb identifies the
+            ConnectivityNode connected to the equipment's first Terminal
+            (Terminals[0]). Import resolves it through the bus-index map
+            built while importing BusRecords; export assigns/looks up a fresh
+            1-based index for that ConnectivityNode.
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      tb:
+        description: To-bus integer index.
+        range: integer
+        required: true
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
+        comments:
+          - >-
+            Same traversal as fb, via the equipment's second Terminal
+            (Terminals[1]). See the fb comment.
+        annotations:
+          order: 2
+          value_type: int
+          separator: ","
+
+      from_name:
+        description: From-bus name label (the ConnectivityNode name).
+        range: string
+        required: false
+        ifabsent: string("")
+        comments:
+          - >-
+            Not used on import (the from-bus is resolved by fb index, not by
+            name). Export: from_name = the from-side ConnectivityNode's name.
+        annotations:
+          order: 3
+          value_type: string
+          quote: false
+          separator: ","
+
+      to_name:
+        description: To-bus name label (the ConnectivityNode name).
+        range: string
+        required: false
+        ifabsent: string("")
+        comments:
+          - >-
+            Not used on import (the to-bus is resolved by tb index, not by
+            name). Export: to_name = the to-side ConnectivityNode's name.
+        annotations:
+          order: 4
+          value_type: string
+          quote: false
+          separator: ","
+
+      r_aa:
+        description: Resistance matrix element R_aa in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.r
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Import: for lines, one PhaseImpedanceData per lower-triangle
+            element of the listed phases (row/column = position in `phases`),
+            r = r_aa × z_base / length; ACLineSegment.r = the first listed
+            phase's diagonal × z_base. For transformers, the first listed
+            phase's diagonal × z_base is written to end 1's
+            PowerTransformerEnd.r and its TransformerMeshImpedance.r. Export:
+            for lines, PhaseImpedanceData row/column index the line's own
+            phase sequence (ACLineSegmentPhase.sequenceNumber), so r_aa =
+            r × length / z_base of the element whose row and column are phase
+            a; a PerLengthSequenceImpedance is expanded to Zs = (2·Z1 + Z0)/3;
+            otherwise ACLineSegment.r / z_base on the diagonal of the line's
+            phases. SeriesCompensator: r / z_base on the a/b/c diagonal.
+            Transformers: the TransformerMeshImpedance.r / z_base (mesh found
+            by pairing from_end.FromMeshImpedance with
+            to_end.ToMeshImpedance) on the a/b/c diagonal. Switches: 1e-8 Ω /
+            z_base on the a/b/c diagonal.
+        todos:
+          - >-
+            Geometry-only lines (WireSpacingInfo + wire info, no
+            PerLengthImpedance or ACLineSegment.r/x) export zero impedance
+            with a warning; computing the phase matrix from geometry is not
+            implemented.
+          - >-
+            Transformer export writes the mesh r/x on the a/b/c diagonal only;
+            no mutual terms or per-phase tank impedances.
+        annotations:
+          order: 5
+          value_type: float
+          separator: ","
+
+      r_ab:
+        description: Resistance matrix element R_ab in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Import: the PhaseImpedanceData element for the a and b positions
+            in `phases`, r = r_ab × z_base / length (lines only; transformers
+            read only the diagonal). Export: r_ab = r × length / z_base of the
+            PhaseImpedanceData element whose row/column are phases a and b in
+            the line's sequence; for a PerLengthSequenceImpedance, Zm =
+            (Z0 − Z1)/3; zero for the ACLineSegment.r/x fallback, switches,
+            transformers, and series compensators.
+        annotations:
+          order: 6
+          value_type: float
+          separator: ","
+
+      r_ac:
+        description: Resistance matrix element R_ac in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Same import/export behavior as r_ab (phases a and c): see the r_ab
+            comment.
+        annotations:
+          order: 7
+          value_type: float
+          separator: ","
+
+      r_bb:
+        description: Resistance matrix element R_bb in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.r
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Same import/export behavior as r_aa for phase b: see the r_aa
+            comment. On import, r_bb sets ACLineSegment.r (or the transformer
+            end r) only when b is the first listed phase.
+        annotations:
+          order: 8
+          value_type: float
+          separator: ","
+
+      r_bc:
+        description: Resistance matrix element R_bc in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Same import/export behavior as r_ab (phases b and c): see the r_ab
+            comment.
+        annotations:
+          order: 9
+          value_type: float
+          separator: ","
+
+      r_cc:
+        description: Resistance matrix element R_cc in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.r
+          - cim:PerLengthPhaseImpedanceData.r
+        comments:
+          - >-
+            Same import/export behavior as r_bb (phase c): see the r_aa and
+            r_bb comments.
+        annotations:
+          order: 10
+          value_type: float
+          separator: ","
+
+      x_aa:
+        description: Reactance matrix element X_aa in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.x
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - >-
+            Same import/export formula as r_aa (reactance instead of
+            resistance): PhaseImpedanceData.x, ACLineSegment.x,
+            PowerTransformerEnd.x / TransformerMeshImpedance.x ↔ x_aa. See the
+            r_aa comment for the full derivation. Switches export zero.
+        annotations:
+          order: 11
+          value_type: float
+          separator: ","
+
+      x_ab:
+        description: Reactance matrix element X_ab in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - "Same import/export behavior as r_ab (reactance instead of resistance): see the r_ab comment."
+        annotations:
+          order: 12
+          value_type: float
+          separator: ","
+
+      x_ac:
+        description: Reactance matrix element X_ac in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - "Same import/export behavior as r_ac (reactance instead of resistance): see the r_ab comment."
+        annotations:
+          order: 13
+          value_type: float
+          separator: ","
+
+      x_bb:
+        description: Reactance matrix element X_bb in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.x
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - "Same import/export behavior as r_bb (reactance instead of resistance): see the r_aa and x_aa comments."
+        annotations:
+          order: 14
+          value_type: float
+          separator: ","
+
+      x_bc:
+        description: Reactance matrix element X_bc in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        related_mappings:
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - "Same import/export behavior as r_bc (reactance instead of resistance): see the r_ab comment."
+        annotations:
+          order: 15
+          value_type: float
+          separator: ","
+
+      x_cc:
+        description: Reactance matrix element X_cc in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:ACLineSegment.x
+          - cim:PerLengthPhaseImpedanceData.x
+        comments:
+          - "Same import/export behavior as r_cc (reactance instead of resistance): see the r_aa and x_aa comments."
+        annotations:
+          order: 16
+          value_type: float
+          separator: ","
+
+      r_s1s1:
+        description: Triplex resistance matrix element R_s1s1 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+        comments:
+          - >-
+            Import: as for r_aa/r_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.r × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 17
+          value_type: float
+          separator: ","
+
+      r_s1s2:
+        description: Triplex resistance matrix element R_s1s2 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+        comments:
+          - >-
+            Import: as for r_aa/r_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.r × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 18
+          value_type: float
+          separator: ","
+
+      r_s2s2:
+        description: Triplex resistance matrix element R_s2s2 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+        comments:
+          - >-
+            Import: as for r_aa/r_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.r × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 19
+          value_type: float
+          separator: ","
+
+      x_s1s1:
+        description: Triplex reactance matrix element X_s1s1 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: as for x_aa/x_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.x × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 20
+          value_type: float
+          separator: ","
+
+      x_s1s2:
+        description: Triplex reactance matrix element X_s1s2 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: as for x_aa/x_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.x × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 21
+          value_type: float
+          separator: ","
+
+      x_s2s2:
+        description: Triplex reactance matrix element X_s2s2 in per-unit (base z_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: as for x_aa/x_ab on a triplex_line with phases s1s2 (center_tap_xfmr reads only r_s1s1/x_s1s1). Export: triplex lines (ACLineSegmentPhases s1/s2): PhaseImpedanceData.x × length / z_base on the secondary base. Center-tap transformers: the s1s1/s2s2 diagonal of the secondary-referred star circuit (see the branch_type comment); the s1s2 mutual term is zero.
+        annotations:
+          order: 22
+          value_type: float
+          separator: ","
+
+      primary_phase:
+        description: >-
+          Primary phase (a, b, or c) of the center-tap transformer feeding this
+          triplex branch; empty for primary-side branchs.
+        range: string
+        required: false
+        ifabsent: string("")
+        comments:
+          - >-
+            Export only (not read on import). center_tap_xfmr: the a/b/c phase of the tank's end 1 (TransformerTankEnd.orderedPhases, falling back to phases). triplex_line: the primary_phase of its from bus, found by tracing from each center-tap transformer's secondary bus through non-transformer equipment (see bus.yaml primary_phase). Empty for other branch types.
+        annotations:
+          order: 23
+          value_type: string
+          quote: false
+          separator: ","
+
+      branch_type:
+        description: >-
+          Branch element type (line, switch, transformer, triplex_line, or
+          center_tap_xfmr).
+        range: string
+        required: false
+        ifabsent: string("line")
+        related_mappings:
+          - cim:ACLineSegment
+          - cim:LoadBreakSwitch
+          - cim:PowerTransformer
+        comments:
+          - >-
+            Import: branch_type selects the class dispatch described in the
+            class-level comment ("switch" → LoadBreakSwitch, "transformer"/
+            "center_tap_xfmr" → PowerTransformer, anything else →
+            ACLineSegment). Export: "line" for ACLineSegment and
+            SeriesCompensator, "triplex_line" for an ACLineSegment whose first
+            phase is s1/s2, "switch" for LoadBreakSwitch/Breaker/Fuse/Recloser,
+            "transformer" for PowerTransformer, and "center_tap_xfmr" for a
+            three-end tank whose ends 2 and 3 share a bus. center_tap_xfmr
+            export mirrors upstream distOPF's secondary-referred star circuit
+            (x2 = (x12 + x23 − x13)/2, x3 = (x13 + x23 − x12)/2, r from each
+            winding's TransformerEndInfo.r).
+        todos:
+          - >-
+            center_tap_xfmr import is an approximation: it builds a plain
+            two-winding PowerTransformer from the s1s1 impedance only, losing
+            the third winding and the split-phase secondary.
+        annotations:
+          order: 24
+          native_name: "type"
+          value_type: string
+          quote: false
+          separator: ","
+
+      name:
+        description: >-
+          Branch name label; the unique identifier for the branch within the
+          network.
+        range: string
+        required: true
+        identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Direct name mapping in both directions: name ↔
+            ConductingEquipment.name (of the ACLineSegment, switch, or
+            PowerTransformer). On export, a PowerTransformer with more than
+            one winding bus pair gets a "_{to bus name}" suffix per branch.
+        annotations:
+          order: 25
+          value_type: string
+          quote: false
+          separator: ","
+
+      status:
+        description: >-
+          Switch status (CLOSED, OPEN, or empty for non-switching elements).
+        range: string
+        required: false
+        ifabsent: string("")
+        close_mappings:
+          - cim:Switch.open
+        comments:
+          - >-
+            Only meaningful for branch_type=switch. Import: status=OPEN sets
+            Switch.open=true; anything else leaves the switch closed. Export: status = "OPEN" when Switch.open is true,
+            "CLOSED" otherwise; left empty ("") for lines and transformers.
+        annotations:
+          order: 26
+          value_type: string
+          quote: false
+          separator: ","
+
+      s_base:
+        description: Apparent power base, in volt-amperes.
+        range: float
+        required: false
+        ifabsent: float(1000000.0)
+        unit:
+          ucum_code: "VA"
+        comments:
+          - >-
+            DistOPF-only scaling constant. Import: used to derive z_base when
+            z_base is absent, and written to both PowerTransformerEnd.ratedS
+            of an imported transformer. Export: always 1e6 VA (1 MVA).
+        todos:
+          - >-
+            Export hard-codes s_base = 1e6 rather than resolving a per-branch
+            base voltage/power combination (see the s_base todo in
+            bus.yaml/generator.yaml for the same pattern elsewhere).
+        annotations:
+          order: 27
+          value_type: float
+          separator: ","
+
+      v_ln_base:
+        description: Line-to-neutral base voltage, in volts.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "V"
+        comments:
+          - >-
+            DistOPF-only scaling constant. Import: used only to derive z_base
+            when z_base is absent. Export: the FROM bus's v_ln_base (see the
+            bus.yaml v_ln_base comment for how it is resolved), so transformer
+            impedances are per-unit on the from side; a center_tap_xfmr
+            reports the secondary (to) bus base instead, as upstream does.
+        annotations:
+          order: 28
+          value_type: float
+          separator: ","
+
+      z_base:
+        description: Impedance base in ohms (z_base = v_ln_base² / s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "Ohm"
+        comments:
+          - >-
+            DistOPF-only derived constant (v_ln_base² / s_base) used to
+            convert r_aa..x_s2s2 between per-unit and ohms; not itself stored
+            on the CIM object. Import uses this value, or computes it from
+            v_ln_base and s_base when absent. Export: the from-bus base (the
+            secondary base for center_tap_xfmr).
+        annotations:
+          order: 29
+          value_type: float
+          separator: ","
+
+      phases:
+        description: >-
+          Active phases for this branch, in the line's phase order (e.g. abc,
+          a, cb, s1s2).
+        range: string
+        required: false
+        ifabsent: string("abc")
+        related_mappings:
+          - cim:ACLineSegmentPhase.phase
+        comments:
+          - >-
+            Import: lines get one ACLineSegmentPhase per token in order
+            (sequenceNumber = position; "abc" when empty); transformers use the
+            first token to pick the diagonal impedance; switches ignore it.
+            Export: lines list their ACLineSegmentPhases in sequenceNumber
+            order with neutrals dropped (e.g. "cb"), or "abc" when the line
+            has no phase objects; center_tap_xfmr writes "s1s2";
+            transformers, switches, and series compensators always write
+            "abc".
+        todos:
+          - >-
+            Transformer, switch, and series-compensator exports do not inspect
+            TransformerTankEnd/SwitchPhase phasing, so single-phase devices
+            still export as "abc".
+        annotations:
+          order: 30
+          value_type: string
+          quote: false
+          separator: ","
+
+      s_a_max:
+        description: Phase A apparent power limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF thermal/apparent-power constraint; not read or written by the CIM converters."
+        todos:
+          - >-
+            No CIM equivalent is wired up. The closest CIM concept (a
+            CurrentLimit/OperationalLimit on the segment or switch) is not
+            traversed on import or export.
+        annotations:
+          order: 31
+          value_type: float
+          separator: ","
+
+      s_b_max:
+        description: Phase B apparent power limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF thermal/apparent-power constraint; not read or written by the CIM converters."
+        todos:
+          - "Same missing OperationalLimit traversal as s_a_max — see the s_a_max todo."
+        annotations:
+          order: 32
+          value_type: float
+          separator: ","
+
+      s_c_max:
+        description: Phase C apparent power limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF thermal/apparent-power constraint; not read or written by the CIM converters."
+        todos:
+          - "Same missing OperationalLimit traversal as s_a_max — see the s_a_max todo."
+        annotations:
+          order: 33
+          value_type: float
+          separator: ","
+
+      length:
+        description: Branch length in meters (0.0 for non-line elements).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "m"
+        exact_mappings:
+          - cim:Conductor.length
+        comments:
+          - >-
+            Only meaningful for line/triplex_line. Direct mapping in both
+            directions: length ↔ ACLineSegment.length (a Conductor
+            attribute), used together with z_base to convert the per-unit
+            matrix elements to and from per-length impedance. Import treats a
+            zero length as 1 m. Export writes 0.0 for transformers, switches,
+            and series compensators.
+        annotations:
+          order: 34
+          value_type: float
+          separator: ""  # No separator after last field

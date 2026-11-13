@@ -1,0 +1,151 @@
+id: https://gridappsd.org/cimhub/distopf/classes/capacitor
+name: capacitor
+title: Capacitor Record
+description: DistOPF capacitor record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  CapacitorRecord:
+    description: >-
+      Shunt capacitor data record for DistOPF. Reactive power values are in
+      per-unit on the fixed distOPF system base of 1 MVA (the record has no
+      s_base of its own).
+    exact_mappings:
+      - cim:LinearShuntCompensator
+    comments:
+      - >-
+        DistOPF CapacitorRecord maps to CIM LinearShuntCompensator. Import
+        creates one Y-connected LinearShuntCompensator per record, with a
+        LinearShuntCompensatorPhase per phase, deriving susceptance from the
+        record's reactive power and the connected bus's nominal voltage.
+        Export reads either per-phase LinearShuntCompensatorPhase.bPerSection
+        (preferred) or the parent-level bPerSection (fallback, all phases
+        equal) and converts back to per-unit reactive power. distOPF keys
+        capacitor rows by bus, so banks sharing a bus merge into one record
+        (q_* summed, phases unioned, name from the first bank).
+
+    attributes:
+      id:
+        description: Capacitor integer index (one-based row number).
+        range: integer
+        required: true
+        identifier: true
+        comments:
+          - >-
+            The distOPF bus index (BusRecord.id) of the bus the capacitor
+            connects to, following the upstream convention; not a CIM
+            identity. Import: the ConnectivityNode is found by this bus index
+            only. Export: id = the bus index of the LinearShuntCompensator's
+            ConnectivityNode.
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: Capacitor name label.
+        range: string
+        required: false
+        ifabsent: string("")
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: LinearShuntCompensator.name = name; it is not used to find
+            the bus. Export: name = LinearShuntCompensator.name (the CIM
+            object's own name, not the bus name; the first bank's name when
+            several share a bus).
+        annotations:
+          order: 2
+          value_type: string
+          quote: false
+          separator: ","
+
+      q_a:
+        description: Phase A reactive power injection in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:LinearShuntCompensatorPhase.bPerSection
+        comments:
+          - >-
+            Import: LinearShuntCompensatorPhase(phase=A).bPerSection = q_a ×
+            1 MVA / V_ln², created when phases lists a or q_a is nonzero; the
+            bank-level bPerSection = (q_a + q_b + q_c) × 1 MVA / V_ll² for a
+            multi-phase bank, or / V_ln² for a single-phase one (nomU = V_ll
+            or V_ln to match), with V from the bus's BaseVoltage. Export: q_a
+            = LinearShuntCompensatorPhase(phase=A).bPerSection × v_ln² / 1 MVA
+            when any phase sets bPerSection; otherwise the parent-level
+            bPerSection × v_ln² / 1 MVA is applied to every phase of the bank.
+        annotations:
+          order: 3
+          value_type: float
+          separator: ","
+
+      q_b:
+        description: Phase B reactive power injection in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:LinearShuntCompensatorPhase.bPerSection
+        comments:
+          - >-
+            Same import/export formula as q_a (phase B): see the q_a comment for
+            the full bPerSection derivation.
+        annotations:
+          order: 4
+          value_type: float
+          separator: ","
+
+      q_c:
+        description: Phase C reactive power injection in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:LinearShuntCompensatorPhase.bPerSection
+        comments:
+          - >-
+            Same import/export formula as q_a (phase C): see the q_a comment for
+            the full bPerSection derivation.
+        annotations:
+          order: 5
+          value_type: float
+          separator: ","
+
+      phases:
+        description: Active phases for this capacitor (e.g. abc, a, bc).
+        range: string
+        required: false
+        ifabsent: string("abc")
+        related_mappings:
+          - cim:LinearShuntCompensatorPhase.phase
+        comments:
+          - >-
+            Import: each listed phase (default "abc" when empty) gets a
+            LinearShuntCompensatorPhase, and the phase count selects the V_ll
+            or V_ln bank rating (see q_a). Export: the a/b/c phases of the
+            bank's ShuntCompensatorPhases in canonical order; "abc" when it
+            has none. Merged records union their phases.
+        annotations:
+          order: 6
+          value_type: string
+          quote: false
+          separator: ""  # No separator after last field

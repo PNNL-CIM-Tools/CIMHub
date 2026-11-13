@@ -1,0 +1,117 @@
+id: https://gridappsd.org/cimhub/distopf/case/schedule
+name: schedule
+title: Schedule Record
+description: DistOPF time-series schedule record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  ScheduleRecord:
+    description: >-
+      Time-series schedule record for DistOPF. Defines per-hour multipliers for
+      load shapes and PV generation, plus the locational marginal price. The
+      `time` field is the integer hour index (0-23 for a 24-hour period).
+    related_mappings:
+      - cim:RegularIntervalSchedule
+    comments:
+      - >-
+        DistOPF ScheduleRecord is read and written as plain CSV data by the
+        reader/writer, but there is currently no importer or exporter
+        converter that maps it to or from CIM objects. The nearest CIM
+        counterpart would be a RegularIntervalSchedule (the time-schedule
+        container) with one RegularTimePoint per hour, but no such
+        traversal exists yet.
+    todos:
+      - >-
+        No CIM converter exists for ScheduleRecord in either direction.
+        Implementing one requires deciding how RegularIntervalSchedule
+        instances attach to the loads/generators/prices they multiply (for
+        example, via EnergyConsumer.SeasonDayTypeSchedules or an equivalent
+        association) before pv_multiplier, default_multiplier, and price can
+        roundtrip.
+
+    attributes:
+      time:
+        description: Hour index (zero-based integer time step).
+        range: integer
+        required: true
+        identifier: true
+        related_mappings:
+          - cim:RegularTimePoint.sequenceNumber
+        comments:
+          - >-
+            Not yet converted. If a converter is implemented, time would
+            correspond to a RegularTimePoint's position within the schedule
+            (RegularIntervalSchedule.timePoints), one point per hour.
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      pv_multiplier:
+        description: PV generation profile multiplier for this hour (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 2
+          native_name: "PV"
+          value_type: float
+          separator: ","
+        comments:
+          - >-
+            Not yet converted; no CIM equivalent is wired up. See the
+            class-level todo.
+        todos:
+          - >-
+            Requires a converter that attaches a RegularIntervalSchedule to
+            the PV generators it scales and reads/writes RegularTimePoint.value1
+            per hour.
+
+      default_multiplier:
+        description: Default load-shape multiplier for this hour (0.0 or greater).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        annotations:
+          order: 3
+          native_name: "default"
+          value_type: float
+          separator: ","
+        comments:
+          - >-
+            Not yet converted; no CIM equivalent is wired up. See the
+            class-level todo.
+        todos:
+          - >-
+            Requires a converter that attaches a RegularIntervalSchedule to
+            the loads it scales and reads/writes RegularTimePoint.value1 per
+            hour.
+
+      price:
+        description: Locational marginal price for this hour, in $/MWh.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "$/MWh"
+        annotations:
+          order: 4
+          value_type: float
+          separator: ""  # No separator after last field
+        comments:
+          - >-
+            DistOPF-only OPF input (locational marginal price signal); no CIM
+            class in the standard profile represents a price schedule.
+        todos:
+          - >-
+            No CIM equivalent for a price time series; would require a CIM
+            extension to roundtrip.

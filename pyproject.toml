@@ -10,6 +10,7 @@ dependencies = [
     "cimhub-raw",
     "cimhub-gdm",
     "cimhub-gridlabd",
+    "cimhub-distopf",
 ]
 
 [dependency-groups]
@@ -33,6 +34,7 @@ members = [
     "cimhub_raw",
     "cimhub_gdm",
     "cimhub_gridlabd",
+    "cimhub_distopf",
 ]
 
 [tool.uv.sources]
@@ -41,6 +43,7 @@ cimhub-opendss = { workspace = true }
 cimhub-raw = { workspace = true }
 cimhub-gdm = { workspace = true }
 cimhub-gridlabd = { workspace = true }
+cimhub-distopf = { workspace = true }
 # Sibling checkouts of the cim-graph stack, for local development only. The packages pin the released
 # versions; the publish-*.yml workflows build with --no-sources and test the wheels against PyPI.
 cim-graph = { path = "../CIM-Graph", editable = true }

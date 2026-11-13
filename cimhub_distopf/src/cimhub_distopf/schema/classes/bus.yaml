@@ -1,0 +1,599 @@
+id: https://gridappsd.org/cimhub/distopf/classes/bus
+name: bus
+title: Bus Record
+description: DistOPF bus record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  BusRecord:
+    description: Bus data record for DistOPF three-phase distribution OPF.
+    exact_mappings:
+      - cim:ConnectivityNode
+    comments:
+      - >-
+        DistOPF BusRecord maps primarily to a CIM ConnectivityNode, with an
+        associated BaseVoltage/VoltageLevel/Substation created (or reused) for
+        the bus's base voltage, an EnergySource on the SWING bus, and an
+        EnergyConsumer with per-phase EnergyConsumerPhases when the bus
+        carries load. Import creates all of these from a single record.
+        Export starts from the ConnectivityNode and traverses its Terminals
+        to recover per-phase load, generation, and capacitor presence.
+
+    attributes:
+      id:
+        description: Bus integer index (one-based row number).
+        range: integer
+        required: true
+        identifier: true
+        comments:
+          - >-
+            DistOPF-only: a row index used to key this record, referenced by
+            branch/regulator fb/tb and by generator/capacitor/battery id.
+            Import resolves those references through this index only (never
+            by name). Not stored on the CIM ConnectivityNode.
+            Export assigns fresh 1-based indices to ConnectivityNodes in
+            traversal order, so round-tripped indices are not guaranteed to
+            match the original import.
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: Bus name label (matches the original feeder bus number).
+        range: string
+        required: false
+        ifabsent: string("")
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Direct name mapping in both directions: name ↔ ConnectivityNode.name.
+        annotations:
+          order: 2
+          value_type: string
+          quote: false
+          separator: ","
+
+      pl_a:
+        description: Phase A active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.p
+        comments:
+          - >-
+            Import: EnergyConsumerPhase(phase=A).p = pl_a × s_base (watts),
+            created when the bus lists phase a or pl_a/ql_a is nonzero;
+            EnergyConsumer.p is the sum over all phases (a, b, c, s1, s2).
+            Export: pl_a = sum of EnergyConsumerPhase(phase=A).p / s_base over
+            the bus's loads; a load with no phase objects is split evenly over
+            the bus's phases (a/b/c, or s1/s2 on a triplex secondary).
+        annotations:
+          order: 3
+          value_type: float
+          separator: ","
+
+      ql_a:
+        description: Phase A reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Same import/export formula as pl_a (reactive power): see the pl_a
+            comment for the full EnergyConsumer.q derivation.
+        annotations:
+          order: 4
+          value_type: float
+          separator: ","
+
+      pl_b:
+        description: Phase B active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as pl_a for phase B: see the pl_a
+            comment.
+        annotations:
+          order: 5
+          value_type: float
+          separator: ","
+
+      ql_b:
+        description: Phase B reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as pl_a (reactive power, phase B): see
+            the pl_a comment.
+        annotations:
+          order: 6
+          value_type: float
+          separator: ","
+
+      pl_c:
+        description: Phase C active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as pl_a for phase C: see the pl_a
+            comment.
+        annotations:
+          order: 7
+          value_type: float
+          separator: ","
+
+      ql_c:
+        description: Phase C reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as pl_a (reactive power, phase C): see
+            the pl_a comment.
+        annotations:
+          order: 8
+          value_type: float
+          separator: ","
+
+      pl_s1:
+        description: Triplex s1 active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.p
+        comments:
+          - >-
+            Same import/export formula as pl_a for triplex phase s1 (see the
+            pl_a comment); a load with no phase objects on a triplex
+            secondary is split evenly over s1/s2.
+        annotations:
+          order: 9
+          value_type: float
+          separator: ","
+
+      ql_s1:
+        description: Triplex s1 reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Same import/export formula as pl_a (reactive power, triplex phase
+            s1): see the pl_a and pl_s1 comments.
+        annotations:
+          order: 10
+          value_type: float
+          separator: ","
+
+      pl_s2:
+        description: Triplex s2 active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.p
+        comments:
+          - >-
+            Same import/export formula as pl_a for triplex phase s2: see the
+            pl_a and pl_s1 comments.
+        annotations:
+          order: 11
+          value_type: float
+          separator: ","
+
+      ql_s2:
+        description: Triplex s2 reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Same import/export formula as pl_a (reactive power, triplex phase
+            s2): see the pl_a and pl_s1 comments.
+        annotations:
+          order: 12
+          value_type: float
+          separator: ","
+
+      pl_s1s2:
+        description: Triplex s1s2 active load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.p
+        comments:
+          - >-
+            Not populated on export or read on import: CIM gives triplex loads as separate s1 and s2 EnergyConsumerPhases, which export to pl_s1/pl_s2. Present to match the upstream DistOPF column set.
+        annotations:
+          order: 13
+          value_type: float
+          separator: ","
+
+      ql_s1s2:
+        description: Triplex s1s2 reactive load in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Not populated on export or read on import: CIM gives triplex loads as separate s1 and s2 EnergyConsumerPhases, which export to pl_s1/pl_s2. Present to match the upstream DistOPF column set.
+        annotations:
+          order: 14
+          value_type: float
+          separator: ","
+
+      bus_type:
+        description: Bus type (SWING = slack bus, PQ = load bus).
+        range: string
+        required: false
+        ifabsent: string("PQ")
+        related_mappings:
+          - cim:EnergySource.Terminals
+        comments:
+          - >-
+            Import: a SWING bus gets an EnergySource (nominalVoltage and
+            voltageMagnitude = the bus's line-to-line base, angle 0). Export:
+            bus_type = "SWING" when the ConnectivityNode has a Terminal
+            connected to an EnergySource, otherwise "PQ" — i.e. the swing bus
+            is detected structurally, not read from a dedicated CIM
+            attribute.
+        annotations:
+          order: 15
+          value_type: string
+          quote: false
+          separator: ","
+
+      v_a:
+        description: Phase A initial voltage magnitude in per-unit (base v_ln_base).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF initial-guess/flat-start voltage; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase OPF initial voltage guess on ConnectivityNode; would need a CIM extension (or a SvVoltage state-variable link) to roundtrip."
+        annotations:
+          order: 16
+          value_type: float
+          separator: ","
+
+      v_b:
+        description: Phase B initial voltage magnitude in per-unit (base v_ln_base).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF initial-guess/flat-start voltage; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase OPF initial voltage guess on ConnectivityNode; would need a CIM extension (or a SvVoltage state-variable link) to roundtrip."
+        annotations:
+          order: 17
+          value_type: float
+          separator: ","
+
+      v_c:
+        description: Phase C initial voltage magnitude in per-unit (base v_ln_base).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF initial-guess/flat-start voltage; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase OPF initial voltage guess on ConnectivityNode; would need a CIM extension (or a SvVoltage state-variable link) to roundtrip."
+        annotations:
+          order: 18
+          value_type: float
+          separator: ","
+
+      v_ln_base:
+        description: Line-to-neutral base voltage, in volts.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "V"
+        close_mappings:
+          - cim:BaseVoltage.nominalVoltage
+        comments:
+          - >-
+            Import: BaseVoltage.nominalVoltage = v_ln_base × √3 (line-to-line;
+            an existing BaseVoltage within 1% is reused); v_ln_base must be
+            positive or import raises a ValueError. Export: v_ln_base =
+            nominalVoltage / √3, taken from the BaseVoltage of equipment
+            attached to the ConnectivityNode; for a transformer, the
+            PowerTransformerEnd or TransformerTankEnd at this node (ratedU,
+            then the end's BaseVoltage). Falls back to the VoltageLevel's
+            BaseVoltage; a node with none of these raises a ValueError.
+        annotations:
+          order: 19
+          value_type: float
+          separator: ","
+
+      s_base:
+        description: Apparent power base, in volt-amperes.
+        range: float
+        required: false
+        ifabsent: float(1000000.0)
+        unit:
+          ucum_code: "VA"
+        comments:
+          - >-
+            DistOPF-only scaling constant used to convert the per-unit load
+            fields (pl_*/ql_*) to and from CIM's SI-unit power values; not
+            itself stored on the CIM object. Import multiplies by this
+            record's s_base; export always writes 1e6 VA (1 MVA).
+        todos:
+          - >-
+            Export hard-codes s_base = 1e6 (_S_BASE) rather than resolving a
+            per-bus base voltage/power combination.
+        annotations:
+          order: 20
+          value_type: float
+          separator: ","
+
+      v_min:
+        description: Minimum voltage magnitude limit, in per-unit.
+        range: float
+        required: false
+        ifabsent: float(0.95)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF voltage constraint lower bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-bus minimum voltage limit; the closest CIM concept (an OperationalLimit on a VoltageLimit) is not wired up."
+        annotations:
+          order: 21
+          value_type: float
+          separator: ","
+
+      v_max:
+        description: Maximum voltage magnitude limit, in per-unit.
+        range: float
+        required: false
+        ifabsent: float(1.05)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF voltage constraint upper bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-bus maximum voltage limit; the closest CIM concept (an OperationalLimit on a VoltageLimit) is not wired up."
+        annotations:
+          order: 22
+          value_type: float
+          separator: ","
+
+      cvr_p:
+        description: >-
+          Conservation Voltage Reduction (CVR) active power coefficient.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        comments:
+          - "DistOPF-only (N/A): OPF voltage-dependent load coefficient; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-bus CVR active-power coefficient (the closest concept, EnergyConsumer.pVoltageExponent, is not wired up); would need a converter to roundtrip."
+        annotations:
+          order: 23
+          value_type: float
+          separator: ","
+
+      cvr_q:
+        description: Conservation Voltage Reduction (CVR) reactive power coefficient.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        comments:
+          - "DistOPF-only (N/A): OPF voltage-dependent load coefficient; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-bus CVR reactive-power coefficient (the closest concept, EnergyConsumer.qVoltageExponent, is not wired up); would need a converter to roundtrip."
+        annotations:
+          order: 24
+          value_type: float
+          separator: ","
+
+      phases:
+        description: Active phases at this bus (abc, a, b, c, ab, ac, bc).
+        range: string
+        required: false
+        ifabsent: string("abc")
+        related_mappings:
+          - cim:EnergyConsumerPhase.phase
+        comments:
+          - >-
+            Import: each listed phase gets an EnergyConsumerPhase when the bus
+            has load (even with zero load on that phase). Export: the union of
+            the phases of the bus's EnergyConsumers (from EnergyConsumerPhase,
+            or the bus default for a load without phase objects), in a, b, c,
+            s1, s2 order; "abc" (or "s1s2" on a triplex secondary) when the bus
+            has no load.
+        annotations:
+          order: 25
+          value_type: string
+          quote: false
+          separator: ","
+
+      primary_phase:
+        description: >-
+          Primary phase (a, b, or c) of the center-tap transformer feeding this
+          triplex bus; empty for primary-side buss.
+        range: string
+        required: false
+        ifabsent: string("")
+        comments:
+          - >-
+            Export only (not read on import). Computed by tracing from each center-tap transformer's secondary bus through non-transformer equipment; the primary phase is the a/b/c phase of the tank's end 1 (TransformerTankEnd.orderedPhases, falling back to phases).
+        annotations:
+          order: 26
+          value_type: string
+          quote: false
+          separator: ","
+
+      has_gen:
+        description: True if a generator is connected at this bus.
+        range: boolean
+        required: false
+        ifabsent: "false"
+        related_mappings:
+          - cim:SynchronousMachine
+          - cim:PowerElectronicsConnection
+        comments:
+          - >-
+            Not used on import (generator equipment is created separately by
+            the GeneratorRecord converter and linked by ConnectivityNode).
+            Export: has_gen = True if any Terminal on this ConnectivityNode
+            connects to a SynchronousMachine or PowerElectronicsConnection.
+        annotations:
+          order: 27
+          value_type: bool
+          separator: ","
+
+      has_load:
+        description: True if a load is connected at this bus.
+        range: boolean
+        required: false
+        ifabsent: "false"
+        related_mappings:
+          - cim:EnergyConsumer
+        comments:
+          - >-
+            Import: has_load gates whether an EnergyConsumer is created for
+            this bus at all. Export: has_load = True if any Terminal on this
+            ConnectivityNode connects to an EnergyConsumer (with at least one
+            a/b/c/s1/s2 phase).
+        annotations:
+          order: 28
+          value_type: bool
+          separator: ","
+
+      has_cap:
+        description: True if a capacitor is connected at this bus.
+        range: boolean
+        required: false
+        ifabsent: "false"
+        related_mappings:
+          - cim:LinearShuntCompensator
+        comments:
+          - >-
+            Not used on import (capacitor equipment is created separately by
+            the CapacitorRecord converter and linked by ConnectivityNode).
+            Export: has_cap = True if any Terminal on this ConnectivityNode
+            connects to a LinearShuntCompensator.
+        annotations:
+          order: 29
+          value_type: bool
+          separator: ","
+
+      latitude:
+        description: Geographic latitude, in degrees.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        comments:
+          - "DistOPF-only (N/A): geographic coordinate; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent wired up. CIM's PositionPoint (via Location) could carry this, but ConnectivityNode does not currently traverse to one."
+        annotations:
+          order: 30
+          value_type: float
+          separator: ","
+
+      longitude:
+        description: Geographic longitude, in degrees.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "deg"
+        comments:
+          - "DistOPF-only (N/A): geographic coordinate; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent wired up. CIM's PositionPoint (via Location) could carry this, but ConnectivityNode does not currently traverse to one."
+        annotations:
+          order: 31
+          value_type: float
+          separator: ","
+
+      load_shape:
+        description: Name of the load-shape profile applied to this bus.
+        range: string
+        required: false
+        ifabsent: string("default")
+        related_mappings:
+          - cim:RegularIntervalSchedule
+        comments:
+          - >-
+            DistOPF-only: names a row in the separate ScheduleRecord table
+            (see case/schedule.yaml), which itself has no CIM converter yet.
+            Not read or written by the CIM converters.
+        todos:
+          - >-
+            No CIM equivalent is wired up; implementing this depends on the
+            ScheduleRecord → RegularIntervalSchedule converter described in
+            case/schedule.yaml's class-level todo.
+        annotations:
+          order: 32
+          value_type: string
+          quote: false
+          separator: ""  # No separator after last field

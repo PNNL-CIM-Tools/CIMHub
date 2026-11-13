@@ -1,0 +1,245 @@
+id: https://gridappsd.org/cimhub/distopf/classes/battery
+name: battery
+title: Battery Record
+description: DistOPF battery storage record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  BatteryRecord:
+    description: >-
+      Battery energy storage system (BESS) data record for DistOPF.
+      Power ratings are in per-unit on the fixed distOPF system base of
+      1 MVA (the record has no s_base of its own). Energy capacity is in
+      per-unit hours (1 MVA × hour). State-of-charge fields are fractions
+      (0.0-1.0).
+    exact_mappings:
+      - cim:BatteryUnit
+    comments:
+      - >-
+        DistOPF BatteryRecord maps to a CIM BatteryUnit connected through a
+        PowerElectronicsConnection. Import creates both objects from a single
+        record; export reads the BatteryUnit and its PowerElectronicsConnection
+        back into one record. distOPF keys battery rows by bus, so batteries
+        sharing a bus merge into one record: s_max and energy_capacity are
+        summed, start_soc is energy-weighted, phases are unioned, and other
+        fields come from the first battery.
+
+    attributes:
+      id:
+        description: Battery integer index (one-based row number).
+        range: integer
+        required: true
+        identifier: true
+        comments:
+          - >-
+            The distOPF bus index (BusRecord.id) of the bus the battery
+            connects to, following the upstream convention; not a CIM
+            identity. Import: the ConnectivityNode is found by this bus index
+            only. Export: id = the bus index of the battery's
+            PowerElectronicsConnection node (shared with the bus record, not
+            a separate counter).
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: >-
+          Battery name label (matches the name of the bus where the battery
+          connects).
+        range: string
+        required: false
+        ifabsent: string("")
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: BatteryUnit.name = PowerElectronicsConnection.name =
+            name + "_batt", so the CIM objects stay distinct from a PV
+            inverter on the same bus; name is not used to find the bus.
+            Export: name = the connected ConnectivityNode's name.
+        annotations:
+          order: 2
+          value_type: string
+          quote: false
+          separator: ","
+
+      s_max:
+        description: Maximum apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        exact_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - >-
+            Import: PowerElectronicsConnection.ratedS = s_max × 1 MVA, or
+            ratedE (1C) when s_max is zero. Export: s_max = ratedS / 1 MVA, or
+            BatteryUnit.ratedE (1C) when ratedS is unset or zero.
+        annotations:
+          order: 3
+          value_type: float
+          separator: ","
+
+      phases:
+        description: Active phases for this battery (e.g. abc, a, bc, s1s2).
+        range: string
+        required: false
+        ifabsent: string("abc")
+        comments:
+          - >-
+            Not used on import (the importer creates no
+            PowerElectronicsConnectionPhase children). Export: the phases of
+            the PEC's PowerElectronicsConnectionPhases in a, b, c, s1, s2
+            order (neutrals dropped); "abc", or "s1s2" on a triplex
+            secondary, when it has none. Merged records union their phases.
+        todos:
+          - >-
+            Import ignores phases, so a single-phase battery round-trips as a
+            balanced three-phase (or s1s2) connection.
+        annotations:
+          order: 4
+          value_type: string
+          quote: false
+          separator: ","
+
+      energy_capacity:
+        description: >-
+          Total energy capacity in per-unit hours (s_base × hour). For example,
+          1.2 with s_base = 1 MVA is 1.2 MWh.
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu.h"
+        close_mappings:
+          - cim:BatteryUnit.ratedE
+        comments:
+          - >-
+            Import: BatteryUnit.ratedE = energy_capacity × 1 MVA·h as a
+            RealEnergy (watt-hours). Export: energy_capacity = ratedE (Wh) /
+            1 MVA; summed when batteries share a bus.
+        annotations:
+          order: 5
+          value_type: float
+          separator: ","
+
+      min_soc:
+        description: Minimum state of charge, as a fraction (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        comments:
+          - "DistOPF-only (N/A): OPF state-of-charge bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a minimum state-of-charge limit on BatteryUnit; requires a CIM extension to roundtrip."
+        annotations:
+          order: 6
+          value_type: float
+          separator: ","
+
+      max_soc:
+        description: Maximum state of charge, as a fraction (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        comments:
+          - "DistOPF-only (N/A): OPF state-of-charge bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a maximum state-of-charge limit on BatteryUnit; requires a CIM extension to roundtrip."
+        annotations:
+          order: 7
+          value_type: float
+          separator: ","
+
+      start_soc:
+        description: Initial state of charge, as a fraction (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(0.5)
+        close_mappings:
+          - cim:BatteryUnit.storedE
+        comments:
+          - >-
+            Import: BatteryUnit.storedE = energy_capacity × 1 MVA·h ×
+            start_soc. Export: start_soc = storedE / ratedE (0.5 if ratedE is
+            zero or storedE is unset); merged batteries get the
+            energy-weighted mean.
+        annotations:
+          order: 8
+          value_type: float
+          separator: ","
+
+      charge_efficiency:
+        description: Charging efficiency, as a fraction (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        exact_mappings:
+          - cim:BatteryUnit.chargingEfficiency
+        comments:
+          - >-
+            Direct fraction mapping in both directions, with no unit
+            conversion: charge_efficiency ↔ BatteryUnit.chargingEfficiency.
+            Export writes 1.0 when the CIM value is unset or zero.
+        annotations:
+          order: 9
+          value_type: float
+          separator: ","
+
+      discharge_efficiency:
+        description: Discharging efficiency, as a fraction (0.0-1.0).
+        range: float
+        required: false
+        ifabsent: float(1.0)
+        exact_mappings:
+          - cim:BatteryUnit.dischargingEfficiency
+        comments:
+          - >-
+            Direct fraction mapping in both directions, with no unit
+            conversion: discharge_efficiency ↔ BatteryUnit.dischargingEfficiency.
+            Export writes 1.0 when the CIM value is unset or zero.
+        annotations:
+          order: 10
+          value_type: float
+          separator: ","
+
+      annual_cycle_limit:
+        description: Annual charge/discharge cycle limit, in cycles per year.
+        range: integer
+        required: false
+        ifabsent: int(365)
+        comments:
+          - "DistOPF-only (N/A): OPF cycling constraint; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for an annual cycle limit on BatteryUnit; requires a CIM extension to roundtrip."
+        annotations:
+          order: 11
+          value_type: int
+          separator: ","
+
+      control_variable:
+        description: >-
+          OPF control variable (P = active power, Q = reactive power, PQ = both,
+          empty = fixed).
+        range: string
+        required: false
+        ifabsent: string("P")
+        comments:
+          - "DistOPF-only (N/A): OPF solver hint for which setpoints are dispatchable; not read or written by the CIM converters."
+        annotations:
+          order: 12
+          value_type: string
+          quote: false
+          separator: ""  # No separator after last field

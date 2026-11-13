@@ -1,0 +1,86 @@
+id: https://gridappsd.org/cimhub/distopf
+name: distopf-schema
+title: DistOPF CSV Data Model
+description: >-
+  LinkML schema for the DistOPF three-phase distribution optimal power flow
+  (OPF) CSV file format, enabling round-trip conversion with CIM. This schema
+  is the single source of truth for both data structure and serialization
+  formatting.
+
+license: https://opensource.org/licenses/BSD-3-Clause
+version: 1.0.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+
+default_prefix: distopf
+default_range: string
+
+imports:
+  - linkml:types
+  - classes/bus
+  - classes/branch
+  - classes/generator
+  - classes/capacitor
+  - classes/battery
+  - classes/regulator
+  - case/schedule
+
+classes:
+  DistopfModel:
+    description: >-
+      Complete DistOPF network model containing every record type in the CSV
+      file set.
+    attributes:
+      bus_records:
+        description: Bus data records (bus_data.csv).
+        range: BusRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      branch_records:
+        description: >-
+          Branch data records for lines, switches, and transformers
+          (branch_data.csv).
+        range: BranchRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      generator_records:
+        description: Generator (DER) data records (gen_data.csv).
+        range: GeneratorRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      capacitor_records:
+        description: Shunt capacitor data records (cap_data.csv).
+        range: CapacitorRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      battery_records:
+        description: Battery energy storage data records (bat_data.csv).
+        range: BatteryRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      regulator_records:
+        description: Voltage regulator tap-position records (reg_data.csv).
+        range: RegulatorRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true
+
+      schedule_records:
+        description: >-
+          Time-series load/PV shape and price records (schedules.csv).
+        range: ScheduleRecord
+        multivalued: true
+        required: false
+        inlined_as_list: true

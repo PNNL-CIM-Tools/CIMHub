@@ -1,0 +1,616 @@
+id: https://gridappsd.org/cimhub/distopf/classes/generator
+name: generator
+title: Generator Record
+description: DistOPF generator record.
+
+imports:
+  - linkml:types
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  distopf: https://gridappsd.org/cimhub/distopf
+  cim: http://iec.ch/TC57/CIM100#
+
+default_prefix: distopf
+
+classes:
+  GeneratorRecord:
+    description: >-
+      Generator (DER) data record for DistOPF. Covers PV and diesel generation
+      types. Power values are in per-unit (base s_base).
+    related_mappings:
+      - cim:PowerElectronicsConnection
+      - cim:SynchronousMachine
+    comments:
+      - >-
+        DistOPF GeneratorRecord maps to different CIM classes depending on
+        generator_type. Import: generator_type=diesel creates a
+        SynchronousMachine; any other value (including the pv+bess type
+        mentioned in older docs, which is not separately handled) creates a
+        PhotoVoltaicUnit behind a PowerElectronicsConnection. Export: only
+        PowerElectronicsConnection objects without an attached BatteryUnit are
+        exported as GeneratorRecord (generator_type is always written as
+        "pv"); SynchronousMachine objects are not currently exported at all.
+        distOPF keys generator rows by bus, so PECs sharing a bus merge into
+        one record: p/q/s_max fields are summed, phases unioned, and other
+        fields taken from the first PEC.
+    todos:
+      - >-
+        Export never emits generator_type="diesel" — there is no exporter
+        registered for cim.SynchronousMachine, so diesel generators created on
+        import cannot be round-tripped back out.
+
+    attributes:
+      id:
+        description: Generator integer index (one-based row number).
+        range: integer
+        required: true
+        identifier: true
+        comments:
+          - >-
+            The distOPF bus index (BusRecord.id) of the bus the generator
+            connects to, following the upstream convention; not a CIM
+            identity. Import: the ConnectivityNode is found by this bus index
+            only. Export: id = the bus index of the PEC's ConnectivityNode, so
+            generators on the same bus merge into one record.
+        annotations:
+          order: 1
+          value_type: int
+          separator: ","
+
+      name:
+        description: >-
+          Generator name label (matches the name of the bus where the generator
+          connects).
+        range: string
+        required: false
+        ifabsent: string("")
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: name becomes the CIM object's own name
+            (PowerElectronicsConnection / PhotoVoltaicUnit /
+            SynchronousMachine); it is not used to find the bus. Export: name
+            = the connected ConnectivityNode's name.
+        annotations:
+          order: 2
+          value_type: string
+          quote: false
+          separator: ","
+
+      generator_type:
+        description: Generator technology type (for example, pv or diesel).
+        range: string
+        required: false
+        ifabsent: string("pv")
+        related_mappings:
+          - cim:PowerElectronicsConnection
+          - cim:SynchronousMachine
+        comments:
+          - >-
+            Import: selects which CIM class is constructed — "diesel" creates
+            a SynchronousMachine, any other value creates a PhotoVoltaicUnit +
+            PowerElectronicsConnection. Export: always written as "pv" (see
+            the class-level comment on the SynchronousMachine export gap).
+        annotations:
+          order: 3
+          native_name: "type"
+          value_type: string
+          quote: false
+          separator: ","
+
+      p_a:
+        description: Phase A active power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+          - cim:SynchronousMachine.p
+        comments:
+          - >-
+            Import: PowerElectronicsConnectionPhase(phase=A).p = p_a × s_base
+            (watts), created when phases lists a or p_a/q_a is nonzero;
+            PowerElectronicsConnection.p (or SynchronousMachine.p, which gets
+            no phase objects) = the sum over all phases (a, b, c, s1, s2).
+            Export: the PEC total p / s_base split evenly over the PEC's
+            phases (from PowerElectronicsConnectionPhase; a PEC with no phase
+            objects is taken as balanced over a/b/c, or s1/s2 on a triplex
+            secondary); per-phase PowerElectronicsConnectionPhase.p values are
+            not read.
+        annotations:
+          order: 4
+          value_type: float
+          separator: ","
+
+      p_b:
+        description: Phase B active power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as p_a for phase B: see the p_a
+            comment.
+        annotations:
+          order: 5
+          value_type: float
+          separator: ","
+
+      p_c:
+        description: Phase C active power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as p_a for phase C: see the p_a
+            comment.
+        annotations:
+          order: 6
+          value_type: float
+          separator: ","
+
+      q_a:
+        description: Phase A reactive power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.q
+          - cim:SynchronousMachine.q
+        comments:
+          - >-
+            Same import/export formula as p_a (reactive power): see the p_a
+            comment.
+        annotations:
+          order: 7
+          value_type: float
+          separator: ","
+
+      q_b:
+        description: Phase B reactive power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as p_a (reactive power, phase B): see
+            the p_a comment.
+        annotations:
+          order: 8
+          value_type: float
+          separator: ","
+
+      q_c:
+        description: Phase C reactive power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as p_a (reactive power, phase C): see
+            the p_a comment.
+        annotations:
+          order: 9
+          value_type: float
+          separator: ","
+
+      s_a_max:
+        description: Phase A apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+          - cim:SynchronousMachine.ratedS
+        comments:
+          - >-
+            Import: the s_*_max fields of all phases (a, b, c, s1, s2) are
+            summed into PowerElectronicsConnection.ratedS (and
+            PhotoVoltaicUnit.maxP) or SynchronousMachine.ratedS, × s_base;
+            there is no per-phase rating in CIM. Export: PEC ratedS / s_base
+            split evenly over the PEC's phases (see the p_a comment).
+        annotations:
+          order: 10
+          value_type: float
+          separator: ","
+
+      s_b_max:
+        description: Phase B apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as s_a_max for phase B: see the s_a_max
+            comment.
+        annotations:
+          order: 11
+          value_type: float
+          separator: ","
+
+      s_c_max:
+        description: Phase C apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - >-
+            Same import/export formula as s_a_max for phase C: see the s_a_max
+            comment.
+        annotations:
+          order: 12
+          value_type: float
+          separator: ","
+
+      p_s1:
+        description: Triplex s1 active power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnectionPhase.p
+        comments:
+          - >-
+            Same import/export formula as p_a for triplex phase s1 (see the p_a comment): PowerElectronicsConnection.p / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 13
+          value_type: float
+          separator: ","
+
+      p_s2:
+        description: Triplex s2 active power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnectionPhase.p
+        comments:
+          - >-
+            Same import/export formula as p_a for triplex phase s2 (see the p_a comment): PowerElectronicsConnection.p / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 14
+          value_type: float
+          separator: ","
+
+      q_s1:
+        description: Triplex s1 reactive power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnectionPhase.q
+        comments:
+          - >-
+            Same import/export formula as p_a (reactive power, triplex phase s1): PowerElectronicsConnection.q / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 15
+          value_type: float
+          separator: ","
+
+      q_s2:
+        description: Triplex s2 reactive power output in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnectionPhase.q
+        comments:
+          - >-
+            Same import/export formula as p_a (reactive power, triplex phase s2): PowerElectronicsConnection.q / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 16
+          value_type: float
+          separator: ","
+
+      s_s1_max:
+        description: Triplex s1 apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - >-
+            Import: included in the ratedS sum (see the s_a_max comment). Export: PowerElectronicsConnection.ratedS / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 17
+          value_type: float
+          separator: ","
+
+      s_s2_max:
+        description: Triplex s2 apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - >-
+            Import: included in the ratedS sum (see the s_a_max comment). Export: PowerElectronicsConnection.ratedS / s_base split evenly over the PEC's s1/s2 PowerElectronicsConnectionPhases.
+        annotations:
+          order: 18
+          value_type: float
+          separator: ","
+
+      s_s1s2_max:
+        description: Triplex combined (s1+s2) apparent power rating in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+        comments:
+          - >-
+            Not populated on export or read on import; the rating is split into s_s1_max/s_s2_max. Present to match the upstream DistOPF column set.
+        annotations:
+          order: 19
+          value_type: float
+          separator: ","
+
+      primary_phase:
+        description: >-
+          Primary phase (a, b, or c) of the center-tap transformer feeding this
+          triplex generator; empty for primary-side generators.
+        range: string
+        required: false
+        ifabsent: string("")
+        comments:
+          - >-
+            Export only (not read on import). The primary_phase of the generator's bus (see bus.yaml primary_phase); empty off a triplex secondary.
+        annotations:
+          order: 20
+          value_type: string
+          quote: false
+          separator: ","
+
+      phases:
+        description: Active phases for this generator (e.g. abc, a, bc, s1s2).
+        range: string
+        required: false
+        ifabsent: string("abc")
+        comments:
+          - >-
+            Import: each listed phase gets a PowerElectronicsConnectionPhase
+            (PV only; a SynchronousMachine gets none), as does any phase with
+            nonzero p/q. Export: the phases of the PEC's
+            PowerElectronicsConnectionPhases in a, b, c, s1, s2 order
+            (neutrals dropped); "abc", or "s1s2" on a triplex secondary, when
+            it has none. Merged records union their phases.
+        annotations:
+          order: 21
+          value_type: string
+          quote: false
+          separator: ","
+
+      q_a_max:
+        description: Phase A maximum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power upper bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power ceiling on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 22
+          value_type: float
+          separator: ","
+
+      q_b_max:
+        description: Phase B maximum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power upper bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power ceiling on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 23
+          value_type: float
+          separator: ","
+
+      q_c_max:
+        description: Phase C maximum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power upper bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power ceiling on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 24
+          value_type: float
+          separator: ","
+
+      q_a_min:
+        description: Phase A minimum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power lower bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power floor on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 25
+          value_type: float
+          separator: ","
+
+      q_b_min:
+        description: Phase B minimum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power lower bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power floor on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 26
+          value_type: float
+          separator: ","
+
+      q_c_min:
+        description: Phase C minimum reactive power in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        comments:
+          - "DistOPF-only (N/A): OPF reactive power lower bound; not read or written by the CIM converters."
+        todos:
+          - "No CIM equivalent for a per-phase reactive power floor on PowerElectronicsConnection/SynchronousMachine; requires a CIM extension to roundtrip."
+        annotations:
+          order: 27
+          value_type: float
+          separator: ","
+
+      q_s1_max:
+        description: Triplex s1 reactive power upper limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.maxQ
+        comments:
+          - >-
+            Not populated on export or read on import (reactive limits are not mapped for any phase). Present to match the upstream DistOPF column set.
+        annotations:
+          order: 28
+          value_type: float
+          separator: ","
+
+      q_s2_max:
+        description: Triplex s2 reactive power upper limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.maxQ
+        comments:
+          - >-
+            Not populated on export or read on import (reactive limits are not mapped for any phase). Present to match the upstream DistOPF column set.
+        annotations:
+          order: 29
+          value_type: float
+          separator: ","
+
+      q_s1_min:
+        description: Triplex s1 reactive power lower limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.minQ
+        comments:
+          - >-
+            Not populated on export or read on import (reactive limits are not mapped for any phase). Present to match the upstream DistOPF column set.
+        annotations:
+          order: 30
+          value_type: float
+          separator: ","
+
+      q_s2_min:
+        description: Triplex s2 reactive power lower limit in per-unit (base s_base).
+        range: float
+        required: false
+        ifabsent: float(0.0)
+        unit:
+          ucum_code: "pu"
+        close_mappings:
+          - cim:PowerElectronicsConnection.minQ
+        comments:
+          - >-
+            Not populated on export or read on import (reactive limits are not mapped for any phase). Present to match the upstream DistOPF column set.
+        annotations:
+          order: 31
+          value_type: float
+          separator: ","
+
+      control_variable:
+        description: >-
+          OPF control variable (P = active power, Q = reactive power, PQ = both,
+          empty = fixed).
+        range: string
+        required: false
+        ifabsent: string("PQ")
+        comments:
+          - "DistOPF-only (N/A): OPF solver hint for which setpoints are dispatchable; not read or written by the CIM converters."
+        annotations:
+          order: 32
+          value_type: string
+          quote: false
+          separator: ","
+
+      s_base:
+        description: Apparent power base, in volt-amperes.
+        range: float
+        required: false
+        ifabsent: float(1000000.0)
+        unit:
+          ucum_code: "VA"
+        comments:
+          - >-
+            DistOPF-only scaling constant used to convert the per-unit p_*,
+            q_*, and s_*_max fields to and from CIM's SI-unit power values;
+            not itself stored on the CIM object. Import multiplies by this
+            record's s_base; export always writes 1e6 VA (1 MVA), the distOPF
+            system base.
+        annotations:
+          order: 33
+          value_type: float
+          separator: ""  # No separator after last field

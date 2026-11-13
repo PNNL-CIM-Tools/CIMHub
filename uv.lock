@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32'",
@@ -14,6 +14,7 @@ resolution-markers = [
 members = [
     "cimhub",
     "cimhub-core",
+    "cimhub-distopf",
     "cimhub-gdm",
     "cimhub-gridlabd",
     "cimhub-opendss",
@@ -202,14 +203,14 @@ name = "cim-builder"
 version = "0.1.0"
 source = { editable = "../CIM-Builder" }
 dependencies = [
+    { name = "cim-profiles" },
     { name = "cim-tables" },
-    { name = "pyarrow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "pyarrow", specifier = ">=18" },
+    { name = "cim-profiles", editable = "/home/ande188/CIM-Profiles" },
+    { name = "cim-tables", editable = "/home/ande188/CIM-Tables" },
 ]
 
 [package.metadata.requires-dev]
@@ -223,7 +224,7 @@ dev = [
 [[package]]
 name = "cim-graph"
 version = "0.6.0"
-source = { editable = "../CIM-Graph" }
+source = { editable = "../../ande188/CIM-Graph" }
 dependencies = [
     { name = "cim-profiles" },
     { name = "defusedxml" },
@@ -255,7 +256,7 @@ dev = [
 [[package]]
 name = "cim-profiles"
 version = "0.2.0"
-source = { editable = "../CIM-Profiles" }
+source = { editable = "../../ande188/CIM-Profiles" }
 dependencies = [
     { name = "pint", version = "0.25.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "pint", version = "0.26.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -273,7 +274,7 @@ dev = [
 [[package]]
 name = "cim-tables"
 version = "0.1.0"
-source = { editable = "../CIM-Tables" }
+source = { editable = "/home/ande188/CIM-Tables" }
 dependencies = [
     { name = "cim-graph" },
     { name = "cim-profiles" },
@@ -282,8 +283,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cim-graph", editable = "../CIM-Graph" },
-    { name = "cim-profiles", editable = "../CIM-Profiles" },
+    { name = "cim-graph", editable = "../../ande188/CIM-Graph" },
+    { name = "cim-profiles", editable = "../../ande188/CIM-Profiles" },
     { name = "lark", specifier = ">=1.1.9" },
 ]
 
@@ -321,6 +322,7 @@ version = "3.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cimhub-core" },
+    { name = "cimhub-distopf" },
     { name = "cimhub-gdm" },
     { name = "cimhub-gridlabd" },
     { name = "cimhub-opendss" },
@@ -340,6 +342,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cimhub-distopf", editable = "cimhub_distopf" },
     { name = "cimhub-gdm", editable = "cimhub_gdm" },
     { name = "cimhub-gridlabd", editable = "cimhub_gridlabd" },
     { name = "cimhub-opendss", editable = "cimhub_opendss" },
@@ -379,6 +382,23 @@ requires-dist = [
     { name = "linkml-runtime", specifier = "~=1.9.5" },
     { name = "pyyaml" },
     { name = "requests" },
+]
+
+[[package]]
+name = "cimhub-distopf"
+version = "3.0.0a0"
+source = { editable = "cimhub_distopf" }
+dependencies = [
+    { name = "cim-tables" },
+    { name = "cimhub-core" },
+    { name = "linkml-runtime" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "linkml-runtime", specifier = "~=1.9.5" },
 ]
 
 [[package]]
@@ -456,6 +476,7 @@ requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
 ]
+
 [[package]]
 name = "click"
 version = "8.5.1"
