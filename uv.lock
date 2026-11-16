@@ -222,7 +222,7 @@ dev = [
 
 [[package]]
 name = "cim-graph"
-version = "0.6.0"
+version = "0.6.1"
 source = { editable = "../CIM-Graph" }
 dependencies = [
     { name = "cim-profiles" },
@@ -370,16 +370,25 @@ dependencies = [
     { name = "requests" },
 ]
 
+[package.optional-dependencies]
+time-points = [
+    { name = "cim-builder" },
+    { name = "pyarrow" },
+]
+
 [package.metadata]
 requires-dist = [
+    { name = "cim-builder", marker = "extra == 'time-points'", editable = "../CIM-Builder" },
     { name = "cim-graph", editable = "../CIM-Graph" },
     { name = "cim-profiles", editable = "../CIM-Profiles" },
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "linkml-runtime", specifier = "~=1.9.5" },
+    { name = "pyarrow", marker = "extra == 'time-points'", specifier = ">=18" },
     { name = "pyyaml" },
     { name = "requests" },
 ]
+provides-extras = ["time-points"]
 
 [[package]]
 name = "cimhub-gdm"
@@ -388,7 +397,7 @@ source = { editable = "cimhub_gdm" }
 dependencies = [
     { name = "cim-builder" },
     { name = "cim-tables" },
-    { name = "cimhub-core" },
+    { name = "cimhub-core", extra = ["time-points"] },
     { name = "grid-data-models" },
     { name = "pyarrow" },
 ]
@@ -397,7 +406,7 @@ dependencies = [
 requires-dist = [
     { name = "cim-builder", editable = "../CIM-Builder" },
     { name = "cim-tables", editable = "../CIM-Tables" },
-    { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cimhub-core", extras = ["time-points"], editable = "cimhub_core" },
     { name = "grid-data-models", specifier = "~=2.4" },
     { name = "pyarrow", specifier = ">=18" },
 ]
@@ -456,6 +465,7 @@ requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
 ]
+
 [[package]]
 name = "click"
 version = "8.5.1"

@@ -1,4 +1,5 @@
-"""S4a: loads: classification, the atoms, GridLAB-D's per-phase power through the load getter, fail fast, decks."""
+"""S4a: loads: classification, the atoms, GridLAB-D's per-phase power through the load getter, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 import math
@@ -9,18 +10,16 @@ import cimprofiles.cim18.cim18v17 as cim
 import pytest
 from cimprofiles.units import units
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.load import get_load_response, get_phase_loads
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.glm_schema import registry_unit
 from cimhub_gridlabd.importer.cimtbl import load
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "load"
-GOLDENS = Path(__file__).parent / "goldens"
 MODEL = "atom"
 SCHEDULED = re.compile(r"^\w+\.value\*([-+.\deE]+)$")
 #: a GLM phase suffix -> the consumer's phase child (a delta child is its branch's from-phase), and the consumer
@@ -165,21 +164,3 @@ def test_split_phase_load_raises(tmp_path):
                          ids=("node", "triplex_meter", "triplex_node current"))
 def test_a_load_on_a_bus_itself_raises(tmp_path, record):
     raises(tmp_path, record, "is a load on the bus itself; not mapped")
-
-
-# -- decks -------------------------------------------------------------------------------------------------------
-
-def test_ieee13_cdpsm_goldens():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    for artifact in ("load", "triplex_load"):
-        assert_matches_golden(part(model, "IEEE13_cdpsm", artifact), GOLDENS / "IEEE13_cdpsm" / f"{artifact}.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_load_binds_with_gridlabds_power(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    assert_gridlabd_loads(model, glm_to_cim(model, name=Path(relative).stem))

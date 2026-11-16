@@ -1,4 +1,5 @@
-"""S3c: regulators: classification, the atom, GridLAB-D's tap and control math, fail fast, decks."""
+"""S3c: regulators: classification, the atom, GridLAB-D's tap and control math, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,17 +7,15 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.transformer import TransformerForm, get_transformer_model
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import regulator
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "regulator"
-GOLDENS = Path(__file__).parent / "goldens"
 MODEL = "reg"
 
 
@@ -157,21 +156,3 @@ def test_compensator_without_ratios_raises(tmp_path):
 
 def test_split_phase_raises(tmp_path):
     raises(tmp_path, _regulator("connect_type WYE_WYE;", phases="AS"), "phases AS; A, B, C and N are mapped")
-
-
-# -- decks -------------------------------------------------------------------------------------------------------
-
-def test_ieee13_cdpsm_golden():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    assert_matches_golden(regulator_part(model, "IEEE13_cdpsm"), GOLDENS / "IEEE13_cdpsm" / "regulator.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_regulator_binds_with_gridlabds_taps(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    network = glm_to_cim(model, name=Path(relative).stem)
-    assert_gridlabd_regulation(model, network)

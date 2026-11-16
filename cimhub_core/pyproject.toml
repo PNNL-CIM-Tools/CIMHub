@@ -38,6 +38,13 @@ dependencies = [
   "requests",
 ]
 
+[project.optional-dependencies]
+# time_points.py: the Parquet sidecar of nc_schedule time points (CIM-Builder's TIME_POINT_SCHEMA)
+time-points = [
+  "cim-builder>=0.1.0a1,<0.2",
+  "pyarrow>=18",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/PNNL-CIM-Tools/CIMHub"
 "Bug Tracker" = "https://github.com/PNNL-CIM-Tools/CIMHub/issues"

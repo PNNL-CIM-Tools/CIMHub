@@ -1,4 +1,5 @@
-"""S2: the conductor, spacing and line configuration catalogs: classification, the atom, fail fast, decks."""
+"""S2: the conductor, spacing and line configuration catalogs: classification, the atom, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,18 +7,16 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.spacing import get_spacing_distances, get_spacing_xy
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import conductor, configuration, spacing
 from cimhub_gridlabd.importer.cimtbl.configuration import triplex_spacing
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "catalog"
-GOLDENS = Path(__file__).parent / "goldens"
 PARTS = ("overhead_line_conductor", "underground_line_conductor", "triplex_line_conductor", "line_spacing",
          "line_configuration", "triplex_line_configuration")
 FIELDS = {**conductor.FIELDS, schema.LineSpacing: spacing.FIELDS, **configuration.FIELDS}
@@ -158,23 +157,10 @@ object triplex_line_configuration { name tc; conductor_1 t; conductor_2 t; condu
 """, r"triplex_line_configuration tc: diameter unset \(triplex_line.cpp throws\)")
 
 
-# -- decks -------------------------------------------------------------------------------------------------------
+# -- the deck sweep's check (test_cimtbl_sweep.py) -----------------------------------------------------------------
 
-def test_ieee13_cdpsm_line_configuration_golden():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    assert_matches_golden(parts(model, "IEEE13_cdpsm")["line_configuration"],
-                          GOLDENS / "IEEE13_cdpsm" / "line_configuration.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_catalog_binds(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    network = glm_to_cim(model, name=Path(relative).stem)
-
+def assert_catalogs(model, network) -> None:
+    """Every conductor, spacing and line configuration is written once (S2)."""
     def count(*classes):
         return sum(len(network.list_by_class(cls)) for cls in classes)
 

@@ -2775,3 +2775,129 @@ A cross-format check should list these as expected divergences, as for S4a-8's c
 - untranscribed, read only by the legacy battery model (use_internal_battery_model false), which raises: 31 slots (`generator_mode` ... `parasitic_power_draw`)
 - untranscribed, solver state or output: 29 slots (`V_Out` ... `climate_object_found`)
 - untranscribed, set from the inverter's soc_reserve (battery.cpp:727): 1 slots (`reserve_state_of_charge`)
+
+## S5: the deck sweep, tier 4 and G7 (proposed 2026-11-10; approved as recommended and built 2026-11-16)
+
+S5 maps nothing new: no deck holds a `latitude` or `longitude`, so there is no coordinates part (the DSS S5's
+`buscoords.cimtbl` has no GLM source). It turns the eight per-slice deck sweeps into one, closes D6 with a complete
+IEEE13_cdpsm golden directory, adds the tier-4 IEEE 13 GLM vs DSS check, and records G7.
+
+### The deck sweep (S5-1)
+
+Today each of the eight slice modules (bus, catalog, line, transformer, regulator, load, capacitor, inverter) has its
+own `test_every_*` over `ALL_DECKS`, with the same stop boilerplate, so every deck is read and bound eight times
+(the GLM suite with `--roundtrip` takes 4 min 30 s).
+`tests/test_cimtbl_sweep.py` reads and binds each deck once and runs every slice's GridLAB-D check on that network:
+
+- `assert_gridlabd_ohms` (S3b), `assert_gridlabd_regulation` (S3c), `assert_gridlabd_loads` and
+  `assert_gridlabd_capacitors` (S4a), `assert_gridlabd_der` (S4b), and the bus, catalog and line counts the slice
+  sweeps assert today, each moved to a named `assert_*` helper in its slice module;
+- a deck in `BIND_STOPS` must stop with its listed error, an unlisted stop fails, and a listed stop that binds fails,
+  so the table stays true. Expected: 27 of 29 bind; `IEEE123_transactive` (`Object battery`) and `IEEE13_houses`
+  (its 634 center taps rated 2401 V on a 480 V bus) stop, as today.
+
+The slice modules keep their atoms, goldens and fail-fast tests. `test_every_deck_walks` stays in
+`test_topology_walk.py` (it stops at the walk, not the bind).
+
+### The IEEE13_cdpsm golden directory (S5-2, D6)
+
+The committed directory does not bind on its own: its master imports `zip_fractions.cimtbl` (the core's shared ZIP
+rows), which no slice committed. S5 adds it, so the directory holds 16 files, and one test checks the whole
+directory: the written file set equals the golden set (no file missing or extra), every file matches its golden, and
+the golden directory binds with `cimtables.load_model`. It replaces the nine per-slice IEEE13_cdpsm golden tests
+(DRY: one place to regenerate, `CIMHUB_UPDATE_GOLDENS=1`).
+
+### Tier 4: IEEE 13 GLM vs DSS (S5-3)
+
+IEEE13_cdpsm.glm is the Java CIMHub export of the model the DSS importer's `IEEE13_CDPSM` golden holds. The test binds
+**the two committed golden directories** with `cimhub_core` and `cimtables` only, matches equipment by its terminal
+buses (the bus names agree), and compares through the core getters in SI. It imports neither spoke and needs no
+engine, so it lives at the workspace root, `tests/cross_format/test_ieee13_glm_vs_dss.py`, as the tier-4 location
+rule says (a test that touches two spokes' artifacts belongs to neither). The root needs a `tests/conftest.py`
+(the `cim_scope` fixture) and `scripts/test-all.sh` runs it as one more process.
+
+Probe on 2026-11-10 (both golden directories, the GLM one completed by S5-2):
+
+| class | compared | result |
+|---|---|---|
+| bus voltages | BaseVoltage of every line, load and capacitor | equal |
+| lines (11) | phases, length, the phase R and X matrices in ohms (length x per-length, conductor order sorted) | equal to 4 places |
+| switches (5) | class (LoadBreakSwitch, Fuse, Recloser), phases, normal state | equal |
+| loads | p, q per bus and phase (DSS has 16 consumers, one per DSS Load; GLM 10) | equal |
+| capacitors (2) | nomQ at nomU per bus; neither has a control | equal |
+| regulator taps (3) | low, high, neutral, step (8, 10, 11), increment 0.625 % | equal |
+| DER (5) | S4b's cross-solver note | batteries and ratings equal; PV and the house's connection follow GridLAB-D |
+| transformers | ratings, voltages, connections, core admittance | equal on xf1 and the house center tap |
+
+**Expected differences** (asserted as differences, so a change on either side shows):
+1. **Source:** DSS 30 deg with the deck's short-circuit impedance; GLM 0 deg with the stiff default (S1-3).
+2. **Substation transformer:** DSS has three windings (a 13.2 kV tertiary on its internal bus `650z`); the Java
+   export wrote two, so GLM has no `650z`.
+3. **Transformer impedance:** not compared. The GLM tanks hold %Z on their `TransformerTankConfiguration` and the core
+   transformer getter reads %Z only from a tank with no template (`BY_TANK_IMPEDANCE`, the GIS form, rc_1
+   `d832796`), not from a `TankConfiguration` (plan section 7, the S3b core row, narrowed: the r/x split and the
+   Hopkinson center tap now exist in core, so only the template lookup is missing). The S3b test already checks the
+   %Z against GridLAB-D's ohms; tier 4 gains the comparison when the getter does.
+4. **Regulator controls:** the Java export wrote `Control MANUAL` with `band_center` commented out, so GLM's controls
+   are disabled with no target; DSS's regulate at 2440 V, 40 V band, delay 15 s. GLM's line drop is 1/5 of DSS's
+   (0.01714 + j0.05143 vs 0.0857 + j0.2571 ohm): the Java export wrote DSS's CT ratio, 3500 = 700 A / 0.2 A,
+   where GridLAB-D's compensator divides the current by `current_transducer_ratio` as a 1 A secondary
+   (`regulator.cpp:1330`, S3c-4). It is not active under MANUAL. See S5-4 and S5-5. Found at build: `neutralU`
+   is 2400 V in DSS (its 2.4 kV winding) and 2401.78 V in GLM (the coil: the 4.16 kV bus over sqrt 3, S3c); the
+   tap positions, range and increment are equal.
+5. **DER:** the S4b cross-solver note (PV output; `s1s2` D at 240 V vs the DSS shape's Y at 208 V).
+
+### G7 (S5-6)
+
+Measured 2026-11-10 on `orig_R3-12.47-3`, the largest deck:
+
+| deck | read | map | bind |
+|---|---|---|---|
+| orig_R3-12.47-3 | 3.0 s | 0.5 s | 4.8 s: 26,622 rows / 52,118 objects, about 5,500 rows/s |
+| IEEE13_cdpsm | <0.1 s | <0.1 s | 0.1 s: 224 rows / 340 objects |
+
+That is the DSS importer's rate (about 7,900 rows/s on IEEE9500 including coordinates), so G7 needs no work; the
+sweep test records no timing (it would be flaky).
+
+### Decisions for S5 (approved as recommended, 2026-11-16)
+
+| # | question | recommendation |
+|---|---|---|
+| S5-1 | Per-slice deck sweeps | One sweep test, one bind per deck, every slice's check on it; the eight `test_every_*` go |
+| S5-2 | The IEEE13_cdpsm golden (D6) | Add `zip_fractions.cimtbl`; one directory test (file set, each file, the directory binds) replaces the nine per-slice IEEE13 golden tests |
+| S5-3 | Where tier 4 lives | Root `tests/cross_format/`, comparing the two committed golden directories through the core getters (no spoke import, no engine); expected differences asserted, not skipped |
+| S5-4 | A disabled `TapChangerControl` with no target (GLM MANUAL) | The core `get_tap_changer_control` raises `targetValue is unset`, so neither tier 4 nor an exporter can read GLM's 3 IEEE 13 regulators (nor any MANUAL unit without a band). Recommended: core returns `target` None when the control is `enabled` false (a plan section 7 core row; tier 4 compares the taps until then). The alternative, the importer writing GridLAB-D's default `band_center` 0, would write a value GridLAB-D never reads |
+| S5-5 | The Java export's CT ratio | Keep GridLAB-D's reading (the engine's 1/5 compensation, as the deck would run), list it as an expected difference and a Java export defect, as S4b's battery. The alternative, reading it as DSS's CT primary (x 0.2), would follow the Java exporter's intent the way S4b's battery does; but here the mode is MANUAL, so nothing runs on it |
+| S5-6 | G7 | Recorded above; closed with no work |
+
+### Built (2026-11-16)
+
+On rc_1 `ddc6227` (the worktree fast-forwarded the same day; no incoming commit touched `cimhub_gridlabd`).
+
+- **Sweep (S5-1):** `tests/test_cimtbl_sweep.py`, `test_every_deck_binds_as_gridlabd_runs_it`, one read and one bind
+  per deck. The checks the slice sweeps made inline are now named helpers in their modules (`assert_buses`,
+  `assert_catalogs`, `assert_lines_and_switches`, `assert_transformers`); the others were already
+  (`assert_gridlabd_regulation`, `_loads`, `_capacitors`, `_der`). The eight `test_every_*` sweeps are gone, and so is
+  S4b's `test_ieee13_cdpsm_against_the_dss_golden`, whose values tier 4 now asserts against the DSS golden itself.
+- **D6 (S5-2):** `zip_fractions.cimtbl` added, so `goldens/IEEE13_cdpsm/` has 16 files.
+  `test_ieee13_cdpsm_golden_directory` writes the documents, matches every file to its golden, checks that the two
+  file sets are the same, and binds the golden directory on its own (`cimtables.load_model`). It replaces the nine
+  per-slice IEEE13_cdpsm golden tests, the master's included; `CIMHUB_UPDATE_GOLDENS=1` rewrites the whole directory.
+- **Tier 4 (S5-3):** `tests/cross_format/test_ieee13_glm_vs_dss.py` (13 tests) plus a root `tests/conftest.py`;
+  `scripts/test-all.sh` runs it as its own process (`scripts/test-all.sh cross_format`, and CI's no-argument run).
+  It imports `cimhub_core` and the cim-graph stack only. Eight tests check what is equal (buses, base voltages,
+  lines, switches, loads, capacitors, regulator taps, transformer ratings and core). Five assert the expected
+  differences 1-5, so either side changing shows. Test 3 asserts that the core getter reads no GLM impedance yet:
+  when the template %Z row lands it fails, and the impedance joins `test_transformers`.
+- **Amended at build:**
+  - **Line matrices:** R, X and B in ohms and siemens are equal to the getter's float precision: the largest relative
+    difference is 0.
+  - **Loads:** compared at a relative 1e-5. Bus 646's constant-impedance delta load is 66,000.09 W per phase in GLM
+    against DSS's 66,000 W, which is the Java export's 6-digit rounding.
+  - **Regulators:** `neutralU` differs (expected difference 4).
+- **S5-4:** plan section 7 core row (a disabled control may have no target). **S5-5:** listed as expected difference 4
+  and a Java export defect; the mapping keeps GridLAB-D's reading.
+- **Results:** the GLM suite with `--roundtrip` (29 decks): 249 passed in 51 s, down from 461 in 4 min 30 s.
+  That is 461 - 232 sweep runs - 10 IEEE 13 tests + 29 sweep runs + 1 directory test. Core: 449 passed.
+  Tier 4: 13 passed. Leak gate and lint are clean.
+
