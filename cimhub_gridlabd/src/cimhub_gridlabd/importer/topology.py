@@ -19,7 +19,9 @@
   coils on the transformer's phase conductors, whatever their number, so a 1-phase ``CN`` unit of 12500/480 V is
   one phase of a 480 V wye secondary. The coil, phase to neutral (the Milsoft WindMil exports, S6): one
   phase-to-neutral coil per side on one conductor (a 7200/120 V service), else polyphase coils of the written
-  voltage x sqrt 3. ``DELTA_DELTA``, ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a
+  voltage x sqrt 3. A coil-rated one-phase service is split-phase (``service_phases``, the user's rule): a 120 V
+  secondary is one leg (s1 to N) and a 240 V one a center tap (two halves, s1 N s2), both on a 240 V system, as a
+  208 V secondary of three coils is ABC line to line. ``DELTA_DELTA``, ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a
   phase-to-neutral primary and two split-phase halves of ``secondary_voltage`` each (120 V halves of a 240 V
   secondary).
 
@@ -46,6 +48,11 @@ _PHASE_LETTERS = frozenset("ABC")
 _DELTA_CONNECTIONS = {"DELTA_DELTA", "DELTA_GWYE"}
 WYE_CONNECTIONS = {"WYE_WYE", "SINGLE_PHASE"}
 _CENTER_TAP = "SINGLE_PHASE_CENTER_TAPPED"
+#: A one-phase service's secondary_voltage (kV, within the walk's nameplate tolerance, as ``coil_rated``) -> the
+#: split-phase conductors it lands on (the user's, 2026-11-16):
+#: 120 V is the s1 leg to N; 240 V is center-tapped, s1 N s2 (two 120 V halves around a grounded N, GridLAB-D's
+#: center-tap star of its one coil), so its legs read 120 V to ground. Either is a 240 V split-phase system.
+SERVICE_PHASES = {0.12: "s1N", 0.24: "s1s2N"}
 
 
 def line_voltage(phase_to_neutral: float, system: System) -> float:
@@ -173,7 +180,7 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str]) -> Transformer:
     elif connect in WYE_CONNECTIONS and coil_rated(model, xf, config, roots):
         if len(conductors) == 1:
             coils = (Coil(primary, v1, Connection.PHASE_NEUTRAL, conductors),
-                     Coil(secondary, v2, Connection.PHASE_NEUTRAL, conductors))
+                     *_service_coils(secondary, v2, service_phases(model, xf, config, roots), conductors))
         else:
             coils = (Coil(primary, line_voltage(v1, System.THREE_PHASE), Connection.POLYPHASE, conductors),
                      Coil(secondary, line_voltage(v2, System.THREE_PHASE), Connection.POLYPHASE, conductors))
@@ -183,6 +190,60 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str]) -> Transformer:
     else:
         raise ValueError(f"transformer {xf.name}: connect_type {connect} on phases {xf.phases} is not walked")
     return Transformer(str(xf.name), coils)
+
+
+def service_phases(model: GlmModel, xf, config, roots: dict[str, str]) -> str | None:
+    """The split-phase conductors of a one-phase service's secondary (``SERVICE_PHASES``): a coil-rated
+    ``WYE_WYE``/``SINGLE_PHASE`` on one phase and N whose ``secondary_voltage`` is 120 or 240 V within the walk's
+    nameplate tolerance (a 110 V can is a leg). None for any other transformer, whose secondary keeps its GLM
+    phases."""
+    if str(config.connect_type) not in WYE_CONNECTIONS or len(phase_letters(xf)) != 1:
+        return None
+    if not coil_rated(model, xf, config, roots):
+        return None
+    secondary = kv(model, config, "secondary_voltage")
+    return next((phases for volts, phases in SERVICE_PHASES.items()
+                  if math.isclose(secondary, volts, rel_tol=NAMEPLATE_TOLERANCE)), None)
+
+
+def _service_coils(bus: str, kv_coil: float, service: str | None, conductors: frozenset[str]) -> tuple[Coil, ...]:
+    """A one-phase coil-rated secondary for the walk: a split-phase leg (120 V), the two halves of a center tap
+    (240 V), else a phase-to-neutral coil on its own system."""
+    if service == "s1N":
+        return (Coil(bus, kv_coil, Connection.HALF, frozenset({"1"})),)
+    if service == "s1s2N":
+        return (Coil(bus, kv_coil / 2, Connection.HALF, frozenset({"1"})),
+                Coil(bus, kv_coil / 2, Connection.HALF, frozenset({"2"})))
+    return (Coil(bus, kv_coil, Connection.PHASE_NEUTRAL, conductors),)
+
+
+def service_buses(model: GlmModel, roots: dict[str, str]) -> dict[str, str]:
+    """Each one-phase service's secondary bus -> its split-phase conductors (``service_phases``). Only loads may sit
+    on one: a link other than its transformer, a capacitor or an inverter raises, since their phase letters have no
+    split-phase meaning yet; two services on one bus must agree."""
+    services: dict[str, str] = {}
+    for xf in model.list_by_class(schema.Transformer):
+        service = service_phases(model, xf, model.by_name(xf.configuration), roots)
+        if service is None:
+            continue
+        bus = roots[xf.to]
+        if services.setdefault(bus, service) != service:
+            raise ValueError(f"transformer {xf.name}: service {service} on bus {bus}, which another gives "
+                             f"{services[bus]}")
+    for cls in (*BRANCH_CLASSES, schema.Transformer):
+        for link in model.list_by_class(cls):
+            for slot in ("from_node", "to"):
+                bus = roots[getattr(link, slot)]
+                if bus in services and not (cls is schema.Transformer and slot == "to"):
+                    raise ValueError(f"{link.class_name} {link.name}: on the {services[bus]} service bus {bus}; "
+                                     "only loads are mapped on a one-phase service")
+    for cls in (schema.Capacitor, schema.Inverter):
+        for record in model.list_by_class(cls):
+            bus = roots.get(str(record.name)) or roots.get(str(record.parent))
+            if bus in services:
+                raise ValueError(f"{record.class_name} {record.name}: on the {services[bus]} service bus {bus}; "
+                                 "only loads are mapped on a one-phase service")
+    return services
 
 
 def check_end_phases(model: GlmModel, link, *, center_tap: bool = False) -> None:

@@ -245,6 +245,18 @@ def _powerless(record, load_class: LoadClass) -> Consumer:
     return Consumer("", letters, False, {letter: _Phase({}) for letter in letters})
 
 
+def on_service(record, found: list[Consumer], service: str) -> list[Consumer]:
+    """A load on a one-phase service's secondary (``topology.SERVICE_PHASES``): its one GLM phase is the s1 leg to N
+    (a 120 V service) or across s1-s2 (a 240 V center tap), as a split-phase record's legs and 240 V part."""
+    if not isinstance(record, schema.Load) or len(found) != 1 or found[0].delta or len(found[0].children) != 1:
+        raise ValueError(f"{label(record)}: phases {record.phases} on a {service} service; one wye phase of a load "
+                         "is mapped there")
+    [phase] = found[0].children.values()
+    if service == "s1N":
+        return [Consumer("", "s1", False, {"s1": phase})]
+    return [Consumer("", "s1s2", True, {"s12": phase})]
+
+
 def _delta_children(phases: str) -> set[str]:
     """The branch PhaseCodes the binder makes on a delta consumer of ``phases`` (``connectivity.phase_plan``)."""
     following = {"A": "B", "B": "C", "C": "A"}
@@ -293,8 +305,9 @@ def _equal(consumer: Consumer) -> bool:
 # -- the documents ---------------------------------------------------------------------------------------------------
 
 def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], buses: dict[str, BusSystem],
-              feeder: str) -> Document:
-    """One load class as one document: its zip_ rows, the consumers, then the phase children's values."""
+              feeder: str, services: dict[str, str]) -> Document:
+    """One load class as one document: its zip_ rows, the consumers, then the phase children's values. A load on a
+    one-phase service bus (``services``, S6-10) is re-phased by ``on_service``."""
     records = [record for record in model.list_by_class(load_class.native) if type(record) is load_class.native]
     if load_class is TRIPLEX_NODE:
         records = [record for record in records
@@ -306,6 +319,9 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
     for record in records:
         check(record, own)
         found = consumers(model, record, load_class)
+        node = roots[str(record.name)]
+        if node in services:
+            found = on_service(record, found, services[node])
         if not any(phase.total for consumer in found for phase in consumer.children.values()):
             powerless.append(str(record.name))
         load_response, fractions = response(found)
@@ -313,7 +329,6 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
             if responses.setdefault(load_response, fractions) != fractions:
                 raise ValueError(f"{label(record)}: its ZIP fractions {fractions} differ from another load's beyond "
                                  f"the 6 places of {load_response}")
-        node = roots[str(record.name)]
         comment = "\n".join(part for part in (*_notes(found), untranscribed_values(own, record)) if part) or None
         for index, consumer in enumerate(found):
             name = f"{record.name}{consumer.suffix}"

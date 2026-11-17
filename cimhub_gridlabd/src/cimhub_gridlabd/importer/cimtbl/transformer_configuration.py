@@ -31,7 +31,7 @@ from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid, untranscribed_val
 from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.glm_schema import registry_unit
 from cimhub_gridlabd.importer.cimtbl.catalog import HEADER_FIELDS, label, native_name, referenced
-from cimhub_gridlabd.importer.topology import WYE_CONNECTIONS, coil_rated, line_voltage
+from cimhub_gridlabd.importer.topology import WYE_CONNECTIONS, coil_rated, line_voltage, service_phases
 from cimhub_gridlabd.schema import gridlabd as schema
 
 NATIVE_CLASS = schema.TransformerConfiguration
@@ -101,6 +101,7 @@ class Wiring(NamedTuple):
     primary: System | None    # a center tap's or a coil-rated wye's primary system (ratedU); None when no instance says
     secondary: System | None = None  # a coil-rated wye's secondary system
     coil_rated: bool = False  # a wye whose voltages rate the coil, phase to neutral (S6)
+    service: str | None = None  # a one-phase service's split-phase conductors (topology.service_phases)
 
 
 def _complex(record, slot: str, real: str, imaginary: str) -> tuple[float, float] | None:
@@ -192,6 +193,12 @@ def default_wiring(config) -> Wiring:
                              "unknown")
         return Wiring(rated, None)
     return Wiring(rated if str(config.connect_type) in WYE_CONNECTIONS and rated else "ABC", None)
+
+
+def center_tapped(config, wiring: Wiring) -> bool:
+    """A center tap's template: ``SINGLE_PHASE_CENTER_TAPPED``, or a 240 V one-phase service (the user's rule:
+    s1 N s2, its one coil written as GridLAB-D's center-tap star)."""
+    return str(config.connect_type) == CENTER_TAP or wiring.service == "s1s2N"
 
 
 def is_bank(config, wiring: Wiring) -> bool:
@@ -294,8 +301,10 @@ def _tank_ends(model: GlmModel, config, wiring: Wiring, out: _Statements, commen
             Row([xc, str(config.name), *_nameplate(model, config, _Tank(total, _k(wiring, total / n, total)))],
                 comment=comment))
     columns = _winding_columns(model, config, [Column("FromTransformerEnd")])
-    for number, (kind, slot) in enumerate(zip(CONNECTIONS[str(config.connect_type)],
-                                              ("primary_voltage", "secondary_voltage")), start=1):
+    kinds = CONNECTIONS[str(config.connect_type)]
+    if wiring.service == "s1N":  # a 120 V service's leg is one split-phase half, as a center tap's (S6-10)
+        kinds = (kinds[0], "I")
+    for number, (kind, slot) in enumerate(zip(kinds, ("primary_voltage", "secondary_voltage")), start=1):
         out.add("TransformerTankEnd", [Column("mRID"), Column("TankConfiguration"), Column("endNumber"),
                                        Column("connectionKind")], Row([f"{xc}_end_{number}", xc, str(number), kind]))
         rated_u, base_u = _voltages(config, wiring, slot, kind)
@@ -335,8 +344,12 @@ def _bank(model: GlmModel, config, wiring: Wiring, out: _Statements, comment: st
 
 
 def _center_tap(model: GlmModel, config, wiring: Wiring, out: _Statements, comment: str | None) -> None:
+    """Lugs H1 H2 X1 X3 X2 and windings H1->H2, X1->X2, X2->X3; the %Z fields the full winding's. A 240 V service's
+    one coil is that full winding: its kVA is the unit's, each half is half its secondary_voltage, and GridLAB-D's
+    R + jX on secondary_voltage^2 / power_rating is already the full winding's (k = 1)."""
     xc = tank_name(config)
-    s = phase_kva(config, wiring.letters)
+    service = str(config.connect_type) != CENTER_TAP
+    s = total_kva(config) if service else phase_kva(config, wiring.letters)
     if s <= 0:
         raise ValueError(f"{label(config)}: power{wiring.letters}_rating unset or 0 on a center tap wired on phase "
                          f"{wiring.letters} (transformer.cpp:772)")
@@ -346,6 +359,8 @@ def _center_tap(model: GlmModel, config, wiring: Wiring, out: _Statements, comme
         out.add("TransformerLug", _LUG_COLUMNS, Row([f"{xc}_lug_{designation.lower()}", xc, designation,
                                                      str(sequence)]))
     v1, v2 = float(config.primary_voltage), float(config.secondary_voltage)
+    if service:
+        v2 = v2 / 2
     primary = None if wiring.primary is None else line_voltage(v1, wiring.primary)
     half = (line_voltage(v2, System.SPLIT_PHASE), v2, s / 2, s)
     columns = _winding_columns(model, config, [Column("FromTransformerLug"), Column("ToTransformerLug")])
@@ -386,7 +401,7 @@ def map_transformer_configuration(model: GlmModel, wirings: dict[str, Wiring]) -
         if not is_bank(config, wiring):
             notes.append(_listed_phase_ratings(config, wiring))
         comment = "\n".join(note for note in notes if note) or None
-        if str(config.connect_type) == CENTER_TAP:
+        if center_tapped(config, wiring):
             _center_tap(model, config, wiring, out, comment)
         elif is_bank(config, wiring):
             _bank(model, config, wiring, out, comment)
@@ -415,7 +430,7 @@ def wiring_of(model: GlmModel, xf, config, roots: dict[str, str], buses: dict[st
     if not any(getattr(config, f"power{p}_rating") for p in "ABC"):
         letters = "ABC"[:len(letters)]
     if coil_rated(model, xf, config, roots):
-        return Wiring(letters, primary, secondary, coil_rated=True)
+        return Wiring(letters, primary, secondary, coil_rated=True, service=service_phases(model, xf, config, roots))
     return Wiring(letters, None)
 
 
@@ -434,7 +449,8 @@ def wirings(model: GlmModel, roots: dict[str, str], buses: dict[str, BusSystem])
 
 def _described(wiring: Wiring) -> str:
     if wiring.coil_rated:
-        return f"on {wiring.letters}, coil-rated, {wiring.primary.name} to {wiring.secondary.name}"
+        service = f", a {wiring.service} service" if wiring.service else ""
+        return f"on {wiring.letters}, coil-rated, {wiring.primary.name} to {wiring.secondary.name}{service}"
     primary = f", primary on a {wiring.primary.name} system" if wiring.primary else ""
     return f"on {wiring.letters}{primary}"
 

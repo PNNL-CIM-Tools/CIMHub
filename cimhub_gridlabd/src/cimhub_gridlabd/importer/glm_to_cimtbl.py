@@ -28,7 +28,7 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, regulator,
                                             spacing, switch, transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
-from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, swing_buses
+from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, service_buses, swing_buses
 from cimhub_gridlabd.schema import gridlabd as schema
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -49,6 +49,7 @@ class Site(NamedTuple):
     base_frequency: float
     substation_name: str
     feeder_name: str
+    services: dict[str, str]  # a one-phase service's secondary bus -> its split-phase conductors (topology)
 
 
 #: ``(native class, mapper(model, site))`` in ``Import`` order, after ``bus`` and ``source``. Each slice adds its
@@ -70,7 +71,8 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
                                                                           site.feeder)),
     (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
     *((load_class.native, lambda model, site, load_class=load_class:
-       load.map_loads(model, load_class, site.roots, site.buses, site.feeder)) for load_class in load.LOAD_CLASSES),
+       load.map_loads(model, load_class, site.roots, site.buses, site.feeder, site.services))
+      for load_class in load.LOAD_CLASSES),
     (schema.Capacitor, lambda model, site: capacitor.map_capacitors(model, site.roots, site.buses, site.feeder)),
     (schema.Inverter, lambda model, site: inverter.map_inverters(model, site.roots, site.buses, site.feeder)),
 )
@@ -106,8 +108,9 @@ def site(model: GlmModel, name: str, *, substation: str | None = None, feeder: s
     """Walk the model's topology and name its containers: ``substation`` and ``feeder``, each ``name`` unless given."""
     substation = name if substation is None else substation
     feeder = name if feeder is None else feeder
-    return Site(name, walk(glm_network(model)), bus_roots(model), mrid("sub_", substation), mrid("fdr_", feeder),
-                base_frequency(model)[0], substation, feeder)
+    buses, roots = walk(glm_network(model)), bus_roots(model)
+    return Site(name, buses, roots, mrid("sub_", substation), mrid("fdr_", feeder), base_frequency(model)[0],
+                substation, feeder, service_buses(model, roots))
 
 
 def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],

@@ -190,7 +190,7 @@ object transformer { name xf_s3; phases ABCN; from n2; to m_s3; configuration xc
 def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
     """A wye whose voltages are its buses' nominal_voltage (phase to neutral, the Milsoft exports) is rated by the
     coil: baseU as written, ratedU on its bus's system, %Z x S_coil / S_total; SINGLE_PHASE is a WYE_WYE, and one
-    template serves A and B (S6)."""
+    template serves A and B (S6). A 120 V one-phase service is a split-phase leg: ratedU 240, its bus 240 V."""
     path = tmp_path / "model.glm"
     path.write_text(f'#include "{ATOM / "transformer.glm"}"\n' + COIL_RATED)
     model = read(path)
@@ -202,14 +202,20 @@ def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
         windings = sorted(templates[name].TransformerWinding, key=lambda w: w.FromTransformerEnd.endNumber)
         return [(float(w.ratedU.to("V")), float(w.baseU.to("V"))) for w in windings]
 
-    assert voltages("xc_xc_s1") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (120.0, 120.0)]
+    assert voltages("xc_xc_s1") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (240.0, 120.0)]
     assert voltages("xc_xc_s3") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (pytest.approx(480.0, rel=1e-4),
                                                                                     277.13)]
     z = 100 * abs(complex(0.01, 0.02))
     assert float(templates["xc_xc_s1"].percentImpedance) == pytest.approx(z)
     assert float(templates["xc_xc_s3"].percentImpedance) == pytest.approx(z / 3)
     nodes = {str(n.mRID): n for n in network.list_by_class(cim.ConnectivityNode)}
-    assert float(nodes["m_s1"].BaseVoltage.nominalVoltage.to("V")) == 120.0
+    assert float(nodes["m_s1"].BaseVoltage.nominalVoltage.to("V")) == 240.0
+    ends = {str(end.mRID): end for end in network.list_by_class(cim.PowerTransformerEnd)}
+    assert (ends["xf_xf_s1_2"].Terminal.phases.value, ends["xf_xf_s3_2"].Terminal.phases.value) == ("s1N", "ABCN")
+    # the leg is one split-phase half, as a center tap's s1: kind I on the instance and the template
+    tank_ends = {str(end.mRID): end for end in network.list_by_class(cim.TransformerTankEnd)}
+    assert (ends["xf_xf_s1_2"].connectionKind, tank_ends["xc_xc_s1_end_2"].connectionKind) == (
+        cim.WindingConnection.I, cim.WindingConnection.I)
 
 
 def test_a_wye_off_its_bus_voltage_raises(tmp_path):

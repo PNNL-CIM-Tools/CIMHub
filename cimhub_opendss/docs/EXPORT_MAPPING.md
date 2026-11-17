@@ -946,7 +946,6 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 - **Raises:**
   - two neutral impedances;
   - a mesh r on balanced ends;
-  - an unused configuration (T5);
   - an unset `ptRatio`;
   - remote sensing;
   - a line drop without `ctRating`;
@@ -968,7 +967,7 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | T2 | Y vs Yn, template vs instance | Fix the getter: the kinds agree up to the grounding, and the instance's wins. The importer stays as built |
 | T3 | Polarity of a 1-phase TankEnd instance | The importer gives such an instance a `TransformerPhaseEnd` per terminal conductor in the deck's node order, and BY_TANK_ENDS reads a coil's phases from them when present. Alternatives: the importer writes such an instance inline (BY_PHASE_ENDS, a listed difference), or it raises on a descending LL coil (IEEE4 YYD stops binding) |
 | T4 | Several tanks on one PowerTransformer | One DSS Transformer per tank, named by the tank; a PowerTransformer with one tank is named by itself. A tap changer on a several-tank PowerTransformer raises until a producer writes one |
-| T5 | An unused TransformerTankConfiguration | Raises: the importer never writes one, and a template alone does not say its phases |
+| T5 | An unused TransformerTankConfiguration | No XfmrCode, logged as a warning naming the skipped mRIDs: a template alone does not say its phases. Amended 2026-11-16 (the user's, for clallam_cim): a feeder package carries its utility's whole catalogue, so most of its templates are sibling feeders'; it raised before |
 | T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye, or an ungrounded coil neutral, is `.4` with no Rneut; two neutral impedances on one transformer raise |
 | T7 | Regulator impedance and range | `%Rs=[r/2 r/2]` (equal to `%LoadLoss=r`); `MaxTap`/`MinTap`/`NumTaps` from the step range; an unset `step` or `ptRatio` raises |
 

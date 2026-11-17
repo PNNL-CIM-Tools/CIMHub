@@ -1,10 +1,14 @@
 """TransformerTankConfiguration -> OpenDSS ``XfmrCode`` (``EXPORT_MAPPING.md#xfmrcode-t5``).
 
 A configuration's values are read through the units that use it, since a template alone does not say its phases
-(T5): every unit gives the same code, and an unused configuration raises. The tap range stays on each instance.
+(T5): every unit gives the same code. An unused configuration has no XfmrCode (a feeder package carries its
+utility's whole catalogue, so most templates are its siblings'), and the skipped ones are logged. The tap range
+stays on each instance.
 """
 
 from __future__ import annotations
+
+import logging
 
 import cimprofiles.cim18.cim18v17 as cim
 
@@ -19,6 +23,7 @@ CIM_CLASSES = (cim.TransformerTankConfiguration,)
 NATIVE_CLASS = schema.Xfmrcode
 #: the Transformer slot -> its XfmrCode spelling
 RENAMED = {"XHL": "Xhl", "XHT": "Xht", "XLT": "Xlt"}
+LOGGER = logging.getLogger(__name__)
 
 _ACTIVE = "the active-winding form; the arrays carry every winding"
 _NOT_IN_CIM = "untranscribed on import; not in CIM"
@@ -41,7 +46,7 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 
 
 def export(context) -> list[schema.Xfmrcode]:
-    """One XfmrCode per configuration a unit uses; an unused one raises (T5)."""
+    """One XfmrCode per configuration a unit uses; an unused one is skipped and logged (T5)."""
     codes = {}
     for transformer in context.objects(*windings.TRANSFORMER_CLASSES):
         for unit in windings.units(transformer):
@@ -55,8 +60,8 @@ def export(context) -> list[schema.Xfmrcode]:
                                  f"earlier unit; the template must be the one source")
     unused = [configuration.mRID for configuration in context.objects(*CIM_CLASSES) if configuration not in codes]
     if unused:
-        raise ValueError(f"TransformerTankConfigurations {unused}: no unit uses them, and a template alone does not "
-                         f"say its phases (T5)")
+        LOGGER.warning("TransformerTankConfigurations %s: no unit uses them, so no XfmrCode is written (a template "
+                       "alone does not say its phases, T5)", unused)
     return list(codes.values())
 
 

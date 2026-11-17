@@ -8,7 +8,7 @@ from cimtopology.core import Connection, System, walk
 
 from conftest import deck, deck_params, defines
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
-from cimhub_gridlabd.importer.topology import bus_roots, glm_network, line_voltage
+from cimhub_gridlabd.importer.topology import bus_roots, glm_network, line_voltage, service_buses
 
 
 def read(tmp_path, text: str):
@@ -76,16 +76,40 @@ def test_single_phase_wye_wye_is_line_to_line(tmp_path):
     assert walk(glm_network(model))["m1"].kv == 0.48
 
 
-def test_coil_rated_single_phase_is_phase_to_neutral(tmp_path):
-    """A SINGLE_PHASE unit rated at its buses' nominal_voltage: one phase-to-neutral coil per side, so its service
-    is a single-phase system (S6)."""
+def test_coil_rated_one_phase_service_is_split_phase(tmp_path):
+    """A SINGLE_PHASE unit rated at its buses' nominal_voltage is a service (S6, the user's rule): a 120 V secondary
+    is one split-phase leg (s1 to N), a 240 V one a center tap (two 120 V halves); both are a 240 V split-phase
+    system."""
     model = read(tmp_path, FEEDER + "object node { name s1; phases AN; nominal_voltage 120; }\n"
+                 "object node { name s2; phases AN; nominal_voltage 240; }\n"
                  "object transformer_configuration { name sp; connect_type SINGLE_PHASE; primary_voltage 7200; "
                  "secondary_voltage 120; }\nobject transformer { name xs; phases AN; from n1; to s1; "
-                 "configuration sp; }\n")
+                 "configuration sp; }\n"
+                 "object transformer_configuration { name sp2; connect_type SINGLE_PHASE; primary_voltage 7200; "
+                 "secondary_voltage 240; }\nobject transformer { name xs2; phases AN; from n1; to s2; "
+                 "configuration sp2; }\n"
+                 "object node { name s3; phases AN; nominal_voltage 110; }\n"
+                 "object transformer_configuration { name sp3; connect_type SINGLE_PHASE; primary_voltage 7200; "
+                 "secondary_voltage 110; }\nobject transformer { name xs3; phases AN; from n1; to s3; "
+                 "configuration sp3; }\n")
     coils = {xf.name: [(c.bus, c.kv, c.connection) for c in xf.coils] for xf in glm_network(model).transformers}
-    assert coils["xs"] == [("n1", 7.2, Connection.PHASE_NEUTRAL), ("s1", 0.12, Connection.PHASE_NEUTRAL)]
-    assert walk(glm_network(model))["s1"] == (0.12, System.SINGLE_PHASE)
+    assert coils["xs"] == [("n1", 7.2, Connection.PHASE_NEUTRAL), ("s1", 0.12, Connection.HALF)]
+    assert coils["xs2"] == [("n1", 7.2, Connection.PHASE_NEUTRAL), ("s2", 0.12, Connection.HALF),
+                            ("s2", 0.12, Connection.HALF)]
+    walked = walk(glm_network(model))
+    assert walked["s1"] == walked["s2"] == (0.24, System.SPLIT_PHASE)
+    # within the walk's nameplate tolerance, as coil_rated: a 110 V can is a 120 V service's leg
+    assert service_buses(model, bus_roots(model)) == {"s1": "s1N", "s2": "s1s2N", "s3": "s1N"}
+
+
+def test_link_on_a_service_bus_raises(tmp_path):
+    model = read(tmp_path, FEEDER + "object node { name s1; phases AN; nominal_voltage 120; }\n"
+                 "object node { name s9; phases AN; nominal_voltage 120; }\n"
+                 "object transformer_configuration { name sp; connect_type SINGLE_PHASE; primary_voltage 7200; "
+                 "secondary_voltage 120; }\nobject transformer { name xs; phases AN; from n1; to s1; "
+                 "configuration sp; }\nobject switch { name sw9; phases AN; from s1; to s9; status CLOSED; }\n")
+    with pytest.raises(ValueError, match="switch sw9: on the s1N service bus s1; only loads are mapped"):
+        service_buses(model, bus_roots(model))
 
 
 def test_link_on_a_phase_its_end_lacks_raises(tmp_path):

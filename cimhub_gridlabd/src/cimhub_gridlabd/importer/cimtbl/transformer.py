@@ -51,8 +51,9 @@ _KINDS = {
 }
 
 
-def end_phases(xf, config) -> tuple[str, str]:
-    """The phases of end 1 and end 2 (S3b-7)."""
+def end_phases(xf, config, service: str | None = None) -> tuple[str, str]:
+    """The phases of end 1 and end 2 (S3b-7); a one-phase service's end 2 is its split-phase conductors
+    (``topology.service_phases``)."""
     written = str(xf.phases or "")
     letters = "".join(letter for letter in "ABC" if letter in written)
     connect = str(config.connect_type)
@@ -69,7 +70,7 @@ def end_phases(xf, config) -> tuple[str, str]:
     if connect in WYE_CONNECTIONS:
         if "N" not in written:
             raise ValueError(f"{label(xf)}: phases {written} without N on the {connect} {config.name}; not mapped")
-        return f"{letters}N", f"{letters}N"
+        return f"{letters}N", service or f"{letters}N"
     if letters != "ABC":
         raise ValueError(f"{label(xf)}: phases {written} on the {connect} {config.name}; a delta is ABC")
     return "ABC", "ABCN" if connect == "DELTA_GWYE" else "ABC"
@@ -87,10 +88,12 @@ def _check_systems(xf, config, wiring: templates.Wiring, node1: str, node2: str,
                              f"{system.name} ({config.connect_type} {config.name})")
 
 
-def _phase_ends(xf_mrid: str, config, wiring: templates.Wiring) -> list[Row]:
-    """A center tap's or a bank's TransformerPhaseEnds, numbered as the template's lugs."""
-    if str(config.connect_type) == templates.CENTER_TAP:
-        numbered = [(1, wiring.letters, 1), (1, "N", 2), (2, "s1", 3), (2, "s2", 4), (2, "N", 5)]
+def _phase_ends(xf_mrid: str, xf, config, wiring: templates.Wiring) -> list[Row]:
+    """A center tap's or a bank's TransformerPhaseEnds, numbered as the template's lugs. A center tap's primary is
+    the instance's own phase (a 240 V service's template letters are only a count, S6)."""
+    if templates.center_tapped(config, wiring):
+        letter = "".join(letter for letter in "ABC" if letter in str(xf.phases))
+        numbered = [(1, letter, 1), (1, "N", 2), (2, "s1", 3), (2, "s2", 4), (2, "N", 5)]
     elif templates.is_bank(config, wiring):
         numbered = [(end, phase, number) for (end, phase), number in templates.bank_numbers(wiring.letters).items()]
     else:
@@ -124,11 +127,14 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str], buses: dict[str, Bu
                             templates.tank_name(config, letter)]) for letter in wiring.letters]
     else:  # one tank goes by its transformer's name
         rows.tanks.append(Row([f"{xf_mrid}_tank", None, xf_mrid, templates.tank_name(config)]))
+    kinds = _KINDS[templates.CENTER_TAP if templates.center_tapped(config, wiring) else str(config.connect_type)]
+    if wiring.service == "s1N":  # a 120 V service's leg is one split-phase half, as a center tap's s1 (S6-10)
+        kinds = (kinds[0], _KINDS[templates.CENTER_TAP][1])
     for number, (node, phases, (kind, grounded)) in enumerate(
-            zip((node1, node2), end_phases(xf, config), _KINDS[str(config.connect_type)]), start=1):
+            zip((node1, node2), end_phases(xf, config, wiring.service), kinds), start=1):
         rows.ends.append(Row([f"{xf_mrid}_{number}", xf_mrid, node, phases, str(number), kind, cell(grounded),
                               buses[node].base_voltage]))
-    rows.phase_ends += _phase_ends(xf_mrid, config, wiring)
+    rows.phase_ends += _phase_ends(xf_mrid, xf, config, wiring)
     rows.limits.add(xf_mrid, link_ratings(xf))
 
 
