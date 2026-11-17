@@ -20,6 +20,7 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import transformer_configuration as templates
 from cimhub_gridlabd.importer.cimtbl.catalog import label
 from cimhub_gridlabd.importer.cimtbl.link import Limits, classify, link_ratings, provenance
+from cimhub_gridlabd.importer.topology import WYE_CONNECTIONS
 from cimhub_gridlabd.schema import gridlabd as schema
 
 NATIVE_CLASS = schema.Transformer
@@ -43,6 +44,7 @@ FIELDS = classify(NATIVE_CLASS, {
 #: connect_type -> ((connectionKind, grounded) of end 1, of end 2), S3b-7.
 _KINDS = {
     templates.WYE_WYE: (("Yn", True), ("Yn", True)),
+    "SINGLE_PHASE": (("Yn", True), ("Yn", True)),
     "DELTA_GWYE": (("D", False), ("Yn", True)),
     "DELTA_DELTA": (("D", False), ("D", False)),
     templates.CENTER_TAP: (("Y", True), ("I", True)),
@@ -64,16 +66,19 @@ def end_phases(xf, config) -> tuple[str, str]:
     if "S" in written:
         raise ValueError(f"{label(xf)}: phases {written} on the {connect} {config.name}; S needs a center tap "
                          "(transformer.cpp:315)")
-    if connect == templates.WYE_WYE:
+    if connect in WYE_CONNECTIONS:
         if "N" not in written:
-            raise ValueError(f"{label(xf)}: phases {written} without N on the WYE_WYE {config.name}; not mapped")
+            raise ValueError(f"{label(xf)}: phases {written} without N on the {connect} {config.name}; not mapped")
         return f"{letters}N", f"{letters}N"
     if letters != "ABC":
         raise ValueError(f"{label(xf)}: phases {written} on the {connect} {config.name}; a delta is ABC")
     return "ABC", "ABCN" if connect == "DELTA_GWYE" else "ABC"
 
 
-def _check_systems(xf, config, node1: str, node2: str, buses: dict[str, BusSystem]) -> None:
+def _check_systems(xf, config, wiring: templates.Wiring, node1: str, node2: str,
+                   buses: dict[str, BusSystem]) -> None:
+    if wiring.coil_rated:  # its ratedU is the systems' its ends are on (S6)
+        return
     expected = ((None, System.SPLIT_PHASE) if str(config.connect_type) == templates.CENTER_TAP
                 else (System.THREE_PHASE, System.THREE_PHASE))
     for node, system in zip((node1, node2), expected):
@@ -111,7 +116,7 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str], buses: dict[str, Bu
     wiring = wirings[str(config.name)]
     xf_mrid = mrid(PREFIX, xf.name)
     node1, node2 = roots[xf.from_node], roots[xf.to]
-    _check_systems(xf, config, node1, node2, buses)
+    _check_systems(xf, config, wiring, node1, node2, buses)
     rows.transformers.append(Row([xf_mrid, str(xf.name)], comment=untranscribed_values(FIELDS, xf)))
     if templates.is_bank(config, wiring):
         rows.tanks += [Row([f"{xf_mrid}_tank_{letter}", xf_mrid, templates.tank_name(config, letter)])

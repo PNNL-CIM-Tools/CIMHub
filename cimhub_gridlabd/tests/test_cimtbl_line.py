@@ -104,9 +104,42 @@ def test_phases_other_than_the_conductors_raise(tmp_path):
            r"overhead_line x: phases AN are not the phases ABCN of configuration lcon_601 \(S3a-3\)")
 
 
-def test_matrix_line_with_a_neutral_raises(tmp_path):
-    raises(tmp_path, "object overhead_line { name x; phases ACN; from n1; to nx; length 10; "
-                     "configuration lcon_mtx604_AC; }", "phases ACN with N on the matrix configuration")
+def bind(tmp_path, text: str):
+    """The atom plus ``text``, bound."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "line.glm"}"\nobject node {{ name nx; phases ABCN; nominal_voltage 2401.78; }}\n'
+                    + text)
+    return glm_to_cim(read(path), name="m")
+
+
+def segment(network, mrid: str):
+    return next(s for s in network.list_by_class(cim.ACLineSegment) if str(s.mRID) == mrid)
+
+
+def test_matrix_line_drops_its_neutral(tmp_path, scope):
+    """GridLAB-D's matrix is the Kron-reduced A, B, C one: a matrix line never reads N (line.cpp:226), S6."""
+    network = bind(tmp_path, "object overhead_line { name x; phases ACN; from n1; to nx; length 10; "
+                             "configuration lcon_mtx604_AC; }")
+    assert segment_phases(segment(network, "ln_x")) == {1: "A", 2: "C"}
+
+
+ZERO_DIAGONAL = ("object line_configuration { name zc; z11 0+0j; z12 0+0j; z13 0+0j; z21 0+0j; z22 0+0j; "
+                 "z23 0+0j; z31 0+0j; z32 0+0j; z33 0.3+0.6j; }\n")
+
+
+def test_a_written_zero_diagonal_is_no_phase(tmp_path, scope):
+    """A written 0 is GridLAB-D's default: the Milsoft exports write all nine terms (S6)."""
+    network = bind(tmp_path, ZERO_DIAGONAL + "object overhead_line { name x; phases CN; from n1; to nx; length 10; "
+                                             "configuration zc; }")
+    line = segment(network, "ln_x")
+    assert segment_phases(line) == {1: "C"}
+    assert line.PerLengthImpedance.conductorCount == 1
+
+
+def test_a_mutual_term_on_a_zero_diagonal_raises(tmp_path):
+    raises(tmp_path, ZERO_DIAGONAL.replace("z13 0+0j; ", "z13 0.1+0.1j; ").replace("z31 0+0j; ", "z31 0.1+0.1j; ")
+           + "object overhead_line { name x; phases CN; from n1; to nx; length 10; configuration zc; }",
+           "z13 is set without z11 and z33")
 
 
 def test_overhead_line_on_underground_conductors_raises(tmp_path):
@@ -148,7 +181,20 @@ def test_line_rating_other_than_its_configurations_raises(tmp_path):
 def test_triplex_line_on_two_phases_raises(tmp_path):
     raises(tmp_path, "object triplex_meter { name tmx; phases AS; nominal_voltage 120; }\n"
                      "object triplex_line { name x; phases ABS; from tn1; to tmx; length 30; "
-                     "configuration tc_rated; }", "phases ABS; a triplex line is AS, BS or CS")
+                     "configuration tc_rated; }", "phases ABS are not all on its from")
+
+
+def test_open_tie_across_phases_takes_two_sides(tmp_path, scope):
+    """CIM's SwitchPhase.phaseSide1/phaseSide2 hold a tie GridLAB-D cannot load (link.cpp:649), S6-9."""
+    network = bind(tmp_path, "object switch { name x; phases AN; from n5; to n8; status OPEN; }")
+    tie = next(sw for sw in network.list_by_class(cim.LoadBreakSwitch) if str(sw.mRID) == "sw_x")
+    assert [(p.phaseSide1.value, p.phaseSide2.value) for p in tie.SwitchPhase] == [("A", "C")]
+    assert sorted(t.phases.value for t in tie.Terminals) == ["A", "C"]
+
+
+def test_closed_tie_across_phases_raises(tmp_path):
+    raises(tmp_path, "object switch { name x; phases AN; from n5; to n8; status CLOSED; }",
+           r"phases AN are not all on its to node n8 \(CN\)")
 
 
 def test_phase_state_other_than_status_raises(tmp_path):
@@ -174,3 +220,11 @@ def assert_lines_and_switches(model, network) -> None:
     assert len(network.list_by_class(cim.LoadBreakSwitch)) == model.count(schema.Switch)
     assert len(network.list_by_class(cim.Fuse)) == model.count(schema.Fuse)
     assert len(network.list_by_class(cim.Recloser)) == model.count(schema.Recloser)
+    switches = {str(sw.mRID): sw for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser)
+                for sw in network.list_by_class(cls)}
+    for native_class, _, _ in switch.SWITCHES:  # each side's phases on its GLM end (an open tie across phases, S6-9)
+        for device in model.list_by_class(native_class):
+            sides = [(p.phaseSide1.value, p.phaseSide2.value) for p in switches[f"sw_{device.name}"].SwitchPhase]
+            for index, slot in enumerate(("from_node", "to")):
+                end = set(str(model.by_name(getattr(device, slot)).phases))
+                assert {pair[index] for pair in sides} <= end, (device.name, slot, sides)

@@ -173,8 +173,51 @@ def test_unset_impedance_raises(tmp_path):
     raises(tmp_path, _config("cx", "connect_type WYE_WYE;"), "cx: impedance None; resistance and reactance")
 
 
-def test_single_phase_connection_raises(tmp_path):
-    raises(tmp_path, _config("cx", "connect_type SINGLE_PHASE; impedance 0.01+0.02j;"), "connect_type SINGLE_PHASE")
+COIL_RATED = """
+object meter { name m_s1; phases AN; nominal_voltage 120; }
+object meter { name m_s1b; phases BN; nominal_voltage 120; }
+object meter { name m_s3; phases ABCN; nominal_voltage 277.13; }
+object transformer_configuration { name xc_s1; connect_type SINGLE_PHASE; primary_voltage 2401.78;
+                                   secondary_voltage 120; power_rating 25; impedance 0.01+0.02j; }
+object transformer_configuration { name xc_s3; connect_type WYE_WYE; primary_voltage 2401.78;
+                                   secondary_voltage 277.13; power_rating 150; impedance 0.01+0.02j; }
+object transformer { name xf_s1; phases AN; from n2; to m_s1; configuration xc_s1; }
+object transformer { name xf_s1b; phases BN; from n2; to m_s1b; configuration xc_s1; }
+object transformer { name xf_s3; phases ABCN; from n2; to m_s3; configuration xc_s3; }
+"""
+
+
+def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
+    """A wye whose voltages are its buses' nominal_voltage (phase to neutral, the Milsoft exports) is rated by the
+    coil: baseU as written, ratedU on its bus's system, %Z x S_coil / S_total; SINGLE_PHASE is a WYE_WYE, and one
+    template serves A and B (S6)."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "transformer.glm"}"\n' + COIL_RATED)
+    model = read(path)
+    network = glm_to_cim(model, name=MODEL)
+    assert_gridlabd_ohms(model, network)
+    templates = {str(c.mRID): c for c in network.list_by_class(cim.TransformerTankConfiguration)}
+
+    def voltages(name):
+        windings = sorted(templates[name].TransformerWinding, key=lambda w: w.FromTransformerEnd.endNumber)
+        return [(float(w.ratedU.to("V")), float(w.baseU.to("V"))) for w in windings]
+
+    assert voltages("xc_xc_s1") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (120.0, 120.0)]
+    assert voltages("xc_xc_s3") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (pytest.approx(480.0, rel=1e-4),
+                                                                                    277.13)]
+    z = 100 * abs(complex(0.01, 0.02))
+    assert float(templates["xc_xc_s1"].percentImpedance) == pytest.approx(z)
+    assert float(templates["xc_xc_s3"].percentImpedance) == pytest.approx(z / 3)
+    nodes = {str(n.mRID): n for n in network.list_by_class(cim.ConnectivityNode)}
+    assert float(nodes["m_s1"].BaseVoltage.nominalVoltage.to("V")) == 120.0
+
+
+def test_a_wye_off_its_bus_voltage_raises(tmp_path):
+    raises(tmp_path, "object transformer_configuration { name cx; connect_type SINGLE_PHASE; primary_voltage 3000; "
+                     "secondary_voltage 120; power_rating 25; impedance 0.01+0.02j; }\n"
+                     "object meter { name my; phases AN; nominal_voltage 120; }\n"
+                     "object transformer { name x; phases AN; from n2; to my; configuration cx; }",
+           "primary_voltage 3 kV of cx is neither the 2.40178 kV nominal_voltage of its from bus n2")
 
 
 def test_phase_ratings_that_miss_the_total_raise(tmp_path):

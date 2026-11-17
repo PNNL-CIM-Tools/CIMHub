@@ -2,7 +2,8 @@
 
 Decks: the small public decks are vendored in ``tests/decks/`` (origins in its README). The others stay out of git;
 point ``CIMHUB_GLM_DECKS`` at a directory with the same layout (``PNNL/orig_R5-12.47-3.glm``) to run them,
-otherwise their tests skip.
+otherwise their tests skip. A utility's own decks never enter git: point ``CIMHUB_GLM_UTILITY_DECKS`` at their
+directory and the sweep binds every non-empty ``*.glm`` in it (S6).
 """
 from __future__ import annotations
 
@@ -61,6 +62,18 @@ def deck(relative: str) -> Path:
     if external and (Path(external) / relative).exists():
         return Path(external) / relative
     pytest.skip(f"{relative}: not vendored; set CIMHUB_GLM_DECKS to run it")
+
+
+def utility_deck_params() -> list:
+    """Every non-empty ``*.glm`` under ``CIMHUB_GLM_UTILITY_DECKS`` as a pytest param (``--roundtrip`` only): each must
+    bind, so there is no stop table to name them in (S6)."""
+    directory = os.environ.get("CIMHUB_GLM_UTILITY_DECKS")
+    if not directory:
+        return [pytest.param(None, id="unset", marks=pytest.mark.skip(reason="set CIMHUB_GLM_UTILITY_DECKS"))]
+    paths = sorted(path for path in Path(directory).glob("*.glm") if path.stat().st_size)
+    if not paths:
+        raise ValueError(f"CIMHUB_GLM_UTILITY_DECKS={directory}: no non-empty *.glm")
+    return [pytest.param(path, id=path.stem, marks=pytest.mark.roundtrip) for path in paths]
 
 
 def deck_params(stops: dict[str, str]) -> list:

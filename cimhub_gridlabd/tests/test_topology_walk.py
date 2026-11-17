@@ -76,6 +76,26 @@ def test_single_phase_wye_wye_is_line_to_line(tmp_path):
     assert walk(glm_network(model))["m1"].kv == 0.48
 
 
+def test_coil_rated_single_phase_is_phase_to_neutral(tmp_path):
+    """A SINGLE_PHASE unit rated at its buses' nominal_voltage: one phase-to-neutral coil per side, so its service
+    is a single-phase system (S6)."""
+    model = read(tmp_path, FEEDER + "object node { name s1; phases AN; nominal_voltage 120; }\n"
+                 "object transformer_configuration { name sp; connect_type SINGLE_PHASE; primary_voltage 7200; "
+                 "secondary_voltage 120; }\nobject transformer { name xs; phases AN; from n1; to s1; "
+                 "configuration sp; }\n")
+    coils = {xf.name: [(c.bus, c.kv, c.connection) for c in xf.coils] for xf in glm_network(model).transformers}
+    assert coils["xs"] == [("n1", 7.2, Connection.PHASE_NEUTRAL), ("s1", 0.12, Connection.PHASE_NEUTRAL)]
+    assert walk(glm_network(model))["s1"] == (0.12, System.SINGLE_PHASE)
+
+
+def test_link_on_a_phase_its_end_lacks_raises(tmp_path):
+    model = read(tmp_path, FEEDER + "object node { name n2; phases BN; nominal_voltage 7200; }\n"
+                 "object switch { name sw; phases AN; from n1; to n2; status CLOSED; }\n")
+    with pytest.raises(ValueError, match=r"switch sw: phases AN are not all on its to node n2 \(BN\); GridLAB-D "
+                                         r"throws \(link.cpp:664\)"):
+        glm_network(model)
+
+
 def test_open_status_on_a_line_raises(tmp_path):
     model = read(tmp_path, FEEDER.replace("length 100;", "length 100; status OPEN;"))
     with pytest.raises(ValueError, match="overhead_line l1: status OPEN on a device that is not a switch"):

@@ -7,13 +7,21 @@
   ``nominal_voltage`` (phase to neutral) on the system its phases give (``line_voltage``). ``SWING_PQ`` is a plain
   bus: it becomes a swing only when its island separates (S1-2).
 - **Branches:** every line, switch, fuse, recloser, sectionalizer, series reactor and regulator (a regulator keeps
-  the voltage). A switching device's ``status OPEN`` is a normally open branch.
-- **Transformers:** one ``Coil`` per winding, from the ``transformer_configuration``. ``WYE_WYE``: polyphase
-  coils on the transformer's phase conductors, whatever their number: GridLAB-D applies ``V_primary /
-  V_secondary`` to the phase voltages, and the ratings are line to line (``transformer.cpp``: ``Np = V_primary /
-  sqrt(3)``), so a 1-phase ``CN`` unit of 12500/480 V is one phase of a 480 V wye secondary. ``DELTA_DELTA``,
-  ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a phase-to-neutral primary and two
-  split-phase halves of ``secondary_voltage`` each (120 V halves of a 240 V secondary).
+  the voltage). A switching device's ``status OPEN`` is a normally open branch. A link's phases (N and D aside)
+  must be on both its end objects, as GridLAB-D's ``link::init`` throws (``link.cpp:649``, ``:664``); a center
+  tap's S is on its to end only (``:604``). One exception, which GridLAB-D cannot load but CIM holds
+  (``SwitchPhase.phaseSide1``/``phaseSide2``): an open switching device between laterals on different phases
+  (``crossed_phases``, S6-9).
+- **Transformers:** one ``Coil`` per winding, from the ``transformer_configuration``. ``WYE_WYE`` and
+  ``SINGLE_PHASE`` (one case in ``transformer.cpp:282``): GridLAB-D applies ``V_primary / V_secondary`` to the
+  phase voltages and takes its impedance base on ``secondary_voltage`` as written, so the voltages are a ratio to
+  it, and the deck says what they rate (``coil_rated``). Line to line (the Java CIMHub exports, S3b-3): polyphase
+  coils on the transformer's phase conductors, whatever their number, so a 1-phase ``CN`` unit of 12500/480 V is
+  one phase of a 480 V wye secondary. The coil, phase to neutral (the Milsoft WindMil exports, S6): one
+  phase-to-neutral coil per side on one conductor (a 7200/120 V service), else polyphase coils of the written
+  voltage x sqrt 3. ``DELTA_DELTA``, ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a
+  phase-to-neutral primary and two split-phase halves of ``secondary_voltage`` each (120 V halves of a 240 V
+  secondary).
 
 Equipment names are the GLM names (unique across a model). Values in volts become the walk's kV through pint
 (``cimprofiles.units``), never by hand.
@@ -25,6 +33,7 @@ import math
 
 from cimprofiles.units import units
 from cimtopology.core import Branch, Coil, Connection, Network, Source, System, Transformer
+from cimtopology.core.voltage import NAMEPLATE_TOLERANCE
 
 from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -35,6 +44,7 @@ BRANCH_CLASSES = (schema.OverheadLine, schema.UndergroundLine, schema.TriplexLin
 SWITCHING_CLASSES = (schema.Switch, schema.Fuse, schema.Recloser, schema.Sectionalizer)
 _PHASE_LETTERS = frozenset("ABC")
 _DELTA_CONNECTIONS = {"DELTA_DELTA", "DELTA_GWYE"}
+WYE_CONNECTIONS = {"WYE_WYE", "SINGLE_PHASE"}
 _CENTER_TAP = "SINGLE_PHASE_CENTER_TAPPED"
 
 
@@ -138,6 +148,7 @@ def _branches(model: GlmModel, roots: dict[str, str]):
             switching = isinstance(record, SWITCHING_CLASSES)
             if is_open and not switching:
                 raise ValueError(f"{record.class_name} {record.name}: status OPEN on a device that is not a switch")
+            check_end_phases(model, record)
             yield Branch(str(record.name), _end(record, "from_node", roots), _end(record, "to", roots),
                          switch=switching, open=is_open)
 
@@ -151,6 +162,7 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str]) -> Transformer:
     primary, secondary = _end(xf, "from_node", roots), _end(xf, "to", roots)
     conductors = phase_letters(xf)
     connect = str(config.connect_type)
+    check_end_phases(model, xf, center_tap=connect == _CENTER_TAP)
     v1, v2 = kv(model, config, "primary_voltage"), kv(model, config, "secondary_voltage")
     if connect == _CENTER_TAP:
         if len(conductors) != 1 or "S" not in str(xf.phases):
@@ -158,9 +170,58 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str]) -> Transformer:
         coils = (Coil(primary, v1, Connection.PHASE_NEUTRAL, conductors),
                  Coil(secondary, v2, Connection.HALF, frozenset({"1"})),
                  Coil(secondary, v2, Connection.HALF, frozenset({"2"})))
-    elif connect == "WYE_WYE" or (connect in _DELTA_CONNECTIONS and len(conductors) == 3):
+    elif connect in WYE_CONNECTIONS and coil_rated(model, xf, config, roots):
+        if len(conductors) == 1:
+            coils = (Coil(primary, v1, Connection.PHASE_NEUTRAL, conductors),
+                     Coil(secondary, v2, Connection.PHASE_NEUTRAL, conductors))
+        else:
+            coils = (Coil(primary, line_voltage(v1, System.THREE_PHASE), Connection.POLYPHASE, conductors),
+                     Coil(secondary, line_voltage(v2, System.THREE_PHASE), Connection.POLYPHASE, conductors))
+    elif connect in WYE_CONNECTIONS or (connect in _DELTA_CONNECTIONS and len(conductors) == 3):
         coils = (Coil(primary, v1, Connection.POLYPHASE, conductors),
                  Coil(secondary, v2, Connection.POLYPHASE, conductors))
     else:
         raise ValueError(f"transformer {xf.name}: connect_type {connect} on phases {xf.phases} is not walked")
     return Transformer(str(xf.name), coils)
+
+
+def check_end_phases(model: GlmModel, link, *, center_tap: bool = False) -> None:
+    """A link's phases, N and D aside, must be on both its end objects (``link.cpp:649``, ``:664``); a center
+    tap's from end needs its phase letter, its to end the S (``:604``-``:617``)."""
+    carried = set(str(link.phases or "")) - {"N", "D"}
+    crossed = crossed_phases(model, link) is not None
+    for slot, written in (("from_node", "from"), ("to", "to")):
+        if slot == "to" and crossed:
+            continue
+        end = model.by_name(getattr(link, slot))
+        needed = (carried - {"S"} if slot == "from_node" else {"S"}) if center_tap else carried
+        if not needed <= set(str(end.phases or "")):
+            raise ValueError(f"{link.class_name} {link.name}: phases {link.phases} are not all on its {written} "
+                             f"{end.class_name} {end.name} ({end.phases}); GridLAB-D throws (link.cpp:664)")
+
+
+def crossed_phases(model: GlmModel, link) -> str | None:
+    """The to end's phases of an open switching device between laterals on different phases (S6-9): its switched
+    letters are on its from end, and its to end has as many letters, none of them those, paired in ABC order
+    (``SwitchPhase.phaseSide2``). ``None`` for any other link; GridLAB-D loads neither case (``link.cpp:649``)."""
+    if not isinstance(link, SWITCHING_CLASSES) or str(link.status) != "OPEN":
+        return None
+    carried = phase_letters(link)
+    near, far = phase_letters(model.by_name(link.from_node)), phase_letters(model.by_name(link.to))
+    if not carried <= near or carried & far or len(far) != len(carried):
+        return None
+    return "".join(sorted(far))
+
+
+def coil_rated(model: GlmModel, xf, config, roots: dict[str, str]) -> bool:
+    """Whether a wye ``config``'s voltages rate the coil (phase to neutral) rather than the line, as ``xf`` wires
+    it: its ``primary_voltage`` is the ``nominal_voltage`` (phase to neutral) of the bus ``from`` is solved as,
+    or that x sqrt 3, within the walk's nameplate tolerance; anything else raises (S6)."""
+    bus = model.by_name(_end(xf, "from_node", roots))
+    written, nominal = kv(model, config, "primary_voltage"), kv(model, bus, "nominal_voltage")
+    if math.isclose(written, nominal, rel_tol=NAMEPLATE_TOLERANCE):
+        return True
+    if math.isclose(written, line_voltage(nominal, System.THREE_PHASE), rel_tol=NAMEPLATE_TOLERANCE):
+        return False
+    raise ValueError(f"transformer {xf.name}: primary_voltage {written:.6g} kV of {config.name} is neither the "
+                     f"{nominal:.6g} kV nominal_voltage of its from bus {bus.name} nor that x sqrt 3")

@@ -1,7 +1,8 @@
 """S5: the deck sweep (S5-1) and the IEEE13_cdpsm reference golden directory (S5-2, D6).
 
 Each deck is read and bound once, and every slice's GridLAB-D check runs on that network. A deck in ``BIND_STOPS``
-must stop with its listed error: an unlisted stop fails, and so does a listed stop that now binds.
+must stop with its listed error: an unlisted stop fails, and so does a listed stop that now binds. A utility's own
+decks (``CIMHUB_GLM_UTILITY_DECKS``, S6) must all bind.
 """
 from __future__ import annotations
 
@@ -12,7 +13,7 @@ import cimtables
 import pytest
 from cimtables.document import write_documents
 
-from conftest import BIND_STOPS, deck, deck_params, defines
+from conftest import BIND_STOPS, deck, deck_params, defines, utility_deck_params
 from cimhub_core.cimtbl_testing import assert_text_matches_golden
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
@@ -39,8 +40,18 @@ def test_every_deck_binds_as_gridlabd_runs_it(relative, stop, scope):
         with pytest.raises((GlmParseError, ValueError), match=stop):
             glm_to_cim(read(relative), name=Path(relative).stem)
         return
-    model = read(relative)
-    network = glm_to_cim(model, name=Path(relative).stem)
+    assert_binds_as_gridlabd_runs_it(read(relative), Path(relative).stem)
+
+
+@pytest.mark.parametrize("path", utility_deck_params())
+def test_every_utility_deck_binds_as_gridlabd_runs_it(path, scope):
+    """A utility's own decks, from ``CIMHUB_GLM_UTILITY_DECKS`` (S6)."""
+    assert_binds_as_gridlabd_runs_it(GlmReader(path).read_all(), path.stem)
+
+
+def assert_binds_as_gridlabd_runs_it(model, name: str) -> None:
+    """The deck binds, and every slice's GridLAB-D check holds on the network."""
+    network = glm_to_cim(model, name=name)
     assert_buses(network)
     assert_catalogs(model, network)
     assert_lines_and_switches(model, network)
