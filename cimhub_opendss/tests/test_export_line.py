@@ -285,6 +285,25 @@ def test_switch_controls_and_states():
     assert options.open_terminals == ["Line.f_open 1", "Line.r_open 1"]
 
 
+def test_normal_switch_state_exports_an_as_built_model():
+    network = _network("states")
+    for cim_class in switch.CIM_CLASSES:
+        for obj in network.graph.get(cim_class, {}).values():
+            obj.open = None  # as built: only normalOpen is set
+    with pytest.raises(ValueError, match="open is unset"):
+        _model(network)
+    model = DssExporter().to_model(network, name_source="name", switch_state="normal")
+    control = _record(model, schema.Swtcontrol, "n_open")
+    assert (control.Normal, control.State) == ("open", "open")
+    [options] = model.list_by_class(schema.Options)
+    assert options.open_terminals == ["Line.f_open 1", "Line.n_open 1", "Line.r_open 1"]
+
+
+def test_unknown_switch_state_raises():
+    with pytest.raises(ValueError, match="switch_state must be one of"):
+        DssExporter().to_model(_network("states"), switch_state="nominal")
+
+
 def test_closed_switches_get_no_swtcontrol():
     model = _model(_network("codes"))
     assert sorted(record.name for record in model.list_by_class(schema.Swtcontrol)) == ["sect", "tie"]
@@ -314,7 +333,7 @@ def test_reclosures_on_another_switch_raise():
     breaker = cim.Breaker(mRID="sw_b1", name="b1", open=False, normalOpen=False)
     breaker.RecloseSequences.append(cim.RecloseSequence(mRID="sw_b1_rs1", recloseStep=1, ProtectedSwitch=breaker))
     with pytest.raises(ValueError, match="RecloseSequences on a Breaker"):
-        switch._control(breaker, Names("name"))
+        switch._control(breaker, Names("name"), "actual")
 
 
 def test_geometry_lines_write_their_earth():

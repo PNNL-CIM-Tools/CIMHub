@@ -3,9 +3,9 @@
 
 CIM gives a switch no impedance (DSS-8), so each is written with a small invented one (B3, the user's rule): 1 mOhm
 resistive. Both of CIM's states go back (E6): ``normalOpen`` -> the control's ``Normal``, ``open`` -> ``State`` and
-an ``Open Line.<name> 1`` command. A switch that is not a Fuse or Recloser gets a SwtControl only when it is open in
-either state. The class is lossy on the way back: every class but Fuse and Recloser comes back a LoadBreakSwitch
-(DSS-9).
+an ``Open Line.<name> 1`` command; ``switch_state='normal'`` writes ``normalOpen`` to both. A switch that is not a
+Fuse or Recloser gets a SwtControl only when it is open in either state. The class is lossy on the way back: every
+class but Fuse and Recloser comes back a LoadBreakSwitch (DSS-9).
 
 A Fuse or Recloser control is written disabled (V7, the user's rule until U15): cim18v17 has no home for its trip
 settings or curve, so the engine's defaults (a ~1 A recloser pickup, the default fuse curve) would trip it on the first
@@ -37,7 +37,8 @@ STATE_WORD = {True: "open", False: "closed"}
 
 _STATE = {
     "Normal": Slot("written", "get_switch_state(which='normal'); written only when open in either state"),
-    "State": Slot("written", "get_switch_state(which='actual'); written only when open in either state"),
+    "State": Slot("written", "get_switch_state(which=switch_state), 'actual' unless the caller asks 'normal'; "
+                             "written only when open in either state"),
 }
 _FUSE_STATE = {name: Slot(slot.kind, slot.note + "; one value per phase (the engine sets a fuse per phase)")
                for name, slot in _STATE.items()}
@@ -100,16 +101,16 @@ def export(context) -> list:
     records = []
     for switch in context.objects(*CIM_CLASSES):
         records.append(_line(switch, context.names))
-        control = _control(switch, context.names)
+        control = _control(switch, context.names, context.switch_state)
         if control is not None:
             records.append(control)
     return records
 
 
 def open_terminals(context) -> list[str]:
-    """``Line.<name> 1`` for every switch that is open now (E6); the deck's ``Open`` commands."""
+    """``Line.<name> 1`` for every switch open in ``context.switch_state`` (E6); the deck's ``Open`` commands."""
     return [f"Line.{switch_name(switch, context.names)} 1" for switch in context.objects(*CIM_CLASSES)
-            if get_switch_state(switch, which="actual")]
+            if get_switch_state(switch, which=context.switch_state)]
 
 
 def _line(switch: cim.Switch, names: Names) -> schema.Line:
@@ -119,9 +120,10 @@ def _line(switch: cim.Switch, names: Names) -> schema.Line:
                        **SWITCH_IMPEDANCE, **ratings(switch), enabled=get_in_service(switch, which="normal"))
 
 
-def _control(switch: cim.Switch, names: Names):
-    """The switch's Fuse, Recloser or SwtControl, or None for a closed switch that is neither."""
-    normal, actual = get_switch_state(switch, which="normal"), get_switch_state(switch, which="actual")
+def _control(switch: cim.Switch, names: Names, switch_state: str):
+    """The switch's Fuse, Recloser or SwtControl, or None for a closed switch that is neither. ``State`` is the
+    switch's ``switch_state`` ('actual' or 'normal')."""
+    normal, actual = get_switch_state(switch, which="normal"), get_switch_state(switch, which=switch_state)
     state = dict(Normal=STATE_WORD[normal], State=STATE_WORD[actual]) if normal or actual else {}
     target = f"Line.{switch_name(switch, names)}"
     if isinstance(switch, cim.Fuse):

@@ -19,14 +19,15 @@ cimhub_opendss/src/cimhub_opendss/exporter/
     vsource.py        EnergySource -> Vsource (one module per DSS class from here on)
 ```
 
-- **`DssExporter().to_model(network, *, name_source=None, circuit_source="source") -> DssModel`.** It runs each
+- **`DssExporter().to_model(network, *, name_source=None, circuit_source="source", switch_state="actual") ->
+  DssModel`.** It runs each
   module of `EXPORT_ORDER` over its CIM classes and adds the records. `history` stays empty: it is a reader
   artifact.
 - Each module has `export(obj, context) -> list[record]` and `SLOTS`, which names each slot of its DSS class as
   `written` (from which getter), `rule` (a CIM `None` DSS needs, E4), `unset` (CIM cannot hold it; engine default)
   or `not mapped`. A test checks that `SLOTS` covers every schema slot, as `check_fields` does on import, and the
   tables below are generated from it.
-- `context` (`ExportContext`) holds the network, the `Names` and the circuit's EnergySource. Nothing else is shared
+- `context` (`ExportContext`) holds the network, the `Names`, the circuit's EnergySource and the `switch_state`. Nothing else is shared
   between modules.
 - Conducting equipment of a class no module exports raises, with the counts (`no DSS export yet for
   {'ACLineSegment': 1, ...}`), so nothing is dropped silently while the sub-slices land.
@@ -393,6 +394,8 @@ The state:
 - `get_switch_state(which="normal")` → the control's `Normal=open|closed`;
 - `which="actual"` → `State=open|closed`, plus `Open Line.<name> 1` in `Options.open_terminals` when open (the
   importer's rule inverted).
+- `to_model(..., switch_state="normal")` reads `which="normal"` for `State` and `Open` too, for an as-built model
+  whose `Switch.open` is unset. The default, `"actual"`, raises on an unset `open`; there is no silent fallback.
 
 A Fuse or Recloser closed in both states writes neither. A one-terminal switch (GroundDisconnector) raises. The
 class is lossy on the way back: Breaker, Disconnector, Sectionaliser and Jumper come back as LoadBreakSwitch

@@ -11,6 +11,7 @@ from typing import NamedTuple
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.base import FormatExporter
+from cimhub_core.getters.switch_state import STATE_ATTRIBUTE
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
@@ -33,6 +34,7 @@ class ExportContext(NamedTuple):
     network: object
     names: Names
     circuit_source: cim.EnergySource
+    switch_state: str
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -40,17 +42,23 @@ class ExportContext(NamedTuple):
 
 
 class DssExporter(FormatExporter):
-    """``to_model(network, *, name_source=None, circuit_source="source") -> DssModel``.
+    """``to_model(network, *, name_source=None, circuit_source="source", switch_state="actual") -> DssModel``.
 
     ``name_source`` is the shared naming switch (``cimhub_core.names``: ``'name'``, ``'mrid'``, ``'uri'``; else
     ``$CIMHUB_NAME_SOURCE``, else ``'mrid'``). ``circuit_source`` names the EnergySource written as ``New Circuit``
-    when there are several (E2). Conducting equipment of a class no module exports raises.
+    when there are several (E2). ``switch_state`` is the CIM state written as each switch's ``State`` and ``Open``
+    command (E6): ``'actual'`` reads ``Switch.open``, ``'normal'`` reads ``Switch.normalOpen`` (an as-built model
+    whose ``open`` is unset). ``Normal`` always reads ``normalOpen``. Conducting equipment of a class no module
+    exports raises.
     """
 
-    def to_model(self, network, *, name_source: str | None = None, circuit_source: str = "source") -> DssModel:
+    def to_model(self, network, *, name_source: str | None = None, circuit_source: str = "source",
+                 switch_state: str = "actual") -> DssModel:
+        if switch_state not in STATE_ATTRIBUTE:
+            raise ValueError(f"switch_state must be one of {sorted(STATE_ATTRIBUTE)}, not {switch_state!r}")
         _check_exported(network)
         names = Names(name_source)
-        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source))
+        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state)
         model = DssModel()
         for module in EXPORT_ORDER:
             for record in module.export(context):

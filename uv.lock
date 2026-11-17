@@ -222,7 +222,7 @@ dev = [
 
 [[package]]
 name = "cim-graph"
-version = "0.6.0"
+version = "0.6.1"
 source = { editable = "../CIM-Graph" }
 dependencies = [
     { name = "cim-profiles" },
@@ -456,6 +456,7 @@ requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cimhub-core", editable = "cimhub_core" },
 ]
+
 [[package]]
 name = "click"
 version = "8.5.1"
