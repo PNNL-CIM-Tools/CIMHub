@@ -87,9 +87,17 @@ def conductor_letters(configuration) -> str:
     return "".join(letter for letter in "ABCN" if getattr(configuration, f"conductor_{letter}") is not None)
 
 
+def _nonzero(configuration, slot: str) -> bool:
+    """A matrix value set to something other than 0: a written 0 is GridLAB-D's default (S6, the Milsoft exports
+    write all nine z terms)."""
+    value = getattr(configuration, slot)
+    return value is not None and (float(value.real or 0.0), float(value.imag or 0.0)) != (0.0, 0.0)
+
+
 def diagonal_letters(configuration) -> str:
-    """The phases whose ``z_ii`` a matrix line_configuration sets, in ABC order (its compacted rows, S2-9)."""
-    return "".join(_LETTER[i] for i in _INDEX if getattr(configuration, f"z{i}{i}") is not None)
+    """The phases whose ``z_ii`` a matrix line_configuration sets to other than 0, in ABC order (its compacted
+    rows, S2-9)."""
+    return "".join(_LETTER[i] for i in _INDEX if _nonzero(configuration, f"z{i}{i}"))
 
 
 def is_matrix(configuration) -> bool:
@@ -160,9 +168,11 @@ def _symmetric_value(configuration, prefix: str, i: str, j: str):
 
 
 def _matrix(model: GlmModel, configuration, frequency: float) -> list:
-    diagonal = [i for i in _INDEX if getattr(configuration, f"z{i}{i}") is not None]
+    diagonal = [i for i in _INDEX if _nonzero(configuration, f"z{i}{i}")]
+    if not diagonal:
+        raise ValueError(f"{label(configuration)}: every z_ii is unset or 0")
     for slot in _is_set(configuration, Z_SLOTS + C_SLOTS):
-        if not {slot[1], slot[2]} <= set(diagonal):
+        if not {slot[1], slot[2]} <= set(diagonal) and _nonzero(configuration, slot):
             raise ValueError(f"{label(configuration)}: {slot} is set without z{slot[1]}{slot[1]} and "
                              f"z{slot[2]}{slot[2]}")
     z_unit = _one_unit(model, configuration, _is_set(configuration, Z_SLOTS), "z")

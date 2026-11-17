@@ -1,8 +1,12 @@
-"""Time points beside the CIM XML: one Parquet table per TimePoint class (TIMESERIES_NEEDS.md T6).
+"""Time points beside the CIM XML: one Parquet table per TimePoint class, for any spoke with nc_schedule schedules.
 
 ``ieee13.xml`` holds the schedules; ``ieee13.EnergyConnectionTimePoint.parquet`` holds their points, one row each,
-keyed by the schedule's uri(). With ``gdm_reader.py`` and ``gdm_writer.py``, the only modules in the spoke that touch
-the filesystem. Generic to any spoke: it moves to cimhub_core once a second one has schedules.
+keyed by the schedule's uri() (CIM issue #7963: too many points for one graph object each). The tables are in
+CIM-Builder's ``TIME_POINT_SCHEMA``, as its schedule builders make them. A reader/writer module: with a spoke's own
+reader and writer, the only code that touches the filesystem. Moved from cimhub_gdm (its
+``docs/TIMESERIES_NEEDS.md`` T6) so that GridLAB-D players can use it too.
+
+Needs the ``time-points`` extra (``cimhub-core[time-points]``: pyarrow and cim-builder).
 """
 
 from __future__ import annotations

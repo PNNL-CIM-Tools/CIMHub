@@ -1,5 +1,5 @@
-"""S4a: capacitors: classification, the atom, GridLAB-D's VAr and switching through the core getters, fail fast,
-decks."""
+"""S4a: capacitors: classification, the atom, GridLAB-D's VAr and switching through the core getters, fail fast; the
+decks run in test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,18 +7,16 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.control import get_equipment_control
 from cimhub_core.getters.shunt import get_shunt_reactive_power
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import capacitor
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "capacitor"
-GOLDENS = Path(__file__).parent / "goldens"
 MODEL = "atom"
 
 
@@ -132,20 +130,3 @@ def test_pt_phase_not_connected_raises(tmp_path):
 def test_unrated_connected_phase_raises(tmp_path):
     raises(tmp_path, "object capacitor { name x; parent n5; phases AN; nominal_voltage 2401.78; }",
            "capacitor_A unset or 0 on a connected phase")
-
-
-# -- decks -------------------------------------------------------------------------------------------------------
-
-def test_ieee13_cdpsm_golden():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    assert_matches_golden(capacitor_part(model, "IEEE13_cdpsm"), GOLDENS / "IEEE13_cdpsm" / "capacitor.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_capacitor_binds_with_gridlabds_vars(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    assert_gridlabd_capacitors(model, glm_to_cim(model, name=Path(relative).stem))

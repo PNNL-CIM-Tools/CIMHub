@@ -1,5 +1,6 @@
 """S4b: inverters with their solar or battery: classification, the atom, GridLAB-D's output through the core DER
-getters, fail fast, decks."""
+getters, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 import math
@@ -8,18 +9,16 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.der import (get_battery_unit, get_der_output, get_inverter_rating, get_inverter_unit,
                                      get_photovoltaic_unit)
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import inverter
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "inverter"
-GOLDENS = Path(__file__).parent / "goldens"
 MODEL = "atom"
 
 
@@ -225,37 +224,3 @@ def test_legacy_battery_raises(tmp_path):
 
 def test_multipoint_efficiency_raises(tmp_path):
     raises(tmp_path, _inverter("use_multipoint_efficiency TRUE;"), "use_multipoint_efficiency TRUE; not mapped")
-
-
-# -- decks -------------------------------------------------------------------------------------------------------
-
-def test_ieee13_cdpsm_golden():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    assert_matches_golden(inverter_part(model, "IEEE13_cdpsm"), GOLDENS / "IEEE13_cdpsm" / "inverter.cimtbl")
-
-
-def test_ieee13_cdpsm_against_the_dss_golden(scope):
-    """The cross-solver note on S4b-2/-4/-5: the battery dispatch and the ratings match the DSS import of the same
-    feeder (``cimhub_opendss/tests/goldens/IEEE13_CDPSM/{pvsystem,storage}.cimtbl``, values copied here); the PV
-    output and the house's connection follow GridLAB-D instead."""
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    network = glm_to_cim(model, name="IEEE13_cdpsm")
-    pecs = {str(pec.name): pec for pec in network.list_by_class(cim.PowerElectronicsConnection)}
-    dss_p_kw = {"inv_bat_school": -100.0, "inv_bat_house": 5.0, "inv_bat_batidle": 1.0}
-    for name, p in dss_p_kw.items():
-        assert float(pecs[name].p.to("kW")) == pytest.approx(p, abs=1e-5), name
-    gridlabd_p_kw = {"inv_pv_school": -298.2545, "inv_pv_house": -4.9709}
-    for name, p in gridlabd_p_kw.items():
-        assert float(pecs[name].p.to("kW")) == pytest.approx(p, abs=1e-4), name
-    assert (pecs["inv_pv_house"].phaseConnection.value, float(pecs["inv_pv_house"].ratedU.to("V"))) == ("D", 240.0)
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_inverter_binds_with_gridlabds_output(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    network = glm_to_cim(model, name=Path(relative).stem)
-    assert_gridlabd_der(model, network)

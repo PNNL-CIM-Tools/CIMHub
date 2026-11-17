@@ -71,7 +71,8 @@ jobs:
 
       - name: Install the wheel with its PyPI dependencies
         env:
-          REQUIREMENT: ${{ steps.release.outputs.name }}==${{ steps.release.outputs.version }}
+          # with the time-points extra, so the wheel's time_points tests run against it
+          REQUIREMENT: ${{ steps.release.outputs.name }}[time-points]==${{ steps.release.outputs.version }}
         run: |
           uv venv wheels
           uv export --frozen --only-group dev --no-emit-workspace --no-hashes > dev-requirements.txt

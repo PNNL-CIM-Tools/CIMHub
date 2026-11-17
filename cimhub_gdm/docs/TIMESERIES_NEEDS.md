@@ -183,7 +183,9 @@ then T3 drops them.
    `use_actual=True`, and `profile_name` = the schedule's name when unique, its uri otherwise (ditto names the
    OpenDSS LoadShape from it, so a repeat would merge two shapes).
 
-**As built:** `importer/time_series.py`, `exporter/time_series.py`, `time_points.py`. Choices made while building:
+**As built:** `importer/time_series.py`, `exporter/time_series.py`, `time_points.py` (since 2026-11-16
+`cimhub_core.time_points`, the `time-points` extra, so other spokes can use it; `cimhub_gdm` still re-exports
+`read_time_points` / `write_time_points`). Choices made while building:
 - schedule mRIDs are `<consumer>_pq`, or `_p` / `_q` when P and Q have different times; the name is the series'
   `profile_name` (the OpenDSS loadshape), else the load's name;
 - a series is a multiplier when its `use_actual` feature is False; with no feature, when its data have no units
@@ -194,7 +196,8 @@ then T3 drops them.
 
 **Tests:** `tests/test_time_series.py`, with the expected points written out in the test rather than as golden files.
 It covers multiplier and actual loads, P-only and split time bases, XML + Parquet → reload (the schedules diff
-clean, the rows come back equal), orphan and repeated rows, the warnings, and GDM → CIM → GDM in actual values. The
+clean, the rows come back equal), the warnings, and GDM → CIM → GDM in actual values. The sidecar's own checks
+(orphan and repeated rows, a schedule with no points, the schema) moved with it to `cimhub_core/tests/test_time_points.py`. The
 ditto test (`test_export_ditto.py`) checks one LoadShape per load with `UseActual=yes` in OpenDSS.
 
 ## 6. Scale (N6)

@@ -86,9 +86,8 @@ def _phases(line, configuration) -> str:
         raise ValueError(f"{label(line)}: phases {written}; only A, B, C and N are mapped on an {line.class_name}")
     ordered = "".join(letter for letter in "ABCN" if letter in written)
     if configuration_part.is_matrix(configuration):
-        if "N" in ordered:
-            raise ValueError(f"{label(line)}: phases {written} with N on the matrix configuration "
-                             f"{configuration.name}; not mapped (no deck has one)")
+        # GridLAB-D's matrix is the Kron-reduced A, B, C one: a matrix line never reads N (line.cpp:226), S6
+        ordered = ordered.replace("N", "")
         expected = configuration_part.diagonal_letters(configuration)
     else:
         expected = configuration_part.conductor_letters(configuration)

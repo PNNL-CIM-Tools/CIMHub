@@ -20,6 +20,7 @@ Table TransformerTankConfiguration: mRID, name, percentImpedance (percent), load
     xc_xc_dg,                       xc_dg,                       5.099019513592785,  1.5,                 ,
     # untranscribed (one tank of power_rating on ABC, S3b-9): powerA_rating=15.0, powerB_rating=0.0, powerC_rating=0.0
     xc_xc_unrated,                  xc_unrated,                  1.8027756377319946, 0.22499999999999998, ,
+    # voltages read line to line (S3b-3): no instance says whether they rate the coil (S6)
     xc_xc_unused,                   xc_unused,                   4.123105625617661,  3.0,                 ,
     xc_xcon_ct5B,                   xcon_ct5B,                   2.080865204668481,  0.06,                0.01,                 0.5
     xc_xcon_xfm1,                   xcon_xfm1,                   2.2825424421026654, 5.5,                 ,

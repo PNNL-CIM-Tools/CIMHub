@@ -1,4 +1,5 @@
-"""S3a: lines and switches: classification, the atom, fail fast, decks."""
+"""S3a: lines and switches: classification, the atom, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,16 +7,14 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import line, switch
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "line"
-GOLDENS = Path(__file__).parent / "goldens"
 PARTS = ("overhead_line", "underground_line", "triplex_line", "switch", "fuse", "recloser")
 FIELDS = {**line.FIELDS, **switch.FIELDS}
 
@@ -105,9 +104,42 @@ def test_phases_other_than_the_conductors_raise(tmp_path):
            r"overhead_line x: phases AN are not the phases ABCN of configuration lcon_601 \(S3a-3\)")
 
 
-def test_matrix_line_with_a_neutral_raises(tmp_path):
-    raises(tmp_path, "object overhead_line { name x; phases ACN; from n1; to nx; length 10; "
-                     "configuration lcon_mtx604_AC; }", "phases ACN with N on the matrix configuration")
+def bind(tmp_path, text: str):
+    """The atom plus ``text``, bound."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "line.glm"}"\nobject node {{ name nx; phases ABCN; nominal_voltage 2401.78; }}\n'
+                    + text)
+    return glm_to_cim(read(path), name="m")
+
+
+def segment(network, mrid: str):
+    return next(s for s in network.list_by_class(cim.ACLineSegment) if str(s.mRID) == mrid)
+
+
+def test_matrix_line_drops_its_neutral(tmp_path, scope):
+    """GridLAB-D's matrix is the Kron-reduced A, B, C one: a matrix line never reads N (line.cpp:226), S6."""
+    network = bind(tmp_path, "object overhead_line { name x; phases ACN; from n1; to nx; length 10; "
+                             "configuration lcon_mtx604_AC; }")
+    assert segment_phases(segment(network, "ln_x")) == {1: "A", 2: "C"}
+
+
+ZERO_DIAGONAL = ("object line_configuration { name zc; z11 0+0j; z12 0+0j; z13 0+0j; z21 0+0j; z22 0+0j; "
+                 "z23 0+0j; z31 0+0j; z32 0+0j; z33 0.3+0.6j; }\n")
+
+
+def test_a_written_zero_diagonal_is_no_phase(tmp_path, scope):
+    """A written 0 is GridLAB-D's default: the Milsoft exports write all nine terms (S6)."""
+    network = bind(tmp_path, ZERO_DIAGONAL + "object overhead_line { name x; phases CN; from n1; to nx; length 10; "
+                                             "configuration zc; }")
+    line = segment(network, "ln_x")
+    assert segment_phases(line) == {1: "C"}
+    assert line.PerLengthImpedance.conductorCount == 1
+
+
+def test_a_mutual_term_on_a_zero_diagonal_raises(tmp_path):
+    raises(tmp_path, ZERO_DIAGONAL.replace("z13 0+0j; ", "z13 0.1+0.1j; ").replace("z31 0+0j; ", "z31 0.1+0.1j; ")
+           + "object overhead_line { name x; phases CN; from n1; to nx; length 10; configuration zc; }",
+           "z13 is set without z11 and z33")
 
 
 def test_overhead_line_on_underground_conductors_raises(tmp_path):
@@ -149,7 +181,20 @@ def test_line_rating_other_than_its_configurations_raises(tmp_path):
 def test_triplex_line_on_two_phases_raises(tmp_path):
     raises(tmp_path, "object triplex_meter { name tmx; phases AS; nominal_voltage 120; }\n"
                      "object triplex_line { name x; phases ABS; from tn1; to tmx; length 30; "
-                     "configuration tc_rated; }", "phases ABS; a triplex line is AS, BS or CS")
+                     "configuration tc_rated; }", "phases ABS are not all on its from")
+
+
+def test_open_tie_across_phases_takes_two_sides(tmp_path, scope):
+    """CIM's SwitchPhase.phaseSide1/phaseSide2 hold a tie GridLAB-D cannot load (link.cpp:649), S6-9."""
+    network = bind(tmp_path, "object switch { name x; phases AN; from n5; to n8; status OPEN; }")
+    tie = next(sw for sw in network.list_by_class(cim.LoadBreakSwitch) if str(sw.mRID) == "sw_x")
+    assert [(p.phaseSide1.value, p.phaseSide2.value) for p in tie.SwitchPhase] == [("A", "C")]
+    assert sorted(t.phases.value for t in tie.Terminals) == ["A", "C"]
+
+
+def test_closed_tie_across_phases_raises(tmp_path):
+    raises(tmp_path, "object switch { name x; phases AN; from n5; to n8; status CLOSED; }",
+           r"phases AN are not all on its to node n8 \(CN\)")
 
 
 def test_phase_state_other_than_status_raises(tmp_path):
@@ -162,23 +207,11 @@ def test_blown_fuse_phase_raises(tmp_path):
            r"fuse x: phase_C_status BLOWN")
 
 
-# -- decks -------------------------------------------------------------------------------------------------------
+# -- the deck sweep's check (test_cimtbl_sweep.py) -----------------------------------------------------------------
 
-def test_ieee13_cdpsm_goldens():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    documents = parts(model, "IEEE13_cdpsm")
-    for name in ("overhead_line", "switch", "fuse", "recloser"):
-        assert_matches_golden(documents[name], GOLDENS / "IEEE13_cdpsm" / f"{name}.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_line_and_switch_binds(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    network = glm_to_cim(model, name=Path(relative).stem)
+def assert_lines_and_switches(model, network) -> None:
+    """Every line and switching device is written, and each geometry line's phases are its spacing's positions
+    (S3a)."""
     segments = network.list_by_class(cim.ACLineSegment)
     assert len(segments) == sum(model.count(cls) for cls, _, _ in line.LINES)
     for segment in segments:  # an all-zero spacing (S2-4) names no positions
@@ -187,3 +220,11 @@ def test_every_line_and_switch_binds(relative, stop, scope):
     assert len(network.list_by_class(cim.LoadBreakSwitch)) == model.count(schema.Switch)
     assert len(network.list_by_class(cim.Fuse)) == model.count(schema.Fuse)
     assert len(network.list_by_class(cim.Recloser)) == model.count(schema.Recloser)
+    switches = {str(sw.mRID): sw for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser)
+                for sw in network.list_by_class(cls)}
+    for native_class, _, _ in switch.SWITCHES:  # each side's phases on its GLM end (an open tie across phases, S6-9)
+        for device in model.list_by_class(native_class):
+            sides = [(p.phaseSide1.value, p.phaseSide2.value) for p in switches[f"sw_{device.name}"].SwitchPhase]
+            for index, slot in enumerate(("from_node", "to")):
+                end = set(str(model.by_name(getattr(device, slot)).phases))
+                assert {pair[index] for pair in sides} <= end, (device.name, slot, sides)

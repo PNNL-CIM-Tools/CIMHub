@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Run every package's tests, one pytest process per package.
+# Run every package's tests, one pytest process per package, then the root tier-4 cross-format
+# tests (tests/cross_format, named cross_format), which read several spokes' committed goldens.
 #
 # One process each because cimtables sets the CIM profile and the model scope
 # process-wide, so suites must not share an interpreter.
@@ -7,6 +8,7 @@
 # Usage:
 #   scripts/test-all.sh              # every package
 #   scripts/test-all.sh core opendss # only the named packages
+#   scripts/test-all.sh cross_format # only the root tier-4 tests
 #   scripts/test-all.sh -- -x -q     # extra args go to pytest
 #   PYTEST=venv/bin/pytest scripts/test-all.sh  # another runner
 #
@@ -27,12 +29,12 @@ done
 
 TEST_DIRS=()
 if [[ "${#PACKAGES[@]}" -eq 0 ]]; then
-    for d in cimhub_*/tests; do
+    for d in cimhub_*/tests tests/cross_format; do
         compgen -G "$d/test_*.py" > /dev/null 2>&1 && TEST_DIRS+=("$d")
     done
 else
     for p in "${PACKAGES[@]}"; do
-        d="cimhub_${p#cimhub_}/tests"
+        if [[ "$p" == "cross_format" ]]; then d="tests/cross_format"; else d="cimhub_${p#cimhub_}/tests"; fi
         if [[ ! -d "$d" ]]; then echo "error: no tests directory $d" >&2; exit 2; fi
         TEST_DIRS+=("$d")
     done

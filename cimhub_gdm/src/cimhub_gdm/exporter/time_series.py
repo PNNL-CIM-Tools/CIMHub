@@ -16,11 +16,11 @@ import cimprofiles.cim18.cim18v17 as cim
 import pyarrow as pa
 from cimbuilder.object_builder.schedule import TIME_POINT_CLASS
 from cimhub_core.getters import describe
+from cimhub_core.time_points import rows_by_schedule
 from gdm.quantities import ActivePower, ReactivePower
 from infrasys.time_series_models import NonSequentialTimeSeries, SingleTimeSeries
 
 from cimhub_gdm.exporter.shared import ExportContext
-from cimhub_gdm.time_points import rows_by_schedule
 
 log = logging.getLogger(__name__)
 

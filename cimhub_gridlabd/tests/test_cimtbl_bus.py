@@ -1,4 +1,5 @@
-"""S1: buses (``bus.cimtbl``) and the swing source (``source.cimtbl``): classification, atoms, fail fast, decks."""
+"""S1: buses (``bus.cimtbl``) and the swing source (``source.cimtbl``): classification, atoms, fail fast; the
+decks run in test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 import math
@@ -7,16 +8,14 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl.bus import (DEFAULT_SHORT_CIRCUIT_MVA, DEFAULT_X_OVER_R, FIELDS, NATIVE_CLASSES,
                                                  default_source_impedance)
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 
 ATOMS = Path(__file__).parent / "atoms"
-GOLDENS = Path(__file__).parent / "goldens"
 
 
 def read(path: Path, **kwargs):
@@ -127,26 +126,10 @@ def test_two_phase_source_raises(tmp_path):
         GlmImporter("m").to_cimtbl(model)
 
 
-# -- decks -------------------------------------------------------------------------------------------------------
+# -- the deck sweep's check (test_cimtbl_sweep.py) -----------------------------------------------------------------
 
-def test_ieee13_cdpsm_goldens():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    documents = parts(model, "IEEE13_cdpsm")
-    for name in ("bus", "source"):
-        assert_matches_golden(documents[name], GOLDENS / "IEEE13_cdpsm" / f"{name}.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_deck_binds(relative, stop, scope):
-    def run():
-        model = read(deck(relative), defines=defines(relative))
-        return glm_to_cim(model, name=Path(relative).stem)
-
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            run()
-        return
-    network = run()
+def assert_buses(network) -> None:
+    """Every node has its BaseVoltage, and there is a swing source (S1)."""
     nodes = network.list_by_class(cim.ConnectivityNode)
     assert nodes and all(node.BaseVoltage is not None for node in nodes)
     assert len(network.list_by_class(cim.EnergySource)) >= 1

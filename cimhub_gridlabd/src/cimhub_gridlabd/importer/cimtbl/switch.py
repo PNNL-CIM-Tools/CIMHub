@@ -2,7 +2,9 @@
 
 GLM gives a device one state, ``status``: it is ``open`` and ``normalOpen`` (S3a-6). A per-phase state that differs
 from it on one of the device's phases raises: no deck has one, and CIM would need ``SwitchPhase`` rows. The
-``phases`` cell is the switched conductors, N dropped, blank when ABC (S3a-7). A fuse's ``current_limit`` is its
+``phases`` cell is the switched conductors, N dropped, blank when ABC (S3a-7). An open device between laterals on
+different phases takes ``phaseSide1`` (its switched conductors) and ``phaseSide2`` (its to end's) instead
+(``topology.crossed_phases``, S6-9). A fuse's ``current_limit`` is its
 ``ratedCurrent`` (S3a-8); the device's own ratings go on its own ``OperationalLimitSet`` (S3a-5). Impedance
 stand-ins, reliability data and reclosing settings are untranscribed (S3a-9). ``sectionalizer`` is not mapped:
 cim18v17 has no class for it (S3a-10).
@@ -19,6 +21,7 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.glm_schema import registry_unit
 from cimhub_gridlabd.importer.cimtbl.catalog import label, native_name
 from cimhub_gridlabd.importer.cimtbl.link import Limits, classify, ends, link_ratings, provenance
+from cimhub_gridlabd.importer.topology import crossed_phases
 from cimhub_gridlabd.schema import gridlabd as schema
 
 PREFIX = "sw_"
@@ -117,8 +120,17 @@ def _row(model: GlmModel, device, roots: dict[str, str], buses) -> tuple[tuple[C
     switched = _phases(device)
     is_open, notes = _is_open(device, switched)
     node1, node2, bus = ends(device, roots, buses)
-    columns = [Column("mRID"), Column("name"), Column("node1"), Column("node2"), Column("phases")]
-    cells = [mrid(PREFIX, device.name), str(device.name), node1, node2, phases_cell(switched)]
+    columns = [Column("mRID"), Column("name"), Column("node1"), Column("node2")]
+    cells = [mrid(PREFIX, device.name), str(device.name), node1, node2]
+    far = crossed_phases(model, device)
+    if far is None:
+        columns.append(Column("phases"))
+        cells.append(phases_cell(switched))
+    else:
+        columns += [Column("phaseSide1"), Column("phaseSide2")]
+        cells += [switched, far]
+        notes.append(f"an open tie between laterals on different phases ({switched} to {far}); GridLAB-D cannot load "
+                     "it (link.cpp:649), S6-9")
     if isinstance(device, schema.Fuse):
         columns.append(Column("ratedCurrent", registry_unit(model.unit(device, "current_limit"))))
         cells.append(cell(device.current_limit))

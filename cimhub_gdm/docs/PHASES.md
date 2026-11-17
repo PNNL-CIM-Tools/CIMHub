@@ -254,7 +254,7 @@ Per [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) §5, on B16 / B16b (built in CI
   p / q, T1); its points are rows of a `pyarrow.Table` in the caller's `time_points` dict
   (`gdm_to_cim(system, time_points=...)`), never graph objects (T6). Without the dict, every series is dropped with
   one WARNING, as before.
-- `time_points.py`: `write_time_points` / `read_time_points`, `<stem>.EnergyConnectionTimePoint.parquet` beside the
+- `time_points.py` (moved to `cimhub_core.time_points` on 2026-11-16, for GridLAB-D players too): `write_time_points` / `read_time_points`, `<stem>.EnergyConnectionTimePoint.parquet` beside the
   XML; orphan rows and repeated points raise, a schedule with no rows warns.
 - `exporter/time_series.py`: `GdmExporter(time_points)` gives each load its actual-value series back.
 - irradiance and `pu_voltage` series keep the drop warning (T2, T3); `Deterministic` raises; the static PV

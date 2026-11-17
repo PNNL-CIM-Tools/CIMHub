@@ -41,8 +41,8 @@ _NOT_MAPPED = "raises when set: no deck sets it, so a mapping waits for one"
 DEFAULTS = {"Control": "MANUAL", "control_level": "INDIVIDUAL", "Type": "B", "dwell_time": 0.0, "time_delay": 0.0}
 #: ``Type`` -> ``VoltageRegulator.construction``.
 CONSTRUCTION = {"A": "typeA", "B": "typeB"}
-#: The ``Control`` modes mapped; ``REMOTE_NODE`` raises (S3c-6).
-CONTROLS = ("MANUAL", "OUTPUT_VOLTAGE", "LINE_DROP_COMP")
+#: The ``Control`` modes mapped; ``REMOTE_NODE`` only on the regulator's own output (S3c-6, S6).
+CONTROLS = ("MANUAL", "OUTPUT_VOLTAGE", "LINE_DROP_COMP", "REMOTE_NODE")
 
 _BAND = ("{target} = {slot} (V): primary volts on OUTPUT_VOLTAGE and MANUAL, x power_transducer_ratio on "
          "LINE_DROP_COMP, whose band is on the PT secondary (regulator.cpp:1316)")
@@ -70,15 +70,18 @@ CONFIGURATION_FIELDS = {
     **{f"compensator_r_setting_{phase}": Field("derived", note=_LDC.format(target="lineDropR")) for phase in "ABC"},
     **{f"compensator_x_setting_{phase}": Field("derived", note=_LDC.format(target="lineDropX")) for phase in "ABC"},
     "CT_phase": Field("structural", note="BANK: the phase whose compensator setting is read, which must be "
-                                         "PT_phase; INDIVIDUAL: " + _NOT_MAPPED + " (GridLAB-D ignores it there)"),
-    "PT_phase": Field("structural", note="BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: " + _NOT_MAPPED),
+                                         "PT_phase; INDIVIDUAL: GridLAB-D ignores it (regulator.cpp:1328), listed "
+                                         "on the row (S6)"),
+    "PT_phase": Field("structural", note="BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: GridLAB-D ignores it "
+                                         "(regulator.cpp:1378), listed on the row (S6)"),
     "regulation": Field("derived", note="RatioTapChanger.stepVoltageIncrement = regulation / raise_taps (percent), "
                                         "GridLAB-D's tapChangePer (regulator.cpp:244); 0 raises unless MANUAL"),
     "control_level": Field("structural", note="INDIVIDUAL (default): one unit per wired phase; BANK: one gang unit "
-                                              "on ABC (GLM-7)"),
+                                              "on ABC (GLM-7), or one unit on its one PT_phase (S6)"),
     "Control": Field("structural", note="MANUAL (default): enabled = controlEnabled = false; OUTPUT_VOLTAGE, "
                                         "LINE_DROP_COMP: true, lineDropCompensation on LINE_DROP_COMP only; "
-                                        "REMOTE_NODE raises (S3c-6: only IEEE13_houses, which stops at the walk)"),
+                                        "REMOTE_NODE on the regulator's own to bus: as OUTPUT_VOLTAGE (the same "
+                                        "voltages, regulator.cpp:1376-1420), elsewhere raises (S3c-6, S6)"),
     "reverse_flow_control": Field("structural", note="unset or LOCK_NONE; others " + _NOT_MAPPED),
     "Type": Field("mapped", (("VoltageRegulator", "construction", None),),
                   "A -> typeA, B -> typeB (default B): GridLAB-D's ratio 1 / (1 + tap x step) or 1 - tap x step"),
@@ -98,7 +101,8 @@ FIELDS = classify(NATIVE_CLASS, {
     "msg_mode": Field("untranscribed", note="co-simulation messaging"),
     **{f"remote_voltage_{phase}": Field("untranscribed", note="solver output or state") for phase in "ABC"},
     **{f"tap_{phase}_change_count": Field("untranscribed", note="solver output or state") for phase in "ABC"},
-    "sense_node": Field("structural", note="REMOTE_NODE's monitored node; raises when set (S3c-6)"),
+    "sense_node": Field("structural", note="REMOTE_NODE's monitored node: must solve as the regulator's to bus; "
+                                           "on another Control GridLAB-D ignores it, listed on the row (S6)"),
     "regulator_resistance": Field("untranscribed", note="NR's stand-in series resistance (default "
                                                         "powerflow::default_resistance, 1e-4 ohm); the "
                                                         "AutoTransformerEnds are ideal (S3c-2)"),
@@ -142,10 +146,31 @@ def check(config) -> None:
                          "(regulator_configuration.cpp:212)")
     if config.reverse_flow_control is not None and str(config.reverse_flow_control) != "LOCK_NONE":
         raise ValueError(f"{label(config)}: reverse_flow_control {config.reverse_flow_control}; not mapped")
-    if str(config.control_level or DEFAULTS["control_level"]) == "INDIVIDUAL":
-        given = [slot for slot in ("CT_phase", "PT_phase") if getattr(config, slot) is not None]
-        if given:
-            raise ValueError(f"{label(config)}: {', '.join(given)} on INDIVIDUAL; not mapped")
+
+
+def ignored_phases(config) -> str | None:
+    """``PT_phase`` and ``CT_phase`` on INDIVIDUAL, which GridLAB-D does not read there (``regulator.cpp:1328``,
+    ``:1378``: each phase is its own), as a row note (S6)."""
+    if str(config.control_level) != "INDIVIDUAL":
+        return None
+    given = [f"{slot} {getattr(config, slot)}" for slot in ("PT_phase", "CT_phase") if getattr(config, slot) is not None]
+    return f"ignored on INDIVIDUAL (GridLAB-D reads each phase): {', '.join(given)}" if given else None
+
+
+def check_sense_node(reg, control: str, roots: dict[str, str]) -> str | None:
+    """REMOTE_NODE is mapped when it senses the regulator's own output, where GridLAB-D reads the voltages
+    OUTPUT_VOLTAGE reads; a sense node elsewhere raises. On another Control GridLAB-D does not read it
+    (``regulator.cpp:150``): a row note (S6)."""
+    if control != "REMOTE_NODE":
+        return None if reg.sense_node is None else f"ignored on Control {control}: sense_node {reg.sense_node}"
+    if reg.sense_node is None:
+        raise ValueError(f"{label(reg)}: REMOTE_NODE without sense_node (regulator.cpp:152)")
+    if reg.sense_node not in roots:
+        raise ValueError(f"{label(reg)}: sense_node {reg.sense_node} is not a bus object")
+    if roots[reg.sense_node] != roots[reg.to]:
+        raise ValueError(f"{label(reg)}: REMOTE_NODE senses {reg.sense_node}, not its own output {reg.to}; a remote "
+                         "sense node is not mapped")
+    return None
 
 
 def tap_step(reg, config, letter: str) -> int:
@@ -182,16 +207,20 @@ class _Unit(NamedTuple):
 
 
 def units_of(reg, config) -> list[_Unit]:
-    """INDIVIDUAL: one unit per wired phase; BANK: one gang unit on ABC, whose taps must agree (GLM-7)."""
+    """INDIVIDUAL: one unit per wired phase; BANK: one gang unit on ABC, whose taps must agree (GLM-7), or one unit
+    on the one phase it monitors (S6)."""
     letters = letters_of(reg)
     if str(config.control_level) == "INDIVIDUAL":
         return [_Unit(f"_{letter}", letter, letter) for letter in letters]
-    if letters != "ABC":
-        raise ValueError(f"{label(reg)}: a BANK regulator on {letters}; a gang unit is mapped on ABC")
     phases = [str(getattr(config, slot) or "") for slot in ("PT_phase", "CT_phase")]
     if phases[0] not in ("A", "B", "C") or phases[1] != phases[0]:
         raise ValueError(f"{label(config)}: PT_phase {phases[0] or 'unset'}, CT_phase {phases[1] or 'unset'}; a BANK "
                          "monitors one phase, the same for both (regulator_configuration.cpp:183)")
+    if letters == phases[0]:
+        return [_Unit("", letters, letters)]
+    if letters != "ABC":
+        raise ValueError(f"{label(reg)}: a BANK regulator on {letters}; a gang unit is mapped on ABC, or on its "
+                         "one monitored phase")
     taps = {tap_step(reg, config, letter) for letter in letters}
     if len(taps) > 1:
         raise ValueError(f"{label(reg)}: BANK taps {sorted(taps)} differ; a gang holds one tap")
@@ -217,9 +246,8 @@ class _Rows:
 def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, BusSystem], rows: _Rows) -> None:
     if reg.status is not None and str(reg.status) != "CLOSED":
         raise ValueError(f"{label(reg)}: status {reg.status}; a regulator is not a switch")
-    if reg.sense_node is not None:
-        raise ValueError(f"{label(reg)}: sense_node {reg.sense_node}; REMOTE_NODE is not mapped")
     config, defaulted = configuration_of(model, reg)
+    ignored_sense = check_sense_node(reg, str(config.Control), roots)
     node1, node2 = roots[reg.from_node], roots[reg.to]
     coil = _quantity(model, model.by_name(node1), "nominal_voltage", "V")  # phase to neutral, as GLM writes it
     control = str(config.Control)
@@ -233,7 +261,9 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
     if control == "LINE_DROP_COMP":
         band = [None if value is None else secondary_to_primary(value, pt) for value in band]
     comment = "\n".join(part for part in (f"configuration {config.name}", defaulted, untranscribed_values(FIELDS, reg),
-                                          untranscribed_values(CONFIGURATION_FIELDS, config)) if part)
+                                          untranscribed_values(CONFIGURATION_FIELDS, config), ignored_phases(config),
+                                          ignored_sense)
+                        if part)
     for unit in units_of(reg, config):
         name = f"{reg.name}{unit.suffix}"
         vr = mrid(PREFIX, name)

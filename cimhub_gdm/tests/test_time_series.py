@@ -9,7 +9,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import gdm_atoms
-import pyarrow as pa
 import pytest
 from cimgraph.databases import XMLFile
 from cimgraph.models import FeederModel
@@ -20,8 +19,8 @@ from gdm.systems.distribution.components import DistributionLoad, DistributionSo
 from infrasys.normalization import NormalizationMax
 from infrasys.time_series_models import NonSequentialTimeSeries, SingleTimeSeries
 
+from cimhub_core.time_points import rows_by_schedule
 from cimhub_gdm import GdmExporter, gdm_to_cim, read_time_points, write_time_points
-from cimhub_gdm.time_points import rows_by_schedule, time_points_path
 
 POINTS = "EnergyConnectionTimePoint"
 START = datetime(2020, 1, 1)
@@ -190,34 +189,6 @@ def test_schedules_and_points_survive_xml_and_parquet(tmp_path):
     read = read_time_points(xml_path, reloaded)[POINTS]
     assert read.schema.equals(time_points[POINTS].schema, check_metadata=True)
     assert read.to_pylist() == time_points[POINTS].to_pylist()
-
-
-def test_an_orphan_row_raises(tmp_path):
-    network, time_points = _import(_with_series(_system()))
-    xml_path = tmp_path / "loads.xml"
-    write_xml(network, str(xml_path))
-    write_time_points(time_points, xml_path)
-    stray = network.find_by_mRID("ld_one_p")
-    network.graph[type(stray)].pop(stray.identifier)
-    with pytest.raises(ValueError, match="rows for 1 schedule"):
-        read_time_points(xml_path, network)
-
-
-def test_a_repeated_point_in_the_file_raises(tmp_path):
-    network, time_points = _import(_with_series(_system()))
-    xml_path = tmp_path / "loads.xml"
-    doubled = pa.concat_tables([time_points[POINTS], time_points[POINTS].slice(0, 1)])
-    write_time_points({POINTS: doubled}, xml_path)
-    with pytest.raises(ValueError, match="1 repeated"):
-        read_time_points(xml_path, network)
-
-
-def test_a_schedule_with_no_points_warns(tmp_path, caplog):
-    network, _ = _import(_with_series(_system()))
-    with caplog.at_level(logging.WARNING, logger="cimhub_gdm"):
-        assert read_time_points(tmp_path / "loads.xml", network) == {}
-    assert "2 EnergyConnectionSchedule(s) have no time points: ['ld_bal_pq', 'ld_one_p']" in caplog.text
-    assert not time_points_path(tmp_path / "loads.xml", POINTS).exists()
 
 
 def test_the_export_gives_back_actual_series():

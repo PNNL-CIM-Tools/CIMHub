@@ -1,4 +1,5 @@
-"""S3c: regulators: classification, the atom, GridLAB-D's tap and control math, fail fast, decks."""
+"""S3c: regulators: classification, the atom, GridLAB-D's tap and control math, fail fast; the decks run in
+test_cimtbl_sweep.py."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,17 +7,16 @@ from pathlib import Path
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import BIND_STOPS, deck, deck_params, defines
 from cimhub_core.cimtbl import check_fields
-from cimhub_core.cimtbl_testing import assert_matches_golden
+from cimhub_core.cimtbl_testing import assert_matches_golden, record_diff
+from cimtables.document import format_document
 from cimhub_core.getters.transformer import TransformerForm, get_transformer_model
-from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import regulator
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "regulator"
-GOLDENS = Path(__file__).parent / "goldens"
 MODEL = "reg"
 
 
@@ -127,9 +127,30 @@ def test_automatic_control_without_regulation_raises(tmp_path):
     raises(tmp_path, _regulator("connect_type WYE_WYE; Control OUTPUT_VOLTAGE;"), "regulation unset or 0")
 
 
-def test_remote_node_raises(tmp_path):
+def regulator_text(tmp_path, text: str) -> str:
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "regulator.glm"}"\n'
+                    "object node { name rx; phases ABCN; nominal_voltage 2401.78; }\n" + text)
+    return format_document(regulator_part(read(path), MODEL))
+
+
+def test_remote_node_on_its_own_output_is_output_voltage(tmp_path):
+    """GridLAB-D reads the voltages OUTPUT_VOLTAGE reads (regulator.cpp:1376-1420), S6."""
+    band = "connect_type WYE_WYE; regulation 0.1; band_center 2401; band_width 20;"
+    remote = regulator_text(tmp_path, _regulator(f"{band} Control REMOTE_NODE;", regulator_body="sense_node rx;"))
+    output = regulator_text(tmp_path, _regulator(f"{band} Control OUTPUT_VOLTAGE;"))
+    assert record_diff(output, remote) == []
+
+
+def test_remote_node_elsewhere_raises(tmp_path):
     raises(tmp_path, _regulator("connect_type WYE_WYE; Control REMOTE_NODE; regulation 0.1;", regulator_body=
-                                "sense_node n3;"), "sense_node n3; REMOTE_NODE is not mapped")
+                                "sense_node r1;"), "REMOTE_NODE senses r1, not its own output rx")
+
+
+def test_sense_node_on_another_control_is_listed(tmp_path):
+    text = regulator_text(tmp_path, _regulator("connect_type WYE_WYE; Control OUTPUT_VOLTAGE; regulation 0.1;",
+                                               regulator_body="sense_node rx;"))
+    assert "ignored on Control OUTPUT_VOLTAGE: sense_node rx" in text
 
 
 def test_reverse_flow_control_raises(tmp_path):
@@ -137,8 +158,22 @@ def test_reverse_flow_control_raises(tmp_path):
            "reverse_flow_control LOCK_NEUTRAL; not mapped")
 
 
-def test_phase_selection_on_individual_raises(tmp_path):
-    raises(tmp_path, _regulator("connect_type WYE_WYE; PT_phase A;"), "PT_phase on INDIVIDUAL; not mapped")
+def test_phase_selection_on_individual_is_listed(tmp_path):
+    """GridLAB-D reads each phase on INDIVIDUAL (regulator.cpp:1328, :1378), S6."""
+    text = regulator_text(tmp_path, _regulator("connect_type WYE_WYE; PT_phase ABC; CT_phase ABC;"))
+    assert "ignored on INDIVIDUAL (GridLAB-D reads each phase): PT_phase ABC, CT_phase ABC" in text
+
+
+def test_bank_on_its_one_phase_is_one_unit(tmp_path, scope):
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "regulator.glm"}"\n'
+                    "object node { name rx; phases ABCN; nominal_voltage 2401.78; }\n"
+                    + _regulator("connect_type WYE_WYE; control_level BANK; PT_phase B; CT_phase B;", phases="BN"))
+    network = glm_to_cim(read(path), name=MODEL)
+    units = {str(vr.mRID): vr for vr in network.list_by_class(cim.VoltageRegulator)
+             if str(vr.mRID) == "xf_x" or str(vr.mRID).startswith("xf_x_")}
+    assert list(units) == ["xf_x"]
+    assert {end.Terminal.phases.value for end in units["xf_x"].AutoTransformerEnd} == {"BN"}
 
 
 def test_bank_taps_that_differ_raise(tmp_path):
@@ -156,22 +191,4 @@ def test_compensator_without_ratios_raises(tmp_path):
 
 
 def test_split_phase_raises(tmp_path):
-    raises(tmp_path, _regulator("connect_type WYE_WYE;", phases="AS"), "phases AS; A, B, C and N are mapped")
-
-
-# -- decks -------------------------------------------------------------------------------------------------------
-
-def test_ieee13_cdpsm_golden():
-    model = read(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm"))
-    assert_matches_golden(regulator_part(model, "IEEE13_cdpsm"), GOLDENS / "IEEE13_cdpsm" / "regulator.cimtbl")
-
-
-@pytest.mark.parametrize("relative, stop", deck_params(BIND_STOPS))
-def test_every_regulator_binds_with_gridlabds_taps(relative, stop, scope):
-    if stop is not None:
-        with pytest.raises((GlmParseError, ValueError), match=stop):
-            glm_to_cim(read(deck(relative), defines=defines(relative)), name=Path(relative).stem)
-        return
-    model = read(deck(relative), defines=defines(relative))
-    network = glm_to_cim(model, name=Path(relative).stem)
-    assert_gridlabd_regulation(model, network)
+    raises(tmp_path, _regulator("connect_type WYE_WYE;", phases="AS"), "phases AS are not all on its from")

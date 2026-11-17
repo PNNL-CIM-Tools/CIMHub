@@ -1323,7 +1323,7 @@ Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen
 | a line without `configuration` or `length`, or with a configuration of the wrong class (a triplex configuration on an overhead line) | `overhead_line.cpp:96`, `:103` throw |
 | an overhead line on underground conductors or the reverse; an underground line whose phase cables are not one kind | `overhead_line.cpp:923`, `underground_line.cpp:149` throw; none in the decks |
 | a geometry line whose phases are not its configuration's conductors (`ACN` on an `A C N` configuration), or a matrix line whose phases are not its diagonal | the positions must agree (S2-3); GridLAB-D throws on a missing conductor (`test_phases`). All 11,584 agree |
-| a matrix line with `N`, `D` on any line, `S` on a non-triplex line, a triplex line not `AS`/`BS`/`CS`, or a triplex line whose ends the walk does not put on a split-phase system | none in the decks |
+| `D` on any line, `S` on a non-triplex line, a triplex line not `AS`/`BS`/`CS`, or a triplex line whose ends the walk does not put on a split-phase system | none in the decks |
 | per-phase ratings that differ; a line's own rating and its configuration's that differ | one limit set per line; none in the decks |
 | a switch or recloser phase state that differs from `status` on a phase it has; a `BLOWN` fuse phase | per-phase state needs `SwitchPhase` rows; none in the decks (S3a-6) |
 | `status OPEN` on a line, an end that is no bus object | the walk raises (S0) |
@@ -1334,7 +1334,7 @@ Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen
 |---|---|---|
 | S3a-1 | Files and identity | **approved:** The six artifacts above; `ln_` for every line class, `sw_` for every switching device, source case |
 | S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give `WireConfiguration`, a matrix gives `PerLengthImpedance`. The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
-| S3a-3 | Line phases | **approved:** The line's letters in ABC order then N (GLM `phases` is a set: `CB` is `BC`, so matrix row 1 is B, as S2-9 compacts it). It must equal the configuration's conductors (geometry) or diagonal (matrix), so ACLineSegmentPhase k is spacing position k. A triplex line is `s1s2N` whatever its letter (`AS`, `BS`, `CS`): CIM puts the primary phase on the center-tap transformer (S3b); the letter must match its end buses' |
+| S3a-3 | Line phases | **approved:** The line's letters in ABC order then N (GLM `phases` is a set: `CB` is `BC`, so matrix row 1 is B, as S2-9 compacts it). It must equal the configuration's conductors (geometry) or diagonal (matrix), so ACLineSegmentPhase k is spacing position k. A triplex line is `s1s2N` whatever its letter (`AS`, `BS`, `CS`): CIM puts the primary phase on the center-tap transformer (S3b); the letter must match its end buses'. **Amended by S6-4:** a matrix line's N is dropped (GridLAB-D's matrix never reads it), and a written 0 diagonal is no phase |
 | S3a-4 | Line ratings | **approved:** **The line's own `continuous_rating_X`/`emergency_rating_X`, as written, on its own `OperationalLimitSet` (D9);** else its configuration's `rating.summer.*` (only `triplex_line_configuration:1` of orig_R5-35.00-1, 1200 A, 192 lines); else none. Conductor ratings stay on the WireInfo (S2-7) and are not copied, and GridLAB-D's 1000/2000 A defaults are never filled. Only the three Java exports rate lines (140 lines, always equal across phases). **Note:** GridLAB-D itself replaces a line's written ratings at init, with its conductors' (a running minimum over A, B, C) or, on a matrix configuration, the configuration's (`overhead_line.cpp:133`). The written values are the deck's statement (the Java exports wrote the CIM source's line limits: IEEE13_assets 730/1095 A on 730/730 A conductors), so they are kept. The alternative is to write the engine's effective rating and leave the written ones untranscribed |
 | S3a-5 | Switch ratings | **approved:** The same rule as lines: the device's own set (IEEE13_cdpsm, IEEE13_assets, IEEE123: 400/600 A on 12 switches, the fuse and the recloser). GridLAB-D reads no rating on a switch (`link.cpp:681` checks limits on lines and transformers only), and the DSS import drops a switch's ratings as stand-ins (DSS-8), so the alternative is untranscribed |
 | S3a-6 | Switch state | **approved:** `status` gives `open`, and `normalOpen` the same (GLM has one state; DSS's rule when no `Normal` is given). Per-phase states that differ raise instead of writing `SwitchPhase` rows: no deck has one (every recloser writes `CLOSED` on all three, status `CLOSED`), so plan section 7's core `switch` per-phase dependency is dropped until a deck needs it. 2 switches are open (IEEE123 `swt_sw7`, `swt_sw8`) |
@@ -1646,7 +1646,7 @@ Expanded by the split (below), the center tap equals the DSS import's `xc_ct5` i
 | GLM slot | kind | target |
 |---|---|---|
 | `name` | copied | `TransformerTankConfiguration.name` (a bank: `TransformerBankConfiguration.name`, each can `<name>_<phase>`); mRID = `xc_` (`xb_`) + name |
-| `connect_type` | structural | the form and connection kinds: `WYE_WYE` Y/Y, `DELTA_GWYE` D/Y, `DELTA_DELTA` D/D (`TransformerTankEnd.connectionKind`; grounding is the instance's); `SINGLE_PHASE_CENTER_TAPPED` lugs; `SINGLE_PHASE`, unset raise |
+| `connect_type` | structural | the form and connection kinds: `WYE_WYE` Y/Y, `DELTA_GWYE` D/Y, `DELTA_DELTA` D/D (`TransformerTankEnd.connectionKind`; grounding is the instance's); `SINGLE_PHASE_CENTER_TAPPED` lugs; `SINGLE_PHASE` as `WYE_WYE` (S6-2); unset raises |
 | `primary_voltage`, `secondary_voltage` | structural | winding `ratedU` and `baseU`, in the written unit (V in every deck), S3b-3 |
 | `power_rating`, `powerA_rating`/`_B_`/`_C_` | structural | winding `ratedS`, `baseS` (S3b-3): the whole unit's kVA (`power_rating`, else the phase sum, as `init()`), a can's its phase's; a center tap's is its instance phase's rating. Phase kVAs a one-tank template does not use are listed on the row |
 | `impedance`, `resistance`, `reactance` | derived | `percentImpedance` = \|R + jX\| × k × 100 and `loadLoss` = R × k × S (S3b-4, S3b-5); a center tap's are the full winding's |
@@ -1716,7 +1716,7 @@ Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, conn
 
 | condition | why |
 |---|---|
-| `connect_type` unset or `SINGLE_PHASE`; voltages or kVA unset or 0; phase ratings that miss `power_rating` by more than 1 % | `transformer_configuration.cpp:193`, `:211`, `:227`, `:234` throw; `SINGLE_PHASE` is in no deck |
+| `connect_type` unset; voltages or kVA unset or 0; phase ratings that miss `power_rating` by more than 1 % | `transformer_configuration.cpp:193`, `:211`, `:227`, `:234` throw |
 | `resistance` or `reactance` unset or not positive; `impedance` set with a `resistance`/`reactance` that differs | `:337` throws (no lossless unit); the slots are one value |
 | `impedance1`/`impedance2` or a shunt on a connection that ignores it; only one of `impedance1`/`impedance2`; `no_load_loss`/`full_load_loss` set | GridLAB-D warns and ignores, or fills in its own; none in the decks |
 | a center tap on phases other than one letter + `S`, or whose phase's `powerX_rating` is unset or 0 | `transformer.cpp:772` throws |
@@ -1730,7 +1730,7 @@ Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, conn
 |---|---|---|
 | S3b-1 | Files and identity | **The user's: every configuration is written, used or not.** The two artifacts above; `xc_`, `xb_` and `xf_` in source case; children named as the DSS import |
 | S3b-2 | Template forms | One tank by tank ends (`WYE_WYE` equal or not fully rated, the deltas); a bank of lugged cans under a `TransformerBankConfiguration` (unequal cans, S3b-9); a center tap by lugs H1 H2 X1 X3 X2 (the DSS import's) |
-| S3b-3 | Voltages and kVA (amends GLM-6) | **GLM-6's "1-phase `WYE_WYE` voltages are phase to neutral" is wrong: the decks and the engine take them line to line on every phase count** (the walk's S0 finding). So `ratedU` is the written voltage and `baseU` the coil (÷ √3 on a wye, as written on a delta); `ratedS` the tank's kVA, `baseS` its share per phase conductor. A center tap's primary is the coil: `baseU` as written, `ratedU` × √3 on a 3-phase system (the walk); a half's `baseU` is `secondary_voltage`, its `ratedU` × 2, its `ratedS` S / 2, every `baseS` S. Derived values are never rounded |
+| S3b-3 | Voltages and kVA (amends GLM-6) | **GLM-6's "1-phase `WYE_WYE` voltages are phase to neutral" is wrong: the decks and the engine take them line to line on every phase count** (the walk's S0 finding). So `ratedU` is the written voltage and `baseU` the coil (÷ √3 on a wye, as written on a delta); `ratedS` the tank's kVA, `baseS` its share per phase conductor. A center tap's primary is the coil: `baseU` as written, `ratedU` × √3 on a 3-phase system (the walk); a half's `baseU` is `secondary_voltage`, its `ratedU` × 2, its `ratedS` S / 2, every `baseS` S. Derived values are never rounded. **Amended by S6-1:** true of the Java exports; a wye whose written voltage is its from bus's `nominal_voltage` is rated by the coil |
 | S3b-4 | Impedance base | **The user's: keep GridLAB-D's ohms.** Its per unit is on its own base (written line-to-line voltage, whole-unit kVA); the %Z fields are on each tank's nameplate, so every value is moved by `k = 3 S_coil / S_total` (above): 1 on 3-phase, delta and center-tap units, 3 on the 581 1-phase and 1.5 on the 130 2-phase `WYE_WYE` units, per can in a bank. Copying the written per unit would give a 1-phase can a third of the impedance GridLAB-D solves with |
 | S3b-5 | Where the impedance goes | **The user's: GLM stores %Z (one R + jX per unit and a parallel shunt), not a mesh, so it goes on the `TransformerTankConfiguration`: `percentImpedance`, `loadLoss`, `noLoadLoss`, `percentMagnetizingCurrent`.** R comes back exactly as loadLoss / S and X as √(Z² − R²) (GridLAB-D requires both positive). No winding `r`, no mesh, nothing on the instance ends; a center tap's split is GridLAB-D's (the Hopkinson rule the CIMTBL-Models templates use) |
 | S3b-6 | Shunt | `shunt_resistance`/`shunt_reactance` are GridLAB-D's parallel branch (`zc = Rsh·jXsh / (Rsh + jXsh)`): the real part is `noLoadLoss` = S / (Rsh k), the reactive part `percentMagnetizingCurrent` = 100 / (Xsh k), as the DSS import's `%noloadloss`/`%imag`. The written value is kept although GridLAB-D's NR ignores the shunt on `WYE_WYE` (`transformer.cpp:362` builds only 1 / zt); FBS and every center tap use it |
@@ -1793,11 +1793,11 @@ transformer, the link's solver outputs and state and inrush settings (as S3a) ar
 | TransformerConfiguration field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, TransformerConfigurationName]` | `xcon_ct5B`, `xcon_sub3`, `xcon_xfm1` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name; a bank xb_ + name, its cans xc_ + name + _<phase> |
-| `connect_type` | `Optional[str]` | `SINGLE_PHASE_CENTER_TAPPED`, `DELTA_GWYE`, `WYE_WYE` | structural | the form and connectionKinds: WYE_WYE Y/Y, DELTA_GWYE D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs; SINGLE_PHASE or unset raise |
+| `connect_type` | `Optional[str]` | `SINGLE_PHASE_CENTER_TAPPED`, `DELTA_GWYE`, `WYE_WYE` | structural | the form and connectionKinds: WYE_WYE and SINGLE_PHASE Y/Y, DELTA_GWYE D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs; unset raises |
 | `install_type` | `Optional[str]` | `POLETOP`, `PADMOUNT` | untranscribed | thermal aging model and siting; no network-profile home |
 | `coolant_type` | `Optional[str]` |  | untranscribed | thermal aging model and siting; no network-profile home |
 | `cooling_type` | `Optional[str]` |  | untranscribed | thermal aging model and siting; no network-profile home |
-| `primary_voltage` | `Optional[float]` | `2400.0`, `115000.0`, `4160.0` | structural | winding 1 ratedU (line to line) and baseU (the coil), S3b-3 |
+| `primary_voltage` | `Optional[float]` | `2400.0`, `115000.0`, `4160.0` | structural | winding 1 ratedU (line to line) and baseU (the coil), S3b-3; a coil-rated wye's is baseU, ratedU on its bus's system (S6) |
 | `secondary_voltage` | `Optional[float]` | `120.0`, `4160.0`, `480.0` | structural | winding 2 ratedU and baseU; a center tap's half (ratedU x 2) |
 | `power_rating` | `Optional[float]` | `5.0`, `5000.0`, `500.0` | structural | ratedS: the whole unit's kVA, else the phase sum (init()) |
 | `powerA_rating` | `Optional[float]` | `0.0`, `75.0`, `1000.0` | structural | a can's kVA in a bank; a center tap's S on its phase; on a one-tank WYE_WYE unused, listed when it is not S / n |
@@ -1915,13 +1915,13 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 | `raise_taps`, `lower_taps` | copied, derived | `highStep`, `lowStep` = -`lower_taps`; `neutralStep` 0 |
 | `regulation` | derived | `stepVoltageIncrement` = regulation / raise_taps (GridLAB-D's `tapChangePer`, `:244`), in percent |
 | `Type` | mapped | `VoltageRegulator.construction`: A `typeA`, B `typeB` (default B) |
-| `Control` | structural | `MANUAL` (default): `TapChangerControl.enabled` = `RatioTapChanger.controlEnabled` = false; `OUTPUT_VOLTAGE`, `LINE_DROP_COMP`: true; `lineDropCompensation` on `LINE_DROP_COMP` only |
+| `Control` | structural | `MANUAL` (default): `TapChangerControl.enabled` = `RatioTapChanger.controlEnabled` = false; `OUTPUT_VOLTAGE`, `LINE_DROP_COMP`: true; `lineDropCompensation` on `LINE_DROP_COMP` only; `REMOTE_NODE` on the regulator's own output as `OUTPUT_VOLTAGE` (S6-6) |
 | `band_center`, `band_width` | derived | `targetValue`, `targetDeadband` (full band, as CIM's): primary volts as written, × `power_transducer_ratio` on `LINE_DROP_COMP`, whose band is on the PT secondary (`:1316`) |
 | `power_transducer_ratio`, `current_transducer_ratio` | copied | `TapChangerControl.ptRatio`, `RatioTapChanger.ptRatio`, `RatioTapChanger.ctRatio` |
 | `compensator_r_setting_X`, `compensator_x_setting_X` | derived | `lineDropR`, `lineDropX` (ohm) of the phase's unit = setting × PT ratio / CT ratio (`line_drop_ohms`; S3c-4) |
 | `dwell_time`, `time_delay` | derived | `initialDelay` = `subsequentDelay` = dwell_time + time_delay (S3c-5) |
-| `control_level` | structural | `INDIVIDUAL`: a unit per wired phase; `BANK`: one gang unit on ABC (GLM-7) |
-| `PT_phase`, `CT_phase` | structural | `BANK`: `monitoredPhase` (the two must agree); `INDIVIDUAL`: raise when set (GridLAB-D ignores them there) |
+| `control_level` | structural | `INDIVIDUAL`: a unit per wired phase; `BANK`: one gang unit on ABC (GLM-7), or one unit on its one `PT_phase` (S6-7) |
+| `PT_phase`, `CT_phase` | structural | `BANK`: `monitoredPhase` (the two must agree); `INDIVIDUAL`: GridLAB-D ignores them, listed on the row (S6-7) |
 | `regulator_resistance` | untranscribed | NR's stand-in (default `powerflow::default_resistance`, 1e-4 Ω); the ends are ideal (S3c-2) |
 | the link's ratings | structural | each unit's own `OperationalLimitSet`, its phase's `continuous_rating_X`/`emergency_rating_X` (a gang unit: as S3a-5) |
 | `msg_mode`, `remote_voltage_X`, `tap_X_change_count`, the link outputs and header slots | untranscribed | co-simulation messaging, solver output or state, as S3a |
@@ -1932,8 +1932,8 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 |---|---|
 | `connect_type` other than `WYE_WYE` | `regulator_configuration.cpp:232`: NR takes only `WYE_WYE`; every deck is `WYE_WYE` |
 | `raise_taps` or `lower_taps` unset or not positive; `regulation` unset or 0 on an automatic `Control` | `:198`, `:212` throw |
-| `Control REMOTE_NODE`, `sense_node` set | S3c-6 |
-| `reverse_flow_control` other than `LOCK_NONE`; `PT_phase`/`CT_phase` on `INDIVIDUAL`; a `BANK` not on ABC, whose `PT_phase` and `CT_phase` are not one equal phase, or whose taps differ | in no deck; a gang holds one tap |
+| `Control REMOTE_NODE` sensing a bus other than the regulator's own output | S3c-6, S6-6 |
+| `reverse_flow_control` other than `LOCK_NONE`; a `BANK` on neither ABC nor its one `PT_phase`, whose `PT_phase` and `CT_phase` are not one equal phase, or whose taps differ | in no deck; a gang holds one tap |
 | a tap outside -lower_taps..+raise_taps | GridLAB-D would clamp it on the first tap change, not at init |
 | compensator settings without both transducer ratios | the primary ohms need both; in no deck |
 | phases with S or nothing in ABC; status `OPEN` | as S3b |
@@ -1947,7 +1947,7 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 | S3c-3 | Coil voltage | `baseU` = `neutralU` = the from bus's `nominal_voltage` as written (phase to neutral, 2401.78 V): the coil the band works against (`regulator.cpp:1380` compares the to-node's phase voltage). A gang unit's is that × √3 (line to line, as the core shape's 3-phase `vr3`) |
 | S3c-4 | Line drop | GridLAB-D's compensator drop is `(I / current_transducer_ratio) × (R + jX)` on the PT secondary (`:1330`), so the primary ohms are the setting × PT ratio / CT ratio: `line_drop_ohms` with the CT ratio where it takes a CT primary rating (GridLAB-D's CT secondary is 1 A). `ctRating` is not written (GLM has no CT primary rating). The settings are written on every unit that has them, also on `MANUAL`, where `lineDropCompensation` is false |
 | S3c-5 | Delays | GridLAB-D waits `dwell_time` and then `time_delay` before every tap change, the first and each later one (`regulator.cpp:598`-`611`: a change re-arms the dwell, and the out-of-band branch then sets the mechanism time after it), so `initialDelay` = `subsequentDelay` = the sum. An exporter writes `dwell_time` 0 and `time_delay` = `subsequentDelay` |
-| S3c-6 | `REMOTE_NODE` | Raises: a `TapChangerControl.Terminal` is a terminal, and a sense node is a bus with no single terminal to name; its one deck (IEEE13_houses) stops at the walk. As the DSS import's remote `bus` |
+| S3c-6 | `REMOTE_NODE` | Raises: a `TapChangerControl.Terminal` is a terminal, and a sense node is a bus with no single terminal to name; its one deck (IEEE13_houses) stops at the walk. As the DSS import's remote `bus`. **Amended by S6-6:** `REMOTE_NODE` on the regulator's own output is mapped as `OUTPUT_VOLTAGE` |
 | S3c-7 | Ratings | Each 1-phase unit's `OperationalLimitSet` carries its own phase's ratings (6 Java-export regulators: 763.58 / 1041.25 A); a gang unit's are the link's, as S3a-5 |
 
 **Getter (done 2026-11-10, on this branch):** the transformer getter's `AUTO` form reads an `AutoTransformer` with
@@ -2002,11 +2002,11 @@ The object header and the link slots (as S3a) are left out.
 | `compensator_x_setting_A` | `Optional[float]` | `9.0`, `7.5`, `0.4` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
 | `compensator_x_setting_B` | `Optional[float]` | `9.0`, `7.5`, `2.6` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
 | `compensator_x_setting_C` | `Optional[float]` | `9.0`, `7.5`, `0.4` | derived | lineDropX (ohm) = the unit's phase setting x power_transducer_ratio / current_transducer_ratio (line_drop_ohms; regulator.cpp:1330); set without both ratios raises |
-| `CT_phase` | `Optional[str]` | `B` | structural | BANK: the phase whose compensator setting is read, which must be PT_phase; INDIVIDUAL: raises when set: no deck sets it, so a mapping waits for one (GridLAB-D ignores it there) |
-| `PT_phase` | `Optional[str]` | `B` | structural | BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: raises when set: no deck sets it, so a mapping waits for one |
+| `CT_phase` | `Optional[str]` | `B` | structural | BANK: the phase whose compensator setting is read, which must be PT_phase; INDIVIDUAL: GridLAB-D ignores it (regulator.cpp:1328), listed on the row (S6) |
+| `PT_phase` | `Optional[str]` | `B` | structural | BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: GridLAB-D ignores it (regulator.cpp:1378), listed on the row (S6) |
 | `regulation` | `Optional[float]` | `0.1` | derived | RatioTapChanger.stepVoltageIncrement = regulation / raise_taps (percent), GridLAB-D's tapChangePer (regulator.cpp:244); 0 raises unless MANUAL |
-| `control_level` | `Optional[str]` | `BANK` | structural | INDIVIDUAL (default): one unit per wired phase; BANK: one gang unit on ABC (GLM-7) |
-| `Control` | `Optional[str]` | `MANUAL`, `OUTPUT_VOLTAGE`, `LINE_DROP_COMP` | structural | MANUAL (default): enabled = controlEnabled = false; OUTPUT_VOLTAGE, LINE_DROP_COMP: true, lineDropCompensation on LINE_DROP_COMP only; REMOTE_NODE raises (S3c-6: only IEEE13_houses, which stops at the walk) |
+| `control_level` | `Optional[str]` | `BANK` | structural | INDIVIDUAL (default): one unit per wired phase; BANK: one gang unit on ABC (GLM-7), or one unit on its one PT_phase (S6) |
+| `Control` | `Optional[str]` | `MANUAL`, `OUTPUT_VOLTAGE`, `LINE_DROP_COMP` | structural | MANUAL (default): enabled = controlEnabled = false; OUTPUT_VOLTAGE, LINE_DROP_COMP: true, lineDropCompensation on LINE_DROP_COMP only; REMOTE_NODE on the regulator's own to bus: as OUTPUT_VOLTAGE (the same voltages, regulator.cpp:1376-1420), elsewhere raises (S3c-6, S6) |
 | `reverse_flow_control` | `Optional[str]` |  | structural | unset or LOCK_NONE; others raises when set: no deck sets it, so a mapping waits for one |
 | `Type` | `Optional[str]` | `B`, `A` | mapped | `VoltageRegulator.construction`; A -> typeA, B -> typeB (default B): GridLAB-D's ratio 1 / (1 + tap x step) or 1 - tap x step |
 | `tap_pos_A` | `Optional[int]` | `10`, `6`, `0` | derived | RatioTapChanger.step of the phase's unit, unless the regulator's tap_A; default 0 (regulator.cpp:146) |
@@ -2037,7 +2037,7 @@ The object header and the link slots (as S3a) are left out.
 | `tap_A_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
 | `tap_B_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
 | `tap_C_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
-| `sense_node` | `Optional[str]` |  | structural | REMOTE_NODE's monitored node; raises when set (S3c-6) |
+| `sense_node` | `Optional[str]` |  | structural | REMOTE_NODE's monitored node: must solve as the regulator's to bus; on another Control GridLAB-D ignores it, listed on the row (S6) |
 | `regulator_resistance` | `Optional[float]` | `0.001` | untranscribed | NR's stand-in series resistance (default powerflow::default_resistance, 1e-4 ohm); the AutoTransformerEnds are ideal (S3c-2) |
 
 ## S4a: loads and capacitors (approved and built 2026-11-10)
@@ -2775,3 +2775,186 @@ A cross-format check should list these as expected divergences, as for S4a-8's c
 - untranscribed, read only by the legacy battery model (use_internal_battery_model false), which raises: 31 slots (`generator_mode` ... `parasitic_power_draw`)
 - untranscribed, solver state or output: 29 slots (`V_Out` ... `climate_object_found`)
 - untranscribed, set from the inverter's soc_reserve (battery.cpp:727): 1 slots (`reserve_state_of_charge`)
+
+## S5: the deck sweep, tier 4 and G7 (proposed 2026-11-10; approved as recommended and built 2026-11-16)
+
+S5 maps nothing new: no deck holds a `latitude` or `longitude`, so there is no coordinates part (the DSS S5's
+`buscoords.cimtbl` has no GLM source). It turns the eight per-slice deck sweeps into one, closes D6 with a complete
+IEEE13_cdpsm golden directory, adds the tier-4 IEEE 13 GLM vs DSS check, and records G7.
+
+### The deck sweep (S5-1)
+
+Today each of the eight slice modules (bus, catalog, line, transformer, regulator, load, capacitor, inverter) has its
+own `test_every_*` over `ALL_DECKS`, with the same stop boilerplate, so every deck is read and bound eight times
+(the GLM suite with `--roundtrip` takes 4 min 30 s).
+`tests/test_cimtbl_sweep.py` reads and binds each deck once and runs every slice's GridLAB-D check on that network:
+
+- `assert_gridlabd_ohms` (S3b), `assert_gridlabd_regulation` (S3c), `assert_gridlabd_loads` and
+  `assert_gridlabd_capacitors` (S4a), `assert_gridlabd_der` (S4b), and the bus, catalog and line counts the slice
+  sweeps assert today, each moved to a named `assert_*` helper in its slice module;
+- a deck in `BIND_STOPS` must stop with its listed error, an unlisted stop fails, and a listed stop that binds fails,
+  so the table stays true. Expected: 27 of 29 bind; `IEEE123_transactive` (`Object battery`) and `IEEE13_houses`
+  (its 634 center taps rated 2401 V on a 480 V bus) stop, as today.
+
+The slice modules keep their atoms, goldens and fail-fast tests. `test_every_deck_walks` stays in
+`test_topology_walk.py` (it stops at the walk, not the bind).
+
+### The IEEE13_cdpsm golden directory (S5-2, D6)
+
+The committed directory does not bind on its own: its master imports `zip_fractions.cimtbl` (the core's shared ZIP
+rows), which no slice committed. S5 adds it, so the directory holds 16 files, and one test checks the whole
+directory: the written file set equals the golden set (no file missing or extra), every file matches its golden, and
+the golden directory binds with `cimtables.load_model`. It replaces the nine per-slice IEEE13_cdpsm golden tests
+(DRY: one place to regenerate, `CIMHUB_UPDATE_GOLDENS=1`).
+
+### Tier 4: IEEE 13 GLM vs DSS (S5-3)
+
+IEEE13_cdpsm.glm is the Java CIMHub export of the model the DSS importer's `IEEE13_CDPSM` golden holds. The test binds
+**the two committed golden directories** with `cimhub_core` and `cimtables` only, matches equipment by its terminal
+buses (the bus names agree), and compares through the core getters in SI. It imports neither spoke and needs no
+engine, so it lives at the workspace root, `tests/cross_format/test_ieee13_glm_vs_dss.py`, as the tier-4 location
+rule says (a test that touches two spokes' artifacts belongs to neither). The root needs a `tests/conftest.py`
+(the `cim_scope` fixture) and `scripts/test-all.sh` runs it as one more process.
+
+Probe on 2026-11-10 (both golden directories, the GLM one completed by S5-2):
+
+| class | compared | result |
+|---|---|---|
+| bus voltages | BaseVoltage of every line, load and capacitor | equal |
+| lines (11) | phases, length, the phase R and X matrices in ohms (length x per-length, conductor order sorted) | equal to 4 places |
+| switches (5) | class (LoadBreakSwitch, Fuse, Recloser), phases, normal state | equal |
+| loads | p, q per bus and phase (DSS has 16 consumers, one per DSS Load; GLM 10) | equal |
+| capacitors (2) | nomQ at nomU per bus; neither has a control | equal |
+| regulator taps (3) | low, high, neutral, step (8, 10, 11), increment 0.625 % | equal |
+| DER (5) | S4b's cross-solver note | batteries and ratings equal; PV and the house's connection follow GridLAB-D |
+| transformers | ratings, voltages, connections, core admittance | equal on xf1 and the house center tap |
+
+**Expected differences** (asserted as differences, so a change on either side shows):
+1. **Source:** DSS 30 deg with the deck's short-circuit impedance; GLM 0 deg with the stiff default (S1-3).
+2. **Substation transformer:** DSS has three windings (a 13.2 kV tertiary on its internal bus `650z`); the Java
+   export wrote two, so GLM has no `650z`.
+3. **Transformer impedance:** not compared. The GLM tanks hold %Z on their `TransformerTankConfiguration` and the core
+   transformer getter reads %Z only from a tank with no template (`BY_TANK_IMPEDANCE`, the GIS form, rc_1
+   `d832796`), not from a `TankConfiguration` (plan section 7, the S3b core row, narrowed: the r/x split and the
+   Hopkinson center tap now exist in core, so only the template lookup is missing). The S3b test already checks the
+   %Z against GridLAB-D's ohms; tier 4 gains the comparison when the getter does.
+4. **Regulator controls:** the Java export wrote `Control MANUAL` with `band_center` commented out, so GLM's controls
+   are disabled with no target; DSS's regulate at 2440 V, 40 V band, delay 15 s. GLM's line drop is 1/5 of DSS's
+   (0.01714 + j0.05143 vs 0.0857 + j0.2571 ohm): the Java export wrote DSS's CT ratio, 3500 = 700 A / 0.2 A,
+   where GridLAB-D's compensator divides the current by `current_transducer_ratio` as a 1 A secondary
+   (`regulator.cpp:1330`, S3c-4). It is not active under MANUAL. See S5-4 and S5-5. Found at build: `neutralU`
+   is 2400 V in DSS (its 2.4 kV winding) and 2401.78 V in GLM (the coil: the 4.16 kV bus over sqrt 3, S3c); the
+   tap positions, range and increment are equal.
+5. **DER:** the S4b cross-solver note (PV output; `s1s2` D at 240 V vs the DSS shape's Y at 208 V).
+
+### G7 (S5-6)
+
+Measured 2026-11-10 on `orig_R3-12.47-3`, the largest deck:
+
+| deck | read | map | bind |
+|---|---|---|---|
+| orig_R3-12.47-3 | 3.0 s | 0.5 s | 4.8 s: 26,622 rows / 52,118 objects, about 5,500 rows/s |
+| IEEE13_cdpsm | <0.1 s | <0.1 s | 0.1 s: 224 rows / 340 objects |
+
+That is the DSS importer's rate (about 7,900 rows/s on IEEE9500 including coordinates), so G7 needs no work; the
+sweep test records no timing (it would be flaky).
+
+### Decisions for S5 (approved as recommended, 2026-11-16)
+
+| # | question | recommendation |
+|---|---|---|
+| S5-1 | Per-slice deck sweeps | One sweep test, one bind per deck, every slice's check on it; the eight `test_every_*` go |
+| S5-2 | The IEEE13_cdpsm golden (D6) | Add `zip_fractions.cimtbl`; one directory test (file set, each file, the directory binds) replaces the nine per-slice IEEE13 golden tests |
+| S5-3 | Where tier 4 lives | Root `tests/cross_format/`, comparing the two committed golden directories through the core getters (no spoke import, no engine); expected differences asserted, not skipped |
+| S5-4 | A disabled `TapChangerControl` with no target (GLM MANUAL) | The core `get_tap_changer_control` raises `targetValue is unset`, so neither tier 4 nor an exporter can read GLM's 3 IEEE 13 regulators (nor any MANUAL unit without a band). Recommended: core returns `target` None when the control is `enabled` false (a plan section 7 core row; tier 4 compares the taps until then). The alternative, the importer writing GridLAB-D's default `band_center` 0, would write a value GridLAB-D never reads |
+| S5-5 | The Java export's CT ratio | Keep GridLAB-D's reading (the engine's 1/5 compensation, as the deck would run), list it as an expected difference and a Java export defect, as S4b's battery. The alternative, reading it as DSS's CT primary (x 0.2), would follow the Java exporter's intent the way S4b's battery does; but here the mode is MANUAL, so nothing runs on it |
+| S5-6 | G7 | Recorded above; closed with no work |
+
+### Built (2026-11-16)
+
+On rc_1 `ddc6227` (the worktree fast-forwarded the same day; no incoming commit touched `cimhub_gridlabd`).
+
+- **Sweep (S5-1):** `tests/test_cimtbl_sweep.py`, `test_every_deck_binds_as_gridlabd_runs_it`, one read and one bind
+  per deck. The checks the slice sweeps made inline are now named helpers in their modules (`assert_buses`,
+  `assert_catalogs`, `assert_lines_and_switches`, `assert_transformers`); the others were already
+  (`assert_gridlabd_regulation`, `_loads`, `_capacitors`, `_der`). The eight `test_every_*` sweeps are gone, and so is
+  S4b's `test_ieee13_cdpsm_against_the_dss_golden`, whose values tier 4 now asserts against the DSS golden itself.
+- **D6 (S5-2):** `zip_fractions.cimtbl` added, so `goldens/IEEE13_cdpsm/` has 16 files.
+  `test_ieee13_cdpsm_golden_directory` writes the documents, matches every file to its golden, checks that the two
+  file sets are the same, and binds the golden directory on its own (`cimtables.load_model`). It replaces the nine
+  per-slice IEEE13_cdpsm golden tests, the master's included; `CIMHUB_UPDATE_GOLDENS=1` rewrites the whole directory.
+- **Tier 4 (S5-3):** `tests/cross_format/test_ieee13_glm_vs_dss.py` (13 tests) plus a root `tests/conftest.py`;
+  `scripts/test-all.sh` runs it as its own process (`scripts/test-all.sh cross_format`, and CI's no-argument run).
+  It imports `cimhub_core` and the cim-graph stack only. Eight tests check what is equal (buses, base voltages,
+  lines, switches, loads, capacitors, regulator taps, transformer ratings and core). Five assert the expected
+  differences 1-5, so either side changing shows. Test 3 asserts that the core getter reads no GLM impedance yet:
+  when the template %Z row lands it fails, and the impedance joins `test_transformers`.
+- **Amended at build:**
+  - **Line matrices:** R, X and B in ohms and siemens are equal to the getter's float precision: the largest relative
+    difference is 0.
+  - **Loads:** compared at a relative 1e-5. Bus 646's constant-impedance delta load is 66,000.09 W per phase in GLM
+    against DSS's 66,000 W, which is the Java export's 6-digit rounding.
+  - **Regulators:** `neutralU` differs (expected difference 4).
+- **S5-4:** plan section 7 core row (a disabled control may have no target). **S5-5:** listed as expected difference 4
+  and a Java export defect; the mapping keeps GridLAB-D's reading.
+- **Results:** the GLM suite with `--roundtrip` (29 decks): 249 passed in 51 s, down from 461 in 4 min 30 s.
+  That is 461 - 232 sweep runs - 10 IEEE 13 tests + 29 sweep runs + 1 directory test. Core: 449 passed.
+  Tier 4: 13 passed. Leak gate and lint are clean.
+
+## S6: a utility's Milsoft WindMil decks (by the user's direction 2026-11-16; built, approved 2026-11-16)
+
+The user's direction: test the converter on a utility's 22 GridLAB-D feeders exported by Milsoft's "WindMil to
+GridLabD Export" (2022), and edit the exports so that GridLAB-D loads them. They are kept out of git (the utility's
+data). The sweep binds every deck in `CIMHUB_GLM_UTILITY_DECKS` (S6-8); the decks' repair log, a patch against the
+originals and the scripts are kept with the data, not here.
+
+The exports are flat: `node`, `load` (constant power), `overhead_line`/`underground_line` on z-matrix
+`line_configuration`s (no geometry), `transformer` on `resistance`/`reactance` configurations, `switch`, `recloser`
+(WindMil writes fuses as reclosers), `capacitor`, `regulator`. About 60,000 nodes, 37,000 lines, 17,000 transformers.
+
+### What GridLAB-D rejects (deck repairs, by the user's leave)
+
+Each repair answers a GridLAB-D error, not the converter's, so the converter is not taught the defects:
+- **lower-case dump `mode rect`** (`convert.cpp:427` matches keywords case-sensitively) and a Windows dump path;
+- **no swing bus:** the head node is `bustype PQ`; under FBS the first node in becomes the swing (`node.cpp:1602`),
+  so the repair writes the `SWING` FBS gives it;
+- **dangling references:** a span `from <capacitor>_n` (WindMil's in-line capacitor), a `sense_node` with its
+  leading `_` lost, a second consumer on `X-1_n`, and `sense_node NULL _n` on every `REMOTE_NODE` regulator (the remote
+  point is lost; it becomes the regulator's own output, `regulator.cpp:154` throws without one);
+- **phasing errors:** 3-phase sections fed through 1-phase spans, which the exporter joins with `fake_g_*_n` nodes
+  (children on phases their parent lacks, `node.cpp:1079`; links on phases their ends lack, `link.cpp:664`). The
+  user's choice: widen the narrow path to the phases below it, each span on the same conductor's wider Milsoft
+  configuration (copied from a sibling deck when the deck lacks it; WindMil writes its catalog in single precision,
+  so copies agree to 1e-6). A customer on 2 or 3 phases behind one 1-phase service can is likely a wye-delta bank,
+  which GridLAB-D does not model; the user's call: parallel cans, the transformer on the customer's phases with
+  Milsoft's own `WYE_WYE-<kVA>x<n>` configuration (n x the can's kVA and per unit, so every phase has the can's ohms);
+- **open ties between laterals on different phases** (`link.cpp:649` throws whatever the status): **kept**, the
+  user's call, as CIM holds them (S6-9). So 10 decks do not load in GridLAB-D as they stand; without the 21 open
+  switches they do, with the same solution;
+- **one nameplate:** 12470 V primaries on 14.4 kV (phase-to-neutral) buses; GridLAB-D runs them 15 % high and the
+  walk rejects them. The user's choice: `primary_voltage 14400`.
+
+### What the converter now maps (S6-1 to S6-7)
+
+| S6 | Subject | Built |
+|---|---|---|
+| S6-1 | Wye rating basis (amends S3b-3; approved: `ratedU` line to line, `baseU` the coil, line to neutral on a wye) | GridLAB-D uses a wye's voltages only as `nt = V1 / V2` and the base `V2² / S` (`transformer.cpp:265`), so either reading solves the same; the deck says which. `topology.coil_rated`: the written `primary_voltage` is its from bus's `nominal_voltage` (phase to neutral; the Milsoft exports) or that × √3 (line to line; the Java exports, S3b-3), within the walk's nameplate tolerance; anything else raises. A coil-rated wye: `baseU` as written, `ratedU` on its bus's system (`line_voltage`), `k = S_coil / S_total` (S3b-4's ohms kept); in the walk one phase-to-neutral coil per side on one conductor (a 7200/120 V service is a single-phase system), else polyphase at × √3. An unused configuration keeps S3b-3, noted. **Confirmed by the user 2026-11-16** after an independent hand translation of one deck (the cimtbl-translate skill) wrote the can as `connectionKind I`, phases `A`, `ratedU` = the coil: the converter's tank template, `Yn` on `AN`, `ratedU` line to line and `baseU` the coil stays (as the DSS import). That translation agreed on every line impedance, the source voltage and the can's series ohms |
+| S6-2 | `SINGLE_PHASE` | One case with `WYE_WYE` in `transformer.cpp:282`: mapped as it (Y/Y, grounded) |
+| S6-3 | One template per phase count | A one-tank wye with no phase ratings depends only on how many phases it is wired on, so one configuration may serve A, B and C (the Milsoft decks share one per kVA) |
+| S6-4 | Matrix lines (amends S3a-3) | N on a matrix line is dropped (`line.cpp:226` fills the Kron-reduced A, B, C only); a written 0 `z_ii` is no phase, a nonzero term on such a phase raises, all-zero raises. **The user's call 2026-11-16:** the matrix is written as given, 3x3 and already reduced: GridLAB-D's `line_configuration` has no neutral terms (`line_configuration.cpp:40`-`46`), so there is no 4x4 to write, and an exporter must not reduce it again (a 4x4 with the neutral, where a source gives one, is left for the exporter to reduce, e.g. OpenDSS `reduce=y`). Geometry lines keep their neutral position |
+| S6-5 | Link phases | A link's phases (N, D aside) must be on both its end objects, as `link::init` throws (`link.cpp:649`, `:664`; a center tap's S on its to end only): the walk raises, S6-9 aside |
+| S6-6 | `REMOTE_NODE` (amends S3c-6; approved) | Sensing the regulator's own output (its `to` bus) GridLAB-D reads the voltages `OUTPUT_VOLTAGE` reads (`regulator.cpp:1376`-`1420`): mapped as it, the records identical; a remote sense node still raises. A `sense_node` on another `Control` GridLAB-D does not read (`:150`): listed on the row |
+| S6-7 | Regulator phases | `PT_phase`/`CT_phase` on `INDIVIDUAL` GridLAB-D does not read (`:1328`, `:1378`): listed on the row, no longer raise. A `BANK` on its one `PT_phase` is one unit on it (named as a gang, `xf_<name>`) |
+| S6-9 | Open ties across phases (the user's call) | An open switching device whose switched letters are on its from end and whose to end has as many other letters (an `-A` switch from an A lateral to a B one) is `phaseSide1` = its letters, `phaseSide2` = its to end's, paired in ABC order (cim-tables' `phaseSide1`/`phaseSide2` columns; each Terminal on its side's phases), with a row note. Closed, or overlapping letters, still raise (S6-5). GridLAB-D cannot load it: the converter holds what the source system has, not only what GridLAB-D runs. The sweep checks every switch's sides against its GLM ends |
+| S6-8 | Utility decks in the sweep | `test_every_utility_deck_binds_as_gridlabd_runs_it`: every non-empty `*.glm` in `CIMHUB_GLM_UTILITY_DECKS` binds and passes every slice check (`--roundtrip`); no stop table, so no names in git |
+
+### Built (2026-11-16)
+
+- **Results:** all 22 utility decks bind and pass every slice check, `assert_gridlabd_ohms` included (17,000
+  transformers at GridLAB-D's `zt`); the largest reads in 1.2 s and binds in 6.1 s. The 29 Powergrid-Models decks
+  are unchanged (27 bind, the 2 stops as before). The GLM suite with `--roundtrip`: 257 passed; with the utility
+  decks the sweep is 52 passed in 105 s. After S6-9 and the parallel cans: 281 passed with both deck sets.
+- **Tests:** the S3a/S3b/S3c fail-fast tests of the amended rules now test the mappings (coil-rated wyes against
+  GridLAB-D's ohms, a wye off its bus raises, a matrix line's N, a 0 diagonal, `REMOTE_NODE` on its own output against
+  `OUTPUT_VOLTAGE`, a remote one raises, the two row notes, a one-phase `BANK`, an open tie across phases and a closed
+  one raising); the walk has the coil-rated coils and the link-phase check. A triplex line and a regulator on phases their ends lack now stop at S6-5 first.

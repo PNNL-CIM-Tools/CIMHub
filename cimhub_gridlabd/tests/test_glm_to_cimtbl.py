@@ -1,20 +1,14 @@
-"""The orchestrator: master document, base frequency, the expression guard, and the IEEE13_cdpsm bind."""
+"""The orchestrator: master document, base frequency and the expression guard (the IEEE13_cdpsm directory is
+test_cimtbl_sweep.py's)."""
 from __future__ import annotations
 
-from pathlib import Path
-
-import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
-from conftest import deck, defines
-from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer import glm_to_cimtbl
 from cimhub_gridlabd.importer.cimtbl import bus, load
-from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, base_frequency, check_expressions, glm_to_cim
+from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, base_frequency, check_expressions
 from cimhub_gridlabd.schema import gridlabd as schema
-
-GOLDENS = Path(__file__).parent / "goldens"
 
 
 def read(tmp_path, text: str):
@@ -43,15 +37,6 @@ object node { name n1; phases ABCN; voltage_B S*7200; voltage_A S*7200; }
         check_expressions(model, fields, load.EXPRESSION_SLOTS)
     del model.expressions[("n1", "voltage_A")]
     check_expressions(model, fields, load.EXPRESSION_SLOTS)  # voltage_B is untranscribed: nothing raises
-
-
-def test_ieee13_cdpsm_master(scope):
-    model = GlmReader(deck("IEEE/IEEE13_cdpsm.glm"), defines=defines("IEEE/IEEE13_cdpsm.glm")).read_all()
-    documents = GlmImporter("IEEE13_cdpsm").to_cimtbl(model)
-    assert_matches_golden(documents.master, GOLDENS / "IEEE13_cdpsm" / "IEEE13_cdpsm.cimtbl")
-    network = glm_to_cim(model, name="IEEE13_cdpsm")
-    voltages = sorted(float(bv.nominalVoltage.to("kV")) for bv in network.list_by_class(cim.BaseVoltage))
-    assert voltages == [0.24, 0.48, 4.16, 115.0]
 
 
 def test_master_lists_every_class_no_mapper_reads(tmp_path, scope, monkeypatch):
