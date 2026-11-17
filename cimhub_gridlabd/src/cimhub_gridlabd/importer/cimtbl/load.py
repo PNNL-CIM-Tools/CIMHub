@@ -7,7 +7,9 @@ phase, so the consumer's p and q are the totals and, when its phase children dif
 ``base_power`` by the fractions and power factors at nominal voltage (S4a-3); a ``<schedule>.value*K`` base is K
 (S4a-2). The voltage response is the shared ZIP row of the one kind every phase uses, else a ``zip_`` row of the
 load's fractions (S4a-4). A split-phase record has the legs (1, 2: s1, s2 to neutral) and the 240 V part (12) as two
-consumers (S4a-6). Explicit constant current and impedance raise (S4a-5).
+consumers (S4a-6). Explicit constant current and impedance raise (S4a-5). A record with no power is a consumer
+of p = q = 0 on its wired phases, and each record is one service: ``customerCount`` 1 on its first consumer
+(defaulted, GLM has no count).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors``.
 """
@@ -31,6 +33,7 @@ from cimhub_gridlabd.glm_schema import registry_unit
 from cimhub_gridlabd.importer.cimtbl import bus
 from cimhub_gridlabd.importer.cimtbl.catalog import label
 from cimhub_gridlabd.importer.cimtbl.link import provenance
+from cimhub_gridlabd.importer.topology import phase_letters
 from cimhub_gridlabd.schema import gridlabd as schema
 
 PREFIX = "ld_"
@@ -206,16 +209,16 @@ def check(record, own: dict[str, Field]) -> None:
 
 
 def consumers(model: GlmModel, record, load_class: LoadClass) -> list[Consumer]:
-    """The record's consumers: a load's one; a split-phase record's legs and its 240 V part (S4a-6); none when no
-    phase carries power (the record is then only a bus)."""
+    """The record's consumers: a load's one; a split-phase record's legs and its 240 V part (S4a-6); one of no power
+    when no phase carries any (``_powerless``)."""
     powers = {suffix: phase_power(model, record, load_class, suffix) for suffix in load_class.suffixes}
     carrying = {suffix: phase for suffix, phase in powers.items() if phase is not None and phase.total != 0}
+    written = str(record.phases or "")
+    if load_class is LOAD and "S" in written:
+        raise ValueError(f"{label(record)}: phases {written}; a split-phase load is a triplex_load")
     if not carrying:
-        return []
+        return [_powerless(record, load_class)]
     if load_class is LOAD:
-        written = str(record.phases or "")
-        if "S" in written:
-            raise ValueError(f"{label(record)}: phases {written}; a split-phase load is a triplex_load")
         if "D" in written:
             phases = "".join(sorted({letter for suffix in carrying for letter in DELTA_BRANCH[suffix]}))
             by_branch = {DELTA_BRANCH[suffix]: phase for suffix, phase in carrying.items()}
@@ -231,6 +234,17 @@ def consumers(model: GlmModel, record, load_class: LoadClass) -> list[Consumer]:
     return result
 
 
+def _powerless(record, load_class: LoadClass) -> Consumer:
+    """A record with no power on any phase is still a consumer (a service, counted by ``customerCount``): p = q = 0
+    on its wired phases, a split-phase record on its legs."""
+    if load_class is not LOAD:
+        return Consumer("", "s1s2", False, {"s1": _Phase({}), "s2": _Phase({})})
+    letters = "".join(sorted(phase_letters(record)))
+    if "D" in str(record.phases):
+        return Consumer("", letters, True, {branch: _Phase({}) for branch in sorted(_delta_children(letters))})
+    return Consumer("", letters, False, {letter: _Phase({}) for letter in letters})
+
+
 def _delta_children(phases: str) -> set[str]:
     """The branch PhaseCodes the binder makes on a delta consumer of ``phases`` (``connectivity.phase_plan``)."""
     following = {"A": "B", "B": "C", "C": "A"}
@@ -242,6 +256,8 @@ def response(consumer_list: list[Consumer]) -> tuple[str, tuple[float, ...] | No
     totals = {kind: sum((phase.parts.get(kind, 0j) for consumer in consumer_list
                          for phase in consumer.children.values()), 0j) for kind in KINDS}
     used = [kind for kind in KINDS if totals[kind] != 0]
+    if not used:
+        return ZIP_CONSTANT_PQ, None  # no power: nothing responds to the voltage
     if len(used) == 1:
         return SHARED_RESPONSE[used[0]], None
     p_total = sum(total.real for total in totals.values())
@@ -290,9 +306,8 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
     for record in records:
         check(record, own)
         found = consumers(model, record, load_class)
-        if not found:
+        if not any(phase.total for consumer in found for phase in consumer.children.values()):
             powerless.append(str(record.name))
-            continue
         load_response, fractions = response(found)
         if fractions is not None:
             if responses.setdefault(load_response, fractions) != fractions:
@@ -306,9 +321,10 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
             total = sum((phase.total for phase in consumer.children.values()), 0j)
             balanced = _equal(consumer)
             phases = phases_cell(consumer.phases) if balanced else consumer.phases
+            customers = cell(1) if index == 0 else None  # one service per record, counted once
             consumer_rows.append(Row([consumer_mrid, name, node, phases, "D" if consumer.delta else "Y",
-                                      cell(not consumer.delta), cell(total.real), cell(total.imag), load_response,
-                                      buses[node].base_voltage],
+                                      cell(not consumer.delta), cell(total.real), cell(total.imag), customers,
+                                      load_response, buses[node].base_voltage],
                                      comment=comment if index == 0 else None))  # the record's notes, once
             if not balanced:
                 for child, phase in consumer.children.items():
@@ -318,7 +334,8 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
     header = provenance(load_class.native.class_name, "EnergyConsumer (+ EnergyConsumerPhase values)", len(records),
                         ANCHOR)
     if powerless:
-        header += f"\nno power on any phase (only a bus, not written): {', '.join(powerless)}"
+        header += "\n" + textwrap.fill(f"no power on any phase (a consumer of p = q = 0): {', '.join(powerless)}",
+                                        width=_WIDTH, break_long_words=False)
     if not consumer_rows:
         return Document(name=load_class.artifact, statements=[], profile=CIM_PROFILE)
     if responses:
@@ -330,11 +347,15 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
     counted = bus.untranscribed_set(model, records, {load_class.native: bus.inherited(fields, own)})
     statements.append(Table(_CONSUMER, [Column("mRID"), Column("name"), Column("node"), Column("phases"),
                                         Column("phaseConnection"), Column("grounded"), Column("p", "W"),
-                                        Column("q", "VAr"), Column("LoadResponse"), Column("BaseVoltage"),
+                                        Column("q", "VAr"), Column("customerCount"), Column("LoadResponse"),
+                                        Column("BaseVoltage"),
                                         Column("EquipmentContainer", default=feeder)], consumer_rows,
                             comment="\n".join(part for part in (
                                 "p, q: the totals at nominal voltage, consumption positive; phases: the phases that "
-                                "carry power, blank when ABC and equal (S4a-1)", counted) if part)))
+                                "carry power, blank when ABC and equal (S4a-1)",
+                                "defaulted: customerCount=1 on each record's first consumer (GLM has no customer "
+                                "count; a record is one service, its 240 V part not counted again)", counted)
+                                if part)))
     if phase_rows:
         statements.append(Table("EnergyConsumerPhase", [Column("mRID"), Column("p", "W"), Column("q", "VAr")],
                                 phase_rows, update=True, comment="the phases differ, so each child carries its own "

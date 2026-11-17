@@ -21,7 +21,8 @@ Mapper: `importer/glm_to_cimtbl.py` `map_master`. Test: `tests/test_glm_to_cimtb
 
 | row | from | rule |
 |---|---|---|
-| `Substation`, `Feeder` | the `name` the caller passes (D7) | mRIDs `sub_<name>`, `fdr_<name>`, source case |
+| `Substation`, `Feeder` | `substation=` and `feeder=`, each the `name` the caller passes unless given (D7; the model's `Model` and file stem stay `name`) | mRIDs `sub_<substation>`, `fdr_<feeder>`, source case |
+| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer, a series reactor) raises |
 | `BaseFrequency` | `module powerflow { nominal_frequency ...; }`, else `#set powerflow::nominal_frequency=...` | else GridLAB-D's 60 Hz, listed as `# defaulted` |
 | `BaseVoltage` | the topology walk's distinct bus voltages (`cimtopology.core`), highest first | `nominal_kv` rounding; mRIDs `bv_12p47kv`, `bv_240v` |
 | comment | every GLM type no mapper reads, with its count, including types the schema lacks (`recorder`) | GLM-14 |
@@ -1573,7 +1574,8 @@ configuration is used by instances of different phase counts; 10 `WYE_WYE` confi
 **Identity (S3b-1):** `xc_<configuration>`, `xb_<configuration>` (a bank), `xf_<transformer>`, the GLM name in
 source case, as S2 and S3a. Children as the DSS import: `xc_<c>_end_<n>`, `xc_<c>_wdg_<n>`, `xc_<c>_mesh_<ij>`,
 `xc_<c>_lug_<h1>`; a bank's cans `xc_<c>_<phase>` (`xc_transformer_configuration:1226_A`); `xf_<t>_tank` (one
-tank) or `xf_<t>_tank_<phase>` (a bank), `xf_<t>_<n>` (ends), `xf_<t>_<n>_<phase>` (phase ends), `xf_<t>_limits`.
+tank, unnamed: it goes by its transformer's name) or `xf_<t>_tank_<phase>` (a bank, named `<t>_<phase>`: each can is
+a unit of its own on export), `xf_<t>_<n>` (ends), `xf_<t>_<n>_<phase>` (phase ends), `xf_<t>_limits`.
 
 ### Templates (`transformer_configuration.cimtbl`)
 
@@ -2149,7 +2151,7 @@ The mapper raises on:
 
 | # | topic | proposal |
 |---|---|---|
-| S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is only a bus (valid GridLAB-D: the S1 bus atom has one), so it writes no consumer and is listed in the artifact header (amended at build, 2026-11-10: the draft raised). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
+| S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is a consumer of p = q = 0 on its wired phases (a split-phase record on s1s2), listed in the artifact header (amended 2026-11-16 for the Clallam decks, where every Milsoft consumer is a service: earlier it wrote only a bus; the draft raised). Each record is one service: `customerCount` 1 on its first consumer, unset on a split-phase record's 240 V part (defaulted: GLM has no customer count). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
 | **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today |
 | S4a-3 | Base power form | As GridLAB-D does at nominal voltage (`load.cpp:940-1073`, `triplex_load.cpp:410-731`). Per part k (power, current, impedance), with `pf` defaulting to 1: P_k = base × f_k × \|pf_k\| and Q_k = P_k × √(1/pf_k² - 1), negative when pf_k < 0 (leading). pf_k = 0 gives P_k = 0 and Q_k = base × f_k. When the fractions don't sum to 1, the power fraction becomes 1 - I - Z (GridLAB-D's own repair, `load.cpp:945`), noted as `defaulted:` |
 | S4a-4 | Voltage response | ZIP fractions from the load's totals (each part's P and Q over the totals). When every part is one kind, the shared `zip_constant_pq`/`_i`/`_z` row (core `zip_fractions.cimtbl`, which the master imports as DSS's does); otherwise a `zip_<pP>_<pI>_<pZ>_<qP>_<qI>_<qZ>` row in the artifact (GDM's naming; the mRID rounds the fractions to 6 places, the row holds them exactly, and two sets that round alike raise). When Q is 0, the Q fractions are the P fractions. Two artifacts that both use one mixed set would both write the row and fail to bind; no deck has a mixed set. Every deck is one kind: taxonomy constant power, Java exports constant current |
@@ -2218,7 +2220,8 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 - **Core:** the `load` shape gained an unbalanced consumer with `Update Table EnergyConsumerPhase` rows and a 240 V
   `s1s2` D consumer, with two getter tests. The `shunt` shape is unchanged, since S4a-10 writes no per-phase b.
 - **Found at build:**
-  - A load with no power is only a bus. It is listed in the header rather than raising (S4a-1).
+  - A load with no power is a consumer of p = q = 0, listed in the header rather than raising (S4a-1, amended
+    2026-11-16).
   - A single delta branch and the 240 V part take no per-phase row: the load getter requires valued children to be
     the conductors.
   - A zip_ row holds its fractions exactly, and only its mRID is rounded (the getter checks the sum to 1e-6).
@@ -2827,17 +2830,15 @@ Probe on 2026-11-10 (both golden directories, the GLM one completed by S5-2):
 | capacitors (2) | nomQ at nomU per bus; neither has a control | equal |
 | regulator taps (3) | low, high, neutral, step (8, 10, 11), increment 0.625 % | equal |
 | DER (5) | S4b's cross-solver note | batteries and ratings equal; PV and the house's connection follow GridLAB-D |
-| transformers | ratings, voltages, connections, core admittance | equal on xf1 and the house center tap |
+| transformers | ratings, voltages, connections, impedance, core admittance | equal on xf1 and the house center tap |
 
 **Expected differences** (asserted as differences, so a change on either side shows):
 1. **Source:** DSS 30 deg with the deck's short-circuit impedance; GLM 0 deg with the stiff default (S1-3).
 2. **Substation transformer:** DSS has three windings (a 13.2 kV tertiary on its internal bus `650z`); the Java
    export wrote two, so GLM has no `650z`.
-3. **Transformer impedance:** not compared. The GLM tanks hold %Z on their `TransformerTankConfiguration` and the core
-   transformer getter reads %Z only from a tank with no template (`BY_TANK_IMPEDANCE`, the GIS form, rc_1
-   `d832796`), not from a `TankConfiguration` (plan section 7, the S3b core row, narrowed: the r/x split and the
-   Hopkinson center tap now exist in core, so only the template lookup is missing). The S3b test already checks the
-   %Z against GridLAB-D's ohms; tier 4 gains the comparison when the getter does.
+3. **Transformer impedance:** closed. The core getter now reads a `TankConfiguration`'s %Z (with the Hopkinson
+   center tap), so GLM's xf1 and house center tap equal the DSS mesh, and the substation's two windings equal
+   DSS's first two; the impedance is compared under `transformers`.
 4. **Regulator controls:** the Java export wrote `Control MANUAL` with `band_center` commented out, so GLM's controls
    are disabled with no target; DSS's regulate at 2440 V, 40 V band, delay 15 s. GLM's line drop is 1/5 of DSS's
    (0.01714 + j0.05143 vs 0.0857 + j0.2571 ohm): the Java export wrote DSS's CT ratio, 3500 = 700 A / 0.2 A,

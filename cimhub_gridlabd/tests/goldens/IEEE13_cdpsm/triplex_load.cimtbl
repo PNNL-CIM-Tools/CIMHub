@@ -5,7 +5,8 @@
 Profile = cim18v17
 
 # p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
-Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+# defaulted: customerCount=1 on each record's first consumer (GLM has no customer count; a record is one service, its 240 V part not counted again)
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
     # scheduled: base_power_1=ieeezipload.value*2941.18, base_power_2=ieeezipload.value*2941.18; the base is mapped, the
     # schedule is not (S4a-2, TODO)
-    ld_ld_house, ld_house, house, s1s2, Y, true, 5000.005999999999, 3098.725410481542, zip_constant_i, bv_240v
+    ld_ld_house, ld_house, house, s1s2, Y, true, 5000.005999999999, 3098.725410481542, 1, zip_constant_i, bv_240v

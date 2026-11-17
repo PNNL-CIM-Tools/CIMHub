@@ -177,13 +177,18 @@ def winding_ratings(model) -> list[tuple]:
     return [(winding.rated_s, winding.rated_u, winding.connection) for winding in model.windings]
 
 
+def impedances(model) -> tuple[list, dict]:
+    return [winding.r for winding in model.windings], {pair: tuple(mesh) for pair, mesh in model.mesh.items()}
+
+
 def test_transformers(dss_glm):
-    """The distribution transformer and the house center tap: ratings, voltages, connections, core. Impedance is
-    expected difference 3."""
+    """The distribution transformer and the house center tap: ratings, voltages, connections, impedance, core. GLM's
+    %Z on the template reads back as the DSS mesh, the center tap by its Hopkinson split (S3b-5)."""
     dss, glm = (by_buses(network, cim.PowerTransformer) for network in dss_glm)
     for key in (("634", "xf1"), ("670", "house")):
         dss_model, glm_model = model_of(dss[key]), model_of(glm[key])
         assert_close(winding_ratings(glm_model), winding_ratings(dss_model), key)
+        assert_close(impedances(glm_model), impedances(dss_model), key)
         assert_close(glm_model.core, dss_model.core, key)
 
 
@@ -207,16 +212,8 @@ def test_2_substation_transformer(dss_glm):
     assert (len(dss_model.windings), len(glm_model.windings)) == (3, 2)
     assert dss_model.windings[2].rated_u == 13_200
     assert_close(winding_ratings(glm_model), winding_ratings(dss_model)[:2], "substation")
-
-
-def test_3_transformer_impedance_is_not_compared(dss_glm):
-    """GLM's %Z is on the TransformerTankConfiguration, which the core getter does not read yet (GLM plan section 7):
-    when it does, this fails, and the impedance joins test_transformers."""
-    glm = dss_glm[1]
-    for transformer in glm.list_by_class(cim.PowerTransformer):
-        model = model_of(transformer)
-        assert model.mesh == {} and all(winding.r is None for winding in model.windings), transformer.mRID
-        assert all(tank.TankConfiguration.percentImpedance is not None for tank in transformer.TransformerTanks)
+    dss_r, dss_mesh = impedances(dss_model)
+    assert_close(impedances(glm_model), (dss_r[:2], {(1, 2): dss_mesh[(1, 2)]}), "substation")
 
 
 def test_4_regulator_controls(dss_glm):

@@ -227,6 +227,12 @@ def units_of(reg, config) -> list[_Unit]:
     return [_Unit("", letters, phases[0])]
 
 
+def unit_mrids(model: GlmModel, reg) -> list[str]:
+    """The mRID of each unit the regulator is written as (``units_of``), in phase order."""
+    config, _ = configuration_of(model, reg)
+    return [mrid(PREFIX, f"{reg.name}{unit.suffix}") for unit in units_of(reg, config)]
+
+
 def _phase_ratings(reg, letter: str) -> dict[str, float]:
     """``{"norm": A, "emerg": A}`` of one phase's own ratings."""
     index = "ABC".index(letter)
@@ -266,7 +272,7 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
                         if part)
     for unit in units_of(reg, config):
         name = f"{reg.name}{unit.suffix}"
-        vr = mrid(PREFIX, name)
+        vr = mrid(PREFIX, name)  # as unit_mrids
         base_u = coil if len(unit.letters) == 1 else line_voltage(coil, System.THREE_PHASE)
         rows.regulators.append(Row([vr, name, CONSTRUCTION[str(config.Type)]], comment=comment))
         for number, node in enumerate((node1, node2), start=1):

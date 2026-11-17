@@ -77,6 +77,9 @@ def assert_gridlabd_loads(model, network) -> int:
         for record in model.list_by_class(load_class.native):
             if type(record) is not load_class.native:
                 continue
+            if load_class is load.TRIPLEX_NODE and all(getattr(record, f"power_{suffix}") is None
+                                                       for suffix in load_class.suffixes):
+                continue  # a plain triplex_node is only a bus
             table = WYE if load_class is load.LOAD else TRIPLEX
             expected: dict[str, dict] = {}
             for suffix, (consumer_suffix, phase) in table.items():
@@ -97,8 +100,9 @@ def assert_gridlabd_loads(model, network) -> int:
                     got = read.per_phase[cim.SinglePhaseKind(phase)]
                     assert (got.p, got.q) == (pytest.approx(power.real, abs=1e-6),
                                               pytest.approx(power.imag, abs=1e-6)), (consumer.mRID, phase)
-            if not expected:
-                assert f"ld_{record.name}" not in consumers
+            if not expected:  # no power: one consumer of p = q = 0
+                read = get_phase_loads(consumers[f"ld_{record.name}"])
+                assert (read.total.p, read.total.q) == (0.0, 0.0), record.name
     return checked
 
 
@@ -125,7 +129,12 @@ def test_atom_binds(scope):
                                                                                          20 / 113.5), abs=1e-6)
     # the 240 V part is a delta consumer across the legs
     assert get_phase_loads(consumers["ld_tn_load_12"]).connection is cim.PhaseShuntConnectionKind.D
-    assert "ld_ld_none" not in consumers
+    # no power on any phase: still a consumer (one service), p = q = 0 on its wired phase
+    none = consumers["ld_ld_none"]
+    assert (float(none.p), float(none.q), none.customerCount) == (0.0, 0.0, 1)
+    assert [child.phase.value for child in none.EnergyConsumerPhase] == ["A"]
+    # each record is one service: its first consumer counts it, a split-phase record's 240 V part does not again
+    assert (consumers["ld_tl_legs"].customerCount, consumers["ld_tl_legs_12"].customerCount) == (1, None)
 
 
 # -- fail fast -------------------------------------------------------------------------------------------------------

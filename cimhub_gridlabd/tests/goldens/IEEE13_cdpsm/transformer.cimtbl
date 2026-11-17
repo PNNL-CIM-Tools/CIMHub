@@ -9,10 +9,10 @@ Table PowerTransformer: mRID, name, EquipmentContainer=fdr_IEEE13_cdpsm
     xf_xf_tpoletop, xf_tpoletop
     xf_xf_xfm1,     xf_xfm1
 
-Table TransformerTank: mRID, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_IEEE13_cdpsm
-    xf_xf_sub3_tank,     xf_xf_sub3,     xc_xcon_sub3
-    xf_xf_tpoletop_tank, xf_xf_tpoletop, xc_xcon_ct5B
-    xf_xf_xfm1_tank,     xf_xf_xfm1,     xc_xcon_xfm1
+Table TransformerTank: mRID, name, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_IEEE13_cdpsm
+    xf_xf_sub3_tank,     , xf_xf_sub3,     xc_xcon_sub3
+    xf_xf_tpoletop_tank, , xf_xf_tpoletop, xc_xcon_ct5B
+    xf_xf_xfm1_tank,     , xf_xf_xfm1,     xc_xcon_xfm1
 
 Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
     xf_xf_sub3_1,     xf_xf_sub3,     sourcebus, ABC,   1, D,  false, bv_115kv

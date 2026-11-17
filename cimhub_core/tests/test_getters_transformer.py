@@ -468,12 +468,96 @@ def test_transformer_with_tanks_raises():
         get_transformer_model(_get(network, cim.PowerTransformer, "xf_t1"))
 
 
-def test_template_bank_raises():
+def test_template_bank_by_tank_ends_raises():
     network = _shape("transformer_by_template")
     transformer = _get(network, cim.PowerTransformer, "xf_t1")
     transformer.TransformerTanks.append(cim.TransformerTank(mRID="xf_t1_tank_2", PowerTransformer=transformer))
-    with pytest.raises(ValueError, match="a bank of template tanks"):
+    with pytest.raises(ValueError, match="a bank of template tanks says which phases each tank serves only by lugs; "
+                                         "TransformerTank 'xf_t1_tank' has none"):
         get_transformer_model(transformer.TransformerTanks[0])
+
+
+# templates by GLM's %Z (S3b-5): percentImpedance and loadLoss on the configuration, no winding r and no mesh. The
+# shapes' xc_xfm1 is R 1.1 %, X 2 % on 500 kVA (loadLoss 5.5 kW) and xc_ct5 R 1.2 %, X 1.7 % on 5 kVA (60 W), so
+# both read back as their mesh forms, the centre tap by its Hopkinson split.
+def _by_nameplate(network, config_mrid, r, x, kva):
+    config = _get(network, cim.TransformerTankConfiguration, config_mrid)
+    for winding in config.TransformerWinding:
+        winding.r = None
+        winding.FromMeshImpedance.clear()
+    config.percentImpedance = cim.PerCent(math.hypot(r, x))
+    config.loadLoss = cim.ActivePower(r / 100 * kva, "kW")
+    return network
+
+
+@pytest.mark.parametrize(("mrid", "config", "r", "x", "kva", "resistances", "mesh"), [
+    ("xf_t1", "xc_xfm1", 1.1, 2.0, 500, [0.55, 0.55], {(1, 2): (None, 2.0)}),
+    ("xf_t2", "xc_ct5", 1.2, 1.7, 5, [0.6, 1.2, 1.2], CENTER_TAP_MESH),
+])
+def test_template_percent_impedance_is_split_as_a_tank_s(mrid, config, r, x, kva, resistances, mesh):
+    model = _model(_by_nameplate(_shape("transformer_by_template"), config, r, x, kva), mrid)
+    assert model.form in (TransformerForm.BY_TANK_ENDS, TransformerForm.BY_LUGS)
+    assert [w.r for w in model.windings] == pytest.approx(resistances)
+    assert _mesh(model) == mesh
+    assert model.base_power == pytest.approx(kva)
+
+
+def test_template_load_loss_above_its_percent_impedance_raises():
+    network = _by_nameplate(_shape("transformer_by_template"), "xc_xfm1", 1.1, 2.0, 500)
+    _get(network, cim.TransformerTankConfiguration, "xc_xfm1").loadLoss = cim.ActivePower(20, "kW")
+    with pytest.raises(ValueError, match="TransformerTankConfiguration 'xc_xfm1': loadLoss 20000 W is 4 % of 500 kVA, "
+                                         "above its percentImpedance"):
+        _model(network, "xf_t1")
+
+
+# a bank of lugged template cans (GLM's unequal WYE_WYE, S3b-9): each lug names the bank's phase end it lands on,
+# end 1 A B N = 1-3, end 2 = 4-6; can A 50 kVA, can B 25 kVA, both 2 % with 1 % load loss
+LUGGED_BANK = """Profile = cim18v17
+Object PowerTransformer: mRID=xf_lb, name=lb
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, PowerTransformer=xf_lb
+    xf_lb_1, p, ABN, 1, Y,  true
+    xf_lb_2, s, ABN, 2, Yn, true
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_lb_1_A, 1, 1, A, xf_lb_T1
+    xf_lb_1_B, 1, 2, B, xf_lb_T1
+    xf_lb_1_N, 1, 3, N, xf_lb_T1
+    xf_lb_2_A, 2, 4, A, xf_lb_T2
+    xf_lb_2_B, 2, 5, B, xf_lb_T2
+    xf_lb_2_N, 2, 6, N, xf_lb_T2
+Table TransformerTankConfiguration: mRID, name, percentImpedance, loadLoss (W)
+    xc_lb_A, lb_A, 2.0, 500
+    xc_lb_B, lb_B, 2.0, 250
+Table TransformerLug: mRID, designation, sequenceNumber, TankConfiguration
+    xc_lb_A_h1, H1, 1, xc_lb_A
+    xc_lb_A_h2, H2, 3, xc_lb_A
+    xc_lb_A_x1, X1, 4, xc_lb_A
+    xc_lb_A_x2, X2, 6, xc_lb_A
+    xc_lb_B_h1, H1, 2, xc_lb_B
+    xc_lb_B_h2, H2, 3, xc_lb_B
+    xc_lb_B_x1, X1, 5, xc_lb_B
+    xc_lb_B_x2, X2, 6, xc_lb_B
+Table TransformerWinding: mRID, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerLug, ToTransformerLug, TankConfiguration
+    xc_lb_A_wdg_1, 12470, 7199.558, 50, 50, xc_lb_A_h1, xc_lb_A_h2, xc_lb_A
+    xc_lb_A_wdg_2, 208,   120.089,  50, 50, xc_lb_A_x1, xc_lb_A_x2, xc_lb_A
+    xc_lb_B_wdg_1, 12470, 7199.558, 25, 25, xc_lb_B_h1, xc_lb_B_h2, xc_lb_B
+    xc_lb_B_wdg_2, 208,   120.089,  25, 25, xc_lb_B_x1, xc_lb_B_x2, xc_lb_B
+Table TransformerTank: mRID, PowerTransformer, TankConfiguration
+    xf_lb_tank_A, xf_lb, xc_lb_A
+    xf_lb_tank_B, xf_lb, xc_lb_B
+"""
+
+
+@pytest.mark.parametrize(("mrid", "phase", "kva"), [("xf_lb_tank_A", A, 50), ("xf_lb_tank_B", B, 25)])
+def test_lugged_template_bank_can_serves_its_lugs_phase(mrid, phase, kva, tmp_path):
+    path = tmp_path / "bank.cimtbl"
+    path.write_text(LUGGED_BANK)
+    model = _can(load_model(path), mrid)
+    assert model.form is TransformerForm.BY_LUGS
+    assert [w.phases for w in model.windings] == [(phase, N), (phase, N)]
+    assert [w.end.mRID for w in model.windings] == ["xf_lb_1", "xf_lb_2"]
+    assert [w.r for w in model.windings] == pytest.approx([0.5, 0.5])
+    assert _mesh(model) == {(1, 2): (None, math.sqrt(3))}
+    assert model.base_power == pytest.approx(kva)
 
 
 def test_own_windings_and_a_configuration_raise():

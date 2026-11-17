@@ -17,7 +17,11 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   is the instance's, so the instance's kind wins. A coil's phases are its instance end's ``TransformerPhaseEnd``s in
   ``sequenceNumber`` order when it has them (a 1-phase coil's direction), else the end's terminal phases.
 - BY_LUGS: the configuration's windings run lug to lug, and a lug's ``sequenceNumber`` names the instance
-  ``TransformerPhaseEnd`` it lands on (a centre tap).
+  ``TransformerPhaseEnd`` it lands on (a centre tap). A bank of template tanks is lugged, every can: the lugs say
+  which of the bank's phase ends each can serves.
+- Either template form may hold its impedance as the configuration's ``percentImpedance`` and ``loadLoss`` instead
+  of winding ``r`` and a mesh (GLM's %Z): read as BY_TANK_IMPEDANCE's below, on winding 1's ``ratedS``, when no
+  winding has an ``r`` or a mesh (with one, the percentImpedance beside it is the nameplate's figure, not read).
 - BY_TANK_IMPEDANCE: two ``PowerTransformerEnd``s and one tank with ``percentImpedance`` (and ``loadLoss``), nothing
   else: a GIS's nameplate kVA and %Z. |z| is on end 1's ``ratedS``, r = loadLoss / ratedS (0 unset), x = √(z² − r²).
   An end on s1s2N with connectionKind I is a centre tap: two halves, s1→N and N→s2, each at half the end's ``ratedU``
@@ -61,6 +65,7 @@ class TransformerForm(Enum):
 
 
 END_FORMS = (TransformerForm.BY_ENDS, TransformerForm.AUTO)
+TEMPLATE_FORMS = (TransformerForm.BY_TANK_ENDS, TransformerForm.BY_LUGS)
 #: BY_TANK_IMPEDANCE: each winding's share of the can's r, and each mesh pair's share of its x. A centre tap is split
 #: by Hopkinson's rule for an interlaced secondary (H - X1X2 = H - X2X3 = 1.5R + j1.2X, X1X2 - X2X3 = 2R + j0.8X).
 TWO_WINDING_SPLIT = ((0.5, 0.5), {(1, 2): 1.0})
@@ -176,11 +181,14 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=N
         value = get_qty(holder, attribute, "percent")
         return None if value is None else value * stored_va(holder) / result_va * factor
 
-    windings = []
-    for number, coil in enumerate(coils, start=1):
-        r = impedance(coil.source, "r", coil.source) if _has(coil.source, "r") else None  # an AutoTransformerEnd has none
-        windings.append(_winding(number, coil, r, voltage_unit, power_unit))
-    mesh = _mesh(unit, coils, impedance)
+    if form in TEMPLATE_FORMS and _by_nameplate(unit.TankConfiguration, coils):
+        resistances, mesh = _template_nameplate(unit.TankConfiguration, coils, first_va, result_va / first_va * factor)
+    else:
+        # an AutoTransformerEnd has no r
+        resistances = [impedance(coil.source, "r", coil.source) if _has(coil.source, "r") else None for coil in coils]
+        mesh = _mesh(unit, coils, impedance)
+    windings = [_winding(number, coil, r, voltage_unit, power_unit)
+                for number, (coil, r) in enumerate(zip(coils, resistances, strict=True), start=1)]
     if form is TransformerForm.BY_ENDS:
         core = _end_core(unit, coils, admittance)
     elif form is TransformerForm.AUTO:
@@ -217,15 +225,23 @@ def _form(unit) -> TransformerForm:
         return TransformerForm.BY_TANK_IMPEDANCE
     if unit.TransformerWindings:
         raise ValueError(f"{describe(unit)}: has its own TransformerWindings and a TankConfiguration")
-    if len(unit.PowerTransformer.TransformerTanks) > 1:
-        raise ValueError(f"{describe(unit.PowerTransformer)}: a bank of template tanks does not say which phases "
-                         f"each tank serves (open until a multi-can form is settled)")
     if not config.TransformerWinding:
         raise ValueError(f"{describe(config)}: has no TransformerWinding")
     lugged = {winding.FromTransformerLug is not None for winding in config.TransformerWinding}
     if lugged == {True, False}:
         raise ValueError(f"{describe(config)}: some windings run between lugs and some from a TransformerTankEnd")
+    tanks = unit.PowerTransformer.TransformerTanks
+    if len(tanks) > 1 and not all(_lugged_template(tank) for tank in tanks):
+        raise ValueError(f"{describe(unit.PowerTransformer)}: a bank of template tanks says which phases each tank "
+                         f"serves only by lugs; {describe(next(t for t in tanks if not _lugged_template(t)))} has none")
     return TransformerForm.BY_LUGS if lugged == {True} else TransformerForm.BY_TANK_ENDS
+
+
+def _lugged_template(tank: cim.TransformerTank) -> bool:
+    """A tank by template whose every winding runs between lugs, which name the instance phase ends it lands on."""
+    config = tank.TankConfiguration
+    return (config is not None and bool(config.TransformerWinding)
+            and all(winding.FromTransformerLug is not None for winding in config.TransformerWinding))
 
 
 def _tank_impedance_model(tank: cim.TransformerTank, impedance_unit: str, base_power, voltage_unit: str,
@@ -242,29 +258,56 @@ def _tank_impedance_model(tank: cim.TransformerTank, impedance_unit: str, base_p
             raise ValueError(f"{describe(end)}: {held or 'a TransformerMeshImpedance'} beside {describe(tank)}'s "
                              f"percentImpedance; one value would have two homes")
     first_va = _can_va(tank, tanks, ends[0])
-    z = get_qty(tank, "percentImpedance", "percent")
-    loss = get_qty(tank, "loadLoss", "W")
-    r = 0.0 if loss is None else loss / first_va * 100
-    if r > z:
-        raise ValueError(f"{describe(tank)}: loadLoss {loss:g} W is {r:.4g} % of {first_va / 1000:g} kVA, above its "
-                         f"percentImpedance {z:g} %")
-    x = math.sqrt(z ** 2 - r ** 2)
     result_va = first_va if base_power is None else base_power.to("VA")
     factor = IMPEDANCE_UNITS[impedance_unit]
-    scale = result_va / first_va * factor
     if len(tanks) == 1:
         windings = [winding for end in ends for winding in _end_windings(end, voltage_unit, power_unit)]
     else:
         position = next(index for index, other in enumerate(tanks) if other is tank)
         windings = _bank_windings(position, len(tanks), ends, get_qty(tank, "baseS", power_unit), voltage_unit,
                                   power_unit)
-    r_shares, x_shares = CENTER_TAP_SPLIT if len(windings) == 3 else TWO_WINDING_SPLIT
-    windings = tuple(winding._replace(number=number, r=share * r * scale)
-                     for number, (winding, share) in enumerate(zip(windings, r_shares, strict=True), start=1))
-    mesh = {pair: MeshImpedance(None, share * x * scale) for pair, share in x_shares.items()}
+    resistances, mesh = _nameplate_split(tank, first_va, len(windings) == 3, result_va / first_va * factor)
+    windings = tuple(winding._replace(number=number, r=r)
+                     for number, (winding, r) in enumerate(zip(windings, resistances, strict=True), start=1))
     base = windings[0].rated_s if base_power is None else base_power.to(power_unit)
     return TransformerModel(TransformerForm.BY_TANK_IMPEDANCE, windings, mesh,
                             _tank_core(tank, first_va, result_va, factor), base)
+
+
+def _nameplate_split(holder, first_va: float, center_tap: bool,
+                     scale: float) -> tuple[list[float], dict[tuple[int, int], MeshImpedance]]:
+    """Each winding's r and the mesh x from ``holder``'s nameplate (a tank or its TankConfiguration): |z| is
+    ``percentImpedance`` on ``first_va``, r = loadLoss / first_va (0 unset), x = √(z² − r²), split over two windings
+    or a centre tap's three (``TWO_WINDING_SPLIT``, ``CENTER_TAP_SPLIT``), then times ``scale``."""
+    z = get_qty(holder, "percentImpedance", "percent")
+    loss = get_qty(holder, "loadLoss", "W")
+    r = 0.0 if loss is None else loss / first_va * 100
+    if r > z:
+        raise ValueError(f"{describe(holder)}: loadLoss {loss:g} W is {r:.4g} % of {first_va / 1000:g} kVA, above "
+                         f"its percentImpedance {z:g} %")
+    x = math.sqrt(z ** 2 - r ** 2)
+    r_shares, x_shares = CENTER_TAP_SPLIT if center_tap else TWO_WINDING_SPLIT
+    return ([share * r * scale for share in r_shares],
+            {pair: MeshImpedance(None, share * x * scale) for pair, share in x_shares.items()})
+
+
+def _by_nameplate(config: cim.TransformerTankConfiguration, coils: list[_Coil]) -> bool:
+    """The template's impedance is its ``percentImpedance`` (GLM's %Z, S3b-5) when no winding holds an r or a
+    TransformerMeshImpedance. Where one does, that is the impedance, and a percentImpedance beside it is the
+    nameplate's figure, not read (the CIMTBL-Models templates carry both)."""
+    series = any(coil.source.r is not None or coil.source.FromMeshImpedance for coil in coils)
+    return config.percentImpedance is not None and not series
+
+
+def _template_nameplate(config, coils: list[_Coil], first_va: float,
+                        scale: float) -> tuple[list[float], dict[tuple[int, int], MeshImpedance]]:
+    """A TankConfiguration's percentImpedance and loadLoss as each winding's r and the mesh, by ``_nameplate_split``:
+    two windings, or a centre tap's (its windings 2 and 3 s1→N and N→s2)."""
+    center_tap = len(coils) == 3 and tuple(coil.phases for coil in coils[1:]) == CENTER_TAP_HALVES
+    if len(coils) != 2 and not center_tap:
+        raise ValueError(f"{describe(config)}: percentImpedance on {len(coils)} windings; it is between two, or over "
+                         f"a centre tap's three")
+    return _nameplate_split(config, first_va, center_tap, scale)
 
 
 def _can_va(tank: cim.TransformerTank, tanks: list, first: cim.PowerTransformerEnd) -> float:

@@ -830,6 +830,8 @@ A winding's `phases` in their order (a coil From → To). `bus_ref` gains the ne
   Probe: Rneut on `.1.2.3` is shorted by the neutral on node 0 (the same as solid). Two windings with a neutral
   impedance raise: the record has one `wdg`.
 - **A delta:** `.1.2.3`.
+- **A 2-phase wye** (every winding on the same two phases and N): as a 3-phase wye on its two phase
+  conductors (`p.2.3`, `.2.3.4` ungrounded), DSS `phases=2`.
 - **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`) when grounded. An ungrounded
   coil neutral is `.4`, as T6 (`head.1.4`): a bank's cans on one bus share that floating node, the wye primary of a
   floating-wye / delta bank. The engine's default antifloat (1 ppm) is enough for it to solve. A coil neutral
@@ -840,7 +842,9 @@ A winding's `phases` in their order (a coil From → To). `bus_ref` gains the ne
 
 One per `TransformerTankConfiguration` that a unit uses. Its values come from the model of the first unit that uses
 it, so they follow the same rules as an inline Transformer:
-- `phases`: 3 when winding 1 has three phase conductors, else 1;
+- `phases`: the polyphase unit's phase conductors, 3 (ABC) or 2 (a 2-phase wye: every winding on the same two
+  phases and N, GLM's `WYE_WYE` on two phases, whose per-phase base (kV/√3)² / (kVA/2) is the coil's), else 1 (a
+  coil); anything else raises;
 - `windings`, `conns`, `kVs`, `kVAs` and `%Rs`;
 - `Xhl`, `Xht` and `Xlt`;
 - `%imag` and `%noloadloss`;

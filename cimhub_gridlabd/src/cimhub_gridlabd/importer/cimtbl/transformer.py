@@ -119,10 +119,11 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str], buses: dict[str, Bu
     _check_systems(xf, config, wiring, node1, node2, buses)
     rows.transformers.append(Row([xf_mrid, str(xf.name)], comment=untranscribed_values(FIELDS, xf)))
     if templates.is_bank(config, wiring):
-        rows.tanks += [Row([f"{xf_mrid}_tank_{letter}", xf_mrid, templates.tank_name(config, letter)])
-                       for letter in wiring.letters]
-    else:
-        rows.tanks.append(Row([f"{xf_mrid}_tank", xf_mrid, templates.tank_name(config)]))
+        # a bank's cans are named <transformer>_<phase>: each is a unit of its own (one DSS Transformer per can)
+        rows.tanks += [Row([f"{xf_mrid}_tank_{letter}", f"{xf.name}_{letter}", xf_mrid,
+                            templates.tank_name(config, letter)]) for letter in wiring.letters]
+    else:  # one tank goes by its transformer's name
+        rows.tanks.append(Row([f"{xf_mrid}_tank", None, xf_mrid, templates.tank_name(config)]))
     for number, (node, phases, (kind, grounded)) in enumerate(
             zip((node1, node2), end_phases(xf, config), _KINDS[str(config.connect_type)]), start=1):
         rows.ends.append(Row([f"{xf_mrid}_{number}", xf_mrid, node, phases, str(number), kind, cell(grounded),
@@ -143,8 +144,9 @@ def map_transformers(model: GlmModel, roots: dict[str, str], buses: dict[str, Bu
     statements = [
         Table("PowerTransformer", [Column("mRID"), Column("name"), Column("EquipmentContainer", default=feeder)],
               rows.transformers),
-        Table("TransformerTank", [Column("mRID"), Column("PowerTransformer"), Column("TankConfiguration"),
-                                  Column("EquipmentContainer", default=feeder)], rows.tanks),
+        Table("TransformerTank", [Column("mRID"), Column("name"), Column("PowerTransformer"),
+                                  Column("TankConfiguration"), Column("EquipmentContainer", default=feeder)],
+              rows.tanks),
         Table("PowerTransformerEnd", [Column("mRID"), Column("PowerTransformer"), Column("node"), Column("phases"),
                                       Column("endNumber"), Column("connectionKind"), Column("grounded"),
                                       Column("BaseVoltage")], rows.ends),

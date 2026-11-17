@@ -16,20 +16,20 @@ Table PowerTransformer: mRID, name, EquipmentContainer=fdr_xfmr
     xf_xf_unrated,  xf_unrated
     xf_xf_xfm1,     xf_xfm1
 
-Table TransformerTank: mRID, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_xfmr
-    xf_xf_bank2_tank_A,  xf_xf_bank2,    xc_xc_bank2_A
-    xf_xf_bank2_tank_C,  xf_xf_bank2,    xc_xc_bank2_C
-    xf_xf_bank3_tank_A,  xf_xf_bank3,    xc_xc_bank3_A
-    xf_xf_bank3_tank_B,  xf_xf_bank3,    xc_xc_bank3_B
-    xf_xf_bank3_tank_C,  xf_xf_bank3,    xc_xc_bank3_C
-    xf_xf_can_tank,      xf_xf_can,      xc_transformer_configuration:1
-    xf_xf_ct_tank,       xf_xf_ct,       xc_xc_ct
-    xf_xf_ct_shunt_tank, xf_xf_ct_shunt, xc_transformer_configuration:3
-    xf_xf_dd_tank,       xf_xf_dd,       xc_xc_dd
-    xf_xf_dg_tank,       xf_xf_dg,       xc_xc_dg
-    xf_xf_tpoletop_tank, xf_xf_tpoletop, xc_xcon_ct5B
-    xf_xf_unrated_tank,  xf_xf_unrated,  xc_xc_unrated
-    xf_xf_xfm1_tank,     xf_xf_xfm1,     xc_xcon_xfm1
+Table TransformerTank: mRID, name, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_xfmr
+    xf_xf_bank2_tank_A,  xf_bank2_A, xf_xf_bank2,    xc_xc_bank2_A
+    xf_xf_bank2_tank_C,  xf_bank2_C, xf_xf_bank2,    xc_xc_bank2_C
+    xf_xf_bank3_tank_A,  xf_bank3_A, xf_xf_bank3,    xc_xc_bank3_A
+    xf_xf_bank3_tank_B,  xf_bank3_B, xf_xf_bank3,    xc_xc_bank3_B
+    xf_xf_bank3_tank_C,  xf_bank3_C, xf_xf_bank3,    xc_xc_bank3_C
+    xf_xf_can_tank,      ,           xf_xf_can,      xc_transformer_configuration:1
+    xf_xf_ct_tank,       ,           xf_xf_ct,       xc_xc_ct
+    xf_xf_ct_shunt_tank, ,           xf_xf_ct_shunt, xc_transformer_configuration:3
+    xf_xf_dd_tank,       ,           xf_xf_dd,       xc_xc_dd
+    xf_xf_dg_tank,       ,           xf_xf_dg,       xc_xc_dg
+    xf_xf_tpoletop_tank, ,           xf_xf_tpoletop, xc_xcon_ct5B
+    xf_xf_unrated_tank,  ,           xf_xf_unrated,  xc_xc_unrated
+    xf_xf_xfm1_tank,     ,           xf_xf_xfm1,     xc_xcon_xfm1
 
 Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
     xf_xf_bank2_1,    xf_xf_bank2,    n4,        ACN,   1, Yn, true,  bv_4p16kv

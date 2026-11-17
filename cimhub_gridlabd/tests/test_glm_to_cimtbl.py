@@ -2,6 +2,7 @@
 test_cimtbl_sweep.py's)."""
 from __future__ import annotations
 
+import cimprofiles.cim18.cim18v17 as cim
 import pytest
 
 from cimhub_gridlabd.glm_reader import GlmReader
@@ -49,3 +50,27 @@ object recorder { name r; }
     master = GlmImporter("m").to_cimtbl(model).master
     assert "not mapped: diesel_dg 1, recorder 1" in master.comment  # substation is mapped (S1); diesel_dg is not
 
+
+
+HEADS = """
+object substation { name src; bustype SWING; phases ABCN; nominal_voltage 7200; }
+object node { name n1; phases ABCN; nominal_voltage 7200; }
+object node { name n2; phases ABCN; nominal_voltage 7200; }
+object recloser { name rc1; phases ABCN; from src; to n1; status CLOSED; }
+object switch { name sw2; phases ABCN; from n2; to src; status CLOSED; }
+"""
+
+
+def test_feeder_head_is_each_link_s_terminal_on_the_swing_bus(tmp_path, scope):
+    """rc1 leaves src from its terminal 1 (from), sw2 from its terminal 2 (to)."""
+    network = glm_to_cimtbl.glm_to_cim(read(tmp_path, HEADS), name="m")
+    [feeder] = network.list_by_class(cim.Feeder)
+    assert sorted(terminal.mRID for terminal in feeder.NormalHeadTerminal) == ["sw_rc1_T1", "sw_sw2_T2"]
+
+
+def test_containers_are_named_apart_from_the_model(tmp_path, scope):
+    documents = GlmImporter("utility_code", substation="s9", feeder="f1").to_cimtbl(read(tmp_path, HEADS))
+    network = glm_to_cimtbl.glm_to_cim(read(tmp_path, HEADS), name="utility_code", substation="s9", feeder="f1")
+    [substation], [feeder] = network.list_by_class(cim.Substation), network.list_by_class(cim.Feeder)
+    assert (substation.mRID, substation.name, feeder.mRID, feeder.name) == ("sub_s9", "s9", "fdr_f1", "f1")
+    assert (documents.master.name, documents.master.model) == ("utility_code", "utility_code")

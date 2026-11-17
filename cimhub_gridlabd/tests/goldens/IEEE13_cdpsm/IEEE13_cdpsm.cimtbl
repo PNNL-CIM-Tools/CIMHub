@@ -51,3 +51,7 @@ Import triplex_load.cimtbl
 Import capacitor.cimtbl
 
 Import inverter.cimtbl
+
+# the feeder head: each link's Terminal on a swing bus (Feeder.NormalHeadTerminal)
+Update Table Terminal: mRID, NormalHeadFeeder
+    xf_xf_sub3_T1, fdr_IEEE13_cdpsm

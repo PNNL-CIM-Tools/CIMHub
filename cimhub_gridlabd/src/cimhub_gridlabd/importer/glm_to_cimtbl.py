@@ -28,7 +28,7 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, regulator,
                                             spacing, switch, transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
-from cimhub_gridlabd.importer.topology import bus_roots, glm_network
+from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, swing_buses
 from cimhub_gridlabd.schema import gridlabd as schema
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -40,13 +40,15 @@ DEFAULT_FREQUENCY_HZ = 60.0
 
 class Site(NamedTuple):
     """What every mapper shares: the walk's bus systems, each bus object's root bus (GLM-4), the container mRIDs
-    and the base frequency (Hz)."""
+    and names, and the base frequency (Hz)."""
     name: str
     buses: dict[str, BusSystem]
     roots: dict[str, str]
     substation: str
     feeder: str
     base_frequency: float
+    substation_name: str
+    feeder_name: str
 
 
 #: ``(native class, mapper(model, site))`` in ``Import`` order, after ``bus`` and ``source``. Each slice adds its
@@ -73,6 +75,12 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     (schema.Inverter, lambda model, site: inverter.map_inverters(model, site.roots, site.buses, site.feeder)),
 )
 
+#: Each mapped link class's mRID prefix (a regulator: ``regulator.unit_mrids``). Every link mapper puts its ``from``
+#: on terminal 1 and ``to`` on terminal 2.
+LINK_PREFIXES: dict[type, str] = {**{native_class: line.PREFIX for native_class, _, _ in line.LINES},
+                                  **{native_class: switch.PREFIX for native_class, _, _ in switch.SWITCHES},
+                                  schema.Transformer: transformer.PREFIX}
+
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
 CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, schema.LineSpacing: spacing.FIELDS,
                                             **configuration.FIELDS, **line.FIELDS, **switch.FIELDS,
@@ -94,10 +102,12 @@ def base_frequency(model: GlmModel) -> tuple[float, bool]:
     return float(given), False
 
 
-def site(model: GlmModel, name: str) -> Site:
-    """Walk the model's topology and name its containers."""
-    return Site(name, walk(glm_network(model)), bus_roots(model), mrid("sub_", name), mrid("fdr_", name),
-                base_frequency(model)[0])
+def site(model: GlmModel, name: str, *, substation: str | None = None, feeder: str | None = None) -> Site:
+    """Walk the model's topology and name its containers: ``substation`` and ``feeder``, each ``name`` unless given."""
+    substation = name if substation is None else substation
+    feeder = name if feeder is None else feeder
+    return Site(name, walk(glm_network(model)), bus_roots(model), mrid("sub_", substation), mrid("fdr_", feeder),
+                base_frequency(model)[0], substation, feeder)
 
 
 def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],
@@ -113,6 +123,39 @@ def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],
             origin = model.origins[name]
             raise ValueError(f"{record.class_name} {name} ({origin[0]}:{origin[1]}): {slot} is the expression "
                              f"{text!r}, which no mapper reads yet (GLM-8)")
+
+
+def feeder_heads(model: GlmModel, roots: dict[str, str]) -> list[str]:
+    """``Feeder.NormalHeadTerminal``: the Terminal on a swing bus of every link that touches one, ``<mRID>_T1`` for
+    its ``from`` and ``_T2`` for its ``to`` (the loader's Terminal names). A head on a link no mapper writes (a
+    sectionalizer, a series reactor) raises: its Terminal would not exist."""
+    swings = {str(record.name) for record in swing_buses(model)}
+    heads = []
+    for native_class in (*BRANCH_CLASSES, schema.Transformer):
+        for link in model.list_by_class(native_class):
+            for number, slot in enumerate(("from_node", "to"), start=1):
+                if roots[getattr(link, slot)] not in swings:
+                    continue
+                heads += [f"{equipment}_T{number}" for equipment in _link_mrids(model, link)]
+    return sorted(heads)
+
+
+def _link_mrids(model: GlmModel, link) -> list[str]:
+    """The equipment a link is written as: one, or a regulator's units."""
+    if isinstance(link, schema.Regulator):
+        return regulator.unit_mrids(model, link)
+    if type(link) not in LINK_PREFIXES:
+        raise ValueError(f"{link.class_name} {link.name}: the feeder head, but no mapper writes a {link.class_name}")
+    return [mrid(LINK_PREFIXES[type(link)], link.name)]
+
+
+def _feeder_head(model: GlmModel, site: Site) -> list[Table]:
+    """The head Terminals, set once every part has written its Terminals (after the Imports)."""
+    rows = [Row([terminal, site.feeder]) for terminal in feeder_heads(model, site.roots)]
+    if not rows:
+        return []
+    return [Table("Terminal", [Column("mRID"), Column("NormalHeadFeeder")], rows, update=True,
+                  comment="the feeder head: each link's Terminal on a swing bus (Feeder.NormalHeadTerminal)")]
 
 
 def _base_voltages(buses: dict[str, BusSystem]) -> Table:
@@ -145,31 +188,37 @@ def map_master(model: GlmModel, parts: list[Document], site: Site, *, authority:
         comment += "\n" + textwrap.fill("not mapped: " + ", ".join(f"{name} {count}" for name, count in counts),
                                        width=116, break_long_words=False)
     common = [
-        ObjectStatement("Substation", [(Column("mRID"), site.substation), (Column("name"), site.name)]),
-        ObjectStatement("Feeder", [(Column("mRID"), site.feeder), (Column("name"), site.name),
+        ObjectStatement("Substation", [(Column("mRID"), site.substation), (Column("name"), site.substation_name)]),
+        ObjectStatement("Feeder", [(Column("mRID"), site.feeder), (Column("name"), site.feeder_name),
                                    (Column("NormalEnergizingSubstation"), site.substation)]),
         _base_frequency(model),
         _base_voltages(site.buses),
         limit_types(),
     ]
-    return Document(name=site.name, statements=[*common, *(Import(part.name) for part in parts)],
+    statements = [*common, *(Import(part.name) for part in parts), *_feeder_head(model, site)]
+    return Document(name=site.name, statements=statements,
                     profile=CIM_PROFILE, authority=authority, model=site.name, comment=comment)
 
 
 class GlmImporter(CimtblImporter):
     """A GLM model to ``.cimtbl`` documents: the master and one document per mapped GLM class.
 
-    ``name`` is the master's ``Model`` and file stem (the model's name, e.g. ``IEEE13_cdpsm``).
+    ``name`` is the master's ``Model`` and file stem (the model's name, e.g. ``IEEE13_cdpsm``). ``substation`` and
+    ``feeder`` name the containers (``sub_<substation>``, ``fdr_<feeder>``), each ``name`` unless given, so a model's
+    scope and its container keys can differ (a utility code over a feeder's own key).
     """
 
-    def __init__(self, name: str, *, authority: str = AUTHORITY):
+    def __init__(self, name: str, *, authority: str = AUTHORITY, substation: str | None = None,
+                 feeder: str | None = None):
         self.name = name
         self.authority = authority
+        self.substation = substation
+        self.feeder = feeder
 
     def to_cimtbl(self, model: GlmModel) -> DocumentSet:
         check_expressions(model, CLASSIFIED, load.EXPRESSION_SLOTS)
         bus.check_bus_loads(model, CLASSIFIED)
-        walked = site(model, self.name)
+        walked = site(model, self.name, substation=self.substation, feeder=self.feeder)
         documents = [bus.map_buses(model, walked.buses, walked.roots, walked.feeder),
                      bus.map_source(model, walked.buses, walked.substation), zip_fractions(),
                      *(mapper(model, walked) for _, mapper in MAPPING_ORDER)]
@@ -177,6 +226,8 @@ class GlmImporter(CimtblImporter):
         return DocumentSet(master=map_master(model, parts, walked, authority=self.authority), parts=parts)
 
 
-def glm_to_cim(model: GlmModel, *, name: str, authority: str = AUTHORITY, network=None, artifact_dir=None):
+def glm_to_cim(model: GlmModel, *, name: str, authority: str = AUTHORITY, substation: str | None = None,
+               feeder: str | None = None, network=None, artifact_dir=None):
     """A GLM model (``GlmReader(path).read_all()``) as a cim18v17 network, built from its written artifacts."""
-    return GlmImporter(name, authority=authority).to_cim(model, network=network, artifact_dir=artifact_dir)
+    importer = GlmImporter(name, authority=authority, substation=substation, feeder=feeder)
+    return importer.to_cim(model, network=network, artifact_dir=artifact_dir)
