@@ -12,6 +12,7 @@ from __future__ import annotations
 import cimprofiles.cim18.cim18v17 as cim
 from cimtables.graph_write import get_qty
 
+from cimhub_core.export_slots import Slot
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.current_limits import get_current_limits
 from cimhub_core.getters.earth import get_earth_resistivity, get_network_earth
@@ -22,7 +23,6 @@ from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.linecode import linecode_name, sequence_slots
 from cimhub_opendss.exporter.linegeometry import (geometry_name, is_spacing_line, line_offset, spacing_geometry_name,
                                                   spacing_geometry_owners)
-from cimhub_opendss.exporter.slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.ACLineSegment,)
