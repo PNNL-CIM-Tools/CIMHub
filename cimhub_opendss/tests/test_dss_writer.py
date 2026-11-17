@@ -108,7 +108,7 @@ def test_per_class_deck_reads_back_the_same_and_solves_the_same(relative, tmp_pa
     written = tmp_path / "master.dss"
     DssWriter().write(original, written, per_class=True)
     assert _records(DssReader(written).read_all()) == _records(original)
-    assert_same_engine_state(source, written)
+    assert_same_engine_state(source, written, exported=False)
 
 
 def test_per_class_layout(tmp_path):

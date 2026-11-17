@@ -110,3 +110,32 @@ def test_bank_cans_are_one_transformer_each_in_tank_order():
     assert (power.buses, power.kVs, power.kVAs) == (["head.2.0", "bank7.2.3"], pytest.approx([12.47 / math.sqrt(3),
                                                                                                0.24]), [50.0] * 2)
     assert {record.name for record in model.list_by_class(schema.Transformer)} >= {"xf_6_a", "xf_6_b", "xf_6_c"}
+
+
+def _bank6_primary(grounded):
+    network = load_model(ATOM)
+    end = next(end for end in network.graph[cim.PowerTransformerEnd].values() if end.mRID == "xf_6_1")
+    end.grounded = grounded
+    return network
+
+
+def test_floating_wye_bank_shares_a_neutral_on_node_4_and_solves(tmp_path):
+    """T6 on the coil path: bank 6's wye primary ungrounded, its three cans' neutrals on head.4, which floats; the
+    engine's default antifloat solves it, and the delta's voltages stay those of the grounded bank."""
+    network = _bank6_primary(False)
+    model = DssExporter().to_model(network, name_source="mrid")
+    assert [_transformer(model, f"xf_6_{can}").buses[0] for can in "abc"] == ["head.1.4", "head.2.4", "head.3.4"]
+    written = tmp_path / "substation.dss"
+    cim_to_dss(network, written, name_source="mrid")
+    compile_deck(written)
+    dss.Text.Command("Solve")
+    assert dss.Solution.Converged()
+    dss.Circuit.SetActiveBus("bank6")
+    assert dss.Bus.VMagAngle()[::2] == pytest.approx([119.5, 119.5, 206.6], abs=0.5)
+    dss.Circuit.SetActiveBus("head")
+    assert dss.Bus.Nodes()[-1] == 4 and dss.Bus.VMagAngle()[-2] < 0.01 * 12470 / math.sqrt(3)
+
+
+def test_coil_neutral_with_grounded_unset_raises():
+    with pytest.raises(ValueError, match="a coil neutral with grounded unset"):
+        DssExporter().to_model(_bank6_primary(None), name_source="mrid")

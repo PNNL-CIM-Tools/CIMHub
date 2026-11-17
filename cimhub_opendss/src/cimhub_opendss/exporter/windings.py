@@ -26,7 +26,8 @@ NAMESPACE = "Transformer"
 TEMPLATE_FORMS = (TransformerForm.BY_TANK_ENDS, TransformerForm.BY_LUGS)
 PHASE, N = cim.SinglePhaseKind, cim.SinglePhaseKind.N
 THREE_PHASES = (PHASE.A, PHASE.B, PHASE.C)
-#: T6: a wye neutral that is not solidly grounded goes on its own node (on node 0 an Rneut would be shorted)
+#: T6: a wye neutral that is not solidly grounded goes on its own node (on node 0 an Rneut would be shorted); an
+#: ungrounded coil neutral too, so a bank's cans share one floating neutral on the bus
 NEUTRAL_NODE = 4
 COIL_NEUTRAL_NODE = 0
 CONNECTION = {cim.WindingConnection.D: "delta", cim.WindingConnection.Y: "wye", cim.WindingConnection.Yn: "wye",
@@ -221,9 +222,10 @@ def _bus(unit_model: UnitModel, winding: Winding, names: Names) -> str:
         raise ValueError(f"{describe(winding.end)}: has no Terminal on a ConnectivityNode")
     node = terminal.ConnectivityNode
     if not unit_model.three_phase:
-        if N in winding.phases and winding.grounded is not True:
-            raise ValueError(f"{describe(winding.end)}: an ungrounded coil neutral is not mapped")
-        return bus_ref(node, winding.phases, names, neutral=COIL_NEUTRAL_NODE)
+        if N in winding.phases and winding.grounded is None:
+            raise ValueError(f"{describe(winding.end)}: a coil neutral with grounded unset")
+        neutral = COIL_NEUTRAL_NODE if winding.grounded else NEUTRAL_NODE  # T6: a floating neutral on its own node
+        return bus_ref(node, winding.phases, names, neutral=neutral)
     wye = _connection(unit_model.unit, winding, unit_model.model.form is TransformerForm.AUTO) == "wye"
     if not wye:
         if N in winding.phases:

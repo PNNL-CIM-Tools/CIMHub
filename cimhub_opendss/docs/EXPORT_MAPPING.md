@@ -830,8 +830,11 @@ A winding's `phases` in their order (a coil From → To). `bus_ref` gains the ne
   Probe: Rneut on `.1.2.3` is shorted by the neutral on node 0 (the same as solid). Two windings with a neutral
   impedance raise: the record has one `wdg`.
 - **A delta:** `.1.2.3`.
-- **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`). An ungrounded coil neutral
-  raises.
+- **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`) when grounded. An ungrounded
+  coil neutral is `.4`, as T6 (`head.1.4`): a bank's cans on one bus share that floating node, the wye primary of a
+  floating-wye / delta bank. The engine's default antifloat (1 ppm) is enough for it to solve. A coil neutral
+  with `grounded` unset raises. The importer has no phase for node 4 on a 1-phase transformer, so it does not read
+  such a deck back (it raises).
 
 ### XfmrCode (T5)
 
@@ -962,7 +965,7 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | T3 | Polarity of a 1-phase TankEnd instance | The importer gives such an instance a `TransformerPhaseEnd` per terminal conductor in the deck's node order, and BY_TANK_ENDS reads a coil's phases from them when present. Alternatives: the importer writes such an instance inline (BY_PHASE_ENDS, a listed difference), or it raises on a descending LL coil (IEEE4 YYD stops binding) |
 | T4 | Several tanks on one PowerTransformer | One DSS Transformer per tank, named by the tank; a PowerTransformer with one tank is named by itself. A tap changer on a several-tank PowerTransformer raises until a producer writes one |
 | T5 | An unused TransformerTankConfiguration | Raises: the importer never writes one, and a template alone does not say its phases |
-| T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye is `.4` with no Rneut; two neutral impedances on one transformer raise |
+| T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye, or an ungrounded coil neutral, is `.4` with no Rneut; two neutral impedances on one transformer raise |
 | T7 | Regulator impedance and range | `%Rs=[r/2 r/2]` (equal to `%LoadLoss=r`); `MaxTap`/`MinTap`/`NumTaps` from the step range; an unset `step` or `ptRatio` raises |
 
 ### Slot tables (S6c, generated from `SLOTS`)
