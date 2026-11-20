@@ -22,7 +22,7 @@ from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters import describe
 from cimhub_core.getters.switch_state import get_reclose_delays, get_switch_state
 from cimhub_core.getters.terminals import get_conductor_phases
-from cimhub_opendss.exporter.line import terminal_buses, ratings
+from cimhub_opendss.exporter.line import SWITCH_IMPEDANCE, ratings, terminal_buses
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
@@ -31,8 +31,6 @@ CIM_CLASSES = (cim.Switch, cim.AirBreakSwitch, cim.Breaker, cim.Cut, cim.Disconn
                cim.EarthingSwitch, cim.Elbow, cim.Fuse, cim.GroundDisconnector, cim.HookstickSwitch, cim.Jumper,
                cim.LoadBreakSwitch, cim.ProtectedSwitch, cim.Recloser, cim.Sectionaliser, cim.ServiceDisconnect)
 LINE_NAMESPACE = "Line"
-#: B3: 1 mOhm, resistive (the old exporter's zero-impedance floor; the IEEE decks write their switches resistive)
-SWITCH_IMPEDANCE = dict(r1=1e-3, r0=1e-3, x1=0.0, x0=0.0, C1=0.0, C0=0.0, length=1.0, units="m")
 STATE_WORD = {True: "open", False: "closed"}
 
 _STATE = {

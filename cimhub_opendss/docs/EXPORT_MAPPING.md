@@ -53,7 +53,7 @@ cimhub_opendss/src/cimhub_opendss/exporter/
 - **The circuit:**
   - Its name is the one Feeder's, by the same switch. Several Feeders are one circuit (one deck per substation)
     when every one has the same `NormalEnergizingSubstation`, and the Substation names it. No Feeder, or several
-    without one Substation, raises.
+    without one Substation, raises. Among several, a Feeder that contains no equipment is not counted (H2).
   - Its source's Vsource is always named `source`, whatever the switch: that is DSS's name for `New Circuit`'s
     source (the reader's rule).
   - The circuit source is the only EnergySource, or the one whose exported name is `circuit_source` (E2). Several
@@ -314,7 +314,8 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
   sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
   The spacing may hold several circuits (a double circuit, a secondary bundle under a primary): the line takes the
   positions of its own phases' sequence numbers. `circuitNumber` is not read, since cim18v17 says a line's need not
-  match its positions'.
+  match its positions'. Lines of one `MultiCircuitGroup` at its highest voltage are coupled instead when two or more
+  are in the network (H1, S6h).
 - **Positions:**
   - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m: phase conductors, then
     neutrals. A bundle (`RegularBundlePosition` triplex, `BundlePosition` quadruplex) is expanded into its
@@ -575,9 +576,9 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, offset and conductors |
-| nconds | written | the spacing's positions; a spacing line's: its phases' positions |
-| nphases | written | WireConfiguration.numberOfPhases, required; a spacing line's: its phases other than N; position kinds phase then neutral |
+| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, offset and conductors; a coupled group's: <group>_geometry (H1) |
+| nconds | written | the spacing's positions; a spacing line's: its phases' positions; a coupled group's: its lines' positions, a shared neutral once |
+| nphases | written | WireConfiguration.numberOfPhases, required; a spacing line's: its phases other than N, a coupled group's: every line's; position kinds phase then neutral |
 | cond | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | wire | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | x | not mapped | the writer folds wires/xs/hs into cond= blocks |
@@ -604,18 +605,18 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names |
-| bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases) |
-| bus2 | written | bus_ref(get_terminal_nodes[1], the same phases) |
+| name | written | Names; a coupled group's: the group's, <line>_jumper1 for each circuit, and <line>_jumper2 or a longer line's remainder <line> (H1, H4) |
+| bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
+| bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
 | linecode | written | the PerLengthImpedance's LineCode name |
-| length | written | required_qty(length, m); lumped: km, unset -> 1 |
-| phases | written | the phase conductors (a neutral is reduced, B4) |
-| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km) |
-| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km) |
-| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises |
-| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises |
-| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0 |
-| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0 |
+| length | written | required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
+| phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
+| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
 | rmatrix | not mapped | a phase matrix is always a LineCode |
 | xmatrix | not mapped | a phase matrix is always a LineCode |
 | cmatrix | not mapped | a phase matrix is always a LineCode |
@@ -623,7 +624,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
 | rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth |
-| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner |
+| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1) |
 | units | written | m (B1); lumped: km (B6) |
 | spacing | not mapped | positions are written inline in the LineGeometry (B2) |
 | cncables | not mapped | the LineGeometry carries the conductors (B2) |
@@ -2038,3 +2039,82 @@ a breaker, and Relay is not mapped (DSS-11).
 | G3 | Reclosures on import | Shots - 1 RecloseSequences at RecloseIntervals, the engine's defaults filling either; the cases the engine resolves by order or by reading past its defaults raise |
 | G4 | A recloser with no RecloseSequence | `Shots=1`, no reclosure, as CIM says, rather than the engine's 4 |
 | G5 | Trip settings (**open**, TODO U15) | Still untranscribed: they need an attribute in the profile (see "What is still open"). Tracked as `.development/UPSTREAM_REQUESTS.md` U15 until the user repairs the FunctionBlock package in the UML |
+
+## S6h: multi-circuit lines, empty Feeders, bus sections (built 2026-11-19 at the user's word; H1 with jumpers, H4-H7 as recommended)
+
+Found by exporting the CIMTBL-Models `boundary_example` (feeder s1-f2 alone, and s1-f2 with s1-f3 on their shared
+double-circuit first span). H4-H7 came from GIS-derived feeders, whose groups are mostly a primary span with the
+secondary underbuilt on the same poles, drawn with lengths that differ (median 6 %, at most 88 times).
+
+### Multi-circuit lines (H1, H4-H7)
+
+- **Which lines are coupled** (`linegeometry.coupled_groups`, found once per export as `ExportContext.coupled`):
+  the lines of one `MultiCircuitGroup` at its highest nominal voltage, when two or more of them are in the network.
+  - The group's lines at another voltage (an underbuilt secondary) are written on their own positions, uncoupled
+    (H5). One line would put them on a bus with the primary's voltage base.
+  - One line of a group alone, as in a feeder exported on its own, is an ordinary spacing line on its own
+    positions (1, 2, 3, 7 for s1-f2).
+  - A group whose coupled lines name one phase position (series pieces of one circuit, such as a span split at a
+    tap) is written uncoupled, with a warning (H7): one coupled line cannot carry them.
+- **The geometry** `<group>_geometry`: every line's phase conductors in circuit order (the lines ordered by their
+  lowest phase sequence number), then the neutrals in sequence-number order. A position several lines name is one
+  conductor, as in the EPRI ConductorPosition model (H6), so a shared neutral is written once, on one wire.
+  `SharedPhases` is not needed; where an ACLineSegmentPhase names a MultiCircuitGroup, it must be its line's.
+  `nphases` is every coupled line's phases, and `reduce=y` (B4).
+- **The line** `<group>`: one Line on the geometry from bus `<group>_1` to `<group>_2`, each circuit's phase
+  conductors on the next nodes (`.1.2.3`, then `.4.5.6`), over the shortest line's length (to the mm). The lines
+  must agree on spacing, spacingYOffset, ratings and in-service state, which the one Line carries. Its `rho` is the
+  network earth, as a spacing line's.
+- **The ends.** A DSS terminal is on one bus, and the circuits end on different nodes:
+  - each circuit has a jumper `<line>_jumper1` from its node 1 onto its nodes of `<group>_1`, with the switches'
+    invented 1 mOhm (B3, now `line.SWITCH_IMPEDANCE`). It is not `Switch=y`: it is a conductor, not a switch;
+  - a line no longer than the group has `<line>_jumper2` from `<group>_2` onto its node 2;
+  - a longer line goes on as `<line>`, its own section from its nodes of `<group>_2` to its node 2, on its own
+    positions, for the rest of its length (H4). Every circuit keeps its exact length.
+
+  Terminal 1 of every line of a group is taken to be at the same end of the structure, and the coupled span to
+  start there: CIM does not say which ends meet, or where along the longer line the shorter one runs.
+- **Raises:** a coupled line that is not a spacing line; coupled lines that differ on spacing, offset, ratings or
+  in-service state; a shared position on different wires; a phase naming another group.
+- **Not imported back.** The DSS importer raises on the group's Line (nodes 4-6 have no phase), so an exported
+  multi-circuit deck does not round-trip yet. Importing DSS multi-circuit lines into a MultiCircuitGroup is
+  separate work.
+
+### Empty Feeders (H2)
+
+A frame model declares the Feeders of its whole area (the boundary example's `dso_area.cimtbl` declares all five,
+under two substations), and a deck holds only those whose equipment it has. Among several Feeders, one that
+contains no equipment is not counted. A Feeder alone still names the circuit, even when empty: the DSS importer
+puts a source-only deck's source in a Substation.
+
+### Bus sections (H3)
+
+A `BusbarSection` is its node's bus. DSS has no element for it, so it writes no record
+(`buses.BUS_CLASSES`, counted as exported by `_check_exported`).
+
+### Tests
+
+- `test_export_line.py`:
+  - the coupled group's records;
+  - its YPrim equal to the same structure written by hand in DSS units (rel 1e-9), with the circuits' mutual block
+    nonzero;
+  - a lone line of a group on its own positions;
+  - a longer line's remainder (H4), which solves;
+  - a shared neutral without SharedPhases (H6);
+  - an underbuilt secondary left uncoupled (H5);
+  - series pieces left uncoupled, with the warning (H7);
+  - five raises.
+- `test_export_circuit.py`: an empty Feeder of another substation is not counted.
+- `test_export_framework.py`: a BusbarSection writes nothing.
+
+### Decisions for S6h
+
+| # | question | decision |
+|---|---|---|
+| H1 | A MultiCircuitGroup | One DSS line on the whole structure when two or more of its lines are coupled, with a 1 mOhm jumper at each end of each circuit; a lone line keeps its own positions. A precomputed 6x6 matrix is not an option (skill `conductor-geometry`) |
+| H2 | Feeders in a frame-model assembly | Among several, empty Feeders are not counted |
+| H3 | BusbarSection | Its node's bus; no record |
+| H4 | Lines of one group with different lengths (user, 2026-11-19) | Coupled over the shortest line's length; the rest of each longer line is its own uncoupled section at its terminal-2 end |
+| H5 | An underbuilt secondary in a group (user, 2026-11-19) | Only the lines at the group's highest nominal voltage are coupled; the others stay on their own positions |
+| H6 | A shared conductor (user, 2026-11-19) | One position on several lines is one conductor (EPRI ConductorPosition); SharedPhases is not required |
+| H7 | Series pieces of one circuit in a group (user, 2026-11-19) | The group is written uncoupled, with a warning |

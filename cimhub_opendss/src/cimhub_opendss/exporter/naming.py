@@ -28,9 +28,11 @@ class Names:
         """A name DSS dictates (the circuit's ``Vsource.source``), claimed for ``obj``."""
         return self._claim(name, obj, namespace, "")
 
-    def bus(self, node) -> str:
-        """A ConnectivityNode's bus name. ``.`` is DSS's node delimiter, so it is sanitized too."""
-        return self._claim(dss_safe_name(export_name(node, self.source)).replace(".", "_"), node, BUS_NAMESPACE, "")
+    def bus(self, node, *, suffix: str = "") -> str:
+        """A ConnectivityNode's bus name, or with ``suffix`` a bus the deck adds for another object (a multi-circuit
+        group's ends, ``<group>_1``). ``.`` is DSS's node delimiter, so it is sanitized too."""
+        name = dss_safe_name(export_name(node, self.source) + suffix).replace(".", "_")
+        return self._claim(name, node, BUS_NAMESPACE, suffix)
 
     def _claim(self, name: str, obj, namespace: str, suffix: str) -> str:
         key, owner = (namespace, name.lower()), (obj.mRID, suffix)

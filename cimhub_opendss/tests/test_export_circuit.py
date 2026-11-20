@@ -76,6 +76,16 @@ def test_feeders_of_two_substations_raise():
         DssExporter().to_model(network, name_source="mrid")
 
 
+def test_empty_feeders_of_another_substation_are_not_counted():
+    """H2: a frame model declares its area's every Feeder; a deck holds only the feeders whose equipment it has."""
+    network = load_model(ATOM)
+    other = cim.Substation(mRID="sub_2", name="sub2")
+    network.add_to_graph(other)
+    network.add_to_graph(cim.Feeder(mRID="fdr_elsewhere", NormalEnergizingSubstation=other))
+    [options] = DssExporter().to_model(network, name_source="mrid").list_by_class(schema.Options)
+    assert options.circuit == "sub_1"
+
+
 def _transformer(model, name):
     return next(record for record in model.list_by_class(schema.Transformer) if record.name == name)
 

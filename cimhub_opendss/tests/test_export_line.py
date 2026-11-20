@@ -526,6 +526,217 @@ def test_spacing_line_with_a_phase_off_its_spacing_raises(tmp_path):
         _spacing_model(network)
 
 
+
+# a MultiCircuitGroup with two lines in the network is one DSS line on the whole structure, with jumpers (H1) ----------
+# ln_a on positions 1-3 and ln_b on 4-6 share the neutral on 7, both leaving n0: the boundary example's double circuit
+COUPLED = """Profile = cim18v17
+Object BaseVoltage: mRID=bv, name=bv, nominalVoltage (kV)=12.47
+Object Feeder: mRID=fdr, name=fdr
+Object EarthResistivity: mRID=earth, name=earth, earthModelType=carson, rho (ohm)=100
+Object EnergySource: mRID=src, name=src, node=n0, nominalVoltage (kV)=12.47, voltageMagnitude (kV)=12.47, voltageAngle (deg)=0, r (ohm)=0.1, x (ohm)=1, r0 (ohm)=0.1, x0 (ohm)=1, BaseVoltage=bv, EquipmentContainer=fdr
+Object LoadResponseCharacteristic: mRID=lrc, name=lrc, exponentModel=false, pConstantPower=1, pConstantCurrent=0, pConstantImpedance=0, qConstantPower=1, qConstantCurrent=0, qConstantImpedance=0
+Table OverheadWireInfo: mRID, name, rAC25 (ohm/mi), gmr (ft), radius (in), ratedCurrent (A)
+    wire_397, 397, 0.2357, 0.0265,  0.3915, 590.0
+    wire_1/0, 1/0, 1.12,   0.00446, 0.199,  230.0
+Object MultiCircuitGroup: mRID=dbl, name=dbl
+Object XYSpacing: mRID=spc_dbl, name=spc_dbl, isTemplate=false, MultiCircuitGroup=dbl
+Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind, xCoord (ft), yCoord (ft)
+    pos_1, 1, 1, phase,   -4,   -3
+    pos_2, 2, 1, phase,   -1.5, -3
+    pos_3, 3, 1, phase,    4,   -3
+    pos_4, 4, 2, phase,   -3.5,  0
+    pos_5, 5, 2, phase,    0,    1.5
+    pos_6, 6, 2, phase,    3.5,  0
+    pos_7, 7,  , neutral,  0.5, -6
+Object ACLineSegment: mRID=ln_a, name=ln_a, node1=n0, node2=a1, phases=ABCN, sequenceNumbers=1 2 3 7, length (ft)=500, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Object ACLineSegment: mRID=ln_b, name=ln_b, node1=n0, node2=b1, phases=ABCN, sequenceNumbers=4 5 6 7, length (ft)=500, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Update Table ACLineSegmentPhase: mRID, WireInfo, MultiCircuitGroup
+    ln_a_A, wire_397,
+    ln_a_B, wire_397,
+    ln_a_C, wire_397,
+    ln_a_N, wire_1/0, dbl
+    ln_b_A, wire_397,
+    ln_b_B, wire_397,
+    ln_b_C, wire_397,
+    ln_b_N, wire_1/0, dbl
+Table EnergyConsumer: mRID, name, node, p (kW), q (kvar), phaseConnection=Y, grounded=true, LoadResponse=lrc, BaseVoltage=bv, EquipmentContainer=fdr
+    ld_a, ld_a, a1, 800, 200
+    ld_b, ld_b, b1, 500, 120
+"""
+
+#: the structure written by hand in DSS's own units: conductors 1-6 the two circuits, 7 the neutral, 40 ft up
+COUPLED_REFERENCE = """Clear
+New Circuit.ref basekv=12.47 bus1=x
+Set earthmodel=Carson
+New WireData.w397 Rac=0.2357 Runits=mi GMRac=0.0265 GMRunits=ft radius=0.3915 radunits=in
+New WireData.w10 Rac=1.12 Runits=mi GMRac=0.00446 GMRunits=ft radius=0.199 radunits=in
+New LineGeometry.ref nconds=7 nphases=6 reduce=yes
+~ cond=1 wire=w397 x=-4 h=37 units=ft
+~ cond=2 wire=w397 x=-1.5 h=37 units=ft
+~ cond=3 wire=w397 x=4 h=37 units=ft
+~ cond=4 wire=w397 x=-3.5 h=40 units=ft
+~ cond=5 wire=w397 x=0 h=41.5 units=ft
+~ cond=6 wire=w397 x=3.5 h=40 units=ft
+~ cond=7 wire=w10 x=0.5 h=34 units=ft
+New Line.ref bus1=x.1.2.3.4.5.6 bus2=y.1.2.3.4.5.6 phases=6 geometry=ref length=500 units=ft rho=100
+"""
+
+
+#: an underbuilt 240 V secondary in the group, on positions 8-10 below the neutral (record checks only: it is fed by
+#: nothing)
+UNDERBUILT = """Object BaseVoltage: mRID=bv_s, name=bv_s, nominalVoltage (kV)=0.24
+Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind, xCoord (ft), yCoord (ft)
+    pos_8,  8,  3, phase,   -0.5, -9
+    pos_9,  9,  3, phase,    0.5, -9
+    pos_10, 10, 3, neutral,  0,   -9.5
+Object ACLineSegment: mRID=ln_s, name=ln_s, node1=s0, node2=s1, phases=s1s2N, sequenceNumbers=8 9 10, length (ft)=300, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv_s, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Update Table ACLineSegmentPhase: mRID, WireInfo=wire_1/0
+    ln_s_s1
+    ln_s_s2
+    ln_s_N
+"""
+
+
+def _coupled_network(tmp_path, *, lone: bool = False, underbuilt: bool = False):
+    """The double circuit; with ``lone`` only ln_a and its load (s1-f2 exported on its own); with ``underbuilt`` a
+    secondary in the group too."""
+    text = COUPLED
+    if lone:
+        text = "\n".join(row for row in COUPLED.splitlines() if "ln_b" not in row and "ld_b" not in row)
+    if underbuilt:
+        text += UNDERBUILT
+    path = tmp_path / "coupled.cimtbl"
+    path.write_text(text)
+    return load_model(path)
+
+
+def _lines(model) -> dict[str, schema.Line]:
+    return {str(record.name): record for record in model.list_by_class(schema.Line)}
+
+
+def test_coupled_group_is_one_line_on_the_whole_structure(tmp_path):
+    model = _spacing_model(_coupled_network(tmp_path))
+    geometry = _geometries(model)["dbl_geometry"]
+    assert list(_geometries(model)) == ["dbl_geometry"]
+    assert (geometry.nconds, geometry.nphases, geometry.reduce) == (7, 6, True)
+    assert [str(wire) for wire in geometry.wires] == ["wire_397"] * 6 + ["wire_1/0"]
+    assert geometry.xs == pytest.approx([x * 0.3048 for x in (-4, -1.5, 4, -3.5, 0, 3.5, 0.5)])
+    assert geometry.hs == pytest.approx([h * 0.3048 for h in (37, 37, 37, 40, 41.5, 40, 34)])
+    lines = _lines(model)
+    assert sorted(lines) == ["dbl", "ln_a_jumper1", "ln_a_jumper2", "ln_b_jumper1", "ln_b_jumper2"]
+    coupled = lines["dbl"]
+    assert (coupled.geometry, coupled.phases, coupled.bus1, coupled.bus2, coupled.rho) == (
+        "dbl_geometry", 6, "dbl_1.1.2.3.4.5.6", "dbl_2.1.2.3.4.5.6", 100.0)
+    assert coupled.length == pytest.approx(500 * 0.3048)
+    jumpers = {name: (line.bus1, line.bus2, line.phases, line.r1) for name, line in lines.items() if name != "dbl"}
+    assert jumpers == {"ln_a_jumper1": ("n0.1.2.3", "dbl_1.1.2.3", 3, 1e-3),
+                       "ln_a_jumper2": ("dbl_2.1.2.3", "a1.1.2.3", 3, 1e-3),
+                       "ln_b_jumper1": ("n0.1.2.3", "dbl_1.4.5.6", 3, 1e-3),
+                       "ln_b_jumper2": ("dbl_2.4.5.6", "b1.1.2.3", 3, 1e-3)}
+
+
+def test_coupled_line_matches_the_structure_written_in_dss(tmp_path):
+    written, reference = tmp_path / "coupled.dss", tmp_path / "reference.dss"
+    cim_to_dss(_coupled_network(tmp_path), written, name_source="mrid")
+    reference.write_text(COUPLED_REFERENCE)
+    exported = _yprim(written, "Line.dbl")
+    assert dss.Solution.Converged()
+    assert exported == pytest.approx(_yprim(reference, "Line.ref"), rel=1e-9)
+    # the circuits are coupled: terminal 1's block between circuit a (rows 1-3) and circuit b (columns 4-6)
+    matrix = exported.reshape(12, 24)[:, 0::2] + 1j * exported.reshape(12, 24)[:, 1::2]
+    assert np.abs(matrix[0:3, 3:6]).min() > 0.01 * np.abs(matrix[0:3, 0:3]).max()
+
+
+def test_a_lone_line_of_a_group_takes_its_own_positions(tmp_path):
+    model = _spacing_model(_coupled_network(tmp_path, lone=True))
+    assert sorted(_lines(model)) == ["ln_a"]
+    geometry = _geometries(model)["ln_a_geometry"]
+    assert (geometry.nconds, geometry.nphases) == (4, 3)
+    assert geometry.hs == pytest.approx([h * 0.3048 for h in (37, 37, 37, 34)])
+
+
+def test_a_longer_line_goes_on_as_its_own_section(tmp_path):
+    """H4: the group is coupled over the shortest line; the rest of ln_b is its own section on its own positions."""
+    network = _coupled_network(tmp_path)
+    _mrid(network, cim.ACLineSegment, "ln_b").length = cim.Length(600, "ft")
+    model = _spacing_model(network)
+    lines = _lines(model)
+    assert sorted(lines) == ["dbl", "ln_a_jumper1", "ln_a_jumper2", "ln_b", "ln_b_jumper1"]
+    assert lines["dbl"].length == pytest.approx(500 * 0.3048)
+    rest = lines["ln_b"]
+    assert (rest.bus1, rest.bus2, rest.phases, rest.geometry) == ("dbl_2.4.5.6", "b1.1.2.3", 3, "ln_b_geometry")
+    assert rest.length == pytest.approx(100 * 0.3048)
+    assert _geometries(model)["ln_b_geometry"].nconds == 4
+    written = tmp_path / "coupled.dss"
+    cim_to_dss(network, written, name_source="mrid")
+    compile_deck(written)
+    dss.Solution.Solve()
+    assert dss.Solution.Converged()
+
+
+def test_shared_neutral_needs_no_shared_phases(tmp_path):
+    """H6: a position on several lines is one conductor, as the EPRI ConductorPosition model has it."""
+    network = _coupled_network(tmp_path)
+    for name in ("ln_a_N", "ln_b_N"):
+        _mrid(network, cim.ACLineSegmentPhase, name).MultiCircuitGroup = None
+    geometry = _geometries(_spacing_model(network))["dbl_geometry"]
+    assert (geometry.nconds, geometry.nphases) == (7, 6)
+
+
+def test_underbuilt_secondary_stays_on_its_own_positions(tmp_path):
+    """H5: only the group's lines at its highest voltage are coupled."""
+    model = _spacing_model(_coupled_network(tmp_path, underbuilt=True))
+    assert sorted(_lines(model)) == ["dbl", "ln_a_jumper1", "ln_a_jumper2", "ln_b_jumper1", "ln_b_jumper2", "ln_s"]
+    assert (_geometries(model)["dbl_geometry"].nconds, _geometries(model)["ln_s_geometry"].nconds) == (7, 3)
+    assert _lines(model)["ln_s"].bus1 == "s0.1.2"
+
+
+def test_series_pieces_leave_the_group_uncoupled(tmp_path, caplog):
+    """H7: two lines on one phase position cannot be one coupled line."""
+    network = _coupled_network(tmp_path)
+    _phase_on_a_phase(network)
+    with caplog.at_level("WARNING"):
+        model = _spacing_model(network)
+    assert sorted(_lines(model)) == ["ln_a", "ln_b"]
+    assert "MultiCircuitGroup 'dbl': ['ln_a', 'ln_b'] name phase positions [1] of one another" in caplog.text
+
+
+def _phase_on_a_phase(network):
+    _mrid(network, cim.ACLineSegmentPhase, "ln_b_A").sequenceNumber = 1
+
+
+def _other_wire(network):
+    _mrid(network, cim.ACLineSegmentPhase, "ln_b_N").WireInfo = _mrid(network, cim.OverheadWireInfo, "wire_397")
+
+
+def _other_offset(network):
+    _mrid(network, cim.ACLineSegment, "ln_b").spacingYOffset = cim.Length(45, "ft")
+
+
+def _by_code(network):
+    line = _mrid(network, cim.ACLineSegment, "ln_b")
+    line.WireSpacing = None
+    for phase in line.ACLineSegmentPhases:
+        phase.WireInfo = None
+
+
+def _other_group(network):
+    _mrid(network, cim.ACLineSegmentPhase, "ln_b_N").MultiCircuitGroup = cim.MultiCircuitGroup(mRID="other")
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (_other_group, r"ACLineSegmentPhase 'ln_b_N' of ACLineSegment 'ln_b' in MultiCircuitGroup 'dbl': is a shared "
+                   r"phase of MultiCircuitGroup 'other'"),
+    (_other_wire, r"sequence number 7 is OverheadWireInfo 'wire_1/0' on one line and OverheadWireInfo 'wire_397'"),
+    (_other_offset, r"its lines' spacingYOffsets \(m, to the mm\) differ"),
+    (_by_code, r"ACLineSegment 'ln_b': one of 2 lines of MultiCircuitGroup 'dbl', but not a spacing line"),
+], ids=lambda value: value.__name__.strip("_") if callable(value) else "")
+def test_coupled_group_that_one_line_cannot_carry_raises(mutate, message, tmp_path):
+    network = _coupled_network(tmp_path)
+    mutate(network)
+    with pytest.raises(ValueError, match=message):
+        _spacing_model(network)
+
 # a plain CableInfo (an underground secondary's insulated conductors) is a WireData mirrored above grade (B7) ----------
 BURIED = """Profile = cim18v17
 Object BaseVoltage: mRID=bv, name=bv, nominalVoltage (kV)=0.208

@@ -68,6 +68,10 @@ Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
     xf_xf_bank3_2_B,     2, 6, B,  xf_xf_bank3_T2
     xf_xf_bank3_2_C,     2, 7, C,  xf_xf_bank3_T2
     xf_xf_bank3_2_N,     2, 8, N,  xf_xf_bank3_T2
+    xf_xf_can_1_C,       1, 1, C,  xf_xf_can_T1
+    xf_xf_can_1_N,       1, 2, N,  xf_xf_can_T1
+    xf_xf_can_2_C,       2, 3, C,  xf_xf_can_T2
+    xf_xf_can_2_N,       2, 4, N,  xf_xf_can_T2
     xf_xf_ct_1_A,        1, 1, A,  xf_xf_ct_T1
     xf_xf_ct_1_N,        1, 2, N,  xf_xf_ct_T1
     xf_xf_ct_2_s1,       2, 3, s1, xf_xf_ct_T2

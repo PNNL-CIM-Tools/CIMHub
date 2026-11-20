@@ -15,9 +15,10 @@ from cimhub_core.getters.switch_state import STATE_ATTRIBUTE
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
-from cimhub_opendss.exporter import (buscoords, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
+from cimhub_opendss.exporter import (buscoords, buses, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
                                      pvsystem, reactor, regcontrol, storage, switch, transformer, vsource, wire,
                                      xfmrcode)
+from cimhub_opendss.exporter.linegeometry import CoupledGroup, coupled_groups
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
 
@@ -35,6 +36,7 @@ class ExportContext(NamedTuple):
     names: Names
     circuit_source: cim.EnergySource
     switch_state: str
+    coupled: dict[cim.MultiCircuitGroup, CoupledGroup]  # linegeometry.coupled_groups, found once (H1)
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -58,7 +60,8 @@ class DssExporter(FormatExporter):
             raise ValueError(f"switch_state must be one of {sorted(STATE_ATTRIBUTE)}, not {switch_state!r}")
         _check_exported(network)
         names = Names(name_source)
-        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state)
+        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state,
+                                coupled_groups(network))
         model = DssModel()
         for module in EXPORT_ORDER:
             for record in module.export(context):
@@ -86,8 +89,9 @@ def _circuit_source(network, name_source: str, circuit_source: str) -> cim.Energ
 
 
 def _check_exported(network) -> None:
-    """Raise on conducting equipment no module exports, so nothing is dropped silently."""
-    exported = {cim_class for module in EXPORT_ORDER for cim_class in module.CIM_CLASSES}
+    """Raise on conducting equipment no module exports, so nothing is dropped silently. A BusbarSection is its
+    node's bus (``buses.BUS_CLASSES``)."""
+    exported = {cim_class for module in EXPORT_ORDER for cim_class in module.CIM_CLASSES} | set(buses.BUS_CLASSES)
     missing = {cls.__name__: len(objects) for cls, objects in network.graph.items()
                if objects and issubclass(cls, cim.ConductingEquipment) and cls not in exported}
     if missing:

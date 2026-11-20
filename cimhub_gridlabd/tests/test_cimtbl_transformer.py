@@ -199,7 +199,7 @@ def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
     templates = {str(c.mRID): c for c in network.list_by_class(cim.TransformerTankConfiguration)}
 
     def voltages(name):
-        windings = sorted(templates[name].TransformerWinding, key=lambda w: w.FromTransformerEnd.endNumber)
+        windings = sorted(templates[name].TransformerWinding, key=lambda w: str(w.mRID))
         return [(float(w.ratedU.to("V")), float(w.baseU.to("V"))) for w in windings]
 
     assert voltages("xc_xc_s1") == [(pytest.approx(4160.0, rel=1e-5), 2401.78), (240.0, 120.0)]
@@ -212,10 +212,14 @@ def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
     assert float(nodes["m_s1"].BaseVoltage.nominalVoltage.to("V")) == 240.0
     ends = {str(end.mRID): end for end in network.list_by_class(cim.PowerTransformerEnd)}
     assert (ends["xf_xf_s1_2"].Terminal.phases.value, ends["xf_xf_s3_2"].Terminal.phases.value) == ("s1N", "ABCN")
-    # the leg is one split-phase half, as a center tap's s1: kind I on the instance and the template
-    tank_ends = {str(end.mRID): end for end in network.list_by_class(cim.TransformerTankEnd)}
-    assert (ends["xf_xf_s1_2"].connectionKind, tank_ends["xc_xc_s1_end_2"].connectionKind) == (
-        cim.WindingConnection.I, cim.WindingConnection.I)
+    # the leg is one split-phase half, as a center tap's s1: kind I on the instance. A one-phase template is a can
+    # by lugs (TankEnds are three-phase only), landing on the instance's own phase: s1 on A, B for xf_s1b
+    assert ends["xf_xf_s1_2"].connectionKind is cim.WindingConnection.I
+    assert not templates["xc_xc_s1"].TransformerTankEnd and templates["xc_xc_s3"].TransformerTankEnd
+    phase_ends = {str(end.mRID): (end.sequenceNumber, end.phase.value)
+                  for end in network.list_by_class(cim.TransformerPhaseEnd) if str(end.mRID).startswith("xf_xf_s1b_")}
+    assert phase_ends == {"xf_xf_s1b_1_B": (1, "B"), "xf_xf_s1b_1_N": (2, "N"), "xf_xf_s1b_2_s1": (3, "s1"),
+                          "xf_xf_s1b_2_N": (4, "N")}
 
 
 def test_a_wye_off_its_bus_voltage_raises(tmp_path):

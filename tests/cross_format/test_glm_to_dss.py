@@ -1,10 +1,11 @@
 """GLM import -> CIM -> DSS export, solved in the engine: the transformer forms the GLM importer writes (S3b) export
-and solve. A synthetic deck (no utility data): a template unit by %Z (3-phase and 2-phase WYE_WYE), a center tap
-and an unequal bank of lugged cans, each loaded, behind a recloser at the feeder head.
+and solve. A synthetic deck (no utility data): a template unit by %Z (3-phase WYE_WYE), a 2-phase WYE_WYE and an
+unequal bank, both lugged cans (TankEnds are three-phase only), and a center tap, each loaded, behind a recloser at
+the feeder head.
 
 GridLAB-D's per unit is on ``secondary_voltage``² / ``power_rating``; each tank's %Z is that moved to its own
-nameplate by ``k = 3 S_coil / S_total`` (S3b-4), which DSS reads per phase: 1 on the 3-phase unit, 1.5 on the
-2-phase one (two coils of 25 kVA) and on the 50 kVA can of the 100 kVA bank.
+nameplate by ``k = 3 S_coil / S_total`` (S3b-4), which DSS reads per phase: 1 on the 3-phase unit, 1.5 on each 25
+kVA can of the 2-phase one and on the 50 kVA can of the 100 kVA bank.
 """
 from __future__ import annotations
 
@@ -61,14 +62,16 @@ object load { name l240; parent v240; phases BN; nominal_voltage 240; constant_p
 #: XfmrCode -> (phases, kVs, kVAs, %Rs, X): GLM's z x k, %R split over the windings (a center tap by Hopkinson's rule)
 CODES = {
     "c3": (3, [12.47, 0.48], [150, 150], [0.5, 0.5], {"Xhl": 5.0}),
-    "c2": (2, [12.47, 0.48], [50, 50], [0.75, 0.75], {"Xhl": 7.5}),
+    # an unrated 2-phase wye's cans are named by place, as every instance shares them whatever its phases
+    "c2_1": (1, [12.47 / 3 ** 0.5, 0.48 / 3 ** 0.5], [25, 25], [0.75, 0.75], {"Xhl": 7.5}),
+    "c2_2": (1, [12.47 / 3 ** 0.5, 0.48 / 3 ** 0.5], [25, 25], [0.75, 0.75], {"Xhl": 7.5}),
     "cbank_a": (1, [12.47 / 3 ** 0.5, 0.208 / 3 ** 0.5], [50, 50], [0.75, 0.75], {"Xhl": 3.0}),
     "cct": (1, [7.2, 0.12, 0.12], [25, 25, 25], [0.6, 1.2, 1.2], {"Xhl": 2.04, "Xht": 2.04, "Xlt": 1.36}),
     # the services, k = 1 (GridLAB-D's base is the coil's): the 240 V coil is a center tap's full winding
     "c120": (1, [7.2, 0.12], [25, 25], [0.5, 0.5], {"Xhl": 2.0}),
     "c240": (1, [7.2, 0.12, 0.12], [25, 25, 25], [0.5, 1.0, 1.0], {"Xhl": 2.4, "Xht": 2.4, "Xlt": 1.6}),
 }
-BUSES = {"t2": ["p.2.3", "s2.2.3"], "t3": ["p.1.2.3", "s3.1.2.3"], "tb_a": ["p.1.0", "sb.1.0"],
+BUSES = {"t2_b": ["p.2.0", "s2.2.0"], "t2_c": ["p.3.0", "s2.3.0"], "t3": ["p.1.2.3", "s3.1.2.3"], "tb_a": ["p.1.0", "sb.1.0"],
          "tb_b": ["p.2.0", "sb.2.0"], "tb_c": ["p.3.0", "sb.3.0"], "tct": ["p.1.0", "h.1.0", "h.0.2"],
          "t120": ["p.3.0", "v120.1.0"], "t240": ["p.2.0", "v240.1.0", "v240.0.2"]}
 #: a one-phase service (the user's rule): 120 V is the s1 leg to N, 240 V a center tap across s1-s2, both on 240 V

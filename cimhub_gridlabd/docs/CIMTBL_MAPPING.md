@@ -1548,7 +1548,7 @@ section 2 rows 5 and 10. Counts are from the 28 readable decks: 1,469 configurat
 
 | # | artifact | native class (records) | CIM | mRID |
 |---|---|---|---|---|
-| 5 | `transformer_configuration.cimtbl` | transformer_configuration (1,469) | `TransformerTankConfiguration`: by `TransformerTankEnd` (one tank), by `TransformerLug` (center tap, and each can of a bank), and `TransformerBankConfiguration` over a bank's cans | `xc_<name>`, `xb_<name>` |
+| 5 | `transformer_configuration.cimtbl` | transformer_configuration (1,469) | `TransformerTankConfiguration`: by `TransformerTankEnd` (a three-phase tank), by `TransformerLug` (a center tap, a one-phase can, and each can of a bank), and `TransformerBankConfiguration` over a bank's cans | `xc_<name>`, `xb_<name>` |
 | 10 | `transformer.cimtbl` | transformer (8,943) | `PowerTransformer` + its `TransformerTank`s by template + a `PowerTransformerEnd` per side | `xf_<name>` |
 
 Shapes: `transformer_template`, `transformer_template_1ph`, `transformer_by_template`, and the CIMTBL-Models bank
@@ -1585,16 +1585,22 @@ instance of one configuration must say the same, else it raises. A configuration
 its own phase ratings (none rated: three phases, as `init():190`); an unused center tap leaves its primary
 `ratedU` unset (no instance says its system), and none is in the decks.
 
-Three forms (S3b-2):
+Three forms (S3b-2). **`TransformerTankEnd` is for three-phase templates only; a single-phase one is
+`TransformerLug`s, its instance `TransformerPhaseEnd`s** (the user's rule, 2026-11-19, S3b-13):
 
-- **One tank by tank ends** (`WYE_WYE` whose wired phases are rated equally, or not every one rated; `DELTA_GWYE`,
-  `DELTA_DELTA`): a `TransformerTankEnd` per winding (`connectionKind` Y or D) and a `TransformerWinding` each,
-  with ratings; the impedance is the configuration's %Z fields (S3b-5).
-- **A bank of cans** (`WYE_WYE` whose wired phases are all rated and the kVAs differ, S3b-9): a
-  `TransformerBankConfiguration` `xb_<c>` and one `TransformerTankConfiguration` per can position `xc_<c>_<phase>`
-  (`BankConfiguration = xb_<c>`), as the CIMTBL-Models open-wye bank. A can has lugs H1, H2, X1, X2 and windings
-  H1→H2, X1→X2; a lug's `sequenceNumber` is the bank conductor it lands on, numbered over the bank: end 1's phases
-  then N, then end 2's (`ABCN`: H side A B C N = 1-4, X side 5-8; can A's H1, H2, X1, X2 = 1, 4, 5, 8).
+- **A three-phase tank by tank ends** (a `WYE_WYE` on three phases rated equally, or not every one rated;
+  `DELTA_GWYE`, `DELTA_DELTA`): a `TransformerTankEnd` per winding (`connectionKind` Y or D) and a
+  `TransformerWinding` each, with ratings; the impedance is the configuration's %Z fields (S3b-5).
+- **Lugged cans**, one per wired phase: a `WYE_WYE` or `SINGLE_PHASE` on one phase (one can, `xc_<c>`) or two (a
+  bank), or on three all rated with different kVAs (a bank, S3b-9). A bank is a `TransformerBankConfiguration`
+  `xb_<c>` and one `TransformerTankConfiguration` per can `xc_<c>_<label>` (`BankConfiguration = xb_<c>`), as the
+  CIMTBL-Models open-wye bank; its instance a tank per can, `<transformer>_<phase>`. A can has lugs H1, H2, X1, X2
+  and windings H1→H2, X1→X2; a lug's `sequenceNumber` is the conductor it lands on, numbered over the unit: end
+  1's phases then N, then end 2's (`ABCN`: H side A B C N = 1-4, X side 5-8; can A's H1, H2, X1, X2 = 1, 4, 5, 8;
+  one can 1-4). Cans rated unequally are labelled and sized by their phases; otherwise they share `power_rating`
+  equally, as GridLAB-D runs them, and are labelled by place (`_1`, `_2`), since one template serves instances on
+  any phases (the walk collapses an unrated template's letters to a count). The instance's phase ends carry its
+  own phases.
 - **A center tap by lugs**: H1, H2, X1, X3, X2 (sequence 1-5) with windings H1→H2, X1→X2 (s1→N), X2→X3 (N→s2),
   as the DSS import, with ratings; its %Z fields are the full winding's, which GridLAB-D splits into its star
   (below).
@@ -1648,9 +1654,9 @@ Expanded by the split (below), the center tap equals the DSS import's `xc_ct5` i
 | GLM slot | kind | target |
 |---|---|---|
 | `name` | copied | `TransformerTankConfiguration.name` (a bank: `TransformerBankConfiguration.name`, each can `<name>_<phase>`); mRID = `xc_` (`xb_`) + name |
-| `connect_type` | structural | the form and connection kinds: `WYE_WYE` Y/Y, `DELTA_GWYE` D/Y, `DELTA_DELTA` D/D (`TransformerTankEnd.connectionKind`; grounding is the instance's); `SINGLE_PHASE_CENTER_TAPPED` lugs; `SINGLE_PHASE` as `WYE_WYE` (S6-2); unset raises |
+| `connect_type` | structural | the form and connection kinds: `WYE_WYE` Y/Y (on one or two phases lugged cans), `DELTA_GWYE` D/Y, `DELTA_DELTA` D/D (`TransformerTankEnd.connectionKind`; grounding is the instance's); `SINGLE_PHASE_CENTER_TAPPED` lugs; `SINGLE_PHASE` as `WYE_WYE` (S6-2); unset raises |
 | `primary_voltage`, `secondary_voltage` | structural | winding `ratedU` and `baseU`, in the written unit (V in every deck), S3b-3 |
-| `power_rating`, `powerA_rating`/`_B_`/`_C_` | structural | winding `ratedS`, `baseS` (S3b-3): the whole unit's kVA (`power_rating`, else the phase sum, as `init()`), a can's its phase's; a center tap's is its instance phase's rating. Phase kVAs a one-tank template does not use are listed on the row |
+| `power_rating`, `powerA_rating`/`_B_`/`_C_` | structural | winding `ratedS`, `baseS` (S3b-3): the whole unit's kVA (`power_rating`, else the phase sum, as `init()`), a can's its phase's when the wired phases are rated unequally, else an equal share; a center tap's is its instance phase's rating. Phase kVAs a one-tank template does not use are listed on the row |
 | `impedance`, `resistance`, `reactance` | derived | `percentImpedance` = \|R + jX\| × k × 100 and `loadLoss` = R × k × S (S3b-4, S3b-5); a center tap's are the full winding's |
 | `impedance1`, `impedance2` (and their `resistance`/`reactance` forms) | derived | a center tap's star given whole; it must be GridLAB-D's own split of one R + jX (`impedance` = 0.5R + j0.8X, both halves R + j0.4X), which gives the %Z fields; any other split raises (none in the decks), and on any other connection they raise (GridLAB-D ignores them with a warning) |
 | `shunt_impedance`, `shunt_resistance`, `shunt_reactance` | derived | `noLoadLoss` = S / (Rsh × k) and `percentMagnetizingCurrent` = 100 / (Xsh × k) (S3b-6); unset: GridLAB-D's 999999999 pu (lossless) is not filled; on a delta connection raises (ignored with a warning) |
@@ -1731,17 +1737,18 @@ Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, conn
 | # | question | decision (approved) |
 |---|---|---|
 | S3b-1 | Files and identity | **The user's: every configuration is written, used or not.** The two artifacts above; `xc_`, `xb_` and `xf_` in source case; children named as the DSS import |
-| S3b-2 | Template forms | One tank by tank ends (`WYE_WYE` equal or not fully rated, the deltas); a bank of lugged cans under a `TransformerBankConfiguration` (unequal cans, S3b-9); a center tap by lugs H1 H2 X1 X3 X2 (the DSS import's) |
+| S3b-2 | Template forms | A three-phase tank by tank ends (a 3-phase `WYE_WYE` equal or not fully rated, the deltas); lugged cans, one (a one-phase wye) or a bank under a `TransformerBankConfiguration` (a two-phase wye, unequal cans, S3b-9); a center tap by lugs H1 H2 X1 X3 X2 (the DSS import's). **Amended by S3b-13** (one- and two-phase wyes were tank ends) |
 | S3b-3 | Voltages and kVA (amends GLM-6) | **GLM-6's "1-phase `WYE_WYE` voltages are phase to neutral" is wrong: the decks and the engine take them line to line on every phase count** (the walk's S0 finding). So `ratedU` is the written voltage and `baseU` the coil (÷ √3 on a wye, as written on a delta); `ratedS` the tank's kVA, `baseS` its share per phase conductor. A center tap's primary is the coil: `baseU` as written, `ratedU` × √3 on a 3-phase system (the walk); a half's `baseU` is `secondary_voltage`, its `ratedU` × 2, its `ratedS` S / 2, every `baseS` S. Derived values are never rounded. **Amended by S6-1:** true of the Java exports; a wye whose written voltage is its from bus's `nominal_voltage` is rated by the coil |
 | S3b-4 | Impedance base | **The user's: keep GridLAB-D's ohms.** Its per unit is on its own base (written line-to-line voltage, whole-unit kVA); the %Z fields are on each tank's nameplate, so every value is moved by `k = 3 S_coil / S_total` (above): 1 on 3-phase, delta and center-tap units, 3 on the 581 1-phase and 1.5 on the 130 2-phase `WYE_WYE` units, per can in a bank. Copying the written per unit would give a 1-phase can a third of the impedance GridLAB-D solves with |
 | S3b-5 | Where the impedance goes | **The user's: GLM stores %Z (one R + jX per unit and a parallel shunt), not a mesh, so it goes on the `TransformerTankConfiguration`: `percentImpedance`, `loadLoss`, `noLoadLoss`, `percentMagnetizingCurrent`.** R comes back exactly as loadLoss / S and X as √(Z² − R²) (GridLAB-D requires both positive). No winding `r`, no mesh, nothing on the instance ends; a center tap's split is GridLAB-D's (the Hopkinson rule the CIMTBL-Models templates use) |
 | S3b-6 | Shunt | `shunt_resistance`/`shunt_reactance` are GridLAB-D's parallel branch (`zc = Rsh·jXsh / (Rsh + jXsh)`): the real part is `noLoadLoss` = S / (Rsh k), the reactive part `percentMagnetizingCurrent` = 100 / (Xsh k), as the DSS import's `%noloadloss`/`%imag`. The written value is kept although GridLAB-D's NR ignores the shunt on `WYE_WYE` (`transformer.cpp:362` builds only 1 / zt); FBS and every center tap use it |
 | S3b-7 | Instance ends and phases | End 1 = `from`, end 2 = `to`. `WYE_WYE`: the written letters + N on both, `Yn` grounded. `DELTA_GWYE`: `ABC` `D` ungrounded, then `ABCN` `Yn` grounded (the G), whether N is written or not. `DELTA_DELTA`: `ABC` `D` on both, N dropped. Center tap: `XN` `Y`, then `s1s2N` `I`, with the DSS import's phase ends. A bank has a phase end per conductor of each terminal, numbered as its lugs. A one-tank instance has none: every GLM coil runs from its phase to N (or is 3-phase), which the terminal phases already say |
 | S3b-8 | Ratings | As S3a-5: the 3 Java-export transformers' `continuous_rating_X`/`emergency_rating_X` go, as written, on the transformer's own `OperationalLimitSet`. They are primary-side amps (27.61 A = 1.1 × the 25.1 A of 5 MVA at 115 kV). GridLAB-D replaces them with the configuration's kVA (`transformer.cpp:234`) |
-| S3b-9 | Unequal cans | **The user's: each can a tank, the bank a `TransformerBankConfiguration`.** A `WYE_WYE` instance whose wired phases are all rated, with different kVAs, is a bank (145 instances): a can per wired phase of its phase's kVA, lugged on the bank's conductors as the CIMTBL-Models open-wye bank. GridLAB-D puts one `zt` in ohms on every phase, so each can's %Z fields are those ohms on its own kVA (S3b-4). **Best guess for the 117 that leave a wired phase unrated** (15 / 0 / 0 kVA on `ABCN`): no can size exists for that phase, and GridLAB-D still runs it through the same `zt`, so they stay one tank of `power_rating`, the phase kVAs listed on the row. Equally rated 2-phase units (100) stay one tank too |
+| S3b-9 | Unequal cans | **The user's: each can a tank, the bank a `TransformerBankConfiguration`.** A `WYE_WYE` instance whose wired phases are all rated, with different kVAs, is a bank (145 instances): a can per wired phase of its phase's kVA, lugged on the bank's conductors as the CIMTBL-Models open-wye bank. GridLAB-D puts one `zt` in ohms on every phase, so each can's %Z fields are those ohms on its own kVA (S3b-4). **Best guess for the 117 that leave a wired phase unrated** (15 / 0 / 0 kVA on `ABCN`): no can size exists for that phase, and GridLAB-D still runs it through the same `zt`, so they stay one tank of `power_rating`, the phase kVAs listed on the row. Equally rated 2-phase units (100) stay one tank too. **Amended by S3b-13:** on one or two phases they are lugged cans of equal shares of `power_rating`, the phase kVAs still listed |
 | S3b-10 | Vector group | Not written, as the DSS import: the connection kinds hold the form (the Java export's `// vector group Dyn1y1` is a comment the reader does not keep) |
 | S3b-11 | Shared code | The center-tap lug layout and `star_to_mesh` are what DSS uses too. They are copied into this spoke (no cross-spoke import) and listed in plan section 7 as core candidates, as `limit_types` was |
 | S3b-12 | Field tables | Generated from the mappers' `FIELDS` with `fields_table` (below), as S3a-11 |
+| S3b-13 | TankEnds three-phase only (the user's, 2026-11-19, via clallam_cim request 10) | **"TransformerTankEnd is only for three-phase templates, single-phase should use TransformerPhaseEnd / TransformerLug."** A `WYE_WYE`/`SINGLE_PHASE` on one phase is one lugged can, on two a bank of two (S3b-2), as the DSS import writes a 1-phase XfmrCode. Electrically unchanged: each can's %Z fields are GridLAB-D's ohms on its own kVA (k = 3 S_can / S, or S_can / S coil-rated, S3b-4), as the tank ends' per-phase base was, and the DSS export is one 1-phase Transformer per can in place of a `phases=2` one. JOHNSON CREEK solves the same (per-phase pu range and total kW unchanged over its 4157 nodes), its TankEnds 78 → 36 |
 
 **Core owes (plan section 7):** the transformer getter (`getters/transformer.py`) reads impedance only from
 winding `r` and the mesh; `percentImpedance`/`loadLoss` are open in `GETTERS_PLAN.md` ("test summaries ... not
@@ -1794,17 +1801,17 @@ transformer, the link's solver outputs and state and inrush settings (as S3a) ar
 
 | TransformerConfiguration field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, TransformerConfigurationName]` | `xcon_ct5B`, `xcon_sub3`, `xcon_xfm1` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name; a bank xb_ + name, its cans xc_ + name + _<phase> |
-| `connect_type` | `Optional[str]` | `SINGLE_PHASE_CENTER_TAPPED`, `DELTA_GWYE`, `WYE_WYE` | structural | the form and connectionKinds: WYE_WYE and SINGLE_PHASE Y/Y, DELTA_GWYE D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs; unset raises |
+| `name` | `Union[str, TransformerConfigurationName]` | `xcon_ct5B`, `xcon_sub3`, `xcon_xfm1` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name; a bank xb_ + name, its cans xc_ + name + _<phase> (_<place> unrated) |
+| `connect_type` | `Optional[str]` | `SINGLE_PHASE_CENTER_TAPPED`, `DELTA_GWYE`, `WYE_WYE` | structural | the form and connectionKinds: WYE_WYE and SINGLE_PHASE Y/Y (on one or two phases lugs), DELTA_GWYE D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs; unset raises |
 | `install_type` | `Optional[str]` | `POLETOP`, `PADMOUNT` | untranscribed | thermal aging model and siting; no network-profile home |
 | `coolant_type` | `Optional[str]` |  | untranscribed | thermal aging model and siting; no network-profile home |
 | `cooling_type` | `Optional[str]` |  | untranscribed | thermal aging model and siting; no network-profile home |
 | `primary_voltage` | `Optional[float]` | `2400.0`, `115000.0`, `4160.0` | structural | winding 1 ratedU (line to line) and baseU (the coil), S3b-3; a coil-rated wye's is baseU, ratedU on its bus's system (S6) |
 | `secondary_voltage` | `Optional[float]` | `120.0`, `4160.0`, `480.0` | structural | winding 2 ratedU and baseU; a center tap's half (ratedU x 2) |
 | `power_rating` | `Optional[float]` | `5.0`, `5000.0`, `500.0` | structural | ratedS: the whole unit's kVA, else the phase sum (init()) |
-| `powerA_rating` | `Optional[float]` | `0.0`, `75.0`, `1000.0` | structural | a can's kVA in a bank; a center tap's S on its phase; on a one-tank WYE_WYE unused, listed when it is not S / n |
-| `powerB_rating` | `Optional[float]` | `5.0`, `75.0`, `1000.0` | structural | a can's kVA in a bank; a center tap's S on its phase; on a one-tank WYE_WYE unused, listed when it is not S / n |
-| `powerC_rating` | `Optional[float]` | `0.0`, `75.0`, `1000.0` | structural | a can's kVA in a bank; a center tap's S on its phase; on a one-tank WYE_WYE unused, listed when it is not S / n |
+| `powerA_rating` | `Optional[float]` | `0.0`, `75.0`, `1000.0` | structural | a can's kVA when the wired phases are rated unequally; a center tap's S on its phase; else unused, listed when it is not S / n |
+| `powerB_rating` | `Optional[float]` | `5.0`, `75.0`, `1000.0` | structural | a can's kVA when the wired phases are rated unequally; a center tap's S on its phase; else unused, listed when it is not S / n |
+| `powerC_rating` | `Optional[float]` | `0.0`, `75.0`, `1000.0` | structural | a can's kVA when the wired phases are rated unequally; a center tap's S on its phase; else unused, listed when it is not S / n |
 | `resistance` | `Optional[float]` | `1e-05`, `0.011`, `0.0127` | derived | percentImpedance = |R + jX| x k x 100, loadLoss = R x k x S (S3b-4, S3b-5); a center tap's are the full winding's |
 | `reactance` | `Optional[float]` | `0.0001`, `0.02`, `8e-05` | derived | percentImpedance = |R + jX| x k x 100, loadLoss = R x k x S (S3b-4, S3b-5); a center tap's are the full winding's |
 | `impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.006, 'imag': 0.0136})` | derived | percentImpedance = |R + jX| x k x 100, loadLoss = R x k x S (S3b-4, S3b-5); a center tap's are the full winding's |
@@ -2948,7 +2955,7 @@ Each repair answers a GridLAB-D error, not the converter's, so the converter is 
 | S6-7 | Regulator phases | `PT_phase`/`CT_phase` on `INDIVIDUAL` GridLAB-D does not read (`:1328`, `:1378`): listed on the row, no longer raise. A `BANK` on its one `PT_phase` is one unit on it (named as a gang, `xf_<name>`) |
 | S6-9 | Open ties across phases (the user's call) | An open switching device whose switched letters are on its from end and whose to end has as many other letters (an `-A` switch from an A lateral to a B one) is `phaseSide1` = its letters, `phaseSide2` = its to end's, paired in ABC order (cim-tables' `phaseSide1`/`phaseSide2` columns; each Terminal on its side's phases), with a row note. Closed, or overlapping letters, still raise (S6-5). GridLAB-D cannot load it: the converter holds what the source system has, not only what GridLAB-D runs. The sweep checks every switch's sides against its GLM ends |
 | S6-8 | Utility decks in the sweep | `test_every_utility_deck_binds_as_gridlabd_runs_it`: every non-empty `*.glm` in `CIMHUB_GLM_UTILITY_DECKS` binds and passes every slice check (`--roundtrip`); no stop table, so no names in git |
-| S6-10 | One-phase services (the user's, 2026-11-16) | A coil-rated `SINGLE_PHASE`/`WYE_WYE` on one phase and N (a Milsoft service) is split-phase by its `secondary_voltage` (within the walk's 10 % nameplate tolerance, as `coil_rated`: a 110 V can is a leg), as a 208 V secondary of three coils is ABC line to line: 120 V is the s1 leg to N (end 2 `s1N`, kind I on the instance and the template's TransformerTankEnd 2, one split-phase half as a center tap's s1; the coil 120 V, ratedU 240); 240 V is a center tap (end 2 `s1s2N`, kind I, the center-tap template of lugs H1 H2 X1 X3 X2 with 120 V halves at S/2 on the can's S, and GridLAB-D's R + jX on 240²/S as the full winding, so a 240 V load sees the same R + jX and each leg reads 120 V to ground; written as one s1-s2 coil its legs floated). Either bus is a 240 V split-phase system (`bv_240v`), and a load's one phase there becomes the s1 leg or the s1-s2 240 V consumer. Only loads may sit on a service bus: a link, capacitor or inverter raises. JOHNSON CREEK: 430 120 V and 278 240 V services; before, 707 nodes read 1.73 pu on a 120 V BaseVoltage taken as line to line. Kind I and the tolerance are merged from glm-repair's build of the same rule (that user's call) |
+| S6-10 | One-phase services (the user's, 2026-11-16) | A coil-rated `SINGLE_PHASE`/`WYE_WYE` on one phase and N (a Milsoft service) is split-phase by its `secondary_voltage` (within the walk's 10 % nameplate tolerance, as `coil_rated`: a 110 V can is a leg), as a 208 V secondary of three coils is ABC line to line: 120 V is the s1 leg to N (end 2 `s1N`, kind I on the instance, one split-phase half as a center tap's s1, a can whose X1 lands on s1 (S3b-13); the coil 120 V, ratedU 240); 240 V is a center tap (end 2 `s1s2N`, kind I, the center-tap template of lugs H1 H2 X1 X3 X2 with 120 V halves at S/2 on the can's S, and GridLAB-D's R + jX on 240²/S as the full winding, so a 240 V load sees the same R + jX and each leg reads 120 V to ground; written as one s1-s2 coil its legs floated). Either bus is a 240 V split-phase system (`bv_240v`), and a load's one phase there becomes the s1 leg or the s1-s2 240 V consumer. Only loads may sit on a service bus: a link, capacitor or inverter raises. JOHNSON CREEK: 430 120 V and 278 240 V services; before, 707 nodes read 1.73 pu on a 120 V BaseVoltage taken as line to line. Kind I and the tolerance are merged from glm-repair's build of the same rule (that user's call) |
 
 ### Built (2026-11-16)
 

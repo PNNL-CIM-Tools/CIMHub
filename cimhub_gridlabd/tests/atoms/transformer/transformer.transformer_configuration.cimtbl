@@ -33,20 +33,22 @@ Table TransformerTankConfiguration: mRID, name, percentImpedance (percent), load
     xc_xc_bank3_C, xc_bank3_C, 0.49908757564506173, 0.024428571428571424, 0.062058718186041396, 0.27391685449536685, xb_xc_bank3
 
 Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind
-    xc_transformer_configuration:1_end_1, xc_transformer_configuration:1, 1, Y
-    xc_transformer_configuration:1_end_2, xc_transformer_configuration:1, 2, Y
-    xc_xc_dd_end_1,                       xc_xc_dd,                       1, D
-    xc_xc_dd_end_2,                       xc_xc_dd,                       2, D
-    xc_xc_dg_end_1,                       xc_xc_dg,                       1, D
-    xc_xc_dg_end_2,                       xc_xc_dg,                       2, Y
-    xc_xc_unrated_end_1,                  xc_xc_unrated,                  1, Y
-    xc_xc_unrated_end_2,                  xc_xc_unrated,                  2, Y
-    xc_xc_unused_end_1,                   xc_xc_unused,                   1, Y
-    xc_xc_unused_end_2,                   xc_xc_unused,                   2, Y
-    xc_xcon_xfm1_end_1,                   xc_xcon_xfm1,                   1, Y
-    xc_xcon_xfm1_end_2,                   xc_xcon_xfm1,                   2, Y
+    xc_xc_dd_end_1,      xc_xc_dd,      1, D
+    xc_xc_dd_end_2,      xc_xc_dd,      2, D
+    xc_xc_dg_end_1,      xc_xc_dg,      1, D
+    xc_xc_dg_end_2,      xc_xc_dg,      2, Y
+    xc_xc_unrated_end_1, xc_xc_unrated, 1, Y
+    xc_xc_unrated_end_2, xc_xc_unrated, 2, Y
+    xc_xc_unused_end_1,  xc_xc_unused,  1, Y
+    xc_xc_unused_end_2,  xc_xc_unused,  2, Y
+    xc_xcon_xfm1_end_1,  xc_xcon_xfm1,  1, Y
+    xc_xcon_xfm1_end_2,  xc_xcon_xfm1,  2, Y
 
 Table TransformerLug: mRID, TankConfiguration, designation, sequenceNumber
+    xc_transformer_configuration:1_lug_h1, xc_transformer_configuration:1, H1, 1
+    xc_transformer_configuration:1_lug_h2, xc_transformer_configuration:1, H2, 2
+    xc_transformer_configuration:1_lug_x1, xc_transformer_configuration:1, X1, 3
+    xc_transformer_configuration:1_lug_x2, xc_transformer_configuration:1, X2, 4
     xc_transformer_configuration:3_lug_h1, xc_transformer_configuration:3, H1, 1
     xc_transformer_configuration:3_lug_h2, xc_transformer_configuration:3, H2, 2
     xc_transformer_configuration:3_lug_x1, xc_transformer_configuration:3, X1, 3
@@ -83,21 +85,9 @@ Table TransformerLug: mRID, TankConfiguration, designation, sequenceNumber
     xc_xcon_ct5B_lug_x3,                   xc_xcon_ct5B,                   X3, 4
     xc_xcon_ct5B_lug_x2,                   xc_xcon_ct5B,                   X2, 5
 
-Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerEnd
-    xc_transformer_configuration:1_wdg_1, xc_transformer_configuration:1, 4160.0, 2401.7771198288433, 75.0,  75.0,               xc_transformer_configuration:1_end_1
-    xc_transformer_configuration:1_wdg_2, xc_transformer_configuration:1, 480.0,  277.1281292110204,  75.0,  75.0,               xc_transformer_configuration:1_end_2
-    xc_xc_dd_wdg_1,                       xc_xc_dd,                       4160.0, 4160.0,             150.0, 50.0,               xc_xc_dd_end_1
-    xc_xc_dd_wdg_2,                       xc_xc_dd,                       480.0,  480.0,              150.0, 50.0,               xc_xc_dd_end_2
-    xc_xc_dg_wdg_1,                       xc_xc_dg,                       4160.0, 4160.0,             150.0, 50.0,               xc_xc_dg_end_1
-    xc_xc_dg_wdg_2,                       xc_xc_dg,                       480.0,  277.1281292110204,  150.0, 50.0,               xc_xc_dg_end_2
-    xc_xc_unrated_wdg_1,                  xc_xc_unrated,                  4160.0, 2401.7771198288433, 15.0,  5.0,                xc_xc_unrated_end_1
-    xc_xc_unrated_wdg_2,                  xc_xc_unrated,                  480.0,  277.1281292110204,  15.0,  5.0,                xc_xc_unrated_end_2
-    xc_xc_unused_wdg_1,                   xc_xc_unused,                   4160.0, 2401.7771198288433, 300.0, 100.0,              xc_xc_unused_end_1
-    xc_xc_unused_wdg_2,                   xc_xc_unused,                   480.0,  277.1281292110204,  300.0, 100.0,              xc_xc_unused_end_2
-    xc_xcon_xfm1_wdg_1,                   xc_xcon_xfm1,                   4160.0, 2401.7771198288433, 500.0, 166.66666666666666, xc_xcon_xfm1_end_1
-    xc_xcon_xfm1_wdg_2,                   xc_xcon_xfm1,                   480.0,  277.1281292110204,  500.0, 166.66666666666666, xc_xcon_xfm1_end_2
-
 Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerLug, ToTransformerLug
+    xc_transformer_configuration:1_wdg_1, xc_transformer_configuration:1, 4160.0,            2401.7771198288433, 75.0, 75.0, xc_transformer_configuration:1_lug_h1, xc_transformer_configuration:1_lug_h2
+    xc_transformer_configuration:1_wdg_2, xc_transformer_configuration:1, 480.0,             277.1281292110204,  75.0, 75.0, xc_transformer_configuration:1_lug_x1, xc_transformer_configuration:1_lug_x2
     xc_transformer_configuration:3_wdg_1, xc_transformer_configuration:3, 4160.004988602778, 2401.78,            25.0, 25.0, xc_transformer_configuration:3_lug_h1, xc_transformer_configuration:3_lug_h2
     xc_transformer_configuration:3_wdg_2, xc_transformer_configuration:3, 240.0,             120.0,              12.5, 25.0, xc_transformer_configuration:3_lug_x1, xc_transformer_configuration:3_lug_x2
     xc_transformer_configuration:3_wdg_3, xc_transformer_configuration:3, 240.0,             120.0,              12.5, 25.0, xc_transformer_configuration:3_lug_x2, xc_transformer_configuration:3_lug_x3
@@ -117,3 +107,15 @@ Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS
     xc_xcon_ct5B_wdg_1,                   xc_xcon_ct5B,                   4156.921938165306, 2400.0,             5.0,  5.0,  xc_xcon_ct5B_lug_h1,                   xc_xcon_ct5B_lug_h2
     xc_xcon_ct5B_wdg_2,                   xc_xcon_ct5B,                   240.0,             120.0,              2.5,  5.0,  xc_xcon_ct5B_lug_x1,                   xc_xcon_ct5B_lug_x2
     xc_xcon_ct5B_wdg_3,                   xc_xcon_ct5B,                   240.0,             120.0,              2.5,  5.0,  xc_xcon_ct5B_lug_x2,                   xc_xcon_ct5B_lug_x3
+
+Table TransformerWinding: mRID, TankConfiguration, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerEnd
+    xc_xc_dd_wdg_1,      xc_xc_dd,      4160.0, 4160.0,             150.0, 50.0,               xc_xc_dd_end_1
+    xc_xc_dd_wdg_2,      xc_xc_dd,      480.0,  480.0,              150.0, 50.0,               xc_xc_dd_end_2
+    xc_xc_dg_wdg_1,      xc_xc_dg,      4160.0, 4160.0,             150.0, 50.0,               xc_xc_dg_end_1
+    xc_xc_dg_wdg_2,      xc_xc_dg,      480.0,  277.1281292110204,  150.0, 50.0,               xc_xc_dg_end_2
+    xc_xc_unrated_wdg_1, xc_xc_unrated, 4160.0, 2401.7771198288433, 15.0,  5.0,                xc_xc_unrated_end_1
+    xc_xc_unrated_wdg_2, xc_xc_unrated, 480.0,  277.1281292110204,  15.0,  5.0,                xc_xc_unrated_end_2
+    xc_xc_unused_wdg_1,  xc_xc_unused,  4160.0, 2401.7771198288433, 300.0, 100.0,              xc_xc_unused_end_1
+    xc_xc_unused_wdg_2,  xc_xc_unused,  480.0,  277.1281292110204,  300.0, 100.0,              xc_xc_unused_end_2
+    xc_xcon_xfm1_wdg_1,  xc_xcon_xfm1,  4160.0, 2401.7771198288433, 500.0, 166.66666666666666, xc_xcon_xfm1_end_1
+    xc_xcon_xfm1_wdg_2,  xc_xcon_xfm1,  480.0,  277.1281292110204,  500.0, 166.66666666666666, xc_xcon_xfm1_end_2

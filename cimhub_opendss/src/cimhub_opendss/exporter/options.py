@@ -27,15 +27,20 @@ def options_record(network, names: Names, open_terminals: list[str]) -> schema.O
 
 def circuit_name(network, names: Names) -> str:
     """The one Feeder's name. Several Feeders are one circuit (one deck per substation) when they share one
-    NormalEnergizingSubstation, named by it. No Feeder, or several without one Substation, raises."""
+    NormalEnergizingSubstation, named by it. No Feeder, or several without one Substation, raises. Among several,
+    a Feeder that contains no equipment is not counted (H2): a frame model declares the Feeders of its whole area,
+    and a deck holds only those whose equipment it has. A Feeder alone names the circuit even when empty (a deck of
+    only its source)."""
     feeders = list(network.graph.get(cim.Feeder, {}).values())
+    if len(feeders) > 1:
+        feeders = [feeder for feeder in feeders if feeder.Equipments]
     if len(feeders) == 1:
         return names.name(feeders[0], "Circuit")
     substations = {feeder.NormalEnergizingSubstation for feeder in feeders}
     if len(substations) != 1 or None in substations:
         shown = sorted(describe(feeder) for feeder in feeders)
-        raise ValueError(f"the model has {len(feeders)} Feeders {shown}; a DSS deck is one circuit: one Feeder, or "
-                         f"Feeders of one NormalEnergizingSubstation")
+        raise ValueError(f"the model has {len(feeders)} Feeders with equipment {shown}; a DSS deck is one circuit: one "
+                         f"Feeder, or Feeders of one NormalEnergizingSubstation")
     [substation] = substations
     return names.name(substation, "Circuit")
 

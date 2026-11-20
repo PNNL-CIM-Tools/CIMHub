@@ -1,10 +1,16 @@
-"""DSS bus references, ``650.1.2.3`` (``EXPORT_MAPPING.md#bus-references``, decision E7)."""
+"""DSS bus references, ``650.1.2.3`` (``EXPORT_MAPPING.md#bus-references``, decision E7).
+
+A BusbarSection is its node's bus (``BUS_CLASSES``): DSS has no element for it, so it writes no record (H3).
+"""
 
 from __future__ import annotations
 
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_opendss.exporter.naming import Names
+
+#: conducting equipment that is only its node's bus in DSS, and writes no record (H3)
+BUS_CLASSES = (cim.BusbarSection,)
 
 _NODE = {
     cim.SinglePhaseKind.A: 1, cim.SinglePhaseKind.B: 2, cim.SinglePhaseKind.C: 3,

@@ -23,7 +23,7 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
-| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (TankEnd), `transformer_template_1ph` (center tap, lugs) | the instances that use it (their bus systems) |
+| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 | `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
@@ -513,14 +513,14 @@ is then updated to match (user, 2026-11-08).
 | code kind | instances | form |
 |---|---:|---|
 | center tap: 1-phase, 3 windings, secondary halves equal (7.2/0.12/0.12, 2.4/0.12/0.12, ...) | 8,828 (IEEE8500, IEEE9500, IEEE123_PV, IEEE13_OCHRE, IEEE13_CDPSM `CT5`) | lugs |
-| 1-phase, 3 windings Y-Y-D (IEEE4 YYD, 39.83/7.62/2.4 kV) | 3 | TankEnd |
+| 1-phase, 3 windings Y-Y-D (IEEE4 YYD, 39.83/7.62/2.4 kV) | 3 | lugs (S3b-3; TankEnd before) |
 | 3-phase, 2 windings | 3 | TankEnd |
-| 1-phase, 2 windings | none outside the regulators (mapped in S3a) | TankEnd |
+| 1-phase, 2 windings | none outside the regulators (mapped in S3a) | lugs (S3b-3) |
 
 Every center-tap instance has the split-phase secondary `bus2.1.0` + `bus2.0.2` and a line-to-neutral primary on
 one node. No instance overrides its code's values, except `ppm_antifloat` (untranscribed).
 
-- **TankEnd template** (3-phase and every code that is not a center tap): `TransformerTankConfiguration`
+- **TankEnd template** (3-phase only, S3b-3): `TransformerTankConfiguration`
   `xc_<code>`. Each DSS winding gives:
   - a `TransformerTankEnd` `xc_<code>_end_<n>` (`endNumber`, `connectionKind`, `rground`/`xground` from
     `Rneut`/`Xneut`; no phases);
@@ -530,7 +530,10 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
   The mesh between windings carries `x`. The instance's `PowerTransformerEnd` n is template end n
   (`endNumber`); it carries the node, phases and `grounded`. Shapes: `transformer_template`,
   `transformer_by_template` (`xf_t1`).
-- **Lug template** (center tap). A 3-winding tank, as CIMTBL-Models
+- **Lug template** (every 1-phase code, S3b-3). Any code but a center tap has two lugs per winding, H1 H2, X1 X2,
+  Y1 Y2 (IEEE C57.12.70), numbered in each coil's node order (its direction) over the instance's phase ends,
+  end 1 first, so a 2-winding code's are 1-4 and IEEE4 YYD's 1-6; windings H1→H2, X1→X2, Y1→Y2, `baseS` each its
+  own kVA. A center tap is a 3-winding tank, as CIMTBL-Models
   `distribution/templates/polemount_1ph_50kva_7200_12470y.cimtbl`:
   - `TransformerLug`s H1, H2, X1, X3, X2 (`sequenceNumber` 1-5: the instance phase end each lands on, below);
   - windings lug to lug from the polarity end: H1→H2, X1→X2 (DSS winding 2, `bus2.1.0`: s1→N) and X2→X3 (winding
@@ -538,8 +541,8 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
   - `designation` per IEEE C57.12.70 (the profile's text). X1 is the low-side terminal in phase with H1 under
     either polarity, so s1 (in phase with the primary) is X1 and s2 (at 180°) is X3. Additive polarity (X3, X2,
     X1: 1-phase, 200 kVA or less, 8,660 V or less) against subtractive (X1, X2, X3) only says where X1 sits on
-    the tank, so the model is the same for both (confirmed by the user, 2026-11-08). Y/Z designations belong to
-    a true 3-winding unit, which here is a TankEnd template (no lugs).
+    the tank, so the model is the same for both (confirmed by the user, 2026-11-08). Y designations belong to
+    a true 3-winding unit's tertiary (IEEE4 YYD).
 
   The instance has a `PowerTransformerEnd` per bus (end 1: the primary node and phases; end 2: `s1s2N`) and, as the
   inline 1-phase mapper already does, a `TransformerPhaseEnd` per phase of each end's terminal, not per lug:
@@ -571,12 +574,12 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
 `TankConfiguration` = `xc_<code>`, plus the ends above. A lug template's instance phase ends reference their end's
 generated Terminal (`xf_<name>_T<n>`), which is their link to the PowerTransformer, since the instance has no
 windings. **Amended 2026-11-09 (DSS S6c, T3):** a 1-phase instance of a TankEnd template gets them too, numbered in
-its coil's node order, end 1 first. That order is the coil's direction, which a PhaseCode cannot hold. Without it,
+its coil's node order, end 1 first (since S3b-3 every 1-phase code is a lug template, whose lugs are numbered so). That order is the coil's direction, which a PhaseCode cannot hold. Without it,
 IEEE4 YYD's `tert.3.1` came back `tert.1.3`, and in the engine the 3-can bank's voltages moved by 1.6 kV. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
 (the template must be the one source), except the untranscribed ones. A regulated instance keeps S3a's rule: it
 takes its code's values, because CIM has no AutoTransformer template.
 
-**Fail fast:** windings other than 2 or 3; a mesh From winding rated other than winding 1; a tap other than 1 on an
+**Fail fast:** a code of other than 1 or 3 phases; windings other than 2 or 3; `Rneut` on a 1-phase code; a mesh From winding rated other than winding 1; a tap other than 1 on an
 unregulated code; a center-tap code with an
 instance that is not a split-phase secondary; instances of one code on different bus systems; `RdcOhms`,
 `Seasons`, `Ratings` set.
@@ -586,11 +589,16 @@ instance that is not a split-phase secondary; instances of one code on different
 **Decisions (approved 2026-11-08):**
 - **S3b-1:** AutoTrans stays unmapped until a deck has one; the master's not-mapped count is the signal.
 - **S3b-2:** the Y-Y-D 1-phase 3-winding code (IEEE4 YYD) is a TankEnd template (3 tank ends, D on the third).
+  **Superseded by S3b-3.**
+- **S3b-3 (the user's, 2026-11-19, via clallam_cim request 10):** "TransformerTankEnd is only for three-phase
+  templates, single-phase should use TransformerPhaseEnd / TransformerLug." Every 1-phase code is a lug template
+  (above), the instance's phase ends unchanged; a 2-phase code raises (no deck has one). The engine checks are
+  unchanged.
 
 | Xfmrcode field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, XfmrcodeName]` | `CT5`, `FdrXfmr`, `RegLeg` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name, lowercased |
-| `phases` | `Optional[int]` | `1`, `3` | structural | 3: TankEnd template; 1 with 3 windings whose instances are center taps: lug template; other 1-phase codes: TankEnd template |
+| `phases` | `Optional[int]` | `1`, `3` | structural | 3: TankEnd template; 1: lug template (a center tap's H1 H2 X1 X3 X2, else two lugs per winding) |
 | `windings` | `Optional[int]` | `3`, `2` | structural | one TransformerWinding each; 2 or 3 |
 | `wdg` | `Optional[int]` |  | structural | the winding Rneut/Xneut belong to (the reader's tag); none = the last |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
@@ -598,7 +606,7 @@ instance that is not a split-phase secondary; instances of one code on different
 | `kVA` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `tap` | `Optional[str]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
-| `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a lug template raises |
+| `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a 1-phase code raises |
 | `Xneut` | `Optional[float]` |  | structural | TankEnd xground (ohm) of its winding, with Rneut >= 0 |
 | `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='wye', descripti...`, `[ConnectionType(text='delta', descrip...` | structural | TankEnd connectionKind (D, Y; grounding is the instance's); a center tap's secondary halves are I; default wye |
 | `kVs` | `Union[float, list[float], NoneType]` | `[2.4, 0.12, 0.12]`, `[4.16, 0.48]`, `[2.4, 2.4]` | structural | winding baseU (the coil); ratedU phase-to-phase from the instances' common bus system (x sqrt 3 on a 3-phase system, x 2 for a split-phase half), and instances that disagree raise |

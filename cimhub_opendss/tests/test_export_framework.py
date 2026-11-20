@@ -89,6 +89,20 @@ def test_unexported_equipment_raises():
         DssExporter().to_model(network)
 
 
+def test_busbar_section_is_its_node_s_bus_and_writes_nothing():
+    """H3: DSS has no element for a BusbarSection."""
+    network = _network("vsource/mvasc.dss")
+    before = {cls: len(DssExporter().to_model(network).list_by_class(cls)) for cls in (schema.Vsource, schema.Line)}
+    [bus] = network.graph[cim.ConnectivityNode].values()
+    busbar = cim.BusbarSection(mRID="busbar")
+    terminal = cim.Terminal(mRID="busbar_t1", ConductingEquipment=busbar, ConnectivityNode=bus, sequenceNumber=1)
+    busbar.Terminals.append(terminal)
+    network.add_to_graph(busbar)
+    network.add_to_graph(terminal)
+    model = DssExporter().to_model(network)
+    assert {cls: len(model.list_by_class(cls)) for cls in before} == before
+
+
 def test_several_sources_need_the_circuit_source_named():
     network = _network("vsource/mvasc.dss")
     [bus] = network.graph[cim.ConnectivityNode].values()

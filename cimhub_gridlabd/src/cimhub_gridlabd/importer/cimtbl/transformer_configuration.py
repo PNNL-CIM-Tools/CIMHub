@@ -6,9 +6,10 @@ So it goes on the ``TransformerTankConfiguration``'s nameplate fields, ``percent
 ``noLoadLoss`` and ``percentMagnetizingCurrent``, moved to the tank's own nameplate by ``k = 3 S_coil / S_total``
 so GridLAB-D's ohms are kept (S3b-4, S3b-5). No winding ``r``, no mesh.
 
-Three forms (S3b-2): one tank by ``TransformerTankEnd``; a bank of lugged cans under a
-``TransformerBankConfiguration`` (a ``WYE_WYE`` whose wired phases are rated unequally, S3b-9); a center tap by
-lugs H1 H2 X1 X3 X2, whose %Z is the full winding's that GridLAB-D splits into its star (``transformer.cpp:788``).
+Three forms (S3b-2), TransformerTankEnds for three-phase templates only (the user's rule, 2026-11-19): a
+three-phase tank by ``TransformerTankEnd``; lugged cans, a wye on one phase (one can) or two (a bank), or on three
+rated unequally (a bank, S3b-9), a bank's cans under a ``TransformerBankConfiguration``; a center tap by lugs H1 H2
+X1 X3 X2, whose %Z is the full winding's that GridLAB-D splits into its star (``transformer.cpp:788``).
 ``SINGLE_PHASE`` is a ``WYE_WYE`` (one case in ``transformer.cpp:282``). A wye's voltages rate the line (the Java
 CIMHub exports, S3b-3) or the coil, phase to neutral (the Milsoft WindMil exports), as the deck says
 (``topology.coil_rated``, S6).
@@ -62,10 +63,11 @@ _SHUNT = Field("derived", note="noLoadLoss = S / (Rsh x k), percentMagnetizingCu
 
 FIELDS = {
     "name": Field("copied", ((_CONFIGURATION, "name", None),), "mRID = xc_ + name; a bank xb_ + name, its cans "
-                                                                "xc_ + name + _<phase>"),
+                                                                "xc_ + name + _<phase> (_<place> unrated)"),
     **HEADER_FIELDS,
-    "connect_type": Field("structural", note="the form and connectionKinds: WYE_WYE and SINGLE_PHASE Y/Y, DELTA_GWYE "
-                                             "D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs; unset raises"),
+    "connect_type": Field("structural", note="the form and connectionKinds: WYE_WYE and SINGLE_PHASE Y/Y (on one or "
+                                             "two phases lugs), DELTA_GWYE D/Y, DELTA_DELTA D/D, "
+                                             "SINGLE_PHASE_CENTER_TAPPED lugs; unset raises"),
     "install_type": _THERMAL,
     "coolant_type": _THERMAL,
     "cooling_type": _THERMAL,
@@ -73,8 +75,9 @@ FIELDS = {
                                                 "coil-rated wye's is baseU, ratedU on its bus's system (S6)"),
     "secondary_voltage": Field("structural", note="winding 2 ratedU and baseU; a center tap's half (ratedU x 2)"),
     "power_rating": Field("structural", note="ratedS: the whole unit's kVA, else the phase sum (init())"),
-    **{f"power{letter}_rating": Field("structural", note="a can's kVA in a bank; a center tap's S on its phase; on a "
-                                                         "one-tank WYE_WYE unused, listed when it is not S / n")
+    **{f"power{letter}_rating": Field("structural", note="a can's kVA when the wired phases are rated unequally; a "
+                                                         "center tap's S on its phase; else unused, listed when it "
+                                                         "is not S / n")
        for letter in "ABC"},
     "resistance": _SERIES,
     "reactance": _SERIES,
@@ -185,14 +188,17 @@ def check(config) -> None:
 
 
 def default_wiring(config) -> Wiring:
-    """An unused configuration's wiring: the phases it rates, else all three."""
+    """An unused configuration's wiring: the phases it rates, else all three (a ``SINGLE_PHASE`` one)."""
     rated = "".join(letter for letter in "ABC" if getattr(config, f"power{letter}_rating"))
-    if str(config.connect_type) == CENTER_TAP:
+    connect = str(config.connect_type)
+    if connect == CENTER_TAP:
         if len(rated) != 1:
             raise ValueError(f"{label(config)}: an unused center tap rated on {rated or 'no phase'}; its phase is "
                              "unknown")
         return Wiring(rated, None)
-    return Wiring(rated if str(config.connect_type) in WYE_CONNECTIONS and rated else "ABC", None)
+    if connect not in WYE_CONNECTIONS:
+        return Wiring("ABC", None)
+    return Wiring(rated or ("A" if connect == "SINGLE_PHASE" else "ABC"), None)
 
 
 def center_tapped(config, wiring: Wiring) -> bool:
@@ -201,19 +207,42 @@ def center_tapped(config, wiring: Wiring) -> bool:
     return str(config.connect_type) == CENTER_TAP or wiring.service == "s1s2N"
 
 
-def is_bank(config, wiring: Wiring) -> bool:
-    """A wye whose wired phases are all rated, unequally (S3b-9)."""
+def _rated_unequally(config, wiring: Wiring) -> bool:
+    """A wye whose wired phases are all rated, unequally: each can has its own kVA (S3b-9). Otherwise GridLAB-D
+    runs the unit on ``power_rating`` alone, so each can takes an equal share."""
     if str(config.connect_type) not in WYE_CONNECTIONS:
         return False
     kvas = [getattr(config, f"power{letter}_rating") for letter in wiring.letters]
     return all(kvas) and len(set(kvas)) > 1
 
 
-def bank_numbers(letters: str) -> dict[tuple[int, str], int]:
-    """``{(end, phase): conductor}`` of a bank, numbered end 1's phases then N, then end 2's (S3b-9)."""
+def lugged(config, wiring: Wiring) -> bool:
+    """A wye written as lugged cans, one per wired phase: on one or two phases (not a three-phase template, so no
+    TankEnds), or on three rated unequally (a bank, S3b-9). Not a center tap (``center_tapped``)."""
+    if str(config.connect_type) not in WYE_CONNECTIONS or center_tapped(config, wiring):
+        return False
+    return len(wiring.letters) < 3 or _rated_unequally(config, wiring)
+
+
+def is_bank(config, wiring: Wiring) -> bool:
+    """Lugged cans, more than one: a TransformerBankConfiguration, a tank per can."""
+    return lugged(config, wiring) and len(wiring.letters) > 1
+
+
+def can_labels(config, wiring: Wiring) -> tuple[str, ...]:
+    """What names each lugged can in the template: its phase when the cans are rated unequally, else its place
+    (1, 2), as equal cans serve any phases (an unrated template's are only a count, ``wiring_of``)."""
+    if _rated_unequally(config, wiring):
+        return tuple(wiring.letters)
+    return tuple(str(place) for place in range(1, len(wiring.letters) + 1))
+
+
+def bank_numbers(labels: tuple[str, ...]) -> dict[tuple[int, str], int]:
+    """``{(end, can label or N): conductor}`` of lugged cans, numbered end 1's phases then N, then end 2's
+    (S3b-9)."""
     numbers, sequence = {}, 1
     for end in (1, 2):
-        for phase in (*letters, "N"):
+        for phase in (*labels, "N"):
             numbers[(end, phase)] = sequence
             sequence += 1
     return numbers
@@ -302,8 +331,6 @@ def _tank_ends(model: GlmModel, config, wiring: Wiring, out: _Statements, commen
                 comment=comment))
     columns = _winding_columns(model, config, [Column("FromTransformerEnd")])
     kinds = CONNECTIONS[str(config.connect_type)]
-    if wiring.service == "s1N":  # a 120 V service's leg is one split-phase half, as a center tap's (S6-10)
-        kinds = (kinds[0], "I")
     for number, (kind, slot) in enumerate(zip(kinds, ("primary_voltage", "secondary_voltage")), start=1):
         out.add("TransformerTankEnd", [Column("mRID"), Column("TankConfiguration"), Column("endNumber"),
                                        Column("connectionKind")], Row([f"{xc}_end_{number}", xc, str(number), kind]))
@@ -323,19 +350,31 @@ def _lugged_windings(xc: str, windings: list[tuple[float, float, float, float]],
 _LUG_COLUMNS = [Column("mRID"), Column("TankConfiguration"), Column("designation"), Column("sequenceNumber")]
 
 
-def _bank(model: GlmModel, config, wiring: Wiring, out: _Statements, comment: str | None) -> None:
-    xb = mrid(BANK_PREFIX, config.name)
+def _cans(model: GlmModel, config, wiring: Wiring, out: _Statements, comment: str | None) -> None:
+    """One TankConfiguration per can (``lugged``), lugs H1 H2 X1 X2 numbered as ``bank_numbers`` and windings H1->H2,
+    X1->X2; several are a bank under a TransformerBankConfiguration. A can's kVA is its phase rating when they are
+    rated unequally, else an equal share of the unit's."""
     total = total_kva(config)
-    out.add("TransformerBankConfiguration", [Column("mRID"), Column("name")], Row([xb, str(config.name)],
-                                                                                   comment=comment))
-    numbers = bank_numbers(wiring.letters)
+    labels = can_labels(config, wiring)
+    bank = len(labels) > 1
+    xb = mrid(BANK_PREFIX, config.name)
+    if bank:
+        out.add("TransformerBankConfiguration", [Column("mRID"), Column("name")], Row([xb, str(config.name)],
+                                                                                       comment=comment))
+    numbers = bank_numbers(labels)
     columns = _winding_columns(model, config, [Column("FromTransformerLug"), Column("ToTransformerLug")])
-    for letter in wiring.letters:
-        xc = tank_name(config, letter)
-        can = phase_kva(config, letter)
-        out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE, Column("BankConfiguration")],
-                Row([xc, f"{config.name}_{letter}", *_nameplate(model, config, _Tank(can, _k(wiring, can, total))), xb]))
-        for designation, (end, phase) in (("H1", (1, letter)), ("H2", (1, "N")), ("X1", (2, letter)),
+    for can_label in labels:
+        can = phase_kva(config, can_label) if _rated_unequally(config, wiring) else total / len(labels)
+        nameplate = _nameplate(model, config, _Tank(can, _k(wiring, can, total)))
+        if bank:
+            xc = tank_name(config, can_label)
+            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE, Column("BankConfiguration")],
+                    Row([xc, f"{config.name}_{can_label}", *nameplate, xb]))
+        else:
+            xc = tank_name(config)
+            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE],
+                    Row([xc, str(config.name), *nameplate], comment=comment))
+        for designation, (end, phase) in (("H1", (1, can_label)), ("H2", (1, "N")), ("X1", (2, can_label)),
                                           ("X2", (2, "N"))):
             out.add("TransformerLug", _LUG_COLUMNS, Row([f"{xc}_lug_{designation.lower()}", xc, designation,
                                                          str(numbers[(end, phase)])]))
@@ -368,7 +407,7 @@ def _center_tap(model: GlmModel, config, wiring: Wiring, out: _Statements, comme
 
 
 def _listed_phase_ratings(config, wiring: Wiring) -> str | None:
-    """A one-tank wye's phase ratings when they are not S / n on its wired phases (S3b-9)."""
+    """A wye's phase ratings when they are not S / n on its wired phases, and so not its cans' (S3b-9)."""
     if str(config.connect_type) not in WYE_CONNECTIONS or not any(getattr(config, f"power{p}_rating") for p in "ABC"):
         return None
     share = total_kva(config) / len(wiring.letters)
@@ -398,13 +437,13 @@ def map_transformer_configuration(model: GlmModel, wirings: dict[str, Wiring]) -
             notes.append("not filled: winding 1 ratedU (no instance says its primary system)")
         if str(config.name) in unused and str(config.connect_type) in WYE_CONNECTIONS:
             notes.append("voltages read line to line (S3b-3): no instance says whether they rate the coil (S6)")
-        if not is_bank(config, wiring):
+        if not _rated_unequally(config, wiring):
             notes.append(_listed_phase_ratings(config, wiring))
         comment = "\n".join(note for note in notes if note) or None
         if center_tapped(config, wiring):
             _center_tap(model, config, wiring, out, comment)
-        elif is_bank(config, wiring):
-            _bank(model, config, wiring, out, comment)
+        elif lugged(config, wiring):
+            _cans(model, config, wiring, out, comment)
         else:
             _tank_ends(model, config, wiring, out, comment)
     if not configs:
