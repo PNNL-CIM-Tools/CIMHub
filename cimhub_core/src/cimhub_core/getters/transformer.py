@@ -21,7 +21,9 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   which of the bank's phase ends each can serves.
 - Either template form may hold its impedance as the configuration's ``percentImpedance`` and ``loadLoss`` instead
   of winding ``r`` and a mesh (GLM's %Z): read as BY_TANK_IMPEDANCE's below, on winding 1's ``ratedS``, when no
-  winding has an ``r`` or a mesh (with one, the percentImpedance beside it is the nameplate's figure, not read).
+  winding has an ``r`` or a mesh (with one, the percentImpedance beside it is the nameplate's figure, not read). Its
+  windings are two, or a centre tap's three, the halves x→N and N→y (s1, s2 on a service; a, b on a delta bank's
+  lighting can).
 - BY_TANK_IMPEDANCE: two ``PowerTransformerEnd``s and one tank with ``percentImpedance`` (and ``loadLoss``), nothing
   else: a GIS's nameplate kVA and %Z. |z| is on end 1's ``ratedS``, r = loadLoss / ratedS (0 unset), x = √(z² − r²).
   An end on s1s2N with connectionKind I is a centre tap: two halves, s1→N and N→s2, each at half the end's ``ratedU``
@@ -302,12 +304,21 @@ def _by_nameplate(config: cim.TransformerTankConfiguration, coils: list[_Coil]) 
 def _template_nameplate(config, coils: list[_Coil], first_va: float,
                         scale: float) -> tuple[list[float], dict[tuple[int, int], MeshImpedance]]:
     """A TankConfiguration's percentImpedance and loadLoss as each winding's r and the mesh, by ``_nameplate_split``:
-    two windings, or a centre tap's (its windings 2 and 3 s1→N and N→s2)."""
-    center_tap = len(coils) == 3 and tuple(coil.phases for coil in coils[1:]) == CENTER_TAP_HALVES
+    two windings, or a centre tap's three (``_is_center_tap``)."""
+    center_tap = _is_center_tap(coils)
     if len(coils) != 2 and not center_tap:
         raise ValueError(f"{describe(config)}: percentImpedance on {len(coils)} windings; it is between two, or over "
                          f"a centre tap's three")
     return _nameplate_split(config, first_va, center_tap, scale)
+
+
+def _is_center_tap(coils: list[_Coil]) -> bool:
+    """Three windings whose 2 and 3 are the halves of one secondary joined at its neutral tap, x→N and N→y: s1→N and
+    N→s2 on a split-phase service, a→N and N→b on the lighting can of a four-wire or open delta bank."""
+    if len(coils) != 3 or any(len(coil.phases) != 2 for coil in coils[1:]):
+        return False
+    (outer, tap), (tap_again, other) = coils[1].phases, coils[2].phases
+    return tap is N and tap_again is N and N not in (outer, other) and outer is not other
 
 
 def _can_va(tank: cim.TransformerTank, tanks: list, first: cim.PowerTransformerEnd) -> float:

@@ -560,6 +560,65 @@ def test_lugged_template_bank_can_serves_its_lugs_phase(mrid, phase, kva, tmp_pa
     assert model.base_power == pytest.approx(kva)
 
 
+# an open wye - open delta bank of lugged template cans by %Z (CIMTBL-Models open_wye_open_delta_example): end 1
+# A B N = 1-3, end 2 a b c N = 4-7; the lighting can L is X1-X2-X3 = a-N-b, the power can T X1-X3 = b-c
+OPEN_DELTA_BANK = """Profile = cim18v17
+Object PowerTransformer: mRID=xf_od, name=od
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, PowerTransformer=xf_od
+    xf_od_1, p, ABN,  1, Y, true
+    xf_od_2, s, ABCN, 2, D, true
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_od_1_A, 1, 1, A, xf_od_T1
+    xf_od_1_B, 1, 2, B, xf_od_T1
+    xf_od_1_N, 1, 3, N, xf_od_T1
+    xf_od_2_A, 2, 4, A, xf_od_T2
+    xf_od_2_B, 2, 5, B, xf_od_T2
+    xf_od_2_C, 2, 6, C, xf_od_T2
+    xf_od_2_N, 2, 7, N, xf_od_T2
+Table TransformerTankConfiguration: mRID, percentImpedance, loadLoss (W)
+    xc_od_l, 2.0808652046684, 600
+    xc_od_t, 2.0808652046684, 300
+Table TransformerLug: mRID, designation, sequenceNumber, TankConfiguration
+    xc_od_l_h1, H1, 1, xc_od_l
+    xc_od_l_h2, H2, 3, xc_od_l
+    xc_od_l_x1, X1, 4, xc_od_l
+    xc_od_l_x2, X2, 7, xc_od_l
+    xc_od_l_x3, X3, 5, xc_od_l
+    xc_od_t_h1, H1, 2, xc_od_t
+    xc_od_t_h2, H2, 3, xc_od_t
+    xc_od_t_x1, X1, 5, xc_od_t
+    xc_od_t_x3, X3, 6, xc_od_t
+Table TransformerWinding: mRID, ratedU (V), baseU (V), ratedS (kVA), baseS (kVA), FromTransformerLug, ToTransformerLug, TankConfiguration
+    xc_od_l_wdg_h1h2, 12470, 7199.558, 50, 50, xc_od_l_h1, xc_od_l_h2, xc_od_l
+    xc_od_l_wdg_x1x2, 240,   120,      25, 50, xc_od_l_x1, xc_od_l_x2, xc_od_l
+    xc_od_l_wdg_x2x3, 240,   120,      25, 50, xc_od_l_x2, xc_od_l_x3, xc_od_l
+    xc_od_t_wdg_h1h2, 12470, 7199.558, 25, 25, xc_od_t_h1, xc_od_t_h2, xc_od_t
+    xc_od_t_wdg_x1x3, 240,   240,      25, 25, xc_od_t_x1, xc_od_t_x3, xc_od_t
+Table TransformerTank: mRID, PowerTransformer, TankConfiguration
+    xf_od_tank_l, xf_od, xc_od_l
+    xf_od_tank_t, xf_od, xc_od_t
+"""
+
+
+def test_a_lighting_can_by_percent_impedance_is_split_as_a_centre_tap(tmp_path):
+    path = tmp_path / "bank.cimtbl"
+    path.write_text(OPEN_DELTA_BANK)
+    network = load_model(path)
+    lighting, power = _can(network, "xf_od_tank_l"), _can(network, "xf_od_tank_t")
+    assert [w.phases for w in lighting.windings] == [(A, N), (A, N), (N, B)]
+    assert [w.r for w in lighting.windings] == pytest.approx([0.6, 1.2, 1.2])
+    assert _mesh(lighting) == CENTER_TAP_MESH
+    assert [w.phases for w in power.windings] == [(B, N), (B, cim.SinglePhaseKind.C)]
+    assert [w.r for w in power.windings] == pytest.approx([0.6, 0.6])
+
+
+def test_three_windings_that_are_no_centre_tap_raise(tmp_path):
+    path = tmp_path / "bank.cimtbl"
+    path.write_text(OPEN_DELTA_BANK.replace("xc_od_l_x2, X2, 7,", "xc_od_l_x2, X2, 6,"))
+    with pytest.raises(ValueError, match="'xc_od_l': percentImpedance on 3 windings"):
+        _can(load_model(path), "xf_od_tank_l")
+
+
 def test_own_windings_and_a_configuration_raise():
     network = _shape("transformer_by_template")
     tank = _get(network, cim.TransformerTank, "xf_t1_tank")
