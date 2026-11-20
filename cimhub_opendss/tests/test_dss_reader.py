@@ -319,6 +319,19 @@ class TestTypeConversion:
             assert transformers[name].kVs == [4.8, 4.8]
             assert [str(conn) for conn in transformers[name].conns] == ["delta", "delta"]
 
+    def test_neutral_impedance_after_arrays_is_the_last_windings(self, tmp_path):
+        """Sub3 in array form: an array leaves the last winding active, so OpenDSS puts Rneut/Xneut on winding 3
+        and leaves the 4.16 kV winding 2 ungrounded (its node 4 floats). The ``wdg=2`` form grounds winding 2."""
+        from cimhub_opendss.dss_reader import DssReader
+        import cimhub_opendss.schema.opendss_schema as dss
+
+        deck = tmp_path / "arrays.dss"
+        deck.write_text("new Transformer.Sub3 windings=3 buses=[SourceBus 650.1.2.3.4 650z] conns=[delta wye wye] "
+                        "kVs=[115.0 4.16 13.2] kVAs=[5000.0 5000.0 1000.0] XHL=0.01 XHT=0.025 XLT=0.025 "
+                        "%Rs=[0.0005 0.0005 0.0005] Rneut=0.0 Xneut=0.4\n")
+        sub3 = DssReader(deck).read_all().graph[dss.Transformer]["Sub3"]
+        assert (sub3.wdg, sub3.Rneut, sub3.Xneut) == (3, 0.0, 0.4)
+
     def test_blanks_around_equals(self, tmp_path):
         """4bus-OYOD-UnBal: '~ wdg=1 bus=... kv= 7.20 kva=2000' keeps the kV."""
         from cimhub_opendss.dss_reader import DssReader

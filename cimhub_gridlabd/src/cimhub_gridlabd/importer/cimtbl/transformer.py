@@ -20,7 +20,7 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import transformer_configuration as templates
 from cimhub_gridlabd.importer.cimtbl.catalog import label
 from cimhub_gridlabd.importer.cimtbl.link import Limits, classify, link_ratings, provenance
-from cimhub_gridlabd.importer.topology import WYE_CONNECTIONS
+from cimhub_gridlabd.importer.topology import WYE_CONNECTIONS, phase_letters
 from cimhub_gridlabd.schema import gridlabd as schema
 
 NATIVE_CLASS = schema.Transformer
@@ -51,15 +51,11 @@ _KINDS = {
 }
 
 
-def _letters(xf) -> str:
-    return "".join(letter for letter in "ABC" if letter in str(xf.phases or ""))
-
-
 def end_phases(xf, config, service: str | None = None) -> tuple[str, str]:
     """The phases of end 1 and end 2 (S3b-7); a one-phase service's end 2 is its split-phase conductors
     (``topology.service_phases``)."""
     written = str(xf.phases or "")
-    letters = _letters(xf)
+    letters = "".join(sorted(phase_letters(xf)))
     connect = str(config.connect_type)
     unknown = set(written) - set("ABCNS")
     if unknown or not letters:
@@ -95,7 +91,7 @@ def _check_systems(xf, config, wiring: templates.Wiring, node1: str, node2: str,
 def _phase_ends(xf_mrid: str, xf, config, wiring: templates.Wiring) -> list[Row]:
     """A lugged template's TransformerPhaseEnds, numbered as its lugs, on the instance's own phases (an unrated
     template's letters are only a count, S6); a 120 V service's secondary is s1 (S6-10)."""
-    letters = _letters(xf)
+    letters = "".join(sorted(phase_letters(xf)))
     if templates.center_tapped(config, wiring):
         numbered = [(1, letters, 1), (1, "N", 2), (2, "s1", 3), (2, "s2", 4), (2, "N", 5)]
     elif templates.lugged(config, wiring):
@@ -131,9 +127,10 @@ def _transformer(model: GlmModel, xf, roots: dict[str, str], buses: dict[str, Bu
     rows.transformers.append(Row([xf_mrid, str(xf.name)], comment=untranscribed_values(FIELDS, xf)))
     if templates.is_bank(config, wiring):
         # a bank's cans are named <transformer>_<phase>: each is a unit of its own (one DSS Transformer per can)
+        letters = "".join(sorted(phase_letters(xf)))
         rows.tanks += [Row([f"{xf_mrid}_tank_{letter}", f"{xf.name}_{letter}", xf_mrid,
                             templates.tank_name(config, can_label)])
-                       for letter, can_label in zip(_letters(xf), templates.can_labels(config, wiring), strict=True)]
+                       for letter, can_label in zip(letters, templates.can_labels(config, wiring), strict=True)]
     else:  # one tank goes by its transformer's name
         rows.tanks.append(Row([f"{xf_mrid}_tank", None, xf_mrid, templates.tank_name(config)]))
     kinds = _KINDS[templates.CENTER_TAP if templates.center_tapped(config, wiring) else str(config.connect_type)]
