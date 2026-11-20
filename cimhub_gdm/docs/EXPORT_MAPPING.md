@@ -395,7 +395,7 @@ Decision X5, the importer's decision 14 inverted:
   one `<catalog>_2`, `_3` in export order: no pre-pass. A line with no normal limit raises.
 - **Geometry (X4, `exporter/geometry.py`).** A line with a WireConfiguration is a GeometryBranch on a
   GeometryBranchEquipment: native geometry, never a computed matrix (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`).
-  - The positions are the line's (`get_line_conductor_xy`, m): the spacing raised by the line's `spacingYOffset`.
+  - The positions are the line's (`get_line_conductor_xy`, m): the spacing raised by the line's `ySpacingOffset`.
     So one GDM equipment is made per (configuration, positions, conductors), named `<configuration>`, then
     `<configuration>_<n>`.
   - The conductors are the configuration's wires by sequence number (`get_configuration_wires`, `get_wire_info`).
@@ -493,7 +493,7 @@ The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_
 | name | written | the WireConfiguration's name; <configuration>_<n> for its n-th values (X3) |
 | conductors | written | get_configuration_wires, by sequence number: one kind (bare or concentric), a tape-shield cable raises |
 | horizontal_positions | written | get_line_conductor_xy x (m) |
-| vertical_positions | written | get_line_conductor_xy y (m): the spacing raised by the line's spacingYOffset |
+| vertical_positions | written | get_line_conductor_xy y (m): the spacing raised by the line's ySpacingOffset |
 | insulation | unset | untranscribed on import: CIM has no permittivity; GDM's default (air) |
 
 **BareConductorEquipment**

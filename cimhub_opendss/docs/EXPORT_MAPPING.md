@@ -204,7 +204,7 @@ are at the end of this section.
 cimhub_opendss/src/cimhub_opendss/exporter/
     wire.py           OverheadWireInfo and CableInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
     linecode.py       PerLengthPhaseImpedance / PerLengthSequenceImpedance -> Linecode
-    linegeometry.py   (WireConfiguration, spacingYOffset) and spacing lines -> Linegeometry, inline positions (B2)
+    linegeometry.py   (WireConfiguration, ySpacingOffset) and spacing lines -> Linegeometry, inline positions (B2)
     line.py           ACLineSegment -> Line
     switch.py         Switch subclasses -> Line Switch=y + Fuse / Recloser / Swtcontrol; open_terminals()
 ```
@@ -304,13 +304,13 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
 
 ### LineGeometry (B2)
 
-- **One record per (WireConfiguration, spacingYOffset)** among the lines (E3). It is named
+- **One record per (WireConfiguration, ySpacingOffset)** among the lines (E3). It is named
   `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
   mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
   default).
 - **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
-  ACLineSegmentPhase) gets one record per (spacing, spacingYOffset, conductors), the conductors being each phase's
+  ACLineSegmentPhase) gets one record per (spacing, ySpacingOffset, conductors), the conductors being each phase's
   sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
   The spacing may hold several circuits (a double circuit, a secondary bundle under a primary): the line takes the
   positions of its own phases' sequence numbers. `circuitNumber` is not read, since cim18v17 says a line's need not
@@ -371,6 +371,10 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 
 One `Line` with `Switch=y` per Switch subclass:
 - bus1/bus2 and phases as a Line; a blank PhaseCode is `.1.2.3`;
+- an open tie between laterals on different phases (terminals B and C, `SwitchPhase.phaseSide1` B →
+  `phaseSide2` C, the GLM importer's S6-9) is written side by side from `get_switch_sides`: `bus1=<a>.2 bus2=<b>.3`.
+  The pairs go in side 1's PhaseCode order. A tie that is closed in either state raises, because closed it would
+  join two phases. So do SwitchPhases that don't pair exactly the two terminals' conductors;
 - `normamps`/`emergamps` from `get_current_limits` (the importer writes none);
 - `enabled`;
 - a small invented impedance (B3, the user's rule), because CIM has none (DSS-8): `r1=1e-3 r0=1e-3 x1=0 x0=0 C1=0
@@ -624,7 +628,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
 | rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth |
-| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1) |
+| geometry | written | the (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1) |
 | units | written | m (B1); lumped: km (B6) |
 | spacing | not mapped | positions are written inline in the LineGeometry (B2) |
 | cncables | not mapped | the LineGeometry carries the conductors (B2) |
@@ -637,8 +641,8 @@ code-level tests in `test_getters_line_impedance.py`):
 | Ratings | unset | not in CIM (untranscribed or raising on import) |
 | LineType | unset | not in CIM (untranscribed or raising on import) |
 | EpsRmedium | unset | not in CIM (untranscribed or raising on import) |
-| HeightOffset | not mapped | spacingYOffset goes into the geometry's heights |
-| HeightUnit | not mapped | spacingYOffset goes into the geometry's heights |
+| HeightOffset | not mapped | ySpacingOffset goes into the geometry's heights |
+| HeightUnit | not mapped | ySpacingOffset goes into the geometry's heights |
 | conductors | unset | not in CIM (untranscribed or raising on import) |
 | normamps | rule | get_current_limits normal (A); unset -> not written, the engine copies the catalog's |
 | emergamps | rule | get_current_limits emergency (A); unset -> not written, as normamps |
@@ -2063,7 +2067,7 @@ secondary underbuilt on the same poles, drawn with lengths that differ (median 6
   `nphases` is every coupled line's phases, and `reduce=y` (B4).
 - **The line** `<group>`: one Line on the geometry from bus `<group>_1` to `<group>_2`, each circuit's phase
   conductors on the next nodes (`.1.2.3`, then `.4.5.6`), over the shortest line's length (to the mm). The lines
-  must agree on spacing, spacingYOffset, ratings and in-service state, which the one Line carries. Its `rho` is the
+  must agree on spacing, ySpacingOffset, ratings and in-service state, which the one Line carries. Its `rho` is the
   network earth, as a spacing line's.
 - **The ends.** A DSS terminal is on one bus, and the circuits end on different nodes:
   - each circuit has a jumper `<line>_jumper1` from its node 1 onto its nodes of `<group>_1`, with the switches'

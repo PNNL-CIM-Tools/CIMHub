@@ -3,7 +3,7 @@ X3, X4).
 
 Geometry stays geometry: the positions and the wires are written, never an impedance computed from them
 (CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md). The positions are the line's (``get_line_conductor_xy``: its spacing raised by
-``spacingYOffset``), so one GDM equipment is made per (configuration, positions, conductors). Each conductor is its
+``ySpacingOffset``), so one GDM equipment is made per (configuration, positions, conductors). Each conductor is its
 WireInfo (``get_wire_info``): an OverheadWireInfo gives a BareConductorEquipment, a ConcentricNeutralCableInfo a
 ConcentricCableEquipment, each shared per (wire, values). A tape-shield cable has no GDM class and raises.
 
@@ -50,7 +50,7 @@ SLOTS = {
                                       "concentric), a tape-shield cable raises"),
         "horizontal_positions": Slot("written", "get_line_conductor_xy x (m)"),
         "vertical_positions": Slot("written", "get_line_conductor_xy y (m): the spacing raised by the line's "
-                                              "spacingYOffset"),
+                                              "ySpacingOffset"),
         "insulation": Slot("unset", "untranscribed on import: CIM has no permittivity; GDM's default (air)"),
     },
     BareConductorEquipment: {

@@ -58,6 +58,11 @@ object transformer { name t120; phases CN; from p; to v120; configuration c120; 
 object transformer { name t240; phases BN; from p; to v240; configuration c240; }
 object load { name l120; parent v120; phases CN; nominal_voltage 120; constant_power_C 4000+1000j; }
 object load { name l240; parent v240; phases BN; nominal_voltage 240; constant_power_B 6000+1500j; }
+object node { name lat_b; phases BN; nominal_voltage 7200; }
+object node { name lat_c; phases CN; nominal_voltage 7200; }
+object switch { name fb; phases BN; from p; to lat_b; status CLOSED; }
+object switch { name fc; phases CN; from p; to lat_c; status CLOSED; }
+object switch { name tie; phases BN; from lat_b; to lat_c; status OPEN; }
 """
 #: XfmrCode -> (phases, kVs, kVAs, %Rs, X): GLM's z x k, %R split over the windings (a center tap by Hopkinson's rule)
 CODES = {
@@ -101,12 +106,22 @@ def test_template_units_export_with_their_percent_impedance(exported):
     assert {name: [bus.lower() for bus in record.buses] for name, record in transformers.items()} == BUSES
 
 
+def test_open_tie_across_phases_lands_on_each_sides_node(exported):
+    """An open tie between a B and a C lateral (GLM S6-9, SwitchPhase B -> C) is written side by side, open."""
+    model = DssReader(exported).read_all()
+    lines = {str(record.name).lower(): record for record in model.list_by_class(schema.Line)}
+    tie = lines["tie"]
+    assert (str(tie.bus1).lower(), str(tie.bus2).lower(), tie.phases, tie.Switch) == ("lat_b.2", "lat_c.3", 1, True)
+    controls = {str(record.name).lower(): record for record in model.list_by_class(schema.Swtcontrol)}
+    assert (str(controls["tie"].Normal), str(controls["tie"].State)) == ("open", "open")
+
+
 def test_deck_solves_near_nominal(exported):
     dss.Text.Command(f"compile [{exported}]")
     dss.Text.Command("solve")
     assert dss.Solution.Converged()
     for bus, nominal in (("s3", 277.128), ("s2", 277.128), ("h", 120.0), ("sb", 120.089), ("v120", 120.0),
-                         ("v240", 120.0)):
+                         ("v240", 120.0), ("lat_b", 7200.0), ("lat_c", 7200.0)):
         dss.Circuit.SetActiveBus(bus)
         assert dss.Bus.VMagAngle()[::2] == pytest.approx([nominal] * len(dss.Bus.Nodes()), rel=0.02), bus
 

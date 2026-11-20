@@ -1,5 +1,5 @@
 """cimhub_core.getters.spacing: conductor positions and distances of XYSpacing and ConductorDistanceSpacing, and a
-line's conductor heights (spacingYOffset)."""
+line's conductor heights (ySpacingOffset)."""
 
 import math
 from pathlib import Path
@@ -175,7 +175,7 @@ def test_line_without_offset_has_its_spacing_at_ground():
 
 def test_offset_lifts_a_crossarm_to_the_pole_height(tmp_path):
     network = _atom(tmp_path, CROSSARM + "Object ACLineSegment: mRID=ln_x, name=x, WireSpacing=spc_arm, "
-                                         "spacingYOffset (ft)=28\n")
+                                         "ySpacingOffset (ft)=28\n")
     line = _get(network, cim.ACLineSegment, "ln_x")
     assert _flat(get_line_conductor_xy(line, "ft")) == pytest.approx(_flat_xy(SPACING_500_XY))
     # the spacing itself stays in its own frame, and its distances do not depend on the offset
@@ -185,7 +185,7 @@ def test_offset_lifts_a_crossarm_to_the_pole_height(tmp_path):
 
 def test_offset_through_a_wire_configuration(tmp_path):
     network = _atom(tmp_path, CROSSARM + """Object WireConfiguration: mRID=wc_x, name=x, WireSpacing=spc_arm
-Object ACLineSegment: mRID=ln_x, name=x, WireConfiguration=wc_x, spacingYOffset (ft)=30
+Object ACLineSegment: mRID=ln_x, name=x, WireConfiguration=wc_x, ySpacingOffset (ft)=30
 """)
     assert get_line_conductor_xy(_get(network, cim.ACLineSegment, "ln_x"), "ft")[3].y == pytest.approx(26.0)
 
@@ -213,8 +213,8 @@ def test_distance_spacing_line_has_its_heights(tmp_path):
 
 def test_offset_on_a_distance_spacing_line_raises(tmp_path):
     spacing = _distance_atom(tmp_path, _spacing_500_rows(), "Object ACLineSegment: mRID=ln_x, name=x, "
-                                                            "WireSpacing=cds, spacingYOffset (ft)=28\n")
-    with pytest.raises(ValueError, match="has a spacingYOffset, but its ConductorDistanceSpacing 'cds' holds "
+                                                            "WireSpacing=cds, ySpacingOffset (ft)=28\n")
+    with pytest.raises(ValueError, match="has a ySpacingOffset, but its ConductorDistanceSpacing 'cds' holds "
                                          "heights above ground"):
         get_line_conductor_xy(spacing.ACLineSegment[0])
 

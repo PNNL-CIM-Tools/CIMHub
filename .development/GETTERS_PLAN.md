@@ -22,7 +22,7 @@ exporter) may ask for signature changes before anything is frozen.
 | G2 | Kron reduction of neutral conductors in step 3: series Z by `derived/kron.py`, shunt b/g by the phase block (V_n = 0); s1/s2 still raise | **done 2026-11-08**, 24 getter + Kron tests (Kersting Example 4.1) |
 | G3 | `get_line_sequence_impedance_per_length` (steps 2-3 per length), `get_line_phase_impedance_matrix` (`PhaseMatrix`, stored code; sequence code expanded only with `expand_sequence=True`) | **done 2026-11-08**, 31 getter tests |
 | G4 | wide fan-out: `get_terminal_nodes`, `get_conductor_phases` (+ `get_terminal_phases`), `get_base_voltage`, `get_switch_state(which=)`, `get_current_limits` | **done 2026-11-08**, 37 tests |
-| G5 | `get_spacing_xy` / `get_spacing_distances` (XYSpacing and ConductorDistanceSpacing), `get_line_conductor_xy` (`spacingYOffset`), `derived/spacing.py` | **done 2026-11-08**, 24 tests |
+| G5 | `get_spacing_xy` / `get_spacing_distances` (XYSpacing and ConductorDistanceSpacing), `get_line_conductor_xy` (`ySpacingOffset`), `derived/spacing.py` | **done 2026-11-08**, 24 tests |
 | G6a | `get_transformer_units`, `get_transformer_model` (`TransformerModel`: windings, mesh, core on one declared power base; five CIM forms) | **done 2026-11-08**, 23 tests |
 | G6b | `get_tap_steps`/`get_tap_ratio`, `get_shunt_reactive_power`, `get_phase_loads`/`get_load_response`, `get_source`, `get_der_output` (+ `phase_power.device_power`) | **done 2026-11-08**, 46 tests |
 | G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
@@ -96,7 +96,7 @@ exporter) may ask for signature changes before anything is frozen.
 - `get_spacing_distances` returns pairwise distances only (they do not depend on the origin). For a
   ConductorDistanceSpacing they are the stored values and every pair is needed; XY positions need only enough pairs
   to place each conductor.
-- **Heights are per line** (user, 2026-11-08): `ACLineSegment.spacingYOffset` (cim101 draft) is the height of the
+- **Heights are per line** (user, 2026-11-08): `ACLineSegment.ySpacingOffset` (cim101 draft) is the height of the
   spacing's origin, which may be the pole top or crossarm centre, so one spacing serves any pole height.
   `get_line_conductor_xy(line)` = spacing y + offset; unset offset = origin at ground (the CIM XYSpacing default). A
   ConductorDistanceSpacing's earth distances are heights above ground; an offset on its line raises. The line's

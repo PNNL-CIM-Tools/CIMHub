@@ -157,7 +157,7 @@ def test_shunt_conductance_raises():
 def test_geometry_per_offset_is_its_own_record():
     network = _network("geometry")
     line = _object(network, cim.ACLineSegment, "g_m")
-    line.spacingYOffset = cim.Length(1.5, "m")
+    line.ySpacingOffset = cim.Length(1.5, "m")
     model = _model(network)
     lifted = _record(model, schema.Linegeometry, "601_1p5m")
     plain = _record(model, schema.Linegeometry, "601")
@@ -178,8 +178,8 @@ def test_geometry_name_rounds_the_offset_to_the_mm():
 
 def test_two_offsets_within_a_mm_raise():
     network = _network("geometry")
-    _object(network, cim.ACLineSegment, "g_m").spacingYOffset = cim.Length(1.5, "m")
-    _object(network, cim.ACLineSegment, "g601").spacingYOffset = cim.Length(1.5002, "m")
+    _object(network, cim.ACLineSegment, "g_m").ySpacingOffset = cim.Length(1.5, "m")
+    _object(network, cim.ACLineSegment, "g601").ySpacingOffset = cim.Length(1.5002, "m")
     with pytest.raises(ValueError, match="share one LineGeometry name"):
         _model(network)
 
@@ -407,7 +407,7 @@ Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind
     spc_dbl_9,  9,  3, phase,    0, -4
     spc_dbl_10, 10, 3, phase,    4, -4
     spc_dbl_4,  4,  0, neutral,  0, -8
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), spacingYOffset (ft), WireSpacing, BaseVoltage, EquipmentContainer=fdr
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), ySpacingOffset (ft), WireSpacing, BaseVoltage, EquipmentContainer=fdr
     ln_1,  ln_1,  n0, n1, ABCN, 500, 28, spc_arm, bv
     ln_2,  ln_2,  n1, n2, ABCN, 300, 28, spc_arm, bv
     ln_3,  ln_3,  n2, n3, ABCN, 200, 28, spc_arm, bv
@@ -548,8 +548,8 @@ Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind
     pos_5, 5, 2, phase,    0,    1.5
     pos_6, 6, 2, phase,    3.5,  0
     pos_7, 7,  , neutral,  0.5, -6
-Object ACLineSegment: mRID=ln_a, name=ln_a, node1=n0, node2=a1, phases=ABCN, sequenceNumbers=1 2 3 7, length (ft)=500, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
-Object ACLineSegment: mRID=ln_b, name=ln_b, node1=n0, node2=b1, phases=ABCN, sequenceNumbers=4 5 6 7, length (ft)=500, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Object ACLineSegment: mRID=ln_a, name=ln_a, node1=n0, node2=a1, phases=ABCN, sequenceNumbers=1 2 3 7, length (ft)=500, ySpacingOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Object ACLineSegment: mRID=ln_b, name=ln_b, node1=n0, node2=b1, phases=ABCN, sequenceNumbers=4 5 6 7, length (ft)=500, ySpacingOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv, EquipmentContainer=fdr, MultiCircuitGroup=dbl
 Update Table ACLineSegmentPhase: mRID, WireInfo, MultiCircuitGroup
     ln_a_A, wire_397,
     ln_a_B, wire_397,
@@ -589,7 +589,7 @@ Table WirePosition: mRID, XYSpacing=spc_dbl, sequenceNumber, circuitNumber, kind
     pos_8,  8,  3, phase,   -0.5, -9
     pos_9,  9,  3, phase,    0.5, -9
     pos_10, 10, 3, neutral,  0,   -9.5
-Object ACLineSegment: mRID=ln_s, name=ln_s, node1=s0, node2=s1, phases=s1s2N, sequenceNumbers=8 9 10, length (ft)=300, spacingYOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv_s, EquipmentContainer=fdr, MultiCircuitGroup=dbl
+Object ACLineSegment: mRID=ln_s, name=ln_s, node1=s0, node2=s1, phases=s1s2N, sequenceNumbers=8 9 10, length (ft)=300, ySpacingOffset (ft)=40, WireSpacing=spc_dbl, BaseVoltage=bv_s, EquipmentContainer=fdr, MultiCircuitGroup=dbl
 Update Table ACLineSegmentPhase: mRID, WireInfo=wire_1/0
     ln_s_s1
     ln_s_s2
@@ -710,7 +710,7 @@ def _other_wire(network):
 
 
 def _other_offset(network):
-    _mrid(network, cim.ACLineSegment, "ln_b").spacingYOffset = cim.Length(45, "ft")
+    _mrid(network, cim.ACLineSegment, "ln_b").ySpacingOffset = cim.Length(45, "ft")
 
 
 def _by_code(network):
@@ -728,7 +728,7 @@ def _other_group(network):
     (_other_group, r"ACLineSegmentPhase 'ln_b_N' of ACLineSegment 'ln_b' in MultiCircuitGroup 'dbl': is a shared "
                    r"phase of MultiCircuitGroup 'other'"),
     (_other_wire, r"sequence number 7 is OverheadWireInfo 'wire_1/0' on one line and OverheadWireInfo 'wire_397'"),
-    (_other_offset, r"its lines' spacingYOffsets \(m, to the mm\) differ"),
+    (_other_offset, r"its lines' ySpacingOffsets \(m, to the mm\) differ"),
     (_by_code, r"ACLineSegment 'ln_b': one of 2 lines of MultiCircuitGroup 'dbl', but not a spacing line"),
 ], ids=lambda value: value.__name__.strip("_") if callable(value) else "")
 def test_coupled_group_that_one_line_cannot_carry_raises(mutate, message, tmp_path):
@@ -778,3 +778,14 @@ def test_buried_plain_cable_matches_the_wire_above_grade_in_the_engine(tmp_path)
     cim_to_dss(_buried_network(tmp_path, "CableInfo", -1), buried, name_source="mrid")
     cim_to_dss(_buried_network(tmp_path, "OverheadWireInfo", 1), above, name_source="mrid")
     assert_same_engine_state(above, buried)
+
+
+def test_closed_tie_across_phases_raises():
+    """A tie from B to C (SwitchPhase, GLM S6-9) is written only open: closed, it would join two phases."""
+    tie = cim.LoadBreakSwitch(mRID="tie", open=False, normalOpen=True)
+    tie.Terminals = [cim.Terminal(mRID=f"tie_T{number}", sequenceNumber=number, phases=code)
+                     for number, code in ((1, cim.PhaseCode.B), (2, cim.PhaseCode.C))]
+    tie.SwitchPhase = [cim.SwitchPhase(mRID="tie_B", phaseSide1=cim.SinglePhaseKind.B,
+                                       phaseSide2=cim.SinglePhaseKind.C)]
+    with pytest.raises(ValueError, match=r"a tie from \['B'\] to \['C'\] that is closed \(normal or actual\)"):
+        switch._line(tie, Names("mrid"), "actual")

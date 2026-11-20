@@ -4,7 +4,7 @@ DSS ``LineSpacing`` wants x and height per conductor (``get_line_conductor_xy``)
 pairwise distances (``get_spacing_distances``) and heights. The spacing getters read either CIM form:
 
 - ``XYSpacing``: ``XYConductorPosition.xCoord/yCoord`` as stored, in the spacing's frame. The origin may be ground,
-  the top of the pole or the centre of the crossarm; the line's ``spacingYOffset`` lifts it to its height above
+  the top of the pole or the centre of the crossarm; the line's ``ySpacingOffset`` lifts it to its height above
   ground, so one crossarm design serves poles of any height. A ``ConductorGroupPosition`` (a bundle, such as a
   triplex) is expanded into its ``SubConductorPosition``s: a ``RegularBundlePosition``'s at the corners of its
   polygon, any other group's at their own coordinates in the group's frame, both rotated by ``orientation``. A
@@ -51,16 +51,16 @@ class ConductorXY(NamedTuple):
 def get_line_conductor_xy(line: cim.ACLineSegment, unit: str = "m") -> tuple[ConductorXY, ...]:
     """The line's conductors with y above ground: the positions of its ACLineSegmentPhases' sequence numbers, phase
     conductors then neutrals, each in sequence-number order (the order of its terminal phases), raised by
-    ``spacingYOffset``. A line without ACLineSegmentPhases takes every position in sequence-number order. An unset
+    ``ySpacingOffset``. A line without ACLineSegmentPhases takes every position in sequence-number order. An unset
     offset means the spacing's origin is ground. A ConductorDistanceSpacing already holds heights above ground, so
     an offset on its line raises."""
     spacing = _line_spacing(line)
     positions = _line_positions(line, spacing, get_spacing_xy(spacing, unit))
-    offset = get_qty(line, "spacingYOffset", unit)
+    offset = get_qty(line, "ySpacingOffset", unit)
     if offset is None:
         return positions
     if isinstance(spacing, cim.ConductorDistanceSpacing):
-        raise ValueError(f"{describe(line)}: has a spacingYOffset, but its {describe(spacing)} holds heights above "
+        raise ValueError(f"{describe(line)}: has a ySpacingOffset, but its {describe(spacing)} holds heights above "
                          f"ground")
     return tuple(position._replace(y=position.y + offset) for position in positions)
 

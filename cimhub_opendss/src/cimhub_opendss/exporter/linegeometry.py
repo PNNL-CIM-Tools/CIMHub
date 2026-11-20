@@ -1,6 +1,6 @@
 """Line geometries -> OpenDSS ``LineGeometry`` (``EXPORT_MAPPING.md#linegeometry-b2``).
 
-DSS ``h=`` is a height above ground, and CIM puts a line's height in its ``spacingYOffset`` (G5). Positions are
+DSS ``h=`` is a height above ground, and CIM puts a line's height in its ``ySpacingOffset`` (G5). Positions are
 written inline (B2): the writer emits them as ``cond=`` blocks, which can mix conductor kinds. Geometry stays
 geometry: no impedance is computed (skill ``conductor-geometry``). Two CIM shapes are written:
 
@@ -89,8 +89,8 @@ SLOTS = {NATIVE_CLASS: {
 
 
 def line_offset(line: cim.ACLineSegment) -> float:
-    """The line's spacingYOffset in m; unset is 0, the spacing's origin at ground."""
-    offset = get_qty(line, "spacingYOffset", UNIT)
+    """The line's ySpacingOffset in m; unset is 0, the spacing's origin at ground."""
+    offset = get_qty(line, "ySpacingOffset", UNIT)
     return 0.0 if offset is None else offset
 
 
@@ -144,7 +144,7 @@ def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
                 raise ValueError(f"{describe(line)}: one of {len(lines)} lines of {describe(group)}, but not a spacing "
                                  f"line (a direct WireSpacing and a WireInfo on each phase); only those are coupled")
         group_value(group, lines, "spacings", lambda line: line.WireSpacing.mRID)
-        group_value(group, lines, "spacingYOffsets (m, to the mm)",
+        group_value(group, lines, "ySpacingOffsets (m, to the mm)",
                     lambda line: round(line_offset(line), NAME_DECIMALS))
         shared = _shared_phase_positions(lines)
         if shared:
@@ -209,7 +209,7 @@ def _check_names_differ(first_line: dict) -> None:
         key = (configuration, round(offset, NAME_DECIMALS))
         if key in named:
             raise ValueError(f"{describe(named[key])} and {describe(line)}: {describe(configuration)} at "
-                             f"spacingYOffset {offset} m and one within a mm of it share one LineGeometry name")
+                             f"ySpacingOffset {offset} m and one within a mm of it share one LineGeometry name")
         named[key] = line
 
 

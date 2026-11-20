@@ -21,7 +21,7 @@ from cimtables.graph_write import get_qty
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters import describe
 from cimhub_core.getters.switch_state import get_reclose_delays, get_switch_state
-from cimhub_core.getters.terminals import get_conductor_phases
+from cimhub_core.getters.terminals import get_switch_sides
 from cimhub_opendss.exporter.line import SWITCH_IMPEDANCE, ratings, terminal_buses
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
@@ -50,7 +50,9 @@ _NO_HOME = "no home on a Switch (untranscribed on import)"
 SLOTS = {
     schema.Line: with_default(schema.Line, {
         "name": Slot("written", "Names, the Line namespace (shared with ACLineSegments)"),
-        "bus1": Slot("written", "bus_ref, as a Line"), "bus2": Slot("written", "bus_ref, as a Line"),
+        "bus1": Slot("written", "bus_ref of side 1's conductors (get_switch_sides)"),
+        "bus2": Slot("written", "bus_ref of side 2's conductors: an open tie across phases (SwitchPhase.phaseSide2) "
+                                "lands on other nodes, e.g. .2 to .3"),
         "phases": Slot("written", "the phase conductors"),
         "Switch": Slot("written", "y"),
         **{name: Slot("rule", "SWITCH_IMPEDANCE: CIM has no switch impedance (B3, 1 mOhm)") for name in SWITCH_IMPEDANCE},
@@ -98,7 +100,7 @@ def export(context) -> list:
     """Each switch's Line, then its control when it has one."""
     records = []
     for switch in context.objects(*CIM_CLASSES):
-        records.append(_line(switch, context.names))
+        records.append(_line(switch, context.names, context.switch_state))
         control = _control(switch, context.names, context.switch_state)
         if control is not None:
             records.append(control)
@@ -111,10 +113,16 @@ def open_terminals(context) -> list[str]:
             if get_switch_state(switch, which=context.switch_state)]
 
 
-def _line(switch: cim.Switch, names: Names) -> schema.Line:
-    phases = get_conductor_phases(switch)
-    bus1, bus2 = terminal_buses(switch, phases, names)
-    return schema.Line(name=switch_name(switch, names), bus1=bus1, bus2=bus2, phases=len(phases), Switch=True,
+def _line(switch: cim.Switch, names: Names, switch_state: str) -> schema.Line:
+    """The switch's Line, side by side. A tie across phases must be open in both states: closed, it would join two
+    phases."""
+    side1, side2 = get_switch_sides(switch)
+    if side1 != side2 and not (get_switch_state(switch, which="normal")
+                               and get_switch_state(switch, which=switch_state)):
+        raise ValueError(f"{describe(switch)}: a tie from {[p.value for p in side1]} to {[p.value for p in side2]} "
+                         f"that is closed (normal or {switch_state}); only an open one is mapped")
+    bus1, bus2 = terminal_buses(switch, side1, names, side2)
+    return schema.Line(name=switch_name(switch, names), bus1=bus1, bus2=bus2, phases=len(side1), Switch=True,
                        **SWITCH_IMPEDANCE, **ratings(switch), enabled=get_in_service(switch, which="normal"))
 
 
@@ -126,7 +134,7 @@ def _control(switch: cim.Switch, names: Names, switch_state: str):
     target = f"Line.{switch_name(switch, names)}"
     if isinstance(switch, cim.Fuse):
         # the engine sets a fuse's state phase by phase: one value per phase (State=open alone opens phase 1)
-        phases = len(get_conductor_phases(switch))
+        phases = len(get_switch_sides(switch)[0])
         per_phase = {slot: [word] * phases for slot, word in state.items()}
         return schema.Fuse(name=names.name(switch, "Fuse"), MonitoredObj=target,
                            RatedCurrent=get_qty(switch, "ratedCurrent", "A"), enabled=PROTECTION_ENABLED, **per_phase)

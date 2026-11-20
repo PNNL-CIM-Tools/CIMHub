@@ -70,7 +70,7 @@ SLOTS = {NATIVE_CLASS: {
     "Rg": Slot("unset", _NOT_IN_CIM), "Xg": Slot("unset", _NOT_IN_CIM),
     "rho": Slot("written", "a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; "
                            "a spacing line's: get_network_earth"),
-    "geometry": Slot("written", "the (WireConfiguration, spacingYOffset) LineGeometry name; a spacing line's: "
+    "geometry": Slot("written", "the (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's: "
                                 "spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1)"),
     "units": Slot("written", "m (B1); lumped: km (B6)"),
     "spacing": Slot("not mapped", "positions are written inline in the LineGeometry (B2)"),
@@ -81,8 +81,8 @@ SLOTS = {NATIVE_CLASS: {
     "B1": Slot("not mapped", "C1 carries the susceptance"), "B0": Slot("not mapped", "C0 carries the susceptance"),
     "Seasons": Slot("unset", _NOT_IN_CIM), "Ratings": Slot("unset", _NOT_IN_CIM),
     "LineType": Slot("unset", _NOT_IN_CIM), "EpsRmedium": Slot("unset", _NOT_IN_CIM),
-    "HeightOffset": Slot("not mapped", "spacingYOffset goes into the geometry's heights"),
-    "HeightUnit": Slot("not mapped", "spacingYOffset goes into the geometry's heights"),
+    "HeightOffset": Slot("not mapped", "ySpacingOffset goes into the geometry's heights"),
+    "HeightUnit": Slot("not mapped", "ySpacingOffset goes into the geometry's heights"),
     "conductors": Slot("unset", _NOT_IN_CIM),
     "normamps": Slot("rule", "get_current_limits normal (A); unset -> not written, the engine copies the catalog's"),
     "emergamps": Slot("rule", "get_current_limits emergency (A); unset -> not written, as normamps"),
@@ -104,12 +104,13 @@ def export(context) -> list[schema.Line]:
     return records
 
 
-def terminal_buses(equipment, phases, names) -> tuple[str, str]:
-    """``(bus1, bus2)`` of a two-terminal equipment on ``phases``."""
+def terminal_buses(equipment, phases, names, far_phases=None) -> tuple[str, str]:
+    """``(bus1, bus2)`` of a two-terminal equipment on ``phases``; bus2 on ``far_phases`` when given (an open tie
+    across phases, switch.py)."""
     nodes = get_terminal_nodes(equipment)
     if len(nodes) != 2:
         raise ValueError(f"{describe(equipment)}: has {len(nodes)} terminals; a DSS line has two")
-    return bus_ref(nodes[0], phases, names), bus_ref(nodes[1], phases, names)
+    return bus_ref(nodes[0], phases, names), bus_ref(nodes[1], far_phases or phases, names)
 
 
 def ratings(equipment) -> dict:
