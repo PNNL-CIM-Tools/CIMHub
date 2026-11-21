@@ -1,3 +1,5 @@
 """CIMHub GridLAB-D: .glm -> .cimtbl -> cim18v17."""
 
-__version__ = "3.0.0a0"
+import importlib.metadata
+
+__version__ = importlib.metadata.version("cimhub_gridlabd")

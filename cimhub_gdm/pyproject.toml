@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "cimhub_gdm"
 description = "CIMHub GDM converter: grid-data-models DistributionSystem -> cim18v17 through CIM-Builder"
 readme = "README.md"
-version = "3.0.0"
+version = "2.1.0"
 requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
@@ -29,9 +29,9 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "cimhub-core[time-points]>=3.0.0a0,<3.1",
-  "cim-builder>=0.1.0a1,<0.2",
-  "cim-tables>=0.1.0a1,<0.2",
+  "cimhub-core[time-points]>=2.1.0a1,<2.2",
+  "cim-builder>=0.1.1a1,<0.2",
+  "cim-tables>=0.1.1a1,<0.2",
   "grid-data-models~=2.4",
   "pyarrow>=18",
 ]

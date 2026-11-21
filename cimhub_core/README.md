@@ -9,7 +9,7 @@ only what the format packages share and no upstream library provides: the `.cimt
 a new one.
 
 ```bash
-pip install cimhub-core
+pip install --pre cimhub-core
 ```
 
 Python 3.11 or later.

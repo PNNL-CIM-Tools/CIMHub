@@ -28,7 +28,7 @@ from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.Switch, cim.AirBreakSwitch, cim.Breaker, cim.Cut, cim.DisconnectingCircuitBreaker, cim.Disconnector,
-               cim.EarthingSwitch, cim.Elbow, cim.Fuse, cim.GroundDisconnector, cim.HookstickSwitch, cim.Jumper,
+               cim.EarthingSwitch, cim.ElbowSwitch, cim.Fuse, cim.GroundDisconnector, cim.HookstickSwitch, cim.Jumper,
                cim.LoadBreakSwitch, cim.ProtectedSwitch, cim.Recloser, cim.Sectionaliser, cim.ServiceDisconnect)
 LINE_NAMESPACE = "Line"
 STATE_WORD = {True: "open", False: "closed"}

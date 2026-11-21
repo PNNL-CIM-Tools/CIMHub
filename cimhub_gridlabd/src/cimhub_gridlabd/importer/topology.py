@@ -17,11 +17,12 @@
   phase voltages and takes its impedance base on ``secondary_voltage`` as written, so the voltages are a ratio to
   it, and the deck says what they rate (``coil_rated``). Line to line (the Java CIMHub exports, S3b-3): polyphase
   coils on the transformer's phase conductors, whatever their number, so a 1-phase ``CN`` unit of 12500/480 V is
-  one phase of a 480 V wye secondary. The coil, phase to neutral (the Milsoft WindMil exports, S6): one
-  phase-to-neutral coil per side on one conductor (a 7200/120 V service), else polyphase coils of the written
-  voltage x sqrt 3. A coil-rated one-phase service is split-phase (``service_phases``, the user's rule): a 120 V
-  secondary is one leg (s1 to N) and a 240 V one a center tap (two halves, s1 N s2), both on a 240 V system, as a
-  208 V secondary of three coils is ABC line to line. ``DELTA_DELTA``, ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a
+  one phase of a 480 V wye secondary. The coil, phase to neutral (the Milsoft WindMil exports, S6): polyphase coils
+  of the written voltage x sqrt 3, except a one-conductor unit's primary, a phase-to-neutral coil. A coil-rated
+  one-phase service is split-phase (``service_phases``, the user's rule): a 120 V secondary is one leg (s1 to N) and
+  a 240 V one a center tap (two halves, s1 N s2), both on a 240 V system, as a 208 V secondary of three coils is ABC
+  line to line. Any other one-phase secondary is one phase of a wye, as its primary is (S6-11): a 277 V coil is on
+  a 480 V system. ``DELTA_DELTA``, ``DELTA_GWYE``: polyphase, 3-phase only. ``SINGLE_PHASE_CENTER_TAPPED``: a
   phase-to-neutral primary and two split-phase halves of ``secondary_voltage`` each (120 V halves of a 240 V
   secondary).
 
@@ -208,13 +209,14 @@ def service_phases(model: GlmModel, xf, config, roots: dict[str, str]) -> str | 
 
 def _service_coils(bus: str, kv_coil: float, service: str | None, conductors: frozenset[str]) -> tuple[Coil, ...]:
     """A one-phase coil-rated secondary for the walk: a split-phase leg (120 V), the two halves of a center tap
-    (240 V), else a phase-to-neutral coil on its own system."""
+    (240 V), else one phase of a wye, a polyphase coil of the coil voltage x sqrt 3 (S6-11: a 277 V coil is on a
+    480 V system, as its 7200 V primary is on 12.47 kV)."""
     if service == "s1N":
         return (Coil(bus, kv_coil, Connection.HALF, frozenset({"1"})),)
     if service == "s1s2N":
         return (Coil(bus, kv_coil / 2, Connection.HALF, frozenset({"1"})),
                 Coil(bus, kv_coil / 2, Connection.HALF, frozenset({"2"})))
-    return (Coil(bus, kv_coil, Connection.PHASE_NEUTRAL, conductors),)
+    return (Coil(bus, line_voltage(kv_coil, System.THREE_PHASE), Connection.POLYPHASE, conductors),)
 
 
 def service_buses(model: GlmModel, roots: dict[str, str]) -> dict[str, str]:

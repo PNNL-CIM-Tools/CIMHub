@@ -6,10 +6,10 @@ and cimtables builds the CIM model from that text. `Raw34Writer` writes native r
 There is no CIM to RAW exporter yet.
 
 ```bash
-pip install cimhub-raw      # also installs cimhub-core
+pip install --pre cimhub-raw      # also installs cimhub-core
 ```
 
-Python 3.11 or later. Version 3.0.0a0 is an alpha.
+Python 3.11 or later. Version 2.1 is in alpha.
 
 ## Quickstart
 

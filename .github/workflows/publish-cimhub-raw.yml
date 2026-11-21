@@ -2,8 +2,8 @@
 name: Publish cimhub-raw
 
 # Publishes cimhub-raw to PyPI on its own (each package has its own publish-<package>.yml):
-#   develop -> the next alpha of the target in cimhub_raw/pyproject.toml (3.0.0 -> 3.0.0a1, 3.0.0a2, ...)
-#   main    -> the target itself (3.0.0)
+#   develop -> the next alpha of the target in cimhub_raw/pyproject.toml (2.1.0 -> 2.1.0a1, 2.1.0a2, ...)
+#   main    -> the target itself (2.1.0)
 # The version is derived from what cimhub-raw already released and never committed, so nothing pushes to
 # the protected branches; .github/scripts/release_version.sh has the rules. Only pushes that change this
 # package release it; a manual run on develop or main always releases.

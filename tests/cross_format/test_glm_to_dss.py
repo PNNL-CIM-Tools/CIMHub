@@ -58,6 +58,11 @@ object transformer { name t120; phases CN; from p; to v120; configuration c120; 
 object transformer { name t240; phases BN; from p; to v240; configuration c240; }
 object load { name l120; parent v120; phases CN; nominal_voltage 120; constant_power_C 4000+1000j; }
 object load { name l240; parent v240; phases BN; nominal_voltage 240; constant_power_B 6000+1500j; }
+object transformer_configuration { name c277; connect_type SINGLE_PHASE; power_rating 25; primary_voltage 7200;
+    secondary_voltage 277; impedance 0.01+0.02j; }
+object node { name v277; phases AN; nominal_voltage 277; }
+object transformer { name t277; phases AN; from p; to v277; configuration c277; }
+object load { name l277; parent v277; phases AN; nominal_voltage 277; constant_power_A 5000+1000j; }
 object node { name lat_b; phases BN; nominal_voltage 7200; }
 object node { name lat_c; phases CN; nominal_voltage 7200; }
 object switch { name fb; phases BN; from p; to lat_b; status CLOSED; }
@@ -75,10 +80,12 @@ CODES = {
     # the services, k = 1 (GridLAB-D's base is the coil's): the 240 V coil is a center tap's full winding
     "c120": (1, [7.2, 0.12], [25, 25], [0.5, 0.5], {"Xhl": 2.0}),
     "c240": (1, [7.2, 0.12, 0.12], [25, 25, 25], [0.5, 1.0, 1.0], {"Xhl": 2.4, "Xht": 2.4, "Xlt": 1.6}),
+    # any other one-phase coil is one phase of a wye (S6-11): 277 V to neutral on a 480 V system
+    "c277": (1, [7.2, 0.277], [25, 25], [0.5, 0.5], {"Xhl": 2.0}),
 }
 BUSES = {"t2_b": ["p.2.0", "s2.2.0"], "t2_c": ["p.3.0", "s2.3.0"], "t3": ["p.1.2.3", "s3.1.2.3"], "tb_a": ["p.1.0", "sb.1.0"],
          "tb_b": ["p.2.0", "sb.2.0"], "tb_c": ["p.3.0", "sb.3.0"], "tct": ["p.1.0", "h.1.0", "h.0.2"],
-         "t120": ["p.3.0", "v120.1.0"], "t240": ["p.2.0", "v240.1.0", "v240.0.2"]}
+         "t120": ["p.3.0", "v120.1.0"], "t240": ["p.2.0", "v240.1.0", "v240.0.2"], "t277": ["p.1.0", "v277.1.0"]}
 #: a one-phase service (the user's rule): 120 V is the s1 leg to N, 240 V a center tap across s1-s2, both on 240 V
 #: systems
 SERVICE_LOADS = {"l120": ("v120.1", 0.12), "l240": ("v240.1.2", 0.24)}
@@ -121,7 +128,7 @@ def test_deck_solves_near_nominal(exported):
     dss.Text.Command("solve")
     assert dss.Solution.Converged()
     for bus, nominal in (("s3", 277.128), ("s2", 277.128), ("h", 120.0), ("sb", 120.089), ("v120", 120.0),
-                         ("v240", 120.0), ("lat_b", 7200.0), ("lat_c", 7200.0)):
+                         ("v240", 120.0), ("v277", 277.0), ("lat_b", 7200.0), ("lat_c", 7200.0)):
         dss.Circuit.SetActiveBus(bus)
         assert dss.Bus.VMagAngle()[::2] == pytest.approx([nominal] * len(dss.Bus.Nodes()), rel=0.02), bus
 
@@ -132,3 +139,12 @@ def test_one_phase_services_are_split_phase(exported):
     assert {name: (str(loads[name].bus1).lower(), loads[name].kV) for name in SERVICE_LOADS} == SERVICE_LOADS
     [options] = model.list_by_class(schema.Options)
     assert 0.24 in options.voltagebases and 0.12 not in options.voltagebases
+
+
+def test_other_one_phase_coil_is_on_a_wye_base(exported):
+    """A 277 V coil to neutral is one phase of a 480 V wye (S6-11): its load is phase to neutral on a 0.48 kV base."""
+    model = DssReader(exported).read_all()
+    loads = {str(record.name).lower(): record for record in model.list_by_class(schema.Load)}
+    assert (str(loads["l277"].bus1).lower(), loads["l277"].kV) == ("v277.1", pytest.approx(0.48 / 3 ** 0.5))
+    [options] = model.list_by_class(schema.Options)
+    assert 0.48 in options.voltagebases and 0.277 not in options.voltagebases

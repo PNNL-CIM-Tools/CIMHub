@@ -102,6 +102,24 @@ def test_coil_rated_one_phase_service_is_split_phase(tmp_path):
     assert service_buses(model, bus_roots(model)) == {"s1": "s1N", "s2": "s1s2N", "s3": "s1N"}
 
 
+def test_coil_rated_one_phase_secondary_is_one_phase_of_a_wye(tmp_path):
+    """A coil-rated one-phase secondary that is not a 120/240 V service is one phase of a wye, as its 7200 V primary
+    is one of 12.47 kV (S6-11): its BaseVoltage is the coil voltage x sqrt 3, line to line."""
+    text = FEEDER
+    for name, volts in (("w277", 277), ("w2400", 2400)):
+        text += (f"object node {{ name {name}; phases BN; nominal_voltage {volts}; }}\n"
+                 f"object transformer_configuration {{ name c{name}; connect_type SINGLE_PHASE; primary_voltage 7200; "
+                 f"secondary_voltage {volts}; }}\nobject transformer {{ name x{name}; phases BN; from n1; to {name}; "
+                 f"configuration c{name}; }}\n")
+    model = read(tmp_path, text)
+    coils = {xf.name: [(c.bus, c.kv, c.connection) for c in xf.coils] for xf in glm_network(model).transformers}
+    assert coils["xw277"] == [("n1", 7.2, Connection.PHASE_NEUTRAL),
+                              ("w277", pytest.approx(0.277 * math.sqrt(3)), Connection.POLYPHASE)]
+    walked = walk(glm_network(model))
+    assert (walked["w277"], walked["w2400"]) == ((0.48, System.THREE_PHASE), (4.16, System.THREE_PHASE))
+    assert walked["t1"] == (0.24, System.SPLIT_PHASE)  # a 120/240 V service keeps its split-phase base (S6-10)
+
+
 def test_link_on_a_service_bus_raises(tmp_path):
     model = read(tmp_path, FEEDER + "object node { name s1; phases AN; nominal_voltage 120; }\n"
                  "object node { name s9; phases AN; nominal_voltage 120; }\n"

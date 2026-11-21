@@ -199,16 +199,18 @@ wheels = [
 
 [[package]]
 name = "cim-builder"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../CIM-Builder" }
 dependencies = [
+    { name = "cim-profiles" },
     { name = "cim-tables" },
     { name = "pyarrow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cim-profiles", specifier = ">=0.2.0a6,<0.3.0" },
+    { name = "cim-tables", specifier = ">=0.1.1a1" },
     { name = "pyarrow", specifier = ">=18" },
 ]
 
@@ -272,7 +274,7 @@ dev = [
 
 [[package]]
 name = "cim-tables"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "../CIM-Tables" }
 dependencies = [
     { name = "cim-graph" },
@@ -317,7 +319,7 @@ dev = [
 
 [[package]]
 name = "cimhub"
-version = "3.0.0"
+version = "2.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "cimhub-core" },
@@ -358,7 +360,7 @@ dev = [
 
 [[package]]
 name = "cimhub-core"
-version = "3.0.0"
+version = "2.1.0"
 source = { editable = "cimhub_core" }
 dependencies = [
     { name = "cim-graph" },
@@ -392,7 +394,7 @@ provides-extras = ["time-points"]
 
 [[package]]
 name = "cimhub-gdm"
-version = "3.0.0"
+version = "2.1.0"
 source = { editable = "cimhub_gdm" }
 dependencies = [
     { name = "cim-builder" },
@@ -413,7 +415,7 @@ requires-dist = [
 
 [[package]]
 name = "cimhub-gridlabd"
-version = "3.0.0a0"
+version = "2.1.0"
 source = { editable = "cimhub_gridlabd" }
 dependencies = [
     { name = "cim-tables" },
@@ -434,7 +436,7 @@ requires-dist = [
 
 [[package]]
 name = "cimhub-opendss"
-version = "3.0.0"
+version = "2.1.0"
 source = { editable = "cimhub_opendss" }
 dependencies = [
     { name = "cim-tables" },
@@ -453,16 +455,18 @@ requires-dist = [
 
 [[package]]
 name = "cimhub-raw"
-version = "3.0.0"
+version = "2.1.0"
 source = { editable = "cimhub_raw" }
 dependencies = [
     { name = "cim-tables" },
+    { name = "cim-topology" },
     { name = "cimhub-core" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
+    { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimhub-core", editable = "cimhub_core" },
 ]
 

@@ -8,7 +8,7 @@ is **builder-native**: `GdmImporter().to_cim(system)` calls CIM-Builder's keywor
 through the `cimhub-core` getters.
 
 ```bash
-pip install cimhub-gdm      # also installs cimhub-core
+pip install --pre cimhub-gdm      # also installs cimhub-core
 ```
 
 Python 3.11 or later.

@@ -23,17 +23,18 @@ Importing and exporting use different paths:
 | `cimhub-opendss` | OpenDSS (`.dss`) | yes | yes |
 | `cimhub-raw` | PSS/E RAW v34 | yes (multi-terminal DC, GNE and induction machine raise) | not yet |
 | `cimhub-gdm` | grid-data-models `DistributionSystem` | yes | yes (see the package README for limits) |
+| `cimhub-gridlabd` | GridLAB-D (`.glm`) | yes | not yet |
 
-GridLAB-D, MATPOWER and DistOPF are planned and are not in this repository yet. Each package README lists what
+MATPOWER and DistOPF are planned and are not in this repository yet. Each package README lists what
 that package maps and what raises.
 
 ## Install
 
 ```bash
-pip install cimhub-opendss      # also installs cimhub-core
+pip install --pre cimhub-opendss      # also installs cimhub-core
 ```
 
-Python 3.11 or later. `cimhub-raw` and `cimhub-gdm` are not on PyPI yet; install them from a clone (below).
+Python 3.11 or later. All five packages are on PyPI as 2.1 alphas, hence `--pre`.
 
 To work on the code, clone the repository and use [uv](https://docs.astral.sh/uv/):
 

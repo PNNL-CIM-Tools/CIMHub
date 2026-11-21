@@ -7,10 +7,10 @@
 # version is derived from what that package has already released (on PyPI and its <name>-v* git tags) and
 # is never committed, so nothing pushes to the protected branches:
 #
-#   develop  the next free alpha of the target: 3.0.0a1 released -> 3.0.0a2
-#   main     the target itself: 3.0.0
+#   develop  the next free alpha of the target: 2.1.0a1 released -> 2.1.0a2
+#   main     the target itself: 2.1.0
 #
-# Once the target is released, both branches move on to the next patch (3.0.1a1, 3.0.1).
+# Once the target is released, both branches move on to the next patch (2.1.1a1, 2.1.1).
 # Bump the target in the package's pyproject.toml for a minor or major release.
 set -euo pipefail
 

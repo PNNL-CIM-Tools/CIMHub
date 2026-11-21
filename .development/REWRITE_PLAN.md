@@ -47,9 +47,9 @@ CIMHub/
   scripts/test-all.sh
 ```
 
-Distribution names stay (`cimhub-core`, `cimhub-opendss`, …) for PyPI continuity. The version jumps to **3.0.0a0**:
-the API break (cim18v17 only, `to_cimtbl`) is a major one, and it keeps CIMHub_2_0's `2.1.0a0` working tree
-apart from the new line.
+Distribution names stay (`cimhub-core`, `cimhub-opendss`, …) for PyPI continuity. The team chose **2.1** over
+3.0 for the API break (cim18v17 only, `to_cimtbl`); the first alpha is 2.1.0a1. Only this repo's
+`publish-*.yml` workflows hold the PyPI Trusted Publishers, so CIMHub_2_0 cannot publish into the line.
 
 ## Skills (F4)
 
