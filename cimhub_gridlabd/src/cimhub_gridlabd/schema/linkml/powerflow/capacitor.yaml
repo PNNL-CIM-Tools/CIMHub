@@ -1,0 +1,376 @@
+id: https://gridlabd.org/schema/glm/powerflow/capacitor
+name: capacitor
+description: GridLAB-D capacitor class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  capacitor:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file capacitor.cpp
+
+      @addtogroup capacitor
+
+      @ingroup powerflow
+
+      @{
+
+
+      Inherits from: node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: node
+    attributes:
+      pt_phase:
+        range: string
+        required: false
+        description: Phase(s) that the PT is on, used as measurement points for control
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: pt_phase
+      phases_connected:
+        range: string
+        required: false
+        description: phases capacitors connected to
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: phases_connected
+      switchA:
+        range: string
+        required: false
+        description: capacitor A switch open or close
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: switchA
+      switchB:
+        range: string
+        required: false
+        description: capacitor B switch open or close
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: switchB
+      switchC:
+        range: string
+        required: false
+        description: capacitor C switch open or close
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: switchC
+      control:
+        range: Control
+        required: false
+        description: control operation strategy
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: control
+      cap_A_switch_count:
+        range: float
+        required: false
+        description: number of switch operations on Phase A
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cap_A_switch_count
+      cap_B_switch_count:
+        range: float
+        required: false
+        description: number of switch operations on Phase B
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cap_B_switch_count
+      cap_C_switch_count:
+        range: float
+        required: false
+        description: number of switch operations on Phase C
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cap_C_switch_count
+      voltage_set_high:
+        range: float
+        required: false
+        description: Turn off if voltage is above this set point
+        unit:
+          ucum_code: V
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_set_high[V]
+      voltage_set_low:
+        range: float
+        required: false
+        description: Turns on if voltage is below this set point
+        unit:
+          ucum_code: V
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_set_low[V]
+      voltage_deadband_center:
+        range: float
+        required: false
+        description: The voltage deadband center
+        unit:
+          ucum_code: V
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_deadband_center[V]
+      voltage_deadband:
+        range: float
+        required: false
+        description: The deadband between voltage_set_high and voltage_set_low
+        unit:
+          ucum_code: V
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: voltage_deadband[V]
+      VAr_set_high:
+        range: float
+        required: false
+        description: high VAR set point for VAR control (turn off)
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VAr_set_high[VAr]
+      VAr_set_low:
+        range: float
+        required: false
+        description: low VAR set point for VAR control (turn on)
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VAr_set_low[VAr]
+      VAr_deadband_center:
+        range: float
+        required: false
+        description: The VAr deadband center
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VAr_deadband_center[VAr]
+      VAr_deadband:
+        range: float
+        required: false
+        description: The deadband between VAr_set_high and VAr_set_low
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: VAr_deadband[VAr]
+      current_set_low:
+        range: float
+        required: false
+        description: high current set point for current control mode (turn on)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_set_low[A]
+      current_set_high:
+        range: float
+        required: false
+        description: low current set point for current control mode (turn off)
+        unit:
+          ucum_code: A
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_set_high[A]
+      current_deadband_center:
+        range: float
+        required: false
+        description: The current deadband center
+        unit:
+          ucum_code: A
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_deadband_center[A]
+      current_deadband:
+        range: float
+        required: false
+        description: The deadband between current_set_high and current_set_low
+        unit:
+          ucum_code: A
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_deadband[A]
+      capacitor_A:
+        range: float
+        required: false
+        description: Capacitance value for phase A or phase AB
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacitor_A[VAr]
+      capacitor_B:
+        range: float
+        required: false
+        description: Capacitance value for phase B or phase BC
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacitor_B[VAr]
+      capacitor_C:
+        range: float
+        required: false
+        description: Capacitance value for phase C or phase CA
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacitor_C[VAr]
+      cap_nominal_voltage:
+        range: float
+        required: false
+        description: Nominal voltage for the capacitor. Used for calculation of capacitance
+          value
+        unit:
+          ucum_code: V
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cap_nominal_voltage[V]
+      time_delay:
+        range: float
+        required: false
+        description: control time delay
+        unit:
+          ucum_code: s
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_delay[s]
+      dwell_time:
+        range: float
+        required: false
+        description: Time for system to remain constant before a state change will
+          be passed
+        unit:
+          ucum_code: s
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dwell_time[s]
+      lockout_time:
+        range: float
+        required: false
+        description: Time for capacitor to remain locked out from further switching
+          operations (VARVOLT control)
+        unit:
+          ucum_code: s
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lockout_time[s]
+      remote_sense:
+        range: string
+        required: false
+        description: Remote object for sensing values used for control schemes
+        annotations:
+          order: 29
+          value_type: string
+          separator: ','
+          native_name: remote_sense
+      remote_sense_B:
+        range: string
+        required: false
+        description: Secondary Remote object for sensing values used for control schemes
+          (VARVOLT uses two)
+        annotations:
+          order: 30
+          value_type: string
+          separator: ','
+          native_name: remote_sense_B
+      control_level:
+        range: ControlLevel
+        required: false
+        description: define bank or individual control
+        annotations:
+          order: 31
+          value_type: string
+          separator: ','
+          native_name: control_level

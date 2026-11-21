@@ -3,7 +3,7 @@ X3, X4).
 
 Geometry stays geometry: the positions and the wires are written, never an impedance computed from them
 (CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md). The positions are the line's (``get_line_conductor_xy``: its spacing raised by
-``spacingYOffset``), so one GDM equipment is made per (configuration, positions, conductors). Each conductor is its
+``ySpacingOffset``), so one GDM equipment is made per (configuration, positions, conductors). Each conductor is its
 WireInfo (``get_wire_info``): an OverheadWireInfo gives a BareConductorEquipment, a ConcentricNeutralCableInfo a
 ConcentricCableEquipment, each shared per (wire, values). A tape-shield cable has no GDM class and raises.
 
@@ -50,7 +50,7 @@ SLOTS = {
                                       "concentric), a tape-shield cable raises"),
         "horizontal_positions": Slot("written", "get_line_conductor_xy x (m)"),
         "vertical_positions": Slot("written", "get_line_conductor_xy y (m): the spacing raised by the line's "
-                                              "spacingYOffset"),
+                                              "ySpacingOffset"),
         "insulation": Slot("unset", "untranscribed on import: CIM has no permittivity; GDM's default (air)"),
     },
     BareConductorEquipment: {
@@ -92,7 +92,7 @@ def geometry_equipment(line: cim.ACLineSegment, phase_count: int, context: Expor
     wires = dict(get_configuration_wires(configuration))
     positions = get_line_conductor_xy(line, LENGTH_UNIT)
     numbers = [position.sequence_number for position in positions]
-    if sorted(wires) != numbers:
+    if sorted(wires) != sorted(numbers):
         raise ValueError(f"{describe(configuration)}: wires on sequence numbers {sorted(wires)}, positions on "
                          f"{numbers}")
     if len(numbers) != phase_count:
@@ -118,6 +118,8 @@ def conductor(wire: cim.WireInfo, line: cim.ACLineSegment, line_limits: CurrentL
     values = get_wire_info(wire, LENGTH_UNIT, RESISTANCE_UNIT, "A")
     if values.kind is cim.TapeShieldCableInfo:
         raise ValueError(f"{describe(wire)}: GDM has no tape-shield cable")
+    if values.kind is cim.CableInfo:
+        raise ValueError(f"{describe(wire)}: GDM has no unshielded cable")
     normal, emergency = ratings(wire, values, line_limits)
     common = {"conductor_diameter": _distance(2 * _required(values.radius, "radius", wire)),
               "conductor_gmr": _distance(_required(values.gmr, "gmr", wire)),

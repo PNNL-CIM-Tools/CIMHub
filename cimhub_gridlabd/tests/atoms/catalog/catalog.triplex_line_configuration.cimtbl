@@ -1,0 +1,20 @@
+# GridLAB-D triplex_line_configuration -> WireConfiguration + WireSequenceConfiguration on a derived ConductorDistanceSpacing (catalog).
+# Source table: triplex_line_configuration (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+# derived (triplex_spacing): D12 = diameter + 2 insulation_thickness, D1N = D2N = diameter + insulation_thickness; diameter=0.522, insulation_thickness=0.08 in
+Object ConductorDistanceSpacing: mRID=wc_triplex_line_configuration:1_spc, name=triplex_line_configuration:1, isTemplate=true
+
+Table ConductorDistance: mRID, ConductorDistanceSpacing=wc_triplex_line_configuration:1_spc, sequenceNumber1, conductorKind1, fromPhase, sequenceNumber2, conductorKind2, toPhase, distance (in)
+    wc_triplex_line_configuration:1_spc_12, 1, phase, s1, 2, phase,   s2, 0.682
+    wc_triplex_line_configuration:1_spc_1N, 1, phase, s1, 3, neutral, N,  0.602
+    wc_triplex_line_configuration:1_spc_2N, 2, phase, s2, 3, neutral, N,  0.602
+
+Object WireConfiguration: mRID=wc_triplex_line_configuration:1, name=triplex_line_configuration:1, numberOfPhases=2, WireSpacing=wc_triplex_line_configuration:1_spc
+
+Table WireSequenceConfiguration: mRID, WireConfiguration=wc_triplex_line_configuration:1, sequenceNumber, WireInfo
+    wc_triplex_line_configuration:1_1, 1, tpc_triplex_4/0 AA
+    wc_triplex_line_configuration:1_2, 2, tpc_triplex_4/0 AA
+    wc_triplex_line_configuration:1_N, 3, tpc_triplex_4/0 AA

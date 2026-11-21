@@ -14,7 +14,8 @@ from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import compile_deck, deck
-from engine_compare import assert_same_engine_state, assert_same_settings, engine_buses, engine_settings
+from engine_compare import (DISABLED_BUSES, as_exported, assert_same_engine_state, assert_same_settings, engine_buses,
+                            engine_settings)
 from export_atoms import assert_matches_dss_golden, bus_names, export_atom, export_network
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -128,6 +129,7 @@ def test_deck_exports_the_same_elements_and_settings(relative, tmp_path):
     reordered, not_mapped = DECKS[relative]
     renamed = _switch_control_names(original)
     buses = {renamed.get(name, name): value for name, value in engine_buses(original).items() if name not in not_mapped}
+    buses = as_exported(buses, DISABLED_BUSES)
     written_buses = engine_buses(written)
     assert written_buses.keys() <= buses.keys()
     # E6: a switch closed in both states gets no SwtControl (IEEE9500 has one on every switch)
@@ -166,6 +168,7 @@ def _hybrid(pv_kw: float, battery_kw: float):
     the battery's in the load sign."""
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     pv = connection.PowerElectronicsUnit[0]
     pv.name, pv.p = "roof", cim.ActivePower(pv_kw, "kW")
     battery = cim.BatteryUnit(mRID="bank", name="bank", maxP=cim.ActivePower(100, "kW"),
@@ -198,6 +201,7 @@ def test_hybrid_inverter_is_one_device_per_unit(tmp_path):
 def test_units_without_p_take_their_share_of_it():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     connection.PowerElectronicsUnit[0].name = "roof"
     carport = cim.PhotoVoltaicUnit(mRID="carport", name="carport", maxP=cim.ActivePower(100, "kW"),
                                    PowerElectronicsConnection=connection)
@@ -217,6 +221,7 @@ def test_unit_above_its_share_of_the_inverter_raises():
 def test_unequal_phases_give_one_inverter_per_phase():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
+    connection.PowerElectronicsUnit[0].irradiance = None  # the fallback: irradiance = output / Pmpp
     for phase, p in ((cim.SinglePhaseKind.A, -100.0), (cim.SinglePhaseKind.B, -80.0), (cim.SinglePhaseKind.C, -60.0)):
         child = cim.PowerElectronicsConnectionPhase(mRID=f"pv_school_{phase.value}", phase=phase,
                                                     PowerElectronicsConnection=connection,
@@ -229,13 +234,29 @@ def test_unequal_phases_give_one_inverter_per_phase():
     assert pvs["School_a"].kv == pytest.approx(0.48 / 3 ** 0.5)
 
 
+def test_irradiance_is_written_and_pct_pmpp_holds_the_output_below_the_panel():
+    pvs = _records("der/der", schema.Pvsystem)
+    found = {name: (pvs[name].Pmpp, pvs[name].irradiance, pvs[name].pct_Pmpp) for name in ("school", "farm", "pmppcap")}
+    assert found == {"school": (300, pytest.approx(0.8), None),
+                     "farm": (1200, pytest.approx(1.0), pytest.approx(100 * 1000 / 1200)),
+                     "pmppcap": (10, pytest.approx(0.9), pytest.approx(60))}
+
+
+def test_output_above_the_panel_raises():
+    network = _network(ATOMS / "der" / "der.dss")
+    unit = _object(network, cim.PowerElectronicsConnection, "pv_school").PowerElectronicsUnit[0]
+    unit.irradiance = cim.ActivePowerPerArea(0.5, "kW/m2")
+    with pytest.raises(ValueError, match=r"p 240.0 kW is above the panel's 150.0 kW \(maxP x irradiance 0.5"):
+        _model(network)
+
+
 def test_unit_of_no_dss_class_raises():
     network = _network(ATOMS / "der" / "der.dss")
     connection = _object(network, cim.PowerElectronicsConnection, "pv_school")
-    wind = cim.PowerElectronicsWindUnit(mRID="wind", maxP=cim.ActivePower(100, "kW"),
-                                        PowerElectronicsConnection=connection)
-    connection.PowerElectronicsUnit.append(wind)
-    with pytest.raises(ValueError, match=r"units \[\"PowerElectronicsWindUnit 'wind'\"\] have no DSS class"):
+    thermal = cim.PowerElectronicsThermalUnit(mRID="thermal", maxP=cim.ActivePower(100, "kW"),
+                                              PowerElectronicsConnection=connection)
+    connection.PowerElectronicsUnit.append(thermal)
+    with pytest.raises(ValueError, match=r"units \[\"PowerElectronicsThermalUnit 'thermal'\"\] have no DSS class"):
         _model(network)
 
 

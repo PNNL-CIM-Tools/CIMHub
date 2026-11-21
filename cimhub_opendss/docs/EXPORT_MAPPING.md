@@ -15,18 +15,19 @@ cimhub_opendss/src/cimhub_opendss/exporter/
     naming.py         Names: the E1 switch + dss_safe_name (kept in the writer) + the per-namespace collision check
     buses.py          bus_ref(node, phases, names) -> "650.1.2.3" (E7)
     options.py        the Options record: circuit, defaultbasefreq, voltagebases (E10)
-    slots.py          Slot, check_slots, slots_table
+    (Slot, check_slots, slots_table: cimhub_core/export_slots.py, shared with the RAW exporter)
     vsource.py        EnergySource -> Vsource (one module per DSS class from here on)
 ```
 
-- **`DssExporter().to_model(network, *, name_source=None, circuit_source="source") -> DssModel`.** It runs each
+- **`DssExporter().to_model(network, *, name_source=None, circuit_source="source", switch_state="actual") ->
+  DssModel`.** It runs each
   module of `EXPORT_ORDER` over its CIM classes and adds the records. `history` stays empty: it is a reader
   artifact.
 - Each module has `export(obj, context) -> list[record]` and `SLOTS`, which names each slot of its DSS class as
   `written` (from which getter), `rule` (a CIM `None` DSS needs, E4), `unset` (CIM cannot hold it; engine default)
   or `not mapped`. A test checks that `SLOTS` covers every schema slot, as `check_fields` does on import, and the
   tables below are generated from it.
-- `context` (`ExportContext`) holds the network, the `Names` and the circuit's EnergySource. Nothing else is shared
+- `context` (`ExportContext`) holds the network, the `Names`, the circuit's EnergySource and the `switch_state`. Nothing else is shared
   between modules.
 - Conducting equipment of a class no module exports raises, with the counts (`no DSS export yet for
   {'ACLineSegment': 1, ...}`), so nothing is dropped silently while the sub-slices land.
@@ -50,7 +51,9 @@ cimhub_opendss/src/cimhub_opendss/exporter/
   - It records the name per DSS class, lowercased. A second object on the same name raises, naming both mRIDs.
     Buses (ConnectivityNodes) are one namespace of their own.
 - **The circuit:**
-  - Its name is the one Feeder's, by the same switch. No Feeder, or several, raises.
+  - Its name is the one Feeder's, by the same switch. Several Feeders are one circuit (one deck per substation)
+    when every one has the same `NormalEnergizingSubstation`, and the Substation names it. No Feeder, or several
+    without one Substation, raises. Among several, a Feeder that contains no equipment is not counted (H2).
   - Its source's Vsource is always named `source`, whatever the switch: that is DSS's name for `New Circuit`'s
     source (the reader's rule).
   - The circuit source is the only EnergySource, or the one whose exported name is `circuit_source` (E2). Several
@@ -145,6 +148,10 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   8. `Buscoords <stem>_buscoords.csv` (`LatLongCoords` for geographic rows), with the CSV written beside the deck.
 - `serialize(obj)` is unchanged for an ordinary record. `Options` and `Buscoords` are not ordinary records, so
   `serialize` raises on them, and `write` handles them as above.
+- `write(model, destination, per_class=True)` (also `cim_to_dss(..., per_class=True)`) writes step 4 as one file
+  per class beside the deck (`linecode.dss`, `xfmrcode.dss`, `line.dss`, ...; only classes that have records), and
+  the master `destination` has `Redirect <file>` in `WRITE_ORDER` in its place. A master named like a class file
+  (`Line.dss`) raises rather than being overwritten. The default is the single deck.
 
 **Found by the round-trip test** (atoms and the IEEE13_CDPSM, IEEE123, IEEE4 OYOD decks; each is engine-checked):
 - **`like=` is never written.** The reader has already copied the other object's values into the record. `like=`
@@ -173,6 +180,7 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   - per element, its buses (bus names and `NodeOrder`) and YPrim (rel 1e-9);
   - the node voltages, solved with `controlmode=off tolerance=1e-10` (rel 1e-8 + 10 µV). Solution settings are not
     part of the model, so the reader drops them; the tight tolerance makes both decks converge to one answer.
+  - the three decks are also written `per_class` and checked the same way (records and engine).
 - **Names:** core precedence (argument > env var > `mrid`), a bad value raises, an unset name raises, `uri` is 36
   characters. Spoke: sanitizing, dots in bus names, a collision after sanitizing raises, namespaces are separate,
   the per-phase suffix.
@@ -194,9 +202,9 @@ are at the end of this section.
 
 ```
 cimhub_opendss/src/cimhub_opendss/exporter/
-    wire.py           OverheadWireInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
+    wire.py           OverheadWireInfo and CableInfo / ConcentricNeutralCableInfo / TapeShieldCableInfo -> Wiredata / Cndata / Tsdata
     linecode.py       PerLengthPhaseImpedance / PerLengthSequenceImpedance -> Linecode
-    linegeometry.py   (WireConfiguration, spacingYOffset) -> Linegeometry, inline positions (B2)
+    linegeometry.py   (WireConfiguration, ySpacingOffset) and spacing lines -> Linegeometry, inline positions (B2)
     line.py           ACLineSegment -> Line
     switch.py         Switch subclasses -> Line Switch=y + Fuse / Recloser / Swtcontrol; open_terminals()
 ```
@@ -256,7 +264,7 @@ deck's own units, and one fixed unit makes a second export the same text (S6f id
 
 One record per WireInfo in the network, used or not (E3). The three DSS classes share one name namespace (`wire`):
 a LineGeometry's conductor list names a wire without saying its catalog, so the writer's `_conductor_kinds` needs
-each name in only one catalog.
+each name in only one catalog. A plain CableInfo (no neutral or shield) is a WireData, its insulation unmodelled (B7).
 
 | DSS slot | from |
 |---|---|
@@ -296,24 +304,39 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
 
 ### LineGeometry (B2)
 
-- **One record per (WireConfiguration, spacingYOffset)** among the lines (E3). It is named
-  `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m, `.` written as
-  `p`).
+- **One record per (WireConfiguration, ySpacingOffset)** among the lines (E3). It is named
+  `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
+  mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
   default).
+- **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
+  ACLineSegmentPhase) gets one record per (spacing, ySpacingOffset, conductors), the conductors being each phase's
+  sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
+  The spacing may hold several circuits (a double circuit, a secondary bundle under a primary): the line takes the
+  positions of its own phases' sequence numbers. `circuitNumber` is not read, since cim18v17 says a line's need not
+  match its positions'. Lines of one `MultiCircuitGroup` at its highest voltage are coupled instead when two or more
+  are in the network (H1, S6h).
 - **Positions:**
-  - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m. They are written as `xs`
-    / `hs` with the conductor names in `wires`, and the writer emits the cond blocks;
-  - the wires are matched to positions by sequence number from `get_configuration_wires`.
+  - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m: phase conductors, then
+    neutrals. A bundle (`RegularBundlePosition` triplex, `BundlePosition` quadruplex) is expanded into its
+    sub-conductors. They are written as `xs` / `hs` with the conductor names in `wires`, and the writer emits the
+    cond blocks;
+  - the wires are matched to positions by sequence number from `get_configuration_wires`, or a spacing line's
+    `get_line_phase_wires`;
+  - a plain CableInfo below grade is written at the same height above it (B7): DSS takes a WireData only above
+    grade.
 - **The other slots:**
   - nconds = the positions;
-  - nphases = `numberOfPhases` (required). Position kinds, where set, must be `phase` for 1..nphases and `neutral`
-    after;
+  - nphases = `numberOfPhases` (required), or a spacing line's phases other than N. Position kinds, where set, must
+    be `phase` for 1..nphases and `neutral` after;
   - `reduce=y`: the neutrals are Kron-reduced, i.e. grounded at both ends, as the impedance getters assume (G2;
     242 of 243 sweep geometries set it). The import left `reduce` untranscribed for that reason.
+- **The earth of a spacing line.** cim18v17 associates an EarthResistivity only with a WireConfiguration or a
+  PerLengthImpedance, so a spacing line takes the network's one EarthResistivity (`get_network_earth`) for its
+  `rho` and the deck's earthmodel. None or several raise.
 - **Raises:**
-  - a line with `ACLineSegment.WireSpacing` and no WireConfiguration, or per-phase `ACLineSegmentPhase.WireInfo`.
-    No producer writes either: the DSS importer turns `spacing=` + `wires=` into a WireConfiguration (B2);
+  - a spacing line with a phase without a WireInfo, or a phase whose sequence number its spacing has no conductor
+    for; a line with both a WireConfiguration and a phase WireInfo;
   - a phase count on the line other than nphases.
 - **The importer's spacing sharing.** The importer shares `spc_500` among 601, 602, ...; each geometry now carries
   its own positions, so a re-import gives `wc_<name>_spc` per geometry. That is a listed difference, equal in the
@@ -327,7 +350,8 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 |---|---|
 | bus1 / bus2 | `bus_ref` over `get_terminal_nodes`, with the phase conductors of `get_conductor_phases` in order (645 CB is `.3.2`). The neutral is not on the bus: it is reduced (B4) |
 | phases | the phase conductors' count |
-| linecode / geometry | the code's name, or the (configuration, offset) geometry's name. Geometry wins when both are set (skill `conductor-geometry`) |
+| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry wins when both are set (skill `conductor-geometry`) |
+| rho | the configuration's EarthResistivity, or a spacing line's network EarthResistivity (ohm-m) |
 | length, units | `required_qty(line, "length", "m")`, `units=m` |
 | normamps / emergamps | `get_current_limits(line)` normal / emergency. Unset is left unset, and the engine copies the code's or geometry's. `short_term` and seasonal limits are not mapped |
 | enabled | `get_in_service(which="normal")`; unset is not written |
@@ -347,6 +371,10 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 
 One `Line` with `Switch=y` per Switch subclass:
 - bus1/bus2 and phases as a Line; a blank PhaseCode is `.1.2.3`;
+- an open tie between laterals on different phases (terminals B and C, `SwitchPhase.phaseSide1` B →
+  `phaseSide2` C, the GLM importer's S6-9) is written side by side from `get_switch_sides`: `bus1=<a>.2 bus2=<b>.3`.
+  The pairs go in side 1's PhaseCode order. A tie that is closed in either state raises, because closed it would
+  join two phases. So do SwitchPhases that don't pair exactly the two terminals' conductors;
 - `normamps`/`emergamps` from `get_current_limits` (the importer writes none);
 - `enabled`;
 - a small invented impedance (B3, the user's rule), because CIM has none (DSS-8): `r1=1e-3 r0=1e-3 x1=0 x0=0 C1=0
@@ -371,6 +399,8 @@ The state:
 - `get_switch_state(which="normal")` → the control's `Normal=open|closed`;
 - `which="actual"` → `State=open|closed`, plus `Open Line.<name> 1` in `Options.open_terminals` when open (the
   importer's rule inverted).
+- `to_model(..., switch_state="normal")` reads `which="normal"` for `State` and `Open` too, for an as-built model
+  whose `Switch.open` is unset. The default, `"actual"`, raises on an unset `open`; there is no silent fallback.
 
 A Fuse or Recloser closed in both states writes neither. A one-terminal switch (GroundDisconnector) raises. The
 class is lossy on the way back: Breaker, Disconnector, Sectionaliser and Jumper come back as LoadBreakSwitch
@@ -427,11 +457,12 @@ code-level tests in `test_getters_line_impedance.py`):
 | # | question | decision |
 |---|---|---|
 | B1 | Deck units | Every length in metres (Line/LineCode `units=m`, geometry `units=m`, wire `Runits/GMRunits/radunits=m`); B6's lumped lines are the one exception |
-| B2 | Geometry form | Inline positions (cond blocks) per (WireConfiguration, offset); no LineSpacing is written. A bare-spacing line raises until a producer writes one |
+| B2 | Geometry form | Inline positions (cond blocks) per (WireConfiguration, offset), and per (spacing, offset, conductors) for a spacing line (a direct WireSpacing and a WireInfo on each phase, the EPRI shape); no LineSpacing is written |
 | B3 | Switch impedance (amended by the user) | A small invented impedance: 1 mOhm resistive, `r1=r0=1e-3 x1=x0=0 C1=C0=0 length=1 units=m` |
 | B4 | Line neutrals (approved by the user 2026-11-09, as recommended and built) | Geometry `reduce=y`, and the neutral is not written on the bus. Engine probe (2026-11-09, geometry 601 under an unbalanced load): `reduce=y` gives the same voltages, to 1e-9 V, as `reduce=n` with the neutral on node 0 at both ends. So `reduce=y` is exactly a neutral grounded at both ends, and it keeps a 3x3 YPrim. `reduce=n` on a `.1.2.3` bus puts the neutral on node 4, ungrounded: it floats (292 V in the probe), and the phase voltages move by up to 4 %. CIM has no per-conductor neutral grounding to export, so `reduce=n` has nothing to carry. A code line with a neutral row raises |
 | B5 | Code values | Code-level getters; a code no line uses is still exported |
 | B6 | Lumped-only lines (amended by the user) | Written inline: the whole-line values divided by the length, `r1 x1 r0 x0` in ohm/km and `C1 C0` in nF/km, `units=km`; with no length, `length=1` |
+| B7 | Unshielded cable (user, 2026-11-12) | A plain CableInfo (insulated, no neutral or shield: an underground secondary's conductors) is a WireData, its insulation not modelled. DSS takes a WireData only above grade, so a buried one is written at the same height above (`hs` = abs(y)). The series impedance is close: the earth-return depth (about 850 m at 100 ohm-m) dwarfs a few feet |
 
 ### Slot tables (generated from `SLOTS`)
 
@@ -549,9 +580,9 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise ('.' as 'p') |
-| nconds | written | the spacing's positions |
-| nphases | written | WireConfiguration.numberOfPhases, required; position kinds phase then neutral |
+| name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, offset and conductors; a coupled group's: <group>_geometry (H1) |
+| nconds | written | the spacing's positions; a spacing line's: its phases' positions; a coupled group's: its lines' positions, a shared neutral once |
+| nphases | written | WireConfiguration.numberOfPhases, required; a spacing line's: its phases other than N, a coupled group's: every line's; position kinds phase then neutral |
 | cond | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | wire | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | x | not mapped | the writer folds wires/xs/hs into cond= blocks |
@@ -561,13 +592,13 @@ code-level tests in `test_getters_line_impedance.py`):
 | emergamps | unset | no rating on a WireConfiguration (D9); the Line carries its own |
 | reduce | written | y: the neutrals grounded at both ends, as the impedance getters assume (B4) |
 | spacing | not mapped | positions are written inline (B2) |
-| wires | written | get_configuration_wires, by sequence number; any of the three catalogs |
+| wires | written | get_configuration_wires, or a spacing line's get_line_phase_wires, by sequence number; any of the three catalogs |
 | cncable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | tscable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | cncables | not mapped | wires carries every kind (the writer names each block's kind) |
 | tscables | not mapped | wires carries every kind (the writer names each block's kind) |
 | xs | written | get_line_conductor_xy x (m); an unused configuration: get_spacing_xy |
-| hs | written | get_line_conductor_xy y, above ground (m) |
+| hs | written | get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7) |
 | Seasons | unset | not in CIM (untranscribed on import) |
 | Ratings | unset | not in CIM (untranscribed on import) |
 | LineType | unset | not in CIM (untranscribed on import) |
@@ -578,31 +609,31 @@ code-level tests in `test_getters_line_impedance.py`):
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names |
-| bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases) |
-| bus2 | written | bus_ref(get_terminal_nodes[1], the same phases) |
+| name | written | Names; a coupled group's: the group's, <line>_jumper1 for each circuit, and <line>_jumper2 or a longer line's remainder <line> (H1, H4) |
+| bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
+| bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
 | linecode | written | the PerLengthImpedance's LineCode name |
-| length | written | required_qty(length, m); lumped: km, unset -> 1 |
-| phases | written | the phase conductors (a neutral is reduced, B4) |
-| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km) |
-| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km) |
-| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises |
-| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises |
-| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0 |
-| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0 |
+| length | written | required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
+| phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
+| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
 | rmatrix | not mapped | a phase matrix is always a LineCode |
 | xmatrix | not mapped | a phase matrix is always a LineCode |
 | cmatrix | not mapped | a phase matrix is always a LineCode |
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
-| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m); unset -> not written |
-| geometry | written | the (WireConfiguration, spacingYOffset) LineGeometry name |
+| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth |
+| geometry | written | the (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1) |
 | units | written | m (B1); lumped: km (B6) |
-| spacing | not mapped | a line with WireSpacing and no WireConfiguration raises (B2) |
-| cncables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
-| tscables | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
-| wires | not mapped | per-phase ACLineSegmentPhase.WireInfo raises (B2) |
+| spacing | not mapped | positions are written inline in the LineGeometry (B2) |
+| cncables | not mapped | the LineGeometry carries the conductors (B2) |
+| tscables | not mapped | the LineGeometry carries the conductors (B2) |
+| wires | not mapped | the LineGeometry carries the conductors (B2) |
 | EarthModel | not mapped | the deck's Set earthmodel carries it (options.py: one model per deck) |
 | B1 | not mapped | C1 carries the susceptance |
 | B0 | not mapped | C0 carries the susceptance |
@@ -610,8 +641,8 @@ code-level tests in `test_getters_line_impedance.py`):
 | Ratings | unset | not in CIM (untranscribed or raising on import) |
 | LineType | unset | not in CIM (untranscribed or raising on import) |
 | EpsRmedium | unset | not in CIM (untranscribed or raising on import) |
-| HeightOffset | not mapped | spacingYOffset goes into the geometry's heights |
-| HeightUnit | not mapped | spacingYOffset goes into the geometry's heights |
+| HeightOffset | not mapped | ySpacingOffset goes into the geometry's heights |
+| HeightUnit | not mapped | ySpacingOffset goes into the geometry's heights |
 | conductors | unset | not in CIM (untranscribed or raising on import) |
 | normamps | rule | get_current_limits normal (A); unset -> not written, the engine copies the catalog's |
 | emergamps | rule | get_current_limits emergency (A); unset -> not written, as normamps |
@@ -686,7 +717,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Normal | written | get_switch_state(which='normal'); written only when open in either state; one value per phase (the engine sets a fuse per phase) |
 | State | written | get_switch_state(which='actual'); written only when open in either state; one value per phase (the engine sets a fuse per phase) |
 | basefreq | unset | no home on a Switch (untranscribed on import) |
-| enabled | unset | no home on a Switch (untranscribed on import) |
+| enabled | rule | no: no trip settings or curve in CIM yet (U15), so the engine's defaults would trip it (V7) |
 | like | not mapped | the writer never writes like= |
 
 **Recloser** (`exporter/switch.py`)
@@ -719,7 +750,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Normal | written | get_switch_state(which='normal'); written only when open in either state |
 | State | written | get_switch_state(which='actual'); written only when open in either state |
 | basefreq | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
-| enabled | unset | protection setting; no home in cim18v17's protection function blocks (DSS-11): the engine's default |
+| enabled | rule | no: no trip settings or curve in CIM yet (U15), so the engine's defaults would trip it (V7) |
 | like | not mapped | the writer never writes like= |
 
 **Swtcontrol** (`exporter/switch.py`)
@@ -774,6 +805,7 @@ One DSS Transformer per unit of `get_transformer_units` (T4). Every value comes 
 | BY_ENDS (`PowerTransformer`, balanced ends) | inline, `phases=3` | `ratedU` (LL), `ratedS` | `%imag`/`%noloadloss` = the core's b/g |
 | BY_PHASE_ENDS (a tank's own windings) | inline, `phases=1` | `baseU`, `baseS` (the coil) | the tank's `%imag`/`%noloadloss` |
 | BY_TANK_ENDS, BY_LUGS (a `TankConfiguration`) | the configuration's XfmrCode; the instance writes `XfmrCode=`, `buses` and `enabled` | (on the code) | |
+| BY_TANK_IMPEDANCE (two ends and each tank's `percentImpedance`, a GIS's cans) | inline, `phases` 1 or 3; a center-tap end (s1s2N, kind I) is two halves on one bus; a bank is one 1-phase Transformer per can (T4), in tank order (GETTERS_PLAN bank rules) | a coil: `ratedU` derived to the coil (V2), each half `ratedU`/2 at the can's kVA; 3-phase `ratedU`, `ratedS` | `%Rs` and `X**` from %Z and loadLoss (Hopkinson's split on a center tap); the tank's `%imag`/`%noloadloss` |
 | AUTO (`AutoTransformer`, `VoltageRegulator`) | inline, `phases` 1 or 3 (DSS has no AutoTrans mapping here, DSS-11) | `baseU` (the deck's kV, LL on a 3-phase gang unit: an AutoTransformerEnd has no `ratedU`), `ratedS` | no core |
 
 - **kVA on a coil is `baseS`.** A center-tap half is written at the can's kVA (25 for a 25 kVA can), as every deck
@@ -803,14 +835,21 @@ A winding's `phases` in their order (a coil From → To). `bus_ref` gains the ne
   Probe: Rneut on `.1.2.3` is shorted by the neutral on node 0 (the same as solid). Two windings with a neutral
   impedance raise: the record has one `wdg`.
 - **A delta:** `.1.2.3`.
-- **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`). An ungrounded coil neutral
-  raises.
+- **A 2-phase wye** (every winding on the same two phases and N): as a 3-phase wye on its two phase
+  conductors (`p.2.3`, `.2.3.4` ungrounded), DSS `phases=2`.
+- **A coil:** its two conductors, N as `.0` (`feeder.1.0`, `house.0.2`, `n1.1.2`) when grounded. An ungrounded
+  coil neutral is `.4`, as T6 (`head.1.4`): a bank's cans on one bus share that floating node, the wye primary of a
+  floating-wye / delta bank. The engine's default antifloat (1 ppm) is enough for it to solve. A coil neutral
+  with `grounded` unset raises. The importer has no phase for node 4 on a 1-phase transformer, so it does not read
+  such a deck back (it raises).
 
 ### XfmrCode (T5)
 
 One per `TransformerTankConfiguration` that a unit uses. Its values come from the model of the first unit that uses
 it, so they follow the same rules as an inline Transformer:
-- `phases`: 3 when winding 1 has three phase conductors, else 1;
+- `phases`: the polyphase unit's phase conductors, 3 (ABC) or 2 (a 2-phase wye: every winding on the same two
+  phases and N, GLM's `WYE_WYE` on two phases, whose per-phase base (kV/√3)² / (kVA/2) is the coil's), else 1 (a
+  coil); anything else raises;
 - `windings`, `conns`, `kVs`, `kVAs` and `%Rs`;
 - `Xhl`, `Xht` and `Xlt`;
 - `%imag` and `%noloadloss`;
@@ -912,7 +951,6 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 - **Raises:**
   - two neutral impedances;
   - a mesh r on balanced ends;
-  - an unused configuration (T5);
   - an unset `ptRatio`;
   - remote sensing;
   - a line drop without `ctRating`;
@@ -934,8 +972,8 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | T2 | Y vs Yn, template vs instance | Fix the getter: the kinds agree up to the grounding, and the instance's wins. The importer stays as built |
 | T3 | Polarity of a 1-phase TankEnd instance | The importer gives such an instance a `TransformerPhaseEnd` per terminal conductor in the deck's node order, and BY_TANK_ENDS reads a coil's phases from them when present. Alternatives: the importer writes such an instance inline (BY_PHASE_ENDS, a listed difference), or it raises on a descending LL coil (IEEE4 YYD stops binding) |
 | T4 | Several tanks on one PowerTransformer | One DSS Transformer per tank, named by the tank; a PowerTransformer with one tank is named by itself. A tap changer on a several-tank PowerTransformer raises until a producer writes one |
-| T5 | An unused TransformerTankConfiguration | Raises: the importer never writes one, and a template alone does not say its phases |
-| T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye is `.4` with no Rneut; two neutral impedances on one transformer raise |
+| T5 | An unused TransformerTankConfiguration | No XfmrCode, logged as a warning naming the skipped mRIDs: a template alone does not say its phases. Amended 2026-11-16 (the user's, for clallam_cim): a feeder package carries its utility's whole catalogue, so most of its templates are sibling feeders'; it raised before |
+| T6 | Neutral impedance (amends E7) | The neutral goes on `.4` with `Rneut`/`Xneut` (probe: on `.1.2.3` it is shorted); an ungrounded wye, or an ungrounded coil neutral, is `.4` with no Rneut; two neutral impedances on one transformer raise |
 | T7 | Regulator impedance and range | `%Rs=[r/2 r/2]` (equal to `%LoadLoss=r`); `MaxTap`/`MinTap`/`NumTaps` from the step range; an unset `step` or `ptRatio` raises |
 
 ### Slot tables (S6c, generated from `SLOTS`)
@@ -1417,11 +1455,15 @@ Each piece's inverter slots:
 
 ### PVSystem
 
-- `Pmpp` = the unit's maxP x its 1/n share; `irradiance` = p / Pmpp, so the engine gives CIM's p at the default
-  P-T curve. `kvar` = the piece's q (generation sign).
-- `%Cutout=0` only when 0 < p < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would switch the PV off below its
-  default cut-out (S4b engine rules).
-- Raises: maxP unset or 0, minP other than 0, p into the PV.
+- `Pmpp` = the unit's maxP x its 1/n share. `irradiance` = the unit's `PhotoVoltaicUnit.irradiance` (kW/m2, the
+  gridappsd extension); unset, it falls back to p / Pmpp, so the panel gives exactly p. `kvar` = the piece's q
+  (generation sign).
+- `%Pmpp` = 100 x p / Pmpp when p is below the panel's Pmpp x irradiance (a PV cut to fit kVA, or held back); the
+  engine caps the panel at it (S4b engine rules), so it gives CIM's p at the default P-T curve. Not written when p
+  is the panel's power.
+- `%Cutout=0` only when p > 0 and Pmpp x irradiance < 20 % of kVA (`ENGINE_CUTOUT_PERCENT`): the engine would
+  switch the PV off below its default cut-out.
+- Raises: maxP unset or 0, minP other than 0, p into the PV, p above Pmpp x irradiance.
 
 ### Storage (P6)
 
@@ -1448,6 +1490,10 @@ Each piece's inverter slots:
   raises. Model 7 comes back as model 1 (CIM has no current limit; listed).
 - `Xd`, `Xdp`, `Xdpp`, `H`, `D`, `XRdp` are unset: cim18v17 has no machine reactance or inertia (U13), so they
   take the engine's defaults (E4).
+- **A PowerElectronicsWindUnit** (user, 2026-11-09, for a GIS spoke) is a model 1 Generator at the unit's output:
+  `inverter_pieces` gives its name, bus, `kv`, its share of the inverter's `kVA`, and its share of p and q. DSS has
+  no inverter wind class, and IEEE 9500 writes its turbines as Generators. The inverter's q limits and `maxIFault`
+  have no home on a model 1 Generator and are not written. The deck reads back as a SynchronousMachine.
 
 ### Reactor (P8)
 
@@ -1505,7 +1551,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | P2 | A unit above its share of ratedS (**confirmed by the user 2026-11-09**) | Raises, naming the unit, its output and its share. Giving each piece the whole rating was the alternative |
 | P3 | Names of the pieces | One unit: the connection's; several: the units' |
 | P4 | Unequal phases (E8) | One unit: one 1-phase device per phase, each 1/n of the connection and of the unit; several units or delta raise |
-| P5 | PV output | `irradiance` = p / Pmpp at Pmpp = maxP; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
+| P5 | PV output | `irradiance` = the unit's (the extension, 2026-11-10), else p / Pmpp, at Pmpp = maxP; `%Pmpp` holds the output at p below the panel; `%Cutout=0` below the engine's 20 % so a running PV keeps running |
 | P6 | Storage output | `%Discharge`/`%Charge`, never `kW` (the engine's percent of the kWrated of the moment); waiting is idling at idlingP |
 | P7 | Generator model | 3 from an enabled voltage control on its own terminal; disabled → 1; model 7 → 1 (listed); reactances at the engine's defaults (U13) |
 | P8 | Reactor coupling | r0/x0 must equal r/x; a varistor raises |
@@ -1521,16 +1567,16 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | phases | written | the phase conductors; a delta across two is 1 |
 | bus1 | written | bus_ref of the phase conductors; a wye inverter's neutral is node 0 |
 | kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
-| irradiance | written | the unit's output / Pmpp (get_inverter_units p, generation sign) |
+| irradiance | written | the unit's irradiance (kW/m2); unset -> the unit's output / Pmpp (get_inverter_units p, generation sign) |
 | Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
-| pct_Pmpp | unset | untranscribed or raising on import; not in CIM |
+| pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
 | Temperature | unset | untranscribed or raising on import; not in CIM |
 | pf | not mapped | kvar carries q |
 | conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
 | kvar | written | the unit's share of q (generation sign: -q) |
 | kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
 | pct_Cutin | unset | untranscribed or raising on import; not in CIM |
-| pct_Cutout | rule | 0 when the output is above 0 and below the engine's 20 % of kVA, else not written |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
 | EffCurve | unset | untranscribed or raising on import; not in CIM |
 | P_TCurve | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |
@@ -1648,13 +1694,13 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 
 | DSS slot | kind | from / why |
 |---|---|---|
-| name | written | Names, the Generator namespace |
+| name | written | Names, the Generator namespace; a wind unit as inverter_pieces names it |
 | phases | written | the phase conductors; a delta across two is 1 |
 | bus1 | written | bus_ref of the phase conductors; a wye machine's neutral is node 0 |
 | kv | written | ratedU (kV, LL), / sqrt 3 for 1-phase wye (S4b-4 inverted) |
-| kW | written | get_der_output total p (kW, generation sign) |
+| kW | written | get_der_output total p (kW, generation sign); a wind unit: its share of the connection's p (inverter_pieces) |
 | pf | not mapped | kvar carries q |
-| kvar | written | get_der_output total q (kVAr, generation sign), after kW |
+| kvar | written | get_der_output total q (kVAr, generation sign), after kW; a wind unit: its share of q |
 | model | written | 3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1 |
 | Vminpu | unset | untranscribed or raising on import; not in CIM |
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
@@ -1671,7 +1717,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | minkvar | written | model 3: minQ (kVAr); unset -> not written |
 | pvfactor | unset | untranscribed or raising on import; not in CIM |
 | forceon | unset | untranscribed or raising on import; not in CIM |
-| kVA | written | ratedS (kVA) |
+| kVA | written | ratedS (kVA); a wind unit: its share of the inverter's ratedS |
 | MVA | not mapped | kVA carries ratedS |
 | Xd | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
 | Xdp | unset | no machine reactance or inertia in cim18v17 (U13); the engine's default |
@@ -1758,8 +1804,10 @@ deck (S6a, §8.2).
 
 The importer's S5-1 inverted. `get_location_coordinates(equipment)` (core) gives the Location's points in
 PositionPoint `sequenceNumber` order and each Terminal's point:
-- one point per Terminal: they pair in order (the importers' form);
+- one point per Terminal: they pair in order (a one-Terminal POINT, a two-point LINESTRING);
 - a two-terminal polyline (more than two points): its ends go to its Terminals (CIM's line route);
+- one point on equipment with several Terminals: a device point (F8), which pairs with no Terminal, so `terminals`
+  is None;
 - any other count raises, and so do a point without a sequenceNumber or a position, and two points with one
   number. No Location, or a Location without points, is None. `zPosition` is not read.
 
@@ -1768,6 +1816,14 @@ network's ConnectivityNode order:
 - Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
   (S5-3).
 - Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
+  so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
+  (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives
+  back the importer's bus to float noise (the midpoint rounded a + b once); with none placed, every bus goes at the
+  point. A device with one open bus goes first, so a chain of switches fills from its placed end. The parity and
+  atom tests compare coordinates to rel 1e-12 / abs 1e-9 (`assert_same_coordinates`) for that noise. An import
+  under `device_geometry="linestring"` (S5-9) has no device points: each device's buses pair one per Terminal and
+  come back exactly.
 - The CoordinateSystem picks the file: `urn:ogc:def:crs:OGC:1.3:CRS84` is `LatLongCoords` (x = longitude, written
   latitude first), `OpenDSSLocalBusCoordinates` is `BusCoords` (the importer's `COORDINATE_SYSTEMS` inverted).
   Another URN, or Locations in two systems, raise.
@@ -1824,6 +1880,13 @@ exporter now writes 1 on a 1-phase winding; the re-import then monitors B, the s
   (DSS-11's protection TODO). In a controls-on solve of the exported IEEE13_CDPSM, `Recloser.Rec1` trips at the
   engine's 1 A default, recloses and locks out after 7 control iterations. Parity runs controls off, so protection
   does not act there.
+- **Protection controls are written disabled (V7, the user's rule 2026-11-09, until U15).** Every Fuse and Recloser
+  control gets `enabled=no`, keeping `RatedCurrent`, `Shots`, `RecloseIntervals` and its states. Without CIM trip
+  settings or curves, the engine's defaults locked out a GIS spoke's feeders behind their head reclosers on the
+  first snapshot. A fuse blew under backfeed. The switch Line stays as CIM says, and an open switch is still opened
+  by its `Open` command (E6). The importer reads a disabled control back as the same Fuse or Recloser (its `enabled`
+  is untranscribed). The engine comparisons treat the original's controls as disabled (`engine_compare.as_exported`).
+  Once U15 maps the settings, a device that has them is written enabled (`switch.PROTECTION_ENABLED`).
 - **Controls on is fragile for parity (F2).** From the same starting state, IEEE9500's `vreg3_a` ends on tap 3 in the
   original and 4 in the export: the 0.095 % differences tip one band decision. IEEE13_CDPSM's deck itself ends in
   `Set Controlmode=OFF` with taps set by hand.
@@ -1857,6 +1920,7 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | F5 | Protection settings (**open**; reclosing closed by S6g, trip settings still open, G5) | Untranscribed for now (DSS-11), listed: the exported recloser trips at the engine's 1 A in a controls-on solve. Open: map Recloser PhaseTrip/GroundTrip (and Relay settings) once DSS-11's protection TODO picks the CIM classes |
 | F6 | Idempotence | Under `name_source="name"`, deck and coordinate files; `mrid` re-prefixes by design |
 | F7 | Decks out of parity | YYD-Master (a fault study that writes files) and IEEE8500 Master-unbal (a missing redirect): idempotence only |
+| F8 | Device points (2026-11-10, the user's pick) | A single POINT on multi-terminal equipment places only open buses, at (N · point − Σ placed) / k: reflection across the point next to a placed bus, the point itself with none. Placing every open bus at the point was the alternative: simpler and closer to real GIS, but a DSS round trip moves a bus only a device touches (a regulator's output) |
 
 ### Slot table (S6f, generated from `SLOTS`)
 
@@ -1865,8 +1929,8 @@ As built (core `test_getters_location.py`, 6 tests; opendss `test_export_buscoor
 | DSS slot | kind | from / why |
 |---|---|---|
 | name | written | the bus (Names.bus) of each Terminal of located equipment |
-| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates) |
-| y | written | the Terminal's PositionPoint yPosition |
+| x | written | the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a device point touches is solved from it as the centroid of the device's buses |
+| y | written | as x, from yPosition |
 | geographic | written | crsUrn CRS84 -> true (LatLongCoords), OpenDSSLocalBusCoordinates -> false; others raise |
 
 ## S6g: earth model and reclose sequences (built 2026-11-09 at the user's word, with decisions G1-G5 as recommended)
@@ -1979,3 +2043,82 @@ a breaker, and Relay is not mapped (DSS-11).
 | G3 | Reclosures on import | Shots - 1 RecloseSequences at RecloseIntervals, the engine's defaults filling either; the cases the engine resolves by order or by reading past its defaults raise |
 | G4 | A recloser with no RecloseSequence | `Shots=1`, no reclosure, as CIM says, rather than the engine's 4 |
 | G5 | Trip settings (**open**, TODO U15) | Still untranscribed: they need an attribute in the profile (see "What is still open"). Tracked as `.development/UPSTREAM_REQUESTS.md` U15 until the user repairs the FunctionBlock package in the UML |
+
+## S6h: multi-circuit lines, empty Feeders, bus sections (built 2026-11-19 at the user's word; H1 with jumpers, H4-H7 as recommended)
+
+Found by exporting the CIMTBL-Models `boundary_example` (feeder s1-f2 alone, and s1-f2 with s1-f3 on their shared
+double-circuit first span). H4-H7 came from GIS-derived feeders, whose groups are mostly a primary span with the
+secondary underbuilt on the same poles, drawn with lengths that differ (median 6 %, at most 88 times).
+
+### Multi-circuit lines (H1, H4-H7)
+
+- **Which lines are coupled** (`linegeometry.coupled_groups`, found once per export as `ExportContext.coupled`):
+  the lines of one `MultiCircuitGroup` at its highest nominal voltage, when two or more of them are in the network.
+  - The group's lines at another voltage (an underbuilt secondary) are written on their own positions, uncoupled
+    (H5). One line would put them on a bus with the primary's voltage base.
+  - One line of a group alone, as in a feeder exported on its own, is an ordinary spacing line on its own
+    positions (1, 2, 3, 7 for s1-f2).
+  - A group whose coupled lines name one phase position (series pieces of one circuit, such as a span split at a
+    tap) is written uncoupled, with a warning (H7): one coupled line cannot carry them.
+- **The geometry** `<group>_geometry`: every line's phase conductors in circuit order (the lines ordered by their
+  lowest phase sequence number), then the neutrals in sequence-number order. A position several lines name is one
+  conductor, as in the EPRI ConductorPosition model (H6), so a shared neutral is written once, on one wire.
+  `SharedPhases` is not needed; where an ACLineSegmentPhase names a MultiCircuitGroup, it must be its line's.
+  `nphases` is every coupled line's phases, and `reduce=y` (B4).
+- **The line** `<group>`: one Line on the geometry from bus `<group>_1` to `<group>_2`, each circuit's phase
+  conductors on the next nodes (`.1.2.3`, then `.4.5.6`), over the shortest line's length (to the mm). The lines
+  must agree on spacing, ySpacingOffset, ratings and in-service state, which the one Line carries. Its `rho` is the
+  network earth, as a spacing line's.
+- **The ends.** A DSS terminal is on one bus, and the circuits end on different nodes:
+  - each circuit has a jumper `<line>_jumper1` from its node 1 onto its nodes of `<group>_1`, with the switches'
+    invented 1 mOhm (B3, now `line.SWITCH_IMPEDANCE`). It is not `Switch=y`: it is a conductor, not a switch;
+  - a line no longer than the group has `<line>_jumper2` from `<group>_2` onto its node 2;
+  - a longer line goes on as `<line>`, its own section from its nodes of `<group>_2` to its node 2, on its own
+    positions, for the rest of its length (H4). Every circuit keeps its exact length.
+
+  Terminal 1 of every line of a group is taken to be at the same end of the structure, and the coupled span to
+  start there: CIM does not say which ends meet, or where along the longer line the shorter one runs.
+- **Raises:** a coupled line that is not a spacing line; coupled lines that differ on spacing, offset, ratings or
+  in-service state; a shared position on different wires; a phase naming another group.
+- **Not imported back.** The DSS importer raises on the group's Line (nodes 4-6 have no phase), so an exported
+  multi-circuit deck does not round-trip yet. Importing DSS multi-circuit lines into a MultiCircuitGroup is
+  separate work.
+
+### Empty Feeders (H2)
+
+A frame model declares the Feeders of its whole area (the boundary example's `dso_area.cimtbl` declares all five,
+under two substations), and a deck holds only those whose equipment it has. Among several Feeders, one that
+contains no equipment is not counted. A Feeder alone still names the circuit, even when empty: the DSS importer
+puts a source-only deck's source in a Substation.
+
+### Bus sections (H3)
+
+A `BusbarSection` is its node's bus. DSS has no element for it, so it writes no record
+(`buses.BUS_CLASSES`, counted as exported by `_check_exported`).
+
+### Tests
+
+- `test_export_line.py`:
+  - the coupled group's records;
+  - its YPrim equal to the same structure written by hand in DSS units (rel 1e-9), with the circuits' mutual block
+    nonzero;
+  - a lone line of a group on its own positions;
+  - a longer line's remainder (H4), which solves;
+  - a shared neutral without SharedPhases (H6);
+  - an underbuilt secondary left uncoupled (H5);
+  - series pieces left uncoupled, with the warning (H7);
+  - five raises.
+- `test_export_circuit.py`: an empty Feeder of another substation is not counted.
+- `test_export_framework.py`: a BusbarSection writes nothing.
+
+### Decisions for S6h
+
+| # | question | decision |
+|---|---|---|
+| H1 | A MultiCircuitGroup | One DSS line on the whole structure when two or more of its lines are coupled, with a 1 mOhm jumper at each end of each circuit; a lone line keeps its own positions. A precomputed 6x6 matrix is not an option (skill `conductor-geometry`) |
+| H2 | Feeders in a frame-model assembly | Among several, empty Feeders are not counted |
+| H3 | BusbarSection | Its node's bus; no record |
+| H4 | Lines of one group with different lengths (user, 2026-11-19) | Coupled over the shortest line's length; the rest of each longer line is its own uncoupled section at its terminal-2 end |
+| H5 | An underbuilt secondary in a group (user, 2026-11-19) | Only the lines at the group's highest nominal voltage are coupled; the others stay on their own positions |
+| H6 | A shared conductor (user, 2026-11-19) | One position on several lines is one conductor (EPRI ConductorPosition); SharedPhases is not required |
+| H7 | Series pieces of one circuit in a group (user, 2026-11-19) | The group is written uncoupled, with a warning |

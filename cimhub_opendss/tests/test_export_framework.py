@@ -12,7 +12,7 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.cim_to_dss import EXPORT_ORDER, DssExporter
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import check_slots
+from cimhub_core.export_slots import check_slots
 from cimhub_opendss.schema import opendss_schema as schema
 
 ATOMS = Path(__file__).parent / "atoms"
@@ -87,6 +87,20 @@ def test_unexported_equipment_raises():
     network.add_to_graph(cim.AsynchronousMachine(mRID="motor"))
     with pytest.raises(ValueError, match=r"no DSS export yet for \{'AsynchronousMachine': 1\}"):
         DssExporter().to_model(network)
+
+
+def test_busbar_section_is_its_node_s_bus_and_writes_nothing():
+    """H3: DSS has no element for a BusbarSection."""
+    network = _network("vsource/mvasc.dss")
+    before = {cls: len(DssExporter().to_model(network).list_by_class(cls)) for cls in (schema.Vsource, schema.Line)}
+    [bus] = network.graph[cim.ConnectivityNode].values()
+    busbar = cim.BusbarSection(mRID="busbar")
+    terminal = cim.Terminal(mRID="busbar_t1", ConductingEquipment=busbar, ConnectivityNode=bus, sequenceNumber=1)
+    busbar.Terminals.append(terminal)
+    network.add_to_graph(busbar)
+    network.add_to_graph(terminal)
+    model = DssExporter().to_model(network)
+    assert {cls: len(model.list_by_class(cls)) for cls in before} == before
 
 
 def test_several_sources_need_the_circuit_source_named():

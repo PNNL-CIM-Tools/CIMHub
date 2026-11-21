@@ -26,7 +26,8 @@ NAMESPACE = "Transformer"
 TEMPLATE_FORMS = (TransformerForm.BY_TANK_ENDS, TransformerForm.BY_LUGS)
 PHASE, N = cim.SinglePhaseKind, cim.SinglePhaseKind.N
 THREE_PHASES = (PHASE.A, PHASE.B, PHASE.C)
-#: T6: a wye neutral that is not solidly grounded goes on its own node (on node 0 an Rneut would be shorted)
+#: T6: a wye neutral that is not solidly grounded goes on its own node (on node 0 an Rneut would be shorted); an
+#: ungrounded coil neutral too, so a bank's cans share one floating neutral on the bus
 NEUTRAL_NODE = 4
 COIL_NEUTRAL_NODE = 0
 CONNECTION = {cim.WindingConnection.D: "delta", cim.WindingConnection.Y: "wye", cim.WindingConnection.Yn: "wye",
@@ -38,8 +39,12 @@ MESH_SLOTS = {(1, 2): "XHL", (1, 3): "XHT", (2, 3): "XLT"}
 class UnitModel(NamedTuple):
     unit: object  # a TransformerTank, a PowerTransformer without tanks, or an AutoTransformer
     model: TransformerModel  # on winding 1's DSS kVA, voltages in kV, powers in kVA
-    three_phase: bool
+    conductors: tuple[cim.SinglePhaseKind, ...]  # a polyphase unit's phase conductors (``_conductors``); () a coil
     kvas: tuple[float, ...]  # each winding's DSS kVA
+
+    @property
+    def polyphase(self) -> bool:
+        return bool(self.conductors)
 
 
 def units(transformer) -> tuple:
@@ -59,19 +64,19 @@ def read_unit(unit) -> UnitModel:
     stored = get_transformer_model(unit, voltage_unit="kV", power_unit="kVA")
     if len(stored.windings) not in (2, 3):
         raise ValueError(f"{describe(unit)}: has {len(stored.windings)} windings; 2 or 3 are mapped (Xscarray is not)")
-    three_phase = _three_phase(unit, stored.windings)
-    kvas = tuple(_kva(unit, winding, three_phase) for winding in stored.windings)
+    conductors = _conductors(unit, stored.windings)
+    kvas = tuple(_kva(unit, winding, bool(conductors)) for winding in stored.windings)
     model = get_transformer_model(unit, base_power=cim.ApparentPower(kvas[0], "kVA"), voltage_unit="kV",
                                   power_unit="kVA")
-    return UnitModel(unit, model, three_phase, kvas)
+    return UnitModel(unit, model, conductors, kvas)
 
 
 def winding_values(unit_model: UnitModel) -> dict:
     """The values a Transformer and an XfmrCode share, under the Transformer's slot names."""
-    unit, model, three_phase, kvas = unit_model
+    unit, model, conductors, kvas = unit_model
     auto = model.form is TransformerForm.AUTO
     return dict(
-        phases=3 if three_phase else 1,
+        phases=len(conductors) or 1,
         windings=len(model.windings),
         conns=[_connection(unit, winding, auto) for winding in model.windings],
         kVs=[winding_kv(unit_model, winding) for winding in model.windings],
@@ -90,9 +95,10 @@ def winding_buses(unit_model: UnitModel, names: Names) -> list[str]:
 
 
 def winding_kv(unit_model: UnitModel, winding: Winding) -> float:
-    """A coil's ``baseU``, a 3-phase winding's ``ratedU`` (LL), in kV; an AutoTransformerEnd has only ``baseU`` (the
-    deck's kV, LL on a 3-phase unit)."""
-    by_rating = unit_model.three_phase and unit_model.model.form is not TransformerForm.AUTO
+    """A coil's ``baseU`` (a PowerTransformerEnd's is derived from its ``ratedU``, ``get_transformer_model``), a
+    polyphase winding's ``ratedU`` (LL), in kV; an AutoTransformerEnd has only ``baseU`` (the deck's kV, LL on a
+    3-phase unit)."""
+    by_rating = unit_model.polyphase and unit_model.model.form is not TransformerForm.AUTO
     attribute = "ratedU" if by_rating else "baseU"
     value = winding.rated_u if by_rating else winding.base_u
     if value is None:
@@ -140,22 +146,26 @@ def tap_windings(unit_model: UnitModel) -> list[tuple[Winding, cim.RatioTapChang
     return found
 
 
-def _three_phase(unit, windings: tuple[Winding, ...]) -> bool:
-    """3-phase when every winding has phase conductors A, B and C; a coil when each has two conductors."""
-    kinds = {tuple(phase for phase in winding.phases if phase is not N) == THREE_PHASES for winding in windings}
-    if len(kinds) > 1:
-        raise ValueError(f"{describe(unit)}: mixes 3-phase windings and coils")
-    three_phase = kinds.pop()
-    if not three_phase:
-        odd = [winding.number for winding in windings if len(winding.phases) != 2]
-        if odd:
-            raise ValueError(f"{describe(unit)}: windings {odd} are neither 3-phase nor a coil of two conductors")
-    return three_phase
+def _conductors(unit, windings: tuple[Winding, ...]) -> tuple[cim.SinglePhaseKind, ...]:
+    """A polyphase unit's phase conductors: every winding on A, B and C, or every winding on the same two phases and
+    N (a 2-phase wye, GLM's ``WYE_WYE`` on two phases: DSS ``phases=2``, whose per-phase base is the coil's). ()
+    when each winding is a coil of two conductors; anything else raises."""
+    phase_sets = {tuple(phase for phase in winding.phases if phase is not N) for winding in windings}
+    if phase_sets == {THREE_PHASES}:
+        return THREE_PHASES
+    two_phase_wye = all(len(winding.phases) == 3 and N in winding.phases for winding in windings)
+    if len(phase_sets) == 1 and two_phase_wye:
+        return phase_sets.pop()
+    odd = [winding.number for winding in windings if len(winding.phases) != 2]
+    if odd:
+        raise ValueError(f"{describe(unit)}: windings {odd} are neither polyphase (ABC, or one pair of phases and N "
+                         f"on every winding) nor a coil of two conductors")
+    return ()
 
 
-def _kva(unit, winding: Winding, three_phase: bool) -> float:
-    """A coil's ``baseS`` (an AutoTransformerEnd has none: its ``ratedS``), a 3-phase winding's ``ratedS``."""
-    value = winding.rated_s if three_phase or winding.base_s is None else winding.base_s
+def _kva(unit, winding: Winding, polyphase: bool) -> float:
+    """A coil's ``baseS`` (an AutoTransformerEnd has none: its ``ratedS``), a polyphase winding's ``ratedS``."""
+    value = winding.rated_s if polyphase or winding.base_s is None else winding.base_s
     if value is None:
         raise ValueError(f"{describe(unit)}: winding {winding.number} has no ratedS")
     return value
@@ -203,9 +213,9 @@ def _neutral_impedance(unit_model: UnitModel) -> dict:
     windings = [winding for winding in unit_model.model.windings if _has_neutral_impedance(winding)]
     if not windings:
         return {}
-    if len(windings) > 1 or not unit_model.three_phase:
+    if len(windings) > 1 or not unit_model.polyphase:
         raise ValueError(f"{describe(unit_model.unit)}: a neutral impedance on windings "
-                         f"{[w.number for w in windings]}; one 3-phase winding is mapped (the record has one wdg)")
+                         f"{[w.number for w in windings]}; one polyphase winding is mapped (the record has one wdg)")
     [winding] = windings
     return dict(wdg=winding.number, Rneut=winding.rground or 0.0, Xneut=winding.xground or 0.0)
 
@@ -219,17 +229,18 @@ def _bus(unit_model: UnitModel, winding: Winding, names: Names) -> str:
     if terminal is None or terminal.ConnectivityNode is None:
         raise ValueError(f"{describe(winding.end)}: has no Terminal on a ConnectivityNode")
     node = terminal.ConnectivityNode
-    if not unit_model.three_phase:
-        if N in winding.phases and winding.grounded is not True:
-            raise ValueError(f"{describe(winding.end)}: an ungrounded coil neutral is not mapped")
-        return bus_ref(node, winding.phases, names, neutral=COIL_NEUTRAL_NODE)
+    if not unit_model.polyphase:
+        if N in winding.phases and winding.grounded is None:
+            raise ValueError(f"{describe(winding.end)}: a coil neutral with grounded unset")
+        neutral = COIL_NEUTRAL_NODE if winding.grounded else NEUTRAL_NODE  # T6: a floating neutral on its own node
+        return bus_ref(node, winding.phases, names, neutral=neutral)
     wye = _connection(unit_model.unit, winding, unit_model.model.form is TransformerForm.AUTO) == "wye"
     if not wye:
         if N in winding.phases:
             raise ValueError(f"{describe(winding.end)}: a delta winding with a neutral")
-        return bus_ref(node, THREE_PHASES, names)
+        return bus_ref(node, unit_model.conductors, names)
     if winding.grounded is None:
         raise ValueError(f"{describe(winding.end)}: a wye winding with grounded unset")
     if winding.grounded and not _has_neutral_impedance(winding):
-        return bus_ref(node, THREE_PHASES, names)  # the engine's neutral is on node 0
-    return bus_ref(node, (*THREE_PHASES, N), names, neutral=NEUTRAL_NODE)
+        return bus_ref(node, unit_model.conductors, names)  # the engine's neutral is on node 0
+    return bus_ref(node, (*unit_model.conductors, N), names, neutral=NEUTRAL_NODE)

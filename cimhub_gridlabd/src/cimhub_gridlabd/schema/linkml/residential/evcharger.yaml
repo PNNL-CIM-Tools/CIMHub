@@ -1,0 +1,193 @@
+id: https://gridlabd.org/schema/glm/residential/evcharger
+name: evcharger
+description: GridLAB-D evcharger class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  evcharger:
+    is_a: residential_enduse
+    description: "Copyright (C) 2008 Battelle Memorial Institute\n@file evcharger.cpp\n\
+      @addtogroup evcharger\n@ingroup residential\nThere are only two types of electric\
+      \ vehicles supported:\n- ELECTRIC\tpure electric vehicle with limited range\
+      \ based on battery capacity\n- HYBRID\thybrid electric vehicle with longer range\
+      \ based on fuel capacity\nThe evcharger simulation is based on demand state\
+      \ profile of the vehicle.\nWhen the vehicle is at home, it has a probability\
+      \ of leaving on one of 3\ntrips.\n@image html residential/docs/evcharger/Slide1.PNG\
+      \ \"Figure 1 - EV charger state diagram\"\n- WORK\t\ttrip to work (standard\
+      \ distance defined by trip.d_work)\n- SHORTTRIP\trandom trip up to 50 miles\
+      \ (battery will not be fully discharged)\n- LONGTRIP\trandom trip over 50 miles\
+      \ (battery will be discharged up to 25%)\nbut only possible for HYBRID vehicles\n\
+      @image html residential/docs/evcharger/Slide2.PNG \"Figure 2 - EV charger home/work\
+      \ arrival/departure statistics\"\nWhen away, the probability of a return is\
+      \ used to determine when the vehicle\nreturns.\nThe charger power can have one\
+      \ of three levels:\n- LOW\t\t120V/15A charger\n- MEDIUM\t240V/30A charger\n\
+      - HIGH\t\t240V/60A charger\nThe trip distances is used to estimate the battery\
+      \ charge upon return according\nto the following rules:\n1. A work trip discharges\
+      \ the battery depending on whether charge_at_work is defined.\nIf charging at\
+      \ work is allowed, the battery will discharge for 1 trip, otherwise it will\n\
+      discharge for 2 trips.\n2. A short trip discharges the battery based on the\
+      \ distance traveled.\n3. A long trip discharges the battery to 25%, but is only\
+      \ possible with hybrids.\nIn all cases, if the trip distance is greater than\
+      \ 50 miles and the car is a\nhybrid, the discharge will be down to 25%.\nHeat\
+      \ fraction ratio is used to calculate the internal gain from plug loads.\n@par\
+      \ Demand profiles\nThe format of the demand profile is as follows:\n@verbatim\n\
+      [DAYTYPE]\nDIRTRIP,DIRTRIP,...\n#.###,#.###,...\n#.###,#.###,...\n.\n.\n.\n\
+      #.###,#.###,...\n@endverbatim\nwhere @e DAYTYPE is either @p WEEKDAY or @p WEEKEND,\n\
+      @e DIR is either @p ARR or @p DEP, and @e TRIP\nis either @p HOME, @p WORK,\
+      \ @p SHRT, or @p LONG.  There must be 24.rows() of numbers,\nthe numbers must\
+      \ be positive numbers between 0 and 1, and each column must be normalized\n\
+      (they must add up to 1.000 over the 24 hour period).\nYou may introduce as many\
+      \ daytype blocks as are supported simultaneously (2 max at this time).\n@todo\
+      \ the 24.rows() are not check for compliance with the 24 hour rule, the 0-1\
+      \ rule, or the normalized rule.\n@{\n\nInherits from: residential_enduse\n\n\
+      Type: Instance (network topology element)\n\nCIM Mapping: TBD\n\nNote: Inherits\
+      \ from residential_enduse (not in residential module)"
+    attributes:
+      charger_type:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: charger_type
+      vehicle_type:
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: vehicle_type
+      state:
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: state
+      p_go_home:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit/h
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: p_go_home[unit/h]
+      p_go_work:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit/h
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: p_go_work[unit/h]
+      work_dist:
+        range: float
+        required: false
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: work_dist[mile]
+      capacity:
+        range: float
+        required: false
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacity[kWh]
+      charge:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge[unit]
+      charge_at_work:
+        range: boolean
+        required: false
+        annotations:
+          order: 9
+          value_type: bool
+          separator: ','
+          native_name: charge_at_work
+      charge_throttle:
+        range: float
+        required: false
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charge_throttle[unit]
+      charger_efficiency:
+        range: float
+        required: false
+        description: Efficiency of the charger in terms of energy in to battery stored
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charger_efficiency[unit]
+      power_train_efficiency:
+        range: float
+        required: false
+        description: Miles per kWh of battery charge
+        unit:
+          ucum_code: mile/kWh
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_train_efficiency[mile/kWh]
+      mileage_classification:
+        range: float
+        required: false
+        description: Miles expected range on battery only
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mileage_classification[mile]
+      demand_profile:
+        range: string
+        required: false
+        annotations:
+          order: 14
+          value_type: string
+          separator: ','
+          native_name: demand_profile

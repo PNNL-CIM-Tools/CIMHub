@@ -16,7 +16,7 @@ from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.load import LoadResponse, get_load_response, get_phase_loads
 from cimhub_opendss.exporter.injection import device_connection, device_kv, equal_phases
 from cimhub_opendss.exporter.naming import Names
-from cimhub_opendss.exporter.slots import Slot, with_default
+from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.EnergyConsumer, cim.ConformLoad, cim.NonConformLoad, cim.StationSupply)

@@ -1,0 +1,23 @@
+# GridLAB-D underground_line_conductor -> ConcentricNeutralCableInfo, OverheadWireInfo, TapeShieldCableInfo (catalog).
+# Source table: underground_line_conductor (records: 3)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+# derived (radius_from_diameter): radius = conductor_diameter / 2, neutralStrandRadius = neutral_diameter / 2
+Table ConcentricNeutralCableInfo: mRID, name, diameterOverJacket (in), gmr (ft), rAC50 (ohm/mile), neutralStrandGmr (ft), neutralStrandRDC20 (ohm/mile), neutralStrandCount, ratedCurrent (A), radius (in), neutralStrandRadius (in), OperationalLimitSet
+    # not filled (S2-7): rating.summer.continuous, rating.summer.emergency
+    # untranscribed: insulation_relative_permitivitty=2.3, shield_gmr=0.0
+    ugc_cncab_cn_250, cncab_cn_250, 1.29, 0.0171, 0.41, 0.00208, 14.8722, 13, , 0.2835, 0.03205,
+
+# derived (radius_from_diameter): radius = conductor_diameter / 2
+Table TapeShieldCableInfo: mRID, name, diameterOverJacket (in), gmr (ft), rAC50 (ohm/mile), tapeThickness (in), diameterOverScreen (in), ratedCurrent (A), radius (in), OperationalLimitSet
+    # not filled (S2-7): rating.summer.continuous, rating.summer.emergency
+    # untranscribed: shield_gmr=0.03625, shield_resistance=4.327833
+    ugc_tscab_ts_1/0, tscab_ts_1/0, 1.06, 0.0111, 0.97, 0.005, 0.87, , 0.184,
+
+# derived (radius_from_diameter): radius = conductor_diameter / 2
+Table OverheadWireInfo: mRID, name, gmr (ft), rAC50 (ohm/mile), ratedCurrent (A), radius (in), OperationalLimitSet
+    # not filled (S2-7): rating.summer.continuous, rating.summer.emergency
+    # untranscribed on a bare wire: outer_diameter=0.4416
+    ugc_ugwire_cu_1/0, ugwire_cu_1/0, 0.01113, 0.607, , 0.184,

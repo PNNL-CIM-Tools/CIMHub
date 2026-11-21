@@ -1,0 +1,264 @@
+id: https://gridlabd.org/schema/glm/generators/controller_dg
+name: controller_dg
+description: GridLAB-D controller_dg class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  controller_dg:
+    is_a: glm_object
+    description: 'GridLAB-D controller_dg class
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      groupid_dg:
+        range: string
+        required: false
+        description: the group ID of the dg objects the controller controls.
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: groupid_dg
+      ki:
+        range: float
+        required: false
+        description: parameter of the propotional control
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ki
+      kp:
+        range: float
+        required: false
+        description: parameter of the integral control
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kp
+      gain:
+        range: float
+        required: false
+        description: Gain of the controller
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gain
+      ki_QV:
+        range: float
+        required: false
+        description: parameter of the propotional control for secondary voltage control
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ki_QV
+      kp_QV:
+        range: float
+        required: false
+        description: parameter of the integral control for secondary voltage control
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: kp_QV
+      gain_QV:
+        range: float
+        required: false
+        description: Gain of the controller for secondary voltage control
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gain_QV
+      first_run:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first_run'
+        annotations:
+          order: 8
+          value_type: bool
+          separator: ','
+          native_name: first_run
+      flag_switchOn:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for flag_switchOn'
+        annotations:
+          order: 9
+          value_type: bool
+          separator: ','
+          native_name: flag_switchOn
+      controlTime:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for controlTime'
+        annotations:
+          order: 10
+          value_type: int
+          separator: ','
+          native_name: controlTime
+      predictor_vals_w_measured:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for predictor_vals.w_measured'
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.w_measured
+      predictor_vals_x:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Predictor pass values of variables - x'
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.x
+      predictor_vals_Pref_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Predictor pass values of variables - Pref_ctrl'
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.Pref_ctrl
+      predictor_vals_wref_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for predictor_vals.wref_ctrl'
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.wref_ctrl
+      predictor_vals_Vset_ref:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for predictor_vals.Vset_ref'
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.Vset_ref
+      predictor_vals_x_QV:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for predictor_vals.x_QV'
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.x_QV
+      predictor_vals_Vset_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Predictor pass values of variables - Vset_ctrl'
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: predictor_vals.Vset_ctrl
+      corrector_vals_w_measured:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for corrector_vals.w_measured'
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.w_measured
+      corrector_vals_x:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Corrector pass values of variables - x'
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.x
+      corrector_vals_Pref_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Corrector pass values of variables - Pref_ctrl'
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.Pref_ctrl
+      corrector_vals_wref_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for corrector_vals.wref_ctrl'
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.wref_ctrl
+      corrector_vals_Vset_ref:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for corrector_vals.Vset_ref'
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.Vset_ref
+      corrector_vals_x_QV:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for corrector_vals.x_QV'
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.x_QV
+      corrector_vals_Vset_ctrl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: Corrector pass values of variables - Vset_ctrl'
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: corrector_vals.Vset_ctrl

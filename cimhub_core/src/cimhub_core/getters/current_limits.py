@@ -41,7 +41,7 @@ def get_current_limits(
     all-year limits only. With a season, each kind is that season's limit, or the all-year one where the season has
     none (an all-year limit holds in every season). Raises when a CurrentLimit has no OperationalLimitType,
     durationKind or normalValue, or when two limits of one kind and season differ."""
-    return _read_limits(equipment, _limit_sets(equipment), unit, season)
+    return _read_limits(equipment, equipment_limit_sets(equipment), unit, season)
 
 
 def get_asset_info_current_limits(
@@ -71,11 +71,11 @@ def _read_limits(owner, limit_sets: list, unit: str, season: cim.CalendarSeasonK
             found[_duration_field(limit)].append((limit, _amps(limit, unit)))
     limits = {}
     for field in CurrentLimits._fields:
-        limits[field] = _agreed(owner, field, in_season[field] or all_year[field])
+        limits[field] = agreed_limit(owner, f"{field} current", in_season[field] or all_year[field])
     return CurrentLimits(**limits)
 
 
-def _limit_sets(equipment: cim.ConductingEquipment) -> list[cim.OperationalLimitSet]:
+def equipment_limit_sets(equipment: cim.ConductingEquipment) -> list[cim.OperationalLimitSet]:
     """The sets on the equipment and on its terminals, each once."""
     limit_sets = list(equipment.OperationalLimitSet)
     for terminal in equipment.Terminals:
@@ -100,13 +100,13 @@ def _amps(limit: cim.CurrentLimit, unit: str) -> float:
     return value
 
 
-def _agreed(owner, field: str, found: list) -> float | None:
+def agreed_limit(owner, what: str, found: list) -> float | None:
     """The one value of a kind, or None when there is none; differing values raise."""
     if not found:
         return None
     _, first = found[0]
     for _, value in found[1:]:
         if not math.isclose(value, first):
-            raise ValueError(f"{describe(owner)}: {field} current limits disagree "
+            raise ValueError(f"{describe(owner)}: {what} limits disagree "
                              f"({[(item.mRID, amount) for item, amount in found]})")
     return first

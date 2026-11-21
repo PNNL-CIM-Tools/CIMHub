@@ -1,0 +1,57 @@
+# GridLAB-D model IEEE13_cdpsm
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = IEEE13_cdpsm
+
+Object Substation: mRID=sub_IEEE13_cdpsm, name=IEEE13_cdpsm
+
+Object Feeder: mRID=fdr_IEEE13_cdpsm, name=IEEE13_cdpsm, NormalEnergizingSubstation=sub_IEEE13_cdpsm
+
+# defaulted: powerflow::nominal_frequency=60.0
+Object BaseFrequency: mRID=bf_60hz, frequency (Hz)=60.0
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_115kv,  115.0
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+    bv_240v,   0.24
+
+Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
+    olt_normal,    normal,    normal,    true,  absoluteValue
+    olt_emergency, emergency, emergency, false, absoluteValue
+
+Import bus.cimtbl
+
+Import source.cimtbl
+
+Import zip_fractions.cimtbl
+
+Import line_configuration.cimtbl
+
+Import transformer_configuration.cimtbl
+
+Import overhead_line.cimtbl
+
+Import switch.cimtbl
+
+Import fuse.cimtbl
+
+Import recloser.cimtbl
+
+Import transformer.cimtbl
+
+Import regulator.cimtbl
+
+Import load.cimtbl
+
+Import triplex_load.cimtbl
+
+Import capacitor.cimtbl
+
+Import inverter.cimtbl
+
+# the feeder head: each link's Terminal on a swing bus (Feeder.NormalHeadTerminal)
+Update Table Terminal: mRID, NormalHeadFeeder
+    xf_xf_sub3_T1, fdr_IEEE13_cdpsm

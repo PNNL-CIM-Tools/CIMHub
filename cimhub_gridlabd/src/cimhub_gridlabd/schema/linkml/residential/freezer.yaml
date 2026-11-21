@@ -1,0 +1,180 @@
+id: https://gridlabd.org/schema/glm/residential/freezer
+name: freezer
+description: GridLAB-D freezer class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  freezer:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file freezer.cpp
+
+      @addtogroup freezer
+
+      @ingroup residential
+
+      The freezer model is based on performance profile that can specified by a tape
+      and using
+
+      a method developed by Ross T. Guttromson
+
+      Original ODE:
+
+      @f$ @frac{C_f}{UA_r + UA_f} @frac{dT_{air}}{dt} + T_{air} = T_{out} + @frac{Q_r}{UA_r}
+      @f$
+
+      where
+
+      @f$ T_{air} @f$ is the temperature of the water
+
+      @f$ T_{out} @f$ is the ambient temperature around the freezer
+
+      @f$ UA_r @f$ is the UA of the freezer itself
+
+      @f$ UA_f @f$ is the UA of the food-air
+
+      @f$ C_f @f$ is the heat capacity of the food
+
+      @f$ Q_r @f$ is the heat rate from the cooling system
+
+      General form:
+
+      @f$ T_t = (T_o - C_2)e^{@frac{-t}{C_1}} + C_2 @f$
+
+      where
+
+      t is the elapsed time
+
+      @f$ T_o @f$ is the initial temperature
+
+      @f$ T_t@f$  is the temperature at time t
+
+      @f$ C_1 = @frac{C_f}{UA_r + UA_f} @f$
+
+      @f$ C_2 = T_out + @frac{Q_r}{UA_f} @f$
+
+      Time solution
+
+      @f$ t = -ln@frac{T_t - C_2}{T_o - C_2}*C_1 @f$
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      size:
+        range: float
+        required: false
+        unit:
+          ucum_code: cf
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: size[cf]
+      rated_capacity:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_capacity[Btu/h]
+      temperature:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: temperature[degF]
+      setpoint:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: setpoint[degF]
+      deadband:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: deadband[degF]
+      next_time:
+        range: string
+        required: false
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: next_time
+      output:
+        range: float
+        required: false
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output
+      event_temp:
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: event_temp
+      UA:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: UA[Btu/degF*h]
+      state:
+        range: State
+        required: false
+        annotations:
+          order: 10
+          value_type: string
+          separator: ','
+          native_name: state

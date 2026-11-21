@@ -11,12 +11,14 @@ from typing import NamedTuple
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.base import FormatExporter
+from cimhub_core.getters.switch_state import STATE_ATTRIBUTE
 from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
-from cimhub_opendss.exporter import (buscoords, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
+from cimhub_opendss.exporter import (buscoords, buses, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
                                      pvsystem, reactor, regcontrol, storage, switch, transformer, vsource, wire,
                                      xfmrcode)
+from cimhub_opendss.exporter.linegeometry import CoupledGroup, coupled_groups
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
 
@@ -33,6 +35,8 @@ class ExportContext(NamedTuple):
     network: object
     names: Names
     circuit_source: cim.EnergySource
+    switch_state: str
+    coupled: dict[cim.MultiCircuitGroup, CoupledGroup]  # linegeometry.coupled_groups, found once (H1)
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -40,17 +44,24 @@ class ExportContext(NamedTuple):
 
 
 class DssExporter(FormatExporter):
-    """``to_model(network, *, name_source=None, circuit_source="source") -> DssModel``.
+    """``to_model(network, *, name_source=None, circuit_source="source", switch_state="actual") -> DssModel``.
 
     ``name_source`` is the shared naming switch (``cimhub_core.names``: ``'name'``, ``'mrid'``, ``'uri'``; else
     ``$CIMHUB_NAME_SOURCE``, else ``'mrid'``). ``circuit_source`` names the EnergySource written as ``New Circuit``
-    when there are several (E2). Conducting equipment of a class no module exports raises.
+    when there are several (E2). ``switch_state`` is the CIM state written as each switch's ``State`` and ``Open``
+    command (E6): ``'actual'`` reads ``Switch.open``, ``'normal'`` reads ``Switch.normalOpen`` (an as-built model
+    whose ``open`` is unset). ``Normal`` always reads ``normalOpen``. Conducting equipment of a class no module
+    exports raises.
     """
 
-    def to_model(self, network, *, name_source: str | None = None, circuit_source: str = "source") -> DssModel:
+    def to_model(self, network, *, name_source: str | None = None, circuit_source: str = "source",
+                 switch_state: str = "actual") -> DssModel:
+        if switch_state not in STATE_ATTRIBUTE:
+            raise ValueError(f"switch_state must be one of {sorted(STATE_ATTRIBUTE)}, not {switch_state!r}")
         _check_exported(network)
         names = Names(name_source)
-        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source))
+        context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state,
+                                coupled_groups(network))
         model = DssModel()
         for module in EXPORT_ORDER:
             for record in module.export(context):
@@ -59,9 +70,10 @@ class DssExporter(FormatExporter):
         return model
 
 
-def cim_to_dss(network, destination, **opts) -> None:
-    """Export ``network`` and write the deck ``destination`` (a ``.dss`` path); ``opts`` go to ``to_model``."""
-    DssWriter().write(DssExporter().to_model(network, **opts), destination)
+def cim_to_dss(network, destination, *, per_class: bool = False, **opts) -> None:
+    """Export ``network`` and write the deck ``destination`` (a ``.dss`` path), one file per DSS class beside it
+    when ``per_class`` (``DssWriter.write``); ``opts`` go to ``to_model``."""
+    DssWriter().write(DssExporter().to_model(network, **opts), destination, per_class=per_class)
 
 
 def _circuit_source(network, name_source: str, circuit_source: str) -> cim.EnergySource:
@@ -77,8 +89,9 @@ def _circuit_source(network, name_source: str, circuit_source: str) -> cim.Energ
 
 
 def _check_exported(network) -> None:
-    """Raise on conducting equipment no module exports, so nothing is dropped silently."""
-    exported = {cim_class for module in EXPORT_ORDER for cim_class in module.CIM_CLASSES}
+    """Raise on conducting equipment no module exports, so nothing is dropped silently. A BusbarSection is its
+    node's bus (``buses.BUS_CLASSES``)."""
+    exported = {cim_class for module in EXPORT_ORDER for cim_class in module.CIM_CLASSES} | set(buses.BUS_CLASSES)
     missing = {cls.__name__: len(objects) for cls, objects in network.graph.items()
                if objects and issubclass(cls, cim.ConductingEquipment) and cls not in exported}
     if missing:

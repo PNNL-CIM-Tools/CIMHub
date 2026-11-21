@@ -17,7 +17,21 @@ from gdm.systems.distribution import controllers as K
 from gdm.systems.distribution import equipment as E
 from infrasys import Component
 
-from cimhub_gdm.importer import bus, capacitor, der, line, load, reactor, regulator, source, switch, transformer
+from cimbuilder.object_builder.schedule import TIME_POINT_CLASS
+
+from cimhub_gdm.importer import (
+    bus,
+    capacitor,
+    der,
+    line,
+    load,
+    reactor,
+    regulator,
+    source,
+    switch,
+    time_series,
+    transformer,
+)
 from cimhub_gdm.importer.network import FIELDS_DistributionFeeder, FIELDS_DistributionSubstation, new_network
 from cimhub_gdm.importer.shared import Naming, components, name_clashes
 
@@ -124,9 +138,18 @@ def classified() -> set[type]:
 
 
 class GdmImporter(FormatImporter):
-    """GDM ``DistributionSystem`` → cim18v17 ``FeederModel`` through CIM-Builder keyword methods."""
+    """GDM ``DistributionSystem`` → cim18v17 ``FeederModel`` through CIM-Builder keyword methods.
+
+    ``time_points``: a dict the caller owns, keyed by TimePoint class name. Given one, each load's P/Q series becomes
+    an ``EnergyConnectionSchedule`` in the network and its points a ``pyarrow.Table`` under
+    ``time_points['EnergyConnectionTimePoint']`` (TIMESERIES_NEEDS.md T6; ``write_time_points`` writes it beside the
+    XML). Without one, every series is dropped with one WARNING, as before schedules existed.
+    """
 
     model_cls = FeederModel
+
+    def __init__(self, time_points: dict | None = None):
+        self.time_points = time_points
 
     def to_cim(self, model, *, network=None) -> FeederModel:
         """Import ``model`` (a GDM ``DistributionSystem``) into a new FeederModel."""
@@ -134,7 +157,8 @@ class GdmImporter(FormatImporter):
             raise ValueError("GdmImporter builds its own network; importing into an existing one is not supported")
         system = model
         check_coverage(system)
-        drop_time_series(system)
+        if self.time_points is None:
+            drop_time_series(system)
         naming = Naming(system.name, name_clashes(_named_components(system)))
 
         feeder_model = new_network(system, naming)
@@ -142,12 +166,16 @@ class GdmImporter(FormatImporter):
             for component in components(system, cls):
                 log_untranscribed(fields, component)
                 add(feeder_model, component, naming)
+        if self.time_points is not None:
+            points = time_series.add_time_series(feeder_model, system, naming)
+            if points is not None:
+                self.time_points[TIME_POINT_CLASS] = points
         return feeder_model
 
 
-def gdm_to_cim(system) -> FeederModel:
-    """Import a GDM ``DistributionSystem`` into a cim18v17 FeederModel."""
-    return GdmImporter().to_cim(system)
+def gdm_to_cim(system, *, time_points: dict | None = None) -> FeederModel:
+    """Import a GDM ``DistributionSystem`` into a cim18v17 FeederModel; ``time_points`` as ``GdmImporter``."""
+    return GdmImporter(time_points).to_cim(system)
 
 
 def check_coverage(system) -> None:
@@ -189,16 +217,11 @@ def _referenced_uuids(system) -> set:
 
 
 def drop_time_series(system) -> None:
-    """Log one WARNING listing every time series, which the first pass drops (OPEN_DECISIONS 2)."""
-    dropped = []
-    for component in system.iter_all_components():
-        if system.has_time_series(component):
-            for metadata in system.list_time_series_metadata(component):
-                dropped.append(f"{type(component).__name__} {component.name!r}: {metadata.name} "
-                               f"({type(metadata).__name__}, {metadata.time_series_uuid}, {metadata.features})")
-    if dropped:
-        log.warning("dropping %d time series (no CIM schedule profile yet; OPEN_DECISIONS 2):\n  %s",
-                    len(dropped), "\n  ".join(dropped))
+    """Log one WARNING listing every time series, dropped when the caller keeps no time points (OPEN_DECISIONS 2)."""
+    dropped = [time_series.describe(component, metadata)
+               for component in system.iter_all_components() if system.has_time_series(component)
+               for metadata in time_series.time_series_metadata(system, component)]
+    time_series.warn_dropped(dropped, "no time_points given to keep them in")
 
 
 def log_untranscribed(fields, component) -> None:

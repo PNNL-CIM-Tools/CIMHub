@@ -1,0 +1,641 @@
+id: https://gridlabd.org/schema/glm/residential/waterheater
+name: waterheater
+description: GridLAB-D waterheater class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  waterheater:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file waterheater.cpp
+
+      @addtogroup waterheater Electric waterheater
+
+      @ingroup residential
+
+      The residential electric waterheater uses a hybrid thermal model that is capable
+
+      of tracking either a single-mass of water, or a dual-mass with a varying thermocline.
+
+      The driving dynamic parameters of the waterheater are
+
+      - <b>demand</b>: the current consumption of water in gallons/minute; the higher
+
+      the demand, the more quickly the thermocline drops.
+
+      - <b>voltage</b>: the line voltage for the coil; the lower the voltage, the
+
+      more slowly the thermocline rises.
+
+      - <b>inlet water temperature</b>: the inlet water temperature; the lower the
+      inlet
+
+      water temperature, the more heat is needed to raise it to the set point
+
+      - <b>indoor air temperature</b>: the higher the indoor temperature, the less
+      heat
+
+      loss through the jacket.
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      tank_volume:
+        range: float
+        required: false
+        description: the volume of water in the tank when it is full
+        unit:
+          ucum_code: gal
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_volume[gal]
+      tank_UA:
+        range: float
+        required: false
+        description: the UA of the tank (surface area divided by R-value)
+        unit:
+          ucum_code: Btu*h/degF
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_UA[Btu*h/degF]
+      tank_diameter:
+        range: float
+        required: false
+        description: the diameter of the water heater tank
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_diameter[ft]
+      tank_height:
+        range: float
+        required: false
+        description: the height of the water heater tank
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_height[ft]
+      water_demand:
+        range: float
+        required: false
+        description: the hot water draw from the water heater
+        unit:
+          ucum_code: gpm
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: water_demand[gpm]
+      heating_element_capacity:
+        range: float
+        required: false
+        description: the power of the heating element
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heating_element_capacity[kW]
+      inlet_water_temperature:
+        range: float
+        required: false
+        description: the inlet temperature of the water tank
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: inlet_water_temperature[degF]
+      waterheater_model:
+        range: string
+        required: false
+        description: the water heater model to use
+        annotations:
+          order: 8
+          value_type: string
+          separator: ','
+          native_name: waterheater_model
+      heat_mode:
+        range: HeatMode
+        required: false
+        description: the energy source for heating the water heater
+        annotations:
+          order: 9
+          value_type: string
+          separator: ','
+          native_name: heat_mode
+      location:
+        range: Location
+        required: false
+        description: whether the water heater is inside or outside
+        annotations:
+          order: 10
+          value_type: string
+          separator: ','
+          native_name: location
+      heatpump_predicted_energy:
+        range: float
+        required: false
+        description: Amount of energy heat pump predicts to need to reach setpoint
+          - energy increases as water temperature decreases
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heatpump_predicted_energy[Wh]
+      tank_setpoint:
+        range: float
+        required: false
+        description: the temperature around which the water heater will heat its contents
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: tank_setpoint[degF]
+      thermostat_deadband:
+        range: float
+        required: false
+        description: the degree to heat the water tank, when needed
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: thermostat_deadband[degF]
+      temperature:
+        range: float
+        required: false
+        description: the outlet temperature of the water tank
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: temperature[degF]
+      height:
+        range: float
+        required: false
+        description: the height of the hot water column within the water tank
+        unit:
+          ucum_code: ft
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: height[ft]
+      demand:
+        range: Complex
+        required: false
+        description: the water heater power consumption
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: demand[kVA]
+      actual_load:
+        range: float
+        required: false
+        description: the actual load based on the current voltage across the coils
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_load[kW]
+      previous_load:
+        range: float
+        required: false
+        description: the previous load based on voltage across the coils at the last
+          sync operation
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: previous_load[kW]
+      actual_power:
+        range: Complex
+        required: false
+        description: the actual power based on the current voltage across the coils
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: actual_power[kVA]
+      time_to_transition:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for time to transition'
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_to_transition
+      Tlower:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for Tlower'
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tlower
+      heating_element_on:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for heating element on'
+        annotations:
+          order: 22
+          value_type: bool
+          separator: ','
+          native_name: heating_element_on
+      turn_fan_on:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for turn fan on'
+        annotations:
+          order: 23
+          value_type: bool
+          separator: ','
+          native_name: turn_fan_on
+      heat_needed:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for heat needed'
+        annotations:
+          order: 24
+          value_type: bool
+          separator: ','
+          native_name: heat_needed
+      water_demand_old:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for previous water demand'
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: water_demand_old
+      init_tank_temp:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for initial tank temperature'
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: init_tank_temp
+      is_waterheater_on:
+        range: float
+        required: false
+        description: simple logic output to determine state of waterheater (1-on,
+          0-off)
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: is_waterheater_on
+      gas_fan_power:
+        range: float
+        required: false
+        description: load of a running gas waterheater
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gas_fan_power[kW]
+      gas_standby_power:
+        range: float
+        required: false
+        description: load of a gas waterheater in standby
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: gas_standby_power[kW]
+      heat_pump_coefficient_of_performance:
+        range: float
+        required: false
+        description: current COP of the water heater pump - currently calculated internally
+          and not an input
+        unit:
+          ucum_code: Btu/kWh
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heat_pump_coefficient_of_performance[Btu/kWh]
+      Tcontrol:
+        range: float
+        required: false
+        description: in heat pump operation, defines the blended temperature used
+          for turning on and off HP - currently calculated internally and not an input
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Tcontrol[degF]
+      current_tank_status:
+        range: string
+        required: false
+        annotations:
+          order: 32
+          value_type: string
+          separator: ','
+          native_name: current_tank_status
+      dr_signal:
+        range: float
+        required: false
+        description: the on/off signal to send to the fortran waterheater model
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dr_signal
+      COP:
+        range: float
+        required: false
+        description: the cop of the fortran heat pump water heater model.
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: COP
+      operating_mode:
+        range: float
+        required: false
+        description: the operating mode the fortran water heater should be using.
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: operating_mode
+      fortran_sim_time:
+        range: float
+        required: false
+        description: the amount of time the fortran model should simulate.
+        unit:
+          ucum_code: s
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: fortran_sim_time[s]
+      waterheater_power:
+        range: float
+        required: false
+        description: the current power draw from the fortran water heater.
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: waterheater_power[kW]
+      load_state:
+        range: string
+        required: false
+        annotations:
+          order: 38
+          value_type: string
+          separator: ','
+          native_name: load_state
+      actual_voltage:
+        range: float
+        required: false
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_voltage
+      nominal_voltage:
+        range: float
+        required: false
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_voltage
+      re_override:
+        range: string
+        required: false
+        description: the override setting for the water heater
+        annotations:
+          order: 41
+          value_type: string
+          separator: ','
+          native_name: re_override
+      lower_tank_setpoint:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The setpoint for the lower heating element
+          thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lower_tank_setpoint[degF]
+      upper_tank_setpoint:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The setpoint for the upper heating element
+          thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: upper_tank_setpoint[degF]
+      lower_tank_deadband:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The deadband for the lower heating element
+          thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lower_tank_deadband[degF]
+      upper_tank_deadband:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The deadband for the upper heating element
+          thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: upper_tank_deadband[degF]
+      lower_tank_temperature:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The water temperature at the lower heating
+          element thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: lower_tank_temperature[degF]
+      upper_tank_temperature:
+        range: float
+        required: false
+        description: 'MULTILAYER_MODEL: The water temperature for the upper heating
+          element thermostat in the tank'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: upper_tank_temperature[degF]
+      discrete_step_size:
+        range: float
+        required: false
+        description: 'MULTILAYER MODEL: The step size in seconds to use in the discrete
+          tank temperature dynamics loop.'
+        unit:
+          ucum_code: s
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: discrete_step_size[s]
+      circular_flow_rate:
+        range: float
+        required: false
+        description: 'MULTILAYER MODEL: Heuristic flow activated once the heating
+          elements turn on.'
+        unit:
+          ucum_code: gpm
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: circular_flow_rate[gpm]
+      T_mixing_valve:
+        range: float
+        required: false
+        description: 'MULTILAYER MODEL: Reference temperature to which mixing valve
+          operate.'
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: T_mixing_valve[degF]
+      lower_heating_element_state:
+        range: string
+        required: false
+        description: 'MULTILAYER MODEL: The state of the lower heating element in
+          the tank.'
+        annotations:
+          order: 51
+          value_type: string
+          separator: ','
+          native_name: lower_heating_element_state
+      upper_heating_element_state:
+        range: string
+        required: false
+        description: 'MULTILAYER MODEL: The state of the upper heating element in
+          the tank.'
+        annotations:
+          order: 52
+          value_type: string
+          separator: ','
+          native_name: upper_heating_element_state

@@ -1,0 +1,307 @@
+id: https://gridlabd.org/schema/glm/powerflow/regulator_configuration
+name: regulator_configuration
+description: GridLAB-D regulator_configuration class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  regulator_configuration:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file regulator_configuration.cpp
+
+      @addtogroup regulator_configuration
+
+      @ingroup regulator
+
+      @{
+
+
+      Inherits from: powerflow_library
+
+
+      Type: Configuration (physical asset template)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      connect_type:
+        range: ConnectType
+        required: false
+        description: Designation of connection style
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: connect_type
+      band_center:
+        range: float
+        required: false
+        description: band center setting of regulator control
+        unit:
+          ucum_code: V
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: band_center[V]
+      band_width:
+        range: float
+        required: false
+        description: band width setting of regulator control
+        unit:
+          ucum_code: V
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: band_width[V]
+      time_delay:
+        range: float
+        required: false
+        description: mechanical time delay between tap changes
+        unit:
+          ucum_code: s
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: time_delay[s]
+      dwell_time:
+        range: float
+        required: false
+        description: time delay before a control action of regulator control
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dwell_time[s]
+      raise_taps:
+        range: integer
+        required: false
+        description: number of regulator raise taps, or the maximum raise voltage
+          tap position
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: raise_taps
+      lower_taps:
+        range: integer
+        required: false
+        description: number of regulator lower taps, or the minimum lower voltage
+          tap position
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: lower_taps
+      current_transducer_ratio:
+        range: float
+        required: false
+        description: primary rating of current transformer
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_transducer_ratio[pu]
+      power_transducer_ratio:
+        range: float
+        required: false
+        description: potential transformer rating
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_transducer_ratio[pu]
+      compensator_r_setting_A:
+        range: float
+        required: false
+        description: Line Drop Compensation R setting of regulator control (in volts)
+          on Phase A
+        unit:
+          ucum_code: V
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_r_setting_A[V]
+      compensator_r_setting_B:
+        range: float
+        required: false
+        description: Line Drop Compensation R setting of regulator control (in volts)
+          on Phase B
+        unit:
+          ucum_code: V
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_r_setting_B[V]
+      compensator_r_setting_C:
+        range: float
+        required: false
+        description: Line Drop Compensation R setting of regulator control (in volts)
+          on Phase C
+        unit:
+          ucum_code: V
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_r_setting_C[V]
+      compensator_x_setting_A:
+        range: float
+        required: false
+        description: Line Drop Compensation X setting of regulator control (in volts)
+          on Phase A
+        unit:
+          ucum_code: V
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_x_setting_A[V]
+      compensator_x_setting_B:
+        range: float
+        required: false
+        description: Line Drop Compensation X setting of regulator control (in volts)
+          on Phase B
+        unit:
+          ucum_code: V
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_x_setting_B[V]
+      compensator_x_setting_C:
+        range: float
+        required: false
+        description: Line Drop Compensation X setting of regulator control (in volts)
+          on Phase C
+        unit:
+          ucum_code: V
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compensator_x_setting_C[V]
+      CT_phase:
+        range: string
+        required: false
+        description: phase(s) monitored by CT
+        annotations:
+          order: 16
+          value_type: string
+          separator: ','
+          native_name: CT_phase
+      PT_phase:
+        range: string
+        required: false
+        description: phase(s) monitored by PT
+        annotations:
+          order: 17
+          value_type: string
+          separator: ','
+          native_name: PT_phase
+      regulation:
+        range: float
+        required: false
+        description: regulation of voltage regulator in %
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: regulation
+      control_level:
+        range: string
+        required: false
+        description: Designates whether control is on per-phase or banked level
+        annotations:
+          order: 19
+          value_type: string
+          separator: ','
+          native_name: control_level
+      Control:
+        range: string
+        required: false
+        description: Type of control used for regulating voltage
+        annotations:
+          order: 20
+          value_type: string
+          separator: ','
+          native_name: Control
+      reverse_flow_control:
+        range: string
+        required: false
+        description: Type of control used when power is flowing in reverse through
+          the regulator
+        annotations:
+          order: 21
+          value_type: string
+          separator: ','
+          native_name: reverse_flow_control
+      Type:
+        range: string
+        required: false
+        description: Defines regulator type
+        annotations:
+          order: 22
+          value_type: string
+          separator: ','
+          native_name: Type
+      tap_pos_A:
+        range: integer
+        required: false
+        description: initial tap position of phase A
+        annotations:
+          order: 23
+          value_type: string
+          separator: ','
+          native_name: tap_pos_A
+      tap_pos_B:
+        range: integer
+        required: false
+        description: initial tap position of phase B
+        annotations:
+          order: 24
+          value_type: string
+          separator: ','
+          native_name: tap_pos_B
+      tap_pos_C:
+        range: integer
+        required: false
+        description: initial tap position of phase C
+        annotations:
+          order: 25
+          value_type: string
+          separator: ','
+          native_name: tap_pos_C

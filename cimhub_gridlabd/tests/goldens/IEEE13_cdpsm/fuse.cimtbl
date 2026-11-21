@@ -1,0 +1,16 @@
+# GridLAB-D fuse -> Fuse.
+# Source table: fuse (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    # untranscribed: mean_replacement_time=3600.0
+    sw_swt_fuse1, swt_fuse1, 633, xf1, , 100.0, false, false, bv_4p16kv
+
+Table OperationalLimitSet: mRID, Equipment
+    sw_swt_fuse1_limits, sw_swt_fuse1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    sw_swt_fuse1_norm,  400.0, olt_normal,    sw_swt_fuse1_limits
+    sw_swt_fuse1_emerg, 600.0, olt_emergency, sw_swt_fuse1_limits

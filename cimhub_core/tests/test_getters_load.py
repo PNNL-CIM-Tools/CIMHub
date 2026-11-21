@@ -43,6 +43,19 @@ def test_total_split_evenly(mrid, phases, share):
     assert loads.per_phase == {phase: pytest.approx(PhasePower(*share)) for phase in phases}
 
 
+def test_unbalanced_shape_rows():
+    loads = get_phase_loads(_load("ld_u1"), "kW", "kVAr")
+    assert not loads.split
+    assert loads.per_phase == {A: pytest.approx(PhasePower(17, 10)), B: pytest.approx(PhasePower(66, 38)),
+                               C: pytest.approx(PhasePower(117, 68))}
+
+
+def test_240_volt_part_is_delta_across_the_legs():
+    loads = get_phase_loads(_load("ld_s12"), "kW", "kVAr")
+    assert (loads.connection, loads.phases, loads.total) == (cim.PhaseShuntConnectionKind.D, (S1, S2),
+                                                             pytest.approx(PhasePower(4, 1.5)))
+
+
 def test_connection_and_total():
     loads = get_phase_loads(_load("ld_d1"), "kW", "kVAr")
     assert (loads.connection, loads.grounded, loads.total) == (cim.PhaseShuntConnectionKind.D, False,

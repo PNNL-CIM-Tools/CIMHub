@@ -22,7 +22,7 @@ exporter) may ask for signature changes before anything is frozen.
 | G2 | Kron reduction of neutral conductors in step 3: series Z by `derived/kron.py`, shunt b/g by the phase block (V_n = 0); s1/s2 still raise | **done 2026-11-08**, 24 getter + Kron tests (Kersting Example 4.1) |
 | G3 | `get_line_sequence_impedance_per_length` (steps 2-3 per length), `get_line_phase_impedance_matrix` (`PhaseMatrix`, stored code; sequence code expanded only with `expand_sequence=True`) | **done 2026-11-08**, 31 getter tests |
 | G4 | wide fan-out: `get_terminal_nodes`, `get_conductor_phases` (+ `get_terminal_phases`), `get_base_voltage`, `get_switch_state(which=)`, `get_current_limits` | **done 2026-11-08**, 37 tests |
-| G5 | `get_spacing_xy` / `get_spacing_distances` (XYSpacing and ConductorDistanceSpacing), `get_line_conductor_xy` (`spacingYOffset`), `derived/spacing.py` | **done 2026-11-08**, 24 tests |
+| G5 | `get_spacing_xy` / `get_spacing_distances` (XYSpacing and ConductorDistanceSpacing), `get_line_conductor_xy` (`ySpacingOffset`), `derived/spacing.py` | **done 2026-11-08**, 24 tests |
 | G6a | `get_transformer_units`, `get_transformer_model` (`TransformerModel`: windings, mesh, core on one declared power base; five CIM forms) | **done 2026-11-08**, 23 tests |
 | G6b | `get_tap_steps`/`get_tap_ratio`, `get_shunt_reactive_power`, `get_phase_loads`/`get_load_response`, `get_source`, `get_der_output` (+ `phase_power.device_power`) | **done 2026-11-08**, 46 tests |
 | G6c | `get_regulating_control`, `get_tap_changer_control`, `get_equipment_control` (`getters/control.py`) | **done 2026-11-08**, 16 tests |
@@ -32,6 +32,11 @@ exporter) may ask for signature changes before anything is frozen.
 | S6e | `get_inverter_units` (`InverterUnitShare`: a shared PowerElectronicsConnection chopped by maxP share, each unit's own p or its share of the connection's; `getters/der.py`), `get_series_compensator` (`getters/series_compensator.py`, ohm) | **done 2026-11-09** with the DSS S6e exporter |
 | S6f | `get_location_coordinates` (`LocationCoordinates`: a Location's points in order and each Terminal's point; `getters/location.py`) | **done 2026-11-09** with the DSS S6f exporter |
 | S6g | `get_earth_resistivity` (`getters/earth.py`: `EarthData`, rho in ohm-m from the profile's Resistance), `get_reclose_delays` (`getters/switch_state.py`) | **done 2026-11-09** with the DSS S6g slice |
+| RAW E0 | `get_node_voltage`, `get_voltage_limits` (`getters/voltage.py`, `NodeVoltage`, `VoltageLimits`; the limit-set and agreement helpers of `current_limits.py` shared); `export_slots.py` moved from the DSS exporter to core | **done 2026-11-09** with the RAW E0 exporter (`cimhub_raw/docs/EXPORT_MAPPING.md`), 6 tests |
+| RAW E1 | `get_limits_by_type` (`getters/limits_by_type.py`: limits of one class keyed by `OperationalLimitType`); `get_shunt_admittance` (`getters/shunt.py`, `ShuntAdmittance`: g, b of the sections in service, S or pu); `get_series_compensator(unit, base_power=)` (pu); `required_qty(..., **bases)` | **done 2026-11-09** with the RAW E1 exporter, 6 tests (`test_getters_bus_branch_units.py`) |
+| RAW E2 | none new. Found: `get_machine_rating` / `get_inverter_rating` require `ratedU`, which a RAW machine had none of | closed by RAW E3-1: the importer writes ratedU = BASKV; the getters keep the requirement |
+| RAW E3 | **`get_unit_limits`** (`der.py`: a GeneratingUnit's `minOperatingP`/`maxOperatingP` or any PowerElectronicsUnit's `minP`/`maxP`, `(min, max)` in the caller's sign, as stored: a minimum above its maximum is returned, not raised, E3-5, user 2026-11-09; the Q limits keep the check); `get_transformer_model` reads a star `PowerTransformerEnd.x` (E3-2, user 2026-11-09: with no mesh, (i, j) x = xᵢ + xⱼ, the mesh r None; star + mesh raises; was G6b's raise); `get_tap_steps` / `get_tap_ratio`: a fixed tap (lowStep = highStep) has increment None and ratio 1 (E3-3) | done 2026-11-09, on `raw-exporter` |
+| RAW E4 | `get_transformer_model`: an end form with a declared `base_power` reads ohm and S on it directly (`get_qty(power_base=)`), so its ends need no `ratedS` (E4-1: a RAW 3-winding unit's have none); an end whose g and b are zero holds no core, zeros on several ends are one zero core (E4-2: RAW's end 2 is zero); `Winding.phase_shift` (deg, `PowerTransformerEnd.phaseShift`). **`get_tap_voltage`** (`tap_changer.py`, E4-3: neutralU + (position − neutralStep) × increment % × the end's ratedU; a fixed tap's neutralU), **`get_phase_tap_steps`** (`PhaseTapChangerLinear`: positions and `stepPhaseShiftIncrement`), **`get_impedance_table`** (`getters/impedance_table.py`: each point's step, ratio, angle, rEnd1..3, xEnd1..3 as stored); `get_limits_by_type(terminal=)` (one terminal's limits: a transformer's ratings are per winding). User 2026-11-09 | done 2026-11-09, on `raw-exporter`, 15 tests |
 | G7 | geometry → impedance engine (step 4), validated against `opendssdirect` | raises `NotImplementedError` today |
 
 ## G1 decisions (confirmed by the user 2026-11-08)
@@ -91,7 +96,7 @@ exporter) may ask for signature changes before anything is frozen.
 - `get_spacing_distances` returns pairwise distances only (they do not depend on the origin). For a
   ConductorDistanceSpacing they are the stored values and every pair is needed; XY positions need only enough pairs
   to place each conductor.
-- **Heights are per line** (user, 2026-11-08): `ACLineSegment.spacingYOffset` (cim101 draft) is the height of the
+- **Heights are per line** (user, 2026-11-08): `ACLineSegment.ySpacingOffset` (cim101 draft) is the height of the
   spacing's origin, which may be the pole top or crossarm centre, so one spacing serves any pole height.
   `get_line_conductor_xy(line)` = spacing y + offset; unset offset = origin at ground (the CIM XYSpacing default). A
   ConductorDistanceSpacing's earth distances are heights above ground; an offset on its line raises. The line's
@@ -107,6 +112,10 @@ exporter) may ask for signature changes before anything is frozen.
   matched to the `PowerTransformerEnd` by `endNumber`), BY_TANK_ENDS (template end n = instance end n), BY_LUGS
   (a lug's `sequenceNumber` names the instance phase end on the ends' Terminals).
 - Winding order: end number, then a coil's lowest phase-end `sequenceNumber` (H, X1-X2, X2-X3).
+- **Coil voltage on BY_ENDS (user, 2026-11-09, for a GIS spoke):** a PowerTransformerEnd has no `baseU`, so an end
+  of two conductors (a single-phase coil) takes `Winding.base_u` from `ratedU`, kept as the phase-to-phase
+  nameplate: as is between two phases (AB, s1s2), over √3 from a phase to the neutral (CN). A 12470GY/7200
+  pole-top is `ratedU=12.47` on CN. An end of three or more conductors has none.
 - **Base:** every percent/pu is on `base_power` (e.g. `network.base_power`), else winding 1's `ratedS`, the base DSS
   (`%R`, `XHL`, `%noloadloss`, `%imag`) and GLM put everything on. The stored percent is read on its From winding with
   `get_qty`, then moved by the power ratio only (UPSTREAM_REQUESTS U12). A winding's `baseS` is per phase, so its
@@ -120,6 +129,35 @@ exporter) may ask for signature changes before anything is frozen.
 - Raise: a PowerTransformer with tanks passed whole, a tank with both its own windings and a configuration, a bank
   of template tanks (which phases each serves is open until the multi-can form is settled), a coil across two ends,
   a star `PowerTransformerEnd.x`, an unset mesh `x`, an unrated winding 1.
+- **BY_TANK_IMPEDANCE (user, 2026-11-09, for a GIS spoke; IEC approved the tank `percentImpedance` for this
+  style):**
+  - **Shape:** two PowerTransformerEnds and one TransformerTank carrying `percentImpedance` (and `loadLoss`), with no
+    TankConfiguration, windings or mesh. A tank with its own windings stays BY_PHASE_ENDS.
+  - **Impedance:** |z| is on end 1's `ratedS`; r = loadLoss / ratedS × 100 (0 when unset); x = √(z² − r²). r > z
+    raises, and so does an end `r`/`x`/`g`/`b` or a mesh beside the tank's %Z.
+  - **Split:** a two-winding unit halves r over its windings (DSS's %loadloss). An end on s1s2N with kind I is a
+    center tap: halves s1→N and N→s2 at ratedU/2 and ratedS/2, `base_s` the can's kVA. It is split by Hopkinson's
+    rule (winding r R/2, R, R; x 1.2X, 1.2X, 0.8X), as the `transformer_template_1ph` shape and the CIMTBL-Models
+    bank templates. A test checks it equals the template's model for one can.
+  - **Core:** `noLoadLoss`/`percentMagnetizingCurrent` from the tank.
+  - **Banks (built 2026-11-09 on U16 `TransformerTank.baseS`, in the user's local CIM-Profiles branch):** the user
+    chose every bank, with cans in tank order and the CIMTBL-Models `cimtbl-transformer-template` skill's
+    conventions. Each tank is one unit (`get_transformer_units`) and one DSS Transformer, named by the tank:
+    - **Can kVA:** each can's %Z and loadLoss are on its `baseS`. The ends' `ratedS` is the bank's total and must
+      equal the sum of the cans' `baseS`.
+    - **Primary:** can i sits on end 1's phase conductor i (tank order), from the phase to N on a wye or grounded
+      wye end. A delta primary raises until a census shows one.
+    - **Secondary:**
+      - Wye (YNyn0): can i runs from end 2's phase i to N, which needs one phase per can (open wye with 2).
+      - Closed delta, 3 cans (ANSI YNd1): can i spans phases (i, i+1): a-b, b-c, c-a.
+      - Open delta, 2 cans (bank_oyod): can 1 is the lighting leg L (a-N-b), can 2 the power leg T (b-c). c is the
+        power leg, so it sits at 207.8 V to N.
+    - **Center tap:** on a delta end with N (4-wire), the can on a-b is the lighting leg, center-tapped to N (split by
+      Hopkinson's rule). Every other can is a two-winding coil with r halved.
+    - **Raises:** any bank shape the rules don't name: a wye secondary without one phase per can, four cans, a
+      delta primary, a tank without `baseS`, a bank mixing forms, or cans not adding up to end 1's `ratedS`. A
+      single can's `baseS`, when set, must equal end 1's `ratedS`.
+    - **Shape:** `transformer_by_tank_impedance.cimtbl` (a center-tap can and an open wye - open delta bank).
 - **Open:** mesh `r0`/`x0` and zero-sequence data are not read; `percentImpedance`/`loadLoss` (test summaries) are
   not checked against the mesh; template banks.
 

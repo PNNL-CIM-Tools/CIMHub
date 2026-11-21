@@ -31,7 +31,7 @@ def get_line_phase_impedance_matrix(line, impedance_unit="ohm/m", admittance_uni
 class ConductorXY(NamedTuple):   # sequence_number, kind (ConductorPositionKind), x, y
 def get_spacing_xy(spacing, unit="m") -> tuple[ConductorXY, ...]          # in the spacing's frame
 def get_spacing_distances(spacing, unit="m") -> dict[tuple[int, int], float]   # {(i, j): d}, i < j
-def get_line_conductor_xy(line, unit="m") -> tuple[ConductorXY, ...]      # y above ground (+ spacingYOffset)
+def get_line_conductor_xy(line, unit="m") -> tuple[ConductorXY, ...]      # y above ground (+ ySpacingOffset)
 def get_terminal_nodes(equipment, *, topological=False) -> tuple[Node, ...]   # Terminal.sequenceNumber order
 def get_conductor_phases(equipment) -> tuple[SinglePhaseKind, ...]         # e.g. (C, B); blank Terminal.phases = ABC
 def get_terminal_phases(terminal) -> tuple[SinglePhaseKind, ...]           # a transformer end's terminal
@@ -68,7 +68,7 @@ def get_der_output(equipment, active_unit="W", reactive_unit="VAr", *, sign) -> 
 def get_inverter_rating(connection, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> InverterRating
     # ratedS, ratedU (LL) required; (min_q, max_q) in sign; maxIFault pu
 def get_inverter_unit(connection) -> PowerElectronicsUnit   # its one unit; none or several raise
-def get_photovoltaic_unit(unit, active_unit="W", *, sign) -> PhotoVoltaicRating   # (min_p, max_p) in sign
+def get_photovoltaic_unit(unit, active_unit="W", irradiance_unit="W/m2", *, sign) -> PhotoVoltaicRating   # (min_p, max_p) in sign, irradiance
 def get_battery_unit(unit, active_unit="W", energy_unit="Wh", *, sign) -> BatteryRating
     # (min_p, max_p) in sign; energies, efficiencies (percent), idling_p (a loss, as stored), state
 def get_machine_rating(machine, apparent_unit="VA", reactive_unit="VAr", *, sign, voltage_unit="V") -> MachineRating
@@ -102,7 +102,7 @@ rated_kv = get_qty(end, "ratedU", "kV")
 | concept | path |
 |---|---|
 | line geometry | `ACLineSegment.WireConfiguration` → `WireConfiguration.WireSpacing` (`XYSpacing`, `isTemplate`) → `XYConductorPosition` (`sequenceNumber`, `xCoord`, `yCoord`, `kind`) |
-| line height | `ACLineSegment.spacingYOffset`: height of the spacing's origin (ground, pole top or crossarm centre) above earth; unset = origin at ground. The spacing: `ACLineSegment.WireSpacing` or `WireConfiguration.WireSpacing` (both set must agree) |
+| line height | `ACLineSegment.ySpacingOffset`: height of the spacing's origin (ground, pole top or crossarm centre) above earth; unset = origin at ground. The spacing: `ACLineSegment.WireSpacing` or `WireConfiguration.WireSpacing` (both set must agree) |
 | distance spacing | `ConductorDistanceSpacing.ConductorDistance` (`sequenceNumber1/2`, `conductorKind1/2`, `distance`); a height is a distance to kind `earth`. The GridAPPS-D `fromPhase`/`toPhase`/`from/toSequenceNumber` are not read |
 | line conductors | `WireConfiguration.WireSequence` → `WireSequenceConfiguration` (`sequenceNumber`, `WireInfo`) → `OverheadWireInfo` / `ConcentricNeutralCableInfo` / `TapeShieldCableInfo` |
 | line phases | `ACLineSegment.ACLineSegmentPhases` → `ACLineSegmentPhase` (`sequenceNumber`, `phase`) |
@@ -160,7 +160,7 @@ SeasonDayTypeSchedule, not imported).
 A `ConductorDistanceSpacing` read as XY: the first conductor at x = 0, each later one placed from its distances and
 heights, mirror images to the right, then every stored distance checked (`derived/spacing.py`,
 `DISTANCE_REL_TOL = 1e-4` because stored distances are rounded). Every conductor needs a height; there is no default.
-A spacing's positions are in its own frame; a line's heights above ground are its spacing's y + `spacingYOffset`
+A spacing's positions are in its own frame; a line's heights above ground are its spacing's y + `ySpacingOffset`
 (user, 2026-11-08: one crossarm design, the pole height on the line). A ConductorDistanceSpacing's earth distances
 are heights above ground, so an offset on its line raises. DSS `h=` and GLM `distance_AE` are per line: an exporter
 writes one native spacing per (spacing, offset).

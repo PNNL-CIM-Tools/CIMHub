@@ -1,0 +1,23 @@
+# GridLAB-D overhead_line_conductor -> OverheadWireInfo (catalog).
+# Source table: overhead_line_conductor (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
+
+Profile = cim18v17
+
+Table OperationalLimitSet: mRID
+    ohc_overhead_line_conductor:3_limits
+    ohc_wire_acsr_556_5_limits
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    ohc_overhead_line_conductor:3_norm, 334.0, olt_normal,    ohc_overhead_line_conductor:3_limits
+    ohc_wire_acsr_556_5_norm,           730.0, olt_normal,    ohc_wire_acsr_556_5_limits
+    ohc_wire_acsr_556_5_emerg,          730.0, olt_emergency, ohc_wire_acsr_556_5_limits
+
+Table OverheadWireInfo: mRID, name, gmr (ft), rAC50 (ohm/mile), ratedCurrent (A), OperationalLimitSet
+    # not filled (S2-7): rating.summer.emergency
+    ohc_overhead_line_conductor:3, overhead_line_conductor:3, 0.00814, 0.563, 334.0, ohc_overhead_line_conductor:3_limits
+
+# derived (radius_from_diameter): radius = diameter / 2
+Table OverheadWireInfo: mRID, name, gmr (ft), rAC50 (ohm/mile), ratedCurrent (A), radius (in), OperationalLimitSet
+    # untranscribed: rating_winter_continuous=730.0, rating_winter_emergency=730.0
+    ohc_wire_acsr_556_5, wire_acsr_556_5, 0.0311, 0.18972, 730.0, 0.4635, ohc_wire_acsr_556_5_limits

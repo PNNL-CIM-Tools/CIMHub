@@ -1,0 +1,12 @@
+// S4a atom: the split-phase loads, on the S3a line atom (its tm1, tm2).
+#include "load.glm"
+
+// legs that differ and the 240 V part: two consumers
+object triplex_load { name tl_legs; parent tm1; phases AS; nominal_voltage 120;
+  constant_power_1 2500+1000j; constant_power_2 2000+800j; constant_power_12 4000+1500j; }
+// equal scheduled legs (IEEE13_cdpsm ld_house): s1s2, no per-phase rows
+object triplex_load { name tl_house; parent tm2; phases AS; nominal_voltage 120;
+  base_power_1 zipsched.value*2941.18; current_fraction_1 1.0; current_pf_1 0.85;
+  base_power_2 zipsched.value*2941.18; current_fraction_2 1.0; current_pf_2 0.85; }
+// a plain triplex_node's 240 V power (the taxonomy's houses)
+object triplex_node { name tn_load; parent tm1; phases AS; nominal_voltage 120; power_12 1530+410j; }

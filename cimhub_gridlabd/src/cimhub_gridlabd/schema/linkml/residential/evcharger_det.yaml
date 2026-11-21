@@ -1,0 +1,558 @@
+id: https://gridlabd.org/schema/glm/residential/evcharger_det
+name: evcharger_det
+description: GridLAB-D evcharger_det class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  evcharger_det:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2019 Battelle Memorial Institute
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      desired_charge_rate:
+        range: float
+        required: false
+        description: Current desired charge rate of the vehicle
+        unit:
+          ucum_code: W
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: desired_charge_rate[W]
+      actual_charge_rate:
+        range: float
+        required: false
+        description: Actual charge rate of the vehicle - may be ramp limited
+        unit:
+          ucum_code: W
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: actual_charge_rate[W]
+      realized_charge_rate:
+        range: float
+        required: false
+        description: Implemented charge rate of the vehicle - grid-influence result
+          of actual_charge_rate
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: realized_charge_rate[kW]
+      variation_mean:
+        range: float
+        required: false
+        description: Mean of normal variation of schedule variation
+        unit:
+          ucum_code: s
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: variation_mean[s]
+      variation_std_dev:
+        range: float
+        required: false
+        description: Standard deviation of normal variation of schedule times
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: variation_std_dev[s]
+      variation_trip_mean:
+        range: float
+        required: false
+        description: Mean of normal variation of trip distance variation
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: variation_trip_mean[mile]
+      variation_trip_std_dev:
+        range: float
+        required: false
+        description: Standard deviation of normal variation of trip distance
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: variation_trip_std_dev[mile]
+      mileage_classification:
+        range: float
+        required: false
+        description: Mileage classification of electric vehicle
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mileage_classification[mile]
+      work_charging_available:
+        range: boolean
+        required: false
+        description: Charging available when at work
+        annotations:
+          order: 9
+          value_type: bool
+          separator: ','
+          native_name: work_charging_available
+      data_file:
+        range: string
+        required: false
+        description: Path to .CSV file with vehicle travel information
+        annotations:
+          order: 10
+          value_type: string
+          separator: ','
+          native_name: data_file
+      vehicle_index:
+        range: integer
+        required: false
+        description: Index of vehicles in file this particular vehicle's data
+        annotations:
+          order: 11
+          value_type: int
+          separator: ','
+          native_name: vehicle_index
+      vehicle_location:
+        range: string
+        required: false
+        annotations:
+          order: 12
+          value_type: string
+          separator: ','
+          native_name: vehicle_location
+      travel_distance:
+        range: float
+        required: false
+        description: Distance vehicle travels from home to home (round trip)
+        unit:
+          ucum_code: mile
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: travel_distance[mile]
+      arrival_at_work:
+        range: float
+        required: false
+        description: Time vehicle arrives at work - HHMM
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: arrival_at_work
+      duration_at_work:
+        range: float
+        required: false
+        description: Duration the vehicle remains at work
+        unit:
+          ucum_code: s
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: duration_at_work[s]
+      arrival_at_home:
+        range: float
+        required: false
+        description: Time vehicle arrives at home - HHMM
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: arrival_at_home
+      duration_at_home:
+        range: float
+        required: false
+        description: Duration the vehicle remains at home
+        unit:
+          ucum_code: s
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: duration_at_home[s]
+      battery_capacity:
+        range: float
+        required: false
+        description: Current capacity of the battery in kWh
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_capacity[kWh]
+      battery_SOC:
+        range: float
+        required: false
+        description: State of charge of battery
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_SOC[%]
+      battery_size:
+        range: float
+        required: false
+        description: Full capacity of battery
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: battery_size[kWh]
+      mileage_efficiency:
+        range: float
+        required: false
+        description: Efficiency of drive train in mile/kWh
+        unit:
+          ucum_code: mile/kWh
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mileage_efficiency[mile/kWh]
+      maximum_charge_rate:
+        range: float
+        required: false
+        description: Maximum output rate of charger in kW
+        unit:
+          ucum_code: W
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_charge_rate[W]
+      charging_efficiency:
+        range: float
+        required: false
+        description: Efficiency of charger (ratio) when charging
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: charging_efficiency[unit]
+      maximum_overload_current:
+        range: float
+        required: false
+        description: Maximum overload current, in per-unit
+        unit:
+          ucum_code: unit
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_overload_current[unit]
+      enable_J2894:
+        range: boolean
+        required: false
+        description: Enable SAE J2894-suggested voltage and ramping suggestions
+        annotations:
+          order: 25
+          value_type: bool
+          separator: ','
+          native_name: enable_J2894
+      charger_enabled:
+        range: boolean
+        required: false
+        description: Flag to indicate if the charger is working, or disconnected due
+          to SAE J2894/ANSI C84.1
+        annotations:
+          order: 26
+          value_type: bool
+          separator: ','
+          native_name: charger_enabled
+      J2894_trip_method:
+        range: string
+        required: false
+        description: SAE J2894 threshold exceeded for the tripping
+        annotations:
+          order: 27
+          value_type: string
+          separator: ','
+          native_name: J2894_trip_method
+      J2894_highest_voltage_surge_value:
+        range: float
+        required: false
+        description: J2894-suggested high voltage surge threshold magnitude
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_highest_voltage_surge_value[pu]
+      J2894_highest_voltage_surge_time:
+        range: float
+        required: false
+        description: J2894-suggested high voltage surge threshold duration
+        unit:
+          ucum_code: s
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_highest_voltage_surge_time[s]
+      J2894_high_voltage_persistent_value:
+        range: float
+        required: false
+        description: J2894-suggested higher-voltage momentary magnitude
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_high_voltage_persistent_value[pu]
+      J2894_high_voltage_persistent_time:
+        range: float
+        required: false
+        description: J2894-suggsted higher-voltage momentary duration
+        unit:
+          ucum_code: s
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_high_voltage_persistent_time[s]
+      J2894_lowest_voltage_surge_value:
+        range: float
+        required: false
+        description: J2894-suggested low voltage surge threshold magnitude
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_lowest_voltage_surge_value[pu]
+      J2894_lowest_voltage_surge_time:
+        range: float
+        required: false
+        description: J2894-suggested low voltage surge threshold duration
+        unit:
+          ucum_code: s
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_lowest_voltage_surge_time[s]
+      J2894_low_voltage_persistent_value:
+        range: float
+        required: false
+        description: J2894-suggested lower-voltage momentary magnitude
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_low_voltage_persistent_value[pu]
+      J2894_low_voltage_persistent_time:
+        range: float
+        required: false
+        description: J2894-suggested lower-voltage momentary duration
+        unit:
+          ucum_code: s
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_low_voltage_persistent_time[s]
+      J2894_ramp_rate_limit:
+        range: float
+        required: false
+        description: J2894-suggested ramp rate limit for charger activation
+        unit:
+          ucum_code: A/s
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_ramp_rate_limit[A/s]
+      J2894_outage_disconnect_interval:
+        range: float
+        required: false
+        description: J2894-suggested outage length, when criterion has been exceeded
+        unit:
+          ucum_code: s
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_outage_disconnect_interval[s]
+      glob_min_timestep:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for global minimum timestep'
+        annotations:
+          order: 38
+          value_type: string
+          separator: ','
+          native_name: glob_min_timestep
+      glob_min_timestep_dbl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for global minimum timestep
+          in double format'
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: glob_min_timestep_dbl
+      off_nominal_time:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for off nominal time'
+        annotations:
+          order: 40
+          value_type: bool
+          separator: ','
+          native_name: off_nominal_time
+      prev_time_dbl:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for previous time in double
+          format'
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: prev_time_dbl
+      deltamode_registered:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for deltamode registration
+          status'
+        annotations:
+          order: 42
+          value_type: bool
+          separator: ','
+          native_name: deltamode_registered
+      J2894_voltage_high_state_0:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 high-voltage state
+          (index 0)'
+        annotations:
+          order: 43
+          value_type: bool
+          separator: ','
+          native_name: J2894_voltage_high_state_0
+      J2894_voltage_high_state_1:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 high-voltage state
+          (index 1)'
+        annotations:
+          order: 44
+          value_type: bool
+          separator: ','
+          native_name: J2894_voltage_high_state_1
+      J2894_voltage_low_state_0:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 low-voltage state
+          (index 0)'
+        annotations:
+          order: 45
+          value_type: bool
+          separator: ','
+          native_name: J2894_voltage_low_state_0
+      J2894_voltage_low_state_1:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 low-voltage state
+          (index 1)'
+        annotations:
+          order: 46
+          value_type: bool
+          separator: ','
+          native_name: J2894_voltage_low_state_1
+      J2894_off_accumulator:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 off accumulator'
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J2894_off_accumulator
+      J2894_is_ramp_constrained:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for J2894 ramp constrained
+          flag'
+        annotations:
+          order: 48
+          value_type: bool
+          separator: ','
+          native_name: J2894_is_ramp_constrained

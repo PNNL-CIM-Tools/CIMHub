@@ -1,0 +1,2095 @@
+id: https://gridlabd.org/schema/glm/types/common
+name: common_types
+description: Common types and enumerations for GridLAB-D GLM schema
+imports:
+- linkml:types
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+classes:
+  Complex:
+    description: Complex number with real and imaginary components
+    attributes:
+      real:
+        range: float
+        required: true
+        description: Real component
+      imag:
+        range: float
+        required: true
+        description: Imaginary component
+  glm_object:
+    abstract: true
+    description: >-
+      The header properties GridLAB-D gives every object (core/object.c), whatever its class. They are not
+      published by the class, so the C++ scrape does not see them. name is the identifier: GridLAB-D names are
+      unique across the whole model; an unnamed object is called <class>:<id>.
+    attributes:
+      name:
+        range: string
+        identifier: true
+        required: true
+        description: The object's name; unique across the model.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: name
+      parent:
+        range: string
+        description: The parent object's name. A child node is solved as its parent's bus; a nested object block sets it to the enclosing object.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: parent
+      groupid:
+        range: string
+        description: Free-text group label.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: groupid
+      latitude:
+        range: string
+        description: Latitude, as written (decimal degrees or GridLAB-D's 37N26:12 form).
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: latitude
+      longitude:
+        range: string
+        description: Longitude, as written.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: longitude
+      in_svc:
+        range: string
+        description: Timestamp the object enters service.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: in_svc
+      out_svc:
+        range: string
+        description: Timestamp the object leaves service.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: out_svc
+      rank:
+        range: string
+        description: Solver rank.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: rank
+      flags:
+        range: string
+        description: Core object flags.
+        annotations:
+          order: 0
+          value_type: string
+          separator: ','
+          native_name: flags
+enums:
+  RectifierType:
+    description: RectifierType enumeration
+    permissible_values:
+      ONE_PULSE:
+        description: ONE_PULSE option
+        meaning: glm:0
+      TWO_PULSE:
+        description: TWO_PULSE option
+        meaning: glm:1
+      THREE_PULSE:
+        description: THREE_PULSE option
+        meaning: glm:2
+      SIX_PULSE:
+        description: SIX_PULSE option
+        meaning: glm:3
+      TWELVE_PULSE:
+        description: TWELVE_PULSE option
+        meaning: glm:4
+  ControlMode:
+    description: ControlMode enumeration
+    permissible_values:
+      GRID_FORMING:
+        description: GRID_FORMING option
+        meaning: glm:0
+      GRID_FOLLOWING:
+        description: GRID_FOLLOWING option
+        meaning: glm:1
+      GFL_CURRENT_SOURCE:
+        description: GFL_CURRENT_SOURCE option
+        meaning: glm:2
+  InverterType:
+    description: InverterType enumeration
+    permissible_values:
+      TWO_PULSE:
+        description: TWO_PULSE option
+        meaning: glm:0
+      SIX_PULSE:
+        description: SIX_PULSE option
+        meaning: glm:1
+      TWELVE_PULSE:
+        description: TWELVE_PULSE option
+        meaning: glm:2
+      PWM:
+        description: PWM option
+        meaning: glm:3
+      FOUR_QUADRANT:
+        description: FOUR_QUADRANT option
+        meaning: glm:4
+  GeneratorMode:
+    description: GeneratorMode enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      CONSTANT_V:
+        description: CONSTANT_V option
+        meaning: glm:1
+      CONSTANT_PQ:
+        description: CONSTANT_PQ option
+        meaning: glm:2
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:3
+      SUPPLY_DRIVEN:
+        description: SUPPLY_DRIVEN option
+        meaning: glm:4
+      POWER_DRIVEN:
+        description: POWER_DRIVEN option
+        meaning: glm:5
+      VOLTAGE_CONTROLLED:
+        description: VOLTAGE_CONTROLLED option
+        meaning: glm:6
+      POWER_VOLTAGE_HYBRID:
+        description: POWER_VOLTAGE_HYBRID option
+        meaning: glm:7
+  GenStatus:
+    description: GenStatus enumeration
+    permissible_values:
+      OFFLINE:
+        description: OFFLINE option
+        meaning: glm:0
+      ONLINE:
+        description: ONLINE option
+        meaning: glm:1
+  LoadClass:
+    description: LoadClass enumeration
+    permissible_values:
+      U:
+        description: U option
+        meaning: glm:0
+      R:
+        description: R option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+      I:
+        description: I option
+        meaning: glm:3
+      A:
+        description: A option
+        meaning: glm:4
+  PhaseAState:
+    description: PhaseAState enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      BYPASS:
+        description: BYPASS option
+        meaning: glm:1
+  PhaseAStatus:
+    description: PhaseAStatus enumeration
+    permissible_values:
+      BLOWN:
+        description: BLOWN option
+        meaning: glm:0
+      GOOD:
+        description: GOOD option
+        meaning: glm:1
+  ChargerType:
+    description: ChargerType enumeration
+    permissible_values:
+      LOW:
+        description: LOW option
+        meaning: glm:0
+      MEDIUM:
+        description: MEDIUM option
+        meaning: glm:1
+      HIGH:
+        description: HIGH option
+        meaning: glm:2
+  Type:
+    description: Type enumeration
+    permissible_values:
+      INCANDESCENT:
+        description: INCANDESCENT option
+        meaning: glm:0
+      FLUORESCENT:
+        description: FLUORESCENT option
+        meaning: glm:1
+      CFL:
+        description: CFL option
+        meaning: glm:2
+      SSL:
+        description: SSL option
+        meaning: glm:3
+      HID:
+        description: HID option
+        meaning: glm:4
+  LoadPriority:
+    description: LoadPriority enumeration
+    permissible_values:
+      DISCRETIONARY:
+        description: DISCRETIONARY option
+        meaning: glm:0
+      PRIORITY:
+        description: PRIORITY option
+        meaning: glm:1
+      CRITICAL:
+        description: CRITICAL option
+        meaning: glm:2
+  InrushIntegrationMethodCapacitance:
+    description: InrushIntegrationMethodCapacitance enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      UNDEFINED:
+        description: UNDEFINED option
+        meaning: glm:1
+      TRAPEZOIDAL:
+        description: TRAPEZOIDAL option
+        meaning: glm:2
+      BACKWARD_EULER:
+        description: BACKWARD_EULER option
+        meaning: glm:3
+  InrushIntegrationMethodInductance:
+    description: InrushIntegrationMethodInductance enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      UNDEFINED:
+        description: UNDEFINED option
+        meaning: glm:1
+      TRAPEZOIDAL:
+        description: TRAPEZOIDAL option
+        meaning: glm:2
+      BACKWARD_EULER:
+        description: BACKWARD_EULER option
+        meaning: glm:3
+  VfdState:
+    description: VfdState enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      CHANGING:
+        description: CHANGING option
+        meaning: glm:1
+      STEADY_STATE:
+        description: STEADY_STATE option
+        meaning: glm:2
+  ConnectType:
+    description: ConnectType enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      WYE_WYE:
+        description: WYE_WYE option
+        meaning: glm:1
+      OPEN_DELTA_ABBC:
+        description: OPEN_DELTA_ABBC option
+        meaning: glm:2
+      OPEN_DELTA_BCAC:
+        description: OPEN_DELTA_BCAC option
+        meaning: glm:3
+      OPEN_DELTA_CABA:
+        description: OPEN_DELTA_CABA option
+        meaning: glm:4
+      CLOSED_DELTA:
+        description: CLOSED_DELTA option
+        meaning: glm:5
+  InstallType:
+    description: InstallType enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      POLETOP:
+        description: POLETOP option
+        meaning: glm:1
+      PADMOUNT:
+        description: PADMOUNT option
+        meaning: glm:2
+      VAULT:
+        description: VAULT option
+        meaning: glm:3
+  CoolantType:
+    description: CoolantType enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      MINERAL_OIL:
+        description: MINERAL_OIL option
+        meaning: glm:1
+      DRY:
+        description: DRY option
+        meaning: glm:2
+  CoolingType:
+    description: CoolingType enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      OA:
+        description: OA option
+        meaning: glm:1
+      FA:
+        description: FA option
+        meaning: glm:2
+      NDFOA:
+        description: NDFOA option
+        meaning: glm:3
+      NDFOW:
+        description: NDFOW option
+        meaning: glm:4
+      DFOA:
+        description: DFOA option
+        meaning: glm:5
+      DFOW:
+        description: DFOW option
+        meaning: glm:6
+  MagnetizationLocation:
+    description: MagnetizationLocation enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      PRIMARY:
+        description: PRIMARY option
+        meaning: glm:1
+      SECONDARY:
+        description: SECONDARY option
+        meaning: glm:2
+      BOTH:
+        description: BOTH option
+        meaning: glm:3
+  PhaseBState:
+    description: PhaseBState enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      BYPASS:
+        description: BYPASS option
+        meaning: glm:1
+  PhaseCState:
+    description: PhaseCState enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      BYPASS:
+        description: BYPASS option
+        meaning: glm:1
+  OperatingMode:
+    description: OperatingMode enumeration
+    permissible_values:
+      INDIVIDUAL:
+        description: INDIVIDUAL option
+        meaning: glm:0
+      BANKED:
+        description: BANKED option
+        meaning: glm:1
+  MotorStatus:
+    description: MotorStatus enumeration
+    permissible_values:
+      RUNNING:
+        description: RUNNING option
+        meaning: glm:0
+      STALLED:
+        description: STALLED option
+        meaning: glm:1
+      TRIPPED:
+        description: TRIPPED option
+        meaning: glm:2
+      'OFF':
+        description: OFF option
+        meaning: glm:3
+  Phase1State:
+    description: Phase1State enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      BYPASS:
+        description: BYPASS option
+        meaning: glm:1
+  Phase2State:
+    description: Phase2State enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      BYPASS:
+        description: BYPASS option
+        meaning: glm:1
+  Operation:
+    description: Operation enumeration
+    permissible_values:
+      REAL:
+        description: REAL option
+        meaning: glm:0
+      IMAGINARY:
+        description: IMAGINARY option
+        meaning: glm:1
+      MAGNITUDE:
+        description: MAGNITUDE option
+        meaning: glm:2
+      ANGLE:
+        description: ANGLE option
+        meaning: glm:3
+  MeterType:
+    description: MeterType enumeration
+    permissible_values:
+      TRIPLEX_METER:
+        description: TRIPLEX_METER option
+        meaning: glm:0
+      METER:
+        description: METER option
+        meaning: glm:1
+  Mode:
+    description: Mode enumeration
+    permissible_values:
+      RECT:
+        description: RECT option
+        meaning: glm:0
+      POLAR:
+        description: POLAR option
+        meaning: glm:1
+  Bustype:
+    description: Bustype enumeration
+    permissible_values:
+      PQ:
+        description: PQ option
+        meaning: glm:0
+      PV:
+        description: PV option
+        meaning: glm:1
+      SWING:
+        description: SWING option
+        meaning: glm:2
+      SWING_PQ:
+        description: SWING_PQ option
+        meaning: glm:3
+  Busflags:
+    description: Busflags enumeration
+    permissible_values:
+      HASSOURCE:
+        description: HASSOURCE option
+        meaning: glm:0
+      ISSOURCE:
+        description: ISSOURCE option
+        meaning: glm:1
+  FrequencyMeasureType:
+    description: FrequencyMeasureType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      SIMPLE:
+        description: SIMPLE option
+        meaning: glm:1
+      PLL:
+        description: PLL option
+        meaning: glm:2
+  ServiceStatus:
+    description: ServiceStatus enumeration
+    permissible_values:
+      IN_SERVICE:
+        description: IN_SERVICE option
+        meaning: glm:0
+      OUT_OF_SERVICE:
+        description: OUT_OF_SERVICE option
+        meaning: glm:1
+  GfaTripMethod:
+    description: GfaTripMethod enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      UNDER_FREQUENCY:
+        description: UNDER_FREQUENCY option
+        meaning: glm:1
+      OVER_FREQUENCY:
+        description: OVER_FREQUENCY option
+        meaning: glm:2
+      UNDER_VOLTAGE:
+        description: UNDER_VOLTAGE option
+        meaning: glm:3
+      OVER_VOLTAGE:
+        description: OVER_VOLTAGE option
+        meaning: glm:4
+  Status:
+    description: Status enumeration
+    permissible_values:
+      CLOSED:
+        description: CLOSED option
+        meaning: glm:0
+      OPEN:
+        description: OPEN option
+        meaning: glm:1
+  FlowDirection:
+    description: FlowDirection enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      AF:
+        description: AF option
+        meaning: glm:1
+      AR:
+        description: AR option
+        meaning: glm:2
+      AN:
+        description: AN option
+        meaning: glm:3
+      BF:
+        description: BF option
+        meaning: glm:4
+      BR:
+        description: BR option
+        meaning: glm:5
+      BN:
+        description: BN option
+        meaning: glm:6
+      CF:
+        description: CF option
+        meaning: glm:7
+      CR:
+        description: CR option
+        meaning: glm:8
+      CN:
+        description: CN option
+        meaning: glm:9
+  MsgMode:
+    description: MsgMode enumeration
+    permissible_values:
+      INTERNAL:
+        description: INTERNAL option
+        meaning: glm:0
+      EXTERNAL:
+        description: EXTERNAL option
+        meaning: glm:1
+  BillMode:
+    description: BillMode enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      UNIFORM:
+        description: UNIFORM option
+        meaning: glm:1
+      TIERED:
+        description: TIERED option
+        meaning: glm:2
+      HOURLY:
+        description: HOURLY option
+        meaning: glm:3
+      TIERED_RTP:
+        description: TIERED_RTP option
+        meaning: glm:4
+      TIERED_TOU:
+        description: TIERED_TOU option
+        meaning: glm:5
+  PhaseBStatus:
+    description: PhaseBStatus enumeration
+    permissible_values:
+      BLOWN:
+        description: BLOWN option
+        meaning: glm:0
+      GOOD:
+        description: GOOD option
+        meaning: glm:1
+  PhaseCStatus:
+    description: PhaseCStatus enumeration
+    permissible_values:
+      BLOWN:
+        description: BLOWN option
+        meaning: glm:0
+      GOOD:
+        description: GOOD option
+        meaning: glm:1
+  RepairDistType:
+    description: RepairDistType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      EXPONENTIAL:
+        description: EXPONENTIAL option
+        meaning: glm:1
+  ReferencePhase:
+    description: ReferencePhase enumeration
+    permissible_values:
+      PHASE_A:
+        description: PHASE_A option
+        meaning: glm:0
+      PHASE_B:
+        description: PHASE_B option
+        meaning: glm:1
+      PHASE_C:
+        description: PHASE_C option
+        meaning: glm:2
+  CtPhase:
+    description: CtPhase enumeration
+    permissible_values:
+      A:
+        description: A option
+        meaning: glm:0
+      B:
+        description: B option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+  PtPhase:
+    description: PtPhase enumeration
+    permissible_values:
+      A:
+        description: A option
+        meaning: glm:0
+      B:
+        description: B option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+      D:
+        description: D option
+        meaning: glm:3
+      N:
+        description: N option
+        meaning: glm:4
+  ControlLevel:
+    description: ControlLevel enumeration
+    permissible_values:
+      BANK:
+        description: BANK option
+        meaning: glm:0
+      INDIVIDUAL:
+        description: INDIVIDUAL option
+        meaning: glm:1
+  Control:
+    description: Control enumeration
+    permissible_values:
+      MANUAL:
+        description: MANUAL option
+        meaning: glm:0
+      VAR:
+        description: VAR option
+        meaning: glm:1
+      VOLT:
+        description: VOLT option
+        meaning: glm:2
+      VARVOLT:
+        description: VARVOLT option
+        meaning: glm:3
+      CURRENT:
+        description: CURRENT option
+        meaning: glm:4
+  ReverseFlowControl:
+    description: ReverseFlowControl enumeration
+    permissible_values:
+      LOCK_NONE:
+        description: LOCK_NONE option
+        meaning: glm:0
+      LOCK_NEUTRAL:
+        description: LOCK_NEUTRAL option
+        meaning: glm:1
+      LOCK_CURRENT_POSITION:
+        description: LOCK_CURRENT_POSITION option
+        meaning: glm:2
+  ControlMethod:
+    description: ControlMethod enumeration
+    permissible_values:
+      ACTIVE:
+        description: ACTIVE option
+        meaning: glm:0
+      STANDBY:
+        description: STANDBY option
+        meaning: glm:1
+  PfPhase:
+    description: PfPhase enumeration
+    permissible_values:
+      A:
+        description: A option
+        meaning: glm:0
+      B:
+        description: B option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+  VoltCompareMode:
+    description: VoltCompareMode enumeration
+    permissible_values:
+      MAG_DIFF:
+        description: MAG_DIFF option
+        meaning: glm:0
+      SEP_DIFF:
+        description: SEP_DIFF option
+        meaning: glm:1
+  PhasesConnected:
+    description: PhasesConnected enumeration
+    permissible_values:
+      A:
+        description: A option
+        meaning: glm:0
+      B:
+        description: B option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+      D:
+        description: D option
+        meaning: glm:3
+      N:
+        description: N option
+        meaning: glm:4
+  Switcha:
+    description: Switcha enumeration
+    permissible_values:
+      OPEN:
+        description: OPEN option
+        meaning: glm:0
+      CLOSED:
+        description: CLOSED option
+        meaning: glm:1
+  Switchb:
+    description: Switchb enumeration
+    permissible_values:
+      OPEN:
+        description: OPEN option
+        meaning: glm:0
+      CLOSED:
+        description: CLOSED option
+        meaning: glm:1
+  Switchc:
+    description: Switchc enumeration
+    permissible_values:
+      OPEN:
+        description: OPEN option
+        meaning: glm:0
+      CLOSED:
+        description: CLOSED option
+        meaning: glm:1
+  Phases:
+    description: Phases enumeration
+    permissible_values:
+      A:
+        description: A option
+        meaning: glm:0
+      B:
+        description: B option
+        meaning: glm:1
+      C:
+        description: C option
+        meaning: glm:2
+      N:
+        description: N option
+        meaning: glm:3
+      S:
+        description: S option
+        meaning: glm:4
+  InrushIntegrationMethod:
+    description: InrushIntegrationMethod enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      TRAPEZOIDAL:
+        description: TRAPEZOIDAL option
+        meaning: glm:1
+      BACKWARD_EULER:
+        description: BACKWARD_EULER option
+        meaning: glm:2
+  Condition:
+    description: Condition enumeration
+    permissible_values:
+      OPEN:
+        description: OPEN option
+        meaning: glm:0
+      CONTACT:
+        description: CONTACT option
+        meaning: glm:1
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:2
+      SN:
+        description: SN option
+        meaning: glm:3
+      S2:
+        description: S2 option
+        meaning: glm:4
+      S1:
+        description: S1 option
+        meaning: glm:5
+      G:
+        description: G option
+        meaning: glm:6
+      N:
+        description: N option
+        meaning: glm:7
+      C:
+        description: C option
+        meaning: glm:8
+      B:
+        description: B option
+        meaning: glm:9
+      A:
+        description: A option
+        meaning: glm:10
+  Solution:
+    description: Solution enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      OUTAGE:
+        description: OUTAGE option
+        meaning: glm:1
+  UvRelayInstall:
+    description: UvRelayInstall enumeration
+    permissible_values:
+      INSTALLED:
+        description: INSTALLED option
+        meaning: glm:0
+      UNINSTALLED:
+        description: UNINSTALLED option
+        meaning: glm:1
+  ContactorState:
+    description: ContactorState enumeration
+    permissible_values:
+      OPEN:
+        description: OPEN option
+        meaning: glm:0
+      CLOSED:
+        description: CLOSED option
+        meaning: glm:1
+  TorqueUsageMethod:
+    description: TorqueUsageMethod enumeration
+    permissible_values:
+      DIRECT:
+        description: DIRECT option
+        meaning: glm:0
+      SPEEDFOUR:
+        description: SPEEDFOUR option
+        meaning: glm:1
+  DesiredMotorState:
+    description: DesiredMotorState enumeration
+    permissible_values:
+      'ON':
+        description: ON option
+        meaning: glm:0
+      'OFF':
+        description: OFF option
+        meaning: glm:1
+  ConnectedHouseAssumedMode:
+    description: ConnectedHouseAssumedMode enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      COOLING:
+        description: COOLING option
+        meaning: glm:1
+      HEATING:
+        description: HEATING option
+        meaning: glm:2
+  MotorOperationType:
+    description: MotorOperationType enumeration
+    permissible_values:
+      SINGLE-PHASE:
+        description: SINGLE-PHASE option
+        meaning: glm:0
+      THREE-PHASE:
+        description: THREE-PHASE option
+        meaning: glm:1
+  TriplexConnectionType:
+    description: TriplexConnectionType enumeration
+    permissible_values:
+      TRIPLEX_1N:
+        description: TRIPLEX_1N option
+        meaning: glm:0
+      TRIPLEX_2N:
+        description: TRIPLEX_2N option
+        meaning: glm:1
+      TRIPLEX_12:
+        description: TRIPLEX_12 option
+        meaning: glm:2
+  CheckMode:
+    description: CheckMode enumeration
+    permissible_values:
+      SINGLE:
+        description: SINGLE option
+        meaning: glm:0
+      ONCHANGE:
+        description: ONCHANGE option
+        meaning: glm:1
+      ALL:
+        description: ALL option
+        meaning: glm:2
+      SINGLE_DEBUG:
+        description: SINGLE_DEBUG option
+        meaning: glm:3
+      SWITCHING:
+        description: SWITCHING option
+        meaning: glm:4
+  GridFollowingMode:
+    description: GridFollowingMode enumeration
+    permissible_values:
+      BALANCED_POWER:
+        description: BALANCED_POWER option
+        meaning: glm:0
+      POSITIVE_SEQUENCE:
+        description: POSITIVE_SEQUENCE option
+        meaning: glm:1
+  GridFormingMode:
+    description: GridFormingMode enumeration
+    permissible_values:
+      CONSTANT_DC_BUS:
+        description: CONSTANT_DC_BUS option
+        meaning: glm:0
+      DYNAMIC_DC_BUS:
+        description: DYNAMIC_DC_BUS option
+        meaning: glm:1
+  PFDroopSettingMode:
+    description: PFDroopSettingMode enumeration
+    permissible_values:
+      FSET_MODE:
+        description: FSET_MODE option
+        meaning: glm:0
+      PSET_MODE:
+        description: PSET_MODE option
+        meaning: glm:1
+  Ieee1547Version:
+    description: Ieee1547Version enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      IEEE1547:
+        description: IEEE1547 option
+        meaning: glm:1
+      IEEE1547A:
+        description: IEEE1547A option
+        meaning: glm:2
+      IEEE1547_2003:
+        description: IEEE1547_2003 option
+        meaning: glm:3
+      IEEE1547A_2014:
+        description: IEEE1547A_2014 option
+        meaning: glm:4
+  Ieee1547TripMethod:
+    description: Ieee1547TripMethod enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      OVER_FREQUENCY_HIGH:
+        description: OVER_FREQUENCY_HIGH option
+        meaning: glm:1
+      OVER_FREQUENCY_LOW:
+        description: OVER_FREQUENCY_LOW option
+        meaning: glm:2
+      UNDER_FREQUENCY_HIGH:
+        description: UNDER_FREQUENCY_HIGH option
+        meaning: glm:3
+      UNDER_FREQUENCY_LOW:
+        description: UNDER_FREQUENCY_LOW option
+        meaning: glm:4
+      UNDER_VOLTAGE_LOW:
+        description: UNDER_VOLTAGE_LOW option
+        meaning: glm:5
+      UNDER_VOLTAGE_MID:
+        description: UNDER_VOLTAGE_MID option
+        meaning: glm:6
+      UNDER_VOLTAGE_HIGH:
+        description: UNDER_VOLTAGE_HIGH option
+        meaning: glm:7
+      OVER_VOLTAGE_LOW:
+        description: OVER_VOLTAGE_LOW option
+        meaning: glm:8
+      OVER_VOLTAGE_HIGH:
+        description: OVER_VOLTAGE_HIGH option
+        meaning: glm:9
+  FourQuadrantControlMode:
+    description: FourQuadrantControlMode enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      CONSTANT_PQ:
+        description: CONSTANT_PQ option
+        meaning: glm:1
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:2
+      VOLT_VAR:
+        description: VOLT_VAR option
+        meaning: glm:3
+      VOLT_WATT:
+        description: VOLT_WATT option
+        meaning: glm:4
+      VOLT_VAR_FREQ_PWR:
+        description: VOLT_VAR_FREQ_PWR option
+        meaning: glm:5
+      LOAD_FOLLOWING:
+        description: LOAD_FOLLOWING option
+        meaning: glm:6
+      GROUP_LOAD_FOLLOWING:
+        description: GROUP_LOAD_FOLLOWING option
+        meaning: glm:7
+      VOLTAGE_SOURCE:
+        description: VOLTAGE_SOURCE option
+        meaning: glm:8
+  PfReg:
+    description: PfReg enumeration
+    permissible_values:
+      INCLUDED:
+        description: INCLUDED option
+        meaning: glm:0
+      INCLUDED_ALT:
+        description: INCLUDED_ALT option
+        meaning: glm:1
+      EXCLUDED:
+        description: EXCLUDED option
+        meaning: glm:2
+  GeneratorStatus:
+    description: GeneratorStatus enumeration
+    permissible_values:
+      OFFLINE:
+        description: OFFLINE option
+        meaning: glm:0
+      ONLINE:
+        description: ONLINE option
+        meaning: glm:1
+  VsiMode:
+    description: VsiMode enumeration
+    permissible_values:
+      VSI_ISOCHRONOUS:
+        description: VSI_ISOCHRONOUS option
+        meaning: glm:0
+      VSI_DROOP:
+        description: VSI_DROOP option
+        meaning: glm:1
+  DynamicModelMode:
+    description: DynamicModelMode enumeration
+    permissible_values:
+      PID:
+        description: PID option
+        meaning: glm:0
+      PI:
+        description: PI option
+        meaning: glm:1
+  InverterManufacturer:
+    description: InverterManufacturer enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      FRONIUS:
+        description: FRONIUS option
+        meaning: glm:1
+      SMA:
+        description: SMA option
+        meaning: glm:2
+      XANTREX:
+        description: XANTREX option
+        meaning: glm:3
+  PfRegStatus:
+    description: PfRegStatus enumeration
+    permissible_values:
+      REGULATING:
+        description: REGULATING option
+        meaning: glm:0
+      IDLING:
+        description: IDLING option
+        meaning: glm:1
+  LoadFollowStatus:
+    description: LoadFollowStatus enumeration
+    permissible_values:
+      IDLE:
+        description: IDLE option
+        meaning: glm:0
+      DISCHARGE:
+        description: DISCHARGE option
+        meaning: glm:1
+      CHARGE:
+        description: CHARGE option
+        meaning: glm:2
+  Ieee1547Status:
+    description: Ieee1547Status enumeration
+    permissible_values:
+      IEEE_NONE:
+        description: IEEE_NONE option
+        meaning: glm:0
+      IEEE1547:
+        description: IEEE1547 option
+        meaning: glm:1
+      IEEE1547A:
+        description: IEEE1547A option
+        meaning: glm:2
+  AdditionalControls:
+    description: AdditionalControls enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      LINEAR_TEMPERATURE:
+        description: LINEAR_TEMPERATURE option
+        meaning: glm:1
+  RfbSize:
+    description: RfbSize enumeration
+    permissible_values:
+      HOUSEHOLD:
+        description: HOUSEHOLD option
+        meaning: glm:0
+      SMALL:
+        description: SMALL option
+        meaning: glm:1
+      MED_COMMERCIAL:
+        description: MED_COMMERCIAL option
+        meaning: glm:2
+      MED_HIGH_ENERGY:
+        description: MED_HIGH_ENERGY option
+        meaning: glm:3
+      LARGE:
+        description: LARGE option
+        meaning: glm:4
+  PowerType:
+    description: PowerType enumeration
+    permissible_values:
+      AC:
+        description: AC option
+        meaning: glm:0
+      DC:
+        description: DC option
+        meaning: glm:1
+  BatteryState:
+    description: BatteryState enumeration
+    permissible_values:
+      CHARGING:
+        description: CHARGING option
+        meaning: glm:0
+      DISCHARGING:
+        description: DISCHARGING option
+        meaning: glm:1
+      WAITING:
+        description: WAITING option
+        meaning: glm:2
+      FULL:
+        description: FULL option
+        meaning: glm:3
+      EMPTY:
+        description: EMPTY option
+        meaning: glm:4
+      CONFLICTED:
+        description: CONFLICTED option
+        meaning: glm:5
+  BatteryType:
+    description: BatteryType enumeration
+    permissible_values:
+      UNKNOWON:
+        description: UNKNOWON option
+        meaning: glm:0
+      LI_ION:
+        description: LI_ION option
+        meaning: glm:1
+      LEAD_ACID:
+        description: LEAD_ACID option
+        meaning: glm:2
+  PanelType:
+    description: PanelType enumeration
+    permissible_values:
+      SINGLE_CRYSTAL_SILICON:
+        description: SINGLE_CRYSTAL_SILICON option
+        meaning: glm:0
+      MULTI_CRYSTAL_SILICON:
+        description: MULTI_CRYSTAL_SILICON option
+        meaning: glm:1
+      AMORPHOUS_SILICON:
+        description: AMORPHOUS_SILICON option
+        meaning: glm:2
+      THIN_FILM_GA_AS:
+        description: THIN_FILM_GA_AS option
+        meaning: glm:3
+      CONCENTRATOR:
+        description: CONCENTRATOR option
+        meaning: glm:4
+  SolarTiltModel:
+    description: SolarTiltModel enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      SOLPOS:
+        description: SOLPOS option
+        meaning: glm:1
+      PLAYERVALUE:
+        description: PLAYERVALUE option
+        meaning: glm:2
+  SolarPowerModel:
+    description: SolarPowerModel enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FLATPLATE:
+        description: FLATPLATE option
+        meaning: glm:1
+      PV_CURVE:
+        description: PV_CURVE option
+        meaning: glm:2
+  Orientation:
+    description: Orientation enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FIXED_AXIS:
+        description: FIXED_AXIS option
+        meaning: glm:1
+  GenType:
+    description: GenType enumeration
+    permissible_values:
+      INDUCTION:
+        description: INDUCTION option
+        meaning: glm:0
+      SYNCHRONOUS:
+        description: SYNCHRONOUS option
+        meaning: glm:1
+  ExciterType:
+    description: ExciterType enumeration
+    permissible_values:
+      NO_EXC:
+        description: NO_EXC option
+        meaning: glm:0
+      SEXS:
+        description: SEXS option
+        meaning: glm:1
+  SexsMode:
+    description: SexsMode enumeration
+    permissible_values:
+      CONSTANT_VOLTAGE:
+        description: CONSTANT_VOLTAGE option
+        meaning: glm:0
+      CONSTANT_Q:
+        description: CONSTANT_Q option
+        meaning: glm:1
+      Q_V_DROOP:
+        description: Q_V_DROOP option
+        meaning: glm:2
+  CvrMode:
+    description: CvrMode enumeration
+    permissible_values:
+      HighOrder:
+        description: HighOrder option
+        meaning: glm:0
+      Feedback:
+        description: Feedback option
+        meaning: glm:1
+  GovernorType:
+    description: GovernorType enumeration
+    permissible_values:
+      NO_GOV:
+        description: NO_GOV option
+        meaning: glm:0
+      DEGOV1:
+        description: DEGOV1 option
+        meaning: glm:1
+      GAST:
+        description: GAST option
+        meaning: glm:2
+      GGOV1:
+        description: GGOV1 option
+        meaning: glm:3
+      P_CONSTANT:
+        description: P_CONSTANT option
+        meaning: glm:4
+  ControlMode0:
+    description: ControlMode0 enumeration
+    permissible_values:
+      NO_CONTROL:
+        description: NO_CONTROL option
+        meaning: glm:0
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:1
+      PEAK_SHAVING:
+        description: PEAK_SHAVING option
+        meaning: glm:2
+  ControlMode1:
+    description: ControlMode1 enumeration
+    permissible_values:
+      NO_CONTROL:
+        description: NO_CONTROL option
+        meaning: glm:0
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:1
+      PEAK_SHAVING:
+        description: PEAK_SHAVING option
+        meaning: glm:2
+  ControlMode2:
+    description: ControlMode2 enumeration
+    permissible_values:
+      NO_CONTROL:
+        description: NO_CONTROL option
+        meaning: glm:0
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:1
+      PEAK_SHAVING:
+        description: PEAK_SHAVING option
+        meaning: glm:2
+  ControlMode3:
+    description: ControlMode3 enumeration
+    permissible_values:
+      NO_CONTROL:
+        description: NO_CONTROL option
+        meaning: glm:0
+      CONSTANT_PF:
+        description: CONSTANT_PF option
+        meaning: glm:1
+      PEAK_SHAVING:
+        description: PEAK_SHAVING option
+        meaning: glm:2
+  GenMode:
+    description: GenMode enumeration
+    permissible_values:
+      CONSTANTE:
+        description: CONSTANTE option
+        meaning: glm:0
+      CONSTANTP:
+        description: CONSTANTP option
+        meaning: glm:1
+      CONSTANTPQ:
+        description: CONSTANTPQ option
+        meaning: glm:2
+  TurbineModel:
+    description: TurbineModel enumeration
+    permissible_values:
+      GENERIC_DEFAULT:
+        description: GENERIC_DEFAULT option
+        meaning: glm:0
+      GENERIC_SYNCH_SMALL:
+        description: GENERIC_SYNCH_SMALL option
+        meaning: glm:1
+      GENERIC_SYNCH_MID:
+        description: GENERIC_SYNCH_MID option
+        meaning: glm:2
+      GENERIC_SYNCH_LARGE:
+        description: GENERIC_SYNCH_LARGE option
+        meaning: glm:3
+      GENERIC_IND_SMALL:
+        description: GENERIC_IND_SMALL option
+        meaning: glm:4
+      GENERIC_IND_MID:
+        description: GENERIC_IND_MID option
+        meaning: glm:5
+      GENERIC_IND_LARGE:
+        description: GENERIC_IND_LARGE option
+        meaning: glm:6
+      USER_DEFINED:
+        description: USER_DEFINED option
+        meaning: glm:7
+      VESTAS_V82:
+        description: VESTAS_V82 option
+        meaning: glm:8
+      GE_25MW:
+        description: GE_25MW option
+        meaning: glm:9
+      BERGEY_10kW:
+        description: BERGEY_10kW option
+        meaning: glm:10
+      GEN_TURB_POW_CURVE_2_4KW:
+        description: GEN_TURB_POW_CURVE_2_4KW option
+        meaning: glm:11
+      GEN_TURB_POW_CURVE_10KW:
+        description: GEN_TURB_POW_CURVE_10KW option
+        meaning: glm:12
+      GEN_TURB_POW_CURVE_100KW:
+        description: GEN_TURB_POW_CURVE_100KW option
+        meaning: glm:13
+      GEN_TURB_POW_CURVE_1_5MW:
+        description: GEN_TURB_POW_CURVE_1_5MW option
+        meaning: glm:14
+  TurbineImplementation:
+    description: TurbineImplementation enumeration
+    permissible_values:
+      COEFF_OF_PERFORMANCE:
+        description: COEFF_OF_PERFORMANCE option
+        meaning: glm:0
+      POWER_CURVE:
+        description: POWER_CURVE option
+        meaning: glm:1
+  WindSpeedSource:
+    description: WindSpeedSource enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      BUILT_IN:
+        description: BUILT_IN option
+        meaning: glm:1
+      WIND_SPEED:
+        description: WIND_SPEED option
+        meaning: glm:2
+      CLIMATE_DATA:
+        description: CLIMATE_DATA option
+        meaning: glm:3
+  VehicleType:
+    description: VehicleType enumeration
+    permissible_values:
+      ELECTRIC:
+        description: ELECTRIC option
+        meaning: glm:0
+      HYBRID:
+        description: HYBRID option
+        meaning: glm:1
+  State:
+    description: State enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      'ON':
+        description: ON option
+        meaning: glm:1
+  HeatMode:
+    description: HeatMode enumeration
+    permissible_values:
+      ELECTRIC:
+        description: ELECTRIC option
+        meaning: glm:0
+      GASHEAT:
+        description: GASHEAT option
+        meaning: glm:1
+      HEAT_PUMP:
+        description: HEAT_PUMP option
+        meaning: glm:2
+  HcMode:
+    description: HcMode enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      HEAT:
+        description: HEAT option
+        meaning: glm:1
+      COOL:
+        description: COOL option
+        meaning: glm:2
+  DischargeScheduleType:
+    description: DischargeScheduleType enumeration
+    permissible_values:
+      INTERNAL:
+        description: INTERNAL option
+        meaning: glm:0
+      EXTERNAL:
+        description: EXTERNAL option
+        meaning: glm:1
+  RechargeScheduleType:
+    description: RechargeScheduleType enumeration
+    permissible_values:
+      INTERNAL:
+        description: INTERNAL option
+        meaning: glm:0
+      EXTERNAL:
+        description: EXTERNAL option
+        meaning: glm:1
+  DefrostCriterion:
+    description: DefrostCriterion enumeration
+    permissible_values:
+      TIMED:
+        description: TIMED option
+        meaning: glm:0
+      DOOR_OPENINGS:
+        description: DOOR_OPENINGS option
+        meaning: glm:1
+      COMPRESSOR_TIME:
+        description: COMPRESSOR_TIME option
+        meaning: glm:2
+  Placement:
+    description: Placement enumeration
+    permissible_values:
+      INDOOR:
+        description: INDOOR option
+        meaning: glm:0
+      OUTDOOR:
+        description: OUTDOOR option
+        meaning: glm:1
+  IncludeSolarQuadrant:
+    description: IncludeSolarQuadrant enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      H:
+        description: H option
+        meaning: glm:1
+      N:
+        description: N option
+        meaning: glm:2
+      E:
+        description: E option
+        meaning: glm:3
+      S:
+        description: S option
+        meaning: glm:4
+      W:
+        description: W option
+        meaning: glm:5
+  HeatingCopCurve:
+    description: HeatingCopCurve enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FLAT:
+        description: FLAT option
+        meaning: glm:1
+      LINEAR:
+        description: LINEAR option
+        meaning: glm:2
+      CURVED:
+        description: CURVED option
+        meaning: glm:3
+  HeatingCapCurve:
+    description: HeatingCapCurve enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FLAT:
+        description: FLAT option
+        meaning: glm:1
+      LINEAR:
+        description: LINEAR option
+        meaning: glm:2
+      CURVED:
+        description: CURVED option
+        meaning: glm:3
+  CoolingCopCurve:
+    description: CoolingCopCurve enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FLAT:
+        description: FLAT option
+        meaning: glm:1
+      LINEAR:
+        description: LINEAR option
+        meaning: glm:2
+      CURVED:
+        description: CURVED option
+        meaning: glm:3
+  CoolingCapCurve:
+    description: CoolingCapCurve enumeration
+    permissible_values:
+      DEFAULT:
+        description: DEFAULT option
+        meaning: glm:0
+      FLAT:
+        description: FLAT option
+        meaning: glm:1
+      LINEAR:
+        description: LINEAR option
+        meaning: glm:2
+      CURVED:
+        description: CURVED option
+        meaning: glm:3
+  ThermostatMode:
+    description: ThermostatMode enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      AUTO:
+        description: AUTO option
+        meaning: glm:1
+      HEAT:
+        description: HEAT option
+        meaning: glm:2
+      COOL:
+        description: COOL option
+        meaning: glm:3
+  SystemType:
+    description: SystemType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      GAS:
+        description: GAS option
+        meaning: glm:1
+      AIRCONDITIONING:
+        description: AIRCONDITIONING option
+        meaning: glm:2
+      FORCEDAIR:
+        description: FORCEDAIR option
+        meaning: glm:3
+      TWOSTAGE:
+        description: TWOSTAGE option
+        meaning: glm:4
+      RESISTIVE:
+        description: RESISTIVE option
+        meaning: glm:5
+  AuxiliaryStrategy:
+    description: AuxiliaryStrategy enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      DEADBAND:
+        description: DEADBAND option
+        meaning: glm:1
+      TIMER:
+        description: TIMER option
+        meaning: glm:2
+      LOCKOUT:
+        description: LOCKOUT option
+        meaning: glm:3
+  SystemMode:
+    description: SystemMode enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      HEAT:
+        description: HEAT option
+        meaning: glm:1
+      'OFF':
+        description: OFF option
+        meaning: glm:2
+      COOL:
+        description: COOL option
+        meaning: glm:3
+      AUX:
+        description: AUX option
+        meaning: glm:4
+  LastSystemMode:
+    description: LastSystemMode enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      HEAT:
+        description: HEAT option
+        meaning: glm:1
+      'OFF':
+        description: OFF option
+        meaning: glm:2
+      COOL:
+        description: COOL option
+        meaning: glm:3
+      AUX:
+        description: AUX option
+        meaning: glm:4
+  HeatingSystemType:
+    description: HeatingSystemType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      GAS:
+        description: GAS option
+        meaning: glm:1
+      HEAT_PUMP:
+        description: HEAT_PUMP option
+        meaning: glm:2
+      RESISTANCE:
+        description: RESISTANCE option
+        meaning: glm:3
+  CoolingSystemType:
+    description: CoolingSystemType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      ELECTRIC:
+        description: ELECTRIC option
+        meaning: glm:1
+      HEAT_PUMP:
+        description: HEAT_PUMP option
+        meaning: glm:2
+  AuxiliarySystemType:
+    description: AuxiliarySystemType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      ELECTRIC:
+        description: ELECTRIC option
+        meaning: glm:1
+  FanType:
+    description: FanType enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      ONE_SPEED:
+        description: ONE_SPEED option
+        meaning: glm:1
+      TWO_SPEED:
+        description: TWO_SPEED option
+        meaning: glm:2
+  ThermalIntegrityLevel:
+    description: ThermalIntegrityLevel enumeration
+    permissible_values:
+      VERY_LITTLE:
+        description: VERY_LITTLE option
+        meaning: glm:0
+      LITTLE:
+        description: LITTLE option
+        meaning: glm:1
+      BELOW_NORMAL:
+        description: BELOW_NORMAL option
+        meaning: glm:2
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:3
+      ABOVE_NORMAL:
+        description: ABOVE_NORMAL option
+        meaning: glm:4
+      GOOD:
+        description: GOOD option
+        meaning: glm:5
+      VERY_GOOD:
+        description: VERY_GOOD option
+        meaning: glm:6
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:7
+  GlassType:
+    description: GlassType enumeration
+    permissible_values:
+      OTHER:
+        description: OTHER option
+        meaning: glm:0
+      GLASS:
+        description: GLASS option
+        meaning: glm:1
+      LOW_E_GLASS:
+        description: LOW_E_GLASS option
+        meaning: glm:2
+  WindowFrame:
+    description: WindowFrame enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      ALUMINUM:
+        description: ALUMINUM option
+        meaning: glm:1
+      ALUMINIUM:
+        description: ALUMINIUM option
+        meaning: glm:2
+      THERMAL_BREAK:
+        description: THERMAL_BREAK option
+        meaning: glm:3
+      WOOD:
+        description: WOOD option
+        meaning: glm:4
+      INSULATED:
+        description: INSULATED option
+        meaning: glm:5
+  GlazingTreatment:
+    description: GlazingTreatment enumeration
+    permissible_values:
+      OTHER:
+        description: OTHER option
+        meaning: glm:0
+      CLEAR:
+        description: CLEAR option
+        meaning: glm:1
+      ABS:
+        description: ABS option
+        meaning: glm:2
+      REFL:
+        description: REFL option
+        meaning: glm:3
+      LOW_S:
+        description: LOW_S option
+        meaning: glm:4
+      HIGH_S:
+        description: HIGH_S option
+        meaning: glm:5
+  GlazingLayers:
+    description: GlazingLayers enumeration
+    permissible_values:
+      ONE:
+        description: ONE option
+        meaning: glm:0
+      TWO:
+        description: TWO option
+        meaning: glm:1
+      THREE:
+        description: THREE option
+        meaning: glm:2
+      OTHER:
+        description: OTHER option
+        meaning: glm:3
+  MotorModel:
+    description: MotorModel enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      BASIC:
+        description: BASIC option
+        meaning: glm:1
+      FULL:
+        description: FULL option
+        meaning: glm:2
+  MotorEfficiency:
+    description: MotorEfficiency enumeration
+    permissible_values:
+      VERY_POOR:
+        description: VERY_POOR option
+        meaning: glm:0
+      POOR:
+        description: POOR option
+        meaning: glm:1
+      AVERAGE:
+        description: AVERAGE option
+        meaning: glm:2
+      GOOD:
+        description: GOOD option
+        meaning: glm:3
+      VERY_GOOD:
+        description: VERY_GOOD option
+        meaning: glm:4
+  ExternalPfMode:
+    description: ExternalPfMode enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      ONEV:
+        description: ONEV option
+        meaning: glm:1
+      TWOV:
+        description: TWOV option
+        meaning: glm:2
+  ThermostatControl:
+    description: ThermostatControl enumeration
+    permissible_values:
+      FULL:
+        description: FULL option
+        meaning: glm:0
+      BAND:
+        description: BAND option
+        meaning: glm:1
+      NONE:
+        description: NONE option
+        meaning: glm:2
+  VehicleLocation:
+    description: VehicleLocation enumeration
+    permissible_values:
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:0
+      HOME:
+        description: HOME option
+        meaning: glm:1
+      WORK:
+        description: WORK option
+        meaning: glm:2
+      DRIVING_HOME:
+        description: DRIVING_HOME option
+        meaning: glm:3
+      DRIVING_WORK:
+        description: DRIVING_WORK option
+        meaning: glm:4
+  J2894TripMethod:
+    description: J2894TripMethod enumeration
+    permissible_values:
+      NONE:
+        description: NONE option
+        meaning: glm:0
+      SURGE_OVER_VOLT:
+        description: SURGE_OVER_VOLT option
+        meaning: glm:1
+      HIGH_OVER_VOLT:
+        description: HIGH_OVER_VOLT option
+        meaning: glm:2
+      OVER_VOLT:
+        description: OVER_VOLT option
+        meaning: glm:3
+      UNDER_VOLT:
+        description: UNDER_VOLT option
+        meaning: glm:4
+      LOW_UNDER_VOLT:
+        description: LOW_UNDER_VOLT option
+        meaning: glm:5
+      EXTREME_UNDER_VOLT:
+        description: EXTREME_UNDER_VOLT option
+        meaning: glm:6
+      UNKNOWN:
+        description: UNKNOWN option
+        meaning: glm:7
+  Location:
+    description: Location enumeration
+    permissible_values:
+      INSIDE:
+        description: INSIDE option
+        meaning: glm:0
+      GARAGE:
+        description: GARAGE option
+        meaning: glm:1
+  StateCooktop:
+    description: StateCooktop enumeration
+    permissible_values:
+      CT_STOPPED:
+        description: CT_STOPPED option
+        meaning: glm:0
+      STAGE_6_ONLY:
+        description: STAGE_6_ONLY option
+        meaning: glm:1
+      STAGE_7_ONLY:
+        description: STAGE_7_ONLY option
+        meaning: glm:2
+      STAGE_8_ONLY:
+        description: STAGE_8_ONLY option
+        meaning: glm:3
+      CT_STALLED:
+        description: CT_STALLED option
+        meaning: glm:4
+      CT_TRIPPED:
+        description: CT_TRIPPED option
+        meaning: glm:5
+  SpinMode:
+    description: SpinMode enumeration
+    permissible_values:
+      SPIN_LOW:
+        description: SPIN_LOW option
+        meaning: glm:0
+      SPIN_MEDIUM:
+        description: SPIN_MEDIUM option
+        meaning: glm:1
+      SPIN_HIGH:
+        description: SPIN_HIGH option
+        meaning: glm:2
+      SPIN_WASH:
+        description: SPIN_WASH option
+        meaning: glm:3
+      SMALLWASH:
+        description: SMALLWASH option
+        meaning: glm:4
+  WashMode:
+    description: WashMode enumeration
+    permissible_values:
+      NORMAL:
+        description: NORMAL option
+        meaning: glm:0
+      PERM_PRESS:
+        description: PERM_PRESS option
+        meaning: glm:1
+      GENTLE:
+        description: GENTLE option
+        meaning: glm:2
+  WaterheaterModel:
+    description: WaterheaterModel enumeration
+    permissible_values:
+      ONEZNODE:
+        description: ONEZNODE option
+        meaning: glm:0
+      TWONODE:
+        description: TWONODE option
+        meaning: glm:1
+      FORTRAN:
+        description: FORTRAN option
+        meaning: glm:2
+      MULTILAYER:
+        description: MULTILAYER option
+        meaning: glm:3
+      NONE:
+        description: NONE option
+        meaning: glm:4
+  CurrentTankStatus:
+    description: CurrentTankStatus enumeration
+    permissible_values:
+      FULL:
+        description: FULL option
+        meaning: glm:0
+      PARTIAL:
+        description: PARTIAL option
+        meaning: glm:1
+      EMPTY:
+        description: EMPTY option
+        meaning: glm:2
+  LoadState:
+    description: LoadState enumeration
+    permissible_values:
+      DEPLETING:
+        description: DEPLETING option
+        meaning: glm:0
+      RECOVERING:
+        description: RECOVERING option
+        meaning: glm:1
+      STABLE:
+        description: STABLE option
+        meaning: glm:2
+  ReOverride:
+    description: ReOverride enumeration
+    permissible_values:
+      OV_ON:
+        description: OV_ON option
+        meaning: glm:0
+      OV_NORMAL:
+        description: OV_NORMAL option
+        meaning: glm:1
+      OV_OFF:
+        description: OV_OFF option
+        meaning: glm:2
+  LowerHeatingElementState:
+    description: LowerHeatingElementState enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      'ON':
+        description: ON option
+        meaning: glm:1
+  UpperHeatingElementState:
+    description: UpperHeatingElementState enumeration
+    permissible_values:
+      'OFF':
+        description: OFF option
+        meaning: glm:0
+      'ON':
+        description: ON option
+        meaning: glm:1

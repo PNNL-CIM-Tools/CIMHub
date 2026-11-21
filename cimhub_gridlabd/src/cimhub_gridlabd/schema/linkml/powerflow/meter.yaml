@@ -1,0 +1,1248 @@
+id: https://gridlabd.org/schema/glm/powerflow/meter
+name: meter
+description: GridLAB-D meter class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  meter:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file meter.cpp
+
+      @addtogroup powerflow_meter Meter
+
+      @ingroup powerflow
+
+      @note The meter object now only implements polyphase meters.  For a
+
+      singlephase meter, see the triplex_meter object.
+
+      Distribution meter can be either single phase or polyphase meters.
+
+      For polyphase meters, the line voltages are nominally 277V line-to-line,
+
+      and 480V line-to-ground.  The ground is not presented explicitly (it is
+
+      assumed).
+
+      Total cumulative energy, instantantenous power and peak demand are
+
+      metered.
+
+      @{
+
+
+      Inherits from: node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: node
+    attributes:
+      measured_real_energy:
+        range: float
+        required: false
+        description: metered real energy consumption, cummalitive
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_energy[Wh]
+      measured_real_energy_delta:
+        range: float
+        required: false
+        description: delta in metered real energy consumption from last specified
+          measured_energy_delta_timestep
+        unit:
+          ucum_code: Wh
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_energy_delta[Wh]
+      measured_reactive_energy:
+        range: float
+        required: false
+        description: metered reactive energy consumption, cummalitive
+        unit:
+          ucum_code: VAh
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_energy[VAh]
+      measured_reactive_energy_delta:
+        range: float
+        required: false
+        description: delta in metered reactive energy consumption from last specified
+          measured_energy_delta_timestep
+        unit:
+          ucum_code: VAh
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_energy_delta[VAh]
+      measured_energy_delta_timestep:
+        range: float
+        required: false
+        description: Period of timestep for real and reactive delta energy calculation
+        unit:
+          ucum_code: s
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_energy_delta_timestep[s]
+      measured_power:
+        range: Complex
+        required: false
+        description: metered complex power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: measured_power[VA]
+      measured_power_A:
+        range: Complex
+        required: false
+        description: metered complex power on phase A
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: measured_power_A[VA]
+      measured_power_B:
+        range: Complex
+        required: false
+        description: metered complex power on phase B
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: measured_power_B[VA]
+      measured_power_C:
+        range: Complex
+        required: false
+        description: metered complex power on phase C
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: measured_power_C[VA]
+      measured_demand:
+        range: float
+        required: false
+        description: greatest metered real power during simulation
+        unit:
+          ucum_code: W
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_demand[W]
+      measured_real_power:
+        range: float
+        required: false
+        description: metered real power
+        unit:
+          ucum_code: W
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_power[W]
+      measured_reactive_power:
+        range: float
+        required: false
+        description: metered reactive power
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_power[VAr]
+      meter_power_consumption:
+        range: Complex
+        required: false
+        description: metered power used for operating the meter; standby and communication
+          losses
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: meter_power_consumption[VA]
+      measured_voltage_A:
+        range: Complex
+        required: false
+        description: measured line-to-neutral voltage on phase A
+        unit:
+          ucum_code: V
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_A[V]
+      measured_voltage_B:
+        range: Complex
+        required: false
+        description: measured line-to-neutral voltage on phase B
+        unit:
+          ucum_code: V
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_B[V]
+      measured_voltage_C:
+        range: Complex
+        required: false
+        description: measured line-to-neutral voltage on phase C
+        unit:
+          ucum_code: V
+        annotations:
+          order: 16
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_C[V]
+      measured_voltage_AB:
+        range: Complex
+        required: false
+        description: measured line-to-line voltage on phase AB
+        unit:
+          ucum_code: V
+        annotations:
+          order: 17
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_AB[V]
+      measured_voltage_BC:
+        range: Complex
+        required: false
+        description: measured line-to-line voltage on phase BC
+        unit:
+          ucum_code: V
+        annotations:
+          order: 18
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_BC[V]
+      measured_voltage_CA:
+        range: Complex
+        required: false
+        description: measured line-to-line voltage on phase CA
+        unit:
+          ucum_code: V
+        annotations:
+          order: 19
+          value_type: complex
+          separator: ','
+          native_name: measured_voltage_CA[V]
+      measured_real_max_voltage_A_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-neutral voltage on phase A over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_A_in_interval[V]
+      measured_real_max_voltage_B_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-neutral voltage on phase B over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_B_in_interval[V]
+      measured_real_max_voltage_C_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-neutral voltage on phase C over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_C_in_interval[V]
+      measured_reactive_max_voltage_A_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-neutral voltage on phase A over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_A_in_interval[V]
+      measured_reactive_max_voltage_B_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-neutral voltage on phase B over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_B_in_interval[V]
+      measured_reactive_max_voltage_C_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-neutral voltage on phase C over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_C_in_interval[V]
+      measured_real_max_voltage_AB_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-line voltage on phase A over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_AB_in_interval[V]
+      measured_real_max_voltage_BC_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-line voltage on phase B over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_BC_in_interval[V]
+      measured_real_max_voltage_CA_in_interval:
+        range: float
+        required: false
+        description: measured real max line-to-line voltage on phase C over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_voltage_CA_in_interval[V]
+      measured_reactive_max_voltage_AB_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-line voltage on phase A over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_AB_in_interval[V]
+      measured_reactive_max_voltage_BC_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-line voltage on phase B over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_BC_in_interval[V]
+      measured_reactive_max_voltage_CA_in_interval:
+        range: float
+        required: false
+        description: measured reactive max line-to-line voltage on phase C over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_voltage_CA_in_interval[V]
+      measured_real_min_voltage_A_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-neutral voltage on phase A over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_A_in_interval[V]
+      measured_real_min_voltage_B_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-neutral voltage on phase B over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_B_in_interval[V]
+      measured_real_min_voltage_C_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-neutral voltage on phase C over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_C_in_interval[V]
+      measured_reactive_min_voltage_A_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-neutral voltage on phase A over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_A_in_interval[V]
+      measured_reactive_min_voltage_B_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-neutral voltage on phase B over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_B_in_interval[V]
+      measured_reactive_min_voltage_C_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-neutral voltage on phase C over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_C_in_interval[V]
+      measured_real_min_voltage_AB_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-line voltage on phase A over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_AB_in_interval[V]
+      measured_real_min_voltage_BC_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-line voltage on phase B over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_BC_in_interval[V]
+      measured_real_min_voltage_CA_in_interval:
+        range: float
+        required: false
+        description: measured real min line-to-line voltage on phase C over a specified
+          interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_voltage_CA_in_interval[V]
+      measured_reactive_min_voltage_AB_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-line voltage on phase A over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 41
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_AB_in_interval[V]
+      measured_reactive_min_voltage_BC_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-line voltage on phase B over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 42
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_BC_in_interval[V]
+      measured_reactive_min_voltage_CA_in_interval:
+        range: float
+        required: false
+        description: measured reactive min line-to-line voltage on phase C over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 43
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_voltage_CA_in_interval[V]
+      measured_avg_voltage_A_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-neutral voltage magnitude on phase A over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_A_mag_in_interval[V]
+      measured_avg_voltage_B_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-neutral voltage magnitude on phase B over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 45
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_B_mag_in_interval[V]
+      measured_avg_voltage_C_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-neutral voltage magnitude on phase C over
+          a specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 46
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_C_mag_in_interval[V]
+      measured_avg_voltage_AB_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-line voltage magnitude on phase A over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_AB_mag_in_interval[V]
+      measured_avg_voltage_BC_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-line voltage magnitude on phase B over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_BC_mag_in_interval[V]
+      measured_avg_voltage_CA_mag_in_interval:
+        range: float
+        required: false
+        description: measured avg line-to-line voltage magnitude on phase C over a
+          specified interval
+        unit:
+          ucum_code: V
+        annotations:
+          order: 49
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_voltage_CA_mag_in_interval[V]
+      measured_real_max_power_in_interval:
+        range: float
+        required: false
+        description: measured maximum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 50
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_power_in_interval[W]
+      measured_reactive_max_power_in_interval:
+        range: float
+        required: false
+        description: measured maximum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 51
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_power_in_interval[VAr]
+      measured_real_min_power_in_interval:
+        range: float
+        required: false
+        description: measured minimum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 52
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_power_in_interval[W]
+      measured_reactive_min_power_in_interval:
+        range: float
+        required: false
+        description: measured minimum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 53
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_power_in_interval[VAr]
+      measured_avg_real_power_in_interval:
+        range: float
+        required: false
+        description: measured average real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 54
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_real_power_in_interval[W]
+      measured_avg_reactive_power_in_interval:
+        range: float
+        required: false
+        description: measured average reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_reactive_power_in_interval[VAr]
+      measured_real_max_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase maximum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 56
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_power_A_in_interval[W]
+      measured_reactive_max_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase maximum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 57
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_power_A_in_interval[VAr]
+      measured_real_min_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase minimum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 58
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_power_A_in_interval[W]
+      measured_reactive_min_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase minimum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_power_A_in_interval[VAr]
+      measured_avg_real_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase average real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 60
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_real_power_A_in_interval[W]
+      measured_avg_reactive_power_A_in_interval:
+        range: float
+        required: false
+        description: measured A phase average reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 61
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_reactive_power_A_in_interval[VAr]
+      measured_real_max_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase maximum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_power_B_in_interval[W]
+      measured_reactive_max_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase maximum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_power_B_in_interval[VAr]
+      measured_real_min_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase minimum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 64
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_power_B_in_interval[W]
+      measured_reactive_min_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase minimum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 65
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_power_B_in_interval[VAr]
+      measured_avg_real_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase average real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 66
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_real_power_B_in_interval[W]
+      measured_avg_reactive_power_B_in_interval:
+        range: float
+        required: false
+        description: measured B phase average reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 67
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_reactive_power_B_in_interval[VAr]
+      measured_real_max_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase maximum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_max_power_C_in_interval[W]
+      measured_reactive_max_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase maximum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 69
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_max_power_C_in_interval[VAr]
+      measured_real_min_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase minimum real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 70
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_real_min_power_C_in_interval[W]
+      measured_reactive_min_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase minimum reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 71
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_reactive_min_power_C_in_interval[VAr]
+      measured_avg_real_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase average real power over a specified interval
+        unit:
+          ucum_code: W
+        annotations:
+          order: 72
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_real_power_C_in_interval[W]
+      measured_avg_reactive_power_C_in_interval:
+        range: float
+        required: false
+        description: measured C phase average reactive power over a specified interval
+        unit:
+          ucum_code: VAr
+        annotations:
+          order: 73
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_avg_reactive_power_C_in_interval[VAr]
+      measured_stats_interval:
+        range: float
+        required: false
+        description: Period of timestep for min/max/average calculations
+        unit:
+          ucum_code: s
+        annotations:
+          order: 74
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: measured_stats_interval[s]
+      measured_current_A:
+        range: Complex
+        required: false
+        description: measured current on phase A
+        unit:
+          ucum_code: A
+        annotations:
+          order: 75
+          value_type: complex
+          separator: ','
+          native_name: measured_current_A[A]
+      measured_current_B:
+        range: Complex
+        required: false
+        description: measured current on phase B
+        unit:
+          ucum_code: A
+        annotations:
+          order: 76
+          value_type: complex
+          separator: ','
+          native_name: measured_current_B[A]
+      measured_current_C:
+        range: Complex
+        required: false
+        description: measured current on phase C
+        unit:
+          ucum_code: A
+        annotations:
+          order: 77
+          value_type: complex
+          separator: ','
+          native_name: measured_current_C[A]
+      customer_interrupted:
+        range: boolean
+        required: false
+        description: Reliability flag - goes active if the customer is in an 'interrupted'
+          state
+        annotations:
+          order: 78
+          value_type: bool
+          separator: ','
+          native_name: customer_interrupted
+      customer_interrupted_secondary:
+        range: boolean
+        required: false
+        description: Reliability flag - goes active if the customer is in an 'secondary
+          interrupted' state - i.e., momentary
+        annotations:
+          order: 79
+          value_type: bool
+          separator: ','
+          native_name: customer_interrupted_secondary
+      sustained_count:
+        range: integer
+        required: false
+        annotations:
+          order: 80
+          value_type: string
+          separator: ','
+          native_name: sustained_count
+      momentary_count:
+        range: integer
+        required: false
+        annotations:
+          order: 81
+          value_type: string
+          separator: ','
+          native_name: momentary_count
+      total_count:
+        range: integer
+        required: false
+        annotations:
+          order: 82
+          value_type: string
+          separator: ','
+          native_name: total_count
+      s_flag:
+        range: integer
+        required: false
+        annotations:
+          order: 83
+          value_type: string
+          separator: ','
+          native_name: s_flag
+      t_flag:
+        range: integer
+        required: false
+        annotations:
+          order: 84
+          value_type: string
+          separator: ','
+          native_name: t_flag
+      pre_load:
+        range: Complex
+        required: false
+        annotations:
+          order: 85
+          value_type: complex
+          separator: ','
+          native_name: pre_load
+      monthly_bill:
+        range: float
+        required: false
+        description: Accumulator for the current month's bill
+        unit:
+          ucum_code: $
+        annotations:
+          order: 86
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: monthly_bill[$]
+      previous_monthly_bill:
+        range: float
+        required: false
+        description: Total monthly bill for the previous month
+        unit:
+          ucum_code: $
+        annotations:
+          order: 87
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: previous_monthly_bill[$]
+      previous_monthly_energy:
+        range: float
+        required: false
+        description: Total monthly energy for the previous month
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 88
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: previous_monthly_energy[kWh]
+      monthly_fee:
+        range: float
+        required: false
+        description: Once a month flat fee for customer hook-up
+        unit:
+          ucum_code: $
+        annotations:
+          order: 89
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: monthly_fee[$]
+      monthly_energy:
+        range: float
+        required: false
+        description: Accumulator for the current month's energy consumption
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 90
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: monthly_energy[kWh]
+      bill_mode:
+        range: string
+        required: false
+        description: Billing structure desired
+        annotations:
+          order: 91
+          value_type: string
+          separator: ','
+          native_name: bill_mode
+      power_market:
+        range: string
+        required: false
+        description: Market (auction object) where the price is being received from
+        annotations:
+          order: 92
+          value_type: string
+          separator: ','
+          native_name: power_market
+      bill_day:
+        range: integer
+        required: false
+        description: day of month bill is to be processed (currently limited to days
+          1-28)
+        annotations:
+          order: 93
+          value_type: int
+          separator: ','
+          native_name: bill_day
+      price:
+        range: float
+        required: false
+        description: current price of electricity
+        unit:
+          ucum_code: $/kWh
+        annotations:
+          order: 94
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: price[$/kWh]
+      price_base:
+        range: float
+        required: false
+        description: Used only in TIERED_RTP mode to describe the price before the
+          first tier
+        unit:
+          ucum_code: $/kWh
+        annotations:
+          order: 95
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: price_base[$/kWh]
+      first_tier_price:
+        range: float
+        required: false
+        description: price of electricity between first tier and second tier energy
+          usage
+        unit:
+          ucum_code: $/kWh
+        annotations:
+          order: 96
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: first_tier_price[$/kWh]
+      first_tier_energy:
+        range: float
+        required: false
+        description: switching point between base price and first tier price
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 97
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: first_tier_energy[kWh]
+      second_tier_price:
+        range: float
+        required: false
+        description: price of electricity between second tier and third tier energy
+          usage
+        unit:
+          ucum_code: $/kWh
+        annotations:
+          order: 98
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: second_tier_price[$/kWh]
+      second_tier_energy:
+        range: float
+        required: false
+        description: switching point between first tier price and second tier price
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 99
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: second_tier_energy[kWh]
+      third_tier_price:
+        range: float
+        required: false
+        description: price of electricity when energy usage exceeds third tier energy
+          usage
+        unit:
+          ucum_code: $/kWh
+        annotations:
+          order: 100
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: third_tier_price[$/kWh]
+      third_tier_energy:
+        range: float
+        required: false
+        description: switching point between second tier price and third tier price
+        unit:
+          ucum_code: kWh
+        annotations:
+          order: 101
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: third_tier_energy[kWh]

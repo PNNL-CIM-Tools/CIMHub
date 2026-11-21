@@ -1,0 +1,16 @@
+# GridLAB-D switch -> LoadBreakSwitch.
+# Source table: switch (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_line
+    sw_swt_s1, swt_s1, n1, n2, ,  false, false, bv_4p16kv
+    sw_swt_s2, swt_s2, n5, n7, A, true,  true,  bv_4p16kv
+
+Table OperationalLimitSet: mRID, Equipment
+    sw_swt_s1_limits, sw_swt_s1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    sw_swt_s1_norm,  400.0, olt_normal,    sw_swt_s1_limits
+    sw_swt_s1_emerg, 600.0, olt_emergency, sw_swt_s1_limits

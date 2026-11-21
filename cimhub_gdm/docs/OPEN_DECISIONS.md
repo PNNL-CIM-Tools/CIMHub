@@ -10,12 +10,15 @@ builder owner on 2026-11-08.
    - Each piece of equipment's `EquipmentContainer` comes from its own `feeder`, else its `substation`.
    - A component with neither goes to a system Feeder `fdr_<system.name>`. That is the one documented fallback.
    - The model's container (the `Feeder` passed to `new_feeder_model`) is one of these Feeders; it is decorative.
-2. **Time series.** **Decided (user, 2026-11-06; amended 2026-11-08):** the target is the user's Curve +
-   RegularIntervalSchedule profile ([`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md)). Until it exists, time series are
-   **dropped, not raised on**, and the static snapshot is imported.
-   - Not silent (I8): `to_cim` logs one `WARNING` naming the count, each component (class + name) and each series
-     (variable name, type, `time_series_uuid`). A test asserts it.
-   - Every time-series type is dropped, `Deterministic` included. Supplemental attributes still raise.
+2. **Time series.** **Decided (user, 2026-11-06; amended 2026-11-08, 2026-11-11):** the target is cim18v17's
+   `nc_schedule`: one `EnergyConnectionSchedule` per load, in actual values, its points in Parquet (T1-T6 in
+   [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md)). **Built 2026-11-11** on B16: load series map when the caller passes a
+   `time_points` dict; without one they are **dropped, not raised on**, and the static snapshot is imported.
+   - Not silent (I8): `to_cim` logs one `WARNING` naming the count, each component (class + name) and each dropped
+     series (variable name, type, `time_series_uuid`). A test asserts it.
+   - Without `time_points`, every time-series type is dropped, `Deterministic` included. With it, `Deterministic`
+     raises, and series with no CIM class (PV irradiance, source `pu_voltage`) are dropped with the warning.
+     Supplemental attributes still raise.
 3. **Network shell.** **Decided (B1 landed 2026-11-08):** `cimbuilder.network.new_feeder_model(authority, model,
    Feeder, name=None, frequency=60)`; further Feeders and Substations through `FeederBuilder` / `SubstationBuilder`.
 4. **Frequency.** **Decided (user, 2026-11-06):** 60 Hz, `FREQUENCY_HZ = 60` in `shared.py`, written as the
@@ -137,7 +140,8 @@ builder owner on 2026-11-08.
   untranscribed because neither `InverterInfo` nor `PowerElectronicsUnit` has a slot for them:
   - `InverterEquipment`: `rise_limit`, `fall_limit`, `cutin_percent`, `cutout_percent`, `dc_to_ac_efficiency`,
     `eff_curve`;
-  - `SolarEquipment`: `resistance`, `reactance`, `power_temp_curve`; `DistributionSolar.irradiance`;
+  - `SolarEquipment`: `resistance`, `reactance`, `power_temp_curve` (`DistributionSolar.irradiance` is mapped since
+    B16b);
   - `BatteryEquipment.idling_efficiency`.
 
   They may live in the child classes: `GenerationInverterInfo` / `StorageInverterInfo` under `InverterInfo`, and

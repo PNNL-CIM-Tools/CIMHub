@@ -1,0 +1,23 @@
+# Shape: transformer by ends with a tank percentImpedance (BY_TANK_IMPEDANCE), the form a GIS gives: per can only
+# its nameplate kVA, %Z and load loss. Two PowerTransformerEnds carry the terminals and nameplates (ratedU phase to
+# phase, ratedS the unit's or the bank's total); one TransformerTank per can carries percentImpedance, loadLoss and
+# baseS (the can's kVA, U16). No TankConfiguration, TransformerWinding, TransformerMeshImpedance or
+# TransformerPhaseEnd. An end on s1s2N with connectionKind I is a center tap. A bank's cans land in tank order on
+# end 1's phases (GETTERS_PLAN.md, the bank rules): here an open wye - open delta, L on A (a-N-b), T on B (b-c).
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table PowerTransformer: mRID, name, EquipmentContainer=fdr_shapes
+    xf_t6, t6
+    xf_t7, t7
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), BaseVoltage, PowerTransformer
+    xf_t6_1, n1,     BN,    1, Y, true, 4.16, 25,  bv_4p16kv, xf_t6
+    xf_t6_2, house,  s1s2N, 2, I, true, 0.24, 25,  bv_240v,   xf_t6
+    xf_t7_1, n1,     ABN,   1, Y, true, 4.16, 100, bv_4p16kv, xf_t7
+    xf_t7_2, house7, ABCN,  2, D, true, 0.24, 100, bv_240v,   xf_t7
+Table TransformerTank: mRID, baseS (kVA), percentImpedance, loadLoss (W), noLoadLoss (W), PowerTransformer, EquipmentContainer=fdr_shapes
+    xf_t6_tank, 25, 2.3, 124, 40, xf_t6
+    xf_t7_l,    50, 2.0, 540, 90, xf_t7
+    xf_t7_t,    50, 2.0, 540, 90, xf_t7

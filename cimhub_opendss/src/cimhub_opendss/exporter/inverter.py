@@ -23,7 +23,7 @@ from cimhub_opendss.exporter.injection import device_connection, equal_phases, r
 from cimhub_opendss.exporter.naming import Names
 
 #: the unit classes a DSS class carries
-UNIT_CLASSES = (cim.PhotoVoltaicUnit, cim.BatteryUnit)
+UNIT_CLASSES = (cim.PhotoVoltaicUnit, cim.BatteryUnit, cim.PowerElectronicsWindUnit)
 #: float noise allowed when an output is checked against its kVA
 KVA_REL_TOL = 1e-9
 
@@ -47,7 +47,7 @@ def inverter_pieces(connection: cim.PowerElectronicsConnection, unit_class: type
     other = [describe(share.unit) for share in units if not isinstance(share.unit, UNIT_CLASSES)]
     if other:
         raise ValueError(f"{describe(connection)}: units {other} have no DSS class (PhotoVoltaicUnit is a PVSystem, "
-                         f"BatteryUnit a Storage)")
+                         f"BatteryUnit a Storage, PowerElectronicsWindUnit a Generator)")
     output = get_der_output(connection, "kW", "kVAr", sign="generation")
     balanced = output.split or equal_phases(output.per_phase)
     pieces = []

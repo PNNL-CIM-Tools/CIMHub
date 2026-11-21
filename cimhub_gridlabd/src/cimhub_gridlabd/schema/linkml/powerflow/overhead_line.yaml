@@ -1,0 +1,32 @@
+id: https://gridlabd.org/schema/glm/powerflow/overhead_line
+name: overhead_line
+description: GridLAB-D overhead_line class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  overhead_line:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file overhead_line.cpp
+
+      @addtogroup overhead_line
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: line
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: line

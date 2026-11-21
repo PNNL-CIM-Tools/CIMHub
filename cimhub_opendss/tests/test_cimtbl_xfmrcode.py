@@ -55,8 +55,14 @@ def test_codes_bind(codes):
     windings = sorted(ct25.TransformerWinding, key=lambda w: w.mRID)
     assert [(w.FromTransformerLug.designation, w.ToTransformerLug.designation) for w in windings] == [
         ("H1", "H2"), ("X1", "X2"), ("X2", "X3")]
-    assert {lug.designation: lug.sequenceNumber for lug in lugs.values()} == {"H1": 1, "H2": 2, "X1": 3, "X3": 4,
-                                                                              "X2": 5}
+    assert {lug.designation: lug.sequenceNumber for lug in lugs.values() if lug.TankConfiguration is ct25} == {
+        "H1": 1, "H2": 2, "X1": 3, "X3": 4, "X2": 5}
+    # any other 1-phase code: two lugs per winding, numbered in each coil's node order (TankEnds are 3-phase only)
+    [yyd] = [c for c in network.graph[cim.TransformerTankConfiguration].values() if c.name == "yyd"]
+    assert not yyd.TransformerTankEnd
+    assert sorted((w.FromTransformerLug.designation, w.FromTransformerLug.sequenceNumber,
+                   w.ToTransformerLug.designation, w.ToTransformerLug.sequenceNumber)
+                  for w in yyd.TransformerWinding) == [("H1", 1, "H2", 2), ("X1", 3, "X2", 4), ("Y1", 5, "Y2", 6)]
     t2 = {end.sequenceNumber: end.phase.value for end in network.graph[cim.TransformerPhaseEnd].values()
           if end.mRID.startswith("xf_t2_")}
     assert t2 == {1: "B", 2: "N", 3: "s1", 4: "s2", 5: "N"}
@@ -73,6 +79,9 @@ def test_codes_bind(codes):
             "New Transformer.u XfmrCode=ct25 buses=[delta.1.2 k.1.0 k.0.2]\n", "different templates"),
     ("New XfmrCode.c phases=1 windings=3 kVs=[7.2 2.4 2.4] kVAs=[100 50 50]\n"
      "New Transformer.t XfmrCode=c buses=[sourcebus.1 a.1 b.1]\n", "mesh's From winding \\(2\\) must carry it"),
+    # TankEnds are for 3-phase templates only, and a 1-phase one is one can
+    ("New XfmrCode.c phases=2 kVs=[12.47 0.48] kVAs=[50 50]\n"
+     "New Transformer.t XfmrCode=c buses=[sourcebus.1.2 a.1.2]\n", "phases=2; a template is 3-phase"),
 ])
 def test_unmapped_codes_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"
@@ -99,13 +108,12 @@ def _engine_template_differences(network) -> list[str]:
         dss.Transformers.Name(tank.PowerTransformer.name)
         windings = sorted(configuration.TransformerWinding, key=lambda w: w.mRID)
         three_phase = dss.CktElement.NumPhases() == 3
-        lugs = bool(configuration.TransformerLugs)
         for number, winding in enumerate(windings, start=1):
             dss.Transformers.Wdg(number)
             label = f"{tank.PowerTransformer.name} winding {number}"
             kv = float((winding.ratedU if three_phase else winding.baseU).to("kV"))
             check(f"{label} kV", kv, dss.Transformers.kV())
-            kva = float(winding.ratedS.to("kVA")) * (2 if lugs and number > 1 else 1)
+            kva = float((winding.ratedS if three_phase else winding.baseS).to("kVA"))  # a coil's is its baseS
             check(f"{label} kVA", kva, dss.Transformers.kVA())
             z_base = float(winding.baseU.to("V")) ** 2 / float(winding.baseS.to("VA"))
             check(f"{label} %R", float(winding.r.to("ohm")) / z_base * 100, dss.Transformers.R())

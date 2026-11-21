@@ -1,0 +1,69 @@
+id: https://gridlabd.org/schema/glm/powerflow/recloser
+name: recloser
+description: GridLAB-D recloser class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  recloser:
+    description: 'Copyright (C) 2011 Battelle Memorial Institute
+
+      @file recloser.cpp
+
+      @addtogroup powerflow recloser
+
+      @ingroup powerflow
+
+      Implements a recloser object.
+
+      @{
+
+
+      Inherits from: switch
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: switch
+    attributes:
+      retry_time:
+        range: float
+        required: false
+        description: the amount of time in seconds to wait before the recloser attempts
+          to close
+        unit:
+          ucum_code: s
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: retry_time[s]
+      max_number_of_tries:
+        range: float
+        required: false
+        description: the number of times the recloser will try to close before permanently
+          opening
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: max_number_of_tries
+      number_of_tries:
+        range: float
+        required: false
+        description: Current number of tries recloser has attempted
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_tries

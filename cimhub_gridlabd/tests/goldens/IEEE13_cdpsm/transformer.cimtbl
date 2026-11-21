@@ -1,0 +1,40 @@
+# GridLAB-D transformer -> PowerTransformer by template (TransformerTank + PowerTransformerEnd).
+# Source table: transformer (records: 3)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3b-transformers
+
+Profile = cim18v17
+
+Table PowerTransformer: mRID, name, EquipmentContainer=fdr_IEEE13_cdpsm
+    xf_xf_sub3,     xf_sub3
+    xf_xf_tpoletop, xf_tpoletop
+    xf_xf_xfm1,     xf_xfm1
+
+Table TransformerTank: mRID, name, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_IEEE13_cdpsm
+    xf_xf_sub3_tank,     , xf_xf_sub3,     xc_xcon_sub3
+    xf_xf_tpoletop_tank, , xf_xf_tpoletop, xc_xcon_ct5B
+    xf_xf_xfm1_tank,     , xf_xf_xfm1,     xc_xcon_xfm1
+
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_xf_sub3_1,     xf_xf_sub3,     sourcebus, ABC,   1, D,  false, bv_115kv
+    xf_xf_sub3_2,     xf_xf_sub3,     650,       ABCN,  2, Yn, true,  bv_4p16kv
+    xf_xf_tpoletop_1, xf_xf_tpoletop, 670,       BN,    1, Y,  true,  bv_4p16kv
+    xf_xf_tpoletop_2, xf_xf_tpoletop, house,     s1s2N, 2, I,  true,  bv_240v
+    xf_xf_xfm1_1,     xf_xf_xfm1,     xf1,       ABCN,  1, Yn, true,  bv_4p16kv
+    xf_xf_xfm1_2,     xf_xf_xfm1,     634,       ABCN,  2, Yn, true,  bv_480v
+
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_xf_tpoletop_1_B,  1, 1, B,  xf_xf_tpoletop_T1
+    xf_xf_tpoletop_1_N,  1, 2, N,  xf_xf_tpoletop_T1
+    xf_xf_tpoletop_2_s1, 2, 3, s1, xf_xf_tpoletop_T2
+    xf_xf_tpoletop_2_s2, 2, 4, s2, xf_xf_tpoletop_T2
+    xf_xf_tpoletop_2_N,  2, 5, N,  xf_xf_tpoletop_T2
+
+Table OperationalLimitSet: mRID, Equipment
+    xf_xf_sub3_limits, xf_xf_sub3
+    xf_xf_xfm1_limits, xf_xf_xfm1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    xf_xf_sub3_norm,  27.61,  olt_normal,    xf_xf_sub3_limits
+    xf_xf_sub3_emerg, 37.65,  olt_emergency, xf_xf_sub3_limits
+    xf_xf_xfm1_norm,  76.33,  olt_normal,    xf_xf_xfm1_limits
+    xf_xf_xfm1_emerg, 104.09, olt_emergency, xf_xf_xfm1_limits

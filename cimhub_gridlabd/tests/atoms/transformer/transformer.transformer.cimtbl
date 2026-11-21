@@ -1,0 +1,96 @@
+# GridLAB-D transformer -> PowerTransformer by template (TransformerTank + PowerTransformerEnd).
+# Source table: transformer (records: 10)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3b-transformers
+
+Profile = cim18v17
+
+Table PowerTransformer: mRID, name, EquipmentContainer=fdr_xfmr
+    xf_xf_bank2,    xf_bank2
+    xf_xf_bank3,    xf_bank3
+    xf_xf_can,      xf_can
+    xf_xf_ct,       xf_ct
+    xf_xf_ct_shunt, xf_ct_shunt
+    xf_xf_dd,       xf_dd
+    xf_xf_dg,       xf_dg
+    xf_xf_tpoletop, xf_tpoletop
+    xf_xf_unrated,  xf_unrated
+    xf_xf_xfm1,     xf_xfm1
+
+Table TransformerTank: mRID, name, PowerTransformer, TankConfiguration, EquipmentContainer=fdr_xfmr
+    xf_xf_bank2_tank_A,  xf_bank2_A, xf_xf_bank2,    xc_xc_bank2_A
+    xf_xf_bank2_tank_C,  xf_bank2_C, xf_xf_bank2,    xc_xc_bank2_C
+    xf_xf_bank3_tank_A,  xf_bank3_A, xf_xf_bank3,    xc_xc_bank3_A
+    xf_xf_bank3_tank_B,  xf_bank3_B, xf_xf_bank3,    xc_xc_bank3_B
+    xf_xf_bank3_tank_C,  xf_bank3_C, xf_xf_bank3,    xc_xc_bank3_C
+    xf_xf_can_tank,      ,           xf_xf_can,      xc_transformer_configuration:1
+    xf_xf_ct_tank,       ,           xf_xf_ct,       xc_xc_ct
+    xf_xf_ct_shunt_tank, ,           xf_xf_ct_shunt, xc_transformer_configuration:3
+    xf_xf_dd_tank,       ,           xf_xf_dd,       xc_xc_dd
+    xf_xf_dg_tank,       ,           xf_xf_dg,       xc_xc_dg
+    xf_xf_tpoletop_tank, ,           xf_xf_tpoletop, xc_xcon_ct5B
+    xf_xf_unrated_tank,  ,           xf_xf_unrated,  xc_xc_unrated
+    xf_xf_xfm1_tank,     ,           xf_xf_xfm1,     xc_xcon_xfm1
+
+Table PowerTransformerEnd: mRID, PowerTransformer, node, phases, endNumber, connectionKind, grounded, BaseVoltage
+    xf_xf_bank2_1,    xf_xf_bank2,    n4,        ACN,   1, Yn, true,  bv_4p16kv
+    xf_xf_bank2_2,    xf_xf_bank2,    m_bank2,   ACN,   2, Yn, true,  bv_480v
+    xf_xf_bank3_1,    xf_xf_bank3,    n2,        ABCN,  1, Yn, true,  bv_4p16kv
+    xf_xf_bank3_2,    xf_xf_bank3,    m_bank3,   ABCN,  2, Yn, true,  bv_480v
+    xf_xf_can_1,      xf_xf_can,      n8,        CN,    1, Yn, true,  bv_4p16kv
+    xf_xf_can_2,      xf_xf_can,      m_can,     CN,    2, Yn, true,  bv_480v
+    xf_xf_ct_1,       xf_xf_ct,       n5,        AN,    1, Y,  true,  bv_4p16kv
+    xf_xf_ct_2,       xf_xf_ct,       tn1,       s1s2N, 2, I,  true,  bv_240v
+    xf_xf_ct_shunt_1, xf_xf_ct_shunt, n10,       CN,    1, Y,  true,  bv_4p16kv
+    xf_xf_ct_shunt_2, xf_xf_ct_shunt, tn_ct3,    s1s2N, 2, I,  true,  bv_240v
+    xf_xf_dd_1,       xf_xf_dd,       n2,        ABC,   1, D,  false, bv_4p16kv
+    xf_xf_dd_2,       xf_xf_dd,       m_dd,      ABC,   2, D,  false, bv_480v
+    xf_xf_dg_1,       xf_xf_dg,       n2,        ABC,   1, D,  false, bv_4p16kv
+    xf_xf_dg_2,       xf_xf_dg,       m_dg,      ABCN,  2, Yn, true,  bv_480v
+    xf_xf_tpoletop_1, xf_xf_tpoletop, n2,        BN,    1, Y,  true,  bv_4p16kv
+    xf_xf_tpoletop_2, xf_xf_tpoletop, tn_ct5B,   s1s2N, 2, I,  true,  bv_240v
+    xf_xf_unrated_1,  xf_xf_unrated,  n2,        ABCN,  1, Yn, true,  bv_4p16kv
+    xf_xf_unrated_2,  xf_xf_unrated,  m_unrated, ABCN,  2, Yn, true,  bv_480v
+    xf_xf_xfm1_1,     xf_xf_xfm1,     n2,        ABCN,  1, Yn, true,  bv_4p16kv
+    xf_xf_xfm1_2,     xf_xf_xfm1,     m_xfm1,    ABCN,  2, Yn, true,  bv_480v
+
+Table TransformerPhaseEnd: mRID, endNumber, sequenceNumber, phase, Terminal
+    xf_xf_bank2_1_A,     1, 1, A,  xf_xf_bank2_T1
+    xf_xf_bank2_1_C,     1, 2, C,  xf_xf_bank2_T1
+    xf_xf_bank2_1_N,     1, 3, N,  xf_xf_bank2_T1
+    xf_xf_bank2_2_A,     2, 4, A,  xf_xf_bank2_T2
+    xf_xf_bank2_2_C,     2, 5, C,  xf_xf_bank2_T2
+    xf_xf_bank2_2_N,     2, 6, N,  xf_xf_bank2_T2
+    xf_xf_bank3_1_A,     1, 1, A,  xf_xf_bank3_T1
+    xf_xf_bank3_1_B,     1, 2, B,  xf_xf_bank3_T1
+    xf_xf_bank3_1_C,     1, 3, C,  xf_xf_bank3_T1
+    xf_xf_bank3_1_N,     1, 4, N,  xf_xf_bank3_T1
+    xf_xf_bank3_2_A,     2, 5, A,  xf_xf_bank3_T2
+    xf_xf_bank3_2_B,     2, 6, B,  xf_xf_bank3_T2
+    xf_xf_bank3_2_C,     2, 7, C,  xf_xf_bank3_T2
+    xf_xf_bank3_2_N,     2, 8, N,  xf_xf_bank3_T2
+    xf_xf_can_1_C,       1, 1, C,  xf_xf_can_T1
+    xf_xf_can_1_N,       1, 2, N,  xf_xf_can_T1
+    xf_xf_can_2_C,       2, 3, C,  xf_xf_can_T2
+    xf_xf_can_2_N,       2, 4, N,  xf_xf_can_T2
+    xf_xf_ct_1_A,        1, 1, A,  xf_xf_ct_T1
+    xf_xf_ct_1_N,        1, 2, N,  xf_xf_ct_T1
+    xf_xf_ct_2_s1,       2, 3, s1, xf_xf_ct_T2
+    xf_xf_ct_2_s2,       2, 4, s2, xf_xf_ct_T2
+    xf_xf_ct_2_N,        2, 5, N,  xf_xf_ct_T2
+    xf_xf_ct_shunt_1_C,  1, 1, C,  xf_xf_ct_shunt_T1
+    xf_xf_ct_shunt_1_N,  1, 2, N,  xf_xf_ct_shunt_T1
+    xf_xf_ct_shunt_2_s1, 2, 3, s1, xf_xf_ct_shunt_T2
+    xf_xf_ct_shunt_2_s2, 2, 4, s2, xf_xf_ct_shunt_T2
+    xf_xf_ct_shunt_2_N,  2, 5, N,  xf_xf_ct_shunt_T2
+    xf_xf_tpoletop_1_B,  1, 1, B,  xf_xf_tpoletop_T1
+    xf_xf_tpoletop_1_N,  1, 2, N,  xf_xf_tpoletop_T1
+    xf_xf_tpoletop_2_s1, 2, 3, s1, xf_xf_tpoletop_T2
+    xf_xf_tpoletop_2_s2, 2, 4, s2, xf_xf_tpoletop_T2
+    xf_xf_tpoletop_2_N,  2, 5, N,  xf_xf_tpoletop_T2
+
+Table OperationalLimitSet: mRID, Equipment
+    xf_xf_xfm1_limits, xf_xf_xfm1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    xf_xf_xfm1_norm,  76.33,  olt_normal,    xf_xf_xfm1_limits
+    xf_xf_xfm1_emerg, 104.09, olt_emergency, xf_xf_xfm1_limits

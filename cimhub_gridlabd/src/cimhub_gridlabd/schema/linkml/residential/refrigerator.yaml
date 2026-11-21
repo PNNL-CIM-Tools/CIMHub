@@ -1,0 +1,599 @@
+id: https://gridlabd.org/schema/glm/residential/refrigerator
+name: refrigerator
+description: GridLAB-D refrigerator class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  refrigerator:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file refrigerator.cpp
+
+      @addtogroup refrigerator
+
+      @ingroup residential
+
+      The refrigerator model is based on performance profile that can specified by
+      a tape and using
+
+      a method developed by Ross T. Guttromson
+
+      Original ODE:
+
+      @f$ @frac{C_f}{UA_r + UA_f} @frac{dT_{air}}{dt} + T_{air} = T_{out} + @frac{Q_r}{UA_r}
+      @f$
+
+      where
+
+      @f$ T_{air} @f$ is the temperature of the water
+
+      @f$ T_{out} @f$ is the ambient temperature around the refrigerator
+
+      @f$ UA_r @f$ is the UA of the refrigerator itself
+
+      @f$ UA_f @f$ is the UA of the food-air
+
+      @f$ C_f @f$ is the heat capacity of the food
+
+      @f$ Q_r @f$ is the heat rate from the cooling system
+
+      General form:
+
+      @f$ T_t = (T_o - C_2)e^{@frac{-t}{C_1}} + C_2 @f$
+
+      where
+
+      t is the elapsed time
+
+      @f$ T_o @f$ is the initial temperature
+
+      @f$ T_t@f$  is the temperature at time t
+
+      @f$ C_1 = @frac{C_f}{UA_r + UA_f} @f$
+
+      @f$ C_2 = T_out + @frac{Q_r}{UA_f} @f$
+
+      Time solution
+
+      @f$ t = -ln@frac{T_t - C_2}{T_o - C_2}*C_1 @f$
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      size:
+        range: float
+        required: false
+        description: volume of the refrigerator
+        unit:
+          ucum_code: cf
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: size[cf]
+      rated_capacity:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/h
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rated_capacity[Btu/h]
+      temperature:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: temperature[degF]
+      setpoint:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: setpoint[degF]
+      deadband:
+        range: float
+        required: false
+        unit:
+          ucum_code: degF
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: deadband[degF]
+      cycle_time:
+        range: float
+        required: false
+        unit:
+          ucum_code: s
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: cycle_time[s]
+      output:
+        range: float
+        required: false
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: output
+      event_temp:
+        range: float
+        required: false
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: event_temp
+      UA:
+        range: float
+        required: false
+        unit:
+          ucum_code: Btu/degF*h
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: UA[Btu/degF*h]
+      compressor_off_normal_energy:
+        range: float
+        required: false
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compressor_off_normal_energy
+      compressor_off_normal_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compressor_off_normal_power[W]
+      compressor_on_normal_energy:
+        range: float
+        required: false
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compressor_on_normal_energy
+      compressor_on_normal_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compressor_on_normal_power[W]
+      defrost_energy:
+        range: float
+        required: false
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: defrost_energy
+      defrost_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: defrost_power[W]
+      icemaking_energy:
+        range: float
+        required: false
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: icemaking_energy
+      icemaking_power:
+        range: float
+        required: false
+        unit:
+          ucum_code: W
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: icemaking_power[W]
+      ice_making_probability:
+        range: float
+        required: false
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ice_making_probability
+      FF_Door_Openings:
+        range: integer
+        required: false
+        annotations:
+          order: 19
+          value_type: int
+          separator: ','
+          native_name: FF_Door_Openings
+      door_opening_energy:
+        range: integer
+        required: false
+        annotations:
+          order: 20
+          value_type: int
+          separator: ','
+          native_name: door_opening_energy
+      door_opening_power:
+        range: integer
+        required: false
+        annotations:
+          order: 21
+          value_type: int
+          separator: ','
+          native_name: door_opening_power
+      DO_Thershold:
+        range: float
+        required: false
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: DO_Thershold
+      dr_mode_double:
+        range: float
+        required: false
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: dr_mode_double
+      energy_needed:
+        range: float
+        required: false
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_needed
+      energy_used:
+        range: float
+        required: false
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: energy_used
+      refrigerator_power:
+        range: float
+        required: false
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: refrigerator_power
+      icemaker_running:
+        range: boolean
+        required: false
+        annotations:
+          order: 27
+          value_type: bool
+          separator: ','
+          native_name: icemaker_running
+      check_DO:
+        range: integer
+        required: false
+        annotations:
+          order: 28
+          value_type: int
+          separator: ','
+          native_name: check_DO
+      is_240:
+        range: boolean
+        required: false
+        annotations:
+          order: 29
+          value_type: bool
+          separator: ','
+          native_name: is_240
+      defrostDelayed:
+        range: float
+        required: false
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: defrostDelayed
+      long_compressor_cycle_due:
+        range: boolean
+        required: false
+        annotations:
+          order: 31
+          value_type: bool
+          separator: ','
+          native_name: long_compressor_cycle_due
+      long_compressor_cycle_time:
+        range: float
+        required: false
+        annotations:
+          order: 32
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: long_compressor_cycle_time
+      long_compressor_cycle_power:
+        range: float
+        required: false
+        annotations:
+          order: 33
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: long_compressor_cycle_power
+      long_compressor_cycle_energy:
+        range: float
+        required: false
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: long_compressor_cycle_energy
+      long_compressor_cycle_threshold:
+        range: float
+        required: false
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: long_compressor_cycle_threshold
+      defrost_criterion:
+        range: string
+        required: false
+        annotations:
+          order: 36
+          value_type: string
+          separator: ','
+          native_name: defrost_criterion
+      run_defrost:
+        range: boolean
+        required: false
+        annotations:
+          order: 37
+          value_type: bool
+          separator: ','
+          native_name: run_defrost
+      door_opening_criterion:
+        range: float
+        required: false
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: door_opening_criterion
+      compressor_defrost_time:
+        range: float
+        required: false
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: compressor_defrost_time
+      delay_defrost_time:
+        range: float
+        required: false
+        annotations:
+          order: 40
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delay_defrost_time
+      daily_door_opening:
+        range: integer
+        required: false
+        annotations:
+          order: 41
+          value_type: int
+          separator: ','
+          native_name: daily_door_opening
+      state:
+        range: State
+        required: false
+        annotations:
+          order: 42
+          value_type: string
+          separator: ','
+          native_name: state
+      check_icemaking:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for icemaker checking'
+        annotations:
+          order: 43
+          value_type: bool
+          separator: ','
+          native_name: check_icemaking
+      return_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for return time'
+        annotations:
+          order: 44
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: return_time
+      door_return_time:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door return time'
+        annotations:
+          order: 45
+          value_type: int
+          separator: ','
+          native_name: door_return_time
+      start_time:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for start time'
+        annotations:
+          order: 46
+          value_type: string
+          separator: ','
+          native_name: start_time
+      check_defrost:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for defrost checking'
+        annotations:
+          order: 47
+          value_type: bool
+          separator: ','
+          native_name: check_defrost
+      no_of_defrost:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for number of defrosts'
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: no_of_defrost
+      hourly_door_opening:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for hourly door opening'
+        annotations:
+          order: 49
+          value_type: int
+          separator: ','
+          native_name: hourly_door_opening
+      door_next_open_time:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door next open time'
+        annotations:
+          order: 50
+          value_type: int
+          separator: ','
+          native_name: door_next_open_time
+      door_time:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door time'
+        annotations:
+          order: 51
+          value_type: int
+          separator: ','
+          native_name: door_time
+      door_open:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door open'
+        annotations:
+          order: 52
+          value_type: bool
+          separator: ','
+          native_name: door_open
+      door_to_open:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door to open'
+        annotations:
+          order: 53
+          value_type: bool
+          separator: ','
+          native_name: door_to_open
+      door_energy_calc:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for door energy calculation'
+        annotations:
+          order: 54
+          value_type: bool
+          separator: ','
+          native_name: door_energy_calc
+      total_compressor_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for total compressor time'
+        annotations:
+          order: 55
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_compressor_time
+      new_running_state:
+        range: boolean
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for new running state'
+        annotations:
+          order: 56
+          value_type: bool
+          separator: ','
+          native_name: new_running_state

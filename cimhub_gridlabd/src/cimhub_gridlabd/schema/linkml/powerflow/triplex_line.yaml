@@ -1,0 +1,32 @@
+id: https://gridlabd.org/schema/glm/powerflow/triplex_line
+name: triplex_line
+description: GridLAB-D triplex_line class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  triplex_line:
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file triplex_line.cpp
+
+      @addtogroup triplex_line
+
+      @ingroup line
+
+      @{
+
+
+      Inherits from: line
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: line

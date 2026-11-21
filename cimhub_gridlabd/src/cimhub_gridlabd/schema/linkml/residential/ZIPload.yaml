@@ -1,0 +1,373 @@
+id: https://gridlabd.org/schema/glm/residential/ZIPload
+name: zipload
+description: GridLAB-D ZIPload class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  ZIPload:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+      @file ZIPloadload.cpp
+
+      @addtogroup ZIPload
+
+      @ingroup residential
+
+      The ZIPload simulation is based on demand profile of the connected ZIPload loads.
+
+      Individual power fractions and power factors are used.
+
+      Heat fraction ratio is used to calculate the internal gain from ZIPload loads.
+
+      The demand response model is based from a paper written by David Chassin and
+      Jason Fuller
+
+      "On the Equilibrium Dynamics of Demand Response in Thermostatic Loads" accepted
+      by HICSS
+
+      - This model is very much in the preliminary stage and only looks at the equilibrium
+      solutions
+
+      of a population of devices as a function of customer demand and thermostatic
+      duty cycles
+
+      @{
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      heat_fraction:
+        range: float
+        required: false
+        description: fraction of ZIPload that is transferred as heat
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: heat_fraction
+      base_power:
+        range: float
+        required: false
+        description: base real power of the overall load
+        unit:
+          ucum_code: kW
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power[kW]
+      power_pf:
+        range: float
+        required: false
+        description: power factor for constant power portion
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: power_pf
+      current_pf:
+        range: float
+        required: false
+        description: power factor for constant current portion
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: current_pf
+      impedance_pf:
+        range: float
+        required: false
+        description: power factor for constant impedance portion
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: impedance_pf
+      is_240:
+        range: boolean
+        required: false
+        description: load is 220/240 V (across both phases)
+        annotations:
+          order: 6
+          value_type: bool
+          separator: ','
+          native_name: is_240
+      breaker_val:
+        range: float
+        required: false
+        description: Amperage of connected breaker
+        unit:
+          ucum_code: A
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: breaker_val[A]
+      actual_power:
+        range: Complex
+        required: false
+        description: variable to pull actual load as function of voltage
+        unit:
+          ucum_code: kVA
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: actual_power[kVA]
+      multiplier:
+        range: float
+        required: false
+        description: this variable is used to modify the base power as a function
+          of multiplier x base_power
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: multiplier
+      heatgain_only:
+        range: boolean
+        required: false
+        description: allows the zipload to generate heat only (no kW), not activated
+          by default
+        annotations:
+          order: 10
+          value_type: bool
+          separator: ','
+          native_name: heatgain_only
+      demand_response_mode:
+        range: boolean
+        required: false
+        description: Activates equilibrium dynamic representation of demand response
+        annotations:
+          order: 11
+          value_type: bool
+          separator: ','
+          native_name: demand_response_mode
+      number_of_devices:
+        range: integer
+        required: false
+        description: Number of devices to model - base power is the total load of
+          all devices
+        annotations:
+          order: 12
+          value_type: string
+          separator: ','
+          native_name: number_of_devices
+      thermostatic_control_range:
+        range: integer
+        required: false
+        description: Range of the thermostat's control operation
+        annotations:
+          order: 13
+          value_type: string
+          separator: ','
+          native_name: thermostatic_control_range
+      number_of_devices_off:
+        range: float
+        required: false
+        description: Total number of devices that are off
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_devices_off
+      number_of_devices_on:
+        range: float
+        required: false
+        description: Total number of devices that are on
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_devices_on
+      rate_of_cooling:
+        range: float
+        required: false
+        description: rate at which devices cool down
+        unit:
+          ucum_code: K/h
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rate_of_cooling[K/h]
+      rate_of_heating:
+        range: float
+        required: false
+        description: rate at which devices heat up
+        unit:
+          ucum_code: K/h
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rate_of_heating[K/h]
+      total_cycle_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for time to transition'
+        unit:
+          ucum_code: h
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: total_cycle_time[h]
+      temperature:
+        range: integer
+        required: false
+        description: temperature of the device's controlled media (eg air temp or
+          water temp)
+        annotations:
+          order: 19
+          value_type: string
+          separator: ','
+          native_name: temperature
+      phi:
+        range: float
+        required: false
+        description: duty cycle of the device
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phi
+      demand_rate:
+        range: float
+        required: false
+        description: consumer demand rate that prematurely turns on a device or population
+        unit:
+          ucum_code: 1/h
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: demand_rate[1/h]
+      nominal_power:
+        range: float
+        required: false
+        description: the rated amount of power demanded by devices that are on
+        annotations:
+          order: 22
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: nominal_power
+      duty_cycle:
+        range: float
+        required: false
+        description: fraction of time in the on state
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: duty_cycle[pu]
+      recovery_duty_cycle:
+        range: float
+        required: false
+        description: fraction of time in the on state, while in recovery interval
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: recovery_duty_cycle[pu]
+      period:
+        range: float
+        required: false
+        description: time interval to apply duty cycle
+        unit:
+          ucum_code: h
+        annotations:
+          order: 25
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: period[h]
+      phase:
+        range: float
+        required: false
+        description: initial phase of load; duty will be assumed to occur at beginning
+          of period
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase[pu]
+      next_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for next time'
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: next_time
+      last_duty_cycle:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last duty cycle'
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_duty_cycle
+      last_time:
+        range: float
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for last time'
+        annotations:
+          order: 29
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: last_time
+      first_pass:
+        range: integer
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for first pass'
+        annotations:
+          order: 30
+          value_type: int
+          separator: ','
+          native_name: first_pass

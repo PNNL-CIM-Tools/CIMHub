@@ -1,0 +1,83 @@
+id: https://gridlabd.org/schema/glm/powerflow/voltdump
+name: voltdump
+description: GridLAB-D voltdump class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  voltdump:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file voltdump.cpp
+
+      @{
+
+
+      Inherits from: gld_object
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in powerflow module)'
+    attributes:
+      group:
+        range: string
+        required: false
+        description: the group ID to output data for (all nodes if empty)
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: group
+      runtime:
+        range: string
+        required: false
+        description: the time to check voltage data
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: runtime
+      filename:
+        range: string
+        required: false
+        description: the file to dump the voltage data into
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: filename
+      file:
+        range: string
+        required: false
+        description: the file to dump the voltage data into
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: file
+      runcount:
+        range: integer
+        required: false
+        description: the number of times the file has been written to
+        annotations:
+          order: 5
+          value_type: int
+          separator: ','
+          native_name: runcount
+      mode:
+        range: Mode
+        required: false
+        description: dumps the voltages in either polar or rectangular notation
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: mode

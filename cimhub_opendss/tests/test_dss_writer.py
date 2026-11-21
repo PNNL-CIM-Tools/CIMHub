@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from cimhub_opendss import DssReader, DssWriter
-from cimhub_opendss.dss_writer import format_float
+from cimhub_opendss.dss_writer import WRITE_ORDER, format_float
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import deck
@@ -63,7 +63,7 @@ def test_deck_reads_back_the_same_and_solves_the_same(relative, tmp_path):
     source = deck(relative)
     written, original, reread = _round_trip(source, tmp_path)
     assert _records(reread) == _records(original)
-    assert_same_engine_state(source, written)
+    assert_same_engine_state(source, written, exported=False)
 
 
 def test_deck_layout(tmp_path):
@@ -99,3 +99,33 @@ def test_class_without_a_write_order_raises(tmp_path):
 def test_deck_records_are_not_new_commands():
     with pytest.raises(ValueError, match="Options is not a New command"):
         DssWriter().serialize(schema.Options(name="options"))
+
+
+@pytest.mark.parametrize("relative", WRITER_DECKS)
+def test_per_class_deck_reads_back_the_same_and_solves_the_same(relative, tmp_path):
+    source = deck(relative)
+    original = DssReader(source).read_all()
+    written = tmp_path / "master.dss"
+    DssWriter().write(original, written, per_class=True)
+    assert _records(DssReader(written).read_all()) == _records(original)
+    assert_same_engine_state(source, written, exported=False)
+
+
+def test_per_class_layout(tmp_path):
+    """The master redirects one file per class, in WRITE_ORDER, between the circuit and the voltage bases."""
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    written = tmp_path / "master.dss"
+    DssWriter().write(model, written, per_class=True)
+    redirects = [line for line in written.read_text().splitlines() if line.startswith("Redirect ")]
+    files = [line.removeprefix("Redirect ") for line in redirects]
+    order = [cls.__name__.lower() + ".dss" for cls in WRITE_ORDER]
+    assert files == sorted(files, key=order.index)
+    assert sorted(path.name for path in tmp_path.glob("*.dss")) == sorted([*files, "master.dss"])
+    assert [line.split()[1] for line in written.read_text().splitlines() if line.lower().startswith("new ")] == ["Circuit.atom"]
+    assert all(line.startswith("new ") for name in files for line in (tmp_path / name).read_text().splitlines())
+
+
+def test_master_named_as_a_class_file_raises(tmp_path):
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    with pytest.raises(ValueError, match="master Line.dss would be overwritten"):
+        DssWriter().write(model, tmp_path / "Line.dss", per_class=True)

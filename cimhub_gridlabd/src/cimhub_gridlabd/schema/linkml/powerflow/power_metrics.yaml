@@ -1,0 +1,195 @@
+id: https://gridlabd.org/schema/glm/powerflow/power_metrics
+name: power_metrics
+description: GridLAB-D power_metrics class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  power_metrics:
+    is_a: glm_object
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+      The metric analysis object reports reliability metrics for a system by
+
+      observing the duration and number of conditions when meter objects are not
+
+      normal.  The following metrics are calculated annual and reported to the @p
+
+      report_file
+
+      -# @e SAIFI (System average interrupts frequency index) indicates how
+
+      often the average customer experiences a system interruption over a predefined
+
+      period of time.  This is calculated using the formula
+
+      @f[ SAIFI = @frac{@Sigma N_{customer_interruptions}}{N_{customers}}
+
+      @f]
+
+      -# @e SAIDI (System average interrupts duration index) indicates the
+
+      total duration of interrupt for the average customer during a predefined period
+
+      of time.  This is calculated using the formula
+
+      @f[ SAIDI = @frac{@Sigma T_{customer_interruptions}}{N_{customers}}
+
+      @f]
+
+      -# @e CAIDI (Customer average interrupt duration index) represents the
+
+      average time required to restore service.  This is calculated using the formula
+
+      @f[ CAIDI = @frac{@Sigma
+
+      T_{customer_interruptions}}{N_{customers_interrupted}} @f]
+
+      -# @e MAIFI (Momentary average interruption frequency index) represents
+
+      the average frequency of momentary interruptions.  This is calculated using
+      the
+
+      formula
+
+      @f[ MAIFI = @frac{@Sigma T_{{momentary
+
+      customer}_interruptions}}{N_{customers}} @f]
+
+      See <b>IEEE Std 1366-2003</b> <i>IEEE Guide for Electric Power
+
+      Distribution Reliability Indices</i> for more information on how to compute
+
+      distribution system reliability indices.
+
+
+      Inherits from: powerflow_library
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from powerflow_library (not in powerflow module)'
+    attributes:
+      SAIFI:
+        range: float
+        required: false
+        description: Displays annual SAIFI values as per IEEE 1366-2003
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SAIFI
+      SAIFI_int:
+        range: float
+        required: false
+        description: Displays SAIFI values over the period specified by base_time_value
+          as per IEEE 1366-2003
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SAIFI_int
+      SAIDI:
+        range: float
+        required: false
+        description: Displays annual SAIDI values as per IEEE 1366-2003
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SAIDI
+      SAIDI_int:
+        range: float
+        required: false
+        description: Displays SAIDI values over the period specified by base_time_value
+          as per IEEE 1366-2003
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: SAIDI_int
+      CAIDI:
+        range: float
+        required: false
+        description: Displays annual CAIDI values as per IEEE 1366-2003
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CAIDI
+      CAIDI_int:
+        range: float
+        required: false
+        description: Displays SAIDI values over the period specified by base_time_value
+          as per IEEE 1366-2003
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: CAIDI_int
+      ASAI:
+        range: float
+        required: false
+        description: Displays annual AISI values as per IEEE 1366-2003
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ASAI
+      ASAI_int:
+        range: float
+        required: false
+        description: Displays AISI values over the period specified by base_time_value
+          as per IEEE 1366-2003
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ASAI_int
+      MAIFI:
+        range: float
+        required: false
+        description: Displays annual MAIFI values as per IEEE 1366-2003
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: MAIFI
+      MAIFI_int:
+        range: float
+        required: false
+        description: Displays MAIFI values over the period specified by base_time_value
+          as per IEEE 1366-2003
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: MAIFI_int
+      base_time_value:
+        range: float
+        required: false
+        description: time period over which _int values are claculated
+        unit:
+          ucum_code: s
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_time_value[s]

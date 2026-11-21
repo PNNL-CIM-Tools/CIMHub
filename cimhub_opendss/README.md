@@ -6,7 +6,7 @@ units), and cimtables builds the CIM model from that text. `DssExporter` reads a
 `cimhub-core` getters and `DssWriter` writes a deck that `DssReader` and the importer read back.
 
 ```bash
-pip install cimhub-opendss      # also installs cimhub-core
+pip install --pre cimhub-opendss      # also installs cimhub-core
 ```
 
 Python 3.11 or later.

@@ -7,7 +7,7 @@ import pytest
 from cimtables import BusBranchModel, load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
-from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes, get_terminal_phases
+from cimhub_core.getters.terminals import get_conductor_phases, get_switch_sides, get_terminal_nodes, get_terminal_phases
 
 A, B, C, N = cim.SinglePhaseKind.A, cim.SinglePhaseKind.B, cim.SinglePhaseKind.C, cim.SinglePhaseKind.N
 S1, S2 = cim.SinglePhaseKind.s1, cim.SinglePhaseKind.s2
@@ -117,3 +117,29 @@ def test_line_children_must_match_its_terminals():
 def test_unknown_phase_code_raises():
     with pytest.raises(ValueError, match="Terminal 't': phases 'XY' are not conductors"):
         get_terminal_phases(cim.Terminal(mRID="t", phases=cim.PhaseCode.XY))
+
+
+# get_switch_sides ----------------------------------------------------------------------------------------------
+
+
+def _tie(near: cim.PhaseCode, far: cim.PhaseCode, pairs) -> cim.LoadBreakSwitch:
+    switch = cim.LoadBreakSwitch(mRID="tie")
+    switch.Terminals = [cim.Terminal(mRID=f"tie_T{number}", sequenceNumber=number, phases=code)
+                        for number, code in ((1, near), (2, far))]
+    switch.SwitchPhase = [cim.SwitchPhase(mRID=f"tie_{one.value}", phaseSide1=one, phaseSide2=two) for one, two in pairs]
+    return switch
+
+
+def test_switch_sides_agree_on_a_plain_switch():
+    network = _shape("switch")
+    assert get_switch_sides(_get(network, cim.Fuse, "sw_f1")) == ((C,), (C,))
+
+
+def test_tie_across_phases_pairs_its_switch_phases():
+    assert get_switch_sides(_tie(cim.PhaseCode.B, cim.PhaseCode.C, [(B, C)])) == ((B,), (C,))
+    assert get_switch_sides(_tie(cim.PhaseCode.AB, cim.PhaseCode.BC, [(B, C), (A, B)])) == ((A, B), (B, C))
+
+
+def test_tie_whose_switch_phases_miss_its_terminals_raises():
+    with pytest.raises(ValueError, match=r"terminals have different phases \[\['B'\], \['C'\]\] and its SwitchPhases"):
+        get_switch_sides(_tie(cim.PhaseCode.B, cim.PhaseCode.C, [(B, A)]))

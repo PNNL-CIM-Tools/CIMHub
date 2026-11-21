@@ -483,9 +483,9 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
 def _map_by_template(xf, xf_id: str, windings: list[Winding], ends: list[End], phases: int,
                      buses: Mapping[str, BusSystem], rows: _Tables) -> None:
     """An instance by XfmrCode: a tank on the code's template and one PowerTransformerEnd per bus. A 1-phase
-    instance also gets one TransformerPhaseEnd per phase of each terminal, on the end's Terminal: by a lug template
-    in terminal order, as the lugs name them (S3b); by a TankEnd template in the coil's node order, which is the
-    coil's direction (S6c T3: a PhaseCode has none, so ``tert.3.1`` would come back ``tert.1.3``)."""
+    instance (a lug template) also gets one TransformerPhaseEnd per phase of each terminal, on the end's Terminal,
+    numbered as its code's lugs: a center tap's in terminal order (S3b), any other's in each coil's node order, which
+    is the coil's direction (S6c T3: a PhaseCode has none, so ``tert.3.1`` would come back ``tert.1.3``)."""
     rows.template_tanks.append(Row([f"{xf_id}_tank", xf_id, mrid("xc_", xf.XfmrCode, lowercase=True)]))
     for end in ends:
         kind, grounded = end_kind(end, phases, xf, len(windings))

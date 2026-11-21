@@ -1,0 +1,106 @@
+// S3b atom: every transformer form, on the S3a line atom (its 4.16 kV nodes n1-n10 and the center tap xf_ct).
+// Values from IEEE13_cdpsm, IEEE123 and the taxonomy feeders, rescaled onto a 4.16 kV primary.
+#include "../line/line.glm"
+
+// 3-phase WYE_WYE with the Java export's ratings (IEEE13_cdpsm xcon_xfm1, xf_xfm1)
+object transformer_configuration {
+  name "xcon_xfm1";
+  connect_type WYE_WYE;
+  primary_voltage 4160.000;
+  secondary_voltage 480.000;
+  power_rating 500.000;
+  resistance 0.011000;
+  reactance 0.020000;
+}
+object transformer {
+  name "xf_xfm1";
+  from "n2";
+  to "m_xfm1";
+  phases ABCN;
+  configuration "xcon_xfm1";
+  continuous_rating_A 76.33;
+  continuous_rating_B 76.33;
+  continuous_rating_C 76.33;
+  emergency_rating_A 104.09;
+  emergency_rating_B 104.09;
+  emergency_rating_C 104.09;
+}
+object meter { name m_xfm1; phases ABCN; nominal_voltage 277.13; }
+
+// DELTA_GWYE written ABC (IEEE13_assets xf_sub) and DELTA_DELTA (IEEE123 xcon_xfm1)
+object transformer_configuration { name xc_dg; connect_type DELTA_GWYE; primary_voltage 4160; secondary_voltage 480;
+  power_rating 150; resistance 0.01; reactance 0.05; }
+object transformer { name xf_dg; phases ABC; from n2; to m_dg; configuration xc_dg; }
+object meter { name m_dg; phases ABCN; nominal_voltage 277.13; }
+object transformer_configuration { name xc_dd; connect_type DELTA_DELTA; primary_voltage 4160; secondary_voltage 480;
+  power_rating 150; resistance 0.0127; reactance 0.0272; }
+object transformer { name xf_dd; phases ABCN; from n2; to m_dd; configuration xc_dd; }
+object meter { name m_dd; phases ABCN; nominal_voltage 277.13; }
+
+// a taxonomy CN can: line-to-line voltages on one phase, a shunt (transformer_configuration:3730)
+object transformer_configuration:1 {
+  connect_type WYE_WYE;
+  install_type PADMOUNT;
+  primary_voltage 4160.000 V;
+  secondary_voltage 480 V;
+  power_rating 75.0;
+  powerC_rating 75.0;
+  resistance 0.00133;
+  reactance 0.00667;
+  shunt_impedance 443.910+424.448j;
+}
+object transformer:2 { name xf_can; phases CN; from n8; to m_can; configuration transformer_configuration:1; }
+object meter { name m_can; phases CN; nominal_voltage 277.13; }
+
+// unequal cans: a 3-can bank (transformer_configuration:1226) and a 2-phase one (transformer_configuration:2918)
+object transformer_configuration { name xc_bank3; connect_type WYE_WYE; primary_voltage 4160 V; secondary_voltage 480 V;
+  power_rating 87.5; powerA_rating 37.5; powerB_rating 25.0; powerC_rating 25.0; resistance 0.00114; reactance 0.00571;
+  shunt_impedance 469.985+425.920j; }
+object transformer { name xf_bank3; phases ABCN; from n2; to m_bank3; configuration xc_bank3; }
+object meter { name m_bank3; phases ABCN; nominal_voltage 277.13; }
+object transformer_configuration { name xc_bank2; connect_type WYE_WYE; primary_voltage 4160 V; secondary_voltage 480 V;
+  power_rating 40.0; powerA_rating 15.0; powerC_rating 25.0; resistance 0.0025; reactance 0.0125; }
+object transformer { name xf_bank2; phases ACN; from n4; to m_bank2; configuration xc_bank2; }
+object meter { name m_bank2; phases ACN; nominal_voltage 277.13; }
+
+// a wired phase it does not rate: one tank of power_rating (transformer_configuration:1227)
+object transformer_configuration { name xc_unrated; connect_type WYE_WYE; primary_voltage 4160 V; secondary_voltage 480 V;
+  power_rating 15.0; powerA_rating 15.0; powerB_rating 0.0; powerC_rating 0.0; resistance 0.015; reactance 0.01; }
+object transformer { name xf_unrated; phases ABCN; from n2; to m_unrated; configuration xc_unrated; }
+object meter { name m_unrated; phases ABCN; nominal_voltage 277.13; }
+
+// center taps: IEEE13_cdpsm xcon_ct5B (impedance1/2, shunt) and a taxonomy one with a shunt (transformer_configuration:3083)
+object transformer_configuration {
+  name "xcon_ct5B";
+  power_rating 5.000;
+  powerA_rating 0.0;
+  powerB_rating 5.000;
+  powerC_rating 0.0;
+  primary_voltage 2400.000;
+  secondary_voltage 120.000;
+  connect_type SINGLE_PHASE_CENTER_TAPPED;
+  impedance 0.00600000+0.0136000j;
+  impedance1 0.0120000+0.00680000j;
+  impedance2 0.0120000+0.00680000j;
+  shunt_reactance 200.000000;
+  shunt_resistance 500.000000;
+}
+object transformer { name "xf_tpoletop"; from "n2"; to "tn_ct5B"; phases BS; configuration "xcon_ct5B"; }
+object triplex_node { name tn_ct5B; phases BS; nominal_voltage 120; }
+object transformer_configuration:3 {
+  connect_type SINGLE_PHASE_CENTER_TAPPED;
+  install_type PADMOUNT;
+  primary_voltage 2401.78 V;
+  secondary_voltage 120 V;
+  power_rating 25.0;
+  powerC_rating 25.0;
+  resistance 0.00600;
+  reactance 0.00400;
+  shunt_impedance 339.610+287.181j;
+}
+object transformer { name xf_ct_shunt; phases CS; from n10; to tn_ct3; configuration transformer_configuration:3; }
+object triplex_node { name tn_ct3; phases CS; nominal_voltage 120; }
+
+// no instance: written from its own ratings (S3b-1)
+object transformer_configuration { name xc_unused; connect_type WYE_WYE; primary_voltage 4160; secondary_voltage 480;
+  power_rating 300; powerA_rating 100; powerB_rating 100; powerC_rating 100; resistance 0.01; reactance 0.04; }

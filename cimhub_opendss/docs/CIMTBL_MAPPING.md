@@ -23,7 +23,7 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
-| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (TankEnd), `transformer_template_1ph` (center tap, lugs) | the instances that use it (their bus systems) |
+| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 | `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
@@ -513,14 +513,14 @@ is then updated to match (user, 2026-11-08).
 | code kind | instances | form |
 |---|---:|---|
 | center tap: 1-phase, 3 windings, secondary halves equal (7.2/0.12/0.12, 2.4/0.12/0.12, ...) | 8,828 (IEEE8500, IEEE9500, IEEE123_PV, IEEE13_OCHRE, IEEE13_CDPSM `CT5`) | lugs |
-| 1-phase, 3 windings Y-Y-D (IEEE4 YYD, 39.83/7.62/2.4 kV) | 3 | TankEnd |
+| 1-phase, 3 windings Y-Y-D (IEEE4 YYD, 39.83/7.62/2.4 kV) | 3 | lugs (S3b-3; TankEnd before) |
 | 3-phase, 2 windings | 3 | TankEnd |
-| 1-phase, 2 windings | none outside the regulators (mapped in S3a) | TankEnd |
+| 1-phase, 2 windings | none outside the regulators (mapped in S3a) | lugs (S3b-3) |
 
 Every center-tap instance has the split-phase secondary `bus2.1.0` + `bus2.0.2` and a line-to-neutral primary on
 one node. No instance overrides its code's values, except `ppm_antifloat` (untranscribed).
 
-- **TankEnd template** (3-phase and every code that is not a center tap): `TransformerTankConfiguration`
+- **TankEnd template** (3-phase only, S3b-3): `TransformerTankConfiguration`
   `xc_<code>`. Each DSS winding gives:
   - a `TransformerTankEnd` `xc_<code>_end_<n>` (`endNumber`, `connectionKind`, `rground`/`xground` from
     `Rneut`/`Xneut`; no phases);
@@ -530,7 +530,10 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
   The mesh between windings carries `x`. The instance's `PowerTransformerEnd` n is template end n
   (`endNumber`); it carries the node, phases and `grounded`. Shapes: `transformer_template`,
   `transformer_by_template` (`xf_t1`).
-- **Lug template** (center tap). A 3-winding tank, as CIMTBL-Models
+- **Lug template** (every 1-phase code, S3b-3). Any code but a center tap has two lugs per winding, H1 H2, X1 X2,
+  Y1 Y2 (IEEE C57.12.70), numbered in each coil's node order (its direction) over the instance's phase ends,
+  end 1 first, so a 2-winding code's are 1-4 and IEEE4 YYD's 1-6; windings H1→H2, X1→X2, Y1→Y2, `baseS` each its
+  own kVA. A center tap is a 3-winding tank, as CIMTBL-Models
   `distribution/templates/polemount_1ph_50kva_7200_12470y.cimtbl`:
   - `TransformerLug`s H1, H2, X1, X3, X2 (`sequenceNumber` 1-5: the instance phase end each lands on, below);
   - windings lug to lug from the polarity end: H1→H2, X1→X2 (DSS winding 2, `bus2.1.0`: s1→N) and X2→X3 (winding
@@ -538,8 +541,8 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
   - `designation` per IEEE C57.12.70 (the profile's text). X1 is the low-side terminal in phase with H1 under
     either polarity, so s1 (in phase with the primary) is X1 and s2 (at 180°) is X3. Additive polarity (X3, X2,
     X1: 1-phase, 200 kVA or less, 8,660 V or less) against subtractive (X1, X2, X3) only says where X1 sits on
-    the tank, so the model is the same for both (confirmed by the user, 2026-11-08). Y/Z designations belong to
-    a true 3-winding unit, which here is a TankEnd template (no lugs).
+    the tank, so the model is the same for both (confirmed by the user, 2026-11-08). Y designations belong to
+    a true 3-winding unit's tertiary (IEEE4 YYD).
 
   The instance has a `PowerTransformerEnd` per bus (end 1: the primary node and phases; end 2: `s1s2N`) and, as the
   inline 1-phase mapper already does, a `TransformerPhaseEnd` per phase of each end's terminal, not per lug:
@@ -571,12 +574,12 @@ one node. No instance overrides its code's values, except `ppm_antifloat` (untra
 `TankConfiguration` = `xc_<code>`, plus the ends above. A lug template's instance phase ends reference their end's
 generated Terminal (`xf_<name>_T<n>`), which is their link to the PowerTransformer, since the instance has no
 windings. **Amended 2026-11-09 (DSS S6c, T3):** a 1-phase instance of a TankEnd template gets them too, numbered in
-its coil's node order, end 1 first. That order is the coil's direction, which a PhaseCode cannot hold. Without it,
+its coil's node order, end 1 first (since S3b-3 every 1-phase code is a lug template, whose lugs are numbered so). That order is the coil's direction, which a PhaseCode cannot hold. Without it,
 IEEE4 YYD's `tert.3.1` came back `tert.1.3`, and in the engine the 3-can bank's voltages moved by 1.6 kV. A code no unregulated instance uses is not written; the file's comment names it. An instance that sets a slot its code also sets raises
 (the template must be the one source), except the untranscribed ones. A regulated instance keeps S3a's rule: it
 takes its code's values, because CIM has no AutoTransformer template.
 
-**Fail fast:** windings other than 2 or 3; a mesh From winding rated other than winding 1; a tap other than 1 on an
+**Fail fast:** a code of other than 1 or 3 phases; windings other than 2 or 3; `Rneut` on a 1-phase code; a mesh From winding rated other than winding 1; a tap other than 1 on an
 unregulated code; a center-tap code with an
 instance that is not a split-phase secondary; instances of one code on different bus systems; `RdcOhms`,
 `Seasons`, `Ratings` set.
@@ -586,11 +589,16 @@ instance that is not a split-phase secondary; instances of one code on different
 **Decisions (approved 2026-11-08):**
 - **S3b-1:** AutoTrans stays unmapped until a deck has one; the master's not-mapped count is the signal.
 - **S3b-2:** the Y-Y-D 1-phase 3-winding code (IEEE4 YYD) is a TankEnd template (3 tank ends, D on the third).
+  **Superseded by S3b-3.**
+- **S3b-3 (the user's, 2026-11-19, via clallam_cim request 10):** "TransformerTankEnd is only for three-phase
+  templates, single-phase should use TransformerPhaseEnd / TransformerLug." Every 1-phase code is a lug template
+  (above), the instance's phase ends unchanged; a 2-phase code raises (no deck has one). The engine checks are
+  unchanged.
 
 | Xfmrcode field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, XfmrcodeName]` | `CT5`, `FdrXfmr`, `RegLeg` | copied | `TransformerTankConfiguration.name`; mRID = xc_ + name, lowercased |
-| `phases` | `Optional[int]` | `1`, `3` | structural | 3: TankEnd template; 1 with 3 windings whose instances are center taps: lug template; other 1-phase codes: TankEnd template |
+| `phases` | `Optional[int]` | `1`, `3` | structural | 3: TankEnd template; 1: lug template (a center tap's H1 H2 X1 X3 X2, else two lugs per winding) |
 | `windings` | `Optional[int]` | `3`, `2` | structural | one TransformerWinding each; 2 or 3 |
 | `wdg` | `Optional[int]` |  | structural | the winding Rneut/Xneut belong to (the reader's tag); none = the last |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
@@ -598,7 +606,7 @@ instance that is not a split-phase secondary; instances of one code on different
 | `kVA` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `tap` | `Optional[str]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
-| `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a lug template raises |
+| `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a 1-phase code raises |
 | `Xneut` | `Optional[float]` |  | structural | TankEnd xground (ohm) of its winding, with Rneut >= 0 |
 | `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='wye', descripti...`, `[ConnectionType(text='delta', descrip...` | structural | TankEnd connectionKind (D, Y; grounding is the instance's); a center tap's secondary halves are I; default wye |
 | `kVs` | `Union[float, list[float], NoneType]` | `[2.4, 0.12, 0.12]`, `[4.16, 0.48]`, `[2.4, 2.4]` | structural | winding baseU (the coil); ratedU phase-to-phase from the instances' common bus system (x sqrt 3 on a 3-phase system, x 2 for a split-phase half), and instances that disagree raise |
@@ -1514,10 +1522,13 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 
 **Engine rules** (pinned with probes in `/tmp`; the defaults are the engine's readback of a bare `New`):
 - **PVSystem.**
-  - The available power is Pmpp × irradiance × %Pmpp / 100. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
+  - The panel's power is Pmpp × irradiance, and `%Pmpp` caps it: the available power is min(Pmpp × irradiance,
+    Pmpp × %Pmpp / 100). Probed 2026-11-10: Pmpp 100 at irradiance 0.5 gives 50 at %Pmpp 60 and 150, and 10 at
+    %Pmpp 10; at irradiance 1.2 it gives 120 at %Pmpp 150. q comes from `pf` (q = P·tan(acos |pf|), with pf's sign)
     or from `kvar`.
   - Over kVA, P is cut to √(kVA² − q²) (var priority, the default), so Pmpp 1200 on kVA 1000 gives 1000.
-  - The PV is off (P = 0) when the available power is below `%Cutout` × kVA / 100. The initial state uses
+  - The PV is off (P = 0) when the panel's power, before the %Pmpp cap, is below `%Cutout` × kVA / 100
+    (irradiance 0.5 on Pmpp 100 and kVA 100 runs at %Pmpp 10, giving 10 under a 20 % cut-out). The initial state uses
     `%Cutout`, not `%Cutin`: 25 % with cut-in 30 / cut-out 5 runs, and with cut-in 5 / cut-out 30 it is off.
   - **`pf` and `kvar` override each other in the order given** (unlike a load, where kvar always wins).
   - Defaults: 3 phases, kV 12.47, irradiance 1, Pmpp 500, %Pmpp 100, pf 1, kVA 500, %Cutin and %Cutout 20,
@@ -1566,7 +1577,8 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 Mapper `importer/cimtbl/pvsystem.py` (`map_pvsystem`). Artifact `pvsystem.cimtbl`; shape `der`. Atom
 `tests/atoms/der/der.dss`:
 - the IEEE13_CDPSM PVs: 3-phase at irradiance 0.8, and 2-phase `s1s2` at 0.208;
-- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, and one with kvar.
+- a 1-phase leg, a delta PV, a kVA-capped PV, one below cut-out, one with a negative pf, one with kvar, and one
+  capped at %Pmpp (irradiance 0.9 at %Pmpp 60 gives 6 kW).
 
 **Identity.** `PowerElectronicsConnection` `pv_` + name and `PhotoVoltaicUnit` `pv_<name>_unit`, lowercased. The
 prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
@@ -1578,7 +1590,8 @@ prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
   - `p` = −P and `q` = −q, by the rules above (derived, `pv_power`);
   - `maxQ` = kvarMax, `minQ` = −kvarMaxAbs, `maxIFault` = 1 / Vminpu (the engine's export convention);
   - `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
-- **Unit:** `maxP` = Pmpp, `minP` = 0, and its connection.
+- **Unit:** `maxP` = Pmpp, `minP` = 0, `irradiance` = irradiance (kW/m2; the gridappsd extension), and its
+  connection.
 
 **What raises:**
 - `model` other than 1;
@@ -1732,16 +1745,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
 | `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
-| `irradiance` | `Optional[float]` | `0.8`, `1.0` | derived | p: Pmpp x irradiance x %Pmpp / 100 (pv_power); default 1 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2), the gridappsd extension; also p (pv_power); default 1 |
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
-| `pct_Pmpp` | `Optional[float]` |  | derived | p (pv_power); default 100 |
+| `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
 | `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
 | `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
-| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance x %Pmpp is below %Cutout of kVA; default 20 |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20 |
 | `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
 | `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -2008,6 +2021,11 @@ per line. The alternative, rejected: a `Junction` per bus (the CIM note: "to ass
 ConnectivityNode"). It is closer to the native table, but it adds about 5,300 one-terminal equipment objects to
 IEEE9500, and every consumer and exporter would have to skip them. No tool reads it either.
 
+**Revised 2026-11-10 (S5-8):** the points are drawn as a GIS draws the equipment, through cimtables' `wkt` column.
+A line (`ACLineSegment`) is a `LINESTRING` through its Terminals' buses; any other equipment is one `POINT`, at its
+bus for one Terminal and at its buses' centroid for more. So a switch, fuse or transformer sits midway between its
+buses, as a GIS point feature does, rather than as a two-point polyline.
+
 ### Shape `location` (added to the catalog first)
 
 ```
@@ -2016,19 +2034,15 @@ Import common.cimtbl
 
 Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates
 
-Table Location: mRID, name, CoordinateSystem=crs_bus
-    ln_650632_loc, 650632_Loc
-
-Table PositionPoint: identifier, Location, sequenceNumber, xPosition, yPosition
-    ln_650632_loc_1, ln_650632_loc, 1, 200, 350
-    ln_650632_loc_2, ln_650632_loc, 2, 200, 300
-
-Update Table PowerSystemResource: mRID, Location
-    ln_650632, ln_650632_loc
+Update Table PowerSystemResource: mRID, wkt
+    ln_650632,  "LINESTRING (200.0 350.0, 200.0 300.0)"
+    sw_671692,  "POINT (225.0 250.0)"
+    ld_671,     "POINT (200.0 250.0)"
 ```
 
-I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `PositionPoint` is Identity-only (an
-`identifier` column, no mRID), and an `Update` on the abstract `PowerSystemResource` resolves any subclass.
+An `Update` on the abstract `PowerSystemResource` resolves any subclass. cimtables' `wkt` binding makes the Location
+(`<mRID>_loc`), one Identity-only `PositionPoint` per vertex (`<mRID>_loc_<n>`, `sequenceNumber` from 0) and points
+the Location at the CoordinateSystem declared first.
 
 ### Buscoords
 
@@ -2042,15 +2056,23 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
   a `.cimtbl` means what binding makes. The hook (`CimtblImporter.bound_parts`, `cimtbl_to_cim(bound_parts=)`) is in
   core because any spoke with coordinates needs it (GLM node latitude/longitude, CYME). The bound Terminals equalled
   the stand-in's on IEEE13_CDPSM, IEEE8500 and IEEE9500 unbal before it was deleted.
-- **Identity:**
-  - Location: `<equipment mRID>_loc`, named `<equipment name>_Loc` (the engine's name);
-  - PositionPoint: `<location>_<n>`;
-  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords).
-- **Order:** equipment in the order its first Terminal binds, points by `sequenceNumber`.
-- **`sequenceNumber` (S5-5):** the Terminal's `sequenceNumber`, 1-based, as the engine writes it. cim18v17 gives the
-  attribute no description, and CIM16's "zero-relative" text is gone.
-- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so they
-  read back exactly. For LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
+- **Geometry (S5-8):** one `wkt` cell per equipment, from its Terminal buses in Terminal `sequenceNumber` order. An
+  `ACLineSegment` is `LINESTRING (x1 y1, x2 y2)`. Anything else is `POINT (x y)` at the buses' centroid: the bus
+  itself for a load, capacitor, PV or source, the midpoint for a switch, fuse, regulator or two-terminal
+  transformer. A center-tap transformer has two Terminals (S5-1 above), so it gets the midpoint too.
+- **`device_geometry` (S5-9):** `DssImporter(..., device_geometry="linestring")` (and `dss_to_cim`) draws every
+  two-terminal equipment as a `LINESTRING` from bus to bus, like a line: switches, fuses, transformers, regulators,
+  series reactors. Equipment with one Terminal, or three or more, stays a `POINT`. The default is `"point"`; any
+  other value raises when the importer is made. It is a keyword, not an environment variable, so a call's output
+  depends only on its arguments.
+- **Identity:** cimtables' `wkt` binding names them:
+  - Location: `<equipment mRID>_loc`, unnamed (the engine's `<name>_Loc` name is dropped with the Location table);
+  - PositionPoint: `<location>_<n>`, `sequenceNumber` = n, the vertex number from 0 (S5-5 is superseded);
+  - CoordinateSystem: `crs_bus` (BusCoords) or `crs_latlong` (LatLongCoords), declared first in the file.
+- **Order:** equipment in the order its first Terminal binds.
+- **Values:** `xPosition`/`yPosition` are strings in CIM. The reader's floats are written by `cell` (`repr`), so a
+  line's vertices and a one-Terminal point read back exactly; a centroid is `repr` of the float mean. For
+  LatLongCoords the reader has already swapped them (x = longitude, y = latitude).
 - **Partial coordinates (S5-3):** equipment gets a Location only if **every** one of its Terminal buses has
   coordinates. The engine writes 0, 0 for a bus without them, which would make a polyline vertex up. The file comment
   counts what is left out: `# not located: <n> of <m> equipment (a terminal bus without coordinates)`. That case is
@@ -2066,9 +2088,9 @@ I tried this on a copy of the IEEE13_CDPSM golden directory, and it binds. `Posi
 
 | Buscoords field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it gets a PositionPoint; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
-| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | copied | `PositionPoint.xPosition`; on every point at the bus |
-| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | copied | `PositionPoint.yPosition`; on every point at the bus |
+| `name` | `Union[str, BuscoordsName]` | `611`, `632`, `190-7361` | structural | picks the bus: every Terminal on it takes its coordinates; a name the circuit has no bus for is ignored, as in the engine (counted in the file comment) |
+| `x` | `Optional[float]` | `0.0`, `200.0`, `-119.1650904` | derived | geometry: a line's LINESTRING vertex at each Terminal bus, verbatim; other equipment's POINT at its Terminal buses' centroid (the bus itself for one Terminal) |
+| `y` | `Optional[float]` | `100.0`, `250.0`, `46.65388888` | derived | as x |
 | `geographic` | `Union[bool, Bool, NoneType]` | `False`, `True` | mapped | the directive (LatLongCoords -> true) picks the CoordinateSystem: COORDINATE_SYSTEMS |
 
 
@@ -2105,8 +2127,8 @@ So 18 of 24 bind. The other 7 of the throwaway sweep's 31 decks are copies in CI
 ### Engine checks (S5)
 
 On the atom and every engine deck:
-- for each piece of equipment, each PositionPoint equals the engine's coordinates of its Terminal's bus
-  (`Circuit.SetActiveBus`, `Bus.X()`, `Bus.Y()`);
+- for each line, its PositionPoints equal the engine's coordinates of its Terminals' buses (`Circuit.SetActiveBus`,
+  `Bus.X()`, `Bus.Y()`); for other equipment, its one PositionPoint equals their centroid (S5-8);
 - every equipment whose buses all have `Bus.Coorddefined()` has a Location, and no other equipment does.
 
 For IEEE9500 the engine's x is the longitude, which also checks the reader's swap.
@@ -2117,6 +2139,7 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
   - `local.dss` + CSV: a line, a switch, a center-tap transformer, a regulator, a load, a capacitor and a PV. The CSV
     has a whitespace row, a bus the circuit doesn't have, a bus listed twice, and one bus left without coordinates.
   - `latlong.dss`: two buses, by LatLongCoords.
+  - `local_linestring.cimtbl`: `local.dss` under `device_geometry="linestring"` (S5-9).
 - **Golden:** the IEEE13_CDPSM directory (D6) gains `buscoords.cimtbl`, so it holds 14 files.
 - **G7 before S5 (2026-11-08):**
 
@@ -2139,6 +2162,13 @@ For IEEE9500 the engine's x is the longitude, which also checks the reader's swa
 - **S5-5:** `sequenceNumber` is the Terminal number, 1-based.
 - **S5-6:** the sweep test covers the 24 `CIMHUB_DSS_DECKS` decks; the 7 CIMHub_2_0 `test_models` copies are dropped.
 - **S5-7:** the reader reads whitespace-separated coordinate rows and raises on a row it can't parse.
+- **S5-8 (2026-11-10, the user's ask):** the coordinates are GIS geometry through cimtables' `wkt` column: a line is a
+  `LINESTRING` through its Terminal buses, other equipment one `POINT` at their centroid (the midpoint for a switch
+  or transformer). It replaces the Location and PositionPoint tables and S5-5's 1-based Terminal numbering; the
+  Location loses its `<name>_Loc` name. The exporter reads it back by F8 (`EXPORT_MAPPING.md`).
+- **S5-9 (2026-11-10, the user's ask):** `device_geometry="linestring"` draws every two-terminal device bus to bus
+  instead of as a midpoint. The exporter needs nothing new: two points on two Terminals pair one per Terminal, so
+  each bus comes back exactly.
 
 ## S6g: earth model and reclose sequences (2026-11-09)
 

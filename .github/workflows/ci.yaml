@@ -1,8 +1,12 @@
 name: CI
 
+# Tests what ships: every package is built with --no-sources and its wheel installed with its PyPI dependencies,
+# as the publish-*.yml workflows do before a release. [tool.uv.sources] points at the workspace and at sibling
+# ../CIM-* checkouts for local development only, so CI needs neither the siblings nor a token for them.
+
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
   pull_request:
 
 permissions:
@@ -16,35 +20,30 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      # The root pyproject resolves the cim-graph stack from sibling checkouts
-      # (../CIM-*) until those packages are released (UPSTREAM_REQUESTS U7), so
-      # CI lays out the same siblings. CIM-Tables is private: CIM_REPOS_TOKEN is a
-      # fine-grained read-only token for the PNNL-CIM-Tools repos.
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: CIMHub
-      - uses: actions/checkout@v4
-        with: { repository: PNNL-CIM-Tools/CIM-Graph, path: CIM-Graph }
-      - uses: actions/checkout@v4
-        with: { repository: PNNL-CIM-Tools/CIM-Profiles, path: CIM-Profiles }
-      - uses: actions/checkout@v4
-        with: { repository: PNNL-CIM-Tools/CIM-Builder, path: CIM-Builder }
-      - uses: actions/checkout@v4
-        with: { repository: PNNL-CIM-Tools/CIM-Graph-Topology-Processor, path: CIM-Graph-Topology-Processor }
-      - uses: actions/checkout@v4
-        with: { repository: PNNL-CIM-Tools/CIM-Tables, path: CIM-Tables, token: "${{ secrets.CIM_REPOS_TOKEN }}" }
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - name: Install UV
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: '3.11'
-      - uses: astral-sh/setup-uv@v6
 
       - name: Leak gate
-        working-directory: CIMHub
         run: scripts/leak-gate.sh
-      - name: Install
-        working-directory: CIMHub
-        run: uv sync --locked
-      - name: Test (one pytest process per package)
-        working-directory: CIMHub
-        run: scripts/test-all.sh
+
+      - name: Build
+        run: |
+          uv build --no-sources --all-packages --out-dir dist
+          uvx twine check --strict dist/*
+
+      - name: Install the wheels with their PyPI dependencies
+        run: |
+          uv venv wheels
+          uv export --frozen --only-group dev --no-emit-workspace --no-hashes > dev-requirements.txt
+          # with the time-points extra, so core's time_points tests run against it
+          uv pip install --python wheels -r dev-requirements.txt dist/*.whl "cimhub-core[time-points]"
+
+      - name: Test the wheels (one pytest process per package)
+        run: PYTEST=wheels/bin/pytest scripts/test-all.sh

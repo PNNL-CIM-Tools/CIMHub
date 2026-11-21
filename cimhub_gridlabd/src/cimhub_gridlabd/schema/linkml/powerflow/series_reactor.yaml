@@ -1,0 +1,144 @@
+id: https://gridlabd.org/schema/glm/powerflow/series_reactor
+name: series_reactor
+description: GridLAB-D series_reactor class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  series_reactor:
+    description: 'Copyright (C) 2009 Battelle Memorial Institute
+
+      @file series_reactor.cpp
+
+      @addtogroup powerflow series_reactor
+
+      @ingroup powerflow
+
+      Implements a a series reactor object with specifiable
+
+      impedances.  This is a static reactor, so values will only
+
+      be computed once.
+
+      @{
+
+
+      Inherits from: link
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: link
+    attributes:
+      phase_A_impedance:
+        range: Complex
+        required: false
+        description: Series impedance of reactor on phase A
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 1
+          value_type: complex
+          separator: ','
+          native_name: phase_A_impedance[Ohm]
+      phase_A_resistance:
+        range: float
+        required: false
+        description: Resistive portion of phase A's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_A_resistance[Ohm]
+      phase_A_reactance:
+        range: float
+        required: false
+        description: Reactive portion of phase A's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_A_reactance[Ohm]
+      phase_B_impedance:
+        range: Complex
+        required: false
+        description: Series impedance of reactor on phase B
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 4
+          value_type: complex
+          separator: ','
+          native_name: phase_B_impedance[Ohm]
+      phase_B_resistance:
+        range: float
+        required: false
+        description: Resistive portion of phase B's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_B_resistance[Ohm]
+      phase_B_reactance:
+        range: float
+        required: false
+        description: Reactive portion of phase B's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_B_reactance[Ohm]
+      phase_C_impedance:
+        range: Complex
+        required: false
+        description: Series impedance of reactor on phase C
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: phase_C_impedance[Ohm]
+      phase_C_resistance:
+        range: float
+        required: false
+        description: Resistive portion of phase C's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_C_resistance[Ohm]
+      phase_C_reactance:
+        range: float
+        required: false
+        description: Reactive portion of phase C's impedance
+        unit:
+          ucum_code: Ohm
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: phase_C_reactance[Ohm]

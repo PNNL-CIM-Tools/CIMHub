@@ -1,11 +1,14 @@
 """OpenDSS bus coordinates (``BusCoords`` / ``LatLongCoords`` files) -> ``buscoords.cimtbl`` (shape ``location``).
 
-A ConnectivityNode is not a PowerSystemResource, so a bus cannot hold a Location. Each piece of equipment gets one
-``Location`` with a ``PositionPoint`` per Terminal at its bus's coordinates (S5-1), numbered by the Terminal's
-``sequenceNumber`` (S5-5), as the engine's CIM export writes them. The Terminals are the ones binding made from the
-other parts, so this is the importer's ``bound_parts`` part, imported last (S5-2). Equipment with a Terminal bus that
-has no coordinates gets no Location (S5-3); coordinates for a bus the circuit does not have are ignored, as the
-engine ignores them. Both are counted in the file comment.
+A ConnectivityNode is not a PowerSystemResource, so a bus cannot hold a Location. The equipment is drawn as a GIS
+draws it, through the ``wkt`` column (S5-8): a line is a ``LINESTRING`` through its Terminals' buses, in
+``sequenceNumber`` order; any other equipment is one ``POINT``, at its bus for one Terminal and at its buses'
+centroid for more (a switch, fuse or transformer midway between its buses). With ``device_geometry="linestring"``
+a two-terminal device is drawn bus to bus like a line instead (S5-9). cimtables makes the Location and its
+PositionPoints. The Terminals are the ones binding made from the other parts, so this is the importer's
+``bound_parts`` part, imported last (S5-2). Equipment with a Terminal bus that has no coordinates gets no Location
+(S5-3); coordinates for a bus the circuit does not have are ignored, as the engine ignores them. Both are counted in
+the file comment.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#buscoords``.
 """
@@ -29,17 +32,27 @@ COORDINATE_SYSTEMS = {
     True: ("crs_latlong", "LatLongCoords", "urn:ogc:def:crs:OGC:1.3:CRS84"),
 }
 _LISTED = 5
+#: how ``map_buscoords`` draws a two-terminal device (a switch, fuse, transformer, regulator, series reactor): a POINT
+#: midway between its buses, as a GIS draws one, or a LINESTRING from bus to bus, as a line (S5-9)
+DEVICE_GEOMETRIES = ("point", "linestring")
 
 FIELDS = {
-    "name": Field("structural", note="picks the bus: every Terminal on it gets a PositionPoint; a name the circuit "
+    "name": Field("structural", note="picks the bus: every Terminal on it takes its coordinates; a name the circuit "
                                      "has no bus for is ignored, as in the engine (counted in the file comment)"),
-    "x": Field("copied", (("PositionPoint", "xPosition", None),), "on every point at the bus"),
-    "y": Field("copied", (("PositionPoint", "yPosition", None),), "on every point at the bus"),
+    "x": Field("derived", note="geometry: a line's LINESTRING vertex at each Terminal bus, verbatim; other equipment's "
+                               "POINT at its Terminal buses' centroid (the bus itself for one Terminal)"),
+    "y": Field("derived", note="as x"),
     "geographic": Field("mapped", note="the directive (LatLongCoords -> true) picks the CoordinateSystem: "
                                        "COORDINATE_SYSTEMS"),
 }
 
-_PROVENANCE = """OpenDSS bus coordinates -> a Location per equipment, a PositionPoint per Terminal at its bus.
+_GEOMETRY_COMMENT = {
+    "point": "a line's LINESTRING through its Terminal buses; other equipment a POINT at their centroid",
+    "linestring": "a line's or two-terminal device's LINESTRING through its Terminal buses; other equipment a POINT "
+                  "at their centroid",
+}
+
+_PROVENANCE = """OpenDSS bus coordinates -> a wkt geometry per equipment: a line's LINESTRING, others a POINT.
 Source table: Buscoords (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#buscoords"""
 
@@ -73,39 +86,42 @@ def terminal_buses(network) -> list[tuple[object, dict[int, str]]]:
     return [(equipment[key], dict(sorted(nodes.items()))) for key, nodes in buses.items()]
 
 
-def map_buscoords(native, network) -> Document:
+def _wkt_geometry(equipment, points: list[tuple[float, float]], cim, device_geometry: str) -> str:
+    """The equipment's WKT from its Terminal buses' points, in Terminal order: a line, and under ``"linestring"`` any
+    two-terminal device, is the LINESTRING through them; anything else one POINT at their centroid, the bus itself
+    for one Terminal and the midpoint for two."""
+    if isinstance(equipment, cim.ACLineSegment) or (device_geometry == "linestring" and len(points) == 2):
+        return "LINESTRING (" + ", ".join(f"{cell(x)} {cell(y)}" for x, y in points) + ")"
+    x = sum(x for x, _ in points) / len(points)
+    y = sum(y for _, y in points) / len(points)
+    return f"POINT ({cell(x)} {cell(y)})"
+
+
+def map_buscoords(native, network, device_geometry: str = "point") -> Document:
     """The coordinates of a DSS model as one ``buscoords`` document. ``network`` is what every other DSS part bound
-    (``DssImporter.bound_parts``); its ConnectivityNodes are the circuit's buses."""
+    (``DssImporter.bound_parts``); its ConnectivityNodes are the circuit's buses. ``device_geometry`` is one of
+    ``DEVICE_GEOMETRIES``."""
     coordinates = native.list_by_class(NATIVE_CLASS)
     if not coordinates:
         return Document(name="buscoords", statements=[], profile=CIM_PROFILE)
-    crs = _coordinate_system(coordinates)
-    by_bus = {str(point.name): point for point in coordinates}
+    by_bus = {str(point.name): (point.x, point.y) for point in coordinates}
     equipment = terminal_buses(network)
-    locations, points, updates = [], [], []
+    rows = []
     for item, nodes in equipment:
         if not all(node in by_bus for node in nodes.values()):
             continue
-        location = f"{item.mRID}_loc"
-        locations.append(Row([location, f"{item.name}_Loc" if item.name is not None else None]))
-        for sequence, node in nodes.items():
-            point = by_bus[node]
-            points.append(Row([f"{location}_{sequence}", location, str(sequence), cell(point.x), cell(point.y)]))
-        updates.append(Row([item.mRID, location]))
+        points = [by_bus[node] for node in nodes.values()]
+        rows.append(Row([item.mRID, _wkt_geometry(item, points, network.cim, device_geometry)]))
     comment = _PROVENANCE.format(count=len(coordinates))
-    if len(locations) < len(equipment):
-        comment += (f"\nnot located: {len(equipment) - len(locations)} of {len(equipment)} equipment (a terminal "
+    if len(rows) < len(equipment):
+        comment += (f"\nnot located: {len(equipment) - len(rows)} of {len(equipment)} equipment (a terminal "
                     "bus without coordinates)")
     unknown = set(by_bus) - {node.mRID for node in network.graph.get(network.cim.ConnectivityNode, {}).values()}
     if unknown:
         comment += f"\nno such bus: {_listed(unknown)}"
     statements = [
-        crs,
-        Table("Location", [Column("mRID"), Column("name"), Column("CoordinateSystem", default=crs.cells[0][1])],
-              locations),
-        Table("PositionPoint", [Column("identifier"), Column("Location"), Column("sequenceNumber"),
-                                Column("xPosition"), Column("yPosition")], points,
-              comment="copied: x, y of the Terminal's bus; sequenceNumber = the Terminal's"),
-        Table("PowerSystemResource", [Column("mRID"), Column("Location")], updates, update=True),
+        _coordinate_system(coordinates),
+        Table("PowerSystemResource", [Column("mRID"), Column("wkt")], rows, update=True,
+              comment=_GEOMETRY_COMMENT[device_geometry]),
     ]
     return Document(name="buscoords", statements=statements, profile=CIM_PROFILE, comment=comment)

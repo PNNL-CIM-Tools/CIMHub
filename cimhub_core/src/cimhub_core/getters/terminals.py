@@ -53,6 +53,26 @@ def get_conductor_phases(equipment: cim.ConductingEquipment) -> tuple[cim.Single
     return line_phases
 
 
+def get_switch_sides(switch: cim.Switch) -> tuple[tuple[cim.SinglePhaseKind, ...], tuple[cim.SinglePhaseKind, ...]]:
+    """Side 1's and side 2's conductors, paired by position. A switch whose terminals agree has its conductors on
+    both sides (``get_conductor_phases``). One between laterals on different phases (a tie, GLM S6-9) pairs them in
+    its SwitchPhases, ``phaseSide1`` -> ``phaseSide2``, in side 1's PhaseCode order; the pairs must be exactly its
+    two terminals' conductors."""
+    terminals = _terminals(switch)
+    sides = [get_terminal_phases(terminal) for terminal in terminals]
+    if len(set(sides)) == 1:
+        phases = get_conductor_phases(switch)
+        return phases, phases
+    pairs = [(child.phaseSide1, child.phaseSide2) for child in switch.SwitchPhase]
+    across = dict(pairs)
+    if (len(terminals) != 2 or len(across) != len(pairs) or set(across) != set(sides[0])
+            or sorted(_values(tuple(across.values()))) != sorted(_values(sides[1]))):
+        raise ValueError(f"{describe(switch)}: its terminals have different phases "
+                         f"{[_values(side) for side in sides]} and its SwitchPhases (phaseSide1, phaseSide2) "
+                         f"{[[_values((one,)), _values((two,))] for one, two in pairs]} do not pair them")
+    return sides[0], tuple(across[phase] for phase in sides[0])
+
+
 def get_terminal_phases(terminal: cim.Terminal) -> tuple[cim.SinglePhaseKind, ...]:
     """One terminal's conductors in PhaseCode order (A, B, C, s1, s2, N); a blank PhaseCode is ABC."""
     if terminal.phases is None:

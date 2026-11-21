@@ -1,6 +1,7 @@
 // PVSystem and Storage (after IEEE13_CDPSM, IEEE9500, IEEE123): a 3-phase PV at irradiance 0.8 and a 2-phase
 // s1s2 PV at 0.208 kV on a center-tap secondary; a 1-phase leg; a 1-phase wye PV on the primary (ratedU x sqrt 3);
-// a delta PV; a kVA-capped PV (Pmpp 1200 on 1000 kVA); one below %Cutout; a negative pf; kvar. Batteries charging,
+// a delta PV; a kVA-capped PV (Pmpp 1200 on 1000 kVA); one below %Cutout; a negative pf; kvar; one capped at %Pmpp
+// (irradiance 0.9 gives 9 kW, %Pmpp=60 caps it at 6; %Cutout is on the 9). Batteries charging,
 // discharging and idling (State), state=charge kW=150 (it discharges) and state=charge kW=-0.0 (it idles), a
 // kVA-capped battery, %stored, delta. Order (S4b-8): pf then kvar and kvar then pf on a PV; a battery's setpoint
 // kept across State edits, %Discharge after kW, and kWhstored then %stored by an edit. The XfmrCode sets its
@@ -21,6 +22,7 @@ New PVSystem.farm bus1=b1 kv=4.16 kVA=1000 Pmpp=1200
 New PVSystem.dim bus1=b2 kv=0.48 kVA=12 Pmpp=10 irradiance=0.1
 New PVSystem.lead bus1=b2 kv=0.48 kVA=12 Pmpp=10 pf=-0.9
 New PVSystem.vars bus1=b2 kv=0.48 kVA=12 Pmpp=10 kvar=3
+New PVSystem.pmppcap bus1=b2 kv=0.48 kVA=12 Pmpp=10 irradiance=0.9 %Pmpp=60
 New Storage.School phases=3 bus1=b2 kV=0.48 kWRated=100 kWhRated=200 kWhStored=100 state=discharging
 New Storage.BatIdle phases=3 bus1=b2 kV=0.48 kWRated=100 kWhRated=200 kWhStored=100 state=idling
 New Storage.House phases=2 bus1=house.1.2 kv=0.208 conn=wye kWRated=5 kWhRated=13.5 kWhStored=5 state=charging

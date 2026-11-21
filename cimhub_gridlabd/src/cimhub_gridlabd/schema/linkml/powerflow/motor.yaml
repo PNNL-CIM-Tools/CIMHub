@@ -1,0 +1,893 @@
+id: https://gridlabd.org/schema/glm/powerflow/motor
+name: motor
+description: GridLAB-D motor class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  motor:
+    description: 'constructor.  Class registration is only called once to
+
+      register the class with the core. Include parent class constructor (node)
+
+      @param mod a module structure maintained by the core
+
+
+      Inherits from: node
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD'
+    is_a: node
+    attributes:
+      base_power:
+        range: float
+        required: false
+        description: base power
+        unit:
+          ucum_code: W
+        annotations:
+          order: 1
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: base_power[W]
+      n:
+        range: float
+        required: false
+        description: ratio of stator auxiliary windings to stator main windings
+        annotations:
+          order: 2
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: n
+      Rds:
+        range: float
+        required: false
+        description: d-axis resistance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 3
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rds[ohm]
+      Rqs:
+        range: float
+        required: false
+        description: q-asis resistance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rqs[ohm]
+      Rs:
+        range: float
+        required: false
+        description: stator resistance - three-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 5
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rs[ohm]
+      Rr:
+        range: float
+        required: false
+        description: rotor resistance
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 6
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Rr[ohm]
+      Xm:
+        range: float
+        required: false
+        description: magnetizing reactance
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 7
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xm[ohm]
+      Xr:
+        range: float
+        required: false
+        description: rotor reactance
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 8
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xr[ohm]
+      Xs:
+        range: float
+        required: false
+        description: stator leakage reactance - three-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 9
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xs[ohm]
+      Xc_run:
+        range: float
+        required: false
+        description: running capacitor reactance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 10
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xc_run[ohm]
+      Xc_start:
+        range: float
+        required: false
+        description: starting capacitor reactance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 11
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xc_start[ohm]
+      Xd_prime:
+        range: float
+        required: false
+        description: d-axis reactance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 12
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xd_prime[ohm]
+      Xq_prime:
+        range: float
+        required: false
+        description: q-axis reactance - single-phase model
+        unit:
+          ucum_code: ohm
+        annotations:
+          order: 13
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Xq_prime[ohm]
+      A_sat:
+        range: float
+        required: false
+        description: flux saturation parameter, A - single-phase model
+        annotations:
+          order: 14
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: A_sat
+      b_sat:
+        range: float
+        required: false
+        description: flux saturation parameter, b - single-phase model
+        annotations:
+          order: 15
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: b_sat
+      H:
+        range: float
+        required: false
+        description: inertia constant
+        unit:
+          ucum_code: s
+        annotations:
+          order: 16
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: H[s]
+      J:
+        range: float
+        required: false
+        description: moment of inertia
+        unit:
+          ucum_code: kg*m^2
+        annotations:
+          order: 17
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: J[kg*m^2]
+      number_of_poles:
+        range: float
+        required: false
+        description: number of poles
+        annotations:
+          order: 18
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: number_of_poles
+      To_prime:
+        range: float
+        required: false
+        description: rotor time constant
+        unit:
+          ucum_code: s
+        annotations:
+          order: 19
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: To_prime[s]
+      capacitor_speed:
+        range: float
+        required: false
+        description: percentage speed of nominal when starting capacitor kicks in
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 20
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: capacitor_speed[%]
+      trip_time:
+        range: float
+        required: false
+        description: 'time motor can stay stalled before tripping off '
+        unit:
+          ucum_code: s
+        annotations:
+          order: 21
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip_time[s]
+      uv_relay_install:
+        range: string
+        required: false
+        description: is under-voltage relay protection installed on this motor
+        annotations:
+          order: 22
+          value_type: string
+          separator: ','
+          native_name: uv_relay_install
+      uv_relay_trip_time:
+        range: float
+        required: false
+        description: 'time low-voltage condition must exist for under-voltage protection
+          to trip '
+        unit:
+          ucum_code: s
+        annotations:
+          order: 23
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: uv_relay_trip_time[s]
+      uv_relay_trip_V:
+        range: float
+        required: false
+        description: pu minimum voltage before under-voltage relay trips
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 24
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: uv_relay_trip_V[pu]
+      contactor_state:
+        range: string
+        required: false
+        description: the current status of the motor
+        annotations:
+          order: 25
+          value_type: string
+          separator: ','
+          native_name: contactor_state
+      contactor_open_Vmin:
+        range: float
+        required: false
+        description: pu voltage at which motor contactor opens
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 26
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: contactor_open_Vmin[pu]
+      contactor_close_Vmax:
+        range: float
+        required: false
+        description: pu voltage at which motor contactor recloses
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 27
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: contactor_close_Vmax[pu]
+      reconnect_time:
+        range: float
+        required: false
+        description: time before tripped motor reconnects
+        unit:
+          ucum_code: s
+        annotations:
+          order: 28
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reconnect_time[s]
+      time_step_divider:
+        range: integer
+        required: false
+        description: divide time step by n - single- and three- phase models
+        annotations:
+          order: 29
+          value_type: int
+          separator: ','
+          native_name: time_step_divider
+      mechanical_torque:
+        range: float
+        required: false
+        description: mechanical torque applied to the motor
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 30
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mechanical_torque[pu]
+      mechanical_torque_state_var:
+        range: float
+        required: false
+        description: Internal state variable torque - three-phase model
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 31
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: mechanical_torque_state_var[pu]
+      torque_usage_method:
+        range: string
+        required: false
+        description: Approach for using Tmech on both types
+        annotations:
+          order: 32
+          value_type: string
+          separator: ','
+          native_name: torque_usage_method
+      iteration_count:
+        range: integer
+        required: false
+        description: maximum number of iterations for steady state model
+        annotations:
+          order: 33
+          value_type: int
+          separator: ','
+          native_name: iteration_count
+      delta_mode_voltage_trigger:
+        range: float
+        required: false
+        description: percentage voltage of nominal when delta mode is triggered
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 34
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mode_voltage_trigger[%]
+      delta_mode_rotor_speed_trigger:
+        range: float
+        required: false
+        description: percentage speed of nominal when delta mode is triggered
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 35
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mode_rotor_speed_trigger[%]
+      delta_mode_voltage_exit:
+        range: float
+        required: false
+        description: percentage voltage of nominal to exit delta mode
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 36
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mode_voltage_exit[%]
+      delta_mode_rotor_speed_exit:
+        range: float
+        required: false
+        description: percentage speed of nominal to exit delta mode
+        unit:
+          ucum_code: '%'
+        annotations:
+          order: 37
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: delta_mode_rotor_speed_exit[%]
+      maximum_speed_error:
+        range: float
+        required: false
+        description: maximum speed error for transitioning modes
+        annotations:
+          order: 38
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: maximum_speed_error
+      rotor_speed:
+        range: float
+        required: false
+        description: rotor speed
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 39
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: rotor_speed[rad/s]
+      motor_status:
+        range: MotorStatus
+        required: false
+        description: the current status of the motor
+        annotations:
+          order: 40
+          value_type: string
+          separator: ','
+          native_name: motor_status
+      motor_status_number:
+        range: integer
+        required: false
+        description: the current status of the motor as an integer
+        annotations:
+          order: 41
+          value_type: int
+          separator: ','
+          native_name: motor_status_number
+      desired_motor_state:
+        range: string
+        required: false
+        description: Should the motor be on or off
+        annotations:
+          order: 42
+          value_type: string
+          separator: ','
+          native_name: desired_motor_state
+      connected_house:
+        range: string
+        required: false
+        description: house object to monitor the XXX property to determine if the
+          motor is running
+        annotations:
+          order: 43
+          value_type: string
+          separator: ','
+          native_name: connected_house
+      connected_house_assumed_mode:
+        range: string
+        required: false
+        description: Assumed operation mode of connected_house object
+        annotations:
+          order: 44
+          value_type: string
+          separator: ','
+          native_name: connected_house_assumed_mode
+      motor_operation_type:
+        range: string
+        required: false
+        description: current operation type of the motor - deltamode related
+        annotations:
+          order: 45
+          value_type: string
+          separator: ','
+          native_name: motor_operation_type
+      triplex_connection_type:
+        range: string
+        required: false
+        description: Describes how the motor will connect to the triplex devices
+        annotations:
+          order: 46
+          value_type: string
+          separator: ','
+          native_name: triplex_connection_type
+      wb:
+        range: float
+        required: false
+        description: base speed
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 47
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: wb[rad/s]
+      ws:
+        range: float
+        required: false
+        description: system speed
+        unit:
+          ucum_code: rad/s
+        annotations:
+          order: 48
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: ws[rad/s]
+      psi_b:
+        range: Complex
+        required: false
+        description: backward rotating flux
+        annotations:
+          order: 49
+          value_type: complex
+          separator: ','
+          native_name: psi_b
+      psi_f:
+        range: Complex
+        required: false
+        description: forward rotating flux
+        annotations:
+          order: 50
+          value_type: complex
+          separator: ','
+          native_name: psi_f
+      psi_dr:
+        range: Complex
+        required: false
+        description: Rotor d axis flux
+        annotations:
+          order: 51
+          value_type: complex
+          separator: ','
+          native_name: psi_dr
+      psi_qr:
+        range: Complex
+        required: false
+        description: Rotor q axis flux
+        annotations:
+          order: 52
+          value_type: complex
+          separator: ','
+          native_name: psi_qr
+      Ids:
+        range: Complex
+        required: false
+        description: time before tripped motor reconnects
+        annotations:
+          order: 53
+          value_type: complex
+          separator: ','
+          native_name: Ids
+      Iqs:
+        range: Complex
+        required: false
+        description: time before tripped motor reconnects
+        annotations:
+          order: 54
+          value_type: complex
+          separator: ','
+          native_name: Iqs
+      If:
+        range: Complex
+        required: false
+        description: forward current
+        annotations:
+          order: 55
+          value_type: complex
+          separator: ','
+          native_name: If
+      Ib:
+        range: Complex
+        required: false
+        description: backward current
+        annotations:
+          order: 56
+          value_type: complex
+          separator: ','
+          native_name: Ib
+      Is:
+        range: Complex
+        required: false
+        description: motor current
+        annotations:
+          order: 57
+          value_type: complex
+          separator: ','
+          native_name: Is
+      electrical_power:
+        range: Complex
+        required: false
+        description: motor power
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 58
+          value_type: complex
+          separator: ','
+          native_name: electrical_power[VA]
+      electrical_torque:
+        range: float
+        required: false
+        description: electrical torque
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 59
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: electrical_torque[pu]
+      Vs:
+        range: Complex
+        required: false
+        description: motor voltage
+        annotations:
+          order: 60
+          value_type: complex
+          separator: ','
+          native_name: Vs
+      motor_trip:
+        range: boolean
+        required: false
+        description: boolean variable to check if motor is tripped
+        annotations:
+          order: 61
+          value_type: bool
+          separator: ','
+          native_name: motor_trip
+      trip:
+        range: float
+        required: false
+        description: current time in tripped state
+        annotations:
+          order: 62
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: trip
+      reconnect:
+        range: float
+        required: false
+        description: current time since motor was tripped
+        annotations:
+          order: 63
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: reconnect
+      phips:
+        range: Complex
+        required: false
+        description: positive sequence stator flux
+        annotations:
+          order: 64
+          value_type: complex
+          separator: ','
+          native_name: phips
+      phins_cj:
+        range: Complex
+        required: false
+        description: conjugate of negative sequence stator flux
+        annotations:
+          order: 65
+          value_type: complex
+          separator: ','
+          native_name: phins_cj
+      phipr:
+        range: Complex
+        required: false
+        description: positive sequence rotor flux
+        annotations:
+          order: 66
+          value_type: complex
+          separator: ','
+          native_name: phipr
+      phinr_cj:
+        range: Complex
+        required: false
+        description: conjugate of negative sequence rotor flux
+        annotations:
+          order: 67
+          value_type: complex
+          separator: ','
+          native_name: phinr_cj
+      per_unit_rotor_speed:
+        range: float
+        required: false
+        description: rotor speed in per-unit
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 68
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: per_unit_rotor_speed[pu]
+      Ias:
+        range: Complex
+        required: false
+        description: motor phase-a stator current
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 69
+          value_type: complex
+          separator: ','
+          native_name: Ias[pu]
+      Ibs:
+        range: Complex
+        required: false
+        description: motor phase-b stator current
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 70
+          value_type: complex
+          separator: ','
+          native_name: Ibs[pu]
+      Ics:
+        range: Complex
+        required: false
+        description: motor phase-c stator current
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 71
+          value_type: complex
+          separator: ','
+          native_name: Ics[pu]
+      Vas:
+        range: Complex
+        required: false
+        description: motor phase-a stator-to-ground voltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 72
+          value_type: complex
+          separator: ','
+          native_name: Vas[pu]
+      Vbs:
+        range: Complex
+        required: false
+        description: motor phase-b stator-to-ground voltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 73
+          value_type: complex
+          separator: ','
+          native_name: Vbs[pu]
+      Vcs:
+        range: Complex
+        required: false
+        description: motor phase-c stator-to-ground voltage
+        unit:
+          ucum_code: pu
+        annotations:
+          order: 74
+          value_type: complex
+          separator: ','
+          native_name: Vcs[pu]
+      Ips:
+        range: Complex
+        required: false
+        description: positive sequence stator current
+        annotations:
+          order: 75
+          value_type: complex
+          separator: ','
+          native_name: Ips
+      Ipr:
+        range: Complex
+        required: false
+        description: positive sequence rotor current
+        annotations:
+          order: 76
+          value_type: complex
+          separator: ','
+          native_name: Ipr
+      Ins_cj:
+        range: Complex
+        required: false
+        description: conjugate of negative sequence stator current
+        annotations:
+          order: 77
+          value_type: complex
+          separator: ','
+          native_name: Ins_cj
+      Inr_cj:
+        range: Complex
+        required: false
+        description: conjugate of negative sequence rotor current
+        annotations:
+          order: 78
+          value_type: complex
+          separator: ','
+          native_name: Inr_cj
+      Ls:
+        range: float
+        required: false
+        description: stator synchronous reactance
+        annotations:
+          order: 79
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Ls
+      Lr:
+        range: float
+        required: false
+        description: rotor synchronous reactance
+        annotations:
+          order: 80
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: Lr
+      sigma1:
+        range: float
+        required: false
+        description: intermediate variable 1 associated with synch. react.
+        annotations:
+          order: 81
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: sigma1
+      sigma2:
+        range: float
+        required: false
+        description: intermediate variable 2 associated with synch. react.
+        annotations:
+          order: 82
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: sigma2

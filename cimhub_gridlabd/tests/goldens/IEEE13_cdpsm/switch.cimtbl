@@ -1,0 +1,23 @@
+# GridLAB-D switch -> LoadBreakSwitch.
+# Source table: switch (records: 3)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table LoadBreakSwitch: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    sw_swt_671692, swt_671692, 671, 692,  ,  false, false, bv_4p16kv
+    sw_swt_brkr1,  swt_brkr1,  650, brkr, ,  false, false, bv_4p16kv
+    sw_swt_sect1,  swt_sect1,  684, tap,  C, false, false, bv_4p16kv
+
+Table OperationalLimitSet: mRID, Equipment
+    sw_swt_671692_limits, sw_swt_671692
+    sw_swt_brkr1_limits,  sw_swt_brkr1
+    sw_swt_sect1_limits,  sw_swt_sect1
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    sw_swt_671692_norm,  400.0, olt_normal,    sw_swt_671692_limits
+    sw_swt_671692_emerg, 600.0, olt_emergency, sw_swt_671692_limits
+    sw_swt_brkr1_norm,   400.0, olt_normal,    sw_swt_brkr1_limits
+    sw_swt_brkr1_emerg,  600.0, olt_emergency, sw_swt_brkr1_limits
+    sw_swt_sect1_norm,   400.0, olt_normal,    sw_swt_sect1_limits
+    sw_swt_sect1_emerg,  600.0, olt_emergency, sw_swt_sect1_limits

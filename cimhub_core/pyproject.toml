@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "cimhub_core"
 description = "CIMHub core: shared .cimtbl import contract, export getters and native-model utilities"
 readme = "README.md"
-version = "3.0.0"
+version = "2.1.0"
 requires-python = ">=3.11"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
@@ -29,13 +29,20 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "cim-graph>=0.6.0a1,<0.7",
-  "cim-topology>=0.1.0a2,<0.2",
-  "cim-profiles>=0.1.0a2,<0.2",  # 0.1.0a1 lacks RecloseSequence and EarthResistivity
-  "cim-tables>=0.1.0a1,<0.2",
+  "cim-graph>=0.6.1a1,<0.7",
+  "cim-topology>=0.1.2a1,<0.2",
+  "cim-profiles>=0.2.0a6,<0.3",
+  "cim-tables>=0.1.1a1,<0.2",
   "linkml-runtime~=1.9.5",
   "pyyaml",
   "requests",
+]
+
+[project.optional-dependencies]
+# time_points.py: the Parquet sidecar of nc_schedule time points (CIM-Builder's TIME_POINT_SCHEMA)
+time-points = [
+  "cim-builder>=0.1.1a1,<0.2",
+  "pyarrow>=18",
 ]
 
 [project.urls]

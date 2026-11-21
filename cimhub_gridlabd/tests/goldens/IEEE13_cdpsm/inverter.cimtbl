@@ -1,0 +1,83 @@
+# GridLAB-D inverter -> PowerElectronicsConnection + PhotoVoltaicUnit or BatteryUnit (with its solar or battery and their datasheets).
+# Source table: inverter (records: 5)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4b-inverters-solar-and-batteries
+
+Profile = cim18v17
+
+# a PV inverter's nameplate: ratedS
+Table GenerationInverterInfo: mRID, name, apparentPowerMaximum (VA), reactivePowerInjectedMax (VAr), reactivePowerAbsorbedMax (VAr)
+    pv_inv_pv_house_info,  inv_pv_house,  5000.0,   5000.0,   5000.0
+    pv_inv_pv_school_info, inv_pv_school, 300000.0, 300000.0, 300000.0
+
+# a battery inverter's nameplate: ratedS; chargeRateActiveMax = max_charge_rate
+Table StorageInverterInfo: mRID, name, apparentPowerMaximum (VA), reactivePowerInjectedMax (VAr), reactivePowerAbsorbedMax (VAr), chargeRateActiveMax (W)
+    storage_inv_bat_batidle_info, inv_bat_batidle, 99999.999, 99999.999, 99999.999, 100000.0
+    storage_inv_bat_house_info,   inv_bat_house,   5000.0,    5000.0,    5000.0,    5000.0
+    storage_inv_bat_school_info,  inv_bat_school,  99999.999, 99999.999, 99999.999, 100000.0
+
+# the array as GridLAB-D orients it (read by its climate models only)
+Table SolarArrayInfo: mRID, name, tiltAngle (deg), orientationAzimuth (deg), shadingFactor (percent)
+    pv_inv_pv_house_array,  pv_house,  45.0, 180.0, 100.0
+    pv_inv_pv_school_array, pv_school, 45.0, 180.0, 100.0
+
+# referenceIrradiation = Rated_Insolation; referenceTemperature: the 77 degF of GridLAB-D's temperature factor
+Table SolarPanelInfo: mRID, name, efficiency (percent), referenceIrradiation (W/m^2), referenceTemperature (degC)=25, SolarArray
+    pv_inv_pv_house_panel,  pv_house,  20.0, 999.9888055331668, pv_inv_pv_house_array
+    pv_inv_pv_school_panel, pv_school, 20.0, 999.9888055331668, pv_inv_pv_school_array
+
+# numberOfCells = floor(nominal_voltage / 4.1) on LI_ION (battery.cpp:720)
+Table BatteryInfo: mRID, name, batteryType, ratedCapacity (Wh), numberOfCells
+    storage_inv_bat_batidle_battery, bat_batidle, lithiumIon, 200000.0, 11
+    storage_inv_bat_house_battery,   bat_house,   lithiumIon, 13500.0,  11
+    storage_inv_bat_school_battery,  bat_school,  lithiumIon, 200000.0, 11
+
+# GridLAB-D's dispatch in the load sign (S4b-2): PV its static-weather output, a battery its CONSTANT_PQ set point; ratedU the bus's line-to-line voltage (S4b-5)
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (VA), ratedU (V), p (W), q (VAr), maxQ (VAr), minQ (VAr), normallyInService, AssetDatasheet, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    # defaulted: Q_Out=0.0, soc_reserve=0.0
+    # four_quadrant_control_mode CONSTANT_PF read as CONSTANT_PQ (a Java export defect: GridLAB-D never dispatches a CONSTANT_PF battery, S4b-2)
+    # CONSTANT_PQ: not read: power_factor=-1.0
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: generator_mode=CONSTANT_PQ, sense_object=634_stmtr, max_discharge_rate=100000.0,
+    # charge_on_threshold=-2000.0, charge_off_threshold=0.0, discharge_on_threshold=60000.0,
+    # discharge_off_threshold=40000.0, charge_lockout_time=1.0, discharge_lockout_time=1.0, V_base=480.0
+    storage_inv_bat_batidle, inv_bat_batidle, 634,   ,     Y, 99999.999, 480.0, 1000.0,             0.0, 99999.999, -99999.999, true, storage_inv_bat_batidle_info, bv_480v
+    # defaulted: Q_Out=0.0, soc_reserve=0.0
+    # four_quadrant_control_mode CONSTANT_PF read as CONSTANT_PQ (a Java export defect: GridLAB-D never dispatches a CONSTANT_PF battery, S4b-2)
+    # CONSTANT_PQ: not read: power_factor=-1.0
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: generator_mode=CONSTANT_PQ, sense_object=house_stmtr, max_discharge_rate=5000.0,
+    # charge_on_threshold=-100.0, charge_off_threshold=0.0, discharge_on_threshold=3000.0, discharge_off_threshold=2000.0,
+    # charge_lockout_time=1.0, discharge_lockout_time=1.0, V_base=208.0
+    storage_inv_bat_house,   inv_bat_house,   house, s1s2, D, 5000.0,    240.0, 5000.0,             0.0, 5000.0,    -5000.0,    true, storage_inv_bat_house_info,   bv_240v
+    # defaulted: Q_Out=0.0, soc_reserve=0.0
+    # four_quadrant_control_mode CONSTANT_PF read as CONSTANT_PQ (a Java export defect: GridLAB-D never dispatches a CONSTANT_PF battery, S4b-2)
+    # CONSTANT_PQ: not read: power_factor=1.0
+    # P_Out 100000.0 W limited to 99999.999 W by GridLAB-D's CONSTANT_PQ (ratedS, a full battery or the reserve, inverter.cpp:3496-3540)
+    # capability: isModeCapableActivePowerReactivePower (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: generator_mode=CONSTANT_PQ, sense_object=634_stmtr, max_discharge_rate=100000.0,
+    # charge_on_threshold=-2000.0, charge_off_threshold=0.0, discharge_on_threshold=60000.0,
+    # discharge_off_threshold=40000.0, charge_lockout_time=1.0, discharge_lockout_time=1.0, V_base=480.0
+    storage_inv_bat_school,  inv_bat_school,  634,   ,     Y, 99999.999, 480.0, -99999.999,         0.0, 99999.999, -99999.999, true, storage_inv_bat_school_info,  bv_480v
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): 4000.0 VA; GridLAB-D's: DC 4970.909 W at Tmodule 122.001 degF
+    # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: V_base=208.0
+    pv_inv_pv_house,         inv_pv_house,    house, s1s2, D, 5000.0,    240.0, -4970.908886535754, 0.0, 5000.0,    -5000.0,    true, pv_inv_pv_house_info,         bv_240v
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): 240000.0 VA; GridLAB-D's: DC 298254.533 W at Tmodule 122.001 degF
+    # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
+    # untranscribed: V_base=480.0
+    pv_inv_pv_school,        inv_pv_school,   634,   ,     Y, 300000.0,  480.0, -298254.5331921453, 0.0, 300000.0,  -300000.0,  true, pv_inv_pv_school_info,        bv_480v
+
+# irradiance: GridLAB-D's static weather, Rated_Insolation x shading_factor (solar.cpp:1170)
+Table PhotoVoltaicUnit: mRID, name, maxP (W), minP (W), irradiance (W/m^2), AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=fdr_IEEE13_cdpsm
+    # defaulted: NOCT=118.4, Rated_Insolation=92.902, Pmax_temp_coeff=-0.00012928994082840237, shading_factor=1.0,
+    # tilt_angle=45.0, orientation_azimuth=180.0
+    pv_inv_pv_house_unit,  pv_house,  5000.0,   0.0, 999.9888055331668, pv_inv_pv_house_array,  pv_inv_pv_house
+    # defaulted: NOCT=118.4, Rated_Insolation=92.902, Pmax_temp_coeff=-0.00012928994082840237, shading_factor=1.0,
+    # tilt_angle=45.0, orientation_azimuth=180.0
+    pv_inv_pv_school_unit, pv_school, 300000.0, 0.0, 999.9888055331668, pv_inv_pv_school_array, pv_inv_pv_school
+
+# storedE = state_of_charge x capacity, minimumE = soc_reserve x capacity; efficiencies sqrt(round trip)
+Table BatteryUnit: mRID, name, ratedE (Wh), storedE (Wh), minimumE (Wh), maxP (W), minP (W), chargingEfficiency (percent), dischargingEfficiency (percent), batteryState, AssetDatasheet, PowerElectronicsConnection, EquipmentContainer=fdr_IEEE13_cdpsm
+    storage_inv_bat_batidle_unit, bat_batidle, 200000.0, 100000.0,          0.0, 100000.0, -100000.0, 92.73618495495704, 92.73618495495704, charging,    storage_inv_bat_batidle_battery, storage_inv_bat_batidle
+    storage_inv_bat_house_unit,   bat_house,   13500.0,  5000.400000000001, 0.0, 5000.0,   -5000.0,   92.73618495495704, 92.73618495495704, charging,    storage_inv_bat_house_battery,   storage_inv_bat_house
+    storage_inv_bat_school_unit,  bat_school,  200000.0, 100000.0,          0.0, 100000.0, -100000.0, 92.73618495495704, 92.73618495495704, discharging, storage_inv_bat_school_battery,  storage_inv_bat_school

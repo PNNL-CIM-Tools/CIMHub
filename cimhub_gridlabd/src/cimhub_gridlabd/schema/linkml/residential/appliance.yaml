@@ -1,0 +1,85 @@
+id: https://gridlabd.org/schema/glm/residential/appliance
+name: appliance
+description: GridLAB-D appliance class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  appliance:
+    is_a: residential_enduse
+    description: 'Copyright (C) 2012 Battelle Northwest
+
+
+      Inherits from: residential_enduse
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from residential_enduse (not in residential module)'
+    attributes:
+      powers:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: powers
+      impedances:
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: impedances
+      currents:
+        range: string
+        required: false
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: currents
+      durations:
+        range: string
+        required: false
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: durations
+      transitions:
+        range: string
+        required: false
+        annotations:
+          order: 5
+          value_type: string
+          separator: ','
+          native_name: transitions
+      heatgains:
+        range: string
+        required: false
+        annotations:
+          order: 6
+          value_type: string
+          separator: ','
+          native_name: heatgains
+      defaults:
+        range: string
+        required: false
+        description: 'CHECKPOINT_VAR: internal variable for appliance default object'
+        annotations:
+          order: 7
+          value_type: string
+          separator: ','
+          native_name: defaults

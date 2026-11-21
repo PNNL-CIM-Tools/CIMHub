@@ -1,13 +1,14 @@
 """OpenDSS ``XfmrCode`` -> ``xfmrcode.cimtbl``: one ``TransformerTankConfiguration`` template per code.
 
-Two template forms (the user's model, 2026-11-08):
+Two template forms (the user's model, 2026-11-08; TransformerTankEnd only for three-phase, 2026-11-19):
 
-- A center-tap code (1-phase, 3 windings, its instances' windings 2 and 3 a split-phase secondary) is a
-  3-winding tank with ``TransformerLug``s H1, H2, X1, X3, X2 (sequenceNumber in terminal order) and windings
-  lug to lug, from the polarity end: H1->H2, X1->X2 (s1->N), X2->X3 (N->s2). The instance has one
-  ``TransformerPhaseEnd`` per phase of each end's terminal (not per lug); each lug's sequenceNumber names the
-  phase end it lands on.
-- Any other code is a ``TransformerTankEnd`` per winding (connection, grounding impedance) with one
+- A 1-phase code is a tank with ``TransformerLug``s and windings lug to lug, from the polarity end. The instance
+  has one ``TransformerPhaseEnd`` per phase of each end's terminal (not per lug); each lug's sequenceNumber names
+  the phase end it lands on. A center tap (3 windings, its instances' windings 2 and 3 a split-phase secondary)
+  has lugs H1, H2, X1, X3, X2 (sequenceNumber in terminal order) and windings H1->H2, X1->X2 (s1->N), X2->X3
+  (N->s2). Any other has two lugs per winding, H1 H2, X1 X2, Y1 Y2, numbered in each coil's node order (its
+  direction), and windings H1->H2, X1->X2, Y1->Y2.
+- A 3-phase code is a ``TransformerTankEnd`` per winding (connection, grounding impedance) with one
   ``TransformerWinding`` each; the instance's ``PowerTransformerEnd`` n is template end n.
 
 A code's ``ratedU`` is the nameplate, phase to phase, which the coil voltage alone does not fix (7.2 kV is
@@ -43,8 +44,8 @@ _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits
 
 FIELDS = {
     "name": Field("copied", ((_CONFIGURATION, "name", None),), "mRID = xc_ + name, lowercased"),
-    "phases": Field("structural", note="3: TankEnd template; 1 with 3 windings whose instances are center taps: lug "
-                                       "template; other 1-phase codes: TankEnd template"),
+    "phases": Field("structural", note="3: TankEnd template; 1: lug template (a center tap's H1 H2 X1 X3 X2, else "
+                                       "two lugs per winding)"),
     "windings": Field("structural", note="one TransformerWinding each; 2 or 3"),
     "wdg": Field("structural", note="the winding Rneut/Xneut belong to (the reader's tag); none = the last"),
     "conn": Field("structural", note=_SCALAR),
@@ -52,7 +53,7 @@ FIELDS = {
     "kVA": Field("structural", note=_SCALAR),
     "tap": Field("structural", note=_SCALAR),
     "pct_R": Field("structural", note=_SCALAR),
-    "Rneut": Field("structural", note="TankEnd rground (ohm) of its winding when >= 0; on a lug template raises"),
+    "Rneut": Field("structural", note="TankEnd rground (ohm) of its winding when >= 0; on a 1-phase code raises"),
     "Xneut": Field("structural", note="TankEnd xground (ohm) of its winding, with Rneut >= 0"),
     "conns": Field("structural", note="TankEnd connectionKind (D, Y; grounding is the instance's); a center tap's "
                                       "secondary halves are I; default wye"),
@@ -98,9 +99,11 @@ _CENTER_TAP_LUGS = (("H1", 1, 0), ("H2", 1, 1), ("X1", 2, 0), ("X2", 2, 1), ("X3
 _CENTER_TAP_WINDINGS = {1: ("h1", "h2"), 2: ("x1", "x2"), 3: ("x2", "x3")}
 #: The center-tap secondary the lugs assume: winding 2 on bus2.1.0, winding 3 on bus2.0.2.
 _CENTER_TAP_NODES = {2: (1, 0), 3: (0, 2)}
+#: Any other 1-phase code's lugs, IEEE C57.12.70: winding n from <letter>1 to <letter>2.
+_COIL_LUG_LETTERS = {1: "H", 2: "X", 3: "Y"}
 
-_PROVENANCE = """OpenDSS XfmrCode -> TransformerTankConfiguration (catalog). A center-tap code is a tank with lugs and
-windings lug to lug; any other a TransformerTankEnd per winding. Built from the instances that use it.
+_PROVENANCE = """OpenDSS XfmrCode -> TransformerTankConfiguration (catalog). A 1-phase code is a tank with lugs and
+windings lug to lug; a 3-phase one a TransformerTankEnd per winding. Built from the instances that use it.
 Source table: XfmrCode (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#xfmrcode"""
 
@@ -129,25 +132,29 @@ def instance_template(xf, buses: Mapping[str, BusSystem]) -> Template:
     """The template of ``xf`` (an instance with its code's values, ``with_code``) on its buses."""
     notes: list[str] = [] if xf.phases is not None else ["phases=3"]
     phases = xf.phases if xf.phases is not None else 3
+    if phases not in (1, 3):
+        raise ValueError(f"Transformer {xf.name}: XfmrCode {xf.XfmrCode} has phases={phases}; a template is 3-phase "
+                         "(TransformerTankEnds) or one 1-phase can (lugs)")
     windings = transformer_mapper.windings_of(xf, phases, notes)
     ends = transformer_mapper.ends_of(windings, phases, name=xf.name)
-    lugs = transformer_mapper.is_center_tap(phases, windings, ends)
+    lugs = phases == 1
+    center_tap = transformer_mapper.is_center_tap(phases, windings, ends)
     base_kva = windings[0].kva
     pairs = [(1, 2), (1, 3), (2, 3)][: 1 if len(windings) == 2 else 3]
     for i, _ in pairs:
         if windings[i - 1].kva != base_kva:
             raise ValueError(f"Transformer {xf.name}: kVAs={[w.kva for w in windings]}; DSS gives every x on winding "
                              f"1's kVA, so a mesh's From winding ({i}) must carry it")
-    if lugs and any(winding.kva != base_kva for winding in windings):
+    if center_tap and any(winding.kva != base_kva for winding in windings):
         raise ValueError(f"Transformer {xf.name}: kVAs={[w.kva for w in windings]}; a center tap's coils share "
                          "winding 1's kVA as their percent base (baseS)")
     no_load_kw = float(xf.pct_noloadloss) / 100 * base_kva if xf.pct_noloadloss is not None else None
     configuration = (cell(xf.pct_imag), cell(no_load_kw))
     end_of = {winding.number: end for end in ends for winding in end.windings}
     rows, template_ends = [], []
-    if lugs:
-        if xf.Rneut is not None and float(xf.Rneut) >= 0:
-            raise ValueError(f"Transformer {xf.name}: a neutral impedance on a center-tap code is not mapped yet")
+    if lugs and xf.Rneut is not None and float(xf.Rneut) >= 0:
+        raise ValueError(f"Transformer {xf.name}: a neutral impedance on a 1-phase code is not mapped yet")
+    if center_tap:
         for winding in windings[1:]:
             if winding.nodes != _CENTER_TAP_NODES[winding.number]:
                 raise ValueError(f"Transformer {xf.name}: winding {winding.number} on nodes {winding.nodes}; a "
@@ -156,6 +163,12 @@ def instance_template(xf, buses: Mapping[str, BusSystem]) -> Template:
         for designation, number, side in _CENTER_TAP_LUGS:
             winding = windings[number - 1]
             template_ends.append((designation, str(numbers[(end_of[number].number, winding.nodes[side])][0])))
+    elif lugs:
+        numbers = transformer_mapper.coil_phase_end_numbers(ends)
+        for winding in windings:
+            letter = _COIL_LUG_LETTERS[winding.number]
+            template_ends += [(f"{letter}{side}", str(numbers[(end_of[winding.number].number, node)][0]))
+                              for side, node in enumerate(winding.nodes, start=1)]
     for winding in windings:
         end = end_of[winding.number]
         if phases == 3:
@@ -165,10 +178,13 @@ def instance_template(xf, buses: Mapping[str, BusSystem]) -> Template:
             from_node, to_node = winding.nodes
             rated_u = transformer_mapper.coil_rated_u(winding, end.phase_of_node[from_node],
                                                       end.phase_of_node[to_node], buses[end.bus])
-            base_u, base_s = winding.kv, base_kva if lugs else winding.kva
+            base_u, base_s = winding.kv, winding.kva  # a center tap's are all winding 1's (checked above)
             rated_s = winding.kva / 2 if end.split_phase else winding.kva
-        if lugs:
+        if center_tap:
             from_end, to_end = _CENTER_TAP_WINDINGS[winding.number]
+        elif lugs:
+            letter = _COIL_LUG_LETTERS[winding.number].lower()
+            from_end, to_end = f"{letter}1", f"{letter}2"
         else:
             from_end, to_end = str(winding.number), None
             template_ends.append((str(winding.number), "Y" if winding.wye else "D",
@@ -261,7 +277,8 @@ def _statements(rows: _Tables) -> list[Table]:
          "baseU = the coil kV; ratedU phase-to-phase (derived from the instances' bus system); baseS = the "
          "winding's kVA (r is on it), per phase on a 3-phase code"),
         ("TransformerWinding", winding + ["FromTransformerLug", "ToTransformerLug"], rows.lug_windings,
-         "from the polarity end: H1->H2, X1->X2 (s1->N), X2->X3 (N->s2); a half's ratedS = kVA / 2"),
+         "from the polarity end: H1->H2, X1->X2, Y1->Y2; a center tap's X1->X2 (s1->N), X2->X3 (N->s2), a "
+         "half's ratedS = kVA / 2"),
         ("TransformerMeshImpedance", ["mRID", "FromWinding", "ToWinding", ("x", "percent")], rows.mesh,
          "x in percent on the From winding's baseU and baseS"),
     ]

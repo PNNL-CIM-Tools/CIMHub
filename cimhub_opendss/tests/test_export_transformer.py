@@ -202,8 +202,11 @@ def test_instances_name_their_code_and_hold_only_buses():
     assert (transformer.XfmrCode, transformer.phases, transformer.kVs) == ("ct25", None, [])
 
 
-def test_unused_configuration_raises():
+def test_unused_configuration_is_skipped_and_logged(caplog):
+    """A feeder package carries its utility's whole catalogue (T5): a template no unit uses gets no XfmrCode."""
     network = _network("xfmrcode/codes")
     network.add_to_graph(cim.TransformerTankConfiguration(mRID="xc_spare", name="spare"))
-    with pytest.raises(ValueError, match=r"TransformerTankConfigurations \['xc_spare'\]: no unit uses them"):
-        _model(network)
+    with caplog.at_level("WARNING"):
+        codes = {str(code.name) for code in _model(network).list_by_class(schema.Xfmrcode)}
+    assert "spare" not in codes and "ct25" in codes
+    assert "TransformerTankConfigurations ['xc_spare']: no unit uses them" in caplog.text

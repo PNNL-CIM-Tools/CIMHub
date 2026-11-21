@@ -29,6 +29,14 @@ __all__ = [
 # Schema annotation cache
 # ---------------------------------------------------------------------------
 
+@lru_cache(maxsize=None)
+def _load_yaml(path: Path):
+    """One schema YAML file, parsed once per process: ``get_schema_annotations`` searches every file of a schema
+    for each class it is asked about, and a large schema (GLM: 79 files) took seconds per class to re-parse."""
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
 @lru_cache(maxsize=128)
 def get_schema_annotations(schema_class: Type) -> dict[str, dict]:
     """Load LinkML annotations for a dataclass from its YAML schema.
@@ -81,8 +89,7 @@ def get_schema_annotations(schema_class: Type) -> dict[str, dict]:
     # Search for class definition (could be in main.yaml or classes/*.yaml)
     for yaml_file in schema_dir.rglob('*.yaml'):
         try:
-            with open(yaml_file) as f:
-                schema = yaml.safe_load(f)
+            schema = _load_yaml(yaml_file)
 
             if not schema or 'classes' not in schema:
                 continue

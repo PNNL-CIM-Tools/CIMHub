@@ -1,0 +1,191 @@
+id: https://gridlabd.org/schema/glm/generators/rectifier
+name: rectifier
+description: GridLAB-D rectifier class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  rectifier:
+    is_a: glm_object
+    description: 'Copyright (C) 2008 Battelle Memorial Institute
+
+      @file rectifier.cpp
+
+      @defgroup rectifier
+
+      @ingroup generators
+
+      @{
+
+
+      Inherits from: gld_object
+
+
+      Type: Instance (network topology element)
+
+
+      CIM Mapping: TBD
+
+
+      Note: Inherits from gld_object (not in generators module)'
+    attributes:
+      rectifier_type:
+        range: string
+        required: false
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: rectifier_type
+      generator_mode:
+        range: string
+        required: false
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: generator_mode
+      V_Out:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 3
+          value_type: complex
+          separator: ','
+          native_name: V_Out[V]
+      V_Rated:
+        range: float
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 4
+          value_type: float
+          separator: ','
+          precision: 6
+          native_name: V_Rated[V]
+      I_Out:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: A
+        annotations:
+          order: 5
+          value_type: complex
+          separator: ','
+          native_name: I_Out[A]
+      VA_Out:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 6
+          value_type: complex
+          separator: ','
+          native_name: VA_Out[VA]
+      voltage_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 7
+          value_type: complex
+          separator: ','
+          native_name: voltage_A[V]
+      voltage_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 8
+          value_type: complex
+          separator: ','
+          native_name: voltage_B[V]
+      voltage_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 9
+          value_type: complex
+          separator: ','
+          native_name: voltage_C[V]
+      current_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 10
+          value_type: complex
+          separator: ','
+          native_name: current_A[V]
+      current_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 11
+          value_type: complex
+          separator: ','
+          native_name: current_B[V]
+      current_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: V
+        annotations:
+          order: 12
+          value_type: complex
+          separator: ','
+          native_name: current_C[V]
+      power_out_A:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 13
+          value_type: complex
+          separator: ','
+          native_name: power_out_A[VA]
+      power_out_B:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 14
+          value_type: complex
+          separator: ','
+          native_name: power_out_B[VA]
+      power_out_C:
+        range: Complex
+        required: false
+        unit:
+          ucum_code: VA
+        annotations:
+          order: 15
+          value_type: complex
+          separator: ','
+          native_name: power_out_C[VA]
+      phases:
+        range: string
+        required: false
+        annotations:
+          order: 16
+          value_type: string
+          separator: ','
+          native_name: phases

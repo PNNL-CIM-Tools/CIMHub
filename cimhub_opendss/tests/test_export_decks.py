@@ -11,7 +11,7 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.cim_to_dss import cim_to_dss
 
 from conftest import deck
-from engine_compare import assert_same_power_flow, engine_coordinates
+from engine_compare import assert_same_coordinates, assert_same_power_flow
 from test_cimtbl_sweep import SWEEP_STOPS
 
 _ROUNDTRIP = pytest.mark.roundtrip
@@ -67,7 +67,7 @@ def test_deck_solves_alike_and_keeps_its_coordinates(relative, tmp_path):
     original = deck(relative)
     written = _export(original, tmp_path / original.name)
     assert assert_same_power_flow(original, written) == PARITY[relative]
-    assert engine_coordinates(written) == engine_coordinates(original)
+    assert_same_coordinates(written, original)
 
 
 @pytest.mark.parametrize("relative", _decks(BINDING))

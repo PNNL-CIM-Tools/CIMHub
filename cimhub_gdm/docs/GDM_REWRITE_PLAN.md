@@ -59,7 +59,7 @@ DSS/GDM parity is written on rc_1 after the merge.
 |---|---|---|
 | builder-native | yes (D11, reconfirmed 2026-11-08) | above |
 | feeders | several per system; each piece of equipment's container comes from its own feeder/substation | OPEN_DECISIONS 1 |
-| time series | **first pass: dropped, with one warning** naming the components and series; the static snapshot is imported. Mapped later onto the user's Curve + RegularIntervalSchedule profile | OPEN_DECISIONS 2, [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) |
+| time series | **first pass: dropped, with one warning** naming the components and series; the static snapshot is imported. Load series mapped onto nc_schedule EnergyConnectionSchedules since 2026-11-11 (actual values, points in Parquet) | OPEN_DECISIONS 2, [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md) |
 | network shell | CIM-Builder `cimbuilder.network.new_feeder_model` (B1) | OPEN_DECISIONS 3 |
 | frequency | 60 Hz, `FREQUENCY_HZ = 60` | OPEN_DECISIONS 4 |
 | BaseVoltage | line-to-line, rounded to 4 significant figures for dedupe and mRID | OPEN_DECISIONS 5 |
@@ -90,7 +90,7 @@ doc, because B17 names vendor fields. What remains:
 | B18 | `rehash_mrid(class_name, token)`: a GUID token → a new seeded UUID string; free text unchanged | user | empty or clashing names (until then a clash raises) |
 | B19 | `GroundDisconnector` builder | user | `EarthingSwitchEquipment` (pending until then) |
 | B20 | AssetInfo builders: `GenerationInverterInfo`/`StorageInverterInfo`, `BatteryInfo`, `SolarPanelInfo`, `SeriesReactorInfo`, `CoolingInfo`, `SwitchInfo`, + `AssetDatasheet` on the instance | user | nothing: those fields are untranscribed until it lands |
-| B16 + profile | RegularIntervalSchedule profile and builders | user | the time-series family (after Phase 5) |
+| B16, B16b | EnergyConnectionSchedule builder (nc_schedule, in the profile since 512fafd); `irradiance` on the PV builder | built 2026-11-11 at the user's go-ahead (uncommitted in CIM-Builder) | the time-series family; static PV irradiance |
 | U3 (old R11) | a `.cimtbl` control row that monitors its own equipment's generated Terminal | CIM-Tables | capacitor-control **goldens** only; the builder path has no ordering problem |
 | X2 | `va` and `kilova` (GDM's ApparentPower spellings) are undefined in the CIM unit registry. `kilovar`/`var` parse. W, VA and VAr share dimensions, so a wrong-quantity mapping never raises | CIM-Profiles | nothing: `UNIT_SPELLINGS = {'va': 'VA', 'kilova': 'kVA'}` covers it; risk 17 stays |
 | X3b | the cim18v17 `protection` part fails to import (`TypeError: 'C' already defined`) | CIM-Profiles | nothing for GDM: the switch classes are in `electrical_unbalanced`, and fuse curves / reclose sequences are untranscribed |
@@ -111,11 +111,11 @@ Closed since the 2026-11-06 plan: B1-B11, B13, C1-C6, D1-D9, X1/R14 (`Qty(v, 'pe
 | 3 | transformers (catalog, instance, center tap) and regulators | mesh mRID fix; B17 for regulators |
 | 4 | DER (PV, battery, inverter), reactors | B20 adds the AssetInfo parts later; reactors wait on OPEN_DECISIONS 17b |
 | 5 | reference system end to end, XML round trip, docs | Phases 1-4 |
-| later | time series onto the schedule profile | B16 + the user's profile |
+| built | time series onto nc_schedule (TIMESERIES_NEEDS.md T1-T6), 2026-11-11 | B16 |
 
 **Companion docs:**
 - [`FAMILY_RECIPE.md`](FAMILY_RECIPE.md): module layout, catalogs built once, the steps per family.
 - [`CLASS_TARGETS.md`](CLASS_TARGETS.md): GDM class → CIM target, builder and phase.
 - [`TEST_DESIGN.md`](TEST_DESIGN.md): the atom harness, goldens and assertions.
 - [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md): decisions (all but 12-rest and 17b answered 2026-11-08), and risks.
-- [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md): what the schedule profile needs to carry GDM time series.
+- [`TIMESERIES_NEEDS.md`](TIMESERIES_NEEDS.md): the nc_schedule mapping, decisions T1-T6 and the B16 builder request.
