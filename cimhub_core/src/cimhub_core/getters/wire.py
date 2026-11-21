@@ -2,9 +2,9 @@
 `export-getters`).
 
 Four WireInfo kinds are read: ``OverheadWireInfo`` (a bare or covered wire), a plain ``CableInfo`` (an insulated,
-unshielded cable: an underground secondary's conductors), ``ConcentricNeutralCableInfo`` and ``TapeShieldCableInfo``. Every value is as stored, in the caller's units; unset is None. Only ``rAC25`` of the
-three AC resistances is read (the one the DSS importer writes); a set ``rAC50``/``rAC75`` raises until a producer
-writes one. The ratings are ``ratedCurrent`` and the limits of the wire's own ``AssetInfo.OperationalLimitSet``;
+unshielded cable: an underground secondary's conductors), ``ConcentricNeutralCableInfo`` and ``TapeShieldCableInfo``. Every value is as stored, in the caller's units; unset is None. ``rAC25`` (the DSS
+importer's) and ``rAC50`` (GridLAB-D's 50 C value, the GLM importer's) are read; a set ``rAC75`` raises until a
+producer writes one. The ratings are ``ratedCurrent`` and the limits of the wire's own ``AssetInfo.OperationalLimitSet``;
 a ``ratedCurrent`` and a normal limit that are both set must agree.
 """
 
@@ -20,7 +20,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.current_limits import CurrentLimits, get_asset_info_current_limits
 
 WIRE_KINDS = (cim.OverheadWireInfo, cim.CableInfo, cim.ConcentricNeutralCableInfo, cim.TapeShieldCableInfo)
-UNREAD_RESISTANCES = ("rAC50", "rAC75")
+UNREAD_RESISTANCES = ("rAC75",)
 
 
 class CableValues(NamedTuple):
@@ -44,6 +44,7 @@ class WireValues(NamedTuple):
     kind: type  # one of WIRE_KINDS
     r_dc20: float | None  # resistance unit (per length)
     r_ac25: float | None
+    r_ac50: float | None
     gmr: float | None  # length unit
     radius: float | None
     rated_current: float | None  # current unit
@@ -59,7 +60,7 @@ def get_wire_info(wire: cim.WireInfo, length_unit: str = "m", resistance_unit: s
         raise ValueError(f"{describe(wire)}: is not one of {[cls.__name__ for cls in WIRE_KINDS]}")
     unread = [name for name in UNREAD_RESISTANCES if getattr(wire, name) is not None]
     if unread:
-        raise ValueError(f"{describe(wire)}: {unread} are set; only rAC25 is read")
+        raise ValueError(f"{describe(wire)}: {unread} are set; only rAC25 and rAC50 are read")
     rated_current = get_qty(wire, "ratedCurrent", current_unit)
     limits = get_asset_info_current_limits(wire, current_unit)
     if rated_current is not None and limits.normal is not None and not math.isclose(rated_current, limits.normal):
@@ -69,6 +70,7 @@ def get_wire_info(wire: cim.WireInfo, length_unit: str = "m", resistance_unit: s
         kind=kind,
         r_dc20=get_qty(wire, "rDC20", resistance_unit),
         r_ac25=get_qty(wire, "rAC25", resistance_unit),
+        r_ac50=get_qty(wire, "rAC50", resistance_unit),
         gmr=get_qty(wire, "gmr", length_unit),
         radius=get_qty(wire, "radius", length_unit),
         rated_current=rated_current,

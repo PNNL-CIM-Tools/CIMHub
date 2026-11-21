@@ -1,7 +1,8 @@
 """A wire spacing's conductor positions and distances, and a line's conductor heights (skill `export-getters`).
 
 DSS ``LineSpacing`` wants x and height per conductor (``get_line_conductor_xy``); GLM ``line_spacing`` wants
-pairwise distances (``get_spacing_distances``) and heights. The spacing getters read either CIM form:
+pairwise distances and heights as the spacing holds them (``get_stored_distances``), where a pair GLM leaves out is
+"no coupling" and a height may be absent. The spacing getters read either CIM form:
 
 - ``XYSpacing``: ``XYConductorPosition.xCoord/yCoord`` as stored, in the spacing's frame. The origin may be ground,
   the top of the pole or the centre of the crossarm; the line's ``ySpacingOffset`` lifts it to its height above
@@ -38,6 +39,15 @@ EARTH = cim.ConductorPositionKind.earth
 DISTANCE_REL_TOL = 1e-4
 
 
+class StoredDistances(NamedTuple):
+    """A spacing's distances and heights, keyed by sequence number: every pair of an XYSpacing; only the stored
+    ones of a ConductorDistanceSpacing."""
+
+    kinds: dict[int, cim.ConductorPositionKind | None]
+    distances: dict[tuple[int, int], float]  # (i, j), i < j
+    heights: dict[int, float]  # an XYSpacing's y in its own frame (no ySpacingOffset); else the stored earth distance
+
+
 class ConductorXY(NamedTuple):
     """One conductor position: x across the structure, y up (from the spacing's origin, or above ground from
     ``get_line_conductor_xy``)."""
@@ -70,7 +80,7 @@ def get_spacing_xy(spacing: cim.WireSpacing, unit: str = "m") -> tuple[Conductor
     if isinstance(spacing, cim.XYSpacing):
         return _stored_positions(spacing, unit)
     if isinstance(spacing, cim.ConductorDistanceSpacing):
-        kinds, heights, distances = _stored_distances(spacing, unit)
+        kinds, heights, distances = _stored_distances(spacing, unit, heights_required=True)
         try:
             positions = positions_from_distances(heights, distances, rel_tol=DISTANCE_REL_TOL)
         except ValueError as error:
@@ -81,17 +91,35 @@ def get_spacing_xy(spacing: cim.WireSpacing, unit: str = "m") -> tuple[Conductor
 
 def get_spacing_distances(spacing: cim.WireSpacing, unit: str = "m") -> dict[tuple[int, int], float]:
     """``{(i, j): d}`` for every pair of sequence numbers i < j, in ``unit`` (the same at any offset). A
-    ``ConductorDistanceSpacing`` gives its stored values and must hold a distance for every pair."""
+    ``ConductorDistanceSpacing`` gives its stored values and must hold a distance for every pair; its heights are not
+    needed."""
     if isinstance(spacing, cim.XYSpacing):
         positions = _stored_positions(spacing, unit)
         return {(first.sequence_number, second.sequence_number): math.dist((first.x, first.y), (second.x, second.y))
                 for first, second in combinations(positions, 2)}
     if isinstance(spacing, cim.ConductorDistanceSpacing):
-        _, heights, distances = _stored_distances(spacing, unit)
-        missing = [pair for pair in combinations(sorted(heights), 2) if pair not in distances]
+        kinds, _, distances = _stored_distances(spacing, unit, heights_required=False)
+        missing = [pair for pair in combinations(sorted(kinds), 2) if pair not in distances]
         if missing:
             raise ValueError(f"{describe(spacing)}: has no distance between conductors {missing}")
         return dict(sorted(distances.items()))
+    raise _no_positions(spacing)
+
+
+def get_stored_distances(spacing: cim.WireSpacing, unit: str = "m") -> StoredDistances:
+    """The spacing's distances and heights in ``unit``, as it holds them: an XYSpacing's every pair and its y; a
+    ConductorDistanceSpacing's stored rows only, a pair or a height it leaves out absent (none at all: empty)."""
+    if isinstance(spacing, cim.XYSpacing):
+        positions = _stored_positions(spacing, unit)
+        distances = {(first.sequence_number, second.sequence_number): math.dist((first.x, first.y), (second.x, second.y))
+                     for first, second in combinations(positions, 2)}
+        return StoredDistances({position.sequence_number: position.kind for position in positions}, distances,
+                               {position.sequence_number: position.y for position in positions})
+    if isinstance(spacing, cim.ConductorDistanceSpacing):
+        if not spacing.ConductorDistance:  # GLM's all-zero spacing: no coupling and no heights
+            return StoredDistances({}, {}, {})
+        kinds, heights, distances = _stored_distances(spacing, unit, heights_required=False)
+        return StoredDistances(dict(sorted(kinds.items())), dict(sorted(distances.items())), heights)
     raise _no_positions(spacing)
 
 
@@ -194,8 +222,10 @@ def _required_xy(spacing: cim.XYSpacing, position: cim.SpacingPosition, unit: st
     return x, y
 
 
-def _stored_distances(spacing: cim.ConductorDistanceSpacing, unit: str) -> tuple[dict, dict, dict]:
-    """``(kinds, heights, distances)`` keyed by sequence number, heights sorted; every conductor needs a height."""
+def _stored_distances(spacing: cim.ConductorDistanceSpacing, unit: str, *,
+                      heights_required: bool) -> tuple[dict, dict, dict]:
+    """``(kinds, heights, distances)`` keyed by sequence number, heights sorted; with ``heights_required`` every
+    conductor needs a height."""
     kinds, heights, distances = {}, {}, {}
     for row in spacing.ConductorDistance:
         distance = get_qty(row, "distance", unit)
@@ -222,7 +252,7 @@ def _stored_distances(spacing: cim.ConductorDistanceSpacing, unit: str) -> tuple
     if not kinds:
         raise ValueError(f"{describe(spacing)}: has no ConductorDistance")
     no_height = sorted(set(kinds) - set(heights))
-    if no_height:
+    if heights_required and no_height:
         raise ValueError(f"{describe(spacing)}: conductors {no_height} have no height (a ConductorDistance to "
                          f"a position of kind earth)")
     return kinds, dict(sorted(heights.items())), distances

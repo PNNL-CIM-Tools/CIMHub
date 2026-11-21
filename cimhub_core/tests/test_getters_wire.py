@@ -100,10 +100,16 @@ def test_rated_current_that_disagrees_with_the_normal_limit_raises(network):
         get_wire_info(cable)
 
 
-def test_unread_ac_resistance_raises(network):
+def test_rac50_is_read(network):
     wire = _wire(network, cim.OverheadWireInfo, "wire_cu")
     wire.rAC50 = cim.ResistancePerLength(0.001)
-    with pytest.raises(ValueError, match=r"\['rAC50'\] are set; only rAC25 is read"):
+    assert get_wire_info(wire, resistance_unit="ohm/m").r_ac50 == pytest.approx(0.001)
+
+
+def test_unread_ac_resistance_raises(network):
+    wire = _wire(network, cim.OverheadWireInfo, "wire_cu")
+    wire.rAC75 = cim.ResistancePerLength(0.001)
+    with pytest.raises(ValueError, match=r"\['rAC75'\] are set; only rAC25 and rAC50 are read"):
         get_wire_info(wire)
 
 

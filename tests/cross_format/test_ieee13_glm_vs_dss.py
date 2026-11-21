@@ -217,8 +217,8 @@ def test_2_substation_transformer(dss_glm):
 
 
 def test_4_regulator_controls(dss_glm):
-    """The Java export wrote Control MANUAL with the band commented out: GLM's controls are off with no target, and
-    the core getter cannot read them (S5-4). GLM's line drop is 1/5 of DSS's: the export wrote DSS's CT ratio
+    """The Java export wrote Control MANUAL with the band commented out: GLM's controls are off with no target, which
+    the core getter reads as None (S5-4). GLM's line drop is 1/5 of DSS's: the export wrote DSS's CT ratio
     (700 A / 0.2 A), which GridLAB-D reads as on a 1 A secondary (S5-5). neutralU: DSS's 2.4 kV winding; GLM's coil,
     the 4.16 kV bus over sqrt 3 (S3c)."""
     dss, glm = (taps(network) for network in dss_glm)
@@ -228,8 +228,8 @@ def test_4_regulator_controls(dss_glm):
         assert (get_tap_steps(dss[phase]).neutral_u, get_tap_steps(glm[phase]).neutral_u) == (2400, 2401.78)
         control = glm[phase].TapChangerControl
         assert (control.enabled, control.targetValue) == (False, None)
-        with pytest.raises(ValueError, match="targetValue is unset"):
-            get_tap_changer_control(glm[phase])
+        assert (get_tap_changer_control(glm[phase]).control.target, get_tap_changer_control(glm[phase]).control.enabled) == (
+            None, False)
         for name in ("lineDropR", "lineDropX"):
             assert float(getattr(control, name).to("ohm")) * 5 == pytest.approx(
                 float(getattr(dss[phase].TapChangerControl, name).to("ohm")))

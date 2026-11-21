@@ -1,0 +1,754 @@
+clock {
+  timezone UTC0;
+  starttime '2000-01-01 00:00:00';
+  stoptime '2000-01-01 00:00:00';
+}
+#set relax_naming_rules=1
+module powerflow {
+  solver_method NR;
+  nominal_frequency 60;
+  line_capacitance TRUE;
+}
+module generators;
+object line_configuration {
+  name "lcon_mtx601_ABC";
+  z11 0.3465+1.0179j;
+  z12 0.1535+0.3849j;
+  z13 0.158+0.4236j;
+  z21 0.1535+0.3849j;
+  z22 0.3375+1.0478j;
+  z23 0.156+0.5017j;
+  z31 0.158+0.4236j;
+  z32 0.156+0.5017j;
+  z33 0.3414+1.0348j;
+  c11 0;
+  c12 0;
+  c13 0;
+  c21 0;
+  c22 0;
+  c23 0;
+  c31 0;
+  c32 0;
+  c33 0;
+}
+object line_configuration {
+  name "lcon_mtx602_ABC";
+  z11 0.7526+1.1814j;
+  z12 0.1535+0.3849j;
+  z13 0.156+0.5017j;
+  z21 0.1535+0.3849j;
+  z22 0.7475+1.1983j;
+  z23 0.158+0.4236j;
+  z31 0.156+0.5017j;
+  z32 0.158+0.4236j;
+  z33 0.7436+1.2112j;
+  c11 0;
+  c12 0;
+  c13 0;
+  c21 0;
+  c22 0;
+  c23 0;
+  c31 0;
+  c32 0;
+  c33 0;
+}
+object line_configuration {
+  name "lcon_mtx603_CB";
+  z22 1.3294+1.3471j;
+  z23 0.2066+0.4591j;
+  z32 0.2066+0.4591j;
+  z33 1.3238+1.3569j;
+  c22 0;
+  c23 0;
+  c32 0;
+  c33 0;
+}
+object line_configuration {
+  name "lcon_mtx604_AC";
+  z11 1.3238+1.3569j;
+  z13 0.2066+0.4591j;
+  z31 0.2066+0.4591j;
+  z33 1.3294+1.3471j;
+  c11 0;
+  c13 0;
+  c31 0;
+  c33 0;
+}
+object line_configuration {
+  name "lcon_mtx605_C";
+  z33 1.3292+1.3475j;
+  c33 0;
+}
+object line_configuration {
+  name "lcon_mtx606_ABC";
+  z11 0.791721+0.438352j;
+  z12 0.318476+0.0276838j;
+  z13 0.28345-0.0184204j;
+  z21 0.318476+0.0276838j;
+  z22 0.781649+0.396697j;
+  z23 0.318476+0.0276838j;
+  z31 0.28345-0.0184204j;
+  z32 0.318476+0.0276838j;
+  z33 0.791721+0.438352j;
+  c11 383.948;
+  c12 0;
+  c13 0;
+  c21 0;
+  c22 383.948;
+  c23 0;
+  c31 0;
+  c32 0;
+  c33 383.948;
+}
+object line_configuration {
+  name "lcon_mtx607_A";
+  z11 1.3425+0.5124j;
+  c11 236;
+}
+object transformer_configuration {
+  name "xcon_ct5B";
+  connect_type "SINGLE_PHASE_CENTER_TAPPED";
+  primary_voltage 2400;
+  secondary_voltage 120;
+  power_rating 5;
+  powerB_rating 5;
+  impedance 0.006+0.0136j;
+  impedance1 0.012+0.0068j;
+  impedance2 0.012+0.0068j;
+  shunt_resistance 500;
+  shunt_reactance 200;
+}
+object transformer_configuration {
+  name "xcon_sub3";
+  connect_type "DELTA_GWYE";
+  primary_voltage 115000;
+  secondary_voltage 4160;
+  power_rating 5000;
+  impedance 1e-05+0.0001j;
+}
+object transformer_configuration {
+  name "xcon_xfm1";
+  connect_type "WYE_WYE";
+  primary_voltage 4160;
+  secondary_voltage 480;
+  power_rating 500;
+  impedance 0.011+0.02j;
+}
+object regulator_configuration {
+  name "xf_Reg_config";
+  connect_type "WYE_WYE";
+  dwell_time 15;
+  raise_taps 16;
+  lower_taps 16;
+  current_transducer_ratio 3500;
+  power_transducer_ratio 20;
+  regulation 0.1;
+  Control "MANUAL";
+  Type "B";
+  tap_pos_A 10;
+  tap_pos_B 8;
+  tap_pos_C 11;
+}
+object substation {
+  name "sourcebus";
+  phases "ABCN";
+  nominal_voltage 66395.280956807;
+  bustype "SWING";
+  positive_sequence_voltage 66395.28+0j;
+}
+object node {
+  name "611";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "632";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "633";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "634";
+  phases "ABCN";
+  nominal_voltage 277.12812921102;
+}
+object node {
+  name "645";
+  phases "BCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "646";
+  phases "BCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "650";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "652";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "670";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "671";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "675";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "680";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "684";
+  phases "ACN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "692";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "brkr";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "mid";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "rg60";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "tap";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "xf1";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object triplex_node {
+  name "house";
+  phases "BS";
+  nominal_voltage 120;
+}
+object overhead_line {
+  name "line_632633";
+  phases "ABC";
+  from "632";
+  to "633";
+  continuous_rating_A 340;
+  continuous_rating_B 340;
+  continuous_rating_C 340;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx602_ABC";
+  length 500;
+}
+object overhead_line {
+  name "line_632645";
+  phases "BC";
+  from "632";
+  to "645";
+  continuous_rating_B 230;
+  continuous_rating_C 230;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx603_CB";
+  length 500;
+}
+object overhead_line {
+  name "line_632670";
+  phases "ABC";
+  from "mid";
+  to "670";
+  continuous_rating_A 730;
+  continuous_rating_B 730;
+  continuous_rating_C 730;
+  emergency_rating_A 730;
+  emergency_rating_B 730;
+  emergency_rating_C 730;
+  configuration "lcon_mtx601_ABC";
+  length 667;
+}
+object overhead_line {
+  name "line_645646";
+  phases "BC";
+  from "645";
+  to "646";
+  continuous_rating_B 230;
+  continuous_rating_C 230;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx603_CB";
+  length 300;
+}
+object overhead_line {
+  name "line_650632";
+  phases "ABC";
+  from "rg60";
+  to "632";
+  continuous_rating_A 730;
+  continuous_rating_B 730;
+  continuous_rating_C 730;
+  emergency_rating_A 730;
+  emergency_rating_B 730;
+  emergency_rating_C 730;
+  configuration "lcon_mtx601_ABC";
+  length 2000;
+}
+object overhead_line {
+  name "line_670671";
+  phases "ABC";
+  from "670";
+  to "671";
+  continuous_rating_A 730;
+  continuous_rating_B 730;
+  continuous_rating_C 730;
+  emergency_rating_A 730;
+  emergency_rating_B 730;
+  emergency_rating_C 730;
+  configuration "lcon_mtx601_ABC";
+  length 1333;
+}
+object overhead_line {
+  name "line_671680";
+  phases "ABC";
+  from "671";
+  to "680";
+  continuous_rating_A 730;
+  continuous_rating_B 730;
+  continuous_rating_C 730;
+  emergency_rating_A 730;
+  emergency_rating_B 730;
+  emergency_rating_C 730;
+  configuration "lcon_mtx601_ABC";
+  length 1000;
+}
+object overhead_line {
+  name "line_671684";
+  phases "AC";
+  from "671";
+  to "684";
+  continuous_rating_A 230;
+  continuous_rating_C 230;
+  emergency_rating_A 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx604_AC";
+  length 300;
+}
+object overhead_line {
+  name "line_684611";
+  phases "C";
+  from "tap";
+  to "611";
+  continuous_rating_C 230;
+  emergency_rating_C 600;
+  configuration "lcon_mtx605_C";
+  length 300;
+}
+object overhead_line {
+  name "line_684652";
+  phases "A";
+  from "684";
+  to "652";
+  continuous_rating_A 165;
+  emergency_rating_A 600;
+  configuration "lcon_mtx607_A";
+  length 800;
+}
+object overhead_line {
+  name "line_692675";
+  phases "ABC";
+  from "692";
+  to "675";
+  continuous_rating_A 260;
+  continuous_rating_B 260;
+  continuous_rating_C 260;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx606_ABC";
+  length 500;
+}
+object switch {
+  name "swt_671692";
+  phases "ABC";
+  status "CLOSED";
+  from "671";
+  to "692";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+}
+object switch {
+  name "swt_brkr1";
+  phases "ABC";
+  status "CLOSED";
+  from "650";
+  to "brkr";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+}
+object switch {
+  name "swt_sect1";
+  phases "C";
+  status "CLOSED";
+  from "684";
+  to "tap";
+  continuous_rating_C 400;
+  emergency_rating_C 600;
+}
+object fuse {
+  name "swt_fuse1";
+  phases "ABC";
+  status "CLOSED";
+  from "633";
+  to "xf1";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+  current_limit 100;
+}
+object recloser {
+  name "swt_rec1";
+  phases "ABC";
+  status "CLOSED";
+  from "632";
+  to "mid";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+}
+object transformer {
+  name "xf_sub3";
+  phases "ABCN";
+  from "sourcebus";
+  to "650";
+  continuous_rating_A 27.61;
+  continuous_rating_B 27.61;
+  continuous_rating_C 27.61;
+  emergency_rating_A 37.65;
+  emergency_rating_B 37.65;
+  emergency_rating_C 37.65;
+  configuration "xcon_sub3";
+}
+object transformer {
+  name "xf_tpoletop";
+  phases "BS";
+  from "670";
+  to "house";
+  configuration "xcon_ct5B";
+}
+object transformer {
+  name "xf_xfm1";
+  phases "ABCN";
+  from "xf1";
+  to "634";
+  continuous_rating_A 76.33;
+  continuous_rating_B 76.33;
+  continuous_rating_C 76.33;
+  emergency_rating_A 104.09;
+  emergency_rating_B 104.09;
+  emergency_rating_C 104.09;
+  configuration "xcon_xfm1";
+}
+object regulator {
+  name "xf_Reg";
+  phases "ABC";
+  from "brkr";
+  to "rg60";
+  continuous_rating_A 763.58;
+  continuous_rating_B 763.58;
+  continuous_rating_C 763.58;
+  emergency_rating_A 1041.25;
+  emergency_rating_B 1041.25;
+  emergency_rating_C 1041.25;
+  configuration "xf_Reg_config";
+}
+object load {
+  name "ld_611";
+  parent "611";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+  base_power_C 187882.94;
+  current_pf_C 0.904819;
+  current_fraction_C 1;
+}
+object load {
+  name "ld_634c";
+  parent "634";
+  phases "ABCN";
+  nominal_voltage 277.12812921102;
+  base_power_A 194164.88;
+  base_power_B 150000;
+  base_power_C 150000;
+  current_pf_A 0.824042;
+  current_pf_B 0.8;
+  current_pf_C 0.8;
+  current_fraction_A 1;
+  current_fraction_B 1;
+  current_fraction_C 1;
+}
+object load {
+  name "ld_645";
+  parent "645";
+  phases "BN";
+  nominal_voltage 2401.77711982884;
+  base_power_B 211009.48;
+  current_pf_B 0.805651;
+  current_fraction_B 1;
+}
+object load {
+  name "ld_646";
+  parent "646";
+  phases "BCD";
+  nominal_voltage 2401.77711982884;
+  base_power_B 265186.73;
+  current_pf_B 0.867313;
+  current_fraction_B 1;
+}
+object load {
+  name "ld_652";
+  parent "652";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+  base_power_A 154207.65;
+  current_pf_A 0.83005;
+  current_fraction_A 1;
+}
+object load {
+  name "ld_670a";
+  parent "670";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+  base_power_A 19723.08;
+  base_power_B 76157.73;
+  base_power_C 135325.53;
+  current_pf_A 0.861934;
+  current_pf_B 0.866622;
+  current_pf_C 0.864582;
+  current_fraction_A 1;
+  current_fraction_B 1;
+  current_fraction_C 1;
+}
+object load {
+  name "ld_671";
+  parent "671";
+  phases "ABCD";
+  nominal_voltage 2401.77711982884;
+  base_power_A 443424.18;
+  base_power_B 443424.18;
+  base_power_C 443424.18;
+  current_pf_A 0.868243;
+  current_pf_B 0.868243;
+  current_pf_C 0.868243;
+  current_fraction_A 1;
+  current_fraction_B 1;
+  current_fraction_C 1;
+}
+object load {
+  name "ld_675a";
+  parent "675";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+  base_power_A 520888.66;
+  base_power_B 90686.27;
+  base_power_C 359226.95;
+  current_pf_A 0.931101;
+  current_pf_B 0.749838;
+  current_pf_C 0.807289;
+  current_fraction_A 1;
+  current_fraction_B 1;
+  current_fraction_C 1;
+}
+object load {
+  name "ld_692";
+  parent "692";
+  phases "ACD";
+  nominal_voltage 2401.77711982884;
+  base_power_C 227378.54;
+  current_pf_C 0.747652;
+  current_fraction_C 1;
+}
+object triplex_load {
+  name "ld_house";
+  parent "house";
+  phases "BS";
+  nominal_voltage 120;
+  base_power_1 2941.18;
+  base_power_2 2941.18;
+  current_pf_1 0.85;
+  current_pf_2 0.85;
+  current_fraction_1 1;
+  current_fraction_2 1;
+}
+object capacitor {
+  name "cap_cap1";
+  parent "675";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+  phases_connected "ABCN";
+  switchA "CLOSED";
+  switchB "CLOSED";
+  switchC "CLOSED";
+  control "MANUAL";
+  capacitor_A 200000;
+  capacitor_B 200000;
+  capacitor_C 200000;
+  cap_nominal_voltage 2401.78;
+}
+object capacitor {
+  name "cap_cap2";
+  parent "611";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+  phases_connected "CN";
+  switchC "CLOSED";
+  control "MANUAL";
+  capacitor_C 100000;
+  cap_nominal_voltage 2400;
+}
+object inverter {
+  name "inv_bat_batidle";
+  parent "634";
+  inverter_type "FOUR_QUADRANT";
+  four_quadrant_control_mode "CONSTANT_PQ";
+  generator_status "ONLINE";
+  P_Out -1000;
+  Q_Out 0;
+  rated_power 33333.333;
+  phases "ABCN";
+  max_charge_rate 100000;
+  max_discharge_rate 100000;
+}
+object inverter {
+  name "inv_bat_house";
+  parent "house";
+  inverter_type "FOUR_QUADRANT";
+  four_quadrant_control_mode "CONSTANT_PQ";
+  generator_status "ONLINE";
+  P_Out -5000;
+  Q_Out 0;
+  rated_power 5000;
+  phases "BS";
+  max_charge_rate 5000;
+  max_discharge_rate 5000;
+}
+object inverter {
+  name "inv_bat_school";
+  parent "634";
+  inverter_type "FOUR_QUADRANT";
+  four_quadrant_control_mode "CONSTANT_PQ";
+  generator_status "ONLINE";
+  P_Out 99999.999;
+  Q_Out 0;
+  rated_power 33333.333;
+  phases "ABCN";
+  max_charge_rate 100000;
+  max_discharge_rate 100000;
+}
+object inverter {
+  name "inv_pv_house";
+  parent "house";
+  inverter_type "FOUR_QUADRANT";
+  four_quadrant_control_mode "CONSTANT_PF";
+  generator_status "ONLINE";
+  rated_power 5000;
+  inverter_efficiency 1;
+  power_factor 1;
+  phases "BS";
+}
+object inverter {
+  name "inv_pv_school";
+  parent "634";
+  inverter_type "FOUR_QUADRANT";
+  four_quadrant_control_mode "CONSTANT_PF";
+  generator_status "ONLINE";
+  rated_power 100000;
+  inverter_efficiency 1;
+  power_factor 1;
+  phases "ABCN";
+}
+object solar {
+  name "pv_house";
+  parent "inv_pv_house";
+  soiling 1;
+  derating 1;
+  rated_power 5000;
+}
+object solar {
+  name "pv_school";
+  parent "inv_pv_school";
+  soiling 1;
+  derating 1;
+  rated_power 300000;
+}
+object battery {
+  name "bat_batidle";
+  parent "inv_bat_batidle";
+  use_internal_battery_model TRUE;
+  battery_type "LI_ION";
+  rated_power 100000;
+  battery_capacity 200000;
+  round_trip_efficiency 0.86;
+  state_of_charge 0.5;
+}
+object battery {
+  name "bat_house";
+  parent "inv_bat_house";
+  use_internal_battery_model TRUE;
+  battery_type "LI_ION";
+  rated_power 5000;
+  battery_capacity 13500;
+  round_trip_efficiency 0.86;
+  state_of_charge 0.3704;
+}
+object battery {
+  name "bat_school";
+  parent "inv_bat_school";
+  use_internal_battery_model TRUE;
+  battery_type "LI_ION";
+  rated_power 100000;
+  battery_capacity 200000;
+  round_trip_efficiency 0.86;
+  state_of_charge 0.5;
+}
