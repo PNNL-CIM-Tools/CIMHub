@@ -57,6 +57,17 @@ def test_line_by_impedance_units():
     assert float(data[(2, 1)].r.to("ohm/mi")) == pytest.approx(0.2066)
 
 
+def test_line_by_impedance_has_a_template_code_and_a_lines_own():
+    """A shared code is a template behind a WireConfiguration with no spacing; a line's own is on the line."""
+    network = _load("line_by_impedance")
+    segments = {segment.name: segment for segment in network.graph[network.cim.ACLineSegment].values()}
+    shared, own = segments["l1"], segments["l2"]
+    assert shared.PerLengthImpedance is None and shared.WireConfiguration.WireSpacing is None
+    assert (shared.WireConfiguration.PerLengthImpedance.name, shared.WireConfiguration.PerLengthImpedance.isTemplate) \
+        == ("mtx604", True)
+    assert own.WireConfiguration is None and own.PerLengthImpedance.isTemplate is False
+
+
 def test_bus_branch_per_unit_converts_on_the_system_base():
     network = _load("line_bus_branch")
     [line] = network.graph[network.cim.ACLineSegment].values()

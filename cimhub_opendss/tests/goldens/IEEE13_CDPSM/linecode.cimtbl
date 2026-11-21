@@ -1,24 +1,25 @@
-# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
+# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (templates),
+# each with the WireConfiguration its lines reference (DSS-14).
 # Source table: LineCode (records: 7)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode
 
 Profile = cim18v17
 
-Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate
     # untranscribed: normamps=730.0
-    lc_mtx601, mtx601, 3, 60
+    lc_mtx601, mtx601, 3, 60, true
     # untranscribed: normamps=340.0
-    lc_mtx602, mtx602, 3, 60
+    lc_mtx602, mtx602, 3, 60, true
     # untranscribed: normamps=230.0
-    lc_mtx603, mtx603, 2, 60
+    lc_mtx603, mtx603, 2, 60, true
     # untranscribed: normamps=230.0
-    lc_mtx604, mtx604, 2, 60
+    lc_mtx604, mtx604, 2, 60, true
     # untranscribed: normamps=230.0
-    lc_mtx605, mtx605, 1, 60
+    lc_mtx605, mtx605, 1, 60, true
     # untranscribed: normamps=260.0
-    lc_mtx606, mtx606, 3, 60
+    lc_mtx606, mtx606, 3, 60, true
     # untranscribed: normamps=165.0
-    lc_mtx607, mtx607, 1, 60
+    lc_mtx607, mtx607, 1, 60, true
 
 # units=mi. row/column are conductor indices of the lower triangle.
 # derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS
@@ -49,3 +50,13 @@ Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/mi), x
     lc_mtx606_32, lc_mtx606, 3, 2, 0.318476, 0.0276838,  0.0
     lc_mtx606_33, lc_mtx606, 3, 3, 0.791721, 0.438352,   144744.98593925923
     lc_mtx607_11, lc_mtx607, 1, 1, 1.3425,   0.5124,     88969.90394966294
+
+# the LineCodes' lines share each through its WireConfiguration, which has no WireSpacing (DSS-14)
+Table WireConfiguration: mRID, name, PerLengthImpedance
+    lc_mtx601_wc, mtx601, lc_mtx601
+    lc_mtx602_wc, mtx602, lc_mtx602
+    lc_mtx603_wc, mtx603, lc_mtx603
+    lc_mtx604_wc, mtx604, lc_mtx604
+    lc_mtx605_wc, mtx605, lc_mtx605
+    lc_mtx606_wc, mtx606, lc_mtx606
+    lc_mtx607_wc, mtx607, lc_mtx607

@@ -3,14 +3,11 @@ Set defaultbasefreq=60
 New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=2.09861225631438e-05 X1=8.39444902525753e-05 R0=2.35020625041835e-05 X0=7.05061875125506e-05
 new Linecode.lc_mtx601 nphases=3 units=m rmatrix=[0.000215305118110236 |9.69339059890241e-05 0.0002097127773801 |9.81766483734988e-05 9.53804780084308e-05 0.000212136125029826] xmatrix=[0.000632493736578382 |0.00031174192714547 0.000651072735226279 |0.000263212837031735 0.00023916577189215 0.000642994909727193] cmatrix=[0.00173983933826454 |-0.0003728227153424 0.00173983933826454 |-0.0003728227153424 -0.0003728227153424 0.00173983933826454] baseFreq=60
 new Linecode.lc_mtx603 nphases=2 units=m rmatrix=[0.000826050862960312 |0.000128375288316233 0.000822571184283783] xmatrix=[0.000837049133062913 |0.00028527151435616 0.000843138570746838] cmatrix=[0.00289919370874095 |-0.000559171935894377 0.00292647190408017] baseFreq=60
-new Linecode.ln_seq1_lc nphases=3 r1=0.0003 x1=0.0006 r0=0.0006 x0=0.0018 C1=0.01 C0=0.004 units=m baseFreq=60
-new Linecode.ln_seq2_lc nphases=3 r1=0.0003 x1=0.0006 r0=0.0001784 x0=0.0004047 C1=0.0111548556430446 C0=0.005249343832021 units=m baseFreq=60
-new Linecode.ln_seq3_lc nphases=1 units=m rmatrix=[0.0005] xmatrix=[0.0009] cmatrix=[0.0034] baseFreq=60
 new Line.ln_l1 linecode=lc_mtx601 phases=3 bus1=sourcebus.1.2.3 bus2=n1.1.2.3 length=609.6 units=m normamps=730
 new Line.ln_l2 linecode=lc_mtx603 phases=2 bus1=n1.3.2 bus2=n2.3.2 length=152.4 units=m normamps=200 emergamps=345
-new Line.ln_seq1 linecode=ln_seq1_lc phases=3 bus1=n1.1.2.3 bus2=n8.1.2.3 length=1000 units=m
-new Line.ln_seq2 linecode=ln_seq2_lc phases=3 bus1=n8.1.2.3 bus2=n9.1.2.3 length=200 units=m
-new Line.ln_seq3 linecode=ln_seq3_lc phases=1 bus1=n9.1 bus2=n10.1 length=300 units=m
+new Line.ln_seq1 phases=3 bus1=n1.1.2.3 bus2=n8.1.2.3 length=1000 r1=0.0003 x1=0.0006 r0=0.0006 x0=0.0018 C1=0.01 C0=0.004 units=m
+new Line.ln_seq2 phases=3 bus1=n8.1.2.3 bus2=n9.1.2.3 length=200 r1=0.0003 x1=0.0006 r0=0.0001784 x0=0.0004047 C1=0.0111548556430446 C0=0.005249343832021 units=m
+new Line.ln_seq3 phases=1 bus1=n9.1 bus2=n10.1 length=300 rmatrix=[0.0005] xmatrix=[0.0009] cmatrix=[0.0034] units=m
 new Line.sw_fuse1 phases=3 Switch=Yes bus1=n1.1.2.3 bus2=n4.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Line.sw_rec1 phases=3 Switch=Yes bus1=n1.1.2.3 bus2=n5.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m
 new Line.sw_sect phases=3 Switch=Yes bus1=n1.1.2.3 bus2=n7.1.2.3 length=1 r1=0.001 x1=0 r0=0.001 x0=0 C1=0 C0=0 units=m

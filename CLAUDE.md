@@ -26,6 +26,7 @@ are in `.development/UPSTREAM_REQUESTS.md`.
 | `cimhub-style` | writing any code here |
 | `cim-units` | anything with a physical quantity, on import or export |
 | `conductor-geometry` | touching any line/cable importer, exporter or shape |
+| `wire-configuration` | choosing how a line names its impedance: a template LineCode, its own impedance, or geometry |
 | `cimtbl-import-contract` | writing an importer or mapper |
 | `cimtbl-shapes` | choosing which tables and columns a mapper emits |
 | `cimtbl-mapping-spec` | writing a spoke's `docs/CIMTBL_MAPPING.md` |

@@ -237,6 +237,24 @@ def test_lines_share_one_catalog_per_ampacity():
     assert by_line == {"mtx3": ("mtx601", 730.0), "mtx3b": ("mtx601_2", 600.0), "mtx1": ("mtx1ph", 200.0)}
 
 
+def test_a_template_line_code_exports_as_a_code_the_line_names(tmp_path):
+    """The atom's lines name a template LineCode (DSS-14): a WireConfiguration holding the PerLengthImpedance and no
+    WireSpacing. They export as the same lines given that PerLengthImpedance as their own."""
+    atom = gdm_atoms.ATOMS / "line" / "lines.cimtbl"
+    templated = atom.read_text().replace("Import ../prereqs/", f"Import {atom.parent.parent / 'prereqs'}/")
+    own = (templated.replace("length (ft), WireConfiguration,", "length (ft), PerLengthImpedance,")
+           .replace("2000, lc_mtx601_wc", "2000, lc_mtx601").replace("500,  lc_mtx601_wc", "500,  lc_mtx601")
+           .replace("    lc_mtx601_wc, mtx601, lc_mtx601\n", ""))
+    assert "lc_mtx601_wc" not in own
+    exports = []
+    for name, cimtbl in (("templated", templated), ("own", own)):
+        path = tmp_path / f"{name}.cimtbl"
+        path.write_text(cimtbl)
+        network = gdm_atoms.type_limit_durations(cimtables.load_model(path))
+        exports.append(GdmExporter().to_model(network, name_source="name", system_name="atom"))
+    assert gdm_differences(*exports) == []
+
+
 def test_a_second_export_changes_nothing():
     exported = _export(_system(*FAMILIES))
     assert gdm_differences(exported, _export(exported)) == []

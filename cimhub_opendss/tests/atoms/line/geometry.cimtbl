@@ -1,4 +1,4 @@
-# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or a synthesized template) or a Switch
+# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or its own impedance) or a Switch
 # (Fuse / Recloser / LoadBreakSwitch by the control that switches it; DSS-9).
 # Source table: Line (records: 3)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches

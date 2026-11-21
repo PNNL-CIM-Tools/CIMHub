@@ -2,6 +2,9 @@
 
 - ``MatrixImpedanceBranchEquipment`` → PerLengthPhaseImpedance ``lc_`` + PhaseImpedanceData (lower triangle).
 - ``SequenceImpedanceBranchEquipment`` → PerLengthSequenceImpedance ``lc_``.
+- Both are named catalogs shared by lines, so both are templates (DSS-14): the impedance has ``isTemplate=true`` and
+  is held by a WireConfiguration ``<lc>_wc`` (the catalog's name, no WireSpacing). Its lines name that
+  WireConfiguration and set no ``ACLineSegment.PerLengthImpedance`` of their own.
 - ``GeometryBranchEquipment`` → XYSpacing ``spc_`` + WireConfiguration ``wc_``, over the wire and cable catalogs
   (OverheadWireInfo ``wire_``, ConcentricNeutralCableInfo ``cn_``). Geometry is never replaced by an impedance matrix
   (CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md).
@@ -68,7 +71,8 @@ _LINE_FIELDS = {
     "phases": Field("structural", note="ACLineSegmentPhase per conductor, in conductor order, balanced ABC included"),
 }
 FIELDS_MatrixImpedanceBranch = _LINE_FIELDS | {
-    "equipment": Field("structural", note="PerLengthImpedance; its ampacity → the line's normal CurrentLimit"),
+    "equipment": Field("structural", note="WireConfiguration <lc>_wc (the template); its ampacity → the line's "
+                                          "normal CurrentLimit"),
 }
 FIELDS_SequenceImpedanceBranch = dict(FIELDS_MatrixImpedanceBranch)
 FIELDS_GeometryBranch = _LINE_FIELDS | {
@@ -149,7 +153,8 @@ def add_matrix_impedance(network, equipment, naming: Naming) -> None:
     size = _check_matrices(equipment)
     builder = PerLengthPhaseImpedanceBuilder(network, network.container)
     impedance = builder.create(mRID=impedance_mrid(equipment, naming), name=equipment.name)
-    builder.add_electrical(impedance, conductorCount=size, calculatedFrequency=Qty(FREQUENCY_HZ, "Hz"))
+    builder.add_electrical(impedance, conductorCount=size, isTemplate=True,
+                           calculatedFrequency=Qty(FREQUENCY_HZ, "Hz"))
     for row in range(size):
         for column in range(row + 1):
             builder.add_phase_impedance_data_row(
@@ -158,6 +163,7 @@ def add_matrix_impedance(network, equipment, naming: Naming) -> None:
                 x=qty(equipment.x_matrix[row, column]),
                 b=susceptance(equipment.c_matrix[row, column]),
             )
+    add_template_configuration(network, equipment, naming)
 
 
 def add_sequence_impedance(network, equipment, naming: Naming) -> None:
@@ -165,10 +171,18 @@ def add_sequence_impedance(network, equipment, naming: Naming) -> None:
     builder = PerLengthSequenceImpedanceBuilder(network, network.container)
     impedance = builder.create(mRID=impedance_mrid(equipment, naming), name=equipment.name)
     builder.add_electrical(impedance, r=qty(equipment.pos_seq_resistance), x=qty(equipment.pos_seq_reactance),
-                           bch=susceptance(equipment.pos_seq_capacitance),
+                           bch=susceptance(equipment.pos_seq_capacitance), isTemplate=True,
                            calculatedFrequency=Qty(FREQUENCY_HZ, "Hz"))
     builder.add_short_circuit(impedance, r0=qty(equipment.zero_seq_resistance),
                               x0=qty(equipment.zero_seq_reactance), b0ch=susceptance(equipment.zero_seq_capacitance))
+    add_template_configuration(network, equipment, naming)
+
+
+def add_template_configuration(network, equipment, naming: Naming) -> None:
+    """The WireConfiguration ``<lc>_wc`` a catalog's lines name: its PerLengthImpedance, no WireSpacing (DSS-14)."""
+    builder = WireConfigurationBuilder(network, network.container)
+    configuration = builder.create(mRID=template_mrid(equipment, naming), name=equipment.name)
+    builder.add_electrical(configuration, PerLengthImpedance=impedance_mrid(equipment, naming))
 
 
 def add_wire(network, conductor, naming: Naming) -> None:
@@ -241,7 +255,7 @@ def add_line(network, line, naming: Naming) -> None:
         emergency = first.emergency_ampacity if isinstance(first, BareConductorEquipment) else None
         add_line_limits(network, segment.mRID, normal=first.ampacity, emergency=emergency)
     else:
-        builder.add_per_length_impedance(segment, PerLengthImpedance=impedance_mrid(equipment, naming))
+        builder.add_wire_configuration(segment, WireConfiguration=template_mrid(equipment, naming))
         add_line_limits(network, segment.mRID, normal=equipment.ampacity, emergency=None)
 
 
@@ -269,6 +283,10 @@ def impedance_mrid(equipment, naming: Naming) -> str:
     cim_class = ("PerLengthPhaseImpedance" if isinstance(equipment, MatrixImpedanceBranchEquipment)
                  else "PerLengthSequenceImpedance")
     return object_mrid(IMPEDANCE_PREFIX, equipment, cim_class, naming)
+
+
+def template_mrid(equipment, naming: Naming) -> str:
+    return f"{impedance_mrid(equipment, naming)}_wc"
 
 
 def configuration_mrid(geometry, naming: Naming) -> str:

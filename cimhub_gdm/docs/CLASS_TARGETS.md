@@ -27,8 +27,8 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | GeometrySwitch *(new in 2.4)* | instance | LoadBreakSwitch `sw_`; its equipment is a `GeometryBranchEquipment` catalog | switch builders | R | 2 (done) |
 | MatrixImpedanceFuse | instance | Fuse `sw_` | `FuseBuilder` | R | 1 |
 | MatrixImpedanceRecloser | instance | Recloser `sw_`; `controller` untranscribed (no RecloseSequence, 12) | `RecloserBuilder` | R | 1 |
-| MatrixImpedanceBranch | instance | ACLineSegment `ln_`: node1/node2, phases, length; PerLengthImpedance `lc_` | `ACLineSegmentBuilder` | R | 2 (done) |
-| SequenceImpedanceBranch | instance | ACLineSegment → PerLengthSequenceImpedance (prefix X7) | same | R | 2 (done) |
+| MatrixImpedanceBranch | instance | ACLineSegment `ln_`: node1/node2, phases, length; WireConfiguration `<lc>_wc` (DSS-14) | `ACLineSegmentBuilder` | R | 2 (done) |
+| SequenceImpedanceBranch | instance | ACLineSegment → WireConfiguration `<lc>_wc` → PerLengthSequenceImpedance (prefix X7) | same | R | 2 (done) |
 | GeometryBranch | instance | ACLineSegment + WireConfiguration `wc_` (never an impedance matrix: `conductor-geometry` skill) | `ACLineSegmentBuilder.add_wire_configuration` | R | 2 (done) |
 | DistributionLoad | instance | EnergyConsumer `ld_`: phaseConnection, grounded, p/q totals, customerCount, LoadResponse; EnergyConsumerPhase p/q only when the phases differ, for a single-phase load, or for s1/s2 triplex (13) | `EnergyConsumerBuilder`, `EnergyConsumerPhaseBuilder` | R | 2 (done) |
 | DistributionCapacitor | instance | LinearShuntCompensator `cap_`: nomU (LL), nomQ, bPerSection, sections (int); controllers → RegulatingControl `<cap>_ctrl` | `LinearShuntCompensatorBuilder` (+Phase), `RegulatingControlBuilder` | R | 2 (done) |
@@ -48,8 +48,8 @@ Decision numbers refer to [`OPEN_DECISIONS.md`](OPEN_DECISIONS.md); B17-B20 are 
 | DistributionSwitchController | controller | normal_state → normalOpen; is_locked, delay untranscribed | switch builders | R | 1 |
 | RecloserControllerEquipment, DistributionRecloserController | controller | untranscribed: no RecloseSequence in cim18v17 `protection` (12) | none | G | 1 |
 | VoltageSourceEquipment / PhaseVoltageSourceEquipment | inline | EnergySource attributes; raise unless every phase is equal | `EnergySourceBuilder` | R | 1 |
-| MatrixImpedanceBranchEquipment | catalog | PerLengthPhaseImpedance `lc_` + PhaseImpedanceData `<lc>_<row><column>` (lower triangle); ampacity → the instance's limits | `PerLengthPhaseImpedanceBuilder` | R | 2 (done) |
-| SequenceImpedanceBranchEquipment | catalog | PerLengthSequenceImpedance (r, x, r0, x0; bch/b0ch = ωC) | `PerLengthSequenceImpedanceBuilder` | R | 2 (done) |
+| MatrixImpedanceBranchEquipment | catalog | PerLengthPhaseImpedance `lc_` (isTemplate) + PhaseImpedanceData `<lc>_<row><column>` (lower triangle) + WireConfiguration `<lc>_wc` (no WireSpacing); ampacity → the instance's limits | `PerLengthPhaseImpedanceBuilder`, `WireConfigurationBuilder` | R | 2 (done) |
+| SequenceImpedanceBranchEquipment | catalog | PerLengthSequenceImpedance (isTemplate; r, x, r0, x0; bch/b0ch = ωC) + WireConfiguration `<lc>_wc` (no WireSpacing) | `PerLengthSequenceImpedanceBuilder`, `WireConfigurationBuilder` | R | 2 (done) |
 | GeometryBranchEquipment | catalog | WireConfiguration `wc_` + XYSpacing `spc_` (isTemplate) + XYConductorPosition `<spc>_<n>` + WireSequenceConfiguration `<wc>_<n>`; insulation G | `WireConfigurationBuilder`, `XYSpacingBuilder` | R | 2 (done) |
 | BareConductorEquipment | catalog | OverheadWireInfo `wire_` (gmr, radius = diameter / 2, rAC, rDC20, ratedCurrent); emergency_ampacity → limits | `OverheadWireInfoBuilder` | R | 2 (done) |
 | ConcentricCableEquipment | catalog | ConcentricNeutralCableInfo `cn_` | `ConcentricNeutralCableInfoBuilder` | R | 2 (done) |

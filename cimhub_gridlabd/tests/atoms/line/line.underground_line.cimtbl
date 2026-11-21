@@ -1,4 +1,4 @@
-# GridLAB-D underground_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# GridLAB-D underground_line -> ACLineSegment (by its configuration's WireConfiguration).
 # Source table: underground_line (records: 1)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
 

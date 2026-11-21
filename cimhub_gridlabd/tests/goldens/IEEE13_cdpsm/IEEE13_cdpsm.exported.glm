@@ -142,6 +142,12 @@ object regulator_configuration {
   lower_taps 16;
   current_transducer_ratio 3500;
   power_transducer_ratio 20;
+  compensator_r_setting_A 3;
+  compensator_r_setting_B 3;
+  compensator_r_setting_C 3;
+  compensator_x_setting_A 9;
+  compensator_x_setting_B 9;
+  compensator_x_setting_C 9;
   regulation 0.1;
   Control "MANUAL";
   Type "B";
@@ -152,9 +158,10 @@ object regulator_configuration {
 object substation {
   name "sourcebus";
   phases "ABCN";
-  nominal_voltage 66395.280956807;
+  nominal_voltage 66395.28;
   bustype "SWING";
   positive_sequence_voltage 66395.28+0j;
+  base_power 12000000;
 }
 object node {
   name "611";
@@ -656,9 +663,9 @@ object inverter {
   P_Out -1000;
   Q_Out 0;
   rated_power 33333.333;
+  soc_reserve 0;
   phases "ABCN";
   max_charge_rate 100000;
-  max_discharge_rate 100000;
 }
 object inverter {
   name "inv_bat_house";
@@ -669,9 +676,9 @@ object inverter {
   P_Out -5000;
   Q_Out 0;
   rated_power 5000;
+  soc_reserve 0;
   phases "BS";
   max_charge_rate 5000;
-  max_discharge_rate 5000;
 }
 object inverter {
   name "inv_bat_school";
@@ -682,9 +689,9 @@ object inverter {
   P_Out 99999.999;
   Q_Out 0;
   rated_power 33333.333;
+  soc_reserve 0;
   phases "ABCN";
   max_charge_rate 100000;
-  max_discharge_rate 100000;
 }
 object inverter {
   name "inv_pv_house";
@@ -711,16 +718,26 @@ object inverter {
 object solar {
   name "pv_house";
   parent "inv_pv_house";
+  Rated_Insolation 92.902;
+  efficiency 0.2;
   soiling 1;
   derating 1;
   rated_power 5000;
+  shading_factor 1;
+  tilt_angle 45;
+  orientation_azimuth 180;
 }
 object solar {
   name "pv_school";
   parent "inv_pv_school";
+  Rated_Insolation 92.902;
+  efficiency 0.2;
   soiling 1;
   derating 1;
   rated_power 300000;
+  shading_factor 1;
+  tilt_angle 45;
+  orientation_azimuth 180;
 }
 object battery {
   name "bat_batidle";

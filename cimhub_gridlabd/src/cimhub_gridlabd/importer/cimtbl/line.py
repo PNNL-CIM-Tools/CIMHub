@@ -1,7 +1,7 @@
 """GLM ``overhead_line``, ``underground_line``, ``triplex_line`` -> one ``.cimtbl`` each: ``ACLineSegment`` (S3a).
 
-A line references its configuration's template: the ``WireConfiguration`` of a geometry or triplex configuration,
-or the ``PerLengthPhaseImpedance`` of a matrix one (S3a-2). Its ``phases`` cell numbers its ACLineSegmentPhases
+A line references its configuration's ``WireConfiguration``: a geometry or triplex configuration's own, or the one
+that holds a matrix configuration's template ``PerLengthPhaseImpedance`` (S3a-2, skill ``wire-configuration``). Its ``phases`` cell numbers its ACLineSegmentPhases
 1..n in written order, so it is written in the configuration's own order (ABC, then N; ``s1s2N`` on a triplex line)
 and must name the configuration's phases (S3a-3). Its own ratings, else its configuration's, go on its own
 ``OperationalLimitSet`` (S3a-4). No impedance is computed (skill ``conductor-geometry``).
@@ -33,7 +33,8 @@ _OWN = {
                                        "(geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3)"),
     "status": Field("structural", note="unset or CLOSED; OPEN raises (the walk: a line is not a switch)"),
     "configuration": Field("structural", note="WireConfiguration = wc_<configuration> (geometry, triplex) or "
-                                              "PerLengthImpedance = lc_<configuration> (matrix), S3a-2"),
+                                              "lc_<configuration>_wc (matrix: the WireConfiguration that holds "
+                                              "the template PerLengthPhaseImpedance), S3a-2"),
     "length": Field("copied", ((_SEGMENT, "length", "{unit}"),), "in its written unit; unset raises"),
 }
 
@@ -129,18 +130,18 @@ def _segment(model: GlmModel, line, roots: dict[str, str], buses) -> tuple[tuple
         phases = _phases(line, configuration)
         if not configuration_part.is_matrix(configuration):
             _check_conductors(model, line, configuration)
-    column, template = configuration_part.template(configuration)
+    template = configuration_part.template(configuration)
     node1, node2, bus = ends(line, roots, buses)
     columns = (Column("mRID"), Column("name"), Column("node1"), Column("node2"), Column("phases"),
-               Column("length", registry_unit(model.unit(line, "length"))), Column(column), Column("BaseVoltage"))
+               Column("length", registry_unit(model.unit(line, "length"))), Column("WireConfiguration"), Column("BaseVoltage"))
     row = Row([mrid(PREFIX, line.name), str(line.name), node1, node2, phases, cell(line.length), template,
                bus.base_voltage], comment=untranscribed_values(FIELDS[type(line)], line))
     return columns, row, configuration
 
 
 def map_lines(model: GlmModel, native_class: type, roots: dict[str, str], buses, feeder: str) -> Document:
-    """Every line of one GLM line class as one document: segments, one table per (length unit, template
-    column), then their limit sets."""
+    """Every line of one GLM line class as one document: segments, one table per length unit, then their limit
+    sets."""
     lines = model.list_by_class(native_class)
     by_columns: dict[tuple[Column, ...], list[Row]] = {}
     limits = Limits()
@@ -153,5 +154,5 @@ def map_lines(model: GlmModel, native_class: type, roots: dict[str, str], buses,
                   for columns, rows in by_columns.items()]
     return Document(name=native_class.class_name, statements=[*statements, *limits.tables()], profile=CIM_PROFILE,
                     comment=provenance(native_class.class_name, "ACLineSegment (by its configuration's "
-                                       "WireConfiguration or PerLengthPhaseImpedance)", len(lines))
+                                       "WireConfiguration)", len(lines))
                     if lines else None)

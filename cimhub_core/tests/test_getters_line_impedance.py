@@ -14,6 +14,8 @@ from cimhub_core.derived.sequence import phase_matrix
 from cimhub_core.getters.line_impedance import (
     ImpedanceSource,
     MatrixSource,
+    get_line_code,
+    get_line_geometry,
     get_line_phase_impedance_matrix,
     get_line_sequence_impedance,
     get_line_sequence_impedance_per_length,
@@ -218,7 +220,7 @@ def test_disagreeing_sources_raise(tmp_path):
 def test_geometry_is_not_built_yet():
     network = load_model(SHAPES / "line_by_wire_configuration.cimtbl")
     line = next(iter(network.graph[cim.ACLineSegment].values()))
-    with pytest.raises(ValueError, match="WireConfiguration: set"):
+    with pytest.raises(ValueError, match="geometry: set"):
         get_line_sequence_impedance(line, derive=ImpedanceSource.MATRIX_REDUCED)
     with pytest.raises(NotImplementedError, match="step 4"):
         get_line_sequence_impedance(line, derive=ImpedanceSource.GEOMETRY)
@@ -340,7 +342,7 @@ def test_matrix_of_a_lumped_line_raises(bus_branch):
 
 
 def test_phase_code_on_its_own(by_impedance):
-    code = _line(by_impedance, "ln_l1").PerLengthImpedance
+    code = get_line_code(_line(by_impedance, "ln_l1"))
     m = get_phase_impedance_code(code, "ohm/mi", "nS/mi")
     assert m.conductor_count == 2
     assert m.r == pytest.approx({(1, 1): 1.3238, (2, 1): 0.2066, (2, 2): 1.3294})
@@ -349,7 +351,7 @@ def test_phase_code_on_its_own(by_impedance):
 
 
 def test_phase_code_entries_must_fit_its_conductor_count(by_impedance):
-    code = _line(by_impedance, "ln_l1").PerLengthImpedance
+    code = get_line_code(_line(by_impedance, "ln_l1"))
     code.conductorCount = 3
     with pytest.raises(ValueError, match="not the lower triangle of its conductorCount 3"):
         get_phase_impedance_code(code)
@@ -365,3 +367,39 @@ def test_sequence_code_on_its_own(by_impedance):
     assert z.source is ImpedanceSource.PER_LENGTH_SEQ
     with pytest.raises(ValueError, match="is not a PerLengthPhaseImpedance"):
         get_phase_impedance_code(code)
+
+
+# the line's code and geometry: through its WireConfiguration --------------------------------------------------------
+
+TEMPLATES = """
+Object PerLengthPhaseImpedance: mRID=mtx, conductorCount=1
+Table PhaseImpedanceData: identifier, PhaseImpedance=mtx, row, column, r (ohm/mi), x (ohm/mi), b (uS/mi)
+    d_11, 1, 1, 1.3292, 1.3475, 4.5193
+Object PerLengthPhaseImpedance: mRID=other, conductorCount=1
+Object XYSpacing: mRID=spc, isTemplate=true
+Object WireConfiguration: mRID=wc_code, PerLengthImpedance=mtx
+Object WireConfiguration: mRID=wc_both, PerLengthImpedance=mtx, WireSpacing=spc
+"""
+
+
+def _templated(tmp_path, line_columns: str):
+    return _line(_load_atom(tmp_path, TEMPLATES + "Object ACLineSegment: mRID=ln, node1=a, node2=b, phases=C, "
+                            f"length (mi)=1, {line_columns}, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr\n"), "ln")
+
+
+def test_a_template_line_code_is_the_configurations_code_and_no_geometry(tmp_path):
+    """A WireConfiguration with only a PerLengthImpedance (a template LineCode) is a matrix, not geometry."""
+    line = _templated(tmp_path, "WireConfiguration=wc_code")
+    assert (get_line_code(line).mRID, get_line_geometry(line)) == ("mtx", None)
+    assert get_line_phase_impedance_matrix(line, "ohm/mi", "uS/mi").r == pytest.approx({(1, 1): 1.3292})
+
+
+def test_a_configuration_with_a_spacing_is_geometry_and_keeps_its_code(tmp_path):
+    line = _templated(tmp_path, "WireConfiguration=wc_both")
+    assert (get_line_geometry(line).mRID, get_line_code(line).mRID) == ("wc_both", "mtx")
+
+
+def test_the_lines_code_and_its_configurations_must_agree(tmp_path):
+    assert get_line_code(_templated(tmp_path, "WireConfiguration=wc_code, PerLengthImpedance=mtx")).mRID == "mtx"
+    with pytest.raises(ValueError, match="is not its WireConfiguration's"):
+        get_line_code(_templated(tmp_path, "WireConfiguration=wc_code, PerLengthImpedance=other"))

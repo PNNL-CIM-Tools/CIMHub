@@ -8,8 +8,12 @@ round-trips. Single-phase regulators with a coil between two phases on the same 
 delta bank) are one GLM regulator: GridLAB-D 6.0 solves no delta regulator under NR (``OPEN_DELTA_ABBC`` is FBS
 only, the others throw, ``regulator.cpp:385``), so the bank is ``WYE_WYE`` (the user's X3 rule, 2026-11-21), each
 coil's tap and compensator on its own phase (an open bank's coils on the phases they do not share, a closed bank's
-AB, BC, CA on A, B, C), and logged. Their shared settings must agree. GLM's regulator is ideal, so only the tap
-changer and its control are written:
+AB, BC, CA on A, B, C), and logged. Their shared settings must agree. A group of several units is GLM's
+``control_level`` INDIVIDUAL (its default); one VoltageRegulator alone (a gang unit on ABC, or one phase not named as
+the importer's split) is BANK, which GridLAB-D and the importer read as one unit (GLM-7, S6), sensing
+``PT_phase``/``CT_phase`` = the control's monitored phase (its first phase when it has none: MANUAL reads no phase;
+an enabled control without one raises). GLM's regulator is ideal, so only the tap changer and its control are
+written:
 
 - ``raise_taps`` = highStep - neutralStep, ``lower_taps`` = neutralStep - lowStep, ``regulation`` =
   stepVoltageIncrement x raise_taps, ``tap_pos_X`` = step - neutralStep on each of its phases;
@@ -18,8 +22,8 @@ changer and its control are written:
 - ``Control`` MANUAL when the TapChangerControl is disabled or absent, LINE_DROP_COMP with line drop compensation,
   else OUTPUT_VOLTAGE; ``band_center``/``band_width`` the target and deadband (primary volts; on LINE_DROP_COMP over
   ptRatio, as GridLAB-D reads it on the PT secondary), ``compensator_r/x_setting_X`` = lineDropR/X x ctRatio /
-  ptRatio, ``current_transducer_ratio``/``power_transducer_ratio`` the CT and PT ratios, ``dwell_time`` the initial
-  delay.
+  ptRatio wherever CIM holds a line drop (GridLAB-D reads them on LINE_DROP_COMP only, the importer on any Control),
+  ``current_transducer_ratio``/``power_transducer_ratio`` the CT and PT ratios, ``dwell_time`` the initial delay.
 """
 
 from __future__ import annotations
@@ -56,6 +60,9 @@ _CONFIGURATION_SLOTS = {
     "current_transducer_ratio": Slot("written", "ctRatio"), "power_transducer_ratio": Slot("written", "ptRatio"),
     **{f"compensator_{part}_setting_{letter}": Slot("written", f"lineDrop{part.upper()} x ctRatio / ptRatio")
        for part in "rx" for letter in "ABC"},
+    "control_level": Slot("written", "BANK for one VoltageRegulator alone, else unset (INDIVIDUAL)"),
+    "PT_phase": Slot("written", "BANK: the monitored phase, else its first"),
+    "CT_phase": Slot("written", "BANK: as PT_phase"),
 }
 _REGULATOR_SLOTS = {
     "name": Slot("written", "Names (X1)"),
@@ -149,6 +156,8 @@ def _regulator(group: list[tuple], drop: str, context) -> list:
             raise ValueError(f"VoltageRegulator {regulator.mRID!r}: has {len(taps)} RatioTapChangers, not 1")
         _merge(slots, _configuration_slots(regulator, taps[0], phase_letters), regulator)
     phase_letters = "".join(sorted(letter for _, letters_on in group for letter in letters_on))
+    if len(group) == 1 and not drop:
+        slots.update(_bank_slots(first, phase_letters))
     configuration = schema.RegulatorConfiguration(name=context.names.name(first, suffix="_config", drop=drop),
                                                   **slots)
     record = schema.Regulator(name=context.names.name(first, drop=drop), phases=phase_letters,
@@ -157,6 +166,23 @@ def _regulator(group: list[tuple], drop: str, context) -> list:
                               configuration=configuration.name,
                               **ratings(first, phase_letters, schema.Regulator))
     return [configuration, record]
+
+
+def _bank_slots(regulator: cim.VoltageRegulator, phase_letters: str) -> dict:
+    """GLM's BANK on one VoltageRegulator, sensing its control's monitored phase (module docstring)."""
+    [tap] = [end.RatioTapChanger for end in _ends(regulator) if end.RatioTapChanger is not None]
+    control = get_tap_changer_control(tap).control
+    enabled = control is not None and control.enabled is not False
+    if control is not None and control.monitored_phases:
+        sensed = letters(control.monitored_phases)
+    elif enabled:
+        raise ValueError(f"VoltageRegulator {regulator.mRID!r}: an enabled control without a monitoredPhase; GLM's "
+                         f"BANK senses one")
+    else:
+        sensed = phase_letters[0]
+    if len(sensed) != 1:
+        raise ValueError(f"VoltageRegulator {regulator.mRID!r}: monitors {sensed}; GLM's BANK senses one phase")
+    return {"control_level": "BANK", "PT_phase": sensed, "CT_phase": sensed}
 
 
 def _merge(slots: dict, coil: dict, regulator) -> None:
@@ -192,7 +218,7 @@ def _control_slots(tap: cim.RatioTapChanger, phase_letters: str) -> dict:
     control = settings.control
     slots = {"dwell_time": settings.initial_delay}
     if control is None or control.enabled is False:
-        return {**slots, "Control": "MANUAL", **_transducers(control)}
+        return {**slots, "Control": "MANUAL", **_transducers(control), **_compensator_slots(tap, settings, phase_letters)}
     line_drop = bool(settings.line_drop_compensation)
     pt_ratio = control.pt_ratio
     if line_drop and not pt_ratio:
@@ -200,13 +226,19 @@ def _control_slots(tap: cim.RatioTapChanger, phase_letters: str) -> dict:
     scale = 1 / pt_ratio if line_drop else 1.0
     slots.update(Control="LINE_DROP_COMP" if line_drop else "OUTPUT_VOLTAGE", band_center=control.target * scale,
                  band_width=None if control.deadband is None else control.deadband * scale, **_transducers(control))
-    if line_drop:
-        ct_ratio = control.ct_ratio
-        for part, value in (("r", settings.line_drop.r), ("x", settings.line_drop.x)):
-            if value is not None:
-                for letter in phase_letters:
-                    slots[f"compensator_{part}_setting_{letter}"] = value * ct_ratio / pt_ratio
-    return slots
+    return {**slots, **_compensator_slots(tap, settings, phase_letters)}
+
+
+def _compensator_slots(tap: cim.RatioTapChanger, settings, phase_letters: str) -> dict:
+    """``compensator_r/x_setting_X`` = lineDrop x ctRatio / ptRatio on each phase, wherever CIM holds a line drop."""
+    drops = (("r", settings.line_drop.r), ("x", settings.line_drop.x))
+    if all(value is None for _, value in drops):
+        return {}
+    control = settings.control
+    if control is None or not control.pt_ratio or not control.ct_ratio:
+        raise ValueError(f"RatioTapChanger {tap.mRID!r}: a line drop without a ptRatio and a ctRatio")
+    return {f"compensator_{part}_setting_{letter}": value * control.ct_ratio / control.pt_ratio
+            for part, value in drops if value is not None for letter in phase_letters}
 
 
 def _transducers(control) -> dict:

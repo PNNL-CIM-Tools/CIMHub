@@ -1,0 +1,52 @@
+clock {
+  timezone UTC0;
+  starttime '2000-01-01 00:00:00';
+  stoptime '2000-01-01 00:00:00';
+}
+#set relax_naming_rules=1
+module powerflow {
+  solver_method NR;
+  nominal_frequency 60;
+  line_capacitance TRUE;
+}
+object line_configuration {
+  name "lc_1";
+  z11 0.3+1j;
+  z12 0+0j;
+  z13 0+0j;
+  z21 0+0j;
+  z22 0.3+1j;
+  z23 0+0j;
+  z31 0+0j;
+  z32 0+0j;
+  z33 0.3+1j;
+  c11 0;
+  c12 0;
+  c13 0;
+  c21 0;
+  c22 0;
+  c23 0;
+  c31 0;
+  c32 0;
+  c33 0;
+}
+object substation {
+  name "swing";
+  phases "ABCN";
+  nominal_voltage 7200;
+  bustype "SWING";
+  positive_sequence_voltage 6422.4443944654-3708j;
+}
+object node {
+  name "n1";
+  phases "ABCN";
+  nominal_voltage 7199.55785679463;
+}
+object overhead_line {
+  name "l1";
+  phases "ABC";
+  from "swing";
+  to "n1";
+  configuration "lc_1";
+  length 100;
+}

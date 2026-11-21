@@ -1,19 +1,27 @@
-# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
+# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (templates),
+# each with the WireConfiguration its lines reference (DSS-14).
 # Source table: LineCode (records: 3)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode
 
 Profile = cim18v17
 
-Table PerLengthSequenceImpedance: mRID, name, r (ohm/kft), x (ohm/kft), r0 (ohm/kft), x0 (ohm/kft), calculatedFrequency (Hz), bch (uS/kft), b0ch (uS/kft)
+Table PerLengthSequenceImpedance: mRID, name, r (ohm/kft), x (ohm/kft), r0 (ohm/kft), x0 (ohm/kft), calculatedFrequency (Hz), bch (uS/kft), b0ch (uS/kft), isTemplate
     # units from its lines: kft (no units on the code; DSS reads it per unit of line length)
-    lc_single,    single, 0.0583, 0.1206, 0.1784, 0.4047, , ,
+    lc_single,    single, 0.0583, 0.1206, 0.1784, 0.4047, , , , true
     # units from its lines: kft (no units on the code; DSS reads it per unit of line length)
-    lc_split_kft, split,  0.0583, 0.1206, 0.1784, 0.4047, , ,
+    lc_split_kft, split,  0.0583, 0.1206, 0.1784, 0.4047, , , , true
 
-Table PerLengthSequenceImpedance: mRID, name, r (ohm/km), x (ohm/km), r0 (ohm/km), x0 (ohm/km), calculatedFrequency (Hz), bch (uS/km), b0ch (uS/km)
+Table PerLengthSequenceImpedance: mRID, name, r (ohm/km), x (ohm/km), r0 (ohm/km), x0 (ohm/km), calculatedFrequency (Hz), bch (uS/km), b0ch (uS/km), isTemplate
     # units inferred: km (median r 0.134 per unit over 1 code; no units on code or line)
-    lc_spare, spare, 0.134, 0.3, 0.4, 0.9, , ,
+    lc_spare, spare, 0.134, 0.3, 0.4, 0.9, , , , true
 
-Table PerLengthSequenceImpedance: mRID, name, r (ohm/mi), x (ohm/mi), r0 (ohm/mi), x0 (ohm/mi), calculatedFrequency (Hz), bch (uS/mi), b0ch (uS/mi)
+Table PerLengthSequenceImpedance: mRID, name, r (ohm/mi), x (ohm/mi), r0 (ohm/mi), x0 (ohm/mi), calculatedFrequency (Hz), bch (uS/mi), b0ch (uS/mi), isTemplate
     # units from its lines: mi (no units on the code; DSS reads it per unit of line length)
-    lc_split_mi, split, 0.0583, 0.1206, 0.1784, 0.4047, , ,
+    lc_split_mi, split, 0.0583, 0.1206, 0.1784, 0.4047, , , , true
+
+# the LineCodes' lines share each through its WireConfiguration, which has no WireSpacing (DSS-14)
+Table WireConfiguration: mRID, name, PerLengthImpedance
+    lc_single_wc,    single, lc_single
+    lc_spare_wc,     spare,  lc_spare
+    lc_split_kft_wc, split,  lc_split_kft
+    lc_split_mi_wc,  split,  lc_split_mi

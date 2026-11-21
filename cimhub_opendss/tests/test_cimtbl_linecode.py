@@ -88,8 +88,9 @@ def test_binds_under_cim18v17(mtx601):
 
 def test_mrid_is_lowercased():
     code = schema.Linecode(name="MTX601", nphases=1, units="ft", rmatrix=[0.1], xmatrix=[0.2])
-    [table, _] = _map(_native(code)).statements
+    [table, _, configurations] = _map(_native(code)).statements
     assert table.rows[0].cells[:2] == ["lc_mtx601", "MTX601"]
+    assert configurations.rows[0].cells == ["lc_mtx601_wc", "MTX601", "lc_mtx601"]
 
 
 def test_unmapped_units_fail_fast():
@@ -114,16 +115,16 @@ def test_sequence_binds_under_cim18v17(sequence):
 
 def test_sequence_b_is_copied_in_microsiemens():
     code = schema.Linecode(name="b", nphases=3, units="mi", r1=0.1, x1=0.3, B1="5.1", C0="0", baseFreq="60")
-    [table] = _map(_native(code)).statements
-    assert [(column.name, column.unit) for column in table.columns][-2:] == [("bch", "uS/mi"), ("b0ch", "nS/mi")]
-    assert table.rows[0].cells[-2:] == ["5.1", "0.0"]
+    [table, _] = _map(_native(code)).statements
+    assert [(column.name, column.unit) for column in table.columns][-3:-1] == [("bch", "uS/mi"), ("b0ch", "nS/mi")]
+    assert table.rows[0].cells[-3:-1] == ["5.1", "0.0"]
 
 
 def test_sequence_codes_group_by_header():
     with_c = schema.Linecode(name="c", nphases=3, units="km", r1=0.1, C1="10", baseFreq="60")
     with_b = schema.Linecode(name="b", nphases=3, units="km", r1=0.1, B1="3.7")
     other_unit = schema.Linecode(name="m", nphases=3, units="mi", r1=0.1, C1="10", baseFreq="60")
-    tables = _map(_native(with_c, with_b, other_unit, with_c)).statements
+    *tables, _ = _map(_native(with_c, with_b, other_unit, with_c)).statements
     assert [len(table.rows) for table in tables] == [2, 1, 1]
 
 
@@ -182,7 +183,7 @@ def test_lines_with_and_without_units_on_one_code_raise():
 @pytest.mark.parametrize("frequency", [60.0, 50.0])
 def test_a_code_with_c_and_no_basefreq_takes_the_decks(frequency):
     code = _sequence_code("c", units="km", C1="10", C0="5")
-    [table] = map_linecode(_native(code), base_frequency=frequency).statements
+    [table, _] = map_linecode(_native(code), base_frequency=frequency).statements
     columns = [column.name for column in table.columns]
     row = table.rows[0]
     assert row.cells[columns.index("calculatedFrequency")] == repr(frequency)
@@ -191,7 +192,7 @@ def test_a_code_with_c_and_no_basefreq_takes_the_decks(frequency):
 
 
 def test_a_code_with_no_c_needs_no_frequency():
-    [table] = _map(_native(_sequence_code("n", units="km"))).statements
+    [table, _] = _map(_native(_sequence_code("n", units="km"))).statements
     assert table.rows[0].comment is None
 
 

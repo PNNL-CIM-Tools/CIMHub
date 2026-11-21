@@ -7,12 +7,16 @@ Bus-branch formats (RAW, MATPOWER) take only sequence values, so the sequence ge
 2. ``PER_LENGTH_SEQ``: ``PerLengthSequenceImpedance`` (times ``length`` for whole-line values).
 3. ``MATRIX_REDUCED``: ``PerLengthPhaseImpedance`` reduced to sequence values, assuming a transposed line and,
    where the matrix has neutral conductors, a neutral grounded at both ends (Kron reduction).
-4. ``GEOMETRY``: ``WireConfiguration`` through line constants (not built yet).
+4. ``GEOMETRY``: a WireConfiguration's WireSpacing and wires through line constants (not built yet).
+
+A line's per-length code is its own ``ACLineSegment.PerLengthImpedance``, else its WireConfiguration's
+(``get_line_code``): a template LineCode, or the matrix equivalent of a configuration that also has a spacing. A line
+is geometry when its WireConfiguration names a WireSpacing (``get_line_geometry``), not merely when it has one.
 
 ``derive=`` caps the step. When the lumped values and a per-length source are both within the cap, they must agree
 and the lumped values win. Geometry-capable formats (GLM, DSS) export native geometry and never call the sequence
-getters on a line that has a ``WireConfiguration`` (skill ``conductor-geometry``); they take the phase matrix only
-where CIM has no geometry.
+getters on a line with geometry (skill ``conductor-geometry``); they take the phase matrix only where CIM has no
+geometry.
 
 Every input is read with ``get_qty`` directly in the caller's unit. The reductions (means, differences, Kron) scale
 linearly, so no value is converted after it is read.
@@ -154,7 +158,7 @@ def get_line_phase_impedance_matrix(
     PerLengthSequenceImpedance is expanded only with ``expand_sequence=True`` (``derived.sequence``: one phase is
     Z1 alone, more are self (2 Z1 + Z0) / 3 and mutual (Z0 - Z1) / 3). A line with geometry and no
     PerLengthImpedance raises: export the geometry instead (skill ``conductor-geometry``)."""
-    code = line.PerLengthImpedance
+    code = get_line_code(line)
     phases = get_conductor_phases(line)
     if isinstance(code, cim.PerLengthPhaseImpedance):
         entries = _matrix_entries(code, len(phases), f"the {len(phases)} conductors of {describe(line)}")
@@ -165,10 +169,10 @@ def get_line_phase_impedance_matrix(
             raise ValueError(f"{describe(line)}: its PerLengthSequenceImpedance becomes a phase matrix only by "
                              f"assuming a transposed line: pass expand_sequence=True")
         return _expand_sequence_code(line, code, phases, impedance_unit, admittance_unit)
-    if line.WireConfiguration is not None:
-        raise ValueError(f"{describe(line)}: has a WireConfiguration and no PerLengthImpedance; export its "
-                         f"geometry through the spacing getters, never a computed matrix")
-    raise ValueError(f"{describe(line)}: has no PerLengthImpedance")
+    if get_line_geometry(line) is not None:
+        raise ValueError(f"{describe(line)}: has geometry and no PerLengthImpedance; export its geometry through "
+                         f"the spacing getters, never a computed matrix")
+    raise ValueError(f"{describe(line)}: has no PerLengthImpedance (its own or its WireConfiguration's)")
 
 
 def get_phase_impedance_code(code: cim.PerLengthPhaseImpedance, impedance_unit: str = "ohm/m",
@@ -218,12 +222,12 @@ def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance
 def _per_length_sequence(line: cim.ACLineSegment, impedance_unit: str, admittance_unit: str,
                          derive: ImpedanceSource) -> SequenceImpedance | None:
     """Steps 2-4 per length, or None when the line's per-length source is absent or beyond ``derive``."""
-    code = line.PerLengthImpedance
+    code = get_line_code(line)
     if isinstance(code, cim.PerLengthSequenceImpedance):
         source = ImpedanceSource.PER_LENGTH_SEQ
     elif isinstance(code, cim.PerLengthPhaseImpedance):
         source = ImpedanceSource.MATRIX_REDUCED
-    elif code is None and line.WireConfiguration is not None:
+    elif code is None and get_line_geometry(line) is not None:
         source = ImpedanceSource.GEOMETRY
     else:
         return None
@@ -399,9 +403,30 @@ def _check_agreement(line: cim.ACLineSegment, lumped: SequenceImpedance, per_len
 
 
 def _no_source(line: cim.ACLineSegment, derive: ImpedanceSource) -> ValueError:
-    code = line.PerLengthImpedance
+    code = get_line_code(line)
     return ValueError(
         f"{describe(line)}: no sequence impedance within derive={derive.name} (lumped r/x: "
         f"{'set' if line.r is not None else 'unset'}, PerLengthImpedance: "
-        f"{type(code).__name__ if code else 'none'}, WireConfiguration: {'set' if line.WireConfiguration else 'none'})"
+        f"{type(code).__name__ if code else 'none'}, geometry: {'set' if get_line_geometry(line) else 'none'})"
     )
+
+
+def get_line_code(line: cim.ACLineSegment) -> cim.PerLengthImpedance | None:
+    """The line's PerLengthImpedance: its own, else its WireConfiguration's (a template LineCode, or the matrix
+    equivalent of a configuration's geometry); both set and different raise."""
+    own = line.PerLengthImpedance
+    configuration = line.WireConfiguration
+    templated = configuration.PerLengthImpedance if configuration is not None else None
+    if own is not None and templated is not None and own is not templated:
+        raise ValueError(f"{describe(line)}: its PerLengthImpedance {describe(own)} is not its WireConfiguration's "
+                         f"{describe(templated)}")
+    return own or templated
+
+
+def get_line_geometry(line: cim.ACLineSegment) -> cim.WireConfiguration | None:
+    """The line's WireConfiguration when it is geometry: it names a WireSpacing. A configuration with only a
+    PerLengthImpedance (a template LineCode) is not geometry, and None is returned."""
+    configuration = line.WireConfiguration
+    if configuration is None or configuration.WireSpacing is None:
+        return None
+    return configuration

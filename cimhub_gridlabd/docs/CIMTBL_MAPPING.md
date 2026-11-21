@@ -1014,7 +1014,7 @@ Table WireSequenceConfiguration: ...  sequenceNumber 1 (conductor_1), 2 (conduct
 | S2-6 | Resistance | **approved:** `resistance` / `conductor_resistance` to `rAC50`: Kersting's 50 C AC tables, and the Java exporter writes GLM resistance from `rAC50`. The DSS importer writes `Rac` to `rAC25`, so the IEEE13_assets comparison (GLM-16) lists that difference |
 | S2-7 | Conductor ratings | **approved:** Summer continuous and emergency as written (D9). **Unset ratings are not filled** (an exception to GLM-3): GridLAB-D's `create()` constants (1000/2000 A overhead and underground, 202/212.1 A triplex) aren't the conductor's rating, and 156 taxonomy conductors set only `summer.continuous`, so a defaulted 2000 A emergency limit would sit on a 120 A conductor. The row lists the unset ones. Winter: untranscribed while it equals summer, raises otherwise |
 | S2-8 | Triplex geometry (GLM-12, amended) | **approved:** A derived `ConductorDistanceSpacing` per triplex configuration (GridLAB-D's formula, which is Kersting's), not an `XYSpacing`. The triplex conductors become `OverheadWireInfo` (CIM has no triplex class; the insulation is on the configuration, and all 25 use one conductor for 1, 2 and N). GLM-12's z-matrix cross-check is dropped: the only triplex z-matrix is in IEEE123_transactive, which stops at read; the atom pins the formula |
-| S2-9 | Matrix configurations (GLM-11, amended) | **approved:** As GLM-11, with b derived from c (above), rows compacted, and both forms on one record raising (none in the decks), since GridLAB-D would use the matrix |
+| S2-9 | Matrix configurations (GLM-11, amended) | **approved:** As GLM-11, with b derived from c (above), rows compacted, and both forms on one record raising (none in the decks), since GridLAB-D would use the matrix. Amended 2026-11-21 (the user's rule, skill `wire-configuration`): the matrix is a template, `isTemplate=true`, held by a WireConfiguration `lc_<name>_wc` with no WireSpacing, which its lines reference |
 | S2-10 | Field tables | **approved:** Generated from the mappers' `FIELDS` with `fields_table` once built, as S1-6 |
 
 **Expected differences from the DSS import of the same models (GLM-16):** the IEEE13_cdpsm matrices match the DSS
@@ -1144,7 +1144,7 @@ that check moved to `get_spacing_xy`. Plan section 7.
 
 | LineConfiguration field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, LineConfigurationName]` | `lcon_mtx601_ABC`, `lcon_mtx602_ABC`, `lcon_mtx603_CB` | copied | `WireConfiguration.name`, `PerLengthPhaseImpedance.name`; mRID = wc_ or lc_ + name |
+| `name` | `Union[str, LineConfigurationName]` | `lcon_mtx601_ABC`, `lcon_mtx602_ABC`, `lcon_mtx603_CB` | copied | `WireConfiguration.name`, `PerLengthPhaseImpedance.name`; mRID = wc_ or lc_ + name; a matrix's WireConfiguration lc_<name>_wc |
 | `parent` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
 | `groupid` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
 | `latitude` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
@@ -1256,8 +1256,8 @@ a child node (15 underground lines, 10 switches, 4 overhead lines, 1 recloser), 
 
 ```
 # IEEE13_cdpsm: a matrix configuration; GLM phases are a set, so CB is written in ABC order
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
-    ln_line_632645, line_632645, 632, 645, BC, 500.0, lc_lcon_mtx603_CB, bv_4p16kv
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ln_line_632645, line_632645, 632, 645, BC, 500.0, lc_lcon_mtx603_CB_wc, bv_4p16kv
 Table OperationalLimitSet: mRID, Equipment
     ln_line_632645_limits, ln_line_632645
 Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
@@ -1277,7 +1277,7 @@ Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfigur
 | `name` | copied | `ACLineSegment.name`; mRID = `ln_` + name |
 | `from`, `to` | structural | `node1`, `node2`: the root bus (GLM-4) |
 | `phases` | structural | the `phases` cell, which numbers the ACLineSegmentPhases 1..n in written order (S3a-3) |
-| `configuration` | structural | `WireConfiguration = wc_<configuration>` (geometry, triplex) or `PerLengthImpedance = lc_<configuration>` (matrix), by the configuration's form (S2-9) |
+| `configuration` | structural | `WireConfiguration = wc_<configuration>` (geometry, triplex) or `lc_<configuration>_wc` (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), by the configuration's form (S2-9, S3a-2) |
 | `length` | copied | `length`, in its written unit (ft in every deck); unset raises (GridLAB-D's `create()` 0 is a line of no impedance) |
 | `continuous_rating_A`/`_B`/`_C` | structural | the normal `CurrentLimit` of the line's own `OperationalLimitSet` (S3a-4) |
 | `emergency_rating_A`/`_B`/`_C` | structural | the emergency `CurrentLimit` of that set |
@@ -1334,7 +1334,7 @@ Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen
 | # | question | decision |
 |---|---|---|
 | S3a-1 | Files and identity | **approved:** The six artifacts above; `ln_` for every line class, `sw_` for every switching device, source case |
-| S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give `WireConfiguration`, a matrix gives `PerLengthImpedance`. The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
+| S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give their `WireConfiguration`, a matrix the `WireConfiguration` `lc_<configuration>_wc` that holds its template `PerLengthPhaseImpedance` (`isTemplate=true`, no WireSpacing; amended 2026-11-21, the user's rule, skill `wire-configuration`). The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
 | S3a-3 | Line phases | **approved:** The line's letters in ABC order then N (GLM `phases` is a set: `CB` is `BC`, so matrix row 1 is B, as S2-9 compacts it). It must equal the configuration's conductors (geometry) or diagonal (matrix), so ACLineSegmentPhase k is spacing position k. A triplex line is `s1s2N` whatever its letter (`AS`, `BS`, `CS`): CIM puts the primary phase on the center-tap transformer (S3b); the letter must match its end buses'. **Amended by S6-4:** a matrix line's N is dropped (GridLAB-D's matrix never reads it), and a written 0 diagonal is no phase |
 | S3a-4 | Line ratings | **approved:** **The line's own `continuous_rating_X`/`emergency_rating_X`, as written, on its own `OperationalLimitSet` (D9);** else its configuration's `rating.summer.*` (only `triplex_line_configuration:1` of orig_R5-35.00-1, 1200 A, 192 lines); else none. Conductor ratings stay on the WireInfo (S2-7) and are not copied, and GridLAB-D's 1000/2000 A defaults are never filled. Only the three Java exports rate lines (140 lines, always equal across phases). **Note:** GridLAB-D itself replaces a line's written ratings at init, with its conductors' (a running minimum over A, B, C) or, on a matrix configuration, the configuration's (`overhead_line.cpp:133`). The written values are the deck's statement (the Java exports wrote the CIM source's line limits: IEEE13_assets 730/1095 A on 730/730 A conductors), so they are kept. The alternative is to write the engine's effective rating and leave the written ones untranscribed |
 | S3a-5 | Switch ratings | **approved:** The same rule as lines: the device's own set (IEEE13_cdpsm, IEEE13_assets, IEEE123: 400/600 A on 12 switches, the fuse and the recloser). GridLAB-D reads no rating on a switch (`link.cpp:681` checks limits on lines and transformers only), and the DSS import drops a switch's ratings as stand-ins (DSS-8), so the alternative is untranscribed |
@@ -1399,7 +1399,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1423,7 +1423,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `247.5`, `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `800.0`, `500.0`, `340.889` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1447,7 +1447,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `30.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 

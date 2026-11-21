@@ -22,12 +22,14 @@ from collections import defaultdict
 from typing import NamedTuple
 
 import cimprofiles.cim18.cim18v17 as cim
+from cimtables.graph_write import get_qty
 from cimtopology.core import Branch, Network, System, Topology
 
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.getters.base_voltage import get_base_voltage
 from cimhub_core.getters.source import get_source
 from cimhub_core.getters.terminals import get_terminal_phases
+from cimhub_gridlabd.exporter.units import glm_unit
 from cimhub_gridlabd.schema import gridlabd as schema
 
 CIM_CLASSES = (cim.EnergySource,)
@@ -52,7 +54,10 @@ TRIPLEX_SLOTS = {
 }
 SUBSTATION_SLOTS = {
     **NODE_SLOTS,
+    "nominal_voltage": Slot("written", "get_source: nominalVoltage / sqrt 3 (the importer's line_voltage inverted)"),
     "positive_sequence_voltage": Slot("written", "get_source: voltageMagnitude / sqrt 3 at voltageAngle"),
+    "base_power": Slot("written", "the graph's BasePower, when it holds one (network.base_power's 100 MVA default "
+                                  "is not CIM's)"),
 }
 SLOTS = {
     schema.Node: with_default(schema.Node, NODE_SLOTS, Slot("unset", _NOT_IN_CIM)),
@@ -112,7 +117,7 @@ def export(context) -> list:
     records = []
     for node, bus in context.buses.items():
         if node in swings:
-            records.append(_substation(bus, swings[node]))
+            records.append(_substation(bus, swings[node], context.network))
         elif bus.system is System.SPLIT_PHASE:
             records.append(schema.TriplexNode(name=bus.name, phases=bus.phases, nominal_voltage=bus.nominal_voltage))
         else:
@@ -120,13 +125,19 @@ def export(context) -> list:
     return records
 
 
-def _substation(bus: Bus, source: cim.EnergySource) -> schema.Substation:
-    values = get_source(source, angle_unit="rad")
+def _substation(bus: Bus, source: cim.EnergySource, network) -> schema.Substation:
+    unit = glm_unit(schema.Substation, "nominal_voltage")
+    values = get_source(source, angle_unit="rad", voltage_unit=unit)
     magnitude = values.magnitude / math.sqrt(3)
     angle = values.angle or 0.0  # an unset angle is CIM's reference angle, 0
     voltage = schema.Complex(real=magnitude * math.cos(angle), imag=magnitude * math.sin(angle))
-    return schema.Substation(name=bus.name, phases=bus.phases, nominal_voltage=bus.nominal_voltage, bustype="SWING",
-                             positive_sequence_voltage=voltage)
+    base_powers = list(network.graph.get(cim.BasePower, {}).values())
+    if len(base_powers) > 1:
+        raise ValueError(f"{len(base_powers)} BasePowers; GLM's substation takes one base_power")
+    base_power = get_qty(base_powers[0], "basePower", glm_unit(schema.Substation, "base_power")) if base_powers \
+        else None
+    return schema.Substation(name=bus.name, phases=bus.phases, nominal_voltage=values.nominal_u / math.sqrt(3),
+                             bustype="SWING", positive_sequence_voltage=voltage, base_power=base_power)
 
 
 def _single_terminal(equipment) -> cim.Terminal:

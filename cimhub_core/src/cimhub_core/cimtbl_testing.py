@@ -110,8 +110,9 @@ def assert_matches_golden(document: Document, golden_path: str | Path) -> None:
 
 
 def assert_text_matches_golden(actual: str, golden_path: str | Path) -> None:
-    """Raise ``AssertionError`` unless ``actual`` (``.cimtbl`` text, e.g. a written artifact file) equals the golden
-    file's text."""
+    """Raise ``AssertionError`` unless ``actual`` (``.cimtbl`` text, e.g. a written artifact file, or a native file
+    an exporter wrote) equals the golden file's text. A ``.cimtbl`` golden's failure lists records, another's a
+    unified diff."""
     golden_path = Path(golden_path)
     if os.environ.get(UPDATE_GOLDENS) == "1":
         golden_path.write_text(actual)
@@ -119,10 +120,11 @@ def assert_text_matches_golden(actual: str, golden_path: str | Path) -> None:
     expected = golden_path.read_text()
     if actual == expected:
         return
-    differences = record_diff(expected, actual)
+    differences = record_diff(expected, actual) if golden_path.suffix == ".cimtbl" else []
     if not differences:
         lines = difflib.unified_diff(expected.splitlines(), actual.splitlines(), "golden", "mapper", lineterm="")
-        differences = ["the records match; comments or layout differ:", *list(lines)[:40]]
+        heading = "the records match; comments or layout differ:" if golden_path.suffix == ".cimtbl" else "the text:"
+        differences = [heading, *list(lines)[:40]]
     raise AssertionError(
         f"{golden_path.name} differs from the mapper output ({UPDATE_GOLDENS}=1 rewrites it):\n  "
         + "\n  ".join(differences)

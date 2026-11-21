@@ -7,6 +7,8 @@ converts a unit.
 
 from __future__ import annotations
 
+from cimprofiles.units import units
+
 from cimhub_gridlabd import glm_schema
 
 
@@ -16,3 +18,10 @@ def glm_unit(native_class: type, slot: str) -> str:
     if unit is None:
         raise ValueError(f"GLM {native_class.class_name}.{slot} declares no unit")
     return unit
+
+
+def from_percent(value: float | None, native_class: type, slot: str) -> float | None:
+    """A percent number (``get_qty(..., 'percent')``, CIM's PerCent) in the GLM slot's unit, a fraction."""
+    if value is None:
+        return None
+    return units.Quantity(value, "percent").to(glm_unit(native_class, slot)).magnitude

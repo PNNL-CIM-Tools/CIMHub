@@ -250,6 +250,13 @@ def pv_output(model: GlmModel, solar) -> PvOutput:
     return PvOutput(units.Quantity(insolation, "W/ft**2").to("W/m**2").magnitude, module_f, dc)
 
 
+def static_dc_output(solar) -> float:
+    """``pv_output``'s DC watts of a ``solar`` written in its schema's units, its unset slots at GridLAB-D's defaults
+    (the exporter's derating, so GridLAB-D's output is CIM's p)."""
+    filled, _ = fill_defaults(SOLAR_FIELDS, solar, _solar_defaults(solar))
+    return pv_output(GlmModel(), filled).dc
+
+
 def battery_output(set_point: float, soc: float, soc_reserve: float, rated_s: float) -> float:
     """GridLAB-D's CONSTANT_PQ output of a battery inverter, W, generation positive (``inverter.cpp:3485-3540``):
     the set point, 0 when charging a full battery or discharging at or below the reserve, capped at ratedS."""

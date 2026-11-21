@@ -21,6 +21,7 @@ CIM 18 removed `WireSpacingInfo` and the rest of the `*Info` catalog. Geometry i
 
 ```
 ACLineSegment.WireConfiguration ─▶ WireConfiguration
+                                     ├─ PerLengthImpedance (optional: a template LineCode, or geometry's equivalent)
                                      ├─ WireSpacing ─▶ XYSpacing (isTemplate=true)
                                      │                   └─ XYConductorPosition × n  (sequenceNumber, xCoord, yCoord, kind)
                                      │            or ─▶ ConductorDistanceSpacing (isTemplate=true)
@@ -30,7 +31,9 @@ ACLineSegment.WireConfiguration ─▶ WireConfiguration
                                           └─ WireInfo  (OverheadWireInfo, ConcentricNeutralCableInfo, TapeShieldCableInfo)
 ```
 
-Phasing comes from the segment: `ACLineSegment.ACLineSegmentPhases`. The `.cimtbl` shape is
+Phasing comes from the segment: `ACLineSegment.ACLineSegmentPhases`. A WireConfiguration is geometry only when it
+names a WireSpacing. One with only a PerLengthImpedance is a template LineCode (skill `wire-configuration`), so
+test with `get_line_geometry(line)`, never `line.WireConfiguration is not None`. The `.cimtbl` shape is
 `line_by_wire_configuration` (`cimhub_core/src/cimhub_core/shapes/line_by_wire_configuration.cimtbl`, see the
 `cimtbl-shapes` skill).
 
@@ -57,13 +60,13 @@ That is wrong because:
 ## Export decision tree
 
 ```
-Does the ACLineSegment have a WireConfiguration?
-├── YES → export its XYSpacing as LineSpacing / line_spacing,
+Does get_line_geometry(line) return a WireConfiguration (one that names a WireSpacing)?
+├── YES → export its spacing as LineSpacing / line_spacing,
 │         each WireSequenceConfiguration.WireInfo as the conductor in that position,
 │         and link them by name in LineGeometry / line_configuration.
 │         STOP. Do not touch impedance.
-└── NO  → does it have a PerLengthImpedance (phase or sequence) with values?
-          ├── YES → export the matrix form (DSS LineCode, GLM z11..z33)
+└── NO  → does get_line_code(line) return a PerLengthImpedance (the line's own, or its WireConfiguration's)?
+          ├── YES → export the matrix form (DSS LineCode or inline, GLM z11..z33; skill wire-configuration)
           └── NO  → log a warning naming the segment and skip the configuration.
                     Never fabricate values.
 ```
@@ -122,11 +125,12 @@ IEEE123). That output has years of GridLAB-D round-trip testing behind it, so it
   them into XY on import: most GLM spacings have no heights and many are not planar. The core getters
   (`getters/spacing.py`) derive XY on export when the target needs it.
 - Native `LineCode` / matrix configurations stay matrices (`line_by_impedance`); do not invent geometry for them.
+  A named one is a template behind a WireConfiguration with no WireSpacing (skill `wire-configuration`).
 
 ## Checklist
 
-- [ ] No `z11`/`z12`, `rmatrix`/`xmatrix` or `PhaseImpedanceData` is written for a segment that has a
-      `WireConfiguration`.
+- [ ] No `z11`/`z12`, `rmatrix`/`xmatrix` or `PhaseImpedanceData` is written for a segment that has geometry
+      (`get_line_geometry`; a WireConfiguration with no WireSpacing is a template LineCode, not geometry).
 - [ ] No importer writes `PerLengthPhaseImpedance` rows computed from native geometry.
 - [ ] No conductor-name field holds a number.
 - [ ] GLM complex values use `a+bj`, with no leading `+` on the real part.

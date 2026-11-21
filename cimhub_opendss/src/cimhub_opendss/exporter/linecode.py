@@ -1,6 +1,8 @@
 """PerLengthImpedance -> OpenDSS ``LineCode`` (``EXPORT_MAPPING.md#linecode``).
 
-Every PerLengthImpedance is written, used or not (E3), per metre (B1). C = b / (2 pi f) at the network's base
+Every template PerLengthImpedance is written, used or not (E3), per metre (B1). One with ``isTemplate=false`` is
+a line's own impedance, which its Line carries inline (``line.py``, skill ``wire-configuration``); an unset
+``isTemplate`` is a template (the CIM default for a code no producer marked). C = b / (2 pi f) at the network's base
 frequency (E5), which is also the code's ``baseFreq``; an unset b is C = 0, so the engine's 3.4/1.6 nF default never
 applies (skill rule 8).
 """
@@ -65,12 +67,26 @@ def linecode_name(code: cim.PerLengthImpedance, names: Names) -> str:
 
 
 def export(context) -> list[schema.Linecode]:
-    """One LineCode per PerLengthImpedance."""
+    """One LineCode per template PerLengthImpedance."""
     frequency = context.network.base_frequency.to("Hz")
-    return [_linecode(code, context.names, frequency) for code in context.objects(*CIM_CLASSES)]
+    return [_linecode(code, context.names, frequency) for code in context.objects(*CIM_CLASSES)
+            if code.isTemplate is not False]
 
 
 def _linecode(code: cim.PerLengthImpedance, names: Names, frequency: float) -> schema.Linecode:
+    order = code.conductorCount if isinstance(code, cim.PerLengthPhaseImpedance) else 3
+    slots = dict(name=linecode_name(code, names), nphases=order, units=UNIT, baseFreq=frequency,
+                 **code_slots(code, frequency))
+    for slot in TEXT_SLOTS:
+        if slot in slots:
+            slots[slot] = format_float(slots[slot])
+    return NATIVE_CLASS(**slots)
+
+
+def code_slots(code: cim.PerLengthImpedance, frequency: float) -> dict:
+    """The impedance slots a LineCode and a Line share, per metre (B1): ``rmatrix xmatrix cmatrix`` of a phase
+    code, ``r1 x1 r0 x0 C1 C0`` of a sequence code. A calculatedFrequency other than the network's, or an earth
+    return, raises."""
     calculated = get_qty(code, "calculatedFrequency", "Hz")
     if calculated is not None and not math.isclose(calculated, frequency):
         raise ValueError(f"{describe(code)}: calculatedFrequency {calculated} Hz differs from the network's "
@@ -78,15 +94,10 @@ def _linecode(code: cim.PerLengthImpedance, names: Names, frequency: float) -> s
     earth = [name for name in ("rg", "xg") if getattr(code, name) is not None]
     if earth:
         raise ValueError(f"{describe(code)}: {earth} set; the earth return is not mapped")
-    slots = dict(name=linecode_name(code, names), units=UNIT, baseFreq=frequency)
     if isinstance(code, cim.PerLengthPhaseImpedance):
-        slots.update(_matrix_slots(code, frequency))
-    else:
-        slots.update(_sequence_slots(code, frequency))
-    for slot in TEXT_SLOTS:
-        if slot in slots:
-            slots[slot] = format_float(slots[slot])
-    return NATIVE_CLASS(**slots)
+        return _matrix_slots(code, frequency)
+    values = get_sequence_impedance_code(code, IMPEDANCE_UNIT, ADMITTANCE_UNIT)
+    return sequence_slots(code, values, frequency)
 
 
 def _matrix_slots(code: cim.PerLengthPhaseImpedance, frequency: float) -> dict:
@@ -95,16 +106,10 @@ def _matrix_slots(code: cim.PerLengthPhaseImpedance, frequency: float) -> dict:
         raise ValueError(f"{describe(code)}: g is set; a DSS line has no shunt conductance")
     keys = [(row, column) for row in range(1, matrix.conductor_count + 1) for column in range(1, row + 1)]
     return dict(
-        nphases=matrix.conductor_count,
         rmatrix=[matrix.r[key] for key in keys],
         xmatrix=[matrix.x[key] for key in keys],
         cmatrix=[0.0 if matrix.b is None else c_from_b(matrix.b[key], frequency) for key in keys],
     )
-
-
-def _sequence_slots(code: cim.PerLengthSequenceImpedance, frequency: float) -> dict:
-    values = get_sequence_impedance_code(code, IMPEDANCE_UNIT, ADMITTANCE_UNIT)
-    return dict(nphases=3, **sequence_slots(code, values, frequency))
 
 
 def sequence_slots(owner, values, frequency: float) -> dict:

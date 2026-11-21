@@ -114,16 +114,17 @@ def _merged_control(units: list, controls: dict, *, split: bool) -> dict:
     """MANUAL without a control; else the units' one VOLT setting on the phases that have it."""
     if not controls:
         return {"control": "MANUAL"}
+    monitored = "".join(sorted("".join(control.pop("pt_phase") for control in controls.values())))
     settings = {tuple(sorted(control.items())) for control in controls.values()}
     if len(settings) != 1:
         raise ValueError(f"LinearShuntCompensators {[shunt.mRID for shunt in units]}: different VOLT settings")
     level = "INDIVIDUAL" if split or all(len(unit_letters) == 1 for unit_letters in controls) else "BANK"
-    return {"control": "VOLT", "control_level": level, "pt_phase": "".join(sorted("".join(controls))),
-            **dict(next(iter(settings)))}
+    return {"control": "VOLT", "control_level": level, "pt_phase": monitored, **dict(next(iter(settings)))}
 
 
 def _control(shunt: cim.LinearShuntCompensator, unit_letters: str) -> dict | None:
-    """A unit's VOLT settings (without ``pt_phase``), or None when it has no enabled voltage control."""
+    """A unit's VOLT settings, or None when it has no enabled voltage control; ``pt_phase`` is the monitored phases
+    (a BANK capacitor senses one phase, S4a), else the unit's own."""
     control = get_equipment_control(shunt, time_unit=glm_unit(schema.Capacitor, "dwell_time"))
     if control is None or control.control.enabled is False or control.control_enabled is False:
         return None
@@ -134,8 +135,6 @@ def _control(shunt: cim.LinearShuntCompensator, unit_letters: str) -> dict | Non
         return None
     if settings.deadband is None:
         raise ValueError(f"LinearShuntCompensator {shunt.mRID!r}: a voltage control without a deadband")
-    if settings.monitored_phases and letters(settings.monitored_phases) != unit_letters:
-        raise ValueError(f"LinearShuntCompensator {shunt.mRID!r}: monitors {letters(settings.monitored_phases)}, not "
-                         f"its own phases {unit_letters}; GLM's pt_phase is the capacitor's")
-    return {"voltage_set_low": settings.target - settings.deadband / 2,
+    monitored = letters(settings.monitored_phases) if settings.monitored_phases else unit_letters
+    return {"pt_phase": monitored, "voltage_set_low": settings.target - settings.deadband / 2,
             "voltage_set_high": settings.target + settings.deadband / 2, "dwell_time": control.delay}

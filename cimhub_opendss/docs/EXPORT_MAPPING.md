@@ -282,7 +282,7 @@ each name in only one catalog. A plain CableInfo (no neutral or shield) is a Wir
 
 ### LineCode
 
-One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.base_frequency`. A code whose
+One record per template PerLengthImpedance in the network (E3): `isTemplate` true or unset (unset is the CIM default for a code no producer marked). One with `isTemplate=false` is a line's own impedance and is written inline on its Line (skill `wire-configuration`). `baseFreq` is `network.base_frequency`. A code whose
 `calculatedFrequency` is set and differs from it raises: C is computed at the deck's frequency.
 - **Phase code:**
   - nphases = `conductorCount`;
@@ -308,7 +308,8 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
   `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
   mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
-  default).
+  default). One with a PerLengthImpedance and no WireSpacing is a template LineCode, not geometry: LineCode writes
+  its code, and it has no earth (`options.earth_model` skips it).
 - **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
   ACLineSegmentPhase) gets one record per (spacing, ySpacingOffset, conductors), the conductors being each phase's
   sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
@@ -350,7 +351,7 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 |---|---|
 | bus1 / bus2 | `bus_ref` over `get_terminal_nodes`, with the phase conductors of `get_conductor_phases` in order (645 CB is `.3.2`). The neutral is not on the bus: it is reduced (B4) |
 | phases | the phase conductors' count |
-| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry wins when both are set (skill `conductor-geometry`) |
+| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry is a WireConfiguration that names a WireSpacing (`get_line_geometry`); the code is the line's own PerLengthImpedance or its WireConfiguration's, a template LineCode (`get_line_code`, DSS-14). Geometry wins when both are set (skill `conductor-geometry`) |
 | rho | the configuration's EarthResistivity, or a spacing line's network EarthResistivity (ohm-m) |
 | length, units | `required_qty(line, "length", "m")`, `units=m` |
 | normamps / emergamps | `get_current_limits(line)` normal / emergency. Unset is left unset, and the engine copies the code's or geometry's. `short_term` and seasonal limits are not mapped |
@@ -364,8 +365,9 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 
   The values come from `get_line_sequence_impedance(line, "ohm")` (`LUMPED`). An unset b is C = 0 (rule 8). An
   unset r0/x0 raises, as on a sequence code. A set and nonzero `gch`/`g0ch` raises.
-- **Inline values are never written.** The importer's synthesized `ln_<line>_lc` comes back as a LineCode (E3,
-  listed).
+- **A line's own impedance** (`isTemplate=false`, the importer's `ln_<line>_lc`, DSS-14) is written inline on the
+  Line, per metre as a LineCode writes it (`linecode.code_slots`): `r1 x1 r0 x0 C1 C0` or `rmatrix xmatrix cmatrix`.
+  So a deck's inline line comes back inline. One that two lines use raises: `isTemplate=false` marks one line's own.
 
 ### Switches (E6)
 
@@ -612,18 +614,18 @@ code-level tests in `test_getters_line_impedance.py`):
 | name | written | Names; a coupled group's: the group's, <line>_jumper1 for each circuit, and <line>_jumper2 or a longer line's remainder <line> (H1, H4) |
 | bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
 | bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
-| linecode | written | the PerLengthImpedance's LineCode name |
+| linecode | written | the template PerLengthImpedance's LineCode name (get_line_code); a line's own (isTemplate=false) is written inline |
 | length | written | required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
 | phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
-| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| rmatrix | not mapped | a phase matrix is always a LineCode |
-| xmatrix | not mapped | a phase matrix is always a LineCode |
-| cmatrix | not mapped | a phase matrix is always a LineCode |
+| r1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| r0 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x0 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C1 | rule | the line's own sequence code (isTemplate=false), as a LineCode writes it; lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C0 | rule | the line's own sequence code (isTemplate=false), as a LineCode writes it; lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| rmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
+| xmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
+| cmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |

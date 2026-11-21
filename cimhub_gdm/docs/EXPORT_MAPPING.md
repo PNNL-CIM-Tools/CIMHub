@@ -393,8 +393,11 @@ Decision X5, the importer's decision 14 inverted:
 - **Catalogs (X3).** GDM puts the line's `ampacity` on the catalog, so one GDM equipment is made per (catalog, the
   line's normal current limit from `get_current_limits`). The first value seen is named `<catalog>`, and each later
   one `<catalog>_2`, `_3` in export order: no pre-pass. A line with no normal limit raises.
-- **Geometry (X4, `exporter/geometry.py`).** A line with a WireConfiguration is a GeometryBranch on a
-  GeometryBranchEquipment: native geometry, never a computed matrix (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`).
+- **Geometry (X4, `exporter/geometry.py`).** A line with geometry, a WireConfiguration that names a WireSpacing
+  (`get_line_geometry`), is a GeometryBranch on a GeometryBranchEquipment: native geometry, never a computed matrix
+  (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`), even when the configuration also holds its equivalent PerLengthImpedance.
+  Otherwise the PerLengthImpedance is the line's own or its WireConfiguration's, a template LineCode
+  (`get_line_code`).
   - The positions are the line's (`get_line_conductor_xy`, m): the spacing raised by the line's `ySpacingOffset`.
     So one GDM equipment is made per (configuration, positions, conductors), named `<configuration>`, then
     `<configuration>_<n>`.
@@ -409,8 +412,8 @@ Decision X5, the importer's decision 14 inverted:
   - A cable's `rated_voltage` is its `ratedVoltage` (read with `get_qty`: `get_wire_info` has none, and DSS has no
     such field). Unset, it is the line's BaseVoltage, line to line.
   - Every other wire value CIM can hold (radius, gmr, rAC25, rDC20, the cable's construction) raises when unset.
-- A line with neither a PerLengthImpedance nor a WireConfiguration (lumped r, x only) raises, and so does one with
-  both.
+- A line with neither geometry nor a PerLengthImpedance (lumped r, x only) raises, and so does one whose own
+  PerLengthImpedance differs from its WireConfiguration's (`get_line_code`).
 - `length` is `length` in m.
 
 The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_type` has no keyword for it (B22 b,

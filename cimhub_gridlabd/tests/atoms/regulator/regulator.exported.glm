@@ -1,0 +1,421 @@
+clock {
+  timezone UTC0;
+  starttime '2000-01-01 00:00:00';
+  stoptime '2000-01-01 00:00:00';
+}
+#set relax_naming_rules=1
+module powerflow {
+  solver_method NR;
+  nominal_frequency 60;
+  line_capacitance TRUE;
+}
+object overhead_line_conductor {
+  name "overhead_line_conductor_3";
+  geometric_mean_radius 0.00814;
+  resistance 0.563;
+  rating.summer.continuous 334;
+}
+object overhead_line_conductor {
+  name "wire_acsr_556_5";
+  geometric_mean_radius 0.0311;
+  resistance 0.18972;
+  diameter 0.927;
+  rating.summer.continuous 730;
+  rating.summer.emergency 730;
+}
+object underground_line_conductor {
+  name "tscab_ts_1/0";
+  outer_diameter 1.06;
+  conductor_gmr 0.0111;
+  conductor_diameter 0.368;
+  conductor_resistance 0.97;
+  shield_thickness 0.005;
+  shield_diameter 0.87;
+  shield_gmr 0.03625;
+  shield_resistance 4.32781609195402;
+}
+object underground_line_conductor {
+  name "ugwire_cu_1/0";
+  outer_diameter 0.4416;
+  conductor_gmr 0.01113;
+  conductor_diameter 0.368;
+  conductor_resistance 0.607;
+}
+object triplex_line_conductor {
+  name "triplex_4/0_AA";
+  resistance 0.48;
+  geometric_mean_radius 0.0158;
+}
+object line_spacing {
+  name "line_spacing_10";
+  distance_AN 7;
+}
+object line_spacing {
+  name "spc_601_ABCN";
+  distance_AB 2.5;
+  distance_BC 4.5;
+  distance_AC 7;
+  distance_AN 5.6569;
+  distance_BN 4.272;
+  distance_CN 5;
+  distance_AE 28;
+  distance_BE 28;
+  distance_CE 28;
+  distance_NE 24;
+}
+object line_spacing {
+  name "spc_607_AN";
+  distance_AN 0.0833;
+}
+object line_configuration {
+  name "lcon_601";
+  conductor_A "wire_acsr_556_5";
+  conductor_B "wire_acsr_556_5";
+  conductor_C "wire_acsr_556_5";
+  conductor_N "overhead_line_conductor_3";
+  spacing "spc_601_ABCN";
+}
+object line_configuration {
+  name "lcon_607";
+  conductor_A "tscab_ts_1/0";
+  conductor_N "ugwire_cu_1/0";
+  spacing "spc_607_AN";
+}
+object line_configuration {
+  name "lcon_mtx604_AC";
+  z11 1.3238+1.3569j;
+  z13 0.2066+0.4591j;
+  z31 0.2066+0.4591j;
+  z33 1.3294+1.3471j;
+  c11 4.7101;
+  c13 0;
+  c31 0;
+  c33 4.545;
+}
+object line_configuration {
+  name "line_configuration_18";
+  conductor_A "overhead_line_conductor_3";
+  conductor_N "overhead_line_conductor_3";
+  spacing "line_spacing_10";
+}
+object triplex_line_configuration {
+  name "tc_rated";
+  conductor_N "triplex_4/0_AA";
+  conductor_1 "triplex_4/0_AA";
+  conductor_2 "triplex_4/0_AA";
+  insulation_thickness 0.08;
+  diameter 0.522;
+}
+object triplex_line_configuration {
+  name "triplex_line_configuration_1";
+  conductor_N "triplex_4/0_AA";
+  conductor_1 "triplex_4/0_AA";
+  conductor_2 "triplex_4/0_AA";
+  insulation_thickness 0.08;
+  diameter 0.522;
+}
+object transformer_configuration {
+  name "xc_ct";
+  connect_type "SINGLE_PHASE_CENTER_TAPPED";
+  primary_voltage 2401.78;
+  secondary_voltage 120;
+  power_rating 25;
+  powerA_rating 25;
+  impedance 0.003+0.01088j;
+  impedance1 0.006+0.00544j;
+  impedance2 0.006+0.00544j;
+}
+object regulator_configuration {
+  name "reg_bank_config";
+  connect_type "WYE_WYE";
+  band_center 2440;
+  band_width 40;
+  dwell_time 30;
+  raise_taps 16;
+  lower_taps 16;
+  CT_phase "B";
+  PT_phase "B";
+  regulation 0.1;
+  control_level "BANK";
+  Control "OUTPUT_VOLTAGE";
+  Type "B";
+  tap_pos_A 4;
+  tap_pos_B 4;
+  tap_pos_C 4;
+}
+object regulator_configuration {
+  name "reg_ldc_config";
+  connect_type "WYE_WYE";
+  band_center 122;
+  band_width 2;
+  dwell_time 0;
+  raise_taps 16;
+  lower_taps 16;
+  current_transducer_ratio 700;
+  power_transducer_ratio 20;
+  compensator_r_setting_A 3;
+  compensator_x_setting_A 9;
+  regulation 0.1;
+  Control "LINE_DROP_COMP";
+  Type "B";
+  tap_pos_A 5;
+}
+object regulator_configuration {
+  name "reg_output_config";
+  connect_type "WYE_WYE";
+  band_center 2440;
+  band_width 40;
+  dwell_time 45;
+  raise_taps 16;
+  lower_taps 16;
+  regulation 0.1;
+  Control "OUTPUT_VOLTAGE";
+  Type "B";
+  tap_pos_A 2;
+  tap_pos_B 3;
+  tap_pos_C 0;
+}
+object regulator_configuration {
+  name "xf_reg3_config";
+  connect_type "WYE_WYE";
+  dwell_time 15;
+  raise_taps 16;
+  lower_taps 16;
+  current_transducer_ratio 250;
+  power_transducer_ratio 20;
+  compensator_r_setting_A 0.4;
+  compensator_r_setting_C 0.4;
+  compensator_x_setting_A 0.4;
+  compensator_x_setting_C 0.4;
+  regulation 0.1;
+  Control "MANUAL";
+  Type "A";
+  tap_pos_A 2;
+  tap_pos_C 0;
+}
+object substation {
+  name "src";
+  phases "ABCN";
+  nominal_voltage 2401.78;
+  bustype "SWING";
+  positive_sequence_voltage 2401.78+0j;
+}
+object node {
+  name "n1";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n10";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n2";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n4";
+  phases "ACN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n5";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n6";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n7";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n8";
+  phases "CN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "n9";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "r1";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "r2";
+  phases "ACN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "r3";
+  phases "AN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "r4";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object triplex_node {
+  name "tm1";
+  phases "AS";
+  nominal_voltage 120;
+}
+object triplex_node {
+  name "tm2";
+  phases "AS";
+  nominal_voltage 120;
+}
+object triplex_node {
+  name "tn1";
+  phases "AS";
+  nominal_voltage 120;
+}
+object overhead_line {
+  name "l1";
+  phases "ABCN";
+  from "src";
+  to "n1";
+  configuration "lcon_601";
+  length 500;
+}
+object overhead_line {
+  name "line_l2";
+  phases "AC";
+  from "n1";
+  to "n4";
+  continuous_rating_A 230;
+  continuous_rating_C 230;
+  emergency_rating_A 600;
+  emergency_rating_C 600;
+  configuration "lcon_mtx604_AC";
+  length 300;
+}
+object overhead_line {
+  name "overhead_line_3";
+  phases "AN";
+  from "n1";
+  to "n5";
+  configuration "line_configuration_18";
+  length 68.8976377952756;
+}
+object underground_line {
+  name "line_u1";
+  phases "AN";
+  from "n2";
+  to "n6";
+  continuous_rating_A 165;
+  emergency_rating_A 247.5;
+  configuration "lcon_607";
+  length 800;
+}
+object triplex_line {
+  name "tl_1";
+  phases "AS";
+  from "tn1";
+  to "tm1";
+  configuration "triplex_line_configuration_1";
+  length 30;
+}
+object triplex_line {
+  name "tl_2";
+  phases "AS";
+  from "tn1";
+  to "tm2";
+  continuous_rating_A 1200;
+  emergency_rating_A 1200;
+  configuration "tc_rated";
+  length 30;
+}
+object switch {
+  name "swt_s1";
+  phases "ABC";
+  status "CLOSED";
+  from "n1";
+  to "n2";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 600;
+  emergency_rating_B 600;
+  emergency_rating_C 600;
+}
+object switch {
+  name "swt_s2";
+  phases "A";
+  status "OPEN";
+  from "n5";
+  to "n7";
+}
+object fuse {
+  name "fuse_1";
+  phases "C";
+  status "CLOSED";
+  from "n4";
+  to "n8";
+  current_limit 50000;
+}
+object fuse {
+  name "fuse_2";
+  phases "A";
+  status "CLOSED";
+  from "n5";
+  to "n9";
+}
+object recloser {
+  name "recloser_1";
+  phases "C";
+  status "CLOSED";
+  from "n1";
+  to "n10";
+}
+object transformer {
+  name "xf_ct";
+  phases "AS";
+  from "n5";
+  to "tn1";
+  configuration "xc_ct";
+}
+object regulator {
+  name "reg_bank";
+  phases "ABC";
+  from "n2";
+  to "r4";
+  configuration "reg_bank_config";
+}
+object regulator {
+  name "reg_ldc";
+  phases "A";
+  from "n5";
+  to "r3";
+  configuration "reg_ldc_config";
+}
+object regulator {
+  name "reg_output";
+  phases "ABC";
+  from "n2";
+  to "r1";
+  continuous_rating_A 763.58;
+  continuous_rating_B 763.58;
+  continuous_rating_C 763.58;
+  emergency_rating_A 1041.25;
+  emergency_rating_B 1041.25;
+  emergency_rating_C 1041.25;
+  configuration "reg_output_config";
+}
+object regulator {
+  name "xf_reg3";
+  phases "AC";
+  from "n4";
+  to "r2";
+  configuration "xf_reg3_config";
+}

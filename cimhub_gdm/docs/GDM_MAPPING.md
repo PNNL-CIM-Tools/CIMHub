@@ -315,14 +315,19 @@ expected differences. It is written on rc_1 after this branch merges (user, 2026
 `importer/line.py`. Catalogs are built eagerly, once each, before any instance (§1); an instance names its catalog
 by the catalog's mRID.
 
+A matrix or sequence catalog is a named catalog shared by lines, so it is a template (DSS-14, as a DSS LineCode): the
+PerLengthImpedance has `isTemplate=true` and is held by a WireConfiguration `<lc>_wc` (the catalog's name, its
+`PerLengthImpedance`, no WireSpacing). Its lines name that WireConfiguration and set no `ACLineSegment.PerLengthImpedance`
+of their own. A geometry catalog is a WireConfiguration that names a WireSpacing.
+
 | GDM | CIM | rule |
 |---|---|---|
-| `MatrixImpedanceBranchEquipment` | PerLengthPhaseImpedance `lc_<name>` + PhaseImpedanceData `<lc>_<row><column>` | lower triangle (row ≥ column, 1-based, conductor order); r, x as written; b = `susceptance(c)` = 2π·60·C; `conductorCount` = n; `calculatedFrequency` = 60 Hz. Non-square, mismatched or asymmetric matrices raise |
-| `SequenceImpedanceBranchEquipment` | PerLengthSequenceImpedance `lc_<name>` | r, x, r0, x0 as written; bch, b0ch = 2π·60·C1, C0 |
+| `MatrixImpedanceBranchEquipment` | PerLengthPhaseImpedance `lc_<name>` + PhaseImpedanceData `<lc>_<row><column>`; WireConfiguration `<lc>_wc` | lower triangle (row ≥ column, 1-based, conductor order); r, x as written; b = `susceptance(c)` = 2π·60·C; `conductorCount` = n; `calculatedFrequency` = 60 Hz; `isTemplate` = true. Non-square, mismatched or asymmetric matrices raise |
+| `SequenceImpedanceBranchEquipment` | PerLengthSequenceImpedance `lc_<name>`; WireConfiguration `<lc>_wc` | r, x, r0, x0 as written; bch, b0ch = 2π·60·C1, C0; `isTemplate` = true |
 | `BareConductorEquipment` | OverheadWireInfo `wire_<name>` | gmr; radius = diameter / 2; `ac_resistance` → rAC25, `dc_resistance` → rDC20 (as DSS); ampacity → ratedCurrent |
 | `ConcentricCableEquipment` | ConcentricNeutralCableInfo `cn_<name>` | as DSS CNData: `phase_ac_resistance` → rAC25, `strand_ac_resistance` → neutralStrandRDC20, `cable_diameter` → diameterOverJacket; radii from diameters |
 | `GeometryBranchEquipment` | XYSpacing `spc_<name>` (isTemplate) + XYConductorPosition `<spc>_<n>`; WireConfiguration `wc_<name>` + WireSequenceConfiguration `<wc>_<n>` → the wire or cable info | positions as written; `numberOfPhases` and the positions' `kind` are not written (GDM's catalog doesn't say which conductor is the neutral) |
-| `MatrixImpedanceBranch`, `SequenceImpedanceBranch`, `GeometryBranch` | ACLineSegment `ln_<name>` | node1/node2, `phases` always (G7), length as written, BaseVoltage of bus 1; `PerLengthImpedance` or `WireConfiguration`; `<ln>_limits` with `<ln>_norm` (the catalog's ampacity, or a geometry's first conductor's) and `<ln>_emerg` (that conductor's `emergency_ampacity`; a cable has none) |
+| `MatrixImpedanceBranch`, `SequenceImpedanceBranch`, `GeometryBranch` | ACLineSegment `ln_<name>` | node1/node2, `phases` always (G7), length as written, BaseVoltage of bus 1; `WireConfiguration` (the catalog's `<lc>_wc` or the geometry's `wc_<name>`); `<ln>_limits` with `<ln>_norm` (the catalog's ampacity, or a geometry's first conductor's) and `<ln>_emerg` (that conductor's `emergency_ampacity`; a cable has none) |
 | `GeometrySwitch` | LoadBreakSwitch `sw_<name>` (switch.py) | as every switch; ratedCurrent from the geometry's first conductor |
 
 OperationalLimitTypes `olt_normal` / `olt_emergency` (as the core `common` shape, without `durationKind`, §14) are
@@ -350,7 +355,7 @@ line, a cable or a GeometrySwitch. SMART-DS p1rhs7: 1,841 lines (1,186 on S1 S2)
 | `buses` | `list[DistributionBus]` |  | structural | node1, node2; BaseVoltage from bus 1 (GDM requires equal bus voltages) |
 | `length` | `Distance` |  | copied | `add_connectivity.length` |
 | `phases` | `list[Phase]` |  | structural | ACLineSegmentPhase per conductor, in conductor order, balanced ABC included |
-| `equipment` | `MatrixImpedanceBranchEquipment` |  | structural | PerLengthImpedance; its ampacity → the line's normal CurrentLimit |
+| `equipment` | `MatrixImpedanceBranchEquipment` |  | structural | WireConfiguration <lc>_wc (the template); its ampacity → the line's normal CurrentLimit |
 
 
 **`SequenceImpedanceBranch`**
@@ -365,7 +370,7 @@ line, a cable or a GeometrySwitch. SMART-DS p1rhs7: 1,841 lines (1,186 on S1 S2)
 | `buses` | `list[DistributionBus]` |  | structural | node1, node2; BaseVoltage from bus 1 (GDM requires equal bus voltages) |
 | `length` | `Distance` |  | copied | `add_connectivity.length` |
 | `phases` | `list[Phase]` |  | structural | ACLineSegmentPhase per conductor, in conductor order, balanced ABC included |
-| `equipment` | `SequenceImpedanceBranchEquipment` |  | structural | PerLengthImpedance; its ampacity → the line's normal CurrentLimit |
+| `equipment` | `SequenceImpedanceBranchEquipment` |  | structural | WireConfiguration <lc>_wc (the template); its ampacity → the line's normal CurrentLimit |
 
 
 **`GeometryBranch`**

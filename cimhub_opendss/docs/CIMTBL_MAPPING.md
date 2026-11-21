@@ -22,7 +22,7 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineSpacing` | `linespacing.cimtbl` | `line_by_wire_configuration` (`XYSpacing`) | nothing |
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
-| `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
+| `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; the line's own impedance `ln_<name>_lc` (`isTemplate=false`), synthesized `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
 | `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
@@ -160,6 +160,14 @@ Mapper: `cimhub_opendss/importer/cimtbl/linecode.py` (`map_linecode`). Atoms: `t
 **Identity.** `mRID` = `lc_` + `name`, lowercased (DSS names are case-insensitive). `PhaseImpedanceData` has no
 mRID; its `identifier` column is `<mRID>_<row><column>`.
 
+**Template (DSS-14, the user's rule 2026-11-21).** A LineCode is a template its lines share by name: its impedance
+has `isTemplate=true`, and a `WireConfiguration` `<template>_wc` (`lc_<name>_wc`, or `lc_<name>_<unit>_wc` per DSS-3)
+holds it as `PerLengthImpedance`, with no `WireSpacing`. Lines reference that WireConfiguration, not the impedance.
+The WireConfiguration is CIM's equivalence route: a configuration with a spacing is geometry, one with only a
+`PerLengthImpedance` is a template LineCode, and one with both is geometry with its equivalent impedance. Exporters
+read it through `get_line_geometry` and `get_line_code` (`cimhub_core.getters.line_impedance`). An impedance only one
+line uses, the line's own values, is `ACLineSegment.PerLengthImpedance` with `isTemplate=false` (Line, below).
+
 **Form.** A code that sets any of `r1 x1 r0 x0 C1 C0 B1 B0` is a sequence code (OpenDSS
 [Line properties](https://opendss.epri.com/Properties14.html)); one that sets `rmatrix`/`xmatrix`/`cmatrix` is a
 matrix code. DSS keeps whichever form was set last, and the reader does not record the order, so a code that sets
@@ -171,7 +179,7 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 
 | Linecode field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`; mRID = lc_ + name, lowercased |
+| `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`, `WireConfiguration.name`; mRID = lc_ + name, lowercased; its WireConfiguration's lc_<name>_wc (DSS-14) |
 | `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4) |
 | `r1` | `Optional[float]` | `0.769009`, `0.3489`, `0.535622` | copied | `PerLengthSequenceImpedance.r` (ohm/{length}) |
 | `x1` | `Optional[float]` | `0.312115`, `0.491691`, `0.560725` | copied | `PerLengthSequenceImpedance.x` (ohm/{length}) |
@@ -852,14 +860,15 @@ phases raises (found by the S6b export, 2026-11-09). The engine sets a fuse phas
   only as numerical stand-ins: `r1=1e-4`, or the `Switch=y` defaults.
 
 **Template (`ACLineSegment`).** Exactly one of the following; a line that combines two raises:
-- `linecode=` → `PerLengthImpedance` = the code's template for the line's unit (`lc_<code>`, or `lc_<code>_<unit>`
-  when the code's lines disagree, DSS-3);
+- `linecode=` → `WireConfiguration` = the WireConfiguration of the code's template for the line's unit
+  (`lc_<code>_wc`, or `lc_<code>_<unit>_wc` when the code's lines disagree, DSS-3, DSS-14);
 - `geometry=` → `WireConfiguration` = `wc_<geometry>`;
 - `spacing=` + `wires=`/`cncables=`/`tscables=` → a synthesized `WireConfiguration` `ln_<name>_wc` on
   `spc_<spacing>`, conductors in order (IEEE13_Assets `684652`). This is the counterpart of S2's synthesized
   spacing;
-- inline `r1`…`B0` or `rmatrix`/`xmatrix`/`cmatrix` → a synthesized `PerLengthSequenceImpedance` or
-  `PerLengthPhaseImpedance` `ln_<name>_lc` under `# synthesized` in `line.cimtbl` (DSS-8). It goes through the
+- inline `r1`…`B0` or `rmatrix`/`xmatrix`/`cmatrix` → `PerLengthImpedance` = a synthesized
+  `PerLengthSequenceImpedance` or `PerLengthPhaseImpedance` `ln_<name>_lc` of the line's own, `isTemplate=false`
+  (DSS-14), under `# synthesized` in `line.cimtbl` (DSS-8). It goes through the
   LineCode mapper's own functions, so DSS-3 (units, gate), DSS-3b and DSS-4 apply unchanged.
   - **Naming:** DSS-8 said `lc_<line>`. A line and a code may share a name, so this proposes `ln_<name>_lc`.
   - **Units:** a unitless inline line goes through the same magnitude gate, over the deck's unitless inline
@@ -910,18 +919,18 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `name` | `Union[str, LineName]` | `632633`, `632645`, `632670` | copied | `ACLineSegment.name`, `Switch.name`; mRID = ln_ + name (segment) or sw_ + name (switch), lowercased |
 | `bus1` | `str` | `632.1.2.3`, `632.3.2`, `MID.1.2.3` | structural | node1, and the phases from its nodes: 1/2/3 = A/B/C, s1/s2 on a split-phase island (DSS-5); no nodes = 1..phases |
 | `bus2` | `Optional[str]` | `633.1.2.3`, `645.3.2`, `670.1.2.3` | structural | node2; its phase nodes must equal bus1's (a transposition raises) |
-| `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.PerLengthImpedance = the code's template for the line's unit (lc_<code> or lc_<code>_<unit>, DSS-3) |
+| `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.WireConfiguration = the WireConfiguration of the code's template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc, DSS-3, DSS-14) |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({length}); default 1 (defaulted); none on a switch |
 | `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the phase count; unset = the code's or geometry's nphases, else 3; one that differs from the code's nphases raises (DSS-10) |
-| `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `x0` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `C1` | `Optional[float]` | `0.0`, `0.000212206590789194`, `0.000450939005427037` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `C0` | `Optional[float]` | `0.0`, `0.000636619772367581`, `0.00135281701628111` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `rmatrix` | `Union[float, list[float], NoneType]` | `[1.3238, 0.2066, 1.3294]`, `[0.0001]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `xmatrix` | `Union[float, list[float], NoneType]` | `[1.3569, 0.4591, 1.3471]`, `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `x0` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `C1` | `Optional[float]` | `0.0`, `0.000212206590789194`, `0.000450939005427037` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `C0` | `Optional[float]` | `0.0`, `0.000636619772367581`, `0.00135281701628111` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `rmatrix` | `Union[float, list[float], NoneType]` | `[1.3238, 0.2066, 1.3294]`, `[0.0001]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `xmatrix` | `Union[float, list[float], NoneType]` | `[1.3569, 0.4591, 1.3471]`, `[0.0]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
 | `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
 | `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
@@ -933,8 +942,8 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `tscables` | `Union[str, list[str], NoneType]` |  | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
 | `wires` | `Union[str, list[str], NoneType]` | `['ACSR_1/0', 'ACSR_1/0']` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
 | `EarthModel` | `Union[str, ForwardRef('EarthModelType'), NoneType]` |  | untranscribed | the earth model of the impedance calculation; the consumer's choice |
-| `B1` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `B0` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `B1` | `Optional[float]` |  | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `B0` | `Optional[float]` |  | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
 | `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
 | `LineType` | `Union[str, ForwardRef('LineTypeCode'), NoneType]` |  | untranscribed | no home in the network profile parts |
@@ -947,7 +956,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `faultrate` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `pct_perm` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `repair` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
-| `basefreq` | `Optional[float]` |  | structural | the synthesized template's calculatedFrequency and the frequency of its b; unset: the deck's (DSS-3b) |
+| `basefreq` | `Optional[float]` |  | structural | the line's own impedance's calculatedFrequency and the frequency of its b; unset: the deck's (DSS-3b) |
 | `enabled` | `Union[bool, Bool, NoneType]` | `True`, `False` | copied | `ACLineSegment.normallyInService`, `Switch.normallyInService` |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 

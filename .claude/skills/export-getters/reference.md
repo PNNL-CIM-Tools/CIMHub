@@ -101,12 +101,12 @@ rated_kv = get_qty(end, "ratedU", "kV")
 
 | concept | path |
 |---|---|
-| line geometry | `ACLineSegment.WireConfiguration` → `WireConfiguration.WireSpacing` (`XYSpacing`, `isTemplate`) → `XYConductorPosition` (`sequenceNumber`, `xCoord`, `yCoord`, `kind`) |
+| line geometry | `get_line_geometry`: `ACLineSegment.WireConfiguration` with a `WireConfiguration.WireSpacing` (`XYSpacing`, `isTemplate`) → `XYConductorPosition` (`sequenceNumber`, `xCoord`, `yCoord`, `kind`) |
 | line height | `ACLineSegment.ySpacingOffset`: height of the spacing's origin (ground, pole top or crossarm centre) above earth; unset = origin at ground. The spacing: `ACLineSegment.WireSpacing` or `WireConfiguration.WireSpacing` (both set must agree) |
 | distance spacing | `ConductorDistanceSpacing.ConductorDistance` (`sequenceNumber1/2`, `conductorKind1/2`, `distance`); a height is a distance to kind `earth`. The GridAPPS-D `fromPhase`/`toPhase`/`from/toSequenceNumber` are not read |
 | line conductors | `WireConfiguration.WireSequence` → `WireSequenceConfiguration` (`sequenceNumber`, `WireInfo`) → `OverheadWireInfo` / `ConcentricNeutralCableInfo` / `TapeShieldCableInfo` |
 | line phases | `ACLineSegment.ACLineSegmentPhases` → `ACLineSegmentPhase` (`sequenceNumber`, `phase`) |
-| line impedance | lumped `ACLineSegment.r/x/bch/gch/r0/x0/b0ch/g0ch`; `ACLineSegment.PerLengthImpedance` → `PerLengthSequenceImpedance` or `PerLengthPhaseImpedance` + `PhaseImpedanceData` (`row`, `column`, `r`, `x`, `b`) |
+| line impedance | lumped `ACLineSegment.r/x/bch/gch/r0/x0/b0ch/g0ch`; the code (`get_line_code`): the line's own `ACLineSegment.PerLengthImpedance` (`isTemplate=false`), else `ACLineSegment.WireConfiguration.PerLengthImpedance` (a template, `isTemplate=true`; skill `wire-configuration`) → `PerLengthSequenceImpedance` or `PerLengthPhaseImpedance` + `PhaseImpedanceData` (`row`, `column`, `r`, `x`, `b`) |
 | catalog transformer | `TransformerTank.TankConfiguration` → `TransformerTankConfiguration` → `TransformerTankEnd` / `TransformerPhaseEnd`, `TransformerWinding`, `TransformerCore`, `TransformerMeshImpedance` |
 | balanced transformer | `PowerTransformer` → `PowerTransformerEnd` (`ratedU`, `ratedS`, `r`, `connectionKind`) + `TransformerMeshImpedance` (`FromTransformerEnd`, `ToTransformerEnd`) |
 | centre-tap template | `TransformerWinding.FromTransformerLug`/`ToTransformerLug` → `TransformerLug.sequenceNumber` = the instance `TransformerPhaseEnd.sequenceNumber` (phase ends on the instance ends' Terminals) |

@@ -19,6 +19,11 @@ on winding 1's ``ratedS``) and written in one of four forms:
   each leg on its own winding's ``ratedS``. A D winding's leg is ``DELTA_GWYE`` (the delta on the winding's side, so
   its shift is kept), a Y/Yn/I one ``WYE_WYE``, any other ``WYE_WYE`` as X3. The core is on leg 1.
 
+A PowerTransformer's lugged cans under one TransformerBankConfiguration (the GLM importer's bank, S3b-9) are one
+``WYE_WYE`` again, named by the bank configuration: ``power_rating`` the cans' sum, ``powerX_rating`` each can's, and
+GridLAB-D's one impedance and shunt, which it puts on every phase in the same ohms: each can's own pu x S_total / (3
+S_can) (the importer's k inverted), which must agree.
+
 Four or more windings raise. GridLAB-D's base is ``secondary_voltage``² / ``power_rating`` as written
 (``transformer.cpp:244``): a polyphase unit is written line to line on its whole kVA, a coil (one phase) on its own
 voltage and kVA, so a percent on the unit's own base needs no change, except a polyphase wye on n < 3 phases,
@@ -104,7 +109,9 @@ class Leg(NamedTuple):
 
 def export(context) -> list:
     legs, stars = [], []
-    singles, banks = _group_banks(context.objects(*CIM_CLASSES))
+    singles, banks, glm_banks = _group_banks(context.objects(*CIM_CLASSES))
+    for transformer, models, bank_configuration in glm_banks:
+        legs.append(_glm_bank(transformer, models, bank_configuration, context))
     for transformer, suffix, model, template in singles:
         unit_legs, star = _unit_legs(transformer, model, template, suffix, context)
         legs += unit_legs
@@ -133,13 +140,18 @@ def _read(unit):
                                  power_unit=glm_unit(schema.TransformerConfiguration, "power_rating"))
 
 
-def _group_banks(transformers) -> tuple[list[tuple], list[list[tuple]]]:
-    """``(singles, banks)``: each unit as ``(transformer, suffix, model, template)``, except single-phase units with
-    a phase-to-phase coil whose windings land on the same buses, which GLM can only write together (the user's rule,
-    2026-11-21): each such group of two or three is a bank of ``(transformer, model)``."""
-    singles, candidates = [], {}
+def _group_banks(transformers) -> tuple[list[tuple], list[list[tuple]], list[tuple]]:
+    """``(singles, banks, glm_banks)``: each unit as ``(transformer, suffix, model, template)``, except single-phase
+    units with a phase-to-phase coil whose windings land on the same buses, which GLM can only write together (the
+    user's rule, 2026-11-21): each such group of two or three is a bank of ``(transformer, model)``; and a
+    transformer's cans under one TransformerBankConfiguration, ``(transformer, models, bank configuration)``."""
+    singles, candidates, glm_banks = [], {}, []
     for transformer in transformers:
         units = get_transformer_units(transformer)
+        bank_configuration = _bank_configuration(units)
+        if bank_configuration is not None:
+            glm_banks.append((transformer, [_read(unit) for unit in units], bank_configuration))
+            continue
         for number, unit in enumerate(units, start=1):
             model = _read(unit)
             if len(units) == 1 and _phase_to_phase_can(model):
@@ -155,7 +167,57 @@ def _group_banks(transformers) -> tuple[list[tuple], list[list[tuple]]]:
             singles.append((transformer, "", model, None))
         else:
             banks.append(sorted(group, key=lambda item: item[0].mRID))
-    return singles, banks
+    return singles, banks, glm_banks
+
+
+def _bank_configuration(units):
+    """The TransformerBankConfiguration every one of several tanks' TankConfigurations belongs to, else None."""
+    if len(units) < 2:
+        return None
+    banks = {getattr(getattr(unit, "TankConfiguration", None), "BankConfiguration", None) for unit in units}
+    return banks.pop() if len(banks) == 1 else None
+
+
+def _glm_bank(transformer, models: list, bank_configuration, context) -> Leg:
+    """One transformer's cans as GLM's ``WYE_WYE`` bank on their phases (module docstring)."""
+    name = context.names.name(transformer)
+    cans = sorted(models, key=lambda model: letters(model.windings[0].phases))
+    total = sum(model.windings[0].rated_s for model in cans)
+    written = [_bank_can(model, total, name) for model in cans]
+    for model, can in zip(cans[1:], written[1:], strict=True):
+        if can.keys() != written[0].keys() or not all(_close(can[slot], written[0][slot]) for slot in can):
+            raise ValueError(f"{name}: its can {model.windings[0].end.mRID!r} gives GridLAB-D another impedance or "
+                             f"voltage than its first; GLM's bank holds one")
+    phase_ratings = {f"power{letters(model.windings[0].phases)}_rating": model.windings[0].rated_s for model in cans}
+    slots = {"connect_type": "WYE_WYE", **written[0], "power_rating": total, **phase_ratings}
+    slots["impedance"] = _complex(_positive(slots["impedance"], name))
+    first, second = cans[0].windings
+    phases = "".join(letters(model.windings[0].phases) for model in cans) + "N"
+    return Leg(transformer, "", name, phases, _bus(first, context), _bus(second, context), slots,
+               bank_configuration, True)
+
+
+def _bank_can(model, total: float, name: str) -> dict:
+    """A can's voltages, impedance and shunt on GridLAB-D's bank base: its own pu x S_total / (3 S_can)."""
+    if len(model.windings) != 2 or not all(winding.connection in WYE_KINDS for winding in model.windings):
+        raise ValueError(f"{name}: its can {model.windings[0].end.mRID!r} is not a two-winding wye")
+    if any(getattr(winding.end, "RatioTapChanger", None) for winding in model.windings):
+        raise ValueError(f"{name}: a tap changer on a bank can; GLM's bank holds one configuration")
+    first, second = model.windings
+    factor = total / (3 * first.rated_s)  # the importer's k = 3 S_can / S_total, inverted
+    return {"primary_voltage": _line_voltage(first), "secondary_voltage": _line_voltage(second),
+            "impedance": _series(model, 1, 2) * factor, **_shunt(model, factor)}
+
+
+def _close(first, second) -> bool:
+    return math.isclose(abs(first - second), 0.0, abs_tol=1e-9 * max(abs(first), abs(second)))
+
+
+def _line_voltage(winding: Winding) -> float:
+    """A can winding's ratedU, line to line, as GLM's bank writes it (the importer's S3b-3)."""
+    if winding.rated_u is None:
+        raise ValueError(f"winding {winding.number} of {winding.end.mRID!r}: ratedU is unset")
+    return winding.rated_u
 
 
 def _phase_to_phase_can(model) -> bool:
@@ -208,7 +270,7 @@ def _unit_legs(transformer, model, template, suffix: str, context) -> tuple[list
         written = letters(windings[0].phases)
         if connect_type is None:
             _log.warning("%s: %s, not a GridLAB-D connection; written as WYE_WYE (X3)", name,
-                         "-".join(str(winding.connection.value) for winding in windings))
+                         "-".join(_connection_text(winding) for winding in windings))
             connect_type = "WYE_WYE"
             written = letters(phase for winding in windings for phase in winding.phases)  # an open bank's 3
         return [_two_winding(transformer, model, suffix, name, template, connect_type, written, context)], []
@@ -332,9 +394,17 @@ def _ratings(first: Winding, second: Winding, connect_type: str) -> dict:
     return slots
 
 
+def _connection_text(winding: Winding) -> str:
+    """A winding's connection for a log line; an AutoTransformerEnd has none."""
+    return "unset" if winding.connection is None else str(winding.connection.value)
+
+
 def _winding_voltage(winding: Winding) -> float:
-    """A coil's own voltage, else the winding's ratedU (line to line)."""
+    """A coil's own voltage, else the winding's ratedU (line to line); an AutoTransformerEnd has no ratedU, so its
+    baseU, line to line on a polyphase end (the core voltage_regulator shape)."""
     if len(letters(winding.phases)) == 1:
+        return _coil_voltage(winding)
+    if winding.rated_u is None and isinstance(winding.end, cim.AutoTransformerEnd):
         return _coil_voltage(winding)
     if winding.rated_u is None:
         raise ValueError(f"winding {winding.number} of {winding.end.mRID!r}: ratedU is unset")

@@ -14,7 +14,7 @@ cimhub_gridlabd/src/cimhub_gridlabd/
         cim_to_glm.py         GlmExporter(FormatExporter).to_model(network, *, name_source, switch_state), EXPORT_ORDER,
                               cim_to_glm(network, destination, **opts); raises on equipment no module exports
         naming.py             Names: the shared name switch (X1) + glm_safe_name, one namespace per deck
-        units.py              glm_unit(class, slot): the schema's unit as a pint unit
+        units.py              glm_unit(class, slot): the schema's unit as a pint unit; from_percent
         buses.py              node / triplex_node / substation, each bus's system and nominal_voltage
         line.py, line_catalog.py   lines and the conductors, spacings and configurations they name
         switch.py             switch, fuse, recloser, sectionalizer
@@ -41,17 +41,22 @@ tables at the end of this file are the generated ones.
   from its centre taps' primary); the EnergySource, a polyphase transformer end, or one-phase ends on different phases
   (a bank) three phase; one-phase ends on one phase single phase. `nominal_voltage` is the BaseVoltage over √3, as
   is, or over 2. Phases: every terminal's A, B, C, then N (S for a triplex bus).
-- **The swing (X6):** one EnergySource, `bustype SWING`, `positive_sequence_voltage` voltageMagnitude/√3 at
-  voltageAngle. GLM's swing is ideal: the source impedance is not written. Two EnergySources raise (NR takes one).
+- **The swing (X6):** one EnergySource, `bustype SWING`, `nominal_voltage` its nominalVoltage/√3 (the importer's
+  `line_voltage` inverted, so the deck's own figure comes back), `positive_sequence_voltage` voltageMagnitude/√3 at
+  voltageAngle, `base_power` the graph's BasePower when it holds one (`network.base_power`'s 100 MVA default is not
+  CIM's). GLM's swing is ideal: the source impedance is not written. Two EnergySources raise (NR takes one).
 
 ## X1: lines and switches
 
-- A line with a WireConfiguration is geometry (skill `conductor-geometry`), whatever else it has: a
-  `line_configuration` with `conductor_X` the wire at phase X's sequence number and a `line_spacing` with the
-  distances and heights the spacing holds (`get_stored_distances`; a pair or height left out is GridLAB-D's 0). No
+- A line is geometry when its WireConfiguration names a WireSpacing (`get_line_geometry`; skill
+  `conductor-geometry`), whatever else it has. The WireConfiguration is the equivalence route: an XYSpacing and a
+  ConductorDistanceSpacing may both lead to one configuration, and it may also carry the PerLengthImpedance its
+  geometry equals. A geometry line is a `line_configuration` with `conductor_X` the wire at phase X's sequence number
+  and a `line_spacing` with the distances and heights the spacing holds (`get_stored_distances`; a pair or height left out is GridLAB-D's 0). No
   impedance is computed from geometry. A split-phase line is a `triplex_line` whose configuration's `diameter` and
   `insulation_thickness` come from its spacing (S2-8 inverted). A geometry line with a cable is an `underground_line`.
-- Otherwise its PerLengthImpedance is a matrix configuration by phase letter, a neutral Kron-reduced out, b as
+- Otherwise its code (`get_line_code`: its own PerLengthImpedance, else its WireConfiguration's, a template LineCode;
+  both set and different raise) is a matrix configuration by phase letter, a neutral Kron-reduced out, b as
   `c` = `c_from_b` at the base frequency (b unset: c unset, GridLAB-D's 0); a sequence code is expanded by the getter.
 - A template used on different phases is one GLM object per use, `<template>_<letters>`.
 - Conductors: `rAC50` (the GLM importer's), else `rAC25` (the DSS importer's). A bare wire buried in an underground
@@ -60,7 +65,8 @@ tables at the end of this file are the generated ones.
   (Kersting eq. 4.89, the Java exporter's): GridLAB-D tells a tape-shield cable by `shield_gmr` > 0.
 - Switches: Fuse `fuse` (`current_limit` = ratedCurrent), Recloser `recloser`, Sectionaliser `sectionalizer`, every
   other Switch `switch`; `status` from `switch_state` (`actual`: `open`, `normal`: `normalOpen`).
-- Ratings: each link's own normal and emergency limits on its phases (D9).
+- Ratings: each link's own normal and emergency limits on its phases (D9); a triplex line's on its service
+  letter, which GridLAB-D and the importer read.
 
 ## X2: transformers and regulators
 
@@ -75,16 +81,22 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 | any other two windings (X3, the user's rule) | `WYE_WYE` on both windings' phases, logged |
 | three windings, not a centre tap (X4, the user's rule) | three legs to a 1 kV star bus `<unit>_star`; a D leg `DELTA_GWYE`, else `WYE_WYE` |
 | single-phase cans with a phase-to-phase coil on the same buses (the user's rule) | one bank, then the rows above |
+| one PowerTransformer's lugged cans under a TransformerBankConfiguration (the importer's bank, S3b-9) | one `WYE_WYE`, `powerX_rating` each can's, named by the bank configuration |
 
 - GridLAB-D's base is `secondary_voltage²/power_rating` as written: polyphase units line to line on their whole kVA,
-  a coil on its own; a two-phase wye's coil base is n/3 of GridLAB-D's.
+  a coil on its own; a two-phase wye's coil base is n/3 of GridLAB-D's. A bank's cans all get GridLAB-D's one
+  impedance in the same ohms, so each can's own pu × S_total / (3 S_can) (the importer's k inverted) must agree.
 - R ≤ 0 or X ≤ 0 is written at 1e-6 pu and logged (§8.5 Q2); a star's middle branch is often negative.
 - An LTC is folded into its winding's voltage at the actual step; its control is not written (X5).
 - Regulators: one per VoltageRegulator (GridLAB-D takes one-phase regulators side by side). Units the GLM importer
   split (`<base>_<phase>` on the same buses, S3c) are `<base>` again. A delta bank (coils between phases) is
   `WYE_WYE`, each coil's tap on its own phase: GridLAB-D 6.0 solves no delta regulator under NR. `Type` B on a
   `construction` typeB, else A (CIM's 1 + step × increment). `Control` MANUAL when disabled, else LINE_DROP_COMP or
-  OUTPUT_VOLTAGE; a disabled control may have no target (core getter change, 2026-11-21).
+  OUTPUT_VOLTAGE; a disabled control may have no target (core getter change, 2026-11-21). The compensator settings
+  are written wherever CIM holds a line drop (GridLAB-D reads them on LINE_DROP_COMP only, the importer on any
+  Control). Several units are `control_level` INDIVIDUAL; one VoltageRegulator alone (a gang on ABC, or one phase
+  not named as the importer's split) is BANK, sensing `PT_phase`/`CT_phase` = the control's monitored phase (its
+  first phase under MANUAL), which GridLAB-D and the importer read as one unit (GLM-7, S6).
 
 ## X3: loads and capacitors
 
@@ -94,23 +106,34 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
   raises. On a split-phase bus a wye consumer is the legs `_1`/`_2`, a delta one the 240 V part `_12`; the
   importer's `<base>_12` consumer is its base's `_12` again (S4a-6).
 - A capacitor per LinearShuntCompensator: `capacitor_X` at nomU with every section in, `switchX` from the actual
-  sections, VOLT from an enabled voltage control (the target ± half the deadband). A control of another mode is
-  MANUAL at the actual state, logged. The importer's per-phase units `<base>_<phase>` are `<base>` again (S4a-8).
+  sections, VOLT from an enabled voltage control (the target ± half the deadband, `pt_phase` the monitored phases,
+  else the unit's own: a BANK capacitor senses one phase). A control of another mode is MANUAL at the actual state,
+  logged. The importer's per-phase units `<base>_<phase>` are `<base>` again (S4a-8).
 
 ## X4: DER
 
 - Each PowerElectronicsUnit is an inverter (several share their connection by maxP, `get_inverter_units`):
-  `FOUR_QUADRANT`, `rated_power` per phase. A battery: `CONSTANT_PQ` at CIM's set point, its `battery` the internal
-  model (capacity, state of charge, round-trip efficiency, `battery_type` from BatteryInfo, else LI_ION logged;
-  `nominal_voltage` unset: the DCConductingAssetInfo TODO, plan §7). A PV: `CONSTANT_PF` at CIM's power factor, GridLAB-D's
-  own PV logic (S4b-1), its `solar` at maxP with `derating`, `soiling` and the inverter's efficiency 1, since CIM's p
-  already holds them.
+  `FOUR_QUADRANT`, `rated_power` per phase.
+- A battery: `CONSTANT_PQ` at CIM's set point, `soc_reserve` minimumE / ratedE, `max_charge_rate` its
+  StorageInverterInfo's chargeRateActiveMax (`get_inverter_datasheet`; `max_discharge_rate` has no CIM home, and both
+  are read by LOAD_FOLLOWING only). Its `battery` is the internal model: capacity, state of charge, round-trip
+  efficiency, `battery_type` from BatteryInfo (none: unset, GridLAB-D's UNKNOWN, as the deck it came from),
+  `nominal_voltage` unset (the DCConductingAssetInfo TODO, plan §7).
+- A PV: `CONSTANT_PF` at CIM's power factor, GridLAB-D's own PV logic (S4b-1). Its `solar` carries the datasheets
+  (`get_photovoltaic_datasheet`: tilt, azimuth and shading from the SolarArrayInfo, efficiency and `Rated_Insolation`
+  from the SolarPanelInfo), `rated_power` maxP, `soiling` and the inverter's efficiency 1, and `derating` the whole
+  loss: CIM's p over GridLAB-D's lossless static-weather output at its defaults for what CIM does not hold (panel
+  type, NOCT; the importer's `static_dc_output`). So GridLAB-D's output, and the re-import's p, is CIM's p, from any
+  origin. A p above the lossless output raises (GridLAB-D's factors are at most 1).
 
 ## X5: tests
 
 - `test_glm_writer.py`: value formats, one object's text, the deck order, a read-back round trip.
 - `test_export_framework.py`: SLOTS cover the schema and are these tables; names; the transformer forms, the bank
   model, the star; regulator bank letters; the tape-shield formulas.
+- `test_export_atoms.py` (tier 2): each importer atom deck (but the bare catalog, which `line.glm` includes) through
+  the exporter and the importer again; the two CIM models equal (`cimtables.diff_models`, SI) under the X1 names,
+  except the differences listed below by name; each exported deck is the golden `<atom>.exported.glm` beside it.
 - `test_export_decks.py` (GridLAB-D 6.0): the Java exports (IEEE 13 cdpsm and assets, IEEE 123) solve to the
   original's voltages within 1e-4, the original run as the importer reads it (a second swing a plain bus, S1-2; a
   CONSTANT_PF battery at its CONSTANT_PQ set point, S4b-2); the PNNL exports solve; a second pass is the same text
@@ -132,9 +155,10 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 | an open-delta bank as a full bank | the wye-wye replacement (X3) | OYOD 11 % (balanced), 16 % (unbalanced); solve only |
 | a delta regulator bank as wye | GridLAB-D 6.0 has no delta regulator under NR | IEEE37 1.75 % |
 | geometry lines' impedances | each engine computes its own line constants | IEEE13_Assets 2 % |
-| a PV's output on DSS-origin CIM | GridLAB-D's weather model, not CIM's p (S4b-1) | — |
 | an LTC's control, a capacitor's non-voltage control | GLM has no form for them | — |
-| a battery's DC voltage | no CIM home yet (TODO, DCConductingAssetInfo) | — |
+| a battery's DC voltage | no CIM home yet (TODO, DCConductingAssetInfo) | tier 2: numberOfCells 11 → 28 (GridLAB-D's 115 V) |
+| a template no equipment uses | GLM's configurations are written per use | tier 2: the atoms' `cn_250`, `xc_unused` |
+| a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, 1.2e-6 |
 | `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
 
 ## Slot tables
@@ -169,11 +193,12 @@ default.
 |---|---|---|
 | name | written | Names (X1) |
 | phases | written | the A, B, C of every terminal on the node, then N |
-| nominal_voltage | written | the BaseVoltage, LL / sqrt 3 on a three-phase system, LL on a single-phase one (module docstring) |
+| nominal_voltage | written | get_source: nominalVoltage / sqrt 3 (the importer's line_voltage inverted) |
 | bustype | written | SWING on the substation only |
 | positive_sequence_voltage | written | get_source: voltageMagnitude / sqrt 3 at voltageAngle |
+| base_power | written | the graph's BasePower, when it holds one (network.base_power's 100 MVA default is not CIM's) |
 
-124 other slots: unset
+123 other slots: unset
 
 ### overhead_line_conductor
 
@@ -296,9 +321,9 @@ default.
 | phases | written | the line's A, B, C, then N when it has a neutral conductor; a triplex line its buses' service letter, then S |
 | from_node | written | terminal 1's bus |
 | to | written | terminal 2's bus |
-| continuous_rating_A | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_B | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_C | written | get_current_limits normal, on each of the line's phases |
+| continuous_rating_A | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_B | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_C | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
 | emergency_rating_A | written | get_current_limits emergency |
 | emergency_rating_B | written | get_current_limits emergency |
 | emergency_rating_C | written | get_current_limits emergency |
@@ -315,9 +340,9 @@ default.
 | phases | written | the line's A, B, C, then N when it has a neutral conductor; a triplex line its buses' service letter, then S |
 | from_node | written | terminal 1's bus |
 | to | written | terminal 2's bus |
-| continuous_rating_A | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_B | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_C | written | get_current_limits normal, on each of the line's phases |
+| continuous_rating_A | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_B | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_C | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
 | emergency_rating_A | written | get_current_limits emergency |
 | emergency_rating_B | written | get_current_limits emergency |
 | emergency_rating_C | written | get_current_limits emergency |
@@ -334,9 +359,9 @@ default.
 | phases | written | the line's A, B, C, then N when it has a neutral conductor; a triplex line its buses' service letter, then S |
 | from_node | written | terminal 1's bus |
 | to | written | terminal 2's bus |
-| continuous_rating_A | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_B | written | get_current_limits normal, on each of the line's phases |
-| continuous_rating_C | written | get_current_limits normal, on each of the line's phases |
+| continuous_rating_A | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_B | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
+| continuous_rating_C | written | get_current_limits normal, on each of the line's phases (a triplex line's service letter) |
 | emergency_rating_A | written | get_current_limits emergency |
 | emergency_rating_B | written | get_current_limits emergency |
 | emergency_rating_C | written | get_current_limits emergency |
@@ -475,14 +500,17 @@ default.
 | compensator_x_setting_A | written | lineDropX x ctRatio / ptRatio |
 | compensator_x_setting_B | written | lineDropX x ctRatio / ptRatio |
 | compensator_x_setting_C | written | lineDropX x ctRatio / ptRatio |
+| CT_phase | written | BANK: as PT_phase |
+| PT_phase | written | BANK: the monitored phase, else its first |
 | regulation | written | stepVoltageIncrement x raise_taps (per unit) |
+| control_level | written | BANK for one VoltageRegulator alone, else unset (INDIVIDUAL) |
 | Control | written | MANUAL, LINE_DROP_COMP or OUTPUT_VOLTAGE from the TapChangerControl |
 | Type | written | B on a construction typeB, else A (module docstring) |
 | tap_pos_A | written | step - neutralStep on each phase |
 | tap_pos_B | written | step - neutralStep on each phase |
 | tap_pos_C | written | step - neutralStep on each phase |
 
-13 other slots: unset
+10 other slots: unset
 
 ### regulator
 
@@ -603,11 +631,11 @@ default.
 | P_Out | written | a battery's get_inverter_units p, generation sign |
 | Q_Out | written | a battery's get_inverter_units q, generation sign |
 | rated_power | written | ratedS x share / phases (GLM's is per phase) |
-| inverter_efficiency | rule | a PV's 1: its losses are in CIM's p (LOSSLESS) |
+| inverter_efficiency | rule | a PV's 1: its losses are in CIM's p (module docstring) |
+| soc_reserve | written | a battery's minimumE / ratedE |
 | power_factor | written | a PV's p / |p + jq|, negative when q is |
 | phases | written | its letters then N; a split-phase bus's letter then S |
-| max_charge_rate | written | a battery's -minP |
-| max_discharge_rate | written | its maxP |
+| max_charge_rate | written | a battery's StorageInverterInfo.chargeRateActiveMax x share |
 
 243 other slots: unset
 
@@ -618,7 +646,7 @@ default.
 | name | written | Names (the BatteryUnit) |
 | parent | written | its inverter |
 | use_internal_battery_model | written | TRUE |
-| battery_type | written | BatteryInfo.batteryType; none: LI_ION, logged |
+| battery_type | written | BatteryInfo.batteryType; none: unset (GridLAB-D's UNKNOWN) |
 | rated_power | written | maxP (W) |
 | battery_capacity | written | ratedE (Wh) |
 | round_trip_efficiency | written | chargingEfficiency x dischargingEfficiency |
@@ -632,8 +660,13 @@ default.
 |---|---|---|
 | name | written | Names (the PhotoVoltaicUnit) |
 | parent | written | its inverter |
-| soiling | rule | 1: in CIM's p (LOSSLESS) |
-| derating | rule | 1: in CIM's p (LOSSLESS) |
-| rated_power | written | maxP (W) |
+| Rated_Insolation | written | SolarPanelInfo.referenceIrradiation |
+| efficiency | written | SolarPanelInfo.efficiency |
+| soiling | rule | 1: in CIM's p (module docstring) |
+| derating | rule | p / GridLAB-D's lossless output: the whole loss (module docstring) |
+| rated_power | written | maxP (W); unset raises |
+| shading_factor | written | SolarArrayInfo.shadingFactor |
+| tilt_angle | written | SolarArrayInfo.tiltAngle |
+| orientation_azimuth | written | SolarArrayInfo.orientationAzimuth |
 
-59 other slots: unset
+54 other slots: unset

@@ -1,9 +1,10 @@
 """OpenDSS ``Line`` (with the ``Fuse``, ``Recloser`` and ``SwtControl`` that switch it) -> ``line.cimtbl``.
 
 A Line with ``Switch=y`` is a Switch: a ``Fuse`` or ``Recloser`` naming it as ``SwitchedObj`` sets the class,
-otherwise it is a ``LoadBreakSwitch`` (DSS-9). Every other Line is an ``ACLineSegment`` referencing its LineCode
-template, its LineGeometry ``WireConfiguration``, or a template synthesized from its own values (DSS-8). No
-impedance is computed from geometry (``conductor-geometry`` skill).
+otherwise it is a ``LoadBreakSwitch`` (DSS-9). Every other Line is an ``ACLineSegment`` referencing a
+``WireConfiguration``: its LineCode's (a template impedance and no spacing, DSS-14) or its LineGeometry's; or, with
+its own values, a ``PerLengthImpedance`` of its own (``isTemplate=false``, DSS-8). No impedance is computed from
+geometry (``conductor-geometry`` skill).
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches``.
 """
@@ -32,8 +33,9 @@ SWITCH_PREFIX = "sw_"
 _SEGMENT = "ACLineSegment"
 _SWITCH = "Switch"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
-_INLINE = ("a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, "
-           "through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed")
+_INLINE = ("the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as "
+           "written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch "
+           "untranscribed")
 _INLINE_GEOMETRY = "with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order"
 _RATING = "instance OperationalLimitSet ln_<name>_limits (see Ratings); on a switch untranscribed"
 _RELIABILITY = "reliability data; no home in the network profile parts"
@@ -47,8 +49,9 @@ FIELDS = {
     "bus2": Field("structural", note="node2; its phase nodes must equal bus1's (a transposition raises)"),
     "phases": Field("structural", note="the phase count; unset = the code's or geometry's nphases, else 3; one "
                                        "that differs from the code's nphases raises (DSS-10)"),
-    "linecode": Field("structural", note="ACLineSegment.PerLengthImpedance = the code's template for the line's "
-                                         "unit (lc_<code> or lc_<code>_<unit>, DSS-3)"),
+    "linecode": Field("structural", note="ACLineSegment.WireConfiguration = the WireConfiguration of the code's "
+                                         "template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc, DSS-3, "
+                                         "DSS-14)"),
     "geometry": Field("structural", note="ACLineSegment.WireConfiguration = wc_<geometry>"),
     "spacing": Field("structural", note=_INLINE_GEOMETRY),
     "wires": Field("structural", note=_INLINE_GEOMETRY),
@@ -58,7 +61,7 @@ FIELDS = {
     "units": Field("mapped", note="the length unit (LENGTH_UNIT); unset: the template's unit (DSS-3)"),
     **{slot: Field("structural", note=_INLINE) for slot in ("r1", "x1", "r0", "x0", "C1", "C0", "B1", "B0",
                                           "rmatrix", "xmatrix", "cmatrix")},
-    "basefreq": Field("structural", note="the synthesized template's calculatedFrequency and the frequency of its "
+    "basefreq": Field("structural", note="the line's own impedance's calculatedFrequency and the frequency of its "
                                          "b; unset: the deck's (DSS-3b)"),
     "Switch": Field("structural", note="a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9)"),
     "normamps": Field("structural", note=_RATING),
@@ -154,7 +157,7 @@ _SPLIT_PHASE_OF_NODE = {1: "s1", 2: "s2"}
 #: The engine reads the length of a geometry line with no units in metres (checked against the engine).
 _GEOMETRY_LENGTH_UNIT = "m"
 
-_PROVENANCE = """OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or a synthesized template) or a Switch
+_PROVENANCE = """OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or its own impedance) or a Switch
 (Fuse / Recloser / LoadBreakSwitch by the control that switches it; DSS-9).
 Source table: Line (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches"""
@@ -489,7 +492,7 @@ def _switch_columns(cim_class: str, container: str) -> list[Column]:
 
 def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_frequency: float,
              length_unit: str | None = None) -> Document:
-    """Every ``Line`` of a DSS model as one ``line`` document: segments, switches, synthesized templates and
+    """Every ``Line`` of a DSS model as one ``line`` document: segments, switches, their own impedances and
     the segments' ratings.
 
     ``buses`` is the topology walk's result (lowercased bus names); ``container`` the EquipmentContainer of every
@@ -550,7 +553,7 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
             choices = code_templates[str(code.name).lower()]
             template = choices[0] if len(choices) == 1 else next(t for t in choices if t.unit == own_unit)
             bus1, bus2, letters = line_phases(line, phases, buses)
-            document_row = _segment(line, letters, bus1, bus2, ("PerLengthImpedance", template.mrid),
+            document_row = _segment(line, letters, bus1, bus2, ("WireConfiguration", f"{template.mrid}_wc"),
                                     own_unit or template.unit, notes, buses, container)
             _ratings(line, code_ratings(code), document, mrid(PREFIX, line.name, lowercase=True))
         elif kind in ("geometry", "spacing"):
@@ -611,7 +614,8 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
         [template] = synthesized[str(line.name).lower()]
         note = _comment(f"synthesized: the inline values of Line {line.name}", template.note, defaulted)
         entries.append((code, [template._replace(note=note)]))
-    document.inline_codes = linecode_mapper.impedance_statements(entries, base_frequency) if entries else []
+    document.inline_codes = (linecode_mapper.impedance_statements(entries, base_frequency, is_template=False)
+                             if entries else [])
     for line, letters, bus1, bus2, notes in pending:
         [template] = synthesized[str(line.name).lower()]
         segment = _segment(line, letters, bus1, bus2, ("PerLengthImpedance", template.mrid),

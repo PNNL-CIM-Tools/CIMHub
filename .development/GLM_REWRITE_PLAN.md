@@ -1,6 +1,6 @@
 # GridLAB-D rewrite on `.cimtbl`: importer wave plan
 
-**Status:** approved by the user 2026-11-09. **The exporter wave (§8) was approved by the user 2026-11-21 ("implement the plan") and built the same day, X0-X5, uncommitted (`docs/EXPORT_MAPPING.md`).** **S0 built 2026-11-09** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09.** **S2 approved (S2-3 amended) and built 2026-11-09** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S0-S2 committed (`3aa8e6d`). **S3a (lines, switches) approved and built 2026-11-09** (`CIMTBL_MAPPING.md` S3a; it amends GLM-10 and drops the section 7 `switch` row). **S3a committed (`928f77d`). S3b (transformers) approved with the user's S3b-1/-4/-5/-9, built and committed (`3cd6983`)** (`CIMTBL_MAPPING.md` S3b; it amends GLM-6 and adds two section 7 core rows). **S3c (regulators) built 2026-11-09 by the user's direction (VoltageRegulator + two ideal AutoTransformerEnds), committed (`02d8fce`)** (`CIMTBL_MAPPING.md` S3c; it amends GLM-7). **The transformer getter reads an ideal AutoTransformer (2026-11-10, by the user's direction), which closes S3c's section 7 core row.** **S4a (loads, capacitors) approved 2026-11-10 with the user's S4a-2 TODO, S4a-5 and S4a-8 (a), built the same day; it and the getter change committed (`7bfe45b`)** (`CIMTBL_MAPPING.md` S4a; it amends GLM-8 and drops the section 7 `load` shape row). **S4b (DER) approved 2026-11-10 with the user's calls (GridLAB-D's PV logic, CONSTANT_PF batteries a Java defect, ratedU line to line) and built the same day, uncommitted** (`CIMTBL_MAPPING.md` S4b; it amends GLM-13). **S5 (the deck sweep, the D6 golden directory, tier 4, G7) proposed 2026-11-10, approved as recommended and built 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S5). **S6 (a utility's Milsoft WindMil decks, by the user's direction 2026-11-16) built and approved 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S6; it amends S3a-3, S3b-3 and S3c-6). The importer is complete for every mapped class. Branch `glm-importer` (worktree
+**Status:** approved by the user 2026-11-09. **The exporter wave (§8) was approved by the user 2026-11-21 ("implement the plan") and built the same day, X0-X5, committed (`4ee084a`, `docs/EXPORT_MAPPING.md`); its §8.3 tests that were left out (tier 2, the forms atom) built 2026-11-21 by the user's "go on to next phase", uncommitted (§8.7).** **S0 built 2026-11-09** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09.** **S2 approved (S2-3 amended) and built 2026-11-09** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S0-S2 committed (`3aa8e6d`). **S3a (lines, switches) approved and built 2026-11-09** (`CIMTBL_MAPPING.md` S3a; it amends GLM-10 and drops the section 7 `switch` row). **S3a committed (`928f77d`). S3b (transformers) approved with the user's S3b-1/-4/-5/-9, built and committed (`3cd6983`)** (`CIMTBL_MAPPING.md` S3b; it amends GLM-6 and adds two section 7 core rows). **S3c (regulators) built 2026-11-09 by the user's direction (VoltageRegulator + two ideal AutoTransformerEnds), committed (`02d8fce`)** (`CIMTBL_MAPPING.md` S3c; it amends GLM-7). **The transformer getter reads an ideal AutoTransformer (2026-11-10, by the user's direction), which closes S3c's section 7 core row.** **S4a (loads, capacitors) approved 2026-11-10 with the user's S4a-2 TODO, S4a-5 and S4a-8 (a), built the same day; it and the getter change committed (`7bfe45b`)** (`CIMTBL_MAPPING.md` S4a; it amends GLM-8 and drops the section 7 `load` shape row). **S4b (DER) approved 2026-11-10 with the user's calls (GridLAB-D's PV logic, CONSTANT_PF batteries a Java defect, ratedU line to line) and built the same day, uncommitted** (`CIMTBL_MAPPING.md` S4b; it amends GLM-13). **S5 (the deck sweep, the D6 golden directory, tier 4, G7) proposed 2026-11-10, approved as recommended and built 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S5). **S6 (a utility's Milsoft WindMil decks, by the user's direction 2026-11-16) built and approved 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S6; it amends S3a-3, S3b-3 and S3c-6). The importer is complete for every mapped class. Branch `glm-importer` (worktree
 `CIMHub-glm`, off `rc_1` at `d0901e7`). This wave is the **importer** (`glm_to_cim`). The exporter (`cim_to_glm` on
 the core getters) gets its own plan once the importer is done, as DSS S6 did.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (F3+, GridLAB-D). **Contract, shapes, spec format:** the
@@ -371,3 +371,44 @@ Decisions taken in the build (on top of X1-X9, §8.5):
 Core getter changes (2026-11-21, tested): `get_wire_info` reads `rAC50`; `get_stored_distances` returns a
 spacing's distances and heights as stored (partial, or empty), and `get_spacing_distances` no longer needs heights;
 `get_regulating_control` returns `target` None on a disabled control.
+
+### 8.7 The §8.3 tests that X0-X5 left out (2026-11-21, by the user's "go on to next phase"; uncommitted)
+
+X0-X5 shipped without two of §8.3's tests, and they found exporter defects:
+
+- **Tier 2** (`tests/test_export_atoms.py`): each importer atom deck (but the bare catalog, which `line.glm` includes)
+  through the exporter and the importer again; the two CIM models are equal (`cimtables.diff_models`, SI) under the
+  X1 names, except three listed differences: a template no equipment uses is not written (configurations are per
+  use); a bus's `nominal_voltage` is its BaseVoltage's, so a deck's rounded 2401.78 V comes back 2401.7771 (a
+  regulator end's baseU and neutralU, 1.2e-6); a battery's numberOfCells (X12's TODO). Each exported deck is the
+  golden `<atom>.exported.glm` beside its atom.
+- **The forms atom** (`atoms/transformer/forms.cimtbl`, CIM by balanced ends): YNd1, Dyn11, YNzn and an unregulated
+  AutoTransformer written WYE_WYE (X3), a YNyn0d1 star split (X4), each checked against values computed in the test
+  (the star branches, each leg on its own ratedS, the d leg DELTA_GWYE), committed as `forms.exported.glm` and
+  solved in GridLAB-D 6.0.
+- **IEEE 8500 (X5) is blocked in the DSS importer**, not here: switch `A333_48332_sw` (`bus1=D5746546-1_INT.3`,
+  `phases` unset, so OpenDSS's 3) fills its conductors as OpenDSS does, nodes 3 2 3, and cimtables refuses phases
+  `CBC` (`line.cimtbl`, `LoadBreakSwitch`). The deck is not vendored (`CIMHUB_DSS_DECKS`, `IEEE/IEEE8500/Master.dss`;
+  its file names' case also differs from its `Redirect`s on Linux). Owed by the DSS spoke.
+
+Defects the tests found, fixed (each in `EXPORT_MAPPING.md`):
+
+| # | defect | fix |
+|---|---|---|
+| X18 | a BANK capacitor monitoring one phase (`pt_phase A` on ABC) raised | `pt_phase` the control's monitored phases, else the unit's own |
+| X19 | the swing's `nominal_voltage` was the BaseVoltage's (7199.56 V for the deck's 7200), its `base_power` dropped | `nominal_voltage` the EnergySource's nominalVoltage / sqrt 3; `base_power` the graph's BasePower when it holds one |
+| X20 | a triplex line's ratings were dropped | written on its service letter |
+| X21 | a gang regulator (one VoltageRegulator on ABC) came back as three; a MANUAL regulator's compensator settings were dropped | one VoltageRegulator alone is `control_level` BANK, `PT_phase`/`CT_phase` its monitored phase; the compensator wherever CIM holds a line drop |
+| X22 | an unequal-can bank (`powerX_rating`) came back as one transformer per can | a PowerTransformer's cans under one TransformerBankConfiguration are one WYE_WYE, named by it, each can's own pu x S_total / (3 S_can) (the importer's k inverted), which must agree |
+| X23 | X13's PV rule wrote derating, soiling and the inverter's efficiency 1, so a deck with losses produced 1 / (0.95 x 0.95 x 0.9) of CIM's p; the array's tilt, azimuth, shading and the panel's efficiency were dropped | the datasheets written; `derating` = p / GridLAB-D's lossless static output at its defaults for what CIM lacks (the importer's `static_dc_output`; a 0 `Pmax_temp_coeff` is GridLAB-D's panel default, `solar.cpp:571`), so GridLAB-D's output is CIM's p from any origin; a p above it raises |
+| X24 | a battery's `soc_reserve` and `max_charge_rate` were dropped; `max_charge_rate` was -minP and `max_discharge_rate` maxP, neither CIM's; no batteryType was written LI_ION | `soc_reserve` minimumE / ratedE, `max_charge_rate` chargeRateActiveMax, `max_discharge_rate` unset (both LOAD_FOLLOWING only); no batteryType is unset, GridLAB-D's UNKNOWN |
+| X25 | a polyphase unregulated AutoTransformer raised (no ratedU; the X3 log line read an unset connection) | its ends' baseU, line to line on a polyphase end (the voltage_regulator shape) |
+| X26 | (the user's review, 2026-11-21) X1 called any line with a WireConfiguration geometry; the test is WireConfiguration.WireSpacing. A WireConfiguration with only a PerLengthImpedance (a template DSS LineCode) is a matrix, and the WireConfiguration is the equivalence route an XYSpacing and a ConductorDistanceSpacing may both point to | core `get_line_geometry` (a configuration with a WireSpacing) and `get_line_code` (the line's PerLengthImpedance, else its WireConfiguration's; both set and different raise), used by the impedance getters and `line_key`. Then (the user's rule, 2026-11-21, DSS-14, skill `wire-configuration`) every importer writes a named catalog lines share (DSS LineCode, GLM z-matrix line_configuration, GDM catalog) as an `isTemplate=true` impedance behind a WireConfiguration `<lc>_wc` with no WireSpacing, and a line's own values as `ACLineSegment.PerLengthImpedance` with `isTemplate=false`. The DSS, GDM and GLM exporters read both through the two getters; the DSS exporter writes a line's own impedance inline |
+
+GLM-origin parity after the fixes: IEEE 13 cdpsm 1.7e-5, IEEE 13 assets 9.6e-6, IEEE 123 4.0e-6 (was within 2.5e-5).
+
+Core changes (tested): `getters.der` gains `get_photovoltaic_datasheet` (SolarArrayInfo + SolarPanelInfo) and
+`get_inverter_datasheet` (GenerationInverterInfo / StorageInverterInfo, `chargeRateActiveMax`);
+`getters.line_impedance` gains `get_line_code` and `get_line_geometry` (X26), and its getters read the code and
+the geometry through them; `cimtbl_testing.assert_text_matches_golden` record-diffs only a `.cimtbl` golden and shows a unified diff for
+another (an exported `.glm`).
