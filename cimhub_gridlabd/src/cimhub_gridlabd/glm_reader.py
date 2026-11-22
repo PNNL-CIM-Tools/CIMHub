@@ -72,8 +72,9 @@ class GlmModel(GraphModel):
     """``(object name, slot) -> unit`` for every value written with a unit (``distance_AN 30 in``)."""
     expressions: dict[tuple[str, str], str] = field(default_factory=dict, repr=False)
     """``(object name, slot) -> text`` for every numeric value that is not a literal (``LIGHTS*1.2``)."""
-    polar: set[tuple[str, str]] = field(default_factory=set, repr=False)
-    """``(object name, slot)`` of every complex value written in polar form."""
+    polar: dict[tuple[str, str], tuple[float, float]] = field(default_factory=dict, repr=False)
+    """``(object name, slot) -> (magnitude, angle in degrees)`` as written, for every complex value written in polar
+    form: its rectangular value went through sin and cos, which differ in the last bit between C libraries."""
     not_read: Counter = field(default_factory=Counter)
     """Object type -> count, for the types the schema does not know (``recorder``)."""
     clock: dict[str, str] = field(default_factory=dict)
@@ -436,7 +437,8 @@ class _Value(NamedTuple):
     value: Any
     """``None`` for an expression."""
     unit: str | None = None
-    polar: bool = False
+    polar: tuple[float, float] | None = None
+    """(magnitude, angle in degrees) as written, for a polar complex."""
 
 
 def _convert(kind: str, text: str) -> _Value:
@@ -457,9 +459,10 @@ def _convert(kind: str, text: str) -> _Value:
             return _Value(gridlabd.Complex(real=float(first), imag=0.0), unit)
         if notation in "ij":
             return _Value(gridlabd.Complex(real=float(first), imag=float(second)), unit)
-        angle = math.radians(float(second)) if notation == "d" else float(second)
-        value = cmath.rect(float(first), angle)
-        return _Value(gridlabd.Complex(real=value.real, imag=value.imag), unit, polar=True)
+        radians = math.radians(float(second)) if notation == "d" else float(second)
+        degrees = float(second) if notation == "d" else math.degrees(radians)
+        value = cmath.rect(float(first), radians)
+        return _Value(gridlabd.Complex(real=value.real, imag=value.imag), unit, polar=(float(first), degrees))
     match = _REAL_WITH_UNIT.match(text)
     if match is None:
         return _Value(None)
@@ -570,8 +573,8 @@ def _record(model: GlmModel, native_cls: type, obj: _Object, properties: dict, a
         values[slot] = converted.value
         if converted.unit is not None:
             model.written_units[(obj.name, slot)] = converted.unit
-        if converted.polar:
-            model.polar.add((obj.name, slot))
+        if converted.polar is not None:
+            model.polar[(obj.name, slot)] = converted.polar
     try:
         return native_cls(**values)
     except (ValueError, TypeError) as error:

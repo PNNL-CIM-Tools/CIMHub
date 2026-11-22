@@ -4,5 +4,5 @@
 Profile = cim18v17
 
 Table EnergySource: mRID, name, node, phases, nominalVoltage (V), voltageMagnitude (V), voltageAngle (deg), r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=sub_swing_node
-    # derived: nominalVoltage = line_voltage(nominal_voltage=7200.0), voltageMagnitude and voltageAngle from voltage_A=6422.444394465398-3707.9999999999995j (written in polar form); defaulted: r x r0 x0 of a stiff source, 10000 MVA short circuit, X/R 10 (S1-3)
-    src_swing, swing, swing, , 12470.765814495915, 12844.888788930793, -29.999999999999996, 0.0015474818382145749, 0.015474818382145749, 0.0015474818382145749, 0.015474818382145749, bv_12p47kv
+    # derived: nominalVoltage = line_voltage(nominal_voltage=7200.0), voltageMagnitude and voltageAngle from voltage_A=7416.0-30.0d (as written); defaulted: r x r0 x0 of a stiff source, 10000 MVA short circuit, X/R 10 (S1-3)
+    src_swing, swing, swing, , 12470.765814495915, 12844.888788930793, -30.0, 0.0015474818382145749, 0.015474818382145749, 0.0015474818382145749, 0.015474818382145749, bv_12p47kv

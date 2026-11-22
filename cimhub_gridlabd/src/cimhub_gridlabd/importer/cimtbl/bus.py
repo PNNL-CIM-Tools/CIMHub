@@ -80,14 +80,16 @@ _TRIPLEX_POWER = Field("copied", (("EnergyConsumer", "p", "{unit}"), ("EnergyCon
 _NOT_A_LOAD = {f"power_{leg}": BUS_LOAD for leg in ("1", "2", "12")}
 
 _SWING_VOLTAGE = Field("derived", note="on a SWING bus only: EnergySource voltageMagnitude = line_voltage(|V|) and "
-                                       "voltageAngle = arg(V) in degrees; elsewhere the solver's initial guess")
+                                       "voltageAngle = arg(V) in degrees (a polar V's as written); elsewhere the "
+                                       "solver's initial guess")
 _INITIAL_GUESS = Field("untranscribed", note="the solver's initial guess")
 
 _BY_CLASS = {
     schema.Node: {"voltage_A": _SWING_VOLTAGE, "voltage_B": _INITIAL_GUESS, "voltage_C": _INITIAL_GUESS},
     schema.Substation: {
         "positive_sequence_voltage": Field("derived", note="EnergySource voltageMagnitude = line_voltage(|V|), "
-                                                           "voltageAngle = arg(V) in degrees; else voltage_A"),
+                                                           "voltageAngle = arg(V) in degrees (a polar V's as "
+                                                           "written); else voltage_A"),
         "reference_phase": Field("structural", note="the phase the angle refers to: unset or PHASE_A, else raises"),
         "base_power": Field("copied", (("BasePower", "basePower", "{unit}"),),
                             note="the system base (cimtables BasePower), in its written unit"),
@@ -282,25 +284,29 @@ def _source_row(model: GlmModel, record, bus: BusSystem) -> tuple[tuple[str, str
         raise ValueError(f"{record.class_name} {name}: a swing bus with no nominal_voltage")
     nominal_unit = model.unit(record, "nominal_voltage")
     slot, voltage, voltage_unit = _source_voltage(model, record)
-    magnitude = units.Quantity(abs(voltage), voltage_unit).to(nominal_unit).magnitude
-    if abs(magnitude - record.nominal_voltage) > NOMINAL_TOLERANCE * record.nominal_voltage:
-        raise ValueError(f"{record.class_name} {name}: source voltage {abs(voltage):g} {voltage_unit} ({slot}) is more "
+    # a polar value as written: |V| and arg(V) of its rectangular form differ in the last bit between C libraries
+    written = model.polar.get((name, slot))
+    magnitude, angle = written if written is not None else (abs(voltage), math.degrees(cmath.phase(voltage)))
+    in_nominal_unit = units.Quantity(magnitude, voltage_unit).to(nominal_unit).magnitude
+    if abs(in_nominal_unit - record.nominal_voltage) > NOMINAL_TOLERANCE * record.nominal_voltage:
+        raise ValueError(f"{record.class_name} {name}: source voltage {magnitude:g} {voltage_unit} ({slot}) is more "
                          f"than {NOMINAL_TOLERANCE:.0%} from nominal_voltage {record.nominal_voltage:g} {nominal_unit}")
     nominal = line_voltage(record.nominal_voltage, bus.system)
     r, x = default_source_impedance(units.Quantity(nominal, nominal_unit).to("kV").magnitude)
     derived = f"derived: nominalVoltage = line_voltage(nominal_voltage={cell(record.nominal_voltage)})"
     if slot is None:
         derived += "; defaulted: voltageMagnitude, voltageAngle = nominal_voltage at 0 deg"
+    elif written is not None:
+        sign = "+" if angle >= 0 else ""
+        derived += f", voltageMagnitude and voltageAngle from {slot}={cell(magnitude)}{sign}{cell(angle)}d (as written)"
     else:
         sign = "+" if voltage.imag >= 0 else ""
         derived += f", voltageMagnitude and voltageAngle from {slot}={cell(voltage.real)}{sign}{cell(voltage.imag)}j"
-        if (name, slot) in model.polar:
-            derived += " (written in polar form)"
     derived += (f"; defaulted: r x r0 x0 of a stiff source, {DEFAULT_SHORT_CIRCUIT_MVA:g} MVA short circuit, "
                 f"X/R {DEFAULT_X_OVER_R:g} (S1-3)")
     phases = "".join(sorted(phase_letters(record)))
     cells = [mrid("src_", name), name, name, phases_cell(phases), cell(nominal),
-             cell(line_voltage(abs(voltage), bus.system)), cell(math.degrees(cmath.phase(voltage))),
+             cell(line_voltage(magnitude, bus.system)), cell(angle),
              cell(r), cell(x), cell(r), cell(x), bus.base_voltage]
     return (nominal_unit, voltage_unit), Row(cells, comment=derived)
 
