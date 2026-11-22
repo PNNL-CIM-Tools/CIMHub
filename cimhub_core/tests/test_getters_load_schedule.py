@@ -66,6 +66,20 @@ def test_two_schedules_on_a_group_raise(network):
         get_load_schedule(_consumer(network, "ld_z1"))
 
 
+def test_schedules_by_season_or_day_type_are_days(network):
+    """A GridLAB-D schedule's form: several schedules, each of a DayType (or Season), and no time series."""
+    group = _consumer(network, "ld_z1").LoadGroup
+    [series] = group.ConformLoadSchedules
+    weekend = network.cim.ConformLoadSchedule(mRID="ls_zipload_weekend", DayType=network.cim.DayType(name="weekend"))
+    group.ConformLoadSchedules.append(weekend)
+    with pytest.raises(ValueError, match="1 schedules with no Season or DayType and 1 with one"):
+        get_load_schedule(_consumer(network, "ld_z1"))
+    series.DayType = network.cim.DayType(name="weekday")
+    found = get_load_schedule(_consumer(network, "ld_z1"))
+    assert (found.schedule, found.start, found.step) == (None, None, None)
+    assert found.days == (series, weekend)  # by mRID
+
+
 def test_dropped_schedules_warn_once_naming_the_groups(network, caplog):
     consumers = [consumer for cls in (network.cim.ConformLoad, network.cim.NonConformLoad)
                  for consumer in network.graph[cls].values()]

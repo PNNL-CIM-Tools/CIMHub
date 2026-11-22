@@ -27,11 +27,12 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 | `LoadShape` (those a Load names as `yearly`) | `loadshape.cimtbl` | `load_schedule` (`ConformLoadGroup` + `ConformLoadSchedule`; the points in the Parquet sidecar, S8) | nothing |
+| | | a shape a PVSystem, Storage or Generator names as `yearly` is not here but that device's own `EnergyConnectionSchedule`, in its document (S9) | |
 | `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows; a `ConformLoad` of its yearly shape's group (S8) | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl`, `loadshape.cimtbl` |
 | `Capacitor` | `capacitor.cimtbl` | `shunt` (`LinearShuntCompensator`) | the master, `bus.cimtbl` |
 | `CapControl` | `capcontrol.cimtbl` | `shunt` (`RegulatingControl` + `Update` of the compensator) | `line.cimtbl`, `capacitor.cimtbl` |
-| `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der` | the master, `bus.cimtbl` |
-| `Generator` | `generator.cimtbl` | `synchronous_machine` | the master, `bus.cimtbl` |
+| `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der`; a yearly shape: nc_schedule `EnergyConnectionSchedule` `<mRID>_yearly` (the points in the Parquet sidecar, S9) | the master, `bus.cimtbl` |
+| `Generator` | `generator.cimtbl` | `synchronous_machine`; a yearly shape as for a PVSystem (S9) | the master, `bus.cimtbl` |
 | `Reactor` | `reactor.cimtbl` | `series_compensator` | the master, `bus.cimtbl` |
 | `Buscoords` (BusCoords / LatLongCoords files) | `buscoords.cimtbl` (last) | `location` | every equipment part (their bound Terminals: `bound_parts`, S5-2) |
 
@@ -1755,7 +1756,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
 | `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
-| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2), the gridappsd extension; also p (pv_power); default 1 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2); also p (pv_power); default 1 |
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
 | `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
@@ -1763,8 +1764,8 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
-| `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
-| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20 |
+| `pct_Cutin` | `Optional[float]` | `0.1` | structural | acts only after the inverter turns off; the snapshot state uses %Cutout; a yearly sample between %Cutout and %Cutin raises (S9); default 20 |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = 0 when Pmpp x irradiance is below %Cutout of kVA, q too unless kvar is set (VarFollowInverter); default 20 |
 | `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
 | `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -1774,7 +1775,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the PV as constant Z; a power-flow setting |
 | `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the PV's EnergyConnectionSchedule <mRID>_yearly: pv_power at irradiance x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `Tyearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
@@ -1784,7 +1785,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
-| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | untranscribed | acts only with an InvControl |
+| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | derived | yes: an inverter that is off gives no kvar either (pv_power, engine-checked); default no |
 | `DutyStart` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
 | `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
@@ -1848,10 +1849,10 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the battery as constant Z; a power-flow setting |
 | `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample (S9); with another DispMode raises |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `DispMode` | `Optional[str]` |  | structural | default only; another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `DispMode` | `Optional[str]` |  | structural | default, or follow with a yearly shape (S9); another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
 | `DischargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `ChargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `TimeChargeTrig` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
@@ -1888,13 +1889,13 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `model` | `Union[str, ForwardRef('GeneratorModel'), NoneType]` | `CurrentLimited`, `ConstantPQ`, `ConstantPV` | structural | 1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4, 5, 6 raise; default 1 |
 | `Vminpu` | `Optional[float]` |  | untranscribed | below it the engine models the machine as constant Z; a power-flow setting |
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the machine as constant Z; a power-flow setting |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the machine's EnergyConnectionSchedule <mRID>_yearly: -kW x mult, -kvar x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `dispmode` | `Union[str, ForwardRef('DispatchMode'), NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
-| `dispvalue` | `Optional[float]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
+| `dispmode` | `Union[str, ForwardRef('DispatchMode'), NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, another than Default raises |
+| `dispvalue` | `Optional[float]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, above 0 raises |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `SynchronousMachine.earthing`; wye -> earthing true, delta -> false (no phaseConnection on a machine, S4b-5); default wye |
-| `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it |
+| `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, Fixed raises |
 | `gen_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
 | `Vpu` | `Optional[float]` | `1.0` | derived | model 3: the control's targetValue (V) = Vpu x ratedU; default 1 |
 | `maxkvar` | `Optional[float]` |  | copied | `SynchronousMachine.maxQ` (kVAr); model 3 only (another model raises); default 2 x kvar |
@@ -2212,7 +2213,7 @@ that scales every load naming it. Mapper `importer/cimtbl/loadshape.py`, artifac
 | S8-4 | Points: `RegularTimePoint` rows in the Parquet sidecar (`cimhub_core.time_points`), as GLM's: `DssImporter(time_points={})` / `dss_to_cim(..., time_points=)` fills the caller's dict; without it the points are dropped with one warning |
 | S8-5 | `npts` unset: the engine reads none of `mult`, inline or from a file (engine-checked with DSS C-API 0.14.5: `Npts` 0, the load constant), so the group has no schedule, its name kept, as GLM's undefined player (M1's five `mult=1` shapes). `npts` set must equal the number of values |
 | S8-6 | `UseActual=Yes` raises: a Load naming it takes the shape's peak as its kW and kvar, or keeps its own, depending on whether `yearly=` comes after `kW=` (engine-checked), which the record does not keep. So no DSS form maps a `NonConformLoad` yet, either way |
-| S8-7 | A shape no Load names as `yearly` (a PVSystem's irradiance, a Vsource's) is not mapped and not checked; the master's comment counts it (`not mapped: Loadshape 1`) |
+| S8-7 | A shape no Load names as `yearly` is not a group: one a PVSystem, Storage or Generator names is that device's schedule (S9); one nothing names (a Vsource's, an unused irradiance shape) is not mapped and not checked, and the master's comment counts it (`not mapped: Loadshape 1`) |
 
 **What raises:**
 - `UseActual=Yes`;
@@ -2259,3 +2260,41 @@ with no `npts` is S8-5's case too: the engine reads no points from the file eith
 | `Mode` | `Optional[float]` |  | untranscribed | generator dispatch; no effect on a Load |
 | `Interpolation` | `Optional[str]` |  | untranscribed | AVG and EDGE agree at the solution steps, which are on the interval grid (TIMESERIES_NEEDS.md X3) |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+## S9: device shapes (built 2026-11-21 at the user's word: "shapes for PV, storage, etc using the nc_schedule profile classes")
+
+A `yearly` LoadShape on a PVSystem, Storage or Generator drives that one device's output, which the engine computes
+from the shape and the device's own settings (irradiance, kWrated, kW). So it is nc_schedule's per-device
+`EnergyConnectionSchedule` on the device's `PowerElectronicsConnection` or `SynchronousMachine`, its points the
+device's p and q at each sample as `EnergyConnectionTimePoint` rows in the Parquet sidecar (`TIME_POINT_SCHEMA`, as
+GDM's T1 schedules), not a load group. The user chose this over a `PowerSchedule` on the unit (2026-11-21). Mappers:
+`pvsystem.py`, `storage.py`, `generator.py` (`schedule_points`; the schedule row in their own document), with
+`loadshape.py`'s `device_shape`, `point_times` and `device_schedules`. Atom `tests/atoms/loadshape/devices.dss`:
+- `sun` (30 min) on two PVs: `p1` by pf with `%Cutin` = `%Cutout` = 10, off at both ends; `p2` by kvar, cut to fit
+  its kVA at the peak, off with its kvar kept at both ends;
+- `run` (hourly) on a model 1 generator by pf, down to 0;
+- `cycle` (hourly) on a follow-mode battery that discharges, charges, idles, and is capped at kVA;
+- a PV and a load with no shape.
+
+| # | decision |
+|---|---|
+| S9-1 | A device's `yearly` shape is an `EnergyConnectionSchedule` `<connection mRID>_yearly`, named after the shape, `timeSeriesKind` schedule, `interpolationKind` previous (a sample holds until the next), on the device's EnergyConnection. One per device: devices sharing a shape each get their own, as their outputs differ (a PV's cap). Only `yearly`, as for loads (S8-1): `daily`, `duty`, `Tyearly`.. are untranscribed. The snapshot p, q are the deck's, as before |
+| S9-2 | Times: sample k (from 1) at the epoch 2020-01-01T00:00Z + k intervals, the instant it is in force (S8-3's rule, engine-checked here per device). The wrap is lost (X4) |
+| S9-3 | Generator: p = -kW x mult, q = -kvar x mult (engine-checked: the engine scales kvar with kW, pf or kvar alike); a model 3 machine's schedule carries p only (its q is its control's). A shape with `dispmode` other than Default, `dispvalue` above 0 or `status=Fixed` raises (the engine then dispatches by load level, price, or not at all) |
+| S9-4 | PVSystem: each sample is `pv_power` at irradiance x mult (engine-checked: the shape scales the irradiance, so %Pmpp, %Cutout and the kVA cut apply per sample). A sample whose panel power lies between %Cutout and %Cutin raises: the engine keeps the inverter on or off as it was (hysteresis, engine-checked), which depends on the samples before and on a snapshot solved first |
+| S9-5 | An inverter that is off still gives a set kvar unless `VarFollowInverter` (engine-checked, snapshot and yearly alike): `pv_power` now keeps it. This changes no golden: no atom or sweep deck has an off PV with a kvar |
+| S9-6 | Storage: only `DispMode=follow` with a yearly shape (engine-checked: discharge at mult x kWrated for mult > 0, charge at -mult x kWrated below 0, idle at 0 with the idling loss, capped at kVA; %Charge, %Discharge and %kWrated have no effect); p only. It is the dispatch asked for: a battery that fills or reaches its reserve idles in the engine, which the schedule does not model (the export's deck idles it too, so a round trip agrees). A follow-mode battery with a kW or State raises (the engine's snapshot of one is not that of `battery_dispatch`); one with neither idles, as the importer has it. A yearly shape in the default (trigger) mode, or follow mode without a shape, raises |
+| S9-7 | A shape with `qmult` raises on a device: its output is scaled by `mult` alone. A shape with no `npts` is no schedule (S8-5); a `yearly` naming no shape raises |
+| S9-8 | Points: `DssImporter(time_points={})` fills the `EnergyConnectionTimePoint` table beside the `RegularTimePoint` one (`time_points.add_device_time_points`, CIM-Builder's builder converting kW, kVAr to SI); without it they are dropped with the one warning of S8-4 |
+
+**What raises:** a sample between %Cutout and %Cutin; a generator shape off Default dispatch; a storage shape off
+follow mode, follow mode with no shape, with a kW or with a State; a `qmult` on a device's shape; a `yearly` naming
+no shape.
+
+**Engine checks.** `test_cimtbl_device_shape.py` runs the atom in yearly mode at each shape's own interval and
+compares every device's kW and kvar at every sample with the schedule's points (rel 1e-6, a tight solver
+tolerance). `test_export_device_shape.py` runs the original atom and its export every 30 minutes for 8 hours, every
+device's power equal at every step.
+
+**Not mapped:** daily and duty shapes; a temperature shape (it acts only through a P-TCurve, which raises); a shape on
+a Vsource; a battery's trigger dispatch modes.

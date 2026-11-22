@@ -351,8 +351,27 @@ S8-7 are in `cimhub_opendss/docs/CIMTBL_MAPPING.md#s8-load-shapes` (import) and 
 | export | `exporter/loadshape.py` + `load.py`'s `yearly=`; `DssExporter(time_points)`; the writer writes Loadshape first |
 | core | `time_points.add_regular_time_points` (by mRID, after binding; GLM now uses it too) and `regular_time_points(value2=)`; `getters/load_schedule.get_schedule_points` (GLM's player check, moved) |
 | engine findings | sample k is in force at k × interval, and wraps; Q follows mult without qmult; without `npts` the engine reads no points, inline or from a file; `UseActual` makes a load's snapshot kW depend on command order |
-| not built | `daily` / `duty` roles (one LoadGroup per ConformLoad); Hour-array shapes; `UseActual` (so no DSS form for a NonConformLoad); shapes on PVSystem, Storage, Generator, Vsource |
+| not built | `daily` / `duty` roles (one LoadGroup per ConformLoad); Hour-array shapes; `UseActual` (so no DSS form for a NonConformLoad); ~~shapes on PVSystem, Storage, Generator~~ (§10); shapes on a Vsource |
 | tests | `test_cimtbl_loadshape.py` (19), `test_export_loadshape.py` (5); `tests/cross_format/test_glm_player_to_dss.py` (2) |
 
-`cimhub_opendss` imports `cimhub_core.time_points` only when points are passed; its pyproject should gain the
-`cimhub-core[time-points]` extra when the bootstrap session next touches the lock (as `cimhub_gridlabd`'s).
+`cimhub_opendss` imports `cimhub_core.time_points` only when points are passed; ~~its pyproject should gain the
+`cimhub-core[time-points]` extra~~: done 2026-11-21 at the user's "fix the pyproject.toml files"
+(`cimhub_opendss[time-points]`, installed by the workspace root; `uv lock` rerun).
+
+## 10. S9: device shapes (2026-11-21; built at the user's "shapes for PV, storage, etc using the nc_schedule profile classes")
+
+A yearly LoadShape on a PVSystem, Storage or Generator is nc_schedule's per-device `EnergyConnectionSchedule` on its
+`PowerElectronicsConnection` or `SynchronousMachine`, its points the device's p and q at each sample
+(`EnergyConnectionTimePoint` rows in the sidecar, as GDM's T1). The user confirmed it (asked: per-device
+EnergyConnectionSchedule with actual points, storage in follow mode only) over a `PowerSchedule` on the unit.
+Decisions S9-1 to S9-8 are in `cimhub_opendss/docs/CIMTBL_MAPPING.md#s9-device-shapes` (import) and
+`docs/EXPORT_MAPPING.md#s9-device-shapes` (export); they were made while building, from the engine.
+
+| where | what |
+|---|---|
+| import | `pvsystem.py`, `storage.py`, `generator.py`: the `<mRID>_yearly` schedule row in their documents and `schedule_points` (the snapshot rule at each sample: `pv_power` at irradiance x mult, `follow_power`, kW and kvar x mult); `loadshape.py`'s `device_shape`, `point_times`, `device_schedules`, `DevicePoints`; `DssImporter.to_cim` adds the `EnergyConnectionTimePoint` table |
+| export | `loadshape.py`'s `ShapeRegistry` (shared shapes, `_2` suffixes), `device_schedule`, `device_yearly`; `pvsystem.py` (mult = p / panel, `%Cutin=0 %Cutout=0`, q by kvar or pf), `storage.py` (`DispMode=follow`, mult = output / kWrated), `generator.py` (mult = p / kW, q checked) |
+| core | `time_points.add_device_time_points` (by mRID, through CIM-Builder's `EnergyConnectionScheduleBuilder.time_points`); `getters/device_schedule.get_device_schedule` |
+| engine findings | the shape scales a PV's irradiance (%Pmpp, %Cutout and the kVA cut per sample) and a generator's kW and kvar together; a PV's cut-in/cut-out has hysteresis; an off PV keeps a set kvar unless `VarFollowInverter` (snapshot too: `pv_power` fixed, no golden changed); a follow-mode battery runs at mult x kWrated capped at kVA, idles at 0, and ignores %Charge, %Discharge, %kWrated |
+| not built | `daily` / `duty`; temperature shapes; a battery's trigger modes; a shape on a Vsource or a wind generator; a schedule on a connection written as several DSS objects; the GDM export of a device schedule (`_consumer` raises for a schedule on anything but an EnergyConsumer) |
+| tests | `test_cimtbl_device_shape.py` (21: goldens, the engine's p and q at every sample of every device, raises), `test_export_device_shape.py` (10: the export golden, yearly-mode engine parity every 30 minutes for 8 hours, shared shapes, raises); core `test_time_points.py` (+3) |

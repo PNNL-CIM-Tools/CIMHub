@@ -4,8 +4,8 @@ p and q are written as kW and kvar. ``kV`` is the bus's (CIM gives a load no rat
 so a deck's rounded kV (2.4 on a 4.16 kV bus) comes back as the bus's phase voltage. The voltage response is one
 pure ZIP model (1, 2, 5) or the exponential model 4. Unequal per-phase values give one 1-phase Load per phase (E8).
 A ConformLoad whose group's schedule is a LoadShape (``loadshape.py``) names it as ``yearly``; a ConformLoad whose
-group has no schedule or no points, and a NonConformLoad, are written static, their groups named in one warning
-(S8).
+group has no schedule or no points, or days by season and day type (a GridLAB-D schedule's: DSS has no calendar),
+and a NonConformLoad, are written static, their groups named in one warning (S8).
 """
 
 from __future__ import annotations
@@ -68,8 +68,8 @@ def export(context) -> list[schema.Load]:
     for consumer in context.objects(*CIM_CLASSES):
         records += _loads(consumer, context.names, _shape(context, consumer, static))
     if static:
-        _log.warning("%d load group(s) are written static (no schedule, no points, or a NonConformLoad's): %s",
-                     len(static), sorted(static))
+        _log.warning("%d load group(s) are written static (no schedule, no points, days by season and day type, or a "
+                     "NonConformLoad's): %s", len(static), sorted(static))
     return records
 
 

@@ -13,7 +13,8 @@ files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transfor
 switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own);
 S4a the core `zip_fractions.cimtbl` (after `source.cimtbl`), then `load.cimtbl`, `triplex_load.cimtbl`,
 `triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators); S7 `series_reactor.cimtbl` (after the
-switches); S8 `player.cimtbl` (after the regulators, before the loads that name its groups).
+switches); S8 `player.cimtbl` (after the regulators, before the loads that name its groups); S9 `schedule.cimtbl`
+(after the players, before the loads).
 
 ## master
 
@@ -2160,7 +2161,7 @@ The mapper raises on:
 | # | topic | proposal |
 |---|---|---|
 | S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is a consumer of p = q = 0 on its wired phases (a split-phase record on s1s2), listed in the artifact header (amended 2026-11-16 for the Clallam decks, where every Milsoft consumer is a service: earlier it wrote only a bus; the draft raised). Each record is one service: `customerCount` 1 on its first consumer, unset on a split-phase record's 240 V part (defaulted: GLM has no customer count). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
-| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today. **Done 2026-11-21 (S8): a player is a ConformLoadGroup and its ConformLoadSchedule, its loads ConformLoads; GLM `schedule` blocks stay unmapped** |
+| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today. **Done 2026-11-21 (S8): a player is a ConformLoadGroup and its ConformLoadSchedule, its loads ConformLoads. Done 2026-11-21 (S9): a GLM `schedule` a base reads as `<schedule>*K` is a ConformLoadGroup with one ConformLoadSchedule per Season and DayType** |
 | S4a-3 | Base power form | As GridLAB-D does at nominal voltage (`load.cpp:940-1073`, `triplex_load.cpp:410-731`). Per part k (power, current, impedance), with `pf` defaulting to 1: P_k = base × f_k × \|pf_k\| and Q_k = P_k × √(1/pf_k² - 1), negative when pf_k < 0 (leading). pf_k = 0 gives P_k = 0 and Q_k = base × f_k. When the fractions don't sum to 1, the power fraction becomes 1 - I - Z (GridLAB-D's own repair, `load.cpp:945`), noted as `defaulted:` |
 | S4a-4 | Voltage response | ZIP fractions from the load's totals (each part's P and Q over the totals). When every part is one kind, the shared `zip_constant_pq`/`_i`/`_z` row (core `zip_fractions.cimtbl`, which the master imports as DSS's does); otherwise a `zip_<pP>_<pI>_<pZ>_<qP>_<qI>_<qZ>` row in the artifact (GDM's naming; the mRID rounds the fractions to 6 places, the row holds them exactly, and two sets that round alike raise). When Q is 0, the Q fractions are the P fractions. Two artifacts that both use one mixed set would both write the row and fail to bind; no deck has a mixed set. Every deck is one kind: taxonomy constant power, Java exports constant current |
 | **S4a-5** | **Explicit current and impedance (approved)** | **`constant_current_X`, `constant_impedance_X`, the `_AN`/`_AB` forms, and `current_*`/`shunt_*` on triplex nodes raise until a deck sets them. They carry angle conventions that no deck exercises: the current is relative to the nominal phasor (0/-120/+120, +30 on delta; `solver_nr.cpp:9409`), and triplex leg 2 has reversed polarity (`node.cpp:1233`). This amends GLM-8, which said they derive** |
@@ -2348,9 +2349,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `measured_power_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
-| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
-| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
 | `power_pf_A` | `Optional[float]` | `0.9` | derived | with base_power; default 1 |
 | `current_pf_A` | `Optional[float]` | `0.824042`, `0.83005`, `0.861934` | derived | with base_power; default 1 |
 | `impedance_pf_A` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -2413,9 +2414,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `indiv_measured_power_2` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `indiv_measured_power_12` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
-| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
-| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
 | `power_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
 | `current_pf_1` | `Optional[float]` | `0.85` | derived | with base_power; default 1 |
 | `impedance_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -3118,4 +3119,66 @@ points are dropped with one warning.
 | `mode` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
 | `loop` | `Optional[int]` | `0` | structural | unset or 0; a repeated tape raises (a schedule has one pass) |
 | `all_events_delta` | `Union[bool, Bool, NoneType]` | `False` | untranscribed | deltamode: an engine option |
+
+## S9: load schedules (by the user's direction, 2026-11-21: Season x DayType, shared like a player)
+
+A load base `<schedule>*K` scales K by a GridLAB-D `schedule` block, a set of cron rules (`minutes hours days months
+weekdays [value]`). GridLAB-D's reading, engine-checked (`tests/test_cimtbl_schedule.py`'s probe and oracle): the
+ranges are inclusive, months count from 1, weekdays from 0 = Sunday, a rule with no value gives 1, a time no rule
+covers gives 0, and two rules covering one minute fail to load. One schedule drives many loads, as a player does, so
+it is the same group (S8-1), but its curve recurs by day of the year and of the week, which CGMES's
+`SeasonDayTypeSchedule` holds: one `ConformLoadSchedule` per `Season` and `DayType`, each a day of multipliers. The
+user chose this over nc_schedule's per-load `EnergyConnectionRegularSchedule` and over one expanded year
+(2026-11-21). Mappers: `importer/cimtbl/schedule.py` `map_schedules` (`schedule_points`, the points) and `load.py` (a
+base reading a schedule names its group). The reader keeps each block's statements as written (`GlmModel.schedules`).
+Tests: `tests/test_cimtbl_schedule.py`; atom `tests/atoms/schedule/schedule.glm`:
+- `zip1`: the first six hours of IEEE13_houses' `ZIP1base_power` (half-hour rules every day, no `;`), 0 after;
+- `heat`: a winter (`12,1-2`) and the rest of the year, each with weekday and weekend days, a summer weekend with no
+  rule (0);
+- `waterdemand`: read by no load (a house's), not mapped.
+
+```
+# the months whose days agree, in a run (December wraps to January)
+Table Season: mRID, name, startDate, endDate
+    season_01_12, 01-12, --01-01, --12-31
+    season_03_11, 03-11, --03-01, --11-30
+    season_12_02, 12-02, --12-01, --02-29
+
+# the weekdays whose days agree in a season, in DayOfWeekKind words
+Table DayType: mRID, name
+    dt_all,     all
+    dt_weekday, weekday
+    dt_weekend, weekend
+
+Table ConformLoadGroup: mRID, name
+    lg_heat, heat
+    lg_zip1, zip1
+
+# value1: the schedule's value, a multiplier of each load's p and q, at each step from midnight (S9)
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (min), value1Unit, Season, DayType, ConformLoadGroup
+    ls_heat_12_02_weekend, heat, 00:00:00, 1440, none, season_12_02, dt_weekend, lg_heat
+    ls_heat_12_02_weekday, heat, 00:00:00, 60,   none, season_12_02, dt_weekday, lg_heat
+    ...
+    ls_zip1,               zip1, 00:00:00, 30,   none, season_01_12, dt_all,     lg_zip1
+```
+
+### Decisions for S9
+
+| # | question | decision |
+|---|---|---|
+| S9-1 | Shape | a schedule a base reads as `<schedule>*K` → `ConformLoadGroup` `lg_<schedule>` (S8-1's prefix: a player and a schedule of one name raise), its loads `ConformLoad`s with p, q K's split (S4a-2). A record's bases follow one source, a player or a schedule (S8-1) |
+| S9-2 | Days | each (month, weekday) gets the day the rules give it (`day_profiles`). The months whose seven days agree, in runs of consecutive months (December's run joins January's), are a `Season` `season_<first>_<last>`: `startDate` `--MM-01`, `endDate` the last month's last day (February's 29th). Within a season, the weekdays whose days agree are a `DayType` `dt_<name>`, named in nc_schedule's `DayOfWeekKind` words: `all`, `weekday`, `weekend`, `sunday` ... `saturday`; another set joins the day names with `_` (`monday_wednesday`). The name carries the weekdays: CIM's DayType has no other attribute |
+| S9-3 | A day | one `ConformLoadSchedule` per (season, day type): `ls_<schedule>` when the schedule is one day, else `ls_<schedule>_<first>_<last>_<day type>`; `startTime` `00:00:00` (CIM: "the value can be a time of day"); `timeStep` (min) the coarsest divisor of a day on which the value only changes at step boundaries (`coarsest_step`); `value1Unit` none. A day no rule covers is a schedule of 0 (one point), as GridLAB-D gives 0 |
+| S9-4 | Points | `RegularTimePoint` rows in the Parquet sidecar with the players' (S8-4), numbered from midnight |
+| S9-5 | Schedules read | the ones a load's base reads; the others (a house's) are not mapped, the master counts them (`not mapped: schedule 1`). A base naming a schedule the deck does not define raises (GridLAB-D would not load it) |
+
+### Fail fast (S9)
+
+| condition | why |
+|---|---|
+| a day of the month other than `*` | no Season or DayType holds it |
+| two rules on one minute | GridLAB-D rejects the overlap |
+| a field off `*`, a number, `a-b`, or a comma list of them, or out of its range; fewer than five fields; a value that is not a number | the cron form |
+| a nested block (`weekday { ... }`) | not mapped |
+| a base reading a schedule the deck does not define; a schedule and a player of one name | S9-5, S9-1 |
 

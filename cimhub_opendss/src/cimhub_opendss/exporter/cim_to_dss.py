@@ -38,6 +38,8 @@ class ExportContext(NamedTuple):
     switch_state: str
     coupled: dict[cim.MultiCircuitGroup, CoupledGroup]  # linegeometry.coupled_groups, found once (H1)
     points: dict  # schedule uri -> its RegularTimePoint rows (time_points.rows_by_schedule); {} without time_points
+    device_points: dict  # schedule uri -> its EnergyConnectionTimePoint rows, likewise (S9)
+    shapes: loadshape.ShapeRegistry  # the LoadShapes claimed so far; filled as the modules export
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -55,7 +57,8 @@ class DssExporter(FormatExporter):
     exports raises.
 
     ``time_points``: the TimePoint tables of the network's schedules (``read_time_points``, or the dict an importer
-    filled); each ConformLoadSchedule with points becomes a LoadShape (S8). Without them the loads are static.
+    filled); each ConformLoadSchedule with points becomes a LoadShape (S8), and so does each EnergyConnectionSchedule
+    of a PV, battery or machine (S9). Without them the loads and devices are static.
     """
 
     def __init__(self, time_points: dict | None = None):
@@ -68,7 +71,8 @@ class DssExporter(FormatExporter):
         _check_exported(network)
         names = Names(name_source)
         context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state,
-                                coupled_groups(network), self._points())
+                                coupled_groups(network), self._points("RegularTimePoint"),
+                                self._points("EnergyConnectionTimePoint"), loadshape.ShapeRegistry())
         model = DssModel()
         for module in EXPORT_ORDER:
             for record in module.export(context):
@@ -76,9 +80,9 @@ class DssExporter(FormatExporter):
         model.add_to_graph(options_record(network, names, switch.open_terminals(context)))
         return model
 
-    def _points(self) -> dict:
-        """Each schedule's RegularTimePoint rows by uri, or {} with no time_points (or no such table)."""
-        table = (self.time_points or {}).get("RegularTimePoint")
+    def _points(self, class_name: str) -> dict:
+        """Each schedule's rows of the ``class_name`` table by uri, or {} with no time_points (or no such table)."""
+        table = (self.time_points or {}).get(class_name)
         if table is None:
             return {}
         from cimhub_core.time_points import rows_by_schedule  # the time-points extra

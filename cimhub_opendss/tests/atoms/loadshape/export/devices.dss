@@ -1,0 +1,16 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
+new Loadshape.cycle npts=4 mult=[0.5 -0.5 0 0.8] sinterval=3600
+new Loadshape.run npts=4 mult=[0.5 1 0.25 0] sinterval=3600
+new Loadshape.sun npts=6 mult=[0 0.2 0.6 1 0.5 0] sinterval=1800
+new Loadshape.sun_2 npts=6 mult=[0 0.2 0.6 0.816496580927726 0.5 0] sinterval=1800
+new Line.l1 phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m
+new Load.l1 phases=3 bus1=b1.1.2.3 kV=4.16 kW=500 model=1 conn=wye kvar=100 NumCust=1 enabled=Yes
+new Pvsystem.p1 phases=3 bus1=b1.1.2.3 kv=4.16 irrad=0.9 Pmpp=100 pf=0.95 conn=wye kVA=110 %Cutin=0 %Cutout=0 Vminpu=0.9 yearly=sun kvarMax=110 kvarMaxAbs=110 enabled=Yes
+new Pvsystem.p2 phases=1 bus1=b1.1 kv=2.40177711982884 irrad=1 Pmpp=60 %Pmpp=81.6496580927726 conn=wye kvar=10 kVA=50 %Cutin=0 %Cutout=0 Vminpu=0.9 yearly=sun_2 kvarMax=50 kvarMaxAbs=50 enabled=Yes
+new Pvsystem.p3 phases=3 bus1=b1.1.2.3 kv=4.16 irrad=0.5 Pmpp=40 conn=wye kvar=0 kVA=50 Vminpu=0.9 kvarMax=50 kvarMaxAbs=50 enabled=Yes
+new Storage.s1 phases=3 bus1=b1.1.2.3 kv=4.16 conn=wye kVA=80 kvarMax=80 kvarMaxAbs=80 kWrated=100 kWhrated=1000 kWhstored=500 %reserve=20 %EffCharge=90 %EffDischarge=90 %IdlingkW=1 Vminpu=0.9 yearly=cycle DispMode=follow enabled=Yes
+new Generator.g1 phases=3 bus1=b1.1.2.3 kv=4.16 kW=200 kvar=96.8644209675705 model=1 yearly=run conn=wye kVA=240 enabled=Yes
+Set voltagebases=[4.16]
+CalcVoltageBases

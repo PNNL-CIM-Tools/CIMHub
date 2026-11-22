@@ -1573,12 +1573,12 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
 | pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
 | Temperature | unset | untranscribed or raising on import; not in CIM |
-| pf | not mapped | kvar carries q |
+| pf | rule | with a yearly shape whose q is in proportion to p: p / hypot(p, q) with the sign of q; else kvar carries q |
 | conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
 | kvar | written | the unit's share of q (generation sign: -q) |
 | kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
-| pct_Cutin | unset | untranscribed or raising on import; not in CIM |
-| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
+| pct_Cutin | rule | 0 with a yearly shape, else not written |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, or with a yearly shape; else not written |
 | EffCurve | unset | untranscribed or raising on import; not in CIM |
 | P_TCurve | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |
@@ -1588,7 +1588,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
 | Balanced | unset | untranscribed or raising on import; not in CIM |
 | LimitCurrent | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the connection's EnergyConnectionSchedule as a LoadShape, mult = p / (Pmpp x irradiance) (S9); %Cutin, %Cutout 0 and q by kvar or pf with it |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | Tyearly | unset | untranscribed or raising on import; not in CIM |
@@ -1664,10 +1664,10 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
 | Balanced | unset | untranscribed or raising on import; not in CIM |
 | LimitCurrent | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the connection's EnergyConnectionSchedule as a LoadShape, mult = output / kWrated (S9) |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
-| DispMode | unset | untranscribed or raising on import; not in CIM |
+| DispMode | rule | follow with a yearly shape, else not written |
 | DischargeTrigger | unset | untranscribed or raising on import; not in CIM |
 | ChargeTrigger | unset | untranscribed or raising on import; not in CIM |
 | TimeChargeTrig | unset | untranscribed or raising on import; not in CIM |
@@ -1706,7 +1706,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | model | written | 3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1 |
 | Vminpu | unset | untranscribed or raising on import; not in CIM |
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the machine's EnergyConnectionSchedule as a LoadShape, mult = p / kW (S9) |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | dispmode | unset | untranscribed or raising on import; not in CIM |
@@ -2150,9 +2150,11 @@ The importer's S8 inverted (`CIMTBL_MAPPING.md#s8-load-shapes`), as GLM's X29 wr
   which is what the importer's `startTime` says of a DSS shape (S8-3). A GLM player's date (2009-07-21) is lost.
 - A value unit other than none (a multiplier) on a ConformLoadSchedule raises.
 - Written static, their groups named in one warning: a ConformLoad whose group has no schedule (M1's `npts`-less
-  shapes, GLM's undefined players), a schedule with no points (or no `time_points`), and a NonConformLoad (its
-  schedule is actual power, which only `UseActual` holds, and a UseActual shape's snapshot depends on command order:
-  S8-6).
+  shapes, GLM's undefined players), a schedule with no points (or no `time_points`), a group of days by season and
+  day type (a GLM schedule's, GLM S9: DSS has no calendar), and a NonConformLoad (its schedule is actual power, which
+  only `UseActual` holds, and a UseActual shape's snapshot depends on command order: S8-6).
+- Shapes are shared (`ShapeRegistry`, also S9's): owners whose export name, interval and multipliers agree name one
+  LoadShape; another of that name with other points takes a suffix `_2`, `_3`.
 
 ### Expected differences (round trip)
 
@@ -2202,3 +2204,50 @@ The importer's S8 inverted (`CIMTBL_MAPPING.md#s8-load-shapes`), as GLM's X29 wr
 | Mode | unset | not in CIM; the engine's default |
 | Interpolation | unset | not in CIM; the engine's default |
 | like | not mapped | the writer never writes like= |
+
+## S9: device shapes (built 2026-11-21 at the user's word)
+
+The importer's S9 inverted (`CIMTBL_MAPPING.md#s9-device-shapes`): a PV's, battery's or machine's own
+`EnergyConnectionSchedule` with points is its `yearly` LoadShape.
+
+### Layout
+
+- `cimhub_core.getters.device_schedule.get_device_schedule`: the equipment's one `EnergyConnectionSchedule` with
+  points, p and q in the caller's units and sign (here kW, kVAr, generation), the step when the points are even;
+  interpolation other than previous, a column null at some points only, and two schedules with points raise.
+- `exporter/loadshape.py`: `device_schedule` (uneven points raise; so does a schedule on a connection written as
+  several DSS objects, or with several units: one shape would scale them by one multiplier, which CIM does not say)
+  and `device_yearly` (the shared `ShapeRegistry`). `ExportContext.device_points` holds the `EnergyConnectionTimePoint`
+  rows by schedule uri.
+- `exporter/pvsystem.py`, `storage.py`, `generator.py`: the multipliers, the device's own slots, and the shape
+  record before the device's when it is new.
+
+### Rules
+
+- Generator: mult = p / kW (the written kW, generation sign); each point's q must be kvar x mult (the engine scales
+  them together), unless the machine is model 3; a kW of 0 raises.
+- PVSystem: mult = p / (Pmpp x irradiance), the irradiance it scales; `%Cutin=0 %Cutout=0`, so the engine gives each
+  point's p, low ones too (an off sample has p 0). q: `kvar` when every point's q is the written kvar (an off PV keeps
+  it, S9-5), else `pf` = p / hypot(p, q) with q's sign when q is in proportion to p; another q raises, as does a
+  point above the written %Pmpp cap.
+- Storage: `DispMode=follow`; mult = output / kWrated, 0 where the output is the idling loss; `State` is not written
+  (the importer raises on a follow-mode battery with one), so its snapshot idles, which batteryState must say
+  (waiting). A point above kVA or a q other than 0 raises.
+- As for loads, `startTime` is not written: the first point is sample 1, one interval into the run.
+
+### Expected differences (round trip)
+
+| what | why |
+|---|---|
+| a PV's `%Cutin`/`%Cutout` come back 0, its q rule as `kvar` or `pf` | the engine gives the points' p and q with them |
+| a battery's capped sample comes back at the cap (80 kVA: mult 0.8, not 1) | the schedule holds the output |
+| devices sharing a shape whose multipliers differ (a PV cut to fit) get their own shapes, `sun_2` | one shape scales one way |
+| a battery's `%Charge`, `%Discharge`, `State` | follow mode does not use them |
+
+### Tests
+
+`test_export_device_shape.py`: the atom's export golden (`atoms/loadshape/export/devices.dss`); the original and the
+export in the engine in yearly mode every 30 minutes for 8 hours, every device's kW and kvar equal (rel 1e-6:
+both intervals, the PVs off and cut to fit, the battery capped, the wrap); shared shapes; without points the devices
+are static; a generator's q off kvar x mult, a PV's q off both rules, a PV point above its cap, a battery's q or a
+point above its kVA, and uneven points raise.

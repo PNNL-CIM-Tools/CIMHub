@@ -170,7 +170,7 @@ def test_explicit_forms_raise(tmp_path, slot):
 
 def test_other_expression_raises(tmp_path):
     raises(tmp_path, "object load { name x; parent n2; phases AN; base_power_A zipsched.value*2+1; }",
-           r"only <player>.value\*<number> is mapped")
+           r"only <player>.value\*<number> and <schedule>\*<number> are mapped")
 
 
 def test_split_phase_load_raises(tmp_path):

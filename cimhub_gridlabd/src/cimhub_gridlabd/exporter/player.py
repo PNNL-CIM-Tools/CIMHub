@@ -6,7 +6,7 @@ the base of each of the group's loads (``load.py``) through the run file's ``cla
 rows: the first at ``startTime`` in GMT (GridLAB-D reads GMT under any clock zone, ``timestamp.cpp:595``), each later
 one ``+<step>s``. ``value2`` other than ``value1`` raises: a GLM base scales p and q together. A group with no
 schedule, a schedule with no points, and a NonConformLoad's schedule are not players: their loads are written static,
-with one warning (``load.py``).
+with one warning (``load.py``). A schedule of a Season or DayType is a day, not a player: ``schedule.py``.
 """
 
 from __future__ import annotations
@@ -59,9 +59,16 @@ def start(schedule) -> datetime:
     return instant.astimezone(timezone.utc)
 
 
+def is_day(schedule) -> bool:
+    """A schedule of a Season or DayType: a recurring day (a GLM schedule), not a time series."""
+    return schedule.Season is not None or schedule.DayType is not None
+
+
 def export(context) -> list[schema.Player]:
     players = []
     for schedule in context.objects(cim.ConformLoadSchedule):
+        if is_day(schedule):
+            continue
         values = points(context, schedule)
         if values is None:
             continue

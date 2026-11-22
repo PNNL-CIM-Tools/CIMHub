@@ -6,6 +6,11 @@ kWrated x 100. ``kW`` is not written: the engine turns it into that percent at t
 writer puts kW before kWrated (probe: ``kW=-5`` then ``kWrated=5`` charges at 1 kW). A waiting battery draws its
 idling loss, ``%IdlingkW``, which is then its p. The energies go before ``State`` in the writer's order, as the
 engine checks them when the state is assigned. q must be 0, as on import.
+
+A connection's own ``EnergyConnectionSchedule`` with points (S9) is a ``DispMode=follow`` battery's ``yearly``
+LoadShape: mult = output / kWrated at each point, 0 where the output is the idling loss (the engine idles at 0).
+Such a battery's snapshot idles, so its batteryState must be waiting, and ``State`` is not written (on import a
+follow-mode battery with a State raises). A point above kVA, or a q other than 0, raises.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ import math
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.getters import describe
+from cimhub_opendss.exporter import loadshape
 from cimhub_core.getters.der import get_battery_unit
 from cimhub_core.getters.phase_power import SUM_REL_TOL
 from cimhub_opendss.exporter.inverter import inverter_pieces
@@ -58,14 +64,45 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "Vminpu": Slot("written", "1 / maxIFault (the importer's rule inverted); unset -> not written"),
     "model": Slot("not mapped", "model 1, the engine's default; others raise on import"),
     "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
+    "yearly": Slot("written", "the connection's EnergyConnectionSchedule as a LoadShape, mult = output / kWrated "
+                              "(S9)"),
+    "DispMode": Slot("rule", "follow with a yearly shape, else not written"),
     "like": Slot("not mapped", "the writer never writes like="),
 }, Slot("unset", "untranscribed or raising on import; not in CIM"))}
 
 
-def export(context) -> list[schema.Storage]:
-    """One Storage per BatteryUnit."""
-    return [_storage(piece) for connection in context.objects(*CIM_CLASSES)
-            for piece in inverter_pieces(connection, cim.BatteryUnit, NAMESPACE, context.names)]
+def export(context) -> list:
+    """One Storage per BatteryUnit, its yearly LoadShape first when new."""
+    records = []
+    for connection in context.objects(*CIM_CLASSES):
+        pieces = inverter_pieces(connection, cim.BatteryUnit, NAMESPACE, context.names)
+        # a schedule is the connection's: it maps when the connection is one Storage of one unit
+        found = loadshape.device_schedule(context, connection, len(pieces) * len(connection.PowerElectronicsUnit)) \
+            if pieces else None
+        for piece in pieces:
+            battery = _storage(piece)
+            if found is not None:
+                records += _yearly(context, battery, piece, found)
+            records.append(battery)
+    return records
+
+
+def _yearly(context, battery: schema.Storage, piece, found) -> list[schema.Loadshape]:
+    """Make ``battery`` follow its yearly shape (mult = output / kWrated, 0 when idling); the new LoadShape records."""
+    label = describe(found.schedule)
+    if battery.State != "idling":
+        raise ValueError(f"{label}: the battery is {battery.State}; a follow-mode battery's snapshot idles")
+    if found.p is None:
+        raise ValueError(f"{label}: no p; a Storage's shape gives its output")
+    if found.q is not None and any(q != 0 for q in found.q):
+        raise ValueError(f"{label}: q other than 0; a Storage's kvar is not mapped, as on import")
+    over = [number for number, p in enumerate(found.p, start=1) if abs(p) > battery.kVA * (1 + SUM_REL_TOL)]
+    if over:
+        raise ValueError(f"{label}: points {over[:5]} are above the battery's {battery.kVA:g} kVA")
+    mult = [0.0 if math.isclose(p, piece.p, rel_tol=SUM_REL_TOL) else p / battery.kWrated for p in found.p]
+    battery.State, battery.DispMode = None, "follow"
+    battery.yearly, shapes = loadshape.device_yearly(context, found, mult)
+    return shapes
 
 
 def _storage(piece) -> schema.Storage:

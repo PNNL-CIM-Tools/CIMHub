@@ -1,0 +1,16 @@
+# OpenDSS Generator -> SynchronousMachine on its bus, in the load sign (generation is negative p); a model 3
+# machine regulates its own terminal (RegulatingControl, then an Update).
+# Source table: Generator (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#generator
+
+Profile = cim18v17
+
+# p = -kW, q = -kvar (the load sign)
+Table SynchronousMachine: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), earthing, normallyInService, BaseVoltage, type=generator, operatingMode=generator, EquipmentContainer=fdr_atom
+    # kVA defaulted to 1.2 x kW
+    # defaulted: model=ConstantPQ, conn=wye, Vpu=1.0, enabled=true
+    gen_g1, g1, b1, , 240.0, 4.16, -200.0, -96.86442096757051, , , true, true, bv_4p16kv
+
+# a yearly LoadShape: the device's p and q at each sample, in the Parquet sidecar (S9)
+Table EnergyConnectionSchedule: mRID, name, EnergyConnection, timeSeriesKind=schedule, interpolationKind=previous
+    gen_g1_yearly, run, gen_g1

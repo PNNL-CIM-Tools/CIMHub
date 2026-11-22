@@ -286,7 +286,8 @@ def test_groups_with_no_schedule_or_points_are_static_with_one_warning(caplog):
         network, _ = _scheduled()
         with caplog.at_level(logging.WARNING, logger="cimhub_gdm.exporter.time_series"):
             exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
-    assert "3 load group(s) are written static (no schedule, or no points): ['plant', 'res', 'unknown']" in caplog.text
+    assert ("3 load group(s) are written static (no schedule, no points, or days by season and day type): "
+            "['plant', 'res', 'unknown']") in caplog.text
     assert not exported.has_time_series(_load(exported, "a"))
 
 

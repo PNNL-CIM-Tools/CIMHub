@@ -10,7 +10,7 @@ Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W)
     ld_tl_legs,    tl_legs,    tm1, s1s2, Y, true,  4500.0, 1800.0, 1, zip_constant_pq, bv_240v
     ld_tl_legs_12, tl_legs_12, tm1, s1s2, D, false, 4000.0, 1500.0, ,  zip_constant_pq, bv_240v
 
-# a base <player>.value*K: p, q from K; the player's group (S8-1)
+# a base <player>.value*K or <schedule>*K: p, q from K; the player's or schedule's group (S8-1, S9-1)
 Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
     ld_tl_house, tl_house, tm2, s1s2, Y, true, 5000.005999999999, 3098.725410481542, 1, zip_constant_i, bv_240v, lg_zipsched
 

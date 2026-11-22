@@ -294,8 +294,15 @@ built at the user's "implement the remaining changes across the other spokes"):
 | NonConformLoad: value1 in W or kW, value2 in VAr or kVAr | the same, in kilowatt and kilovar, `use_actual=True` |
 | `profile_name` | the group's name; its uri when two groups share a name |
 | a group with no schedule, or no points | no series; one WARNING naming the groups |
+| a group of days by season and day type (a GridLAB-D schedule, `GLM_REWRITE_PLAN.md` §8.10) | no series, in the same WARNING: a GDM series needs absolute times, and a recurring day has none |
 
 **The import is unchanged (T1).** A GDM series still imports as one `EnergyConnectionSchedule` per load in actual
 values, so CIM → GDM → CIM turns a group into per-load schedules (the test pins it: the group's multipliers times
 each load's p and q). Importing a shared multiplier series as a ConformLoad group instead would change T1, which is
 the user's call. Tests: `test_time_series.py` (5), `test_export_ditto.py` (1).
+
+Since 2026-11-21 the OpenDSS importer also writes per-device `EnergyConnectionSchedule`s for the yearly shapes of
+PVSystems, Storage and Generators (`DSS_REWRITE_PLAN.md` §10), on a `PowerElectronicsConnection` or a
+`SynchronousMachine`. The GDM export does not take them yet: `exporter/time_series._consumer` raises for a schedule
+on anything but an EnergyConsumer, naming the class, when the time points are given (without them the schedules are
+named in one WARNING, as before).

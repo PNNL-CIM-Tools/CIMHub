@@ -138,8 +138,29 @@ GLM_REWRITE_PLAN.md §8.9, the importer's S8 inverted; the points are the caller
   `ieeezipload`, which their run file defines; writing the reference would leave a deck GridLAB-D cannot load), a
   schedule with no points (no `time_points`), and a NonConformLoad (its schedule is in power units: GLM's base form
   holds a multiplier only).
-- The DSS, RAW and GDM exporters read ConformLoad and NonConformLoad as loads and log their groups' schedules as
-  dropped (`cimhub_core.getters.load_schedule.log_dropped_schedules`), until a DSS LoadShape slice.
+- The DSS exporter writes a player's group as a LoadShape (DSS S8) and GDM as one shared series; RAW logs the
+  groups' schedules as dropped (`cimhub_core.getters.load_schedule.log_dropped_schedules`).
+
+## X30: load schedules
+
+The importer's S9 inverted (`exporter/schedule.py`, before `load.py` in `EXPORT_ORDER`): a conform group of days by
+season and day type (`get_load_schedule`'s `days`), with their points, is a GLM `schedule` named after the group
+(`GlmModel.schedules`, written as a block before the objects); each ConformLoad of the group writes its bases as
+`<schedule>*<base>`.
+
+- Each day becomes rules: each run of equal values, split at the hours (`7-59 1`, `* 2-5`, `0-14 6`), on the
+  season's months (`*` for the year, `12,1-2` across December) and the day type's weekdays (DayOfWeekKind words, as
+  the importer names them; no DayType: every day, no Season: every month). A value of 0 is no rule: GridLAB-D's
+  value where none applies. So the atom's rules come back as written, but for spacing and number form.
+- Raise: a day whose `startTime` is not `00:00:00` or whose points do not fill 24 h in whole minutes; a season off
+  whole months; a day type of another name; two days on one (month, weekday) (GridLAB-D rejects the overlap); a
+  `value2` other than `value1` (as X29).
+- Written static, with X29's one warning: a group one of whose days has no points (no `time_points`). The DSS and
+  GDM exporters write a group of days static and name it in their own warning: DSS has no calendar, a GDM series
+  needs absolute times (`tests/cross_format/test_glm_schedule_elsewhere.py`).
+- Tests (`tests/test_export_schedules.py`): the rules; GridLAB-D giving the exported schedules the original's value
+  every 30 minutes over a winter and a summer week; the written deck read back to the same points; the export golden
+  `atoms/schedule/schedule.exported.glm`; the helpers and the raises.
 
 ## X4: DER
 
@@ -614,27 +635,27 @@ default.
 | parent | written | its bus |
 | phases | written | the letters then N (wye) or D (delta); a split-phase bus's letter then S |
 | nominal_voltage | written | its bus's |
-| base_power_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| base_power_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| base_power_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| base_power_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| base_power_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
 
 198 other slots: unset
 
@@ -646,27 +667,27 @@ default.
 | parent | written | its bus |
 | phases | written | the letters then N (wye) or D (delta); a split-phase bus's letter then S |
 | nominal_voltage | written | its bus's |
-| base_power_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| base_power_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| base_power_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| power_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| current_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
-| impedance_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| base_power_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| base_power_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| power_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| current_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
+| impedance_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM schedule (X30) |
 
 115 other slots: unset
 

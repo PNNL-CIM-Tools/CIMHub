@@ -14,8 +14,10 @@ from cimbuilder.object_builder.schedule import TIME_POINT_CLASS, EnergyConnectio
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
-from cimhub_core.time_points import (REGULAR_TIME_POINT_CLASS, add_regular_time_points, read_time_points,
-                                     regular_time_points, rows_by_schedule, time_points_path, write_time_points)
+from cimhub_core.getters.device_schedule import get_device_schedule
+from cimhub_core.time_points import (REGULAR_TIME_POINT_CLASS, add_device_time_points, add_regular_time_points,
+                                     read_time_points, regular_time_points, rows_by_schedule, time_points_path,
+                                     write_time_points)
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
 HOURS = [datetime(2020, 1, 1) + timedelta(hours=hour) for hour in range(3)]
@@ -172,3 +174,39 @@ def test_points_added_twice_or_for_no_schedule_raise(regular):
         add_regular_time_points(dict(points), network, {"ls_plant": [1.0]})
     with pytest.raises(ValueError, match=r"no RegularIntervalSchedule with mRID \['ls_none'\]"):
         add_regular_time_points({}, network, {"ls_none": [1.0]})
+
+
+def test_device_points_are_added_by_mrid(scheduled):
+    """The DSS importer's path: (times, p kW, q kVAr) per schedule mRID, the builder's rows in SI."""
+    network, (y1, c1), _ = scheduled
+    points = {}
+    add_device_time_points(points, network, {"ld_y1_pq": (HOURS, [1.0, 2.0, 3.0], [0.5, 0.6, 0.7]),
+                                             "ld_c1_pq": (HOURS[:2], [-4.0, 0.0], None)})
+    rows = rows_by_schedule(points[TIME_POINT_CLASS])
+    assert rows[y1.uri()].column("q").to_pylist() == pytest.approx([500.0, 600.0, 700.0])
+    assert rows[c1.uri()].column("p").to_pylist() == [-4000.0, 0.0]
+    with pytest.raises(ValueError, match="already holds"):
+        add_device_time_points(points, network, {"ld_c1_pq": (HOURS, [1.0] * 3, None)})
+    with pytest.raises(ValueError, match="no EnergyConnectionSchedule with mRID \\['nope'\\]"):
+        add_device_time_points({}, network, {"nope": (HOURS, [1.0] * 3, None)})
+
+
+def test_a_device_schedule_reads_in_the_callers_units_and_sign(scheduled):
+    network, (y1, c1), points = scheduled
+    rows = rows_by_schedule(points[TIME_POINT_CLASS])
+    found = get_device_schedule(y1.EnergyConnection, rows, "kW", "kVAr", sign="generation")
+    assert (found.schedule, found.step) == (y1, 3600.0)
+    assert found.p == pytest.approx([-1.0, -2.0, -3.0]) and found.q == pytest.approx([-0.5, -0.6, -0.7])
+    only_p = get_device_schedule(c1.EnergyConnection, rows, "W", "VAr", sign="load")
+    assert (only_p.p, only_p.q) == ([1000.0, 2000.0, 3000.0], None)
+    assert get_device_schedule(y1.EnergyConnection, {}, "kW", "kVAr", sign="load") is None  # no points
+
+
+def test_a_device_schedule_off_the_rules_raises(scheduled):
+    network, (y1, _), points = scheduled
+    rows = rows_by_schedule(points[TIME_POINT_CLASS])
+    with pytest.raises(ValueError, match="sign must be one of"):
+        get_device_schedule(y1.EnergyConnection, rows, "kW", "kVAr", sign="up")
+    y1.interpolationKind = network.cim.TimeSeriesInterpolationKind.linear
+    with pytest.raises(ValueError, match="interpolationKind linear"):
+        get_device_schedule(y1.EnergyConnection, rows, "kW", "kVAr", sign="load")

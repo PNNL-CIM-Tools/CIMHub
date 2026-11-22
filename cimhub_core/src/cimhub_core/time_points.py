@@ -26,7 +26,7 @@ import cimprofiles.cim18.cim18v17 as cim
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from cimbuilder.object_builder.schedule import TIME_POINT_CLASS, TIME_POINT_SCHEMA
+from cimbuilder.object_builder.schedule import TIME_POINT_CLASS, TIME_POINT_SCHEMA, EnergyConnectionScheduleBuilder
 
 log = logging.getLogger(__name__)
 
@@ -128,6 +128,24 @@ def add_regular_time_points(time_points: dict, network, values: dict[str, list[f
     time_points[REGULAR_TIME_POINT_CLASS] = regular_time_points(
         {uris[mrid]: points for mrid, points in values.items()},
         {uris[mrid]: points for mrid, points in (value2 or {}).items()})
+
+
+def add_device_time_points(time_points: dict, network, points: dict[str, tuple]) -> None:
+    """Put the ``EnergyConnectionTimePoint`` table of ``points`` (``{schedule mRID: (times, p, q)}``: when each point
+    takes effect, p in kW and q in kVAr in the load sign, None for a column the schedule does not carry) into the
+    caller's ``time_points``, through CIM-Builder's ``EnergyConnectionScheduleBuilder.time_points`` (its schema; kW
+    and kVAr to SI). A table there already raises, as does an mRID no ``EnergyConnectionSchedule`` of the network
+    has."""
+    if TIME_POINT_CLASS in time_points:
+        raise ValueError(f"time_points already holds a {TIME_POINT_CLASS} table")
+    schedules = {schedule.mRID: schedule for schedule in _schedules(network, cim.EnergyConnectionSchedule).values()}
+    missing = sorted(set(points) - set(schedules))
+    if missing:
+        raise ValueError(f"no EnergyConnectionSchedule with mRID {missing[:5]} in the network")
+    builder = EnergyConnectionScheduleBuilder(network, None)  # time_points adds nothing to the graph
+    tables = [builder.time_points(schedules[mrid], times=times, p=p, q=q, p_unit="kW", q_unit="kVAr")
+              for mrid, (times, p, q) in points.items()]
+    time_points[TIME_POINT_CLASS] = pa.concat_tables(tables)
 
 
 def rows_by_schedule(table: pa.Table) -> dict[str, pa.Table]:

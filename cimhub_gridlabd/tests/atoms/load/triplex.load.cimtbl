@@ -20,7 +20,7 @@ Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W)
     # defaulted: power_fraction_C=0.4 (the fractions did not sum to 1: GridLAB-D's repair, load.cpp:945)
     ld_ld_zip,   ld_zip,   n4, AC, Y, true,  113500.0, 42426.99772010576, 1, zip_0.572687_0.251101_0.176211_0.513694_0.486306_0, bv_4p16kv
 
-# a base <player>.value*K: p, q from K; the player's group (S8-1)
+# a base <player>.value*K or <schedule>*K: p, q from K; the player's or schedule's group (S8-1, S9-1)
 Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
     ld_ld_sched, ld_sched, n5, A, Y, true, 16999.99323672, 10000.005731892072, 1, zip_constant_i, bv_4p16kv, lg_zipsched
 

@@ -247,7 +247,7 @@ line's own set), D10 and D14 (no open delta in the decks, so it stays fail fast)
 
 | owed by | item | blocks |
 |---|---|---|
-| ~~user~~ | **Built in §8.9 (2026-11-21): ConformLoad groups, points in a Parquet sidecar (S8, X29).** ~~TODO (S4a-2): a GLM load schedule (`<schedule>.value*K`) to the CGMES schedule classes (`ConformLoadSchedule`, `SeasonDayTypeSchedule`) once profile export works; today only K is mapped and the reference is a row comment. **2026-11-16, the user:** nc_schedule schedule classes now have a Parquet sidecar for their points (`cimhub_gdm/time_points.py`, rc_1 `1c800cc`), meant for GLM `player` files too. Moved to `cimhub_core.time_points` the same day by the user's direction (the `time-points` extra: pyarrow, cim-builder), so a GLM schedule/player slice can use it~~ | a GLM schedule/player slice |
+| ~~user~~ | **Built in §8.9 (2026-11-21): ConformLoad groups, points in a Parquet sidecar (S8, X29); GLM `schedule` blocks in §8.10 (S9, X30).** ~~TODO (S4a-2): a GLM load schedule (`<schedule>.value*K`) to the CGMES schedule classes (`ConformLoadSchedule`, `SeasonDayTypeSchedule`) once profile export works; today only K is mapped and the reference is a row comment. **2026-11-16, the user:** nc_schedule schedule classes now have a Parquet sidecar for their points (`cimhub_gdm/time_points.py`, rc_1 `1c800cc`), meant for GLM `player` files too. Moved to `cimhub_core.time_points` the same day by the user's direction (the `time-points` extra: pyarrow, cim-builder), so a GLM schedule/player slice can use it~~ | a GLM schedule/player slice |
 | user (cim-tables) | reference an `Identity`-only row by its `identifier`: `InverterInfo.InverterCapabilities` → `InverterCapabilities` (S4b-11). cim-tables does not index `Identity` rows today (`CIMTBL_DESIGN.md:141`), so S4b names the capability flag in the row comment instead of writing the row | S4b-11's `InverterCapabilities` |
 | core | `der` shape: `p2` (and `storage_b2`) say `s1s2` Y at 208 V, two 120 V legs to neutral, from the DSS IEEE 13. GridLAB-D's split-phase inverter sits across the legs at 240 V (S4b-4, S4b-5), so the shape should show `s1s2` D at 240 V. The DSS exporter must then write such a DER across the legs | the exporter wave's GLM round trip |
 | core | `shunt` shape and getter: per-phase `LinearShuntCompensatorPhase` b, for a gang capacitor whose `capacitor_A/B/C` differ. No deck has one: S4a-10 raises on it, and the getter keeps its raise | when a deck needs it |
@@ -467,9 +467,34 @@ owner):
 | NonConformLoad | the user's "maybe also": a CIM class every exporter reads, its group schedule in the shape and the getter. No GLM form: a NonConformLoadSchedule is in power units with independent P and Q, and GLM's base form holds one multiplier, so it is written static with the warning. A DSS LoadShape (`useactual`) can hold it: the DSS slice |
 | tests | core 488 (+11); GLM `test_cimtbl_player.py` (28), `test_export_players.py` (8: the rules, and IEEE 13 with GridAPPS-D's 1,440-point player, vendored, solved in GridLAB-D at its first two instants against fixed bases, 1e-9) |
 
-Not built: GLM `schedule` blocks (cron rows, `SeasonDayTypeSchedule`). ~~DSS LoadShapes, GDM reading a
-ConformLoadSchedule~~: built 2026-11-21 (above). The player export now reads its points through the core
-`get_schedule_points`, and the importer adds them through `time_points.add_regular_time_points`, both shared with
-the DSS spoke. `cimhub_gridlabd` imports `cimhub_core.time_points` only when points are
-passed; its pyproject should gain a `time-points` extra (`cimhub-core[time-points]`) when the bootstrap session next
-touches the lock.
+~~Not built: GLM `schedule` blocks (cron rows, `SeasonDayTypeSchedule`)~~: built 2026-11-21 (§8.10). ~~DSS
+LoadShapes, GDM reading a ConformLoadSchedule~~: built 2026-11-21 (above). The player export now reads its points
+through the core `get_schedule_points`, and the importer adds them through `time_points.add_regular_time_points`,
+both shared with the DSS spoke. `cimhub_gridlabd` imports `cimhub_core.time_points` only when points are passed;
+~~its pyproject should gain a `time-points` extra~~: done 2026-11-21 at the user's "fix the pyproject.toml files"
+(`cimhub_gridlabd[time-points]` and `cimhub_opendss[time-points]` pull `cimhub-core[time-points]`; the workspace
+root installs both; `uv lock` rerun).
+
+### 8.10 Load schedules (2026-11-21; the user's call: Season x DayType; built the same day, uncommitted)
+
+The user's "implement the glm schedule ... using the nc_schedule profile classes", with the choice (asked) of
+CGMES's `SeasonDayTypeSchedule` over nc_schedule's per-load `EnergyConnectionRegularSchedule` (one copy per load, in
+actual power) and over one expanded year (the recurrence lost). A GLM `schedule` a base reads as `<schedule>*K` is a
+`ConformLoadGroup`, as a player is (§8.9), with one `ConformLoadSchedule` per `Season` (a run of months) and
+`DayType` (a weekday set, named in nc_schedule's `DayOfWeekKind` words), each a day of multipliers from midnight.
+GridLAB-D's reading of the rules was checked in the engine first (inclusive ranges, months from 1, weekdays from 0 =
+Sunday, an omitted value 1, uncovered times 0, overlaps a load error). Decisions S9-1 to S9-5 and X30 were made
+while building, from that reading; they are in `cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s9-load-schedules` and
+`EXPORT_MAPPING.md#x30-load-schedules`.
+
+| where | what |
+|---|---|
+| core | `getters/load_schedule.get_load_schedule`: a group has one time series (no Season, no DayType) or days by season and day type (`LoadSchedule.days`); both, or two time series, raise. `log_dropped_schedules` counts days too |
+| GLM importer | `importer/cimtbl/schedule.py` (rules, `day_profiles`, `seasons`, `coarsest_step`, the document and `schedule_points`); `load.py` reads `<schedule>*K` (`references(model, players=)`); the orchestrator maps schedules after players, adds their points with the players', and counts unread schedules on the master |
+| GLM exporter | `exporter/schedule.py` (each day as rules, split at the hours; `GlmModel.schedules`), `load.py` writes `<schedule>*K`, `player.py` skips days; `GlmWriter` writes schedule blocks |
+| DSS, GDM | a group of days is written static and named in their warnings (DSS has no calendar; a GDM series needs absolute times) |
+| tests | `test_cimtbl_schedule.py` (19: goldens, binding, GridLAB-D's value every 30 minutes over a winter and a summer week against the CIM days, helpers, raises), `test_export_schedules.py` (15: the rules, GridLAB-D parity of the exported schedules over both weeks, the deck read back to the same points, helpers, raises), `tests/cross_format/test_glm_schedule_elsewhere.py` (2) |
+
+Not built: a day-of-month field (no Season or DayType holds it); nested blocks; a schedule on anything but a load base
+(the decks' only schedules drive houses, which are not mapped); a DSS form (a `daily` shape could carry an all-year,
+all-days schedule).

@@ -1,0 +1,31 @@
+# GridLAB-D schedule -> ConformLoadGroup + one ConformLoadSchedule per Season and DayType (S9): the
+# schedules the loads' bases read. A day of multipliers of each load's p and q; the points are in the Parquet sidecar,
+# not here. startTime: midnight, a time of day.
+# Source table: schedule (blocks: 3; 2 read by a load's base)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s9-load-schedules
+
+Profile = cim18v17
+
+# the months whose days agree, in a run (December wraps to January)
+Table Season: mRID, name, startDate, endDate
+    season_01_12, 01-12, --01-01, --12-31
+    season_03_11, 03-11, --03-01, --11-30
+    season_12_02, 12-02, --12-01, --02-29
+
+# the weekdays whose days agree in a season, in DayOfWeekKind words
+Table DayType: mRID, name
+    dt_all,     all
+    dt_weekday, weekday
+    dt_weekend, weekend
+
+Table ConformLoadGroup: mRID, name
+    lg_heat, heat
+    lg_zip1, zip1
+
+# value1: the schedule's value, a multiplier of each load's p and q, at each step from midnight (S9)
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (min), value1Unit, Season, DayType, ConformLoadGroup
+    ls_heat_12_02_weekend, heat, 00:00:00, 1440, none, season_12_02, dt_weekend, lg_heat
+    ls_heat_12_02_weekday, heat, 00:00:00, 60,   none, season_12_02, dt_weekday, lg_heat
+    ls_heat_03_11_weekend, heat, 00:00:00, 1440, none, season_03_11, dt_weekend, lg_heat
+    ls_heat_03_11_weekday, heat, 00:00:00, 120,  none, season_03_11, dt_weekday, lg_heat
+    ls_zip1,               zip1, 00:00:00, 30,   none, season_01_12, dt_all,     lg_zip1

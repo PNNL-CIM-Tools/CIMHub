@@ -5,6 +5,12 @@ The state and p are the engine's snapshot dispatch, replayed from the deck's ass
 ``State`` picks which setpoint runs; capped at kVA. An idling battery
 draws its idling losses. The load sign: discharge is negative p, charging positive (S4b-1). q is 0.
 
+A ``yearly`` LoadShape with ``DispMode=follow`` is the battery's own ``EnergyConnectionSchedule`` (S9): at each
+sample it discharges at mult x kWrated (mult > 0), charges at -mult x kWrated (< 0) or idles (0), capped at kVA
+(engine-checked; %Charge, %Discharge and %kWrated have no effect), p in the Parquet sidecar (``schedule_points``).
+That is the dispatch asked for: a battery full or at its reserve idles in the engine, which the schedule does not
+model. Such a battery's snapshot idles, so a kW or State on it raises; a shape in another dispatch mode raises.
+
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#storage``.
 """
 
@@ -16,8 +22,9 @@ from typing import NamedTuple
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
-from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, untranscribed_values
+from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
+from cimhub_opendss.importer.cimtbl import loadshape
 from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta
 from cimhub_opendss.importer.cimtbl.inverter import CONNECTION, connection_columns, connection_row, unit_id
 from cimhub_opendss.schema import opendss_schema as schema
@@ -79,10 +86,13 @@ FIELDS = {
                                           "setting"),
     "Balanced": Field("structural", note="raises when yes: " + _NOT_MAPPED),
     "LimitCurrent": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "yearly": Field("untranscribed", note=_SHAPE),
+    "yearly": Field("mapped", ((loadshape.DEVICE_SCHEDULE, "name", None),),
+                    "DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample "
+                    "(S9); with another DispMode raises"),
     "daily": Field("untranscribed", note=_SHAPE),
     "duty": Field("untranscribed", note=_SHAPE),
-    "DispMode": Field("structural", note="default only; another dispatch mode raises (" + _NOT_MAPPED + ")"),
+    "DispMode": Field("structural", note="default, or follow with a yearly shape (S9); another dispatch mode raises "
+                                         "(" + _NOT_MAPPED + ")"),
     "DischargeTrigger": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
     "ChargeTrigger": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
     "TimeChargeTrig": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
@@ -112,6 +122,7 @@ _UNMAPPED = ("EffCurve", "DynaDLL", "DynaData", "UserModel", "UserData")
 _YES_UNMAPPED = ("Balanced", "LimitCurrent", "WattPriority", "PFPriority")
 _NONZERO_UNMAPPED = ("pct_PminNoVars", "pct_PminkvarMax", "kvar")
 _STATES = {"charging": "charging", "discharging": "discharging", "idling": "waiting"}
+_FOLLOW = "follow"
 #: The slots that give the stored energy and its limits.
 _ENERGY = ("kWhstored", "pct_stored", "kWhrated", "pct_reserve")
 
@@ -194,7 +205,8 @@ def _check(storage) -> None:
     unmapped += [slot for slot in _NONZERO_UNMAPPED if getattr(storage, slot) not in (None, 0)]
     if storage.ControlMode is not None and str(storage.ControlMode).upper() != "GFL":
         unmapped.append(f"ControlMode={storage.ControlMode}")
-    if storage.DispMode is not None and str(storage.DispMode).lower() != "default":
+    mode = str(storage.DispMode).lower() if storage.DispMode is not None else "default"
+    if mode not in ("default", _FOLLOW):
         unmapped.append(f"DispMode={storage.DispMode}")
     if storage.pf is not None and float(storage.pf) != 1:
         unmapped.append(f"pf={storage.pf}")
@@ -203,6 +215,37 @@ def _check(storage) -> None:
                          "them)")
     if storage.model is not None and int(storage.model) != 1:
         raise ValueError(f"Storage {storage.name}: model={storage.model} is not mapped (model 1 is)")
+    if (mode == _FOLLOW) != (storage.yearly is not None):
+        raise ValueError(f"Storage {storage.name}: DispMode={storage.DispMode} with yearly={storage.yearly}; only a "
+                         "follow-mode battery's yearly shape is mapped (S9-6)")
+    if mode == _FOLLOW and (storage.kW is not None or storage.State is not None):
+        raise ValueError(f"Storage {storage.name}: DispMode=follow with a kW or State; the engine's snapshot of such a "
+                         "battery is not mapped (one with neither idles)")
+
+
+def follow_power(value: float, *, kw_rated: float, kva: float, idling_kw: float) -> float:
+    """A follow-mode battery's p (kW, the load sign) at a shape sample: discharge at mult x kWrated, charge at
+    -mult x kWrated, idle at 0, capped at kVA (engine-checked)."""
+    if value == 0:
+        return idling_kw
+    return -min(value * kw_rated, kva) if value > 0 else min(-value * kw_rated, kva)
+
+
+def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
+    """Each follow-mode battery's yearly schedule (``<mRID>_yearly``): ``follow_power`` at each sample, p only."""
+    points, defaults = {}, dss_defaults(NATIVE_CLASS)
+    for original in native.list_by_class(NATIVE_CLASS):
+        shape = loadshape.device_shape(native, original, f"Storage {original.name}")
+        if shape is None:
+            continue
+        battery, _ = fill_defaults(FIELDS, original, defaults)
+        kw_rated = float(battery.kWrated)
+        kva = float(battery.kVA) if battery.kVA is not None else kw_rated
+        idling_kw = float(battery.pct_IdlingkW) * kw_rated / 100
+        points[mrid(PREFIX, battery.name, lowercase=True) + loadshape.DEVICE_SCHEDULE_SUFFIX] = loadshape.DevicePoints(
+            loadshape.point_times(shape),
+            [follow_power(value, kw_rated=kw_rated, kva=kva, idling_kw=idling_kw) + 0.0 for value in shape.mult], None)
+    return points
 
 
 def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Document:
@@ -211,7 +254,7 @@ def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Docum
     if not batteries:
         return Document(name="storage", statements=[], profile=CIM_PROFILE)
     defaults = dss_defaults(NATIVE_CLASS)
-    connections, units = [], []
+    connections, units, schedules = [], [], []
     for original in batteries:
         _check(original)
         by_energy = native.last_of(original, "kWhstored", "pct_stored") == "kWhstored"
@@ -235,6 +278,8 @@ def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Docum
         units.append(Row([unit_id(PREFIX, battery), cell(rated), cell(stored), cell(minimum), cell(kw_rated),
                           cell(-kw_rated), cell(float(battery.pct_EffCharge)), cell(float(battery.pct_EffDischarge)),
                           cell(idling_kw), dispatch.state, row.cells[0]]))
+        if loadshape.device_shape(native, original, f"Storage {battery.name}") is not None:
+            schedules.append(loadshape.device_schedule_row(row.cells[0], battery))
     statements = [
         Table(CONNECTION, connection_columns(container), connections,
               comment="derived: p by the state (battery_dispatch): -kW or -kWrated x %Discharge discharging, "
@@ -246,5 +291,7 @@ def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Docum
               comment="derived: storedE = kWhstored or %stored x kWhrated; minimumE = %reserve x kWhrated; "
                       "idlingP = %IdlingkW x kWrated"),
     ]
+    if schedules:
+        statements.append(loadshape.device_schedules(schedules))
     return Document(name="storage", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(batteries)))

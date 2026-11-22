@@ -2,7 +2,8 @@
 (``GLM_REWRITE_PLAN.md`` section 8.2, ``docs/EXPORT_MAPPING.md#x0-framework-writer-nodes-and-the-swing``).
 
 The deck is the model's ``clock`` block, its ``#set`` globals, one ``module`` block per module, its ``class``
-blocks (``class player { double value; }``), then one ``object <class> { ... }`` per record in ``WRITE_ORDER`` (each
+blocks (``class player { double value; }``), its ``schedule`` blocks (``GlmModel.schedules``, one rule per line),
+then one ``object <class> { ... }`` per record in ``WRITE_ORDER`` (each
 class after the classes it names), the records of a class in name order. A property is the slot's GLM name and its
 value; an unset slot is not written, unless the model holds an expression for it (``<player>.value*K``), written as
 is. Each player's tape (``GlmModel.tapes``) is written to its ``file`` beside the deck, one ``time,value`` row per
@@ -48,6 +49,11 @@ WRITE_ORDER = (
 
 #: GlmObject slots that are object bookkeeping, not properties (``name`` is written first, the others never set)
 _FIRST = "name"
+
+
+def _schedule_block(name: str, rules: list[str]) -> str:
+    """``schedule <name> { <rule>; ... }``: a schedule's rules as written."""
+    return "\n".join([f"schedule {name} {{", *(f"  {rule};" for rule in rules), "}"])
 
 
 def format_float(value: float) -> str:
@@ -100,6 +106,7 @@ class GlmWriter(FormatWriter):
         blocks += [f"#define {name}={value}" for name, value in model.defines.items()]
         blocks += [_settings_block(f"module {name}", settings) for name, settings in model.modules.items()]
         blocks += [_class_block(name, properties) for name, properties in model.classes.items()]
+        blocks += [_schedule_block(name, rules) for name, rules in model.schedules.items()]
         players = {str(player.name) for player in model.list_by_class(schema.Player)}
         if players != set(model.tapes):
             raise ValueError(f"GlmWriter: players {sorted(players)} and tapes {sorted(model.tapes)} differ")

@@ -6,6 +6,6 @@ Profile = cim18v17
 
 # p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
 # defaulted: customerCount=1 on each record's first consumer (GLM has no customer count; a record is one service, its 240 V part not counted again)
-# a base <player>.value*K: p, q from K; the player's group (S8-1)
+# a base <player>.value*K or <schedule>*K: p, q from K; the player's or schedule's group (S8-1, S9-1)
 Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
     ld_tl_play, tl_play, tm2, s1s2, Y, true, 5588.241999999999, 1836.7663212929406, 1, zip_constant_pq, bv_240v, lg_zipload

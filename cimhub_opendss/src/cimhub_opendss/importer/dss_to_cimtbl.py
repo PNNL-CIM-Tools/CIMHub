@@ -198,18 +198,25 @@ class DssImporter(CimtblImporter):
                            parts=parts)
 
     def to_cim(self, model, *, network=None, artifact_dir=None):
-        """The core ``to_cim``, then the yearly shapes' points, keyed by their bound schedules' uri (S8)."""
+        """The core ``to_cim``, then the yearly shapes' points, keyed by their bound schedules' uri: the load groups'
+        (S8, ``RegularTimePoint``) and the devices' (S9, ``EnergyConnectionTimePoint``)."""
         bound = super().to_cim(model, network=network, artifact_dir=artifact_dir)
         value1, value2 = loadshape.shape_points(model)
-        if not value1:
+        devices = {**pvsystem.schedule_points(model), **storage.schedule_points(model),
+                   **generator.schedule_points(model)}
+        if not value1 and not devices:
             return bound
         if self.time_points is None:
-            _log.warning("the points of %d LoadShape(s) are dropped: pass DssImporter(time_points={}) to keep them: "
-                         "%s", len(value1), sorted(value1))
+            _log.warning("the points of %d LoadShape(s) and %d device schedule(s) are dropped: pass "
+                         "DssImporter(time_points={}) to keep them: %s", len(value1), len(devices),
+                         sorted(value1) + sorted(devices))
             return bound
-        from cimhub_core.time_points import add_regular_time_points  # the time-points extra
+        from cimhub_core.time_points import add_device_time_points, add_regular_time_points  # the time-points extra
 
-        add_regular_time_points(self.time_points, bound, value1, value2)
+        if value1:
+            add_regular_time_points(self.time_points, bound, value1, value2)
+        if devices:
+            add_device_time_points(self.time_points, bound, devices)
         return bound
 
     def bound_parts(self, model, network) -> list[Document]:

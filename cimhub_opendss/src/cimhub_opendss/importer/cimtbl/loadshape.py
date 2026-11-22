@@ -7,8 +7,10 @@ none). The points go to the Parquet sidecar (``shape_points``), not the artifact
 is in force from k x interval (engine-checked), so ``startTime`` is the epoch 2020-01-01T00:00Z (ditto's) plus one
 interval (TIMESERIES_NEEDS.md X2), and the shape's wrap-around has no CIM form (X4). Without ``npts`` the engine
 reads none of ``mult``, inline or from a file (engine-checked: the load stays constant), so such a shape is a group
-with no schedule, its name kept (EPRI M1's ``mult=1`` shapes). A shape no Load names as ``yearly`` (a PVSystem's
-irradiance) is not mapped: the master counts it.
+with no schedule, its name kept (EPRI M1's ``mult=1`` shapes). A shape a PVSystem, Storage or Generator names as
+``yearly`` is that device's own ``EnergyConnectionSchedule`` (S9: ``device_shape``, ``point_times`` and
+``device_schedules``, used by those mappers), not a group. A shape no Load or device names as ``yearly`` is not
+mapped: the master counts it.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#s8-load-shapes``.
 """
@@ -34,6 +36,11 @@ DEFAULT_INTERVAL_H = 1.0
 INTERVALS = {"interval": ("h", "hours"), "minterval": ("min", "minutes"), "sinterval": ("s", "seconds")}
 
 _GROUP, _SCHEDULE, _POINT = "ConformLoadGroup", "ConformLoadSchedule", "RegularTimePoint"
+#: the devices whose yearly shape is their own EnergyConnectionSchedule (S9)
+DEVICE_CLASSES = (schema.Pvsystem, schema.Storage, schema.Generator)
+DEVICE_SCHEDULE = "EnergyConnectionSchedule"
+#: a device schedule's mRID: its EnergyConnection's + this
+DEVICE_SCHEDULE_SUFFIX = "_yearly"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
 _INTERVAL = "the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h"
 _FILE = _NOT_MAPPED + " (the reader reads mult=(file=...))"
@@ -96,14 +103,23 @@ class Shape(NamedTuple):
     qmult: list[float] | None
 
 
-def yearly_shapes(native) -> set[str]:
-    """The lowercased names of the shapes the deck's Loads name as ``yearly``."""
-    return {str(load.yearly).lower() for load in native.list_by_class(schema.Load) if load.yearly is not None}
+class DevicePoints(NamedTuple):
+    """A device's yearly schedule points (S9): when each sample is in force, p (kW) and q (kVAr) in the load sign;
+    None for a column the schedule does not carry (``time_points.add_device_time_points`` takes them)."""
+    times: list[datetime]
+    p: list[float] | None
+    q: list[float] | None
+
+
+def yearly_shapes(native, *classes) -> set[str]:
+    """The lowercased names of the shapes the deck's records of ``classes`` (default: Loads) name as ``yearly``."""
+    return {str(record.yearly).lower() for cls in classes or (schema.Load,) for record in native.list_by_class(cls)
+            if record.yearly is not None}
 
 
 def unmapped_count(native) -> int:
-    """How many of the deck's shapes no Load names as ``yearly`` (the master lists them as not mapped)."""
-    named = yearly_shapes(native)
+    """How many of the deck's shapes no Load or device names as ``yearly`` (the master lists them as not mapped)."""
+    named = yearly_shapes(native) | yearly_shapes(native, *DEVICE_CLASSES)
     return sum(1 for shape in native.list_by_class(NATIVE_CLASS) if str(shape.name).lower() not in named)
 
 
@@ -115,8 +131,45 @@ def normalized(values: list[float]) -> list[float]:
 
 def start_time(shape: Shape) -> str:
     """``startTime``: the epoch plus one interval, when sample 1 is in force (ISO 8601, UTC)."""
+    return point_times(shape)[0].isoformat()
+
+
+def point_times(shape: Shape) -> list[datetime]:
+    """When each sample is in force: sample k (from 1) at the epoch plus k intervals (engine-checked, S8)."""
     keyword = next(keyword for unit, keyword in INTERVALS.values() if unit == shape.unit)
-    return (EPOCH + timedelta(**{keyword: shape.interval})).isoformat()
+    step = timedelta(**{keyword: shape.interval})
+    return [EPOCH + step * number for number in range(1, len(shape.mult) + 1)]
+
+
+def device_shape(native, record, label: str) -> Shape | None:
+    """The shape a PVSystem, Storage or Generator names as ``yearly``, as the engine reads it (S9); None when it
+    names none or the engine reads no points (``npts`` unset). A name no LoadShape has raises, and so does a
+    ``qmult``: a device's shape scales its output by ``mult`` alone."""
+    if record.yearly is None:
+        return None
+    shapes = {str(shape.name).lower(): shape for shape in native.list_by_class(NATIVE_CLASS)}
+    found = shapes.get(str(record.yearly).lower())
+    if found is None:
+        raise ValueError(f"{label}: yearly={record.yearly} names no LoadShape of the deck")
+    shape = read_shape(native, found)
+    if shape is not None and shape.qmult is not None:
+        raise ValueError(f"{label}: yearly={record.yearly} has a qmult; a device's shape scales it by mult alone, so "
+                         "a qmult is not mapped")
+    return shape
+
+
+def device_schedules(rows: list[Row]) -> Table:
+    """The ``EnergyConnectionSchedule`` table of a device document: one row per device with a shape (S9), from
+    ``device_schedule_row``."""
+    return Table(DEVICE_SCHEDULE, [Column("mRID"), Column("name"), Column("EnergyConnection"),
+                                   Column("timeSeriesKind", default="schedule"),
+                                   Column("interpolationKind", default="previous")], rows,
+                 comment="a yearly LoadShape: the device's p and q at each sample, in the Parquet sidecar (S9)")
+
+
+def device_schedule_row(connection: str, record) -> Row:
+    """A device's schedule row: ``<connection mRID>_yearly``, named after its shape."""
+    return Row([connection + DEVICE_SCHEDULE_SUFFIX, str(record.yearly), connection])
 
 
 def read_shape(native, shape) -> Shape | None:

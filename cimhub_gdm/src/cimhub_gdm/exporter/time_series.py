@@ -12,7 +12,8 @@ loadshape: from ``startTime`` (naive UTC) every ``timeStep``, ``profile_name`` t
 groups share one). A ConformLoad's are multipliers (``use_actual=False``: value1 ``PMult``, value2 ``QMult``, none
 when value2 is unset, so Q follows P as in OpenDSS), labelled kilowatt and kilovar as ditto labels a loadshape's
 (its OpenDSS writer needs units; ``use_actual`` says they are multipliers); a NonConformLoad's are actual kW and kvar
-(``use_actual=True``). A group with no schedule or no points is written static, named in one WARNING.
+(``use_actual=True``). A group with no schedule or no points, or with days by season and day type (a GridLAB-D
+schedule's: a GDM series needs absolute times), is written static, named in one WARNING.
 """
 
 from __future__ import annotations
@@ -141,8 +142,8 @@ def add_group_series(system, context: ExportContext, consumers, time_points: dic
             system.add_time_series(series, *loads, profile_type=profile_type, profile_name=profile_name,
                                    use_actual=not found.conform)
     if static:
-        log.warning("%d load group(s) are written static (no schedule, or no points): %s", len(static),
-                    sorted(static))
+        log.warning("%d load group(s) are written static (no schedule, no points, or days by season and day type): "
+                    "%s", len(static), sorted(static))
 
 
 def _regular_axis(found) -> tuple[datetime, timedelta]:

@@ -108,7 +108,7 @@ def test_without_time_points_the_points_drop_with_a_warning(native, caplog):
     with caplog.at_level(logging.WARNING, logger="cimhub_opendss.importer.dss_to_cimtbl"):
         network = dss_to_cim(native, name="atom")
     assert len(network.graph[cim.ConformLoadSchedule]) == 3
-    assert "the points of 3 LoadShape(s) are dropped" in caplog.text
+    assert "the points of 3 LoadShape(s) and 0 device schedule(s) are dropped" in caplog.text
 
 
 def test_derived_values():

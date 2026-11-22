@@ -30,6 +30,7 @@ from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_core.load_response import zip_fractions
 from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, player,
+                                             schedule,
                                             regulator, series_reactor, spacing, switch, transformer,
                                             transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
@@ -61,7 +62,7 @@ class Site(NamedTuple):
 
 #: ``(native class, mapper(model, site))`` in ``Import`` order, after ``bus`` and ``source``. Each slice adds its
 #: mappers.
-MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
+MAPPING_ORDER: tuple[tuple[type | str, Callable[[GlmModel, Site], Document]], ...] = (
     *((native_class, lambda model, site, native_class=native_class: conductor.map_conductors(model, native_class))
       for native_class, _, _ in conductor.CATALOGS),
     (schema.LineSpacing, lambda model, site: spacing.map_line_spacing(model)),
@@ -79,7 +80,8 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     (schema.Transformer, lambda model, site: transformer.map_transformers(model, site.roots, site.buses,
                                                                           site.feeder)),
     (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
-    (player.NATIVE_CLASS, lambda model, site: player.map_players(model, load.references(model))),
+    (player.NATIVE_CLASS, lambda model, site: player.map_players(model, load.references(model, players=True))),
+    ("schedule", lambda model, site: schedule.map_schedules(model, load.references(model, players=False))),
     *((load_class.native, lambda model, site, load_class=load_class:
        load.map_loads(model, load_class, site.roots, site.buses, site.feeder, site.services))
       for load_class in load.LOAD_CLASSES),
@@ -192,6 +194,9 @@ def _not_mapped(model: GlmModel, mapped) -> list[tuple[str, int]]:
     """``(GLM type, count)`` of every object no mapper reads: schema classes and types the schema lacks."""
     counts = {cls.class_name: model.count(cls) for cls in model.graph if cls not in mapped}
     counts.update(model.not_read)
+    unread = len(set(model.schedules) - set(load.references(model, players=False)))
+    if unread:
+        counts["schedule"] = unread  # no load's base reads it (a house's)
     return sorted(counts.items())
 
 
@@ -245,14 +250,16 @@ class GlmImporter(CimtblImporter):
         return DocumentSet(master=map_master(model, parts, walked, authority=self.authority), parts=parts)
 
     def to_cim(self, model: GlmModel, *, network=None, artifact_dir=None):
-        """The core ``to_cim``, then the players' points, keyed by their bound schedules' uri (S8-4)."""
+        """The core ``to_cim``, then the players' and schedules' points, keyed by their bound schedules' uri (S8-4,
+        S9)."""
         bound = super().to_cim(model, network=network, artifact_dir=artifact_dir)
-        points = player.player_points(model)
+        points = {**player.player_points(model),
+                  **schedule.schedule_points(model, load.references(model, players=False))}
         if not points:
             return bound
         if self.time_points is None:
-            _log.warning("the points of %d player(s) are dropped: pass GlmImporter(time_points={}) to keep them: %s",
-                         len(points), sorted(points))
+            _log.warning("the points of %d player(s) and schedule(s) are dropped: pass GlmImporter(time_points={}) to "
+                         "keep them: %s", len(points), sorted(points))
             return bound
         from cimhub_core.time_points import add_regular_time_points  # the time-points extra
 

@@ -67,7 +67,7 @@ def test_without_time_points_the_points_drop_with_a_warning(scope, caplog):
     with caplog.at_level(logging.WARNING, logger="cimhub_gridlabd.importer.glm_to_cimtbl"):
         network = glm_to_cim(read(ATOM / "player.glm"), name=MODEL)
     assert len(network.graph[cim.ConformLoadSchedule]) == 1
-    assert "the points of 1 player(s) are dropped" in caplog.text
+    assert "the points of 1 player(s) and schedule(s) are dropped" in caplog.text
 
 
 # -- the tape rules (S8-3) -------------------------------------------------------------------------------------------
@@ -138,13 +138,13 @@ def test_a_player_with_no_class_block_raises(tmp_path):
 def test_two_players_on_one_load_raise(tmp_path):
     raises(tmp_path, "object player { name p; file p.player; }\nobject player { name q; file p.player; }\n"
                      "object load { name x; parent n2; phases ABN; base_power_A p.value*10; base_power_B q.value*10; }",
-           r"its bases name \['p', 'q'\]; a ConformLoad follows one player")
+           r"its bases name \['p.value', 'q.value'\]; a ConformLoad follows one player or schedule")
 
 
 def test_a_phase_off_the_player_raises(tmp_path):
     raises(tmp_path, "object player { name p; file p.player; }\n"
                      "object load { name x; parent n2; phases ABN; base_power_A p.value*10; base_power_B 10; }",
-           r"its bases name \['None', 'p'\]")
+           r"its bases name \['None', 'p.value'\]")
 
 
 def test_another_class_block_raises(tmp_path):

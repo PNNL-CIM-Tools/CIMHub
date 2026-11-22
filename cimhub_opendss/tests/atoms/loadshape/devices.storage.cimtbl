@@ -1,0 +1,20 @@
+# OpenDSS Storage -> PowerElectronicsConnection + BatteryUnit on its bus: the snapshot dispatch (kW when set,
+# else State), in the load sign (discharge is negative p).
+# Source table: Storage (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#storage
+
+Profile = cim18v17
+
+# derived: p by the state (battery_dispatch): -kW or -kWrated x %Discharge discharging, kWrated x %Charge charging, idlingP waiting; capped at kVA
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), maxIFault, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: conn=wye, pf=1.0, pct_reserve=20.0, State=idling, pct_Discharge=100.0, pct_Charge=100.0,
+    # pct_EffCharge=90.0, pct_EffDischarge=90.0, pct_IdlingkW=1.0, model=1, Vminpu=0.9, enabled=true
+    storage_s1, s1, b1, , Y, 80.0, 4.16, 1.0, 0.0, 80.0, -80.0, 1.1111111111111112, true, bv_4p16kv
+
+# derived: storedE = kWhstored or %stored x kWhrated; minimumE = %reserve x kWhrated; idlingP = %IdlingkW x kWrated
+Table BatteryUnit: mRID, ratedE (kWh), storedE (kWh), minimumE (kWh), maxP (kW), minP (kW), chargingEfficiency (percent), dischargingEfficiency (percent), idlingP (kW), batteryState, PowerElectronicsConnection, EquipmentContainer=fdr_atom
+    storage_s1_unit, 1000.0, 500.0, 200.0, 100.0, -100.0, 90.0, 90.0, 1.0, waiting, storage_s1
+
+# a yearly LoadShape: the device's p and q at each sample, in the Parquet sidecar (S9)
+Table EnergyConnectionSchedule: mRID, name, EnergyConnection, timeSeriesKind=schedule, interpolationKind=previous
+    storage_s1_yearly, cycle, storage_s1

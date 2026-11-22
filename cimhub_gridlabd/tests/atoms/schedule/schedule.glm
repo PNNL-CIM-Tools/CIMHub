@@ -1,0 +1,37 @@
+// S9 atom: GridLAB-D schedules read by load bases (<schedule>*K) on the S3a line atom (its n5, tm2).
+// zip1: the first six hours of IEEE13_houses' ZIP1base_power (half-hour rules, every day, no ';'), 0 after them.
+// heat: a winter (December to February, written 12,1-2) and the rest of the year, each with weekday and weekend
+// days; a summer weekend has no rule, so 0. waterdemand: a schedule no load reads (a house's), not mapped.
+#include "../line/line.glm"
+
+schedule zip1 {
+	00-29  00   *   *  *   1.686360
+	30-59  00   *   *  *   1.616535
+	00-29  01   *   *  *   1.593260
+	30-59  01   *   *  *   1.553267
+	00-29  02   *   *  *   1.539935
+	30-59  02   *   *  *   1.523217
+	00-29  03   *   *  *   1.517644
+	30-59  03   *   *  *   1.526276
+	00-29  04   *   *  *   1.529154
+	30-59  04   *   *  *   1.579583
+	00-29  05   *   *  *   1.596393
+	30-59  05   *   *  *   1.731125
+}
+schedule heat {
+  * 0-6 * 12,1-2 1-5 1.2;
+  * 7-23 * 12,1-2 1-5 0.9;
+  * * * 12,1-2 0,6 1.1;
+  * 6-21 * 3-11 1-5 0.6;
+}
+schedule waterdemand {
+  * 6-8 * * * 2.5;
+}
+
+// IEEE13_cdpsm ld_670a phase A's constant-current base, on zip1
+object load { name ld_zip; parent n5; phases AN; nominal_voltage 2401.78;
+  base_power_A zip1*19723.08; current_fraction_A 1.0; current_pf_A 0.861934; }
+// a split-phase house, both legs on heat
+object triplex_load { name tl_heat; parent tm2; phases AS; nominal_voltage 120;
+  base_power_1 heat*2941.18; power_fraction_1 1.0; power_pf_1 0.95;
+  base_power_2 heat*2941.18; power_fraction_2 1.0; power_pf_2 0.95; }

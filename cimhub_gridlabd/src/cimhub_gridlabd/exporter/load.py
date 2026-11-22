@@ -19,8 +19,9 @@ another exponent raises, as does a negative part (generation): GLM's base_power 
 power is a load with no base.
 
 A ConformLoad whose group's schedule is a player (``player.py``) writes each base as ``<player>.value*<base>`` (an
-expression, as the reader keeps it); its 240 V part must follow the same player. A ConformLoad whose group has no
-schedule or no points, and a NonConformLoad, are written static, their groups named in one warning (X29).
+expression, as the reader keeps it), and one whose group's days are a GLM schedule (``schedule.py``) as
+``<schedule>*<base>``; its 240 V part must follow the same source. A ConformLoad whose group has no schedule or no
+points, and a NonConformLoad, are written static, their groups named in one warning (X29, X30).
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ from cimhub_core.getters.load import get_load_response, get_phase_loads
 from cimhub_core.getters.load_schedule import get_load_schedule
 from cimhub_core.getters.terminals import get_terminal_nodes
 from cimhub_core.names import export_name
-from cimhub_gridlabd.exporter import player
+from cimhub_gridlabd.exporter import player, schedule
 from cimhub_gridlabd.exporter.buses import letters
 from cimhub_gridlabd.exporter.units import glm_unit
 from cimhub_gridlabd.glm_writer import format_float
@@ -60,7 +61,8 @@ _SLOTS = {
     "nominal_voltage": Slot("written", "its bus's"),
 }
 _PER_PHASE = Slot("written", "base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's "
-                             "schedule is a player (X29)")
+                             "schedule is a player (X29), <schedule>*<base> on one whose group's days are a GLM "
+                             "schedule (X30)")
 SLOTS = {
     schema.Load: with_default(schema.Load, {
         **_SLOTS, **{f"base_power_{letter}": _PER_PHASE for letter in "ABC"},
@@ -106,7 +108,7 @@ def export(context) -> list:
         name = context.names.name(consumer, drop=drop)
         if follows is not None:
             for slot in [slot for slot in slots if slot.startswith("base_power_")]:
-                context.model.expressions[(name, slot)] = f"{follows}.value*{format_float(slots.pop(slot))}"
+                context.model.expressions[(name, slot)] = f"{follows}*{format_float(slots.pop(slot))}"
         records.append(native_class(name=name, **slots))
     if static:
         _log.warning("%d load group(s) are written static (no schedule, no points, or a NonConformLoad's): %s",
@@ -115,8 +117,9 @@ def export(context) -> list:
 
 
 def _player(context, consumer, players: dict, static: set) -> str | None:
-    """The player the consumer's base follows, or None (``players``: schedule uri -> player name or None, so each
-    schedule's points are checked once; ``static``: the groups written static)."""
+    """What the consumer's base reads, ``<player>.value`` or ``<schedule>``, or None (``players``: schedule uri ->
+    player name or None, so each schedule's points are checked once; ``static``: the groups written static). A group
+    of days reads the schedule ``schedule.py`` wrote for it."""
     found = get_load_schedule(consumer)
     if found is None:
         return None
@@ -126,7 +129,11 @@ def _player(context, consumer, players: dict, static: set) -> str | None:
             has_points = player.points(context, found.schedule) is not None
             players[uri] = player.player_name(context, found.schedule) if has_points else None
         if players[uri] is not None:
-            return players[uri]
+            return f"{players[uri]}.value"
+    if found.conform and found.days:
+        name = schedule.schedule_name(context, found.group)
+        if name in context.model.schedules:
+            return name
     static.add(str(found.group.name or found.group.mRID))
     return None
 

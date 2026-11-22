@@ -7,32 +7,39 @@ Profile = cim18v17
 
 # derived: p = -(Pmpp x irradiance, capped at %Pmpp of Pmpp, cut to fit kVA), 0 when Pmpp x irradiance is below %Cutout (pv_power); q = -kvar
 Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), maxIFault, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
-    # defaulted: pct_Pmpp=100.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    # defaulted: pct_Pmpp=100.0, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
     pv_house,    House,    house, s1s2, Y, 5.0,    0.208,               -4.0,    0.0,                5.0,    -5.0,    1.1111111111111112, true, bv_240v
-    # defaulted: pct_Pmpp=100.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    # defaulted: pct_Pmpp=100.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
     pv_school,   School,   b2,    ,     Y, 300.0,  0.48,                -240.0,  0.0,                300.0,  -300.0,  1.1111111111111112, true, bv_480v
     # off: below %Cutout of kVA
-    # defaulted: phases=3, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    # defaulted: phases=3, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
     pv_dim,      dim,      b2,    ,     Y, 12.0,   0.48,                0.0,     0.0,                12.0,   -12.0,   1.1111111111111112, true, bv_480v
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
     pv_dpv,      dpv,      b2,    ,     D, 60.0,   0.48,                -50.0,   0.0,                60.0,   -60.0,   1.1111111111111112, true, bv_480v
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9,
-    # enabled=true
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1,
+    # Vminpu=0.9, enabled=true
     pv_farm,     farm,     b1,    ,     Y, 1000.0, 4.16,                -1000.0, 0.0,                1000.0, -1000.0, 1.1111111111111112, true, bv_4p16kv
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_kvarlast, kvarlast, b2,    ,     Y, 12.0,   0.48,                -10.0,   -3.0,               12.0,   -12.0,   1.1111111111111112, true, bv_480v
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_lead,     lead,     b2,    ,     Y, 12.0,   0.48,                -10.0,   4.843221048378526,  12.0,   -12.0,   1.1111111111111112, true, bv_480v
-    # defaulted: irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_leg,      leg,      house, s2,   Y, 3.3,    0.20784609690826525, -3.0,    0.0,                3.3,    -3.3,    1.1111111111111112, true, bv_240v
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_pflast,   pflast,   b2,    ,     Y, 12.0,   0.48,                -10.0,   -4.843221048378526, 12.0,   -12.0,   1.1111111111111112, true, bv_480v
-    # defaulted: phases=3, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_pmppcap,  pmppcap,  b2,    ,     Y, 12.0,   0.48,                -6.0,    0.0,                12.0,   -12.0,   1.1111111111111112, true, bv_480v
-    # defaulted: irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
-    pv_primary,  primary,  b1,    C,    Y, 120.0,  4.156921938165305,   -120.0,  0.0,                120.0,  -120.0,  1.1111111111111112, true, bv_4p16kv
-    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
     # enabled=true
+    pv_kvarlast, kvarlast, b2,    ,     Y, 12.0,   0.48,                -10.0,   -3.0,               12.0,   -12.0,   1.1111111111111112, true, bv_480v
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
+    pv_lead,     lead,     b2,    ,     Y, 12.0,   0.48,                -10.0,   4.843221048378526,  12.0,   -12.0,   1.1111111111111112, true, bv_480v
+    # defaulted: irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
+    pv_leg,      leg,      house, s2,   Y, 3.3,    0.20784609690826525, -3.0,    0.0,                3.3,    -3.3,    1.1111111111111112, true, bv_240v
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
+    pv_pflast,   pflast,   b2,    ,     Y, 12.0,   0.48,                -10.0,   -4.843221048378526, 12.0,   -12.0,   1.1111111111111112, true, bv_480v
+    # defaulted: phases=3, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    pv_pmppcap,  pmppcap,  b2,    ,     Y, 12.0,   0.48,                -6.0,    0.0,                12.0,   -12.0,   1.1111111111111112, true, bv_480v
+    # defaulted: irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9,
+    # enabled=true
+    pv_primary,  primary,  b1,    C,    Y, 120.0,  4.156921938165305,   -120.0,  0.0,                120.0,  -120.0,  1.1111111111111112, true, bv_4p16kv
+    # defaulted: phases=3, irradiance=1.0, pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1,
+    # Vminpu=0.9, enabled=true
     pv_vars,     vars,     b2,    ,     Y, 12.0,   0.48,                -10.0,   -3.0,               12.0,   -12.0,   1.1111111111111112, true, bv_480v
 
 Table PhotoVoltaicUnit: mRID, maxP (kW), minP (kW), irradiance (kW/m2), PowerElectronicsConnection, EquipmentContainer=fdr_atom

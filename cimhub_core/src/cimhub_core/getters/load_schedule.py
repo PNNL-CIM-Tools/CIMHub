@@ -1,8 +1,10 @@
 """A load's group schedule: ``ConformLoad → ConformLoadGroup ← ConformLoadSchedule`` (the same for NonConformLoad).
 
 A conform load follows its group's curve as a multiplier of its own p and q (a GridLAB-D player, a DSS LoadShape);
-a non-conform load's group schedule is in its value units (``value1Unit``). One schedule per group: CIM allows one
-per season and day type, which no format here holds yet, so several raise. The points are in the Parquet sidecar
+a non-conform load's group schedule is in its value units (``value1Unit``). A group has either one time series (a
+schedule with no Season and no DayType: a player's or a DSS LoadShape's, from its ``startTime``) or a recurring day
+per season and day type (a GridLAB-D schedule's, ``startTime`` a time of day); two time series, or both kinds, raise.
+The points are in the Parquet sidecar
 (``cimhub_core.time_points``, ``RegularTimePoint``), not on the schedule: ``get_schedule_points`` reads a schedule's
 from the sidecar's rows split by schedule (``time_points.rows_by_schedule``), so this module needs no pyarrow.
 """
@@ -23,9 +25,10 @@ _log = logging.getLogger(__name__)
 class LoadSchedule(NamedTuple):
     conform: bool  # True: ConformLoad (a multiplier); False: NonConformLoad
     group: cim.LoadGroup
-    schedule: cim.SeasonDayTypeSchedule | None  # None: the group has no schedule (only its name is known)
-    start: str | None  # startTime as written (ISO 8601, with its offset)
-    step: float | None  # timeStep in seconds
+    schedule: cim.SeasonDayTypeSchedule | None  # the one time series; None: none (only days, or only the name)
+    start: str | None  # the time series' startTime as written (ISO 8601, with its offset)
+    step: float | None  # the time series' timeStep in seconds
+    days: tuple = ()  # the schedules of a Season or DayType (a recurring day), by mRID
 
 
 def get_load_schedule(consumer: cim.EnergyConsumer) -> LoadSchedule | None:
@@ -40,11 +43,15 @@ def get_load_schedule(consumer: cim.EnergyConsumer) -> LoadSchedule | None:
         return None
     if group is None:
         return None
-    if len(schedules) > 1:
-        raise ValueError(f"{describe(group)}: {len(schedules)} schedules (seasons or day types); one is read")
-    if not schedules:
-        return LoadSchedule(conform, group, None, None, None)
-    [schedule] = schedules
+    days = tuple(sorted((schedule for schedule in schedules if schedule.Season is not None
+                         or schedule.DayType is not None), key=lambda schedule: schedule.mRID))
+    series = [schedule for schedule in schedules if schedule not in days]
+    if len(series) > 1 or (series and days):
+        raise ValueError(f"{describe(group)}: {len(series)} schedules with no Season or DayType and {len(days)} "
+                         "with one; a group has one time series or days by season and day type")
+    if not series:
+        return LoadSchedule(conform, group, None, None, None, days)
+    [schedule] = series
     return LoadSchedule(conform, group, schedule, schedule.startTime, get_qty(schedule, "timeStep", "s"))
 
 
@@ -76,7 +83,7 @@ def get_schedule_points(schedule: cim.RegularIntervalSchedule, rows_by_schedule:
 def log_dropped_schedules(consumers, target: str) -> None:
     """One WARNING naming the groups whose schedules ``target`` does not export (it writes the loads static)."""
     groups = sorted({str(found.group.name or found.group.mRID) for found in map(get_load_schedule, consumers)
-                     if found is not None and found.schedule is not None})
+                     if found is not None and (found.schedule is not None or found.days)})
     if groups:
         _log.warning("%s: the schedules of %d load group(s) are not exported; their loads are written static: %s",
                      target, len(groups), groups)
