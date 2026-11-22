@@ -42,7 +42,7 @@ print(consumer.name, get_phase_loads(consumer, "kW", "kVAr").total)   # 611 Phas
 | `cimhub_core.names` | export naming: `name`, `mrid` or `uri`, chosen by argument or `CIMHUB_NAME_SOURCE` |
 | `cimhub_core.cimtbl_testing` | `cim_scope`, `assert_matches_golden`; `CIMHUB_UPDATE_GOLDENS=1` regenerates goldens |
 | `cimhub_core.scaffold` | `scaffold_package`: generate a new format package |
-| `cimhub_core.time_points` | the Parquet sidecar of nc_schedule time points beside the CIM XML (`write_time_points`, `read_time_points`, `rows_by_schedule`); install `cimhub-core[time-points]` |
+| `cimhub_core.time_points` | the Parquet sidecar of schedule time points beside the CIM XML: nc_schedule `EnergyConnectionTimePoint`s and the `RegularTimePoint`s of any `RegularIntervalSchedule` (`write_time_points`, `read_time_points`, `rows_by_schedule`, `regular_time_points`, `add_regular_time_points`, `add_device_time_points`; a group schedule's points through `getters.load_schedule.get_schedule_points`, a device's through `getters.device_schedule.get_device_schedule`); install `cimhub-core[time-points]` |
 
 Topology (spanning trees, islands, voltage zones) comes from `cimtopology`, not from core.
 

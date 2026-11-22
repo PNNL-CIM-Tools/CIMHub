@@ -3,8 +3,10 @@
 The line's PerLengthImpedance picks the GDM class: PerLengthPhaseImpedance → MatrixImpedanceBranchEquipment,
 PerLengthSequenceImpedance → SequenceImpedanceBranchEquipment. GDM puts the line's ``ampacity`` on the catalog, so one
 GDM equipment is made per (catalog, normal current limit): ``<catalog>`` for the first limit seen, ``<catalog>_2``
-and on for others (X3). A line with a WireConfiguration is a GeometryBranch on its wires and positions (``geometry.py``, X4), never a
-computed matrix (CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md).
+and on for others (X3). A line with geometry (a WireConfiguration naming a WireSpacing, ``get_line_geometry``) is a
+GeometryBranch on its wires and positions (``geometry.py``, X4), never a computed matrix
+(CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md), even when its configuration also holds a PerLengthImpedance. Otherwise the
+PerLengthImpedance is the line's own or its WireConfiguration's (a template LineCode, ``get_line_code``).
 
 GDM holds capacitance, CIM susceptance: C = b / (2πf) at the importer's 60 Hz, the inverse of its ``susceptance``.
 """
@@ -17,7 +19,8 @@ import cimprofiles.cim18.cim18v17 as cim
 import numpy as np
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.current_limits import get_current_limits
-from cimhub_core.getters.line_impedance import get_line_phase_impedance_matrix, get_line_sequence_impedance_per_length
+from cimhub_core.getters.line_impedance import (get_line_code, get_line_geometry, get_line_phase_impedance_matrix,
+                                                get_line_sequence_impedance_per_length)
 from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes
 from gdm.quantities import CapacitancePULength, ReactancePULength, ResistancePULength
 from gdm.systems.distribution.components import GeometryBranch, MatrixImpedanceBranch, SequenceImpedanceBranch
@@ -85,18 +88,16 @@ SLOTS = {
 
 
 def export(line: cim.ACLineSegment, context: ExportContext):
-    code = line.PerLengthImpedance
     phases = get_conductor_phases(line)
-    if line.WireConfiguration is not None:
-        if code is not None:
-            raise ValueError(f"{describe(line)}: has both a WireConfiguration and a PerLengthImpedance")
+    code = get_line_code(line)
+    if get_line_geometry(line) is not None:
         component_class, equipment = GeometryBranch, geometry.geometry_equipment(line, len(phases), context)
     elif isinstance(code, cim.PerLengthPhaseImpedance):
         component_class, equipment = MatrixImpedanceBranch, catalog(line, code, context)
     elif isinstance(code, cim.PerLengthSequenceImpedance):
         component_class, equipment = SequenceImpedanceBranch, catalog(line, code, context)
     else:
-        raise ValueError(f"{describe(line)}: has no PerLengthImpedance or WireConfiguration; GDM lines are per "
+        raise ValueError(f"{describe(line)}: has neither geometry nor a PerLengthImpedance; GDM lines are per "
                          "length")
     node1, node2 = get_terminal_nodes(line)
     return component_class(
@@ -128,7 +129,7 @@ def matrix_values(line: cim.ACLineSegment) -> dict:
     matrix = get_line_phase_impedance_matrix(line, IMPEDANCE_UNIT, ADMITTANCE_UNIT)
     size = len(matrix.phases)
     if matrix.g is not None and any(matrix.g.values()):
-        raise ValueError(f"{describe(line.PerLengthImpedance)}: a shunt conductance g has no GDM home")
+        raise ValueError(f"{describe(get_line_code(line))}: a shunt conductance g has no GDM home")
     susceptance = square(matrix.b, size) if matrix.b is not None else np.zeros((size, size))
     return {"r_matrix": ResistancePULength(square(matrix.r, size), GDM_IMPEDANCE_UNIT),
             "x_matrix": ReactancePULength(square(matrix.x, size), GDM_IMPEDANCE_UNIT),
@@ -138,7 +139,7 @@ def matrix_values(line: cim.ACLineSegment) -> dict:
 def sequence_values(line: cim.ACLineSegment) -> dict:
     """Positive and zero sequence values of the line's PerLengthSequenceImpedance."""
     values = get_line_sequence_impedance_per_length(line, IMPEDANCE_UNIT, ADMITTANCE_UNIT)
-    code = line.PerLengthImpedance
+    code = get_line_code(line)
     unset = [name for name in ("r0", "x0") if getattr(values, name) is None]
     if unset:
         raise ValueError(f"{describe(code)}: {', '.join(unset)} unset; GDM needs the zero sequence")

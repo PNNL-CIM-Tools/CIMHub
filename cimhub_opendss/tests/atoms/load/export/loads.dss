@@ -1,9 +1,8 @@
 Clear
 Set defaultbasefreq=60
 New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
-new Linecode.ln_l1_lc nphases=3 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m baseFreq=60
 new Xfmrcode.xc_ct phases=1 windings=3 conns=[wye wye wye] kVs=[2.4 0.12 0.12] kVAs=[25 25 25] Xhl=2.04 Xht=2.04 Xlt=1.36 %Rs=[0.6 1.2 1.2]
-new Line.ln_l1 linecode=ln_l1_lc phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 units=m
+new Line.ln_l1 phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m
 new Transformer.xf_ct XfmrCode=xc_ct buses=[b1.2.0 house.1.0 house.0.2]
 new Load.ld_ca phases=1 bus1=b1.3.1 kV=4.16 kW=170 model=5 conn=delta kvar=82.3347578224349 NumCust=1 enabled=Yes
 new Load.ld_cvr1 phases=1 bus1=b1.1 kV=2.40177711982884 kW=100 model=4 conn=wye kvar=32.8684105178863 CVRwatts=0.8 CVRvars=3 NumCust=1 enabled=Yes

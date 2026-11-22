@@ -26,6 +26,14 @@ CIM_DIFFERENCES = {
         "PowerElectronicsConnection pv_house.AssetDatasheet: expected '53cd40e1-4a74-56af-8ddb-273b080b75b3', got "
         "'71c3a9b8-51fb-5fbf-8113-b9accca6acce'",
     ],
+    #: GDM has no load group: the import makes each load an EnergyConsumer, its series its own schedule (T1,
+    #: TIMESERIES_NEEDS.md §8); with no time points (here) the loads come back static.
+    "load/scheduled": [
+        *(f"ConformLoad ld_{name}: missing" for name in "abc"),
+        "ConformLoadGroup lg_res: missing", "ConformLoadGroup lg_unknown: missing", "ConformLoadSchedule ls_res: missing",
+        *(f"EnergyConsumer ld_{name}: extra" for name in "abcp"),
+        "NonConformLoad ld_p: missing", "NonConformLoadGroup lg_plant: missing", "NonConformLoadSchedule ls_plant: missing",
+    ],
     #: The reference system's reg1666 as the regulator atom's (below): the impedance fill.
     "e2e/reference": ["TransformerTankConfiguration xc_reg1666.loadLoss: expected 0.0 watt, got 166.6 watt"],
     "regulator/regulators": [

@@ -393,8 +393,11 @@ Decision X5, the importer's decision 14 inverted:
 - **Catalogs (X3).** GDM puts the line's `ampacity` on the catalog, so one GDM equipment is made per (catalog, the
   line's normal current limit from `get_current_limits`). The first value seen is named `<catalog>`, and each later
   one `<catalog>_2`, `_3` in export order: no pre-pass. A line with no normal limit raises.
-- **Geometry (X4, `exporter/geometry.py`).** A line with a WireConfiguration is a GeometryBranch on a
-  GeometryBranchEquipment: native geometry, never a computed matrix (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`).
+- **Geometry (X4, `exporter/geometry.py`).** A line with geometry, a WireConfiguration that names a WireSpacing
+  (`get_line_geometry`), is a GeometryBranch on a GeometryBranchEquipment: native geometry, never a computed matrix
+  (`CONDUCTOR_GEOMETRY_ANTI_PATTERNS.md`), even when the configuration also holds its equivalent PerLengthImpedance.
+  Otherwise the PerLengthImpedance is the line's own or its WireConfiguration's, a template LineCode
+  (`get_line_code`).
   - The positions are the line's (`get_line_conductor_xy`, m): the spacing raised by the line's `ySpacingOffset`.
     So one GDM equipment is made per (configuration, positions, conductors), named `<configuration>`, then
     `<configuration>_<n>`.
@@ -409,8 +412,8 @@ Decision X5, the importer's decision 14 inverted:
   - A cable's `rated_voltage` is its `ratedVoltage` (read with `get_qty`: `get_wire_info` has none, and DSS has no
     such field). Unset, it is the line's BaseVoltage, line to line.
   - Every other wire value CIM can hold (radius, gmr, rAC25, rDC20, the cable's construction) raises when unset.
-- A line with neither a PerLengthImpedance nor a WireConfiguration (lumped r, x only) raises, and so does one with
-  both.
+- A line with neither geometry nor a PerLengthImpedance (lumped r, x only) raises, and so does one whose own
+  PerLengthImpedance differs from its WireConfiguration's (`get_line_code`).
 - `length` is `length` in m.
 
 The importer's OperationalLimitTypes have no `durationKind`, because `add_limit_type` has no keyword for it (B22 b,
@@ -539,6 +542,11 @@ Decision X7. `EnergyConsumer` → `DistributionLoad` + `LoadEquipment` + one `Ph
   or the voltage exponents. GDM still requires the fractions with exponents, so they are filled as constant power
   (`fills.ZIP_UNDER_EXPONENTS`); ditto then writes `Model=4`.
 - `num_customers` is `customerCount` on every phase.
+- **Load groups** (TIMESERIES_NEEDS.md §8). A ConformLoad and a NonConformLoad export as any load. Their group's one
+  schedule, with `RegularTimePoint` rows in `time_points`, is one `SingleTimeSeries` per value column shared by the
+  group's loads (`time_series.add_group_series`): a ConformLoad's multipliers (`use_actual=False`), a
+  NonConformLoad's actual kW and kvar (`use_actual=True`). A group with no schedule or no points is written static,
+  named in one WARNING.
 
 **DistributionLoad**
 
@@ -1054,6 +1062,8 @@ X4. `SeriesCompensator` → `DistributionReactor` between its two terminals' bus
     line bus as if line to ground, and the atoms' irradiance is not their output's share.
   - Each exported PV makes the p and q CIM holds, its irradiance set to its output's share of the panel.
   - Exported load series become one LoadShape per load, `UseActual=yes`, in kW and kvar (T1, T6).
+  - A ConformLoad group's series becomes one LoadShape of multipliers both its loads name as `yearly`; a
+    NonConformLoad group's one of actual kW, `UseActual=yes`, at its 15-minute interval (§8).
   - With capacitors and t_ln, it still solves.
   - An exported regulator bank (rb alone) holds its band, 121–123 V on its PT.
   - A strict xfail pins ditto 0.1.8's missing CircuitBreaker and Disconnector equipment writers. ditto writes their

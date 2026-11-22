@@ -1,0 +1,22 @@
+# GridLAB-D series_reactor -> SeriesCompensator.
+# Source table: series_reactor (records: 2)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s7-series-reactors
+
+Profile = cim18v17
+
+# r0 = r, x0 = x: GridLAB-D's reactor has no coupling between phases
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=fdr_atom
+    rx_hsb, hsb, n2,  rb1, 0.0, 14.798307, 0.0, 14.798307, bv_4p16kv
+    rx_r1,  r1,  rb1, rb2, 0.5, 2.0,       0.5, 2.0,       bv_4p16kv
+
+# SeriesCompensator has no per-phase class: a reactor on fewer than three phases gives its Terminals their phases here
+Update Table Terminal: mRID, phases
+    rx_r1_T1, B
+    rx_r1_T2, B
+
+Table OperationalLimitSet: mRID, Equipment
+    rx_hsb_limits, rx_hsb
+
+Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    rx_hsb_norm,  400.0, olt_normal,    rx_hsb_limits
+    rx_hsb_emerg, 400.0, olt_emergency, rx_hsb_limits

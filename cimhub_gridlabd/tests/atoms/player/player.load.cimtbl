@@ -1,0 +1,11 @@
+# GridLAB-D load -> EnergyConsumer or ConformLoad (+ EnergyConsumerPhase values).
+# Source table: load (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
+
+Profile = cim18v17
+
+# p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
+# defaulted: customerCount=1 on each record's first consumer (GLM has no customer count; a record is one service, its 240 V part not counted again)
+# a base <player>.value*K or <schedule>*K: p, q from K; the player's or schedule's group (S8-1, S9-1)
+Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    ld_ld_play, ld_play, n5, A, Y, true, 16999.99323672, 10000.005731892072, 1, zip_constant_i, bv_4p16kv, lg_zipload

@@ -1,0 +1,25 @@
+# OpenDSS PVSystem -> PowerElectronicsConnection + PhotoVoltaicUnit on its bus: the snapshot dispatch at
+# rated voltage, in the load sign (generation is negative p).
+# Source table: PVSystem (records: 3)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#pvsystem
+
+Profile = cim18v17
+
+# derived: p = -(Pmpp x irradiance, capped at %Pmpp of Pmpp, cut to fit kVA), 0 when Pmpp x irradiance is below %Cutout (pv_power); q = -kvar
+Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), maxIFault, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: pct_Pmpp=100.0, conn=wye, model=1, Vminpu=0.9, enabled=true
+    pv_p1, p1, b1, ,  Y, 110.0, 4.16,              -90.0,              -29.58156946609769, 110.0, -110.0, 1.1111111111111112, true, bv_4p16kv
+    # defaulted: pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    pv_p2, p2, b1, A, Y, 50.0,  4.159999999999994, -48.98979485566356, -10.0,              50.0,  -50.0,  1.1111111111111112, true, bv_4p16kv
+    # defaulted: pct_Pmpp=100.0, pf=1.0, conn=wye, pct_Cutin=20.0, pct_Cutout=20.0, model=1, Vminpu=0.9, enabled=true
+    pv_p3, p3, b1, ,  Y, 50.0,  4.16,              -20.0,              0.0,                50.0,  -50.0,  1.1111111111111112, true, bv_4p16kv
+
+Table PhotoVoltaicUnit: mRID, maxP (kW), minP (kW), irradiance (kW/m2), PowerElectronicsConnection, EquipmentContainer=fdr_atom
+    pv_p1_unit, 100.0, 0.0, 0.9, pv_p1
+    pv_p2_unit, 60.0,  0.0, 1.0, pv_p2
+    pv_p3_unit, 40.0,  0.0, 0.5, pv_p3
+
+# a yearly LoadShape: the device's p and q at each sample, in the Parquet sidecar (S9)
+Table EnergyConnectionSchedule: mRID, name, EnergyConnection, timeSeriesKind=schedule, interpolationKind=previous
+    pv_p1_yearly, sun, pv_p1
+    pv_p2_yearly, sun, pv_p2

@@ -37,7 +37,7 @@ object node { name n1; phases ABCN; nominal_voltage 7200; voltage_A 7200+0.5j; v
     assert (node.voltage_A.real, node.voltage_A.imag) == (7200.0, 0.5)
     assert node.voltage_B.real == pytest.approx(7200 * math.cos(math.radians(-120)))
     assert node.voltage_B.imag == pytest.approx(7200 * math.sin(math.radians(-120)))
-    assert model.polar == {("n1", "voltage_B")}
+    assert model.polar == {("n1", "voltage_B"): (7200.0, -120.0)}  # as written
 
 
 def test_macro_from_define_set_or_caller(tmp_path):

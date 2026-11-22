@@ -1,0 +1,18 @@
+// Device shapes (S9): PVs, a battery and a generator follow yearly LoadShapes, each its own EnergyConnectionSchedule.
+// sun (30 min) drives two PVs: p1 by pf, %Cutin = %Cutout = 10 (off at the ends); p2 by kvar, cut to fit its kVA at
+// the peak, off with its kvar kept at the ends. run (hourly): a model 1 generator by pf, down to 0. cycle (hourly): a
+// follow-mode battery that discharges, charges, idles, and is capped at kVA. p3 and the load have no shape.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Loadshape.sun npts=6 minterval=30 mult=(0 0.2 0.6 1.0 0.5 0.05)
+New Loadshape.run npts=4 interval=1 mult=(0.5 1 0.25 0)
+New Loadshape.cycle npts=4 interval=1 mult=(0.5 -0.5 0 1)
+New PVSystem.p1 bus1=b1 phases=3 kV=4.16 kVA=110 Pmpp=100 irradiance=0.9 pf=0.95 %cutin=10 %cutout=10 yearly=sun
+New PVSystem.p2 bus1=b1.1 phases=1 kV=2.40177711982884 kVA=50 Pmpp=60 irradiance=1 kvar=10 yearly=sun
+New PVSystem.p3 bus1=b1 phases=3 kV=4.16 kVA=50 Pmpp=40 irradiance=0.5
+New Generator.g1 bus1=b1 phases=3 kV=4.16 kW=200 pf=0.9 yearly=run
+New Storage.s1 bus1=b1 phases=3 kV=4.16 kWrated=100 kVA=80 kWhrated=1000 %stored=50 DispMode=follow yearly=cycle
+New Load.l1 bus1=b1 phases=3 kV=4.16 kW=500 kvar=100
+Set voltagebases=[4.16]
+Calcv

@@ -1,22 +1,22 @@
-# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or a synthesized template) or a Switch
+# OpenDSS Line -> ACLineSegment (by LineCode, LineGeometry or its own impedance) or a Switch
 # (Fuse / Recloser / LoadBreakSwitch by the control that switches it; DSS-9).
 # Source table: Line (records: 16)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#line-and-switches
 
 Profile = cim18v17
 
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_ieee13nodeckt, normallyInService
-    ln_632633, 632633, 632,  633, ABC, 500.0,  lc_mtx602, bv_4p16kv,
-    ln_632645, 632645, 632,  645, CB,  500.0,  lc_mtx603, bv_4p16kv,
-    ln_632670, 632670, mid,  670, ABC, 667.0,  lc_mtx601, bv_4p16kv,
-    ln_645646, 645646, 645,  646, CB,  300.0,  lc_mtx603, bv_4p16kv,
-    ln_650632, 650632, rg60, 632, ABC, 2000.0, lc_mtx601, bv_4p16kv,
-    ln_670671, 670671, 670,  671, ABC, 1333.0, lc_mtx601, bv_4p16kv,
-    ln_671680, 671680, 671,  680, ABC, 1000.0, lc_mtx601, bv_4p16kv,
-    ln_671684, 671684, 671,  684, AC,  300.0,  lc_mtx604, bv_4p16kv,
-    ln_684611, 684611, tap,  611, C,   300.0,  lc_mtx605, bv_4p16kv,
-    ln_684652, 684652, 684,  652, A,   800.0,  lc_mtx607, bv_4p16kv,
-    ln_692675, 692675, 692,  675, ABC, 500.0,  lc_mtx606, bv_4p16kv,
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_ieee13nodeckt, normallyInService
+    ln_632633, 632633, 632,  633, ABC, 500.0,  lc_mtx602_wc, bv_4p16kv,
+    ln_632645, 632645, 632,  645, CB,  500.0,  lc_mtx603_wc, bv_4p16kv,
+    ln_632670, 632670, mid,  670, ABC, 667.0,  lc_mtx601_wc, bv_4p16kv,
+    ln_645646, 645646, 645,  646, CB,  300.0,  lc_mtx603_wc, bv_4p16kv,
+    ln_650632, 650632, rg60, 632, ABC, 2000.0, lc_mtx601_wc, bv_4p16kv,
+    ln_670671, 670671, 670,  671, ABC, 1333.0, lc_mtx601_wc, bv_4p16kv,
+    ln_671680, 671680, 671,  680, ABC, 1000.0, lc_mtx601_wc, bv_4p16kv,
+    ln_671684, 671684, 671,  684, AC,  300.0,  lc_mtx604_wc, bv_4p16kv,
+    ln_684611, 684611, tap,  611, C,   300.0,  lc_mtx605_wc, bv_4p16kv,
+    ln_684652, 684652, 684,  652, A,   800.0,  lc_mtx607_wc, bv_4p16kv,
+    ln_692675, 692675, 692,  675, ABC, 500.0,  lc_mtx606_wc, bv_4p16kv,
 
 Table OperationalLimitSet: mRID, Equipment
     # ratings: normamps from LineCode mtx602

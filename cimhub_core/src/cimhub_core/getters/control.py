@@ -4,7 +4,9 @@
 A ``RegulatingControl`` target is a plain float in primary units of its mode (V, A, W, VAr), times
 ``targetValueUnitMultiplier`` when set. ``get_regulating_control`` returns the target, deadband, limits and reverse
 settings in the caller's unit (default the mode's SI unit). A mode with no quantity here (powerFactor, timeScheduled,
-admittance, temperature) is returned as stored, and naming a unit or a multiplier for it raises.
+admittance, temperature) is returned as stored, and naming a unit or a multiplier for it raises. A disabled control
+(``enabled`` false: a manual regulator, GLM's ``MANUAL``) may leave ``targetValue`` unset; its target is then None.
+An enabled one, or one whose ``enabled`` is unset, must have one.
 
 Settings that CIM allows on either side must agree when both are set: ``ptRatio`` and ``ctRatio`` on a
 ``TapChanger`` and its ``TapChangerControl``. The regulated side adds its own: ``TapChanger`` delays and CT rating,
@@ -39,7 +41,7 @@ TARGET_ATTRIBUTES = ("targetValue", "targetDeadband", "minAllowedTargetValue", "
 class RegulatingSettings(NamedTuple):
     mode: cim.RegulatingControlModeKind
     unit: str | None  # what the targets are in; None for a mode returned as stored
-    target: float
+    target: float | None  # None only on a disabled control
     deadband: float | None
     min_allowed: float | None
     max_allowed: float | None
@@ -90,8 +92,8 @@ def get_regulating_control(control: cim.RegulatingControl, unit: str | None = No
         raise ValueError(f"{describe(control)}: mode is unset")
     if control.Terminal is None:
         raise ValueError(f"{describe(control)}: monitors no Terminal")
-    if control.targetValue is None:
-        raise ValueError(f"{describe(control)}: targetValue is unset")
+    if control.targetValue is None and control.enabled is not False:
+        raise ValueError(f"{describe(control)}: targetValue is unset on a control that is not disabled")
     target_unit, convert = _target_conversion(control, unit)
     targets = []
     for name in TARGET_ATTRIBUTES:

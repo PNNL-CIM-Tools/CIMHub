@@ -6,10 +6,10 @@ requires-python = ">=3.11,<3.14"
 license = "BSD-3-Clause"
 dependencies = [
     "cimhub-core",
-    "cimhub-opendss",
+    "cimhub-opendss[time-points]",
     "cimhub-raw",
     "cimhub-gdm",
-    "cimhub-gridlabd",
+    "cimhub-gridlabd[time-points]",
 ]
 
 [dependency-groups]
@@ -20,6 +20,7 @@ dev = [
     "ruff~=0.14.0",
     "opendssdirect.py~=0.9.4",   # the engine is a test oracle only
     "NREL-ditto~=0.1.8",         # DSS -> GDM for cimhub_gdm sweeps and DSS/GDM parity tests; pins grid-data-models==2.4.1
+    "gridlabd~=6.0.0",           # the GridLAB-D engine (PyPI wheel) is a test oracle only, as opendssdirect is for DSS
 ]
 
 [tool.uv]

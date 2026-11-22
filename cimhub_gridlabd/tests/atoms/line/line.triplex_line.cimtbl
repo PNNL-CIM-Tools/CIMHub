@@ -1,4 +1,4 @@
-# GridLAB-D triplex_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# GridLAB-D triplex_line -> ACLineSegment (by its configuration's WireConfiguration).
 # Source table: triplex_line (records: 2)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
 

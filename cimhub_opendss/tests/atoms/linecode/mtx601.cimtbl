@@ -1,12 +1,13 @@
-# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
+# OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (templates),
+# each with the WireConfiguration its lines reference (DSS-14).
 # Source table: LineCode (records: 1)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode
 
 Profile = cim18v17
 
-Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate
     # untranscribed: normamps=730.0
-    lc_mtx601, mtx601, 3, 60
+    lc_mtx601, mtx601, 3, 60, true
 
 # units=mi. row/column are conductor indices of the lower triangle.
 # derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS
@@ -17,3 +18,7 @@ Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/mi), x
     lc_mtx601_31, lc_mtx601, 3, 1, 0.158,  0.4236, 0.0
     lc_mtx601_32, lc_mtx601, 3, 2, 0.156,  0.5017, 0.0
     lc_mtx601_33, lc_mtx601, 3, 3, 0.3414, 1.0348, 0.0
+
+# the LineCodes' lines share each through its WireConfiguration, which has no WireSpacing (DSS-14)
+Table WireConfiguration: mRID, name, PerLengthImpedance
+    lc_mtx601_wc, mtx601, lc_mtx601

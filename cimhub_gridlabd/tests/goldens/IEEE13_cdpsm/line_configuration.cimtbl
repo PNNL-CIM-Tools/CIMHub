@@ -4,7 +4,7 @@
 
 Profile = cim18v17
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx601_ABC, name=lcon_mtx601_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx601_ABC, name=lcon_mtx601_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx601_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -21,7 +21,10 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx601_ABC, row, co
     # z33 (C)
     lc_lcon_mtx601_ABC_33, 3, 3, 0.3414, 1.0348, 0.0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx602_ABC, name=lcon_mtx602_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx601_ABC_wc, name=lcon_mtx601_ABC, PerLengthImpedance=lc_lcon_mtx601_ABC
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx602_ABC, name=lcon_mtx602_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx602_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -38,7 +41,10 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx602_ABC, row, co
     # z33 (C)
     lc_lcon_mtx602_ABC_33, 3, 3, 0.7436, 1.2112, 0.0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx603_CB, name=lcon_mtx603_CB, conductorCount=2, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx602_ABC_wc, name=lcon_mtx602_ABC, PerLengthImpedance=lc_lcon_mtx602_ABC
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx603_CB, name=lcon_mtx603_CB, conductorCount=2, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx603_CB, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -49,7 +55,10 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx603_CB, row, col
     # z33 (C)
     lc_lcon_mtx603_CB_22, 2, 2, 1.3238, 1.3569, 0.0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx603_CB_wc, name=lcon_mtx603_CB, PerLengthImpedance=lc_lcon_mtx603_CB
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -60,14 +69,20 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, col
     # z33 (C)
     lc_lcon_mtx604_AC_22, 2, 2, 1.3294, 1.3471, 0.0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx605_C, name=lcon_mtx605_C, conductorCount=1, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx604_AC_wc, name=lcon_mtx604_AC, PerLengthImpedance=lc_lcon_mtx604_AC
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx605_C, name=lcon_mtx605_C, conductorCount=1, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx605_C, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
     # z33 (C)
     lc_lcon_mtx605_C_11, 1, 1, 1.3292, 1.3475, 0.0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx606_ABC, name=lcon_mtx606_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx605_C_wc, name=lcon_mtx605_C, PerLengthImpedance=lc_lcon_mtx605_C
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx606_ABC, name=lcon_mtx606_ABC, conductorCount=3, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx606_ABC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -84,9 +99,15 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx606_ABC, row, co
     # z33 (C)
     lc_lcon_mtx606_ABC_33, 3, 3, 0.791721, 0.438352,   144744.98593925923
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx607_A, name=lcon_mtx607_A, conductorCount=1, calculatedFrequency (Hz)=60.0
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx606_ABC_wc, name=lcon_mtx606_ABC, PerLengthImpedance=lc_lcon_mtx606_ABC
+
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx607_A, name=lcon_mtx607_A, conductorCount=1, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx607_A, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
     # z11 (A)
     lc_lcon_mtx607_A_11, 1, 1, 1.3425, 0.5124, 88969.90394966294
+
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx607_A_wc, name=lcon_mtx607_A, PerLengthImpedance=lc_lcon_mtx607_A

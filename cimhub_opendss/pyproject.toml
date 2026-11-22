@@ -35,6 +35,12 @@ dependencies = [
   "pyyaml",
 ]
 
+[project.optional-dependencies]
+# schedule time points (players, LoadShapes) in the Parquet sidecar: cimhub_core.time_points
+time-points = [
+  "cimhub-core[time-points]>=2.1.0a1,<2.2",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/PNNL-CIM-Tools/CIMHub"
 "Bug Tracker" = "https://github.com/PNNL-CIM-Tools/CIMHub/issues"

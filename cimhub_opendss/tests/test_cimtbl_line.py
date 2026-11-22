@@ -64,7 +64,21 @@ def test_codes_bind():
     limits = {limit.OperationalLimitType.durationKind.value: float(limit.normalValue.to("A"))
               for limit in network.graph[cim.CurrentLimit].values() if limit.OperationalLimitSet.Equipment is l2}
     assert limits == {"normal": 200, "emergency": 345}
-    assert l2.PerLengthImpedance.mRID == "lc_mtx603" and float(l2.length.to("ft")) == pytest.approx(500)
+    assert float(l2.length.to("ft")) == pytest.approx(500)
+
+
+def test_a_linecode_is_a_template_its_lines_share_and_inline_values_are_the_lines_own():
+    """DSS-14: a LineCode is an isTemplate PerLengthImpedance behind a WireConfiguration with no WireSpacing; a
+    line's inline values are a PerLengthImpedance of its own, isTemplate=false."""
+    network = dss_to_cim(DssReader(ATOMS / "codes.dss").read_all(), name="atom")
+    segments = {seg.name: seg for seg in network.graph[network.cim.ACLineSegment].values()}
+    l2, seq1 = segments["l2"], segments["seq1"]
+    assert l2.PerLengthImpedance is None and l2.WireConfiguration.mRID == "lc_mtx603_wc"
+    assert l2.WireConfiguration.WireSpacing is None
+    code = l2.WireConfiguration.PerLengthImpedance
+    assert (code.mRID, code.isTemplate, code.WireConfiguration) == ("lc_mtx603", True, l2.WireConfiguration)
+    assert seq1.WireConfiguration is None
+    assert (seq1.PerLengthImpedance.mRID, seq1.PerLengthImpedance.isTemplate) == ("ln_seq1_lc", False)
 
 
 def test_geometry_binds():

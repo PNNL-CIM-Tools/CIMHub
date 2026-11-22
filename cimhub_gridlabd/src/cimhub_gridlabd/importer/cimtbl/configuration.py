@@ -3,8 +3,9 @@
 A line configuration is geometry or a matrix, never both (GridLAB-D would use the matrix, so a record with both
 raises). Geometry, ``spacing`` + ``conductor_X``: a ``WireConfiguration`` with one ``WireSequenceConfiguration``
 per conductor, numbered 1..n in ABCN order like its spacing's positions (S2-3). Matrix, ``z11``..``z33``: a
-``PerLengthPhaseImpedance`` with one ``PhaseImpedanceData`` per lower-triangle element, rows compacted to 1..n
-(CIM's range), and b derived from c at the base frequency.
+template ``PerLengthPhaseImpedance`` (``isTemplate=true``) with one ``PhaseImpedanceData`` per lower-triangle
+element, rows compacted to 1..n (CIM's range), and b derived from c at the base frequency; its lines share it through
+a ``WireConfiguration`` ``lc_<name>_wc`` that holds it and names no WireSpacing (skill ``wire-configuration``).
 
 A triplex configuration is geometry too: GridLAB-D computes its spacing from ``diameter`` and
 ``insulation_thickness`` (``triplex_spacing``), so that spacing is written as a derived ConductorDistanceSpacing.
@@ -38,7 +39,8 @@ _RATINGS = {slot: _RATING for slot in ("rating_summer_continuous", "rating_summe
                                        "rating_winter_continuous", "rating_winter_emergency")}
 
 LINE_FIELDS = {
-    "name": Field("copied", ((_WIRE, "name", None), (_PHASE, "name", None)), "mRID = wc_ or lc_ + name"),
+    "name": Field("copied", ((_WIRE, "name", None), (_PHASE, "name", None)),
+                  "mRID = wc_ or lc_ + name; a matrix's WireConfiguration lc_<name>_wc"),
     **HEADER_FIELDS,
     "spacing": Field("structural", note="geometry: WireConfiguration.WireSpacing = spc_ + spacing"),
     **{f"conductor_{letter}": Field("structural", note="geometry: one WireSequenceConfiguration, sequenceNumber "
@@ -105,11 +107,12 @@ def is_matrix(configuration) -> bool:
     return bool(_is_set(configuration, Z_SLOTS + C_SLOTS))
 
 
-def template(configuration) -> tuple[str, str]:
-    """``(ACLineSegment column, mRID)`` of the template a line on ``configuration`` references (S3a-2)."""
+def template(configuration) -> str:
+    """The mRID of the WireConfiguration a line on ``configuration`` references (S3a-2): its geometry's, or the one
+    that holds its matrix (skill ``wire-configuration``)."""
     if isinstance(configuration, schema.LineConfiguration) and is_matrix(configuration):
-        return "PerLengthImpedance", mrid(MATRIX_PREFIX, configuration.name)
-    return _WIRE, mrid(GEOMETRY_PREFIX, configuration.name)
+        return f"{mrid(MATRIX_PREFIX, configuration.name)}_wc"
+    return mrid(GEOMETRY_PREFIX, configuration.name)
 
 
 # ---------------------------------------------------------------------------
@@ -197,12 +200,16 @@ def _matrix(model: GlmModel, configuration, frequency: float) -> list:
     return [
         ObjectStatement(_PHASE, [(Column("mRID"), impedance_mrid), (Column("name"), str(configuration.name)),
                                  (Column("conductorCount"), str(len(diagonal))),
-                                 (Column("calculatedFrequency", "Hz"), cell(frequency))],
+                                 (Column("calculatedFrequency", "Hz"), cell(frequency)),
+                                 (Column("isTemplate"), "true")],
                         comment=untranscribed_values(LINE_FIELDS, configuration)),
         Table("PhaseImpedanceData", [Column("identifier"), Column("PhaseImpedance", default=impedance_mrid),
                                      Column("row"), Column("column"), Column("r", z_unit), Column("x", z_unit),
                                      Column("b", f"nS/{per_length}")], rows,
               comment="derived: b = 2 pi f c (b_from_c)"),
+        ObjectStatement(_WIRE, [(Column("mRID"), f"{impedance_mrid}_wc"), (Column("name"), str(configuration.name)),
+                                (Column("PerLengthImpedance"), impedance_mrid)],
+                        comment="the matrix's lines share it through this WireConfiguration (no WireSpacing)"),
     ]
 
 

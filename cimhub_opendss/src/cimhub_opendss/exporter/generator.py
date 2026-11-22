@@ -10,9 +10,15 @@ so a disabled control is not written. CIM has no machine reactance (U13), so ``X
 A wind turbine behind an inverter is a model 1 Generator at the unit's output (``inverter.inverter_pieces``): DSS has
 no inverter wind class, and IEEE 9500 writes its turbines as Generators. The inverter's q limits and ``maxIFault``
 have no home on a model 1 Generator, so they are not written. The deck reads back as a SynchronousMachine.
+
+A machine's own ``EnergyConnectionSchedule`` with points (S9) is its ``yearly`` LoadShape: mult = p / the written kW
+at each point, as the engine scales kW and kvar by mult. So the points' q must be the written kvar times mult (a
+model 3 machine's q is its control's and is not checked); a kW of 0 raises. A wind unit's schedule is not mapped.
 """
 
 from __future__ import annotations
+
+import math
 
 import cimprofiles.cim18.cim18v17 as cim
 
@@ -20,6 +26,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.control import get_equipment_control
 from cimhub_core.getters.der import get_der_output, get_machine_rating
 from cimhub_core.getters.in_service import get_in_service
+from cimhub_opendss.exporter import loadshape
 from cimhub_opendss.exporter.controls import control_enabled
 from cimhub_opendss.exporter.injection import device_connection, rated_kv
 from cimhub_opendss.exporter.inverter import inverter_pieces
@@ -56,16 +63,45 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     **{slot: Slot("unset", "no machine reactance or inertia in cim18v17 (U13); the engine's default")
        for slot in ("Xd", "Xdp", "Xdpp", "H", "D", "XRdp")},
     "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
+    "yearly": Slot("written", "the machine's EnergyConnectionSchedule as a LoadShape, mult = p / kW (S9)"),
     "like": Slot("not mapped", "the writer never writes like="),
 }, Slot("unset", _NOT_IN_CIM))}
+#: how far a point's q may stray from kvar x mult (kVAr, relative to the larger)
+Q_REL_TOL = 1e-6
 
 
-def export(context) -> list[schema.Generator]:
-    """One Generator per SynchronousMachine, then one per PowerElectronicsWindUnit."""
-    machines = [_generator(machine, context.names) for machine in context.objects(*CIM_CLASSES)]
-    turbines = [_wind_generator(piece) for connection in context.objects(cim.PowerElectronicsConnection)
-                for piece in inverter_pieces(connection, WIND_UNIT, NAMESPACE, context.names)]
-    return machines + turbines
+def export(context) -> list:
+    """One Generator per SynchronousMachine (its yearly LoadShape first when new), then one per
+    PowerElectronicsWindUnit."""
+    records = []
+    for machine in context.objects(*CIM_CLASSES):
+        generator = _generator(machine, context.names)
+        found = loadshape.device_schedule(context, machine, 1)
+        if found is not None:
+            generator.yearly, shapes = loadshape.device_yearly(context, found, _multipliers(machine, generator, found))
+            records += shapes
+        records.append(generator)
+    for connection in context.objects(cim.PowerElectronicsConnection):
+        pieces = inverter_pieces(connection, WIND_UNIT, NAMESPACE, context.names)
+        if pieces and loadshape.device_schedule(context, connection, len(pieces)) is not None:
+            raise ValueError(f"{describe(connection)}: a schedule on a wind unit is not mapped")
+        records += [_wind_generator(piece) for piece in pieces]
+    return records
+
+
+def _multipliers(machine, generator: schema.Generator, found) -> list[float]:
+    """mult = p / kW at each point; q must follow kvar x mult, unless the machine regulates its own voltage."""
+    if found.p is None:
+        raise ValueError(f"{describe(found.schedule)}: no p; a Generator's shape scales its kW")
+    if generator.kW == 0:
+        raise ValueError(f"{describe(found.schedule)}: the machine's kW is 0; a Generator's shape scales its kW")
+    mult = [p / generator.kW for p in found.p]
+    if found.q is not None and generator.model != "ConstantPV":
+        for number, (value, q) in enumerate(zip(mult, found.q), start=1):
+            if not math.isclose(q, generator.kvar * value, rel_tol=Q_REL_TOL, abs_tol=Q_REL_TOL):
+                raise ValueError(f"{describe(found.schedule)}: point {number} has q {q} kVAr, not kvar "
+                                 f"{generator.kvar} x mult {value}; the engine scales kvar with kW")
+    return mult
 
 
 def regulates_itself(machine: cim.SynchronousMachine) -> bool:

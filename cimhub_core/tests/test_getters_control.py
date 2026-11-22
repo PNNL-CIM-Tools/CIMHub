@@ -84,6 +84,12 @@ def test_required_settings_raise(attribute, message):
         get_regulating_control(control)
 
 
+def test_a_disabled_control_may_have_no_target():
+    control = _machine_control()
+    control.targetValue, control.enabled = None, False
+    assert get_regulating_control(control).target is None
+
+
 # get_tap_changer_control -------------------------------------------------------------------------------------------
 
 

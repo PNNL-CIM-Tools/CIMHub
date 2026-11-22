@@ -1,0 +1,82 @@
+id: https://gridlabd.org/schema/glm/tape/player
+name: player
+description: GridLAB-D player class
+imports:
+- linkml:types
+- ../types/common
+prefixes:
+  linkml: https://w3id.org/linkml/
+  glm: https://gridlabd.org/schema/glm/
+default_prefix: glm
+default_range: string
+classes:
+  player:
+    description: 'The tape module''s player: it plays a file of time,value rows into its parent''s property, or
+
+      into its own value when the deck declares class player { double value; } (the GridAPPS-D run-file pattern,
+
+      read as <player>.value by an expression). Written by hand from tape/tape.cpp:291-296 (PUBLISH_STRUCT, which
+
+      the C++ scrape does not read); the hidden checkpoint cursor (tape.cpp:306-333) is left out.
+
+
+      Type: Instance (tape)
+
+
+      CIM Mapping: ConformLoadGroup + ConformLoadSchedule (GLM_REWRITE_PLAN.md 8.9)'
+    is_a: glm_object
+    attributes:
+      property:
+        range: string
+        required: false
+        description: The parent's property the rows set (unset with no parent; the player's own value)
+        annotations:
+          order: 1
+          value_type: string
+          separator: ','
+          native_name: property
+      file:
+        range: string
+        required: false
+        description: The tape file of time,value rows, relative to the deck
+        annotations:
+          order: 2
+          value_type: string
+          separator: ','
+          native_name: file
+      filetype:
+        range: string
+        required: false
+        description: The tape's type (the file's extension by default)
+        annotations:
+          order: 3
+          value_type: string
+          separator: ','
+          native_name: filetype
+      mode:
+        range: string
+        required: false
+        description: The tape's open mode
+        annotations:
+          order: 4
+          value_type: string
+          separator: ','
+          native_name: mode
+      loop:
+        range: integer
+        required: false
+        description: The number of times the tape is repeated
+        annotations:
+          order: 5
+          value_type: int
+          separator: ','
+          native_name: loop
+      all_events_delta:
+        range: boolean
+        required: false
+        description: Every row's time enters deltamode
+        annotations:
+          order: 6
+          value_type: bool
+          separator: ','
+          native_name: all_events_delta

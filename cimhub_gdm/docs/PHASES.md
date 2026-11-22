@@ -92,6 +92,8 @@ two decks); the opt-in gdmloader sweep passes 8 of 8. With the Phase 3/4 classes
   triangle only (row ≥ column), identifier `<lc>_<row><column>`; raise on an asymmetric matrix; `conductorCount` = n;
   b = `susceptance(c, FREQUENCY_HZ)`; `calculatedFrequency` = 60 Hz.
 - SequenceImpedanceBranch → ACLineSegment with PerLengthSequenceImpedance (prefix per OPEN_DECISIONS 9).
+- Amended 2026-11-21 (DSS-14): both catalogs are templates (`isTemplate=true`) behind a WireConfiguration
+  `<lc>_wc` with no WireSpacing, which their lines name instead of a PerLengthImpedance (GDM_MAPPING.md §15).
 - GeometryBranch → ACLineSegment with WireConfiguration `wc_` → XYSpacing `spc_` (isTemplate) + XYConductorPosition
   `<spc>_<n>` + WireSequenceConfiguration `<wc>_<n>` → OverheadWireInfo `wire_` / ConcentricNeutralCableInfo
   `cable_`. Never substitute an impedance matrix for the geometry (`conductor-geometry` skill).

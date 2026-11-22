@@ -54,7 +54,8 @@ Table WireSequenceConfiguration: mRID, WireConfiguration, sequenceNumber, WireIn
 
 # --- impedance catalogs --------------------------------------------------------------------------------------------
 # untranscribed: construction=OVERHEAD (no home on PerLengthImpedance). ampacity rates each line using the code.
-Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+# Shared named catalogs, so templates (DSS-14): each sits behind the WireConfiguration <lc>_wc its lines name.
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate=true
     lc_mtx601, mtx601, 3, 60
     lc_mtx1ph, mtx1ph, 1, 60
 
@@ -72,16 +73,22 @@ Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/km), x
     lc_mtx1ph_11, lc_mtx1ph, 1, 1, 0.5, 0.9, 1281.7698026646356
 
 # derived: bch = 2 pi 60 x 10 nF/km = 3769.91 nS/km; b0ch = 2 pi 60 x 4 nF/km = 1507.96 nS/km
-Object PerLengthSequenceImpedance: mRID=lc_seq1, name=seq1, calculatedFrequency (Hz)=60, r (ohm/km)=0.3, x (ohm/km)=0.6, r0 (ohm/km)=0.6, x0 (ohm/km)=1.8, bch (nS/km)=3769.9111843077517, b0ch (nS/km)=1507.9644737231006
+Object PerLengthSequenceImpedance: mRID=lc_seq1, name=seq1, isTemplate=true, calculatedFrequency (Hz)=60, r (ohm/km)=0.3, x (ohm/km)=0.6, r0 (ohm/km)=0.6, x0 (ohm/km)=1.8, bch (nS/km)=3769.9111843077517, b0ch (nS/km)=1507.9644737231006
+
+# the catalogs' template WireConfigurations: a PerLengthImpedance, no WireSpacing
+Table WireConfiguration: mRID, name, PerLengthImpedance
+    lc_mtx601_wc, mtx601, lc_mtx601
+    lc_mtx1ph_wc, mtx1ph, lc_mtx1ph
+    lc_seq1_wc,   seq1,   lc_seq1
 
 # --- lines ---------------------------------------------------------------------------------------------------------
 # mtx3b is written C A B: conductor 1 is phase C.
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
-    ln_mtx3,  mtx3,  b1, b2, ABC, 2000, lc_mtx601
-    ln_mtx3b, mtx3b, b2, b3, CAB, 500,  lc_mtx601
-Table ACLineSegment: mRID, name, node1, node2, phases, length (km), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
-    ln_mtx1, mtx1, b2, b3, C,   0.3, lc_mtx1ph
-    ln_seq,  seq,  b1, b3, ABC, 1,   lc_seq1
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+    ln_mtx3,  mtx3,  b1, b2, ABC, 2000, lc_mtx601_wc
+    ln_mtx3b, mtx3b, b2, b3, CAB, 500,  lc_mtx601_wc
+Table ACLineSegment: mRID, name, node1, node2, phases, length (km), WireConfiguration, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+    ln_mtx1, mtx1, b2, b3, C,   0.3, lc_mtx1ph_wc
+    ln_seq,  seq,  b1, b3, ABC, 1,   lc_seq1_wc
 Object ACLineSegment: mRID=ln_geo, name=geo, node1=b6, node2=b7, phases=ABCN, length (m)=300, WireConfiguration=wc_g601, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
 Object ACLineSegment: mRID=ln_ug, name=ug, node1=b1, node2=b2, phases=ABC, length (ft)=100, WireConfiguration=wc_ug3, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
 

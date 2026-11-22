@@ -1,8 +1,7 @@
 Clear
 Set defaultbasefreq=60
 New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
-new Linecode.ln_l1_lc nphases=3 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m baseFreq=60
-new Line.ln_l1 linecode=ln_l1_lc phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 units=m
+new Line.ln_l1 phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m
 new Transformer.xf_t phases=3 windings=2 buses=[b1.1.2.3 b2.1.2.3] conns=[wye wye] kVs=[4.16 0.48] kVAs=[2000 2000] XHL=5 %Rs=[0.2 0.2]
 new Generator.gen_delta phases=3 bus1=b2.1.2.3 kv=0.48 kW=50 kvar=10.1529330317002 model=1 conn=delta kVA=250 enabled=Yes
 new Generator.gen_edited phases=3 bus1=b2.1.2.3 kv=0.48 kW=50 kvar=2.41935483870966 model=1 conn=wye kVA=775 enabled=Yes

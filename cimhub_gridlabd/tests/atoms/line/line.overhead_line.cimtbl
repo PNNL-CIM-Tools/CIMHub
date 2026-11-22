@@ -1,14 +1,12 @@
-# GridLAB-D overhead_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# GridLAB-D overhead_line -> ACLineSegment (by its configuration's WireConfiguration).
 # Source table: overhead_line (records: 3)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
 
 Profile = cim18v17
 
 Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_line
-    ln_l1, l1, src, n1, ABCN, 500.0, wc_lcon_601, bv_4p16kv
-
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_line
-    ln_line_l2, line_l2, n1, n4, AC, 300.0, lc_lcon_mtx604_AC, bv_4p16kv
+    ln_l1,      l1,      src, n1, ABCN, 500.0, wc_lcon_601,          bv_4p16kv
+    ln_line_l2, line_l2, n1,  n4, AC,   300.0, lc_lcon_mtx604_AC_wc, bv_4p16kv
 
 Table ACLineSegment: mRID, name, node1, node2, phases, length (m), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_line
     ln_overhead_line:3, overhead_line:3, n1, n5, AN, 21.0, wc_line_configuration:18, bv_4p16kv

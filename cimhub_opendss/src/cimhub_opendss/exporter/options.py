@@ -50,12 +50,15 @@ EARTH_MODELS = {cim.EarthModelKind.carson: "Carson", cim.EarthModelKind.deri: "D
 
 
 def earth_model(network) -> str | None:
-    """The one earth model of every WireConfiguration (``get_earth_resistivity``) and, when there are spacing lines,
+    """The one earth model of every geometry WireConfiguration (one with a WireSpacing; ``get_earth_resistivity``)
+    and, when there are spacing lines,
     of the network's one EarthResistivity (``get_network_earth``); DSS's earthmodel is the deck's. None when none
     names one (the engine's Deri). Models that differ raise, and so does a configuration without an
     EarthResistivity beside one with: it would take the other's model."""
     found = {}
     for configuration in network.graph.get(cim.WireConfiguration, {}).values():
+        if configuration.WireSpacing is None:
+            continue  # a template LineCode: no earth
         earth = get_earth_resistivity(configuration)
         found.setdefault(earth.model if earth is not None else None, describe(configuration))
     if any(is_spacing_line(line) for line in network.graph.get(cim.ACLineSegment, {}).values()):

@@ -69,9 +69,15 @@ def gridlabd_phase_power(model, record, slot_power: str, suffix: str) -> complex
     return complex(value.real, value.imag) * factor
 
 
+def all_consumers(network) -> dict:
+    """mRID -> consumer, a scheduled load's ConformLoad included (the graph is keyed by exact class)."""
+    return {str(consumer.mRID): consumer for cls in (cim.EnergyConsumer, cim.ConformLoad)
+            for consumer in network.list_by_class(cls)}
+
+
 def assert_gridlabd_loads(model, network) -> int:
     """Every record's per-phase power is its consumers' (get_phase_loads); returns the consumers checked."""
-    consumers = {str(consumer.mRID): consumer for consumer in network.list_by_class(cim.EnergyConsumer)}
+    consumers = all_consumers(network)
     checked = 0
     for load_class in load.LOAD_CLASSES:
         for record in model.list_by_class(load_class.native):
@@ -118,7 +124,7 @@ def test_atom_binds(scope):
     model = read(ATOM / "triplex.glm")
     network = glm_to_cim(model, name=MODEL)
     assert assert_gridlabd_loads(model, network) == 9
-    consumers = {str(consumer.mRID): consumer for consumer in network.list_by_class(cim.EnergyConsumer)}
+    consumers = all_consumers(network)
     # ld_delta: GLM's C on a delta load is the CA branch, the binder's child C on AC
     delta = consumers["ld_ld_delta"]
     assert get_phase_loads(delta).connection is cim.PhaseShuntConnectionKind.D
@@ -135,6 +141,11 @@ def test_atom_binds(scope):
     assert [child.phase.value for child in none.EnergyConsumerPhase] == ["A"]
     # each record is one service: its first consumer counts it, a split-phase record's 240 V part does not again
     assert (consumers["ld_tl_legs"].customerCount, consumers["ld_tl_legs_12"].customerCount) == (1, None)
+    # a base zipsched.value*K: a ConformLoad of zipsched's group, which has no schedule (no such player, S8-5)
+    for scheduled in ("ld_ld_sched", "ld_tl_house"):
+        assert isinstance(consumers[scheduled], cim.ConformLoad)
+        assert consumers[scheduled].LoadGroup.name == "zipsched"
+        assert consumers[scheduled].LoadGroup.ConformLoadSchedules == []
 
 
 # -- fail fast -------------------------------------------------------------------------------------------------------
@@ -159,7 +170,7 @@ def test_explicit_forms_raise(tmp_path, slot):
 
 def test_other_expression_raises(tmp_path):
     raises(tmp_path, "object load { name x; parent n2; phases AN; base_power_A zipsched.value*2+1; }",
-           r"only <schedule>.value\*<number> is mapped")
+           r"only <player>.value\*<number> and <schedule>\*<number> are mapped")
 
 
 def test_split_phase_load_raises(tmp_path):

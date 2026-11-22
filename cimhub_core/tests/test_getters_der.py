@@ -4,7 +4,7 @@ from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
-from cimtables import load_model
+from cimtables import load_model, load_text
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.der import (
@@ -13,11 +13,13 @@ from cimhub_core.getters.der import (
     MachineImpedance,
     get_battery_unit,
     get_der_output,
+    get_inverter_datasheet,
     get_inverter_rating,
     get_inverter_unit,
     get_inverter_units,
     get_machine_impedance,
     get_machine_rating,
+    get_photovoltaic_datasheet,
     get_photovoltaic_unit,
     get_unit_limits,
 )
@@ -203,6 +205,40 @@ def test_photovoltaic_irradiance_in_the_unit_asked_for_or_none():
     assert get_photovoltaic_unit(get_inverter_unit(_inverter("pv_p1")), "kW", "kW/m2",
                                  sign="generation").irradiance == pytest.approx(0.8)
     assert get_photovoltaic_unit(get_inverter_unit(_inverter("pv_p2")), sign="generation").irradiance is None
+
+
+DATASHEETS = """Profile = cim18v17
+Object SolarArrayInfo: mRID=arr, tiltAngle (deg)=30, orientationAzimuth (deg)=200, shadingFactor (percent)=80
+Object SolarPanelInfo: mRID=pnl, efficiency (percent)=15, referenceIrradiation (W/m^2)=1000, SolarArray=arr
+Object PhotoVoltaicUnit: mRID=pv_with, AssetDatasheet=arr
+Object PhotoVoltaicUnit: mRID=pv_without
+Object StorageInverterInfo: mRID=sinv, apparentPowerMaximum (kVA)=100, chargeRateActiveMax (kW)=80
+Object GenerationInverterInfo: mRID=ginv, apparentPowerMaximum (kVA)=10, reactivePowerInjectedMax (kVAr)=4
+Object PowerElectronicsConnection: mRID=pec_storage, AssetDatasheet=sinv
+Object PowerElectronicsConnection: mRID=pec_pv, AssetDatasheet=ginv
+Object PowerElectronicsConnection: mRID=pec_bare
+"""
+
+
+def _datasheet_model() -> dict:
+    network = load_model(SHAPES / "der.cimtbl")
+    load_text(DATASHEETS, network)
+    return {obj.mRID: obj for cls in (cim.PhotoVoltaicUnit, cim.PowerElectronicsConnection)
+            for obj in network.graph[cls].values()}
+
+
+def test_photovoltaic_datasheet_reads_the_array_and_its_panel():
+    objects = _datasheet_model()
+    assert get_photovoltaic_datasheet(objects["pv_with"], "rad", "kW/m2") == pytest.approx(
+        (30 * 3.141592653589793 / 180, 200 * 3.141592653589793 / 180, 80.0, 15.0, 1.0))
+    assert get_photovoltaic_datasheet(objects["pv_without"]) is None
+
+
+def test_inverter_datasheet_charge_rate_is_a_storage_inverters():
+    objects = _datasheet_model()
+    assert get_inverter_datasheet(objects["pec_storage"], "kVA", "kVAr", "kW") == (100.0, None, None, 80.0)
+    assert get_inverter_datasheet(objects["pec_pv"], "kVA", "kVAr", "kW") == (10.0, 4.0, None, None)
+    assert get_inverter_datasheet(objects["pec_bare"]) is None
 
 
 def test_battery():

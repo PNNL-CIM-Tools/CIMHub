@@ -7,6 +7,10 @@ bus) machine regulates its own terminal: a ``RegulatingControl`` ``gen_<name>_ct
 ``Update`` giving the machine its control (S4a's own-terminal form). SynchronousMachine has no phaseConnection, so
 delta is ``earthing=false`` (S4b-5). The ``phases`` column gives one RotatingMachinePhase per phase.
 
+A ``yearly`` LoadShape scales kW and kvar by mult (engine-checked): the machine's own ``EnergyConnectionSchedule``,
+p and q at each sample in the Parquet sidecar (``schedule_points``, S9); a model 3 machine's q is its control's, so
+its schedule carries p only.
+
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#generator``.
 """
 
@@ -21,6 +25,7 @@ from cimtopology.core import BusSystem
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, phases_cell, untranscribed_values
 from cimhub_opendss.dss_reader import dss_defaults
+from cimhub_opendss.importer.cimtbl import loadshape
 from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, line_kv, reactive_power
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -58,14 +63,16 @@ FIELDS = {
                                           "setting"),
     "Vmaxpu": Field("untranscribed", note="above it the engine models the machine as constant Z; a power-flow "
                                           "setting"),
-    "yearly": Field("untranscribed", note=_SHAPE),
+    "yearly": Field("mapped", ((loadshape.DEVICE_SCHEDULE, "name", None),),
+                    "the machine's EnergyConnectionSchedule <mRID>_yearly: -kW x mult, -kvar x mult per sample (S9)"),
     "daily": Field("untranscribed", note=_SHAPE),
     "duty": Field("untranscribed", note=_SHAPE),
-    "dispmode": Field("untranscribed", note=_DISPATCH),
-    "dispvalue": Field("untranscribed", note=_DISPATCH),
+    "dispmode": Field("untranscribed", note=_DISPATCH + "; with a yearly shape, another than Default raises"),
+    "dispvalue": Field("untranscribed", note=_DISPATCH + "; with a yearly shape, above 0 raises"),
     "conn": Field("mapped", ((_MACHINE, "earthing", None),),
                   "wye -> earthing true, delta -> false (no phaseConnection on a machine, S4b-5); default wye"),
-    "status": Field("untranscribed", note="Fixed/Variable: whether load multipliers scale it; " + _DISPATCH),
+    "status": Field("untranscribed", note="Fixed/Variable: whether load multipliers scale it; " + _DISPATCH
+                    + "; with a yearly shape, Fixed raises"),
     "gen_class": Field("untranscribed", note="a DSS report grouping"),
     "Vpu": Field("derived", note="model 3: the control's targetValue (V) = Vpu x ratedU; default 1"),
     "maxkvar": Field("copied", ((_MACHINE, "maxQ", "kVAr"),), "model 3 only (another model raises); default 2 x "
@@ -153,6 +160,32 @@ def _check(generator) -> None:
         raise ValueError(f"Generator {generator.name}: model {model} is not mapped (models 1, 3 and 7 are)")
     if model != _PV_BUS and (generator.maxkvar is not None or generator.minkvar is not None):
         raise ValueError(f"Generator {generator.name}: Maxkvar/Minkvar on model {model}; only model 3 uses them")
+    if generator.yearly is None:
+        return
+    follows = (("dispmode", generator.dispmode, model_name(generator.dispmode).lower() == "default"),
+               ("dispvalue", generator.dispvalue, not float(generator.dispvalue or 0) > 0),
+               ("status", generator.status, model_name(generator.status).lower() == "variable"))
+    dispatch = [f"{slot}={value}" for slot, value, followed in follows if value is not None and not followed]
+    if dispatch:
+        raise ValueError(f"Generator {generator.name}: yearly={generator.yearly} with {', '.join(dispatch)}; only a "
+                         "generator that follows its shape is mapped (S9)")
+
+
+def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
+    """Each machine's yearly schedule (``<mRID>_yearly``): -kW x mult and -kvar x mult at each sample (the load
+    sign; engine-checked), p only for model 3 (its q is the control's)."""
+    points, defaults = {}, dss_defaults(NATIVE_CLASS)
+    for original in native.list_by_class(NATIVE_CLASS):
+        shape = loadshape.device_shape(native, original, f"Generator {original.name}")
+        if shape is None:
+            continue
+        generator, _ = fill_defaults(FIELDS, original, defaults)
+        kw, kvar = float(generator.kW), dispatched_kvar(native.assignments(original))
+        regulated = model_name(generator.model) == _PV_BUS
+        key = mrid(PREFIX, generator.name, lowercase=True) + loadshape.DEVICE_SCHEDULE_SUFFIX
+        points[key] = loadshape.DevicePoints(loadshape.point_times(shape), [-kw * value + 0.0 for value in shape.mult],
+                                             None if regulated else [-kvar * value + 0.0 for value in shape.mult])
+    return points
 
 
 def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Document:
@@ -161,7 +194,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
     if not generators:
         return Document(name="generator", statements=[], profile=CIM_PROFILE)
     defaults = dss_defaults(NATIVE_CLASS)
-    machines, controls, updates = [], [], []
+    machines, controls, updates, schedules = [], [], [], []
     for original in generators:
         _check(original)
         generator, defaulted = fill_defaults(FIELDS, original, defaults)
@@ -191,6 +224,8 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
             cell(-kvar + 0.0), cell(max_q), cell(min_q), cell(not delta), cell(generator.enabled),
             terminal.system.base_voltage,
         ], comment="\n".join(note for note in notes if note) or None))
+        if loadshape.device_shape(native, original, label) is not None:
+            schedules.append(loadshape.device_schedule_row(machine, generator))
     columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("ratedS", "kVA"),
                Column("ratedU", "kV"), Column("p", "kW"), Column("q", "kVAr"), Column("maxQ", "kVAr"),
                Column("minQ", "kVAr"), Column("earthing"), Column("normallyInService"), Column("BaseVoltage"),
@@ -204,5 +239,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
                                 controls, comment="model 3 (PV bus): the machine regulates its own terminal"))
         statements.append(Table(_MACHINE, [Column("mRID"), Column("RegulatingControl"),
                                            Column("controlEnabled", default="true")], updates, update=True))
+    if schedules:
+        statements.append(loadshape.device_schedules(schedules))
     return Document(name="generator", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(generators)))

@@ -32,8 +32,10 @@ They call getters, and only shape the result into the native format.
    `ratedU`/`ratedS` (end); a `From*` reference uses the From end (mesh impedance); an unrated class (`ACLineSegment`,
    `EnergySource`) uses its `BaseVoltage` and the system base power (`network.base_power`). A missing rating raises.
 6. **cim18v17 only.** No `*Info` electrical catalog. Read these paths (reference.md §2):
-   - lines: `ACLineSegment.WireConfiguration` → `WireSpacing` (an `XYSpacing` + `XYConductorPosition`) +
-     `WireSequence` (`WireSequenceConfiguration`) → `WireInfo`; or `ACLineSegment.PerLengthImpedance`;
+   - lines: geometry is `get_line_geometry(line)` (a `WireConfiguration` naming a `WireSpacing`, an `XYSpacing` +
+     `XYConductorPosition` or a `ConductorDistanceSpacing`) + `WireSequence` (`WireSequenceConfiguration`) →
+     `WireInfo`; the code is `get_line_code(line)` (the line's own `PerLengthImpedance`, else its WireConfiguration's
+     template; skill `wire-configuration`);
    - catalog transformers: `TransformerTank.TankConfiguration` → `TransformerTankConfiguration` (tank ends,
      windings, core, mesh); balanced transformers: `PowerTransformerEnd` + `TransformerMeshImpedance`;
    - phases: always from the equipment (`ACLineSegment.ACLineSegmentPhases`, `Terminal.phases`), never from a
@@ -109,7 +111,9 @@ needs.
 ## Anti-patterns
 
 - An exporter doing `line.r.to('ohm') / z_base` or `value * 1000`; a getter with its own `to_float`.
-- `get_line_sequence_impedance` called by a GLM/DSS converter on a line that has a `WireConfiguration`.
+- `get_line_sequence_impedance` called by a GLM/DSS converter on a line that has geometry.
+- `line.WireConfiguration is not None` as the geometry test, or `line.PerLengthImpedance` as the code (use
+  `get_line_geometry` / `get_line_code`).
 - Reading `WireSpacingInfo`, `WirePosition`, or `TransformerTankInfo` in a getter.
 - A getter that returns a dict or a bare tuple, or a different one per format.
 - `if x else 1.0` style defaults; `Point(0, 0)` fallbacks; writing a computed value back onto a CIM object.

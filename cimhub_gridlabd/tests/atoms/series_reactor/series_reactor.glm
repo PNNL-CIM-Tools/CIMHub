@@ -1,0 +1,25 @@
+// S7 atom: a series reactor on three phases with its ratings and one on one phase, on the S3a line atom (its n2).
+// Values from the core series_compensator shape (IEEE 8500's substation reactor, as the DSS importer writes it).
+#include "../line/line.glm"
+
+object node { name rb1; phases ABCN; nominal_voltage 2401.78; }
+object node { name rb2; phases BN; nominal_voltage 2401.78; }
+
+// three phases, N dropped: its Terminals keep CIM's balanced default
+object series_reactor {
+  name hsb;
+  from n2;
+  to rb1;
+  phases ABCN;
+  phase_A_impedance 0+14.798307j;
+  phase_B_impedance 0+14.798307j;
+  phase_C_impedance 0+14.798307j;
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
+  emergency_rating_A 400;
+  emergency_rating_B 400;
+  emergency_rating_C 400;
+}
+// one phase: its Terminals take B
+object series_reactor { name r1; from rb1; to rb2; phases BN; phase_B_impedance 0.5+2j; }

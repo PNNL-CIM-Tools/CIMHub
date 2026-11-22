@@ -12,7 +12,9 @@ S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 the six catalog fi
 files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transformer.cimtbl` (after the
 switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own);
 S4a the core `zip_fractions.cimtbl` (after `source.cimtbl`), then `load.cimtbl`, `triplex_load.cimtbl`,
-`triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators).
+`triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators); S7 `series_reactor.cimtbl` (after the
+switches); S8 `player.cimtbl` (after the regulators, before the loads that name its groups); S9 `schedule.cimtbl`
+(after the players, before the loads).
 
 ## master
 
@@ -22,7 +24,7 @@ Mapper: `importer/glm_to_cimtbl.py` `map_master`. Test: `tests/test_glm_to_cimtb
 | row | from | rule |
 |---|---|---|
 | `Substation`, `Feeder` | `substation=` and `feeder=`, each the `name` the caller passes unless given (D7; the model's `Model` and file stem stay `name`) | mRIDs `sub_<substation>`, `fdr_<feeder>`, source case |
-| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer, a series reactor) raises |
+| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer) raises |
 | `BaseFrequency` | `module powerflow { nominal_frequency ...; }`, else `#set powerflow::nominal_frequency=...` | else GridLAB-D's 60 Hz, listed as `# defaulted` |
 | `BaseVoltage` | the topology walk's distinct bus voltages (`cimtopology.core`), highest first | `nominal_kv` rounding; mRIDs `bv_12p47kv`, `bv_240v` |
 | comment | every GLM type no mapper reads, with its count, including types the schema lacks (`recorder`) | GLM-14 |
@@ -1014,7 +1016,7 @@ Table WireSequenceConfiguration: ...  sequenceNumber 1 (conductor_1), 2 (conduct
 | S2-6 | Resistance | **approved:** `resistance` / `conductor_resistance` to `rAC50`: Kersting's 50 C AC tables, and the Java exporter writes GLM resistance from `rAC50`. The DSS importer writes `Rac` to `rAC25`, so the IEEE13_assets comparison (GLM-16) lists that difference |
 | S2-7 | Conductor ratings | **approved:** Summer continuous and emergency as written (D9). **Unset ratings are not filled** (an exception to GLM-3): GridLAB-D's `create()` constants (1000/2000 A overhead and underground, 202/212.1 A triplex) aren't the conductor's rating, and 156 taxonomy conductors set only `summer.continuous`, so a defaulted 2000 A emergency limit would sit on a 120 A conductor. The row lists the unset ones. Winter: untranscribed while it equals summer, raises otherwise |
 | S2-8 | Triplex geometry (GLM-12, amended) | **approved:** A derived `ConductorDistanceSpacing` per triplex configuration (GridLAB-D's formula, which is Kersting's), not an `XYSpacing`. The triplex conductors become `OverheadWireInfo` (CIM has no triplex class; the insulation is on the configuration, and all 25 use one conductor for 1, 2 and N). GLM-12's z-matrix cross-check is dropped: the only triplex z-matrix is in IEEE123_transactive, which stops at read; the atom pins the formula |
-| S2-9 | Matrix configurations (GLM-11, amended) | **approved:** As GLM-11, with b derived from c (above), rows compacted, and both forms on one record raising (none in the decks), since GridLAB-D would use the matrix |
+| S2-9 | Matrix configurations (GLM-11, amended) | **approved:** As GLM-11, with b derived from c (above), rows compacted, and both forms on one record raising (none in the decks), since GridLAB-D would use the matrix. Amended 2026-11-21 (the user's rule, skill `wire-configuration`): the matrix is a template, `isTemplate=true`, held by a WireConfiguration `lc_<name>_wc` with no WireSpacing, which its lines reference |
 | S2-10 | Field tables | **approved:** Generated from the mappers' `FIELDS` with `fields_table` once built, as S1-6 |
 
 **Expected differences from the DSS import of the same models (GLM-16):** the IEEE13_cdpsm matrices match the DSS
@@ -1144,7 +1146,7 @@ that check moved to `get_spacing_xy`. Plan section 7.
 
 | LineConfiguration field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, LineConfigurationName]` | `lcon_mtx601_ABC`, `lcon_mtx602_ABC`, `lcon_mtx603_CB` | copied | `WireConfiguration.name`, `PerLengthPhaseImpedance.name`; mRID = wc_ or lc_ + name |
+| `name` | `Union[str, LineConfigurationName]` | `lcon_mtx601_ABC`, `lcon_mtx602_ABC`, `lcon_mtx603_CB` | copied | `WireConfiguration.name`, `PerLengthPhaseImpedance.name`; mRID = wc_ or lc_ + name; a matrix's WireConfiguration lc_<name>_wc |
 | `parent` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
 | `groupid` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
 | `latitude` | `Optional[str]` |  | untranscribed | object header: a catalog object has no place or service state |
@@ -1256,8 +1258,8 @@ a child node (15 underground lines, 10 switches, 4 overhead lines, 1 recloser), 
 
 ```
 # IEEE13_cdpsm: a matrix configuration; GLM phases are a set, so CB is written in ABC order
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
-    ln_line_632645, line_632645, 632, 645, BC, 500.0, lc_lcon_mtx603_CB, bv_4p16kv
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ln_line_632645, line_632645, 632, 645, BC, 500.0, lc_lcon_mtx603_CB_wc, bv_4p16kv
 Table OperationalLimitSet: mRID, Equipment
     ln_line_632645_limits, ln_line_632645
 Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
@@ -1277,7 +1279,7 @@ Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfigur
 | `name` | copied | `ACLineSegment.name`; mRID = `ln_` + name |
 | `from`, `to` | structural | `node1`, `node2`: the root bus (GLM-4) |
 | `phases` | structural | the `phases` cell, which numbers the ACLineSegmentPhases 1..n in written order (S3a-3) |
-| `configuration` | structural | `WireConfiguration = wc_<configuration>` (geometry, triplex) or `PerLengthImpedance = lc_<configuration>` (matrix), by the configuration's form (S2-9) |
+| `configuration` | structural | `WireConfiguration = wc_<configuration>` (geometry, triplex) or `lc_<configuration>_wc` (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), by the configuration's form (S2-9, S3a-2) |
 | `length` | copied | `length`, in its written unit (ft in every deck); unset raises (GridLAB-D's `create()` 0 is a line of no impedance) |
 | `continuous_rating_A`/`_B`/`_C` | structural | the normal `CurrentLimit` of the line's own `OperationalLimitSet` (S3a-4) |
 | `emergency_rating_A`/`_B`/`_C` | structural | the emergency `CurrentLimit` of that set |
@@ -1334,7 +1336,7 @@ Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen
 | # | question | decision |
 |---|---|---|
 | S3a-1 | Files and identity | **approved:** The six artifacts above; `ln_` for every line class, `sw_` for every switching device, source case |
-| S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give `WireConfiguration`, a matrix gives `PerLengthImpedance`. The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
+| S3a-2 | Line template | **approved:** The configuration's form decides (S2-9): geometry and triplex give their `WireConfiguration`, a matrix the `WireConfiguration` `lc_<configuration>_wc` that holds its template `PerLengthPhaseImpedance` (`isTemplate=true`, no WireSpacing; amended 2026-11-21, the user's rule, skill `wire-configuration`). The line class must match its conductors' class (GridLAB-D throws otherwise); all decks do |
 | S3a-3 | Line phases | **approved:** The line's letters in ABC order then N (GLM `phases` is a set: `CB` is `BC`, so matrix row 1 is B, as S2-9 compacts it). It must equal the configuration's conductors (geometry) or diagonal (matrix), so ACLineSegmentPhase k is spacing position k. A triplex line is `s1s2N` whatever its letter (`AS`, `BS`, `CS`): CIM puts the primary phase on the center-tap transformer (S3b); the letter must match its end buses'. **Amended by S6-4:** a matrix line's N is dropped (GridLAB-D's matrix never reads it), and a written 0 diagonal is no phase |
 | S3a-4 | Line ratings | **approved:** **The line's own `continuous_rating_X`/`emergency_rating_X`, as written, on its own `OperationalLimitSet` (D9);** else its configuration's `rating.summer.*` (only `triplex_line_configuration:1` of orig_R5-35.00-1, 1200 A, 192 lines); else none. Conductor ratings stay on the WireInfo (S2-7) and are not copied, and GridLAB-D's 1000/2000 A defaults are never filled. Only the three Java exports rate lines (140 lines, always equal across phases). **Note:** GridLAB-D itself replaces a line's written ratings at init, with its conductors' (a running minimum over A, B, C) or, on a matrix configuration, the configuration's (`overhead_line.cpp:133`). The written values are the deck's statement (the Java exports wrote the CIM source's line limits: IEEE13_assets 730/1095 A on 730/730 A conductors), so they are kept. The alternative is to write the engine's effective rating and leave the written ones untranscribed |
 | S3a-5 | Switch ratings | **approved:** The same rule as lines: the device's own set (IEEE13_cdpsm, IEEE13_assets, IEEE123: 400/600 A on 12 switches, the fuse and the recloser). GridLAB-D reads no rating on a switch (`link.cpp:681` checks limits on lines and transformers only), and the DSS import drops a switch's ratings as stand-ins (DSS-8), so the alternative is untranscribed |
@@ -1399,7 +1401,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1423,7 +1425,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `247.5`, `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `800.0`, `500.0`, `340.889` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1447,7 +1449,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or PerLengthImpedance = lc_<configuration> (matrix), S3a-2 |
+| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `30.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -2159,7 +2161,7 @@ The mapper raises on:
 | # | topic | proposal |
 |---|---|---|
 | S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is a consumer of p = q = 0 on its wired phases (a split-phase record on s1s2), listed in the artifact header (amended 2026-11-16 for the Clallam decks, where every Milsoft consumer is a service: earlier it wrote only a bus; the draft raised). Each record is one service: `customerCount` 1 on its first consumer, unset on a split-phase record's 240 V part (defaulted: GLM has no customer count). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
-| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today |
+| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today. **Done 2026-11-21 (S8): a player is a ConformLoadGroup and its ConformLoadSchedule, its loads ConformLoads. Done 2026-11-21 (S9): a GLM `schedule` a base reads as `<schedule>*K` is a ConformLoadGroup with one ConformLoadSchedule per Season and DayType** |
 | S4a-3 | Base power form | As GridLAB-D does at nominal voltage (`load.cpp:940-1073`, `triplex_load.cpp:410-731`). Per part k (power, current, impedance), with `pf` defaulting to 1: P_k = base × f_k × \|pf_k\| and Q_k = P_k × √(1/pf_k² - 1), negative when pf_k < 0 (leading). pf_k = 0 gives P_k = 0 and Q_k = base × f_k. When the fractions don't sum to 1, the power fraction becomes 1 - I - Z (GridLAB-D's own repair, `load.cpp:945`), noted as `defaulted:` |
 | S4a-4 | Voltage response | ZIP fractions from the load's totals (each part's P and Q over the totals). When every part is one kind, the shared `zip_constant_pq`/`_i`/`_z` row (core `zip_fractions.cimtbl`, which the master imports as DSS's does); otherwise a `zip_<pP>_<pI>_<pZ>_<qP>_<qI>_<qZ>` row in the artifact (GDM's naming; the mRID rounds the fractions to 6 places, the row holds them exactly, and two sets that round alike raise). When Q is 0, the Q fractions are the P fractions. Two artifacts that both use one mixed set would both write the row and fail to bind; no deck has a mixed set. Every deck is one kind: taxonomy constant power, Java exports constant current |
 | **S4a-5** | **Explicit current and impedance (approved)** | **`constant_current_X`, `constant_impedance_X`, the `_AN`/`_AB` forms, and `current_*`/`shunt_*` on triplex nodes raise until a deck sets them. They carry angle conventions that no deck exercises: the current is relative to the nominal phasor (0/-120/+120, +30 on delta; `solver_nr.cpp:9409`), and triplex leg 2 has reversed polarity (`node.cpp:1233`). This amends GLM-8, which said they derive** |
@@ -2347,9 +2349,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `measured_power_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
 | `power_pf_A` | `Optional[float]` | `0.9` | derived | with base_power; default 1 |
 | `current_pf_A` | `Optional[float]` | `0.824042`, `0.83005`, `0.861934` | derived | with base_power; default 1 |
 | `impedance_pf_A` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -2412,9 +2414,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `indiv_measured_power_2` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `indiv_measured_power_12` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
+| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K or <schedule>*K is K, the load a ConformLoad of its group (S4a-2, S8-1, S9-1) |
 | `power_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
 | `current_pf_1` | `Optional[float]` | `0.85` | derived | with base_power; default 1 |
 | `impedance_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -2968,3 +2970,215 @@ Each repair answers a GridLAB-D error, not the converter's, so the converter is 
   GridLAB-D's ohms, a wye off its bus raises, a matrix line's N, a 0 diagonal, `REMOTE_NODE` on its own output against
   `OUTPUT_VOLTAGE`, a remote one raises, the two row notes, a one-phase `BANK`, an open tie across phases and a closed
   one raising); the walk has the coil-rated coils and the link-phase check. A triplex line and a regulator on phases their ends lack now stop at S6-5 first.
+
+## S7: series reactors (by the user's "go for the next phase", 2026-11-21; built the same day)
+
+No GLM deck has a `series_reactor`, so GLM-14 left it unmapped. The exporter now writes one for a SeriesCompensator
+(EXPORT_MAPPING.md X28: IEEE 8500's substation reactor, the DSS deck's source impedance), so the importer reads it
+back, or a DSS-origin deck would lose its feeder head on the way back.
+
+Mapper: `importer/cimtbl/series_reactor.py` `map_series_reactors`; shape `series_compensator`. Test:
+`tests/test_cimtbl_series_reactor.py`; atom `tests/atoms/series_reactor/series_reactor.glm` (on the S3a line atom).
+
+```
+# GridLAB-D series_reactor -> SeriesCompensator.
+# r0 = r, x0 = x: GridLAB-D's reactor has no coupling between phases
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=fdr_atom
+    rx_hsb, hsb, n2,  rb1, 0.0, 14.798307, 0.0, 14.798307, bv_4p16kv
+    rx_r1,  r1,  rb1, rb2, 0.5, 2.0,       0.5, 2.0,       bv_4p16kv
+
+# SeriesCompensator has no per-phase class: a reactor on fewer than three phases gives its Terminals their phases here
+Update Table Terminal: mRID, phases
+    rx_r1_T1, B
+    rx_r1_T2, B
+```
+
+### Decisions for S7
+
+| # | question | decision |
+|---|---|---|
+| S7-1 | Identity | `rx_<name>`, source case (the DSS importer's prefix) |
+| S7-2 | Impedance | GridLAB-D's reactor is one impedance per phase with no coupling (`series_reactor.cpp:105`), CIM's SeriesCompensator one r + jx for every phase: the phases' `phase_X_impedance` must be equal, r and x copied from it, r0 = r and x0 = x (the DSS importer's rule) |
+| S7-3 | Phases | A, B, C, N dropped; three phases leave the Terminals' phases unset (the shape's balanced form), fewer give them by an `Update` |
+| S7-4 | Ratings | the link's own, on its own `OperationalLimitSet` (S3a-4) |
+
+### Fail fast (S7)
+
+| condition | why |
+|---|---|
+| phases whose `phase_X_impedance` differ | CIM's SeriesCompensator has one impedance |
+| a phase's `phase_X_impedance` unset | GridLAB-D's 0 is a switch stand-in under NR (1e4 + 1e4j S, `series_reactor.cpp:122`), not a reactor |
+| `phase_X_resistance` or `phase_X_reactance` set | GridLAB-D's aliases of the impedance's parts; no deck sets one |
+| `status OPEN` | the walk raises (S0): a reactor is not a switch |
+
+### Field tables (generated: `fields_table(cls, records, fields=FIELDS)`, samples from the atom; the link groups of S3a left out)
+
+#### series_reactor
+
+| SeriesReactor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, SeriesReactorName]` | `hsb`, `r1` | copied | `SeriesCompensator.name`; mRID = rx_ + name |
+| `phases` | `Optional[str]` | `ABCN`, `BN` | structural | the reactor's A, B, C, N dropped; fewer than three: its Terminals' phases |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises in the walk (a reactor is not a switch) |
+| `from_node` | `Optional[str]` | `n2`, `rb1` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `rb1`, `rb2` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `phase_A_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_A_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_A_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_B_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...`, `Complex({'real': 0.5, 'imag': 2.0})` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_B_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_B_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_C_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_C_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_C_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+
+## S8: load players (by the user's direction, 2026-11-21: ConformLoad groups, points in a Parquet sidecar)
+
+GLM_REWRITE_PLAN.md §8.9 (S4a-2's TODO). A load base `<player>.value*K` scales K by the player's value over time,
+through the GridAPPS-D run file's pattern: `module tape;`, `class player { double value; }`, then
+`object player { name ieeezipload; file zipload_schedule.player; }`. One player drives many loads, as a DSS LoadShape
+does, so it is the classic shared schedule: a `ConformLoadGroup` whose `ConformLoadSchedule` gives the curve as a
+multiplier, its loads `ConformLoad`s (shape `load_schedule`). Not nc_schedule's `EnergyConnectionSchedule`: one
+actual-value schedule per device (GDM's T1), which would copy one shape onto every load.
+
+Mappers: `importer/cimtbl/player.py` `map_players` (the groups and schedules; `player_points`, the points) and
+`load.py` (a scheduled record's consumers are `ConformLoad` rows with a `LoadGroup`). The reader reads the `class`
+block and each player's file (`GlmModel.classes`, `GlmModel.tapes`). Tests: `tests/test_cimtbl_player.py`; atom
+`tests/atoms/player/player.glm` (on the S3a line atom, the first four rows of GridAPPS-D's zipload schedule).
+
+```
+# one group per player: the loads whose base is <player>.value*K
+Table ConformLoadGroup: mRID, name
+    lg_zipload, zipload
+
+# value1: the player's value, a multiplier of each load's p and q; the points are RegularTimePoints in the Parquet sidecar
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, ConformLoadGroup
+    ls_zipload, zipload, 2009-07-21T00:00:00-04:00, 60.0, none, lg_zipload
+
+# a base <player>.value*K: p, q from K; the player's group (S8-1)
+Table ConformLoad: mRID, name, node, phases, ..., LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    ld_ld_play, ld_play, n5, A, Y, true, 16999.99323672, 10000.005731892072, 1, zip_constant_i, bv_4p16kv, lg_zipload
+```
+
+The points are not in the artifact: `GlmImporter(time_points={})` (or `glm_to_cim(..., time_points=...)`) adds a
+`RegularTimePoint` table (`cimhub_core.time_points`: the schedule's uri, `sequenceNumber` from 0, `value1`) to the
+caller's dict after binding, as GDM's importer does; `write_time_points` puts it beside the XML. Without the dict the
+points are dropped with one warning.
+
+### Decisions for S8
+
+| # | question | decision |
+|---|---|---|
+| S8-1 | Shape | one player → `ConformLoadGroup` `lg_<player>` + `ConformLoadSchedule` `ls_<player>`. A load whose bases name it is a `ConformLoad` of that group, its p, q K's split as before (S4a-2). A ConformLoad has one group and scales every phase: two players on one record, or a phase with power but no player beside one with it, raise |
+| S8-2 | Values | `value1` = the player's value, `value1Unit` none: a multiplier of p and q together (GLM scales the base) |
+| S8-3 | Times | `startTime` = the first row's time, its zone an offset (`2009-07-21 00:00:00 EDT` → `2009-07-21T00:00:00-04:00`; US zones and UTC/GMT, `player.ZONES`, others raise); `timeStep` = the one step between rows (`+1m` → 60 s; `+N[smhd]` after the row before, or absolute), steps that differ raise; a one-row tape has no step |
+| S8-4 | Points | `RegularTimePoint` rows in the Parquet sidecar, never graph objects (GDM's T6), numbered from 0 (CIM: a point's time is startTime + sequenceNumber × timeStep) |
+| S8-5 | A player the deck does not define | a group with no schedule and one warning, so the name survives (the Java exports: their run file defines `ieeezipload`). The exporter writes such loads static (X29) |
+| S8-6 | Players read | only the run-file pattern: no `parent`, `property`, `filetype`, `mode`; `loop` unset or 0; the deck's `class player { double value; }` |
+
+### Fail fast (S8)
+
+| condition | why |
+|---|---|
+| a player with `parent`, `property`, `filetype` or `mode` | only a player read as `<name>.value` is mapped (S8-6) |
+| `loop` above 0 | a schedule has one pass |
+| no `file`, a missing file, a row with no comma (reader), no rows | the rows are the schedule |
+| no `class player { double value; }`; any other `class` block (reader) | the pattern GridLAB-D needs for `<name>.value` |
+| a first row that is not absolute with a zone; an unknown zone; steps that differ; a value that is not a number | S8-3 |
+| two players on one load record, or a phase off the player | S8-1 |
+
+### Field tables (generated: `fields_table(cls, records, fields=FIELDS)`, samples from the atom)
+
+#### player
+
+| Player field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, PlayerName]` | `zipload` | copied | `ConformLoadGroup.name`, `ConformLoadSchedule.name`; mRID = lg_ / ls_ + name |
+| `parent` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `groupid` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `latitude` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `longitude` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `in_svc` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `out_svc` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `rank` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `flags` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `property` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `file` | `Optional[str]` | `zipload.player` | structural | its rows: startTime, timeStep and the points (the sidecar); unset raises |
+| `filetype` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `mode` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `loop` | `Optional[int]` | `0` | structural | unset or 0; a repeated tape raises (a schedule has one pass) |
+| `all_events_delta` | `Union[bool, Bool, NoneType]` | `False` | untranscribed | deltamode: an engine option |
+
+## S9: load schedules (by the user's direction, 2026-11-21: Season x DayType, shared like a player)
+
+A load base `<schedule>*K` scales K by a GridLAB-D `schedule` block, a set of cron rules (`minutes hours days months
+weekdays [value]`). GridLAB-D's reading, engine-checked (`tests/test_cimtbl_schedule.py`'s probe and oracle): the
+ranges are inclusive, months count from 1, weekdays from 0 = Sunday, a rule with no value gives 1, a time no rule
+covers gives 0, and two rules covering one minute fail to load. One schedule drives many loads, as a player does, so
+it is the same group (S8-1), but its curve recurs by day of the year and of the week, which CGMES's
+`SeasonDayTypeSchedule` holds: one `ConformLoadSchedule` per `Season` and `DayType`, each a day of multipliers. The
+user chose this over nc_schedule's per-load `EnergyConnectionRegularSchedule` and over one expanded year
+(2026-11-21). Mappers: `importer/cimtbl/schedule.py` `map_schedules` (`schedule_points`, the points) and `load.py` (a
+base reading a schedule names its group). The reader keeps each block's statements as written (`GlmModel.schedules`).
+Tests: `tests/test_cimtbl_schedule.py`; atom `tests/atoms/schedule/schedule.glm`:
+- `zip1`: the first six hours of IEEE13_houses' `ZIP1base_power` (half-hour rules every day, no `;`), 0 after;
+- `heat`: a winter (`12,1-2`) and the rest of the year, each with weekday and weekend days, a summer weekend with no
+  rule (0);
+- `waterdemand`: read by no load (a house's), not mapped.
+
+```
+# the months whose days agree, in a run (December wraps to January)
+Table Season: mRID, name, startDate, endDate
+    season_01_12, 01-12, --01-01, --12-31
+    season_03_11, 03-11, --03-01, --11-30
+    season_12_02, 12-02, --12-01, --02-29
+
+# the weekdays whose days agree in a season, in DayOfWeekKind words
+Table DayType: mRID, name
+    dt_all,     all
+    dt_weekday, weekday
+    dt_weekend, weekend
+
+Table ConformLoadGroup: mRID, name
+    lg_heat, heat
+    lg_zip1, zip1
+
+# value1: the schedule's value, a multiplier of each load's p and q, at each step from midnight (S9)
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (min), value1Unit, Season, DayType, ConformLoadGroup
+    ls_heat_12_02_weekend, heat, 00:00:00, 1440, none, season_12_02, dt_weekend, lg_heat
+    ls_heat_12_02_weekday, heat, 00:00:00, 60,   none, season_12_02, dt_weekday, lg_heat
+    ...
+    ls_zip1,               zip1, 00:00:00, 30,   none, season_01_12, dt_all,     lg_zip1
+```
+
+### Decisions for S9
+
+| # | question | decision |
+|---|---|---|
+| S9-1 | Shape | a schedule a base reads as `<schedule>*K` → `ConformLoadGroup` `lg_<schedule>` (S8-1's prefix: a player and a schedule of one name raise), its loads `ConformLoad`s with p, q K's split (S4a-2). A record's bases follow one source, a player or a schedule (S8-1) |
+| S9-2 | Days | each (month, weekday) gets the day the rules give it (`day_profiles`). The months whose seven days agree, in runs of consecutive months (December's run joins January's), are a `Season` `season_<first>_<last>`: `startDate` `--MM-01`, `endDate` the last month's last day (February's 29th). Within a season, the weekdays whose days agree are a `DayType` `dt_<name>`, named in nc_schedule's `DayOfWeekKind` words: `all`, `weekday`, `weekend`, `sunday` ... `saturday`; another set joins the day names with `_` (`monday_wednesday`). The name carries the weekdays: CIM's DayType has no other attribute |
+| S9-3 | A day | one `ConformLoadSchedule` per (season, day type): `ls_<schedule>` when the schedule is one day, else `ls_<schedule>_<first>_<last>_<day type>`; `startTime` `00:00:00` (CIM: "the value can be a time of day"); `timeStep` (min) the coarsest divisor of a day on which the value only changes at step boundaries (`coarsest_step`); `value1Unit` none. A day no rule covers is a schedule of 0 (one point), as GridLAB-D gives 0 |
+| S9-4 | Points | `RegularTimePoint` rows in the Parquet sidecar with the players' (S8-4), numbered from midnight |
+| S9-5 | Schedules read | the ones a load's base reads; the others (a house's) are not mapped, the master counts them (`not mapped: schedule 1`). A base naming a schedule the deck does not define raises (GridLAB-D would not load it) |
+
+### Fail fast (S9)
+
+| condition | why |
+|---|---|
+| a day of the month other than `*` | no Season or DayType holds it |
+| two rules on one minute | GridLAB-D rejects the overlap |
+| a field off `*`, a number, `a-b`, or a comma list of them, or out of its range; fewer than five fields; a value that is not a number | the cron form |
+| a nested block (`weekday { ... }`) | not mapped |
+| a base reading a schedule the deck does not define; a schedule and a player of one name | S9-5, S9-1 |
+

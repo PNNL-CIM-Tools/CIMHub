@@ -169,4 +169,4 @@ def assert_catalogs(model, network) -> None:
     triplex = model.count(schema.TriplexLineConfiguration)
     assert count(cim.OverheadWireInfo, cim.ConcentricNeutralCableInfo, cim.TapeShieldCableInfo) == conductors
     assert count(cim.ConductorDistanceSpacing) == model.count(schema.LineSpacing) + triplex
-    assert count(cim.WireConfiguration, cim.PerLengthPhaseImpedance) == configurations + triplex
+    assert count(cim.WireConfiguration) == configurations + triplex  # a matrix's holds its template

@@ -19,11 +19,14 @@ drop R and X, which the original's rb bank leaves unset, and r1 parallels rb_a a
 import math
 from datetime import datetime, timedelta
 
+import cimtables
 import gdm_atoms
 import pytest
 from gdm.quantities import ActivePower
 from infrasys.time_series_models import SingleTimeSeries
 
+from cimhub_core.cimtbl_testing import cim_scope
+from cimhub_core.time_points import add_regular_time_points
 from cimhub_gdm import GdmExporter, gdm_to_cim
 
 writer = pytest.importorskip("ditto.writers.opendss.write")
@@ -143,3 +146,25 @@ def test_exported_load_series_become_actual_loadshapes(tmp_path):
     }
     opendssdirect.Loads.Name("bal")
     assert opendssdirect.Loads.Yearly() == "ls_bal"
+
+
+def test_a_load_group_becomes_one_shared_loadshape(tmp_path):
+    """§8 through ditto: the ConformLoad group res is one LoadShape of multipliers that both its loads name; the
+    NonConformLoad group plant one of actual kW (UseActual), 15 minutes apart."""
+    with cim_scope():
+        network = cimtables.load_model(gdm_atoms.ATOMS / "load" / "scheduled.cimtbl")
+        time_points = {}
+        add_regular_time_points(time_points, network, {"ls_res": [0.5, 1.0, 0.75], "ls_plant": [400.0, 450.0]},
+                                {"ls_res": [0.4, 0.9, 0.6]})
+        exported = GdmExporter(time_points).to_model(network, name_source="name", system_name="atom")
+    _solve(exported, tmp_path / "exported")
+    opendssdirect.LoadShape.Name("res")
+    assert (opendssdirect.LoadShape.UseActual(), opendssdirect.LoadShape.HrInterval()) == (False, 1.0)
+    assert list(opendssdirect.LoadShape.PMult()) == pytest.approx([0.5, 1.0, 0.75])
+    assert list(opendssdirect.LoadShape.QMult()) == pytest.approx([0.4, 0.9, 0.6])
+    opendssdirect.LoadShape.Name("plant")
+    assert (opendssdirect.LoadShape.UseActual(), opendssdirect.LoadShape.HrInterval()) == (True, 0.25)
+    assert list(opendssdirect.LoadShape.PMult()) == pytest.approx([400.0, 450.0])
+    for name in ("a", "b"):
+        opendssdirect.Loads.Name(name)
+        assert opendssdirect.Loads.Yearly() == "res"

@@ -2,8 +2,6 @@
 // taxonomy feeders.
 #include "../line/line.glm"
 
-schedule zipsched { * * * * * 1.0; }  // a scheduled base: the base is mapped, the schedule is not (S4a-2)
-
 // constant power on two wye phases, a zero phase (taxonomy writes 0+0j), load_class untranscribed
 object load { name ld_wye; parent n2; phases ABCN; nominal_voltage 2401.78; load_class R;
   constant_power_A 12000+4000j; constant_power_B 0+0j; constant_power_C 8000+3000j; }
@@ -18,7 +16,8 @@ object load { name ld_zip; parent n4; phases ACN; nominal_voltage 2401.78;
   base_power_A 100kVA; power_fraction_A 0.5; current_fraction_A 0.3; impedance_fraction_A 0.2;
   power_pf_A 0.9; current_pf_A -0.95;
   base_power_C 50000; current_fraction_C 0.6; current_pf_C 0.0; }
-// the Java exports' scheduled constant-current base (IEEE13_cdpsm ld_670a phase A)
+// the Java exports' scheduled constant-current base (IEEE13_cdpsm ld_670a phase A): the base is K, the load a
+// ConformLoad of zipsched, a player the deck does not define (its group has no schedule, S8-5)
 object load { name ld_sched; parent n5; phases AN; nominal_voltage 2401.78;
   base_power_A zipsched.value*19723.08; current_fraction_A 1.0; current_pf_A 0.861934; }
 // no power on any phase: only a bus, listed in the header

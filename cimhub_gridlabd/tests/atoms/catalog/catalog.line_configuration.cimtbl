@@ -18,7 +18,7 @@ Table WireSequenceConfiguration: mRID, WireConfiguration=wc_lcon_607, sequenceNu
     wc_lcon_607_A, 1, ugc_tscab_ts_1/0
     wc_lcon_607_N, 2, ugc_ugwire_cu_1/0
 
-Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0
+Object PerLengthPhaseImpedance: mRID=lc_lcon_mtx604_AC, name=lcon_mtx604_AC, conductorCount=2, calculatedFrequency (Hz)=60.0, isTemplate=true
 
 # derived: b = 2 pi f c (b_from_c)
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
@@ -28,6 +28,9 @@ Table PhaseImpedanceData: identifier, PhaseImpedance=lc_lcon_mtx604_AC, row, col
     lc_lcon_mtx604_AC_21, 2, 1, 0.2066, 0.4591, 0.0
     # z33 (C)
     lc_lcon_mtx604_AC_22, 2, 2, 1.3294, 1.3471, 1713.424633267873
+
+# the matrix's lines share it through this WireConfiguration (no WireSpacing)
+Object WireConfiguration: mRID=lc_lcon_mtx604_AC_wc, name=lcon_mtx604_AC, PerLengthImpedance=lc_lcon_mtx604_AC
 
 Object WireConfiguration: mRID=wc_line_configuration:18, name=line_configuration:18, numberOfPhases=1, WireSpacing=spc_line_spacing:10
 

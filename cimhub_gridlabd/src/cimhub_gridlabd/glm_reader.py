@@ -16,7 +16,11 @@ line; nothing is dropped silently:
   (``gridlabd -D``); an unknown name raises (GLM-15).
 - An object type the schema does not know is counted in ``GlmModel.not_read`` (GLM-14) and its properties are not
   read. A property a known class does not have raises. Keywords are case-sensitive, as in GridLAB-D's parser.
-- ``#include`` is followed relative to the including file. ``class`` blocks, ``#if*`` and other directives raise.
+- ``#include`` is followed relative to the including file. ``#if*`` and other directives raise, as does a
+  ``class`` block other than the GridAPPS-D run file's ``class player { double value; }`` (``GlmModel.classes``).
+- A ``player``'s ``file`` is read beside the file that declares the player, into ``GlmModel.tapes``: its
+  ``time,value`` rows as written, comment and blank lines dropped, the value ending at a ``;`` (GridLAB-D's
+  ``player.cpp:345``). A missing file or a row with no comma raises.
 - ``object x { object y { ... }; }``: the nested object's ``parent`` is the enclosing object.
 - ``object house:..20 { ... }`` makes 20 objects, nested objects included.
 - A property set twice keeps the last value, as GridLAB-D does, with a warning.
@@ -68,8 +72,9 @@ class GlmModel(GraphModel):
     """``(object name, slot) -> unit`` for every value written with a unit (``distance_AN 30 in``)."""
     expressions: dict[tuple[str, str], str] = field(default_factory=dict, repr=False)
     """``(object name, slot) -> text`` for every numeric value that is not a literal (``LIGHTS*1.2``)."""
-    polar: set[tuple[str, str]] = field(default_factory=set, repr=False)
-    """``(object name, slot)`` of every complex value written in polar form."""
+    polar: dict[tuple[str, str], tuple[float, float]] = field(default_factory=dict, repr=False)
+    """``(object name, slot) -> (magnitude, angle in degrees)`` as written, for every complex value written in polar
+    form: its rectangular value went through sin and cos, which differ in the last bit between C libraries."""
     not_read: Counter = field(default_factory=Counter)
     """Object type -> count, for the types the schema does not know (``recorder``)."""
     clock: dict[str, str] = field(default_factory=dict)
@@ -80,6 +85,10 @@ class GlmModel(GraphModel):
     """``#define name=value``, and the caller's ``defines``."""
     schedules: dict[str, list[str]] = field(default_factory=dict)
     """Schedule name -> its statements, as written."""
+    classes: dict[str, dict[str, str]] = field(default_factory=dict)
+    """``class`` blocks: class name -> ``{property: type}`` (only ``player`` -> ``{"value": "double"}`` is read)."""
+    tapes: dict[str, list[tuple[str, str]]] = field(default_factory=dict, repr=False)
+    """Player name -> its file's ``(time, value)`` rows, as written."""
     origins: dict[str, tuple[str, int]] = field(default_factory=dict, repr=False)
     """Object name -> ``(file, line)`` of its ``object`` header, for error messages."""
 
@@ -184,6 +193,9 @@ class _RawObject:
         return f"{self.type_name}:{self.header_id}" if self.header_id is not None else None
 
 
+#: The one ``class`` block read: the GridAPPS-D run file's player value.
+PLAYER_CLASS = {"value": "double"}
+
 _OBJECT_HEADER = re.compile(r"^object\s+([A-Za-z_]\w*)(?::(\S*))?$")
 _RANGE = re.compile(r"^\.\.(\d+)$")
 _MACRO = re.compile(r"\$\{([A-Za-z_]\w*)\}")
@@ -218,6 +230,8 @@ class _Parser:
                 self.model.modules[rest] = self._settings(tokens, token)
             elif keyword == "schedule" and rest:
                 self.model.schedules[rest] = self._block_text(tokens, token)
+            elif keyword == "class" and rest:
+                self._class(rest, tokens, token)
             else:
                 raise GlmParseError(f"unknown block {token.text!r}", token.path, token.line)
         elif token.kind == "end":
@@ -259,6 +273,14 @@ class _Parser:
             if token.kind in ("open", "directive"):
                 raise GlmParseError(f"{token.text!r} inside {header.text}", token.path, token.line)
         raise GlmParseError(f"{header.text} block is not closed", header.path, header.line)
+
+    def _class(self, name: str, tokens: Iterator[_Token], header: _Token) -> None:
+        """Only ``class player { double value; }``: the run file's player value (``GLM_REWRITE_PLAN.md`` 8.9)."""
+        declared = {prop: kind for kind, prop in self._settings(tokens, header).items()}
+        if (name, declared) != ("player", PLAYER_CLASS):
+            raise GlmParseError(f"class {name} {{{declared}}}: only class player {{ double value; }} is read",
+                                header.path, header.line)
+        self.model.classes[name] = declared
 
     @staticmethod
     def _block_text(tokens: Iterator[_Token], header: _Token) -> list[str]:
@@ -415,7 +437,8 @@ class _Value(NamedTuple):
     value: Any
     """``None`` for an expression."""
     unit: str | None = None
-    polar: bool = False
+    polar: tuple[float, float] | None = None
+    """(magnitude, angle in degrees) as written, for a polar complex."""
 
 
 def _convert(kind: str, text: str) -> _Value:
@@ -436,9 +459,10 @@ def _convert(kind: str, text: str) -> _Value:
             return _Value(gridlabd.Complex(real=float(first), imag=0.0), unit)
         if notation in "ij":
             return _Value(gridlabd.Complex(real=float(first), imag=float(second)), unit)
-        angle = math.radians(float(second)) if notation == "d" else float(second)
-        value = cmath.rect(float(first), angle)
-        return _Value(gridlabd.Complex(real=value.real, imag=value.imag), unit, polar=True)
+        radians = math.radians(float(second)) if notation == "d" else float(second)
+        degrees = float(second) if notation == "d" else math.degrees(radians)
+        value = cmath.rect(float(first), radians)
+        return _Value(gridlabd.Complex(real=value.real, imag=value.imag), unit, polar=(float(first), degrees))
     match = _REAL_WITH_UNIT.match(text)
     if match is None:
         return _Value(None)
@@ -476,7 +500,27 @@ class GlmReader(FormatReader):
         for name, value in self.defines.items():
             model.defines.setdefault(name, value)
         _build(model, _expand_objects(parser.objects))
+        for player in model.list_by_class(gridlabd.Player):
+            if player.file is not None:
+                model.tapes[str(player.name)] = read_tape(Path(model.origins[str(player.name)][0]).parent / player.file)
         return model
+
+
+def read_tape(path: Path) -> list[tuple[str, str]]:
+    """A player file's ``(time, value)`` rows as written: ``#`` and blank lines dropped, each value ending at a ``;``
+    (``player.cpp:339-345``)."""
+    if not path.is_file():
+        raise FileNotFoundError(f"player file not found: {path}")
+    rows = []
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip() or line.startswith("#"):
+            continue
+        time, comma, value = line.partition(",")
+        value = value.split(";", 1)[0].strip()
+        if not comma or not time.strip() or not value:
+            raise GlmParseError(f"player row {line!r} is not time,value", path, number)
+        rows.append((time.strip(), value))
+    return rows
 
 
 def _build(model: GlmModel, objects: list[_Object]) -> None:
@@ -529,8 +573,8 @@ def _record(model: GlmModel, native_cls: type, obj: _Object, properties: dict, a
         values[slot] = converted.value
         if converted.unit is not None:
             model.written_units[(obj.name, slot)] = converted.unit
-        if converted.polar:
-            model.polar.add((obj.name, slot))
+        if converted.polar is not None:
+            model.polar[(obj.name, slot)] = converted.polar
     try:
         return native_cls(**values)
     except (ValueError, TypeError) as error:

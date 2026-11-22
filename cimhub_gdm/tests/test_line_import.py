@@ -81,8 +81,21 @@ def test_geometry_conductor_count_must_match_the_phases():
 def test_guid_catalog_name_is_rehashed_and_shared_by_its_lines():
     equipment = gdm_atoms.matrix_catalog(GUID, gdm_atoms.MTX601_R, gdm_atoms.MTX601_X, gdm_atoms.MTX601_C, "mile", 730)
     model = gdm_to_cim(_one_line(equipment))
-    segment = model.find_by_mRID("ln_l")
-    impedance = segment.PerLengthImpedance
+    impedance = model.find_by_mRID("ln_l").WireConfiguration.PerLengthImpedance
     assert impedance.mRID != GUID and not impedance.mRID.startswith("lc_")
     assert impedance.name == GUID
     assert len(impedance.PhaseImpedanceData) == 6  # the lower triangle of the 3x3 matrix
+
+
+
+@pytest.mark.parametrize("line_mrid, catalog", [("ln_mtx3", "mtx601"), ("ln_seq", "seq1")])
+def test_a_catalog_is_a_template_its_lines_name_through_a_wire_configuration(line_mrid, catalog):
+    """DSS-14: a shared catalog is an isTemplate impedance behind a WireConfiguration with no WireSpacing."""
+    segment = gdm_to_cim(_system()).find_by_mRID(line_mrid)
+    configuration = segment.WireConfiguration
+    impedance = configuration.PerLengthImpedance
+    assert segment.PerLengthImpedance is None
+    assert configuration.mRID == f"lc_{catalog}_wc" and configuration.name == catalog
+    assert configuration.WireSpacing is None
+    assert impedance.mRID == f"lc_{catalog}" and impedance.isTemplate is True
+    assert impedance.WireConfiguration is configuration  # the inverse side

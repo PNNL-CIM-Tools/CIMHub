@@ -1,0 +1,18 @@
+// LoadShapes (S8): an hourly shape with qmult (res); a 15-minute shape normalized (com, as K1's action=normalize);
+// a 900 s shape (ind); M1's bare mult=1 (flat: no npts, no interval, so the engine's 1 h); one no Load names (pv,
+// a PVSystem's irradiance in K1). Loads: two share res (r2 also names a daily shape, untranscribed), one each on
+// com, ind and flat (named in another case), one with no shape.
+Clear
+New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
+New Loadshape.res npts=4 interval=1 mult=(0.5 0.75 1.0 0.8) qmult=(0.4 0.6 0.9 0.7)
+New Loadshape.com npts=4 minterval=15 mult=(2 4 8 6) action=normalize
+New Loadshape.ind npts=3 sinterval=900 mult=(1.0 0.9 0.95)
+New Loadshape.flat mult=1
+New Loadshape.pv npts=2 interval=1 mult=(0 1)
+New Load.r1 bus1=b1.1 phases=1 kV=2.40177711982884 kW=100 kvar=40 yearly=res
+New Load.r2 bus1=b1.2 phases=1 kV=2.40177711982884 kW=50 kvar=20 yearly=res daily=com
+New Load.c1 bus1=b1 phases=3 kV=4.16 kW=300 kvar=100 yearly=com
+New Load.i1 bus1=b1.3 phases=1 kV=2.40177711982884 kW=80 kvar=30 yearly=ind
+New Load.f1 bus1=b1 phases=3 kV=4.16 kW=10 kvar=5 yearly=Flat
+New Load.static bus1=b1 phases=3 kV=4.16 kW=200 kvar=50

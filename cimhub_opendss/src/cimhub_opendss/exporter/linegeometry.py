@@ -4,8 +4,10 @@ DSS ``h=`` is a height above ground, and CIM puts a line's height in its ``ySpac
 written inline (B2): the writer emits them as ``cond=`` blocks, which can mix conductor kinds. Geometry stays
 geometry: no impedance is computed (skill ``conductor-geometry``). Two CIM shapes are written:
 
-- A line with a WireConfiguration: one geometry per (configuration, offset) among the lines. A configuration no
-  line uses is written at offset 0, its spacing's positions as stored.
+- A line with geometry, a WireConfiguration naming a WireSpacing (``get_line_geometry``): one geometry per
+  (configuration, offset) among the lines. A configuration no line uses is written at offset 0, its spacing's
+  positions as stored. A WireConfiguration with a PerLengthImpedance and no WireSpacing is a template LineCode,
+  which ``linecode.py`` writes.
 - A spacing line, with a direct ``WireSpacing`` and a WireInfo on each ACLineSegmentPhase (the EPRI line shape):
   one geometry per (spacing, offset, conductors), the conductors being each phase's sequence number, wire and
   whether it is the neutral. The spacing may hold several circuits; the line takes the positions of its own
@@ -31,6 +33,7 @@ from cimtables.graph_write import get_qty
 
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.base_voltage import get_base_voltage
+from cimhub_core.getters.line_impedance import get_line_geometry
 from cimhub_core.getters.spacing import ConductorXY, get_line_conductor_xy, get_spacing_xy
 from cimhub_core.getters.wire import get_configuration_wires, get_line_phase_wires
 from cimhub_opendss.exporter.naming import Names
@@ -172,8 +175,9 @@ def export(context) -> list[schema.Linegeometry]:
     spacing-line owner."""
     first_line = {}
     for line in context.objects(cim.ACLineSegment):
-        if line.WireConfiguration is not None:
-            first_line.setdefault((line.WireConfiguration, line_offset(line)), line)
+        configuration = get_line_geometry(line)
+        if configuration is not None:
+            first_line.setdefault((configuration, line_offset(line)), line)
     _check_names_differ(first_line)
     records = []
     for (configuration, offset), line in first_line.items():
@@ -183,7 +187,9 @@ def export(context) -> list[schema.Linegeometry]:
     for configuration in context.objects(*CIM_CLASSES):
         if configuration not in used:
             if configuration.WireSpacing is None:
-                raise ValueError(f"{describe(configuration)}: has no WireSpacing")
+                if configuration.PerLengthImpedance is not None:
+                    continue  # a template LineCode
+                raise ValueError(f"{describe(configuration)}: has neither a WireSpacing nor a PerLengthImpedance")
             positions = get_spacing_xy(configuration.WireSpacing, UNIT)
             records.append(_geometry(configuration, 0.0, positions, context.names))
     for owner in dict.fromkeys(spacing_geometry_owners(context).values()):

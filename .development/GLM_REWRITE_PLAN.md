@@ -1,6 +1,6 @@
 # GridLAB-D rewrite on `.cimtbl`: importer wave plan
 
-**Status:** approved by the user 2026-11-09. **S0 built 2026-11-09** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09.** **S2 approved (S2-3 amended) and built 2026-11-09** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S0-S2 committed (`3aa8e6d`). **S3a (lines, switches) approved and built 2026-11-09** (`CIMTBL_MAPPING.md` S3a; it amends GLM-10 and drops the section 7 `switch` row). **S3a committed (`928f77d`). S3b (transformers) approved with the user's S3b-1/-4/-5/-9, built and committed (`3cd6983`)** (`CIMTBL_MAPPING.md` S3b; it amends GLM-6 and adds two section 7 core rows). **S3c (regulators) built 2026-11-09 by the user's direction (VoltageRegulator + two ideal AutoTransformerEnds), committed (`02d8fce`)** (`CIMTBL_MAPPING.md` S3c; it amends GLM-7). **The transformer getter reads an ideal AutoTransformer (2026-11-10, by the user's direction), which closes S3c's section 7 core row.** **S4a (loads, capacitors) approved 2026-11-10 with the user's S4a-2 TODO, S4a-5 and S4a-8 (a), built the same day; it and the getter change committed (`7bfe45b`)** (`CIMTBL_MAPPING.md` S4a; it amends GLM-8 and drops the section 7 `load` shape row). **S4b (DER) approved 2026-11-10 with the user's calls (GridLAB-D's PV logic, CONSTANT_PF batteries a Java defect, ratedU line to line) and built the same day, uncommitted** (`CIMTBL_MAPPING.md` S4b; it amends GLM-13). **S5 (the deck sweep, the D6 golden directory, tier 4, G7) proposed 2026-11-10, approved as recommended and built 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S5). **S6 (a utility's Milsoft WindMil decks, by the user's direction 2026-11-16) built and approved 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S6; it amends S3a-3, S3b-3 and S3c-6). The importer is complete for every mapped class. Branch `glm-importer` (worktree
+**Status:** approved by the user 2026-11-09. **The exporter wave (§8) was approved by the user 2026-11-21 ("implement the plan") and built the same day, X0-X5, committed (`4ee084a`, `docs/EXPORT_MAPPING.md`); its §8.3 tests that were left out (tier 2, the forms atom) built 2026-11-21 by the user's "go on to next phase", committed with the WireConfiguration rule (`f74f3f5`, §8.7). IEEE 8500 (X5's last deck, the series reactor both ways, S7) built 2026-11-21 by the user's "go for the next phase", committed (`b140e7b`, §8.8). Load players (§8.9) approved 2026-11-21 ("go ahead and implement the ConformLoad") and built the same day, uncommitted (S8, X29).** **S0 built 2026-11-09** (§4, findings in §3.5). GLM-1 re-decided and GLM-17 deferred by the user the same day. **S1 approved (S1-2, S1-3 amended) and built 2026-11-09.** **S2 approved (S2-3 amended) and built 2026-11-09** (`CIMTBL_MAPPING.md` S2; it amends GLM-11, GLM-12 and section 2 row 3). S0-S2 committed (`3aa8e6d`). **S3a (lines, switches) approved and built 2026-11-09** (`CIMTBL_MAPPING.md` S3a; it amends GLM-10 and drops the section 7 `switch` row). **S3a committed (`928f77d`). S3b (transformers) approved with the user's S3b-1/-4/-5/-9, built and committed (`3cd6983`)** (`CIMTBL_MAPPING.md` S3b; it amends GLM-6 and adds two section 7 core rows). **S3c (regulators) built 2026-11-09 by the user's direction (VoltageRegulator + two ideal AutoTransformerEnds), committed (`02d8fce`)** (`CIMTBL_MAPPING.md` S3c; it amends GLM-7). **The transformer getter reads an ideal AutoTransformer (2026-11-10, by the user's direction), which closes S3c's section 7 core row.** **S4a (loads, capacitors) approved 2026-11-10 with the user's S4a-2 TODO, S4a-5 and S4a-8 (a), built the same day; it and the getter change committed (`7bfe45b`)** (`CIMTBL_MAPPING.md` S4a; it amends GLM-8 and drops the section 7 `load` shape row). **S4b (DER) approved 2026-11-10 with the user's calls (GridLAB-D's PV logic, CONSTANT_PF batteries a Java defect, ratedU line to line) and built the same day, uncommitted** (`CIMTBL_MAPPING.md` S4b; it amends GLM-13). **S5 (the deck sweep, the D6 golden directory, tier 4, G7) proposed 2026-11-10, approved as recommended and built 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S5). **S6 (a utility's Milsoft WindMil decks, by the user's direction 2026-11-16) built and approved 2026-11-16, uncommitted** (`CIMTBL_MAPPING.md` S6; it amends S3a-3, S3b-3 and S3c-6). The importer is complete for every mapped class. Branch `glm-importer` (worktree
 `CIMHub-glm`, off `rc_1` at `d0901e7`). This wave is the **importer** (`glm_to_cim`). The exporter (`cim_to_glm` on
 the core getters) gets its own plan once the importer is done, as DSS S6 did.
 **Master plan:** [`REWRITE_PLAN.md`](REWRITE_PLAN.md) (F3+, GridLAB-D). **Contract, shapes, spec format:** the
@@ -234,7 +234,7 @@ Each item has a recommendation and the slice that needs it.
 | GLM-11 | Line configurations | **Amended in S2 (S2-9):** b derived from c (CIM has no capacitance on PhaseImpedanceData), rows compacted, and both forms on one record raise (GridLAB-D would use the matrix). Originally: a configuration with spacing + conductors is geometry (WireConfiguration); with `z11..z33` only, a `PerLengthPhaseImpedance` (`ohm/mi`, `c` in nF/mi verbatim). Both on one record: geometry, with the matrix untranscribed and noted (never substitute) | S2 |
 | GLM-12 | Triplex geometry | **Amended in S2 (S2-8):** a derived `ConductorDistanceSpacing` (D12 = d + 2t, D1N = d + t, `triplex_line.cpp`), not an XYSpacing; the z-matrix cross-check is dropped (no readable deck has one). Originally: GLM gives a triplex configuration as conductors + `insulation_thickness` + `diameter`, with no spacing object. Recommendation: an `XYSpacing` derived from those (named function, the GridLAB-D triplex formula cited), so it stays geometry; check it against the triplex z-matrix the Java exports carry for the same conductors | S2 |
 | GLM-13 | DER | `inverter` → `PowerElectronicsConnection` (`rated_power` is per phase in GLM: ratedS derived × phase count), nested `solar` → `PhotoVoltaicUnit`, `battery` → `BatteryUnit`. diesel_dg / windturb_dg: not mapped until a deck has one. **Amended by S4b (the user's calls, 2026-11-10):** the output is GridLAB-D's own (PV: its static-weather closed form, with the irradiance on `PhotoVoltaicUnit.irradiance`; a battery: its CONSTANT_PQ set point, CONSTANT_PF read as the Java export's defect); `ratedU` is the bus's line-to-line voltage; split phase is `s1s2` D across the legs; the datasheets are `GenerationInverterInfo`/`StorageInverterInfo`, `SolarArrayInfo`/`SolarPanelInfo` and `BatteryInfo` | S4b |
-| GLM-14 | Not mapped | recorder, multi_recorder, player, fncs_msg, house, ZIPload, waterheater and every class with no deck: listed with counts in the master comment, so nothing disappears silently (as DSS-11). Houses have no network-profile home | S0 |
+| GLM-14 | Not mapped | recorder, multi_recorder, player (**mapped since S8, §8.9**), fncs_msg, house, ZIPload, waterheater and every class with no deck: listed with counts in the master comment, so nothing disappears silently (as DSS-11). Houses have no network-profile home | S0 |
 | GLM-15 | `${VSOURCE}` in the Java exports | `glm_to_cim(path, defines={"VSOURCE": ...})`; without it the reader raises naming the macro. Vendored IEEE13 atoms pass it explicitly | S0 |
 | GLM-16 | Test oracle | No GridLAB-D engine is installed. For the importer: the tier-4 IEEE 13 GLM vs DSS comparison (§5) plus spot checks against the C++ formulas. Building GridLAB-D for power-flow parity is deferred to the exporter wave | S3b on |
 | GLM-17 | GLM-JSON input | **Decided by the user 2026-11-09: deferred to a phase after the migration.** GLM-JSON is GridLAB-D's new official format (reference schema in GridLAB-D's `utilities/json_schema`), but `.glm` is the commonly used one, so the `.glm` reader comes first. The S0 reader keeps parsing (pass 1, raw objects) apart from typing (pass 2), so a JSON front end can feed the same pass 2 | after the migration |
@@ -247,17 +247,254 @@ line's own set), D10 and D14 (no open delta in the decks, so it stays fail fast)
 
 | owed by | item | blocks |
 |---|---|---|
-| user | TODO (S4a-2): a GLM load schedule (`<schedule>.value*K`) to the CGMES schedule classes (`ConformLoadSchedule`, `SeasonDayTypeSchedule`) once profile export works; today only K is mapped and the reference is a row comment. **2026-11-16, the user:** nc_schedule schedule classes now have a Parquet sidecar for their points (`cimhub_gdm/time_points.py`, rc_1 `1c800cc`), meant for GLM `player` files too. Moved to `cimhub_core.time_points` the same day by the user's direction (the `time-points` extra: pyarrow, cim-builder), so a GLM schedule/player slice can use it | a GLM schedule/player slice |
+| ~~user~~ | **Built in §8.9 (2026-11-21): ConformLoad groups, points in a Parquet sidecar (S8, X29); GLM `schedule` blocks in §8.10 (S9, X30).** ~~TODO (S4a-2): a GLM load schedule (`<schedule>.value*K`) to the CGMES schedule classes (`ConformLoadSchedule`, `SeasonDayTypeSchedule`) once profile export works; today only K is mapped and the reference is a row comment. **2026-11-16, the user:** nc_schedule schedule classes now have a Parquet sidecar for their points (`cimhub_gdm/time_points.py`, rc_1 `1c800cc`), meant for GLM `player` files too. Moved to `cimhub_core.time_points` the same day by the user's direction (the `time-points` extra: pyarrow, cim-builder), so a GLM schedule/player slice can use it~~ | a GLM schedule/player slice |
 | user (cim-tables) | reference an `Identity`-only row by its `identifier`: `InverterInfo.InverterCapabilities` → `InverterCapabilities` (S4b-11). cim-tables does not index `Identity` rows today (`CIMTBL_DESIGN.md:141`), so S4b names the capability flag in the row comment instead of writing the row | S4b-11's `InverterCapabilities` |
 | core | `der` shape: `p2` (and `storage_b2`) say `s1s2` Y at 208 V, two 120 V legs to neutral, from the DSS IEEE 13. GridLAB-D's split-phase inverter sits across the legs at 240 V (S4b-4, S4b-5), so the shape should show `s1s2` D at 240 V. The DSS exporter must then write such a DER across the legs | the exporter wave's GLM round trip |
 | core | `shunt` shape and getter: per-phase `LinearShuntCompensatorPhase` b, for a gang capacitor whose `capacitor_A/B/C` differ. No deck has one: S4a-10 raises on it, and the getter keeps its raise | when a deck needs it |
 | ~~core~~ | ~~`switch` shape: per-phase `SwitchPhase` states (GLM-10)~~ dropped in S3a (S3a-6): no deck has per-phase states, so they raise | — |
 | core | transformer getter: read `percentImpedance`/`loadLoss` (with the center tap's Hopkinson split) where there is no mesh, and a bank of lugged template tanks by its phase ends; today it reads impedance only from winding `r` and the mesh and raises on a bank (S3b-5, S3b-9; the same %Z gap the DSS exporter hit). **Narrowed on rc_1 `d832796`:** `BY_TANK_IMPEDANCE` reads %Z, loadLoss and a bank from a tank with no template (the GIS form), with the Hopkinson center tap; what remains is reading the same values from the tank's `TankConfiguration` (GLM's form). **Done 2026-11-16:** a template with no winding `r` and no mesh reads its `percentImpedance`/`loadLoss` by the same split, and a bank of lugged template tanks is read can by can (`getters/transformer.py`) | done |
 | core | candidates now used by two spokes: the center-tap lug layout (DSS `xfmrcode.py`, GLM `transformer_configuration.py`) and `limit_types` (S3b-11) | — |
-| core | control getter (S5-4): `get_tap_changer_control` (via `get_regulating_control`) raises `targetValue is unset` on a disabled control. GLM's `MANUAL` regulators without a band (the 3 IEEE 13 units) have none, as GridLAB-D reads none; the getter should return `target` None when `enabled` is false. Tier 4 compares their taps and asserts the raise until then (`test_4_regulator_controls`) | the exporter wave |
+| ~~core~~ | ~~control getter (S5-4)~~ **done 2026-11-21 (exporter wave):** `get_tap_changer_control` (via `get_regulating_control`) raised `targetValue is unset` on a disabled control. GLM's `MANUAL` regulators without a band (the 3 IEEE 13 units) have none, as GridLAB-D reads none; the getter should return `target` None when `enabled` is false. Tier 4 compares their taps and asserts the raise until then (`test_4_regulator_controls`) | the exporter wave |
 | core | `source` shape: an ideal swing with zero impedance binds (GLM-9) | S1 |
-| core | `getters.spacing.get_spacing_distances` needs every conductor's height, which 224 GLM spacings and every triplex spacing lack; distances do not need heights, so the check belongs in `get_spacing_xy` (S2-2, S2-8) | the exporter wave's GLM round trip |
+| ~~core~~ | **done 2026-11-21 (exporter wave, `get_stored_distances`):** `getters.spacing.get_spacing_distances` needed every conductor's height, which 224 GLM spacings and every triplex spacing lack; distances do not need heights, so the check belongs in `get_spacing_xy` (S2-2, S2-8) | the exporter wave's GLM round trip |
 | core | derived functions: LN→system kV (GLM-1), triplex spacing (GLM-12), ZIP fractions (GLM-8); each goes to `derived/` when a second spoke needs it, else stays in the spoke | S1, S2, S4a |
 | ~~root workspace~~ | ~~`cimhub_gridlabd` added to the root `pyproject.toml` members and sources, then one `uv lock`~~ done in S0, with the same `cimtables` → `cim-tables` rename that is uncommitted on `rc_1` | — |
 | user | `cim-topology` release (0.1.0, from 0.1.0a2 on PyPI) carrying `cimtopology.core`; then the root `../CIM-Graph-Topology-Processor` path source can become a version pin. Until then the sibling checkout must be on a branch with `cimtopology.core` (its `develop` lacks it) | the walk |
+| user | TODO (X4, 2026-11-21, the user's): a GLM battery's `nominal_voltage` (its DC terminal voltage, 48 V in the IEEE 13 decks) must round-trip through `DCConductingAssetInfo`; until then the importer keeps only `BatteryInfo.numberOfCells` (floor(V / 4.1)) and the exporter leaves it unset, so GridLAB-D's internal battery model takes its `battery_type` default (`battery.cpp:665`). Not from `PowerElectronicsConnection.ratedU`, which is the AC side | a battery DC slice |
 | user | review of this plan and of each slice's spec section | every slice |
+
+## 8. The exporter wave (plan 2026-11-21, approved by the user the same day; X0-X5 built 2026-11-21, uncommitted)
+
+`GlmExporter(FormatExporter).to_model(network) -> GlmModel`, written fresh in `cimhub_gridlabd/exporter/`, one module
+per GLM class, on the core getters (`export-getters` skill), as DSS §8. The `GlmModel` it returns has the shape
+`GlmReader.read_all()` returns (schema dataclasses), so a new `GlmWriter` writes a deck the reader and the importer
+read back. CIMHub_2_0's `exporter/` (4,300 lines, cimhub_2026, `WireSpacingInfo`, a silent `WYE_WYE` default for
+unknown winding pairs, a 1.0 V `nominal_voltage` fallback in the writer) is the oracle only. Each sub-slice has its
+own section in `cimhub_gridlabd/docs/EXPORT_MAPPING.md`, approved before its code.
+
+### 8.1 Sub-slices
+
+| # | content | getters (new or changed in **bold**) |
+|---|---|---|
+| X0 | framework: `GlmExporter`, `EXPORT_ORDER`, `SLOTS` per class (`cimhub_core.export_slots`), naming (X1), `GlmWriter` (§8.2), the per-atom harness (§8.3); `node`/`triplex_node` from ConnectivityNodes (phases from the terminals, `nominal_voltage` LN from the BaseVoltage), the swing (X6) | `get_terminal_phases`, `get_base_voltage`, `get_source` |
+| X1 | lines: `overhead_line_conductor`, `underground_line_conductor`, `triplex_line_conductor`; `line_spacing` from the spacing's distances; `line_configuration` / `triplex_line_configuration` by conductors + spacing (geometry) or by z-matrix (a PerLengthImpedance only); `overhead_line`, `underground_line`, `triplex_line`; `switch`, `fuse`, `recloser`, `sectionalizer` with `status` from the switch state | `get_wire_info`, **`get_spacing_distances` without heights** (§7 core row), `get_line_phase_impedance_matrix(expand_sequence=True)`, `get_switch_state`, `get_current_limits` |
+| X2 | transformers: `transformer_configuration` + `transformer` for GridLAB-D's connections (X2), the wye-wye replacement for every other model (X3), the three-winding star split (X4); `regulator_configuration` + `regulator` from a VoltageRegulator | `get_transformer_units`, `get_transformer_model`, `get_tap_steps`, **`get_tap_changer_control` with `target` None when disabled** (§7 core row) |
+| X3 | `load`, `triplex_load` (constant power/current/impedance per phase from the ZIP fractions), `capacitor` (+ its control) | `get_phase_loads`, `get_load_response`, `get_shunt_reactive_power`, `get_regulating_control` |
+| X4 | `inverter` + nested `solar` / `battery` (GridLAB-D's per-phase `rated_power`, S4b's PV and battery rules inverted) | `get_der_output`, `get_inverter_units`, the DER rating getters |
+| X5 | whole decks: the idempotence sweep over every binding GLM deck; cross-format, DSS-imported CIM (IEEE 13/123/8500) to GLM; power-flow parity in GridLAB-D (X9) | — |
+
+### 8.2 Writer (X0)
+
+A new `glm_writer.py` (reader-writer skill), not the CIMHub_2_0 one: class order as a `WRITE_ORDER` list (every
+object after what it names: conductors, spacings, configurations, nodes, links, then loads and DER, which are
+`parent`ed); a `clock` block and `module powerflow { solver_method NR; }`; one `object <class> { ... }` per record,
+the slot's `native_name` and value only (a quantity in the slot's schema unit, a complex `a+bj` through one
+`format_complex`); `None` never written. No fallback values: a class GridLAB-D cannot initialise without a slot
+(`nominal_voltage`) raises in the exporter, naming the CIM object.
+
+### 8.3 Tests
+
+- **Per atom (tier 2, every sub-slice):** atom `.glm` → `glm_to_cim` → `to_model` → writer → reader → importer; the
+  two `.cimtbl` texts equal, except each listed difference. An exported golden `.glm` is committed beside each atom
+  (D6) so a diff shows what changed.
+- **Transformer forms (X2):** atoms built as `.cimtbl` text for the forms no GLM deck holds (YNd, Dyn11, Yz, a
+  three-winding YNyn0d1, an unregulated AutoTransformer), exported and checked against hand-computed GLM values (the
+  star impedances, the leg ratings).
+- **Idempotence (X5):** export(import(export(import(deck)))) is the same text as export(import(deck)) on every deck
+  that binds.
+- **Parity (X5):** bus voltages of the exported deck against the original in GridLAB-D 6.0 (X9).
+
+### 8.4 Decisions
+
+| # | question | recommendation |
+|---|---|---|
+| X1 | Names | DSS E1 unchanged: `cimhub_core.names.export_name` (`name`, `mrid`, `uri`; default `mrid`), sanitized by a GLM rule (`glm_safe_name`: no whitespace, `;`, `{`, `}`, quotes; `:` is GridLAB-D's class:id form, so replaced), one namespace per deck (GLM names are global), a collision raises naming both |
+| X2 | Native transformer connections | **Decided by the user 2026-11-21: native where GridLAB-D's C++ has the model.** Two windings: Y/Yn–Y/Yn → `WYE_WYE` (one or two phases: lugged cans, `SINGLE_PHASE` is the same case, `transformer.cpp:263`); D–D on three phases → `DELTA_DELTA`; D–Yn on three phases at GridLAB-D's fixed shift (`DELTA_GWYE`: the high side leads the low side by 30°, `transformer.cpp:663`) → `DELTA_GWYE`; a centre tap (s1, s2, N) → `SINGLE_PHASE_CENTER_TAPPED`, its halves folded back into the full winding's R + jX by S3b's star (the importer's split inverted). %Z on winding 1's `ratedS` (the getter's default base), `primary_voltage`/`secondary_voltage` as S3b-3 |
+| X3 | Every other two-winding model | **Decided by the user 2026-11-21:** a two-winding `WYE_WYE` from the PowerTransformerEnds' `ratedU`/`ratedS` and the (1, 2) mesh: Y–D, Yn–D, D–Y, D–Yn at another shift (Dyn11), Z/Zn, an open delta, an AutoTransformer that is not a VoltageRegulator. Each is logged once per unit and listed in `EXPORT_MAPPING.md` as an expected difference (the phase shift, the zero-sequence path, the grounding are lost). Four or more windings raise |
+| X4 | Three windings (not a centre tap) | **Decided by the user 2026-11-21:** a star split into three two-winding transformers, winding i → a fake 1 kV star node (`<unit>_star`, three-phase, `nominal_voltage` 577.35 V LN). The star impedances on winding 1's ratedS: Zᵢ = (Zᵢⱼ + Zᵢₖ − Zⱼₖ) / 2, each leg on its own winding's `ratedS` (z × Sᵢ / S₁). The core on leg 1. Each leg's connection and a non-positive branch: §8.5 Q1, Q2 |
+| X5 | Regulators | A VoltageRegulator → `regulator` + `regulator_configuration` (S3c inverted: band, steps, increment, taps per phase, `Control` from the TapChangerControl's mode and `enabled`). A RatioTapChanger on a plain PowerTransformer (an LTC) → the transformer at its actual tap folded into `primary_voltage`, the control dropped and listed |
+| X6 | The swing | Each EnergySource → a `substation` (`bustype SWING`, `positive_sequence_voltage` from `nominalVoltage`, the angle). GLM's swing is ideal: a source impedance is not written and is listed (power flow differs from DSS by the source drop) |
+| X7 | Values CIM leaves unset | DSS E4: the getters' `None` follows a written spoke rule with a comment; LinkML `glm_default`s are never read. GridLAB-D requires R > 0 and X > 0 on every `transformer_configuration` (`transformer_configuration.cpp:337`), so a winding with no `r` takes §8.5 Q2's floor |
+| X8 | Units | Each GLM slot's unit is the schema's (`unit.ucum_code`; GLM has fixed units: ft, mile, ohm/mile, V, VA, nF/mile). The exporter asks each getter for that unit (`glm_schema.registry_unit`); no factor in spoke code |
+| X9 | Oracle | GridLAB-D 6.0 from the PyPI `gridlabd` wheel (§8.5 Q3) |
+
+### 8.5 The user's answers (2026-11-21)
+
+- **Q1 the star legs' connection (X4): each leg keeps its winding's connection where X2 has one.** A D winding is
+  `DELTA_GWYE` into the star (the delta on the winding's side), a Y/Yn winding `WYE_WYE`; any other winding is
+  `WYE_WYE` (X3). So a YNyn0d1 keeps its d1 shift.
+- **Q2 a non-positive R or X (X4, X7): a floor of 1e-6 pu.** A star branch, or a winding with no `r`, whose R or X
+  is ≤ 0 is written at 1e-6 pu on its leg's base, logged once per unit and listed in `EXPORT_MAPPING.md`.
+- **Q3 the parity oracle (X9): GridLAB-D 6.0**, a test oracle only, as `opendssdirect` is for DSS. X5 compares bus
+  voltages with the original deck's. **2026-11-21:** v6.0 is released (tag `v6.0`, branch `release/v6.0`) with a
+  `gridlabd` 6.0.0 abi3 wheel on PyPI (manylinux x86_64, macOS, Windows; Python >= 3.10) whose API loads a deck and
+  reads node voltages (`GridLabD().load_glm`, `run`, `get_objects_by_class`, `get_object_property_value` → complex).
+  So the oracle is a dev-group pin `gridlabd~=6.0.0` (the root `pyproject.toml`, bootstrap session), not a CMake
+  build. The C++ citations in this plan are to v6.0 (`CIMHub_2_0/cimhub_gridlabd/gridlab-d`, fast-forwarded to
+  `feature/1478` `3d2c998c`, whose source equals `release/v6.0`); v6.0 changes no transformer, regulator or line
+  model since the importer wave's tree (checkpointing, macOS `isa_*` exports, formatting), only line numbers.
+  **Confirmed 2026-11-21:** the 6.0.0 wheel (with its declared `nanobind-backend` 1.0.0, nanobind's split-mode
+  runtime) loads and solves the vendored `IEEE13_cdpsm.glm` unedited under NR. Notes for the X5 harness: the wheel has
+  no `gridlabd` CLI, only the library; `GridLabD` runs a worker process and returns only "failed to load model file",
+  so load errors need `DirectGridLabD` (in-process, prints the parser's message), which lacks
+  `get_object_property_value`; the Java exports' `ieeezipload.value*K` needs the GridAPPS-D run-file pattern
+  (`module tape; class player { double value; }` and a `player` named `ieeezipload`), as a `schedule` source is a bare
+  name (`ieeezipload*K`); the deck's bus `634` is `SWING_PQ`, a plain second swing without a `fault_check`, so it
+  backfeeds `xf_xfm1` and blows `swt_fuse1`. As a PQ bus the feeder solves with no overload (650 at 1.0, `rg60`
+  1.067/1.054/1.074, 671 1.003/1.027/0.999).
+
+### 8.6 Built (2026-11-21)
+
+All of X0-X5, spec `cimhub_gridlabd/docs/EXPORT_MAPPING.md` (its slot tables generated from `SLOTS` and checked).
+`gridlabd~=6.0.0` is in the root dev group (by the user's direction). Results:
+
+- GLM-origin (the Java exports, run as the importer reads them): IEEE 13 cdpsm (DER included), IEEE 13 assets,
+  IEEE 123 within 2.5e-5 of the original in GridLAB-D; the PNNL exports solve; a second export(import()) pass is
+  the same text on all five vendored decks that bind.
+- DSS-origin (`tests/cross_format/test_dss_to_glm.py`, against OpenDSS's own frozen solution, line to line): native
+  forms within 5e-4 (IEEE 13, IEEE 123, 4-bus YY and DY); the listed differences within their bounds (YD/GrdYD
+  1.4e-3, CDPSM 3e-3, Assets 2 %, IEEE 37 1.75 %); OYOD and YYD solve.
+
+Decisions taken in the build (on top of X1-X9, §8.5):
+
+| # | decision | by |
+|---|---|---|
+| X10 | Single-phase units with a phase-to-phase coil on the same buses are one bank, then X2-X4 (YYD: a Y-Y-D star split; OYOD: an open-delta bank written WYE_WYE on its three phases) | the user, 2026-11-21 |
+| X11 | A delta regulator bank is one `WYE_WYE` regulator, each coil's tap on its own phase: GridLAB-D 6.0 solves no delta regulator under NR (`OPEN_DELTA_ABBC` FBS only, the rest throw) | X3's rule, carried to regulators; listed |
+| X12 | Battery `nominal_voltage` (DC) is unset until it round-trips through `DCConductingAssetInfo` (§7 TODO); not from ratedU, the AC side | the user, 2026-11-21 |
+| X13 | A PV inverter is `CONSTANT_PF` at CIM's power factor (GridLAB-D's PV logic, S4b-1, so it reads back); a battery `CONSTANT_PQ` at its set point; PV loss factors 1 (CIM's p holds them) | S4b's rule |
+| X14 | `line_capacitance TRUE` in the deck: CIM's b is model data, and GridLAB-D ignores every `c` without it | — |
+| X15 | The importer's splits are inverted by name, so a GLM model round-trips: regulator units `<base>_<phase>` (S3c), capacitor units `<base>_<phase>` (S4a-8), a triplex 240 V part `<base>_12` (S4a-6) | — |
+| X16 | Bare wires in an underground configuration: `outer_diameter` 1.2 x diameter (the Java exporter's); tape shields: `shield_gmr`, `shield_resistance` by Kersting eq. 4.89 (the Java exporter's): GridLAB-D needs both | — |
+| X17 | Non-voltage capacitor controls (time, VAR, current) are MANUAL at the actual state, logged, as an LTC's control (X5); voltage-exponent loads with exponents 0, 1, 2 are ZIP | — |
+
+Core getter changes (2026-11-21, tested): `get_wire_info` reads `rAC50`; `get_stored_distances` returns a
+spacing's distances and heights as stored (partial, or empty), and `get_spacing_distances` no longer needs heights;
+`get_regulating_control` returns `target` None on a disabled control.
+
+### 8.7 The §8.3 tests that X0-X5 left out (2026-11-21, by the user's "go on to next phase"; uncommitted)
+
+X0-X5 shipped without two of §8.3's tests, and they found exporter defects:
+
+- **Tier 2** (`tests/test_export_atoms.py`): each importer atom deck (but the bare catalog, which `line.glm` includes)
+  through the exporter and the importer again; the two CIM models are equal (`cimtables.diff_models`, SI) under the
+  X1 names, except three listed differences: a template no equipment uses is not written (configurations are per
+  use); a bus's `nominal_voltage` is its BaseVoltage's, so a deck's rounded 2401.78 V comes back 2401.7771 (a
+  regulator end's baseU and neutralU, 1.2e-6); a battery's numberOfCells (X12's TODO). Each exported deck is the
+  golden `<atom>.exported.glm` beside its atom.
+- **The forms atom** (`atoms/transformer/forms.cimtbl`, CIM by balanced ends): YNd1, Dyn11, YNzn and an unregulated
+  AutoTransformer written WYE_WYE (X3), a YNyn0d1 star split (X4), each checked against values computed in the test
+  (the star branches, each leg on its own ratedS, the d leg DELTA_GWYE), committed as `forms.exported.glm` and
+  solved in GridLAB-D 6.0.
+- **IEEE 8500 (X5) was blocked in the DSS importer** (done in §8.8: the stop was another copy of the deck): switch `A333_48332_sw` (`bus1=D5746546-1_INT.3`,
+  `phases` unset, so OpenDSS's 3) fills its conductors as OpenDSS does, nodes 3 2 3, and cimtables refuses phases
+  `CBC` (`line.cimtbl`, `LoadBreakSwitch`). The deck is not vendored (`CIMHUB_DSS_DECKS`, `IEEE/IEEE8500/Master.dss`;
+  its file names' case also differs from its `Redirect`s on Linux). Owed by the DSS spoke.
+
+Defects the tests found, fixed (each in `EXPORT_MAPPING.md`):
+
+| # | defect | fix |
+|---|---|---|
+| X18 | a BANK capacitor monitoring one phase (`pt_phase A` on ABC) raised | `pt_phase` the control's monitored phases, else the unit's own |
+| X19 | the swing's `nominal_voltage` was the BaseVoltage's (7199.56 V for the deck's 7200), its `base_power` dropped | `nominal_voltage` the EnergySource's nominalVoltage / sqrt 3; `base_power` the graph's BasePower when it holds one |
+| X20 | a triplex line's ratings were dropped | written on its service letter |
+| X21 | a gang regulator (one VoltageRegulator on ABC) came back as three; a MANUAL regulator's compensator settings were dropped | one VoltageRegulator alone is `control_level` BANK, `PT_phase`/`CT_phase` its monitored phase; the compensator wherever CIM holds a line drop |
+| X22 | an unequal-can bank (`powerX_rating`) came back as one transformer per can | a PowerTransformer's cans under one TransformerBankConfiguration are one WYE_WYE, named by it, each can's own pu x S_total / (3 S_can) (the importer's k inverted), which must agree |
+| X23 | X13's PV rule wrote derating, soiling and the inverter's efficiency 1, so a deck with losses produced 1 / (0.95 x 0.95 x 0.9) of CIM's p; the array's tilt, azimuth, shading and the panel's efficiency were dropped | the datasheets written; `derating` = p / GridLAB-D's lossless static output at its defaults for what CIM lacks (the importer's `static_dc_output`; a 0 `Pmax_temp_coeff` is GridLAB-D's panel default, `solar.cpp:571`), so GridLAB-D's output is CIM's p from any origin; a p above it raises |
+| X24 | a battery's `soc_reserve` and `max_charge_rate` were dropped; `max_charge_rate` was -minP and `max_discharge_rate` maxP, neither CIM's; no batteryType was written LI_ION | `soc_reserve` minimumE / ratedE, `max_charge_rate` chargeRateActiveMax, `max_discharge_rate` unset (both LOAD_FOLLOWING only); no batteryType is unset, GridLAB-D's UNKNOWN |
+| X25 | a polyphase unregulated AutoTransformer raised (no ratedU; the X3 log line read an unset connection) | its ends' baseU, line to line on a polyphase end (the voltage_regulator shape) |
+| X26 | (the user's review, 2026-11-21) X1 called any line with a WireConfiguration geometry; the test is WireConfiguration.WireSpacing. A WireConfiguration with only a PerLengthImpedance (a template DSS LineCode) is a matrix, and the WireConfiguration is the equivalence route an XYSpacing and a ConductorDistanceSpacing may both point to | core `get_line_geometry` (a configuration with a WireSpacing) and `get_line_code` (the line's PerLengthImpedance, else its WireConfiguration's; both set and different raise), used by the impedance getters and `line_key`. Then (the user's rule, 2026-11-21, DSS-14, skill `wire-configuration`) every importer writes a named catalog lines share (DSS LineCode, GLM z-matrix line_configuration, GDM catalog) as an `isTemplate=true` impedance behind a WireConfiguration `<lc>_wc` with no WireSpacing, and a line's own values as `ACLineSegment.PerLengthImpedance` with `isTemplate=false`. The DSS, GDM and GLM exporters read both through the two getters; the DSS exporter writes a line's own impedance inline |
+
+GLM-origin parity after the fixes: IEEE 13 cdpsm 1.7e-5, IEEE 13 assets 9.6e-6, IEEE 123 4.0e-6 (was within 2.5e-5).
+
+Core changes (tested): `getters.der` gains `get_photovoltaic_datasheet` (SolarArrayInfo + SolarPanelInfo) and
+`get_inverter_datasheet` (GenerationInverterInfo / StorageInverterInfo, `chargeRateActiveMax`);
+`getters.line_impedance` gains `get_line_code` and `get_line_geometry` (X26), and its getters read the code and
+the geometry through them; `cimtbl_testing.assert_text_matches_golden` record-diffs only a `.cimtbl` golden and shows a unified diff for
+another (an exported `.glm`).
+
+### 8.8 IEEE 8500 (2026-11-21, by the user's "go for the next phase"; committed `b140e7b`)
+
+X5's last deck. `CIMHUB_DSS_DECKS`' copy (`CIMHub_2_0/test_data/.../IEEE/IEEE8500/Master.dss`) binds in the DSS
+sweep: its switch `A333_48332_sw` writes `phases=1`, so §8.7's stop (phases unset, OpenDSS's 3 filled as `CBC`) came
+from another copy of the deck, not the importer. Three things stood between it and GridLAB-D:
+
+| # | finding | done |
+|---|---|---|
+| X27 | its triplex codes carry a cmatrix (3.0 / -2.4 nF per kft), and a triplex matrix with b raised | the b is not written, logged per configuration: GridLAB-D 6.0's `triplex_line` has no shunt admittance (`triplex_line.cpp:315` fills only the series matrix), so no form holds it; about 0.1 VAr per kft at 240 V. Listed |
+| X28 | its source impedance is a series Reactor (a SeriesCompensator, the feeder head), which no GLM module exported | `exporter/series_reactor.py`: a `series_reactor`, `phase_X_impedance` = r + jx on each phase, a link's ratings; r0/x0 other than r/x and a varistor raise (GridLAB-D's reactor has no coupling, `series_reactor.cpp:105`). The importer reads it back (`CIMTBL_MAPPING.md` S7, `importer/cimtbl/series_reactor.py`): equal phases → one SeriesCompensator, r0 = r, x0 = x; an unset phase (GridLAB-D's 0 is a switch stand-in) or the resistance/reactance aliases raise. Atom `atoms/series_reactor/` (tiers 1, 1b, 2) |
+| — | the deck sets no regulator tap, so CIM's taps are neutral: frozen there with controls off the feeder collapses (0.70 pu in OpenDSS, 31 iterations; GridLAB-D's NR never converges and, at one instant, retries forever) | the harness's `SOLVED_TAPS`: both engines at the taps OpenDSS's own controlled solve reaches (`FEEDER_REGA` 1.0125 … `VREG3_A` 1.10), written into CIM's `step` before the export; OpenDSS's iteration cap raised to 100 |
+| — | at full load GridLAB-D's NR stalls (a fixed mismatch of 1568; also with constant-impedance loads, a 100 MVA base, the reactor as a switch, or 2000 iterations) and solves at 0.9 (lowest bus 0.96 pu). **The user, 2026-11-21: keep 0.9 load**; their OPF team sees the same with this feeder's undersized secondaries | `LOAD_MULTIPLIER`: OpenDSS `loadmult` 0.9, the GLM deck's `base_power_X` × 0.9 |
+
+Result: within 5.3e-3 line to line of OpenDSS (`m1069311`), bound 1e-2; the cause is not isolated (candidates:
+1,177 centre-tap services, ideal regulators, X27). The test (import, export, both solves) takes 22 s.
+
+### 8.9 Load players (2026-11-21; the user's calls: ConformLoad groups, points in a Parquet sidecar; built the same day, uncommitted)
+
+S4a-2's TODO, both ways: a GLM `player` and the `<player>.value*K` load bases that name it. The Java exports'
+`ieeezipload` is one player shared by every load, scaling each base by its value, as a DSS `LoadShape` scales the kW
+of every load naming it. So the CIM keeps one shared multiplier schedule. **The user, 2026-11-21:** the
+`ConformLoadSchedule → ConformLoadGroup ← ConformLoad` pattern, not nc_schedule's `EnergyConnectionSchedule` (one
+actual-value schedule per device: IEEE 8500 would carry 1,177 copies of one shape, and the export would write 1,177
+players). GDM's per-device actual-value series stay on `EnergyConnectionSchedule` (`cimhub_gdm` T1). Probe
+(2026-11-21): cimtables binds a `Table ConformLoad` (Terminal and EnergyConsumerPhase as for an EnergyConsumer),
+its group and schedule, and `write_xml` writes them, so "once profile export works" no longer blocks. Out of scope:
+GLM `schedule` blocks (cron rows: `SeasonDayTypeSchedule` with its `DayType` and `Season`) and DSS loadshapes (the
+DSS spoke's own slice, onto the same CIM).
+
+| # | decision (approved; built as S8-1 to S8-6 and X29) |
+|---|---|
+| P1 | One player → one `ConformLoadGroup` (`lg_<player>`) and one `ConformLoadSchedule` (`ls_<player>`). A load whose base names it is a `ConformLoad` whose `LoadGroup` is that group; its p, q are today's (S4a-2: K split by the fractions). Loads naming two different players on two phases raise (one LoadGroup) |
+| P2 | The schedule is a multiplier of p and q together (GLM scales the base, so both): `value1` = the player's value, `value1Unit` none; `value2` unset. On export a set `value2` other than `value1` raises |
+| P3 | Times: `startTime` = the first row's timestamp, its zone written as an offset (`2009-07-21 00:00:00 EDT` → `2009-07-21T00:00:00-04:00`; US abbreviations and UTC/GMT, others raise); `timeStep` = the one step (`+1m` → `60 (s)`). Steps that differ raise: a `RegularIntervalSchedule` has one step |
+| P4 | Points: `RegularTimePoint` rows in a Parquet table beside the XML (`<stem>.RegularTimePoint.parquet`: `IntervalSchedule` uri, `sequenceNumber`, `value1`), never graph objects (GDM's T6). The `.cimtbl` holds the group and the schedule header. `GlmImporter(time_points)` fills the caller's dict and `GlmExporter(time_points)` reads it, as GDM's |
+| P5 | A base naming a player the deck does not define (the Java exports; GridAPPS-D's run file defines `ieeezipload`) gets the group with no schedule and one warning, so the name survives. ~~The export writes `<group>.value*K` and warns that no player is written~~ **Built otherwise:** the export writes such loads static, naming the groups in one warning: a reference to no player is a deck GridLAB-D cannot load, and it would break the X5 parity solves of the three Java exports. Tier 2 lists it (the load atoms' `zipsched` loads come back EnergyConsumers) |
+| P6 | Reader: a `player` object (tape module) with `file` (resolved beside the deck) and `loop` 0 or unset, read only through the run-file pattern `class player { double value; }` + `<name>.value`. Rows are `time,value`: an absolute time with a zone or `+N[s|m|h|d]`; a trailing `;` is GridLAB-D's (`player.cpp:345` stops the value at `;`). A player with a `parent`/`property` target, a `loop` > 0 or any other row raises |
+| P7 | Export: each `ConformLoadSchedule` → a `player` (name = the group's name, file `<name>.player`, written by `GlmWriter` beside the deck) plus `module tape;` and `class player { double value; }`; a ConformLoad's `base_power_X` = `<player>.value*K`, K today's base. A group with several schedules (seasons, day types) raises |
+| P8 | `ConformLoad` is a subclass and the graph is keyed by class, so every exporter's load classes gain `cim.ConformLoad`: GLM here; DSS, RAW, GDM export it as a plain load, its schedule dropped with one warning, until their own slices (owners: those spokes; their "class no module exports" guard raises until then) |
+
+Built 2026-11-21 (the core parts too, by the user's "go ahead and implement"; spokes otherwise send them to the core
+owner):
+
+| where | what |
+|---|---|
+| core | `time_points`: the `RegularTimePoint` table (`REGULAR_TIME_POINT_SCHEMA`: `IntervalSchedule` uri, `sequenceNumber`, `value1..3`), read for every `RegularIntervalSchedule` subclass, and `regular_time_points`; shape `load_schedule.cimtbl` (ConformLoad and NonConformLoad groups); getter `getters/load_schedule.py` (`get_load_schedule`, `log_dropped_schedules`) |
+| GLM schema | `linkml/tape/player.yaml`, written by hand from `tape.cpp:291-296` (PUBLISH_STRUCT, which the scrape does not read); `gridlabd.py` regenerated (the rest unchanged) |
+| GLM reader | `class player { double value; }` (any other `class` raises), each player's file into `GlmModel.tapes` |
+| GLM importer | S8 (`CIMTBL_MAPPING.md`): `importer/cimtbl/player.py`, `load.py`'s ConformLoad rows, `GlmImporter(time_points=)` |
+| GLM exporter | X29 (`EXPORT_MAPPING.md`): `exporter/player.py`, `load.py`'s `<player>.value*K`, the clock at the earliest start, `GlmExporter(time_points)`; `GlmWriter` writes expressions, class blocks and tapes |
+| DSS, RAW, GDM | ConformLoad and NonConformLoad are loads (DSS and RAW already read them; GDM now does); RAW logs the group schedules it drops. **Since 2026-11-21 (the user's "implement the remaining changes across the other spokes"):** DSS maps yearly LoadShapes both ways (`DSS_REWRITE_PLAN.md` §9); GDM exports a group's schedule as one shared series (`cimhub_gdm/docs/TIMESERIES_NEEDS.md` §8) |
+| NonConformLoad | the user's "maybe also": a CIM class every exporter reads, its group schedule in the shape and the getter. No GLM form: a NonConformLoadSchedule is in power units with independent P and Q, and GLM's base form holds one multiplier, so it is written static with the warning. A DSS LoadShape (`useactual`) can hold it: the DSS slice |
+| tests | core 488 (+11); GLM `test_cimtbl_player.py` (28), `test_export_players.py` (8: the rules, and IEEE 13 with GridAPPS-D's 1,440-point player, vendored, solved in GridLAB-D at its first two instants against fixed bases, 1e-9) |
+
+~~Not built: GLM `schedule` blocks (cron rows, `SeasonDayTypeSchedule`)~~: built 2026-11-21 (§8.10). ~~DSS
+LoadShapes, GDM reading a ConformLoadSchedule~~: built 2026-11-21 (above). The player export now reads its points
+through the core `get_schedule_points`, and the importer adds them through `time_points.add_regular_time_points`,
+both shared with the DSS spoke. `cimhub_gridlabd` imports `cimhub_core.time_points` only when points are passed;
+~~its pyproject should gain a `time-points` extra~~: done 2026-11-21 at the user's "fix the pyproject.toml files"
+(`cimhub_gridlabd[time-points]` and `cimhub_opendss[time-points]` pull `cimhub-core[time-points]`; the workspace
+root installs both; `uv lock` rerun).
+
+### 8.10 Load schedules (2026-11-21; the user's call: Season x DayType; built the same day, uncommitted)
+
+The user's "implement the glm schedule ... using the nc_schedule profile classes", with the choice (asked) of
+CGMES's `SeasonDayTypeSchedule` over nc_schedule's per-load `EnergyConnectionRegularSchedule` (one copy per load, in
+actual power) and over one expanded year (the recurrence lost). A GLM `schedule` a base reads as `<schedule>*K` is a
+`ConformLoadGroup`, as a player is (§8.9), with one `ConformLoadSchedule` per `Season` (a run of months) and
+`DayType` (a weekday set, named in nc_schedule's `DayOfWeekKind` words), each a day of multipliers from midnight.
+GridLAB-D's reading of the rules was checked in the engine first (inclusive ranges, months from 1, weekdays from 0 =
+Sunday, an omitted value 1, uncovered times 0, overlaps a load error). Decisions S9-1 to S9-5 and X30 were made
+while building, from that reading; they are in `cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s9-load-schedules` and
+`EXPORT_MAPPING.md#x30-load-schedules`.
+
+| where | what |
+|---|---|
+| core | `getters/load_schedule.get_load_schedule`: a group has one time series (no Season, no DayType) or days by season and day type (`LoadSchedule.days`); both, or two time series, raise. `log_dropped_schedules` counts days too |
+| GLM importer | `importer/cimtbl/schedule.py` (rules, `day_profiles`, `seasons`, `coarsest_step`, the document and `schedule_points`); `load.py` reads `<schedule>*K` (`references(model, players=)`); the orchestrator maps schedules after players, adds their points with the players', and counts unread schedules on the master |
+| GLM exporter | `exporter/schedule.py` (each day as rules, split at the hours; `GlmModel.schedules`), `load.py` writes `<schedule>*K`, `player.py` skips days; `GlmWriter` writes schedule blocks |
+| DSS, GDM | a group of days is written static and named in their warnings (DSS has no calendar; a GDM series needs absolute times) |
+| tests | `test_cimtbl_schedule.py` (19: goldens, binding, GridLAB-D's value every 30 minutes over a winter and a summer week against the CIM days, helpers, raises), `test_export_schedules.py` (15: the rules, GridLAB-D parity of the exported schedules over both weeks, the deck read back to the same points, helpers, raises), `tests/cross_format/test_glm_schedule_elsewhere.py` (2) |
+
+Not built: a day-of-month field (no Season or DayType holds it); nested blocks; a schedule on anything but a load base
+(the decks' only schedules drive houses, which are not mapped); a DSS form (a `daily` shape could carry an all-year,
+all-days schedule).

@@ -1,4 +1,4 @@
-# GridLAB-D triplex_node -> EnergyConsumer (+ EnergyConsumerPhase values).
+# GridLAB-D triplex_node -> EnergyConsumer or ConformLoad (+ EnergyConsumerPhase values).
 # Source table: triplex_node (records: 1)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
 

@@ -2,22 +2,27 @@
 # triangle, row/column = conductor index) or a sequence code (PerLengthSequenceImpedance). Per-length units
 # are the source's (ohm/mi, ohm/km, nS/mi, uS/km); the segment's length unit is its own. Ratings go on the
 # instance: an OperationalLimitSet with one CurrentLimit per OperationalLimitType (common.cimtbl).
+#
+# Two forms (skill wire-configuration):
+# - a named code lines share (DSS LineCode, GLM z-matrix line_configuration, GDM catalog): isTemplate=true, held
+#   by a WireConfiguration <lc>_wc with no WireSpacing; the lines name the WireConfiguration (l1);
+# - a line's own values: isTemplate=false, ACLineSegment.PerLengthImpedance (l2).
 
 Profile = cim18v17
 
 Import common.cimtbl
 
-Object PerLengthPhaseImpedance: mRID=lc_mtx604, name=mtx604, conductorCount=2, calculatedFrequency (Hz)=60
+Object PerLengthPhaseImpedance: mRID=lc_mtx604, name=mtx604, conductorCount=2, calculatedFrequency (Hz)=60, isTemplate=true
 Table PhaseImpedanceData: identifier, PhaseImpedance=lc_mtx604, row, column, r (ohm/mi), x (ohm/mi), b (nS/mi)
     lc_mtx604_11, 1, 1, 1.3238, 1.3569, 4710.84
     lc_mtx604_21, 2, 1, 0.2066, 0.4591, -899.07
     lc_mtx604_22, 2, 2, 1.3294, 1.3471, 4545.35
+Object WireConfiguration: mRID=lc_mtx604_wc, name=mtx604, PerLengthImpedance=lc_mtx604
 
-Object PerLengthSequenceImpedance: mRID=lc_seq1, name=seq1, calculatedFrequency (Hz)=60, r (ohm/km)=0.3489, x (ohm/km)=0.426198, r0 (ohm/km)=0.588811, x0 (ohm/km)=1.29612, bch (nS/km)=3932.35, b0ch (nS/km)=1690.81
+Object PerLengthSequenceImpedance: mRID=ln_l2_lc, name=l2, isTemplate=false, calculatedFrequency (Hz)=60, r (ohm/km)=0.3489, x (ohm/km)=0.426198, r0 (ohm/km)=0.588811, x0 (ohm/km)=1.29612, bch (nS/km)=3932.35, b0ch (nS/km)=1690.81
 
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
-    ln_l1, l1, n1, n3, CB,  300, lc_mtx604
-    ln_l2, l2, n1, n4, ABC, 500, lc_seq1
+Object ACLineSegment: mRID=ln_l1, name=l1, node1=n1, node2=n3, phases=CB, length (ft)=300, WireConfiguration=lc_mtx604_wc, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
+Object ACLineSegment: mRID=ln_l2, name=l2, node1=n1, node2=n4, phases=ABC, length (ft)=500, PerLengthImpedance=ln_l2_lc, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_shapes
 
 Object OperationalLimitSet: mRID=ln_l1_limits, Equipment=ln_l1
 Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet=ln_l1_limits

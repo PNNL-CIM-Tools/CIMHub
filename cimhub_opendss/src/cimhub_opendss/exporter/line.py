@@ -1,7 +1,9 @@
 """ACLineSegment -> OpenDSS ``Line`` (``EXPORT_MAPPING.md#line``).
 
-A line names its catalog: a LineGeometry when it has a WireConfiguration, or a direct WireSpacing with a WireInfo on
-each ACLineSegmentPhase (a spacing line; geometry wins, skill ``conductor-geometry``), else a LineCode. Lengths are
+A line names its catalog: a LineGeometry when its WireConfiguration names a WireSpacing (``get_line_geometry``), or a
+direct WireSpacing with a WireInfo on each ACLineSegmentPhase (a spacing line; geometry wins, skill
+``conductor-geometry``), else its code (``get_line_code``): a template's LineCode by name, or the line's own
+impedance (``isTemplate=false``, skill ``wire-configuration``) written inline, per metre like a LineCode. Lengths are
 in metres (B1). A line with only lumped values is written inline per km with ``units=km`` (B6, the user's rule): the
 whole-line values divided by the length, or the values themselves at ``length=1`` when the line has none. A neutral
 conductor is not on the bus: a geometry reduces it (B4), and a line without geometry that has one raises.
@@ -27,10 +29,10 @@ from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.current_limits import get_current_limits
 from cimhub_core.getters.earth import get_earth_resistivity, get_network_earth
 from cimhub_core.getters.in_service import get_in_service
-from cimhub_core.getters.line_impedance import get_line_sequence_impedance
+from cimhub_core.getters.line_impedance import get_line_code, get_line_geometry, get_line_sequence_impedance
 from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes
 from cimhub_opendss.exporter.buses import bus_ref
-from cimhub_opendss.exporter.linecode import linecode_name, sequence_slots
+from cimhub_opendss.exporter.linecode import code_slots, linecode_name, sequence_slots
 from cimhub_opendss.exporter.linegeometry import (CoupledGroup, geometry_name, group_value, is_spacing_line,
                                                   line_offset, spacing_geometry_name, spacing_geometry_owners)
 from cimhub_opendss.schema import opendss_schema as schema
@@ -46,6 +48,7 @@ SWITCH_IMPEDANCE = dict(r1=1e-3, r0=1e-3, x1=0.0, x0=0.0, C1=0.0, C0=0.0, length
 
 _LUMPED = "lumped only (B6): the whole-line value / length in km"
 _JUMPER = "; a jumper's: SWITCH_IMPEDANCE (B3, H1)"
+_OWN = "the line's own sequence code (isTemplate=false), as a LineCode writes it"
 _NOT_IN_CIM = "not in CIM (untranscribed or raising on import)"
 SLOTS = {NATIVE_CLASS: {
     "name": Slot("written", "Names; a coupled group's: the group's, <line>_jumper1 for each circuit, and "
@@ -54,18 +57,23 @@ SLOTS = {NATIVE_CLASS: {
                             "group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder "
                             "from <group>_2 on its circuit's nodes (H1, H4)"),
     "bus2": Slot("written", "bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1)"),
-    "linecode": Slot("written", "the PerLengthImpedance's LineCode name"),
+    "linecode": Slot("written", "the template PerLengthImpedance's LineCode name (get_line_code); a line's own "
+                                "(isTemplate=false) is written inline"),
     "length": Slot("written", "required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest "
                               "line's, a remainder the rest of its line, a jumper 1 m (H4)"),
     "phases": Slot("written", "the phase conductors (a neutral is reduced, B4); a coupled group's: every line's"),
-    "r1": Slot("written", f"{_LUMPED} (ohm/km){_JUMPER}"), "x1": Slot("written", f"{_LUMPED} (ohm/km){_JUMPER}"),
-    "r0": Slot("written", f"{_LUMPED} (ohm/km); unset raises{_JUMPER}"),
-    "x0": Slot("written", f"{_LUMPED} (ohm/km); unset raises{_JUMPER}"),
-    "C1": Slot("rule", f"{_LUMPED}, c_from_b(bch) (nF/km); unset -> 0{_JUMPER}"),
-    "C0": Slot("rule", f"{_LUMPED}, c_from_b(b0ch) (nF/km); unset -> 0{_JUMPER}"),
-    "rmatrix": Slot("not mapped", "a phase matrix is always a LineCode"),
-    "xmatrix": Slot("not mapped", "a phase matrix is always a LineCode"),
-    "cmatrix": Slot("not mapped", "a phase matrix is always a LineCode"),
+    "r1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
+    "x1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
+    "r0": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km); unset raises{_JUMPER}"),
+    "x0": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km); unset raises{_JUMPER}"),
+    "C1": Slot("rule", f"{_OWN}; {_LUMPED}, c_from_b(bch) (nF/km); unset -> 0{_JUMPER}"),
+    "C0": Slot("rule", f"{_OWN}; {_LUMPED}, c_from_b(b0ch) (nF/km); unset -> 0{_JUMPER}"),
+    "rmatrix": Slot("written", "the line's own phase code (isTemplate=false), lower triangle per m; a template's is "
+                             "its LineCode's"),
+    "xmatrix": Slot("written", "the line's own phase code (isTemplate=false), lower triangle per m; a template's is "
+                             "its LineCode's"),
+    "cmatrix": Slot("written", "the line's own phase code (isTemplate=false), lower triangle per m; a template's is "
+                             "its LineCode's"),
     "Switch": Slot("not mapped", "a Switch is exported by switch.py"),
     "Rg": Slot("unset", _NOT_IN_CIM), "Xg": Slot("unset", _NOT_IN_CIM),
     "rho": Slot("written", "a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; "
@@ -127,7 +135,7 @@ def _line(line: cim.ACLineSegment, context, owners: dict[cim.ACLineSegment, cim.
     bus1, bus2 = terminal_buses(line, conductors, names)
     slots = dict(name=names.name(line, NAMESPACE), bus1=bus1, bus2=bus2, phases=len(conductors), **ratings(line),
                  enabled=get_in_service(line, which="normal"))
-    configuration, code = line.WireConfiguration, line.PerLengthImpedance
+    configuration, code = get_line_geometry(line), get_line_code(line)
     if configuration is not None:
         if any(phase.WireInfo is not None for phase in line.ACLineSegmentPhases):
             raise ValueError(f"{describe(line)}: has both a WireConfiguration and ACLineSegmentPhase.WireInfo; a "
@@ -147,7 +155,11 @@ def _line(line: cim.ACLineSegment, context, owners: dict[cim.ACLineSegment, cim.
                          f"is not mapped (B4)")
     elif code is not None:
         _check_code_phases(line, code, len(conductors))
-        slots.update(linecode=linecode_name(code, names), length=required_qty(line, "length", UNIT), units=UNIT)
+        slots.update(length=required_qty(line, "length", UNIT), units=UNIT)
+        if code.isTemplate is False:
+            slots.update(_own_code(line, code, context.network.base_frequency.to("Hz")))
+        else:
+            slots.update(linecode=linecode_name(code, names))
     else:
         slots.update(_lumped(line, context.network.base_frequency.to("Hz")))
     return NATIVE_CLASS(**slots)
@@ -188,6 +200,14 @@ def _check_code_phases(line: cim.ACLineSegment, code: cim.PerLengthImpedance, co
     expected = code.conductorCount if isinstance(code, cim.PerLengthPhaseImpedance) else 3
     if expected != count:
         raise ValueError(f"{describe(line)}: {count} phase conductors on {describe(code)} of {expected}")
+
+
+def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: float) -> dict:
+    """The line's own impedance (``isTemplate=false``) inline; one that other lines use too raises."""
+    if code.ACLineSegments != [line]:
+        raise ValueError(f"{describe(code)}: isTemplate=false marks one line's own impedance, but "
+                         f"{len(code.ACLineSegments)} lines use it")
+    return code_slots(code, frequency)
 
 
 def _lumped(line: cim.ACLineSegment, frequency: float) -> dict:

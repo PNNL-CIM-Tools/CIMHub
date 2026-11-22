@@ -10,7 +10,8 @@ from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.derived.spacing import positions_from_distances
-from cimhub_core.getters.spacing import get_line_conductor_xy, get_spacing_distances, get_spacing_xy
+from cimhub_core.getters.spacing import (get_line_conductor_xy, get_spacing_distances, get_spacing_xy,
+                                         get_stored_distances)
 
 PHASE, NEUTRAL = cim.ConductorPositionKind.phase, cim.ConductorPositionKind.neutral
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
@@ -146,10 +147,32 @@ def test_a_missing_pair_raises_for_distances_but_not_positions(tmp_path):
         get_spacing_distances(spacing)
 
 
-def test_missing_height_raises(tmp_path):
+def test_missing_height_raises_for_positions_but_not_distances(tmp_path):
     rows = [row for row in _spacing_500_rows() if row[0] != "h4"]
+    spacing = _distance_atom(tmp_path, rows)
     with pytest.raises(ValueError, match=r"conductors \[4\] have no height"):
-        get_spacing_xy(_distance_atom(tmp_path, rows))
+        get_spacing_xy(spacing)
+    assert get_spacing_distances(spacing, "ft") == pytest.approx(SPACING_500_DISTANCES)
+
+
+def test_stored_distances_keep_what_a_distance_spacing_holds(tmp_path):
+    """GLM's form: a pair left out is "no coupling", a height may be absent; nothing is filled in."""
+    pairs = {pair: d for pair, d in SPACING_500_DISTANCES.items() if pair != (1, 3)}
+    rows = [row for row in _spacing_500_rows(pairs) if row[0] != "h4"]
+    stored = get_stored_distances(_distance_atom(tmp_path, rows), "ft")
+    assert stored.distances == pytest.approx(pairs)
+    assert stored.heights == pytest.approx({1: 28.0, 2: 28.0, 3: 28.0})
+    assert stored.kinds == {1: PHASE, 2: PHASE, 3: PHASE, 4: NEUTRAL}
+
+
+def test_stored_distances_of_an_empty_distance_spacing():
+    assert get_stored_distances(cim.ConductorDistanceSpacing(mRID="cds")) == ({}, {}, {})
+
+
+def test_stored_distances_of_an_xy_spacing():
+    stored = get_stored_distances(_spacing_500(), "ft")
+    assert stored.distances == pytest.approx(SPACING_500_DISTANCES, rel=1e-6)
+    assert stored.heights == pytest.approx({1: 28.0, 2: 28.0, 3: 28.0, 4: 24.0})
 
 
 def test_inconsistent_distances_raise(tmp_path):

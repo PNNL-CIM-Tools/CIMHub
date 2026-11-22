@@ -1,4 +1,4 @@
-# GridLAB-D load -> EnergyConsumer (+ EnergyConsumerPhase values).
+# GridLAB-D load -> EnergyConsumer or ConformLoad (+ EnergyConsumerPhase values).
 # Source table: load (records: 9)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors
 
@@ -6,29 +6,17 @@ Profile = cim18v17
 
 # p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank when ABC and equal (S4a-1)
 # defaulted: customerCount=1 on each record's first consumer (GLM has no customer count; a record is one service, its 240 V part not counted again)
-Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
-    # scheduled: base_power_C=ieeezipload.value*187882.94; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_611,  ld_611,  611, C,   Y, true,  170000.05388786,    79999.88013221203,  1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_A=ieeezipload.value*194164.88, base_power_B=ieeezipload.value*150000.0,
-    # base_power_C=ieeezipload.value*150000.0; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_634c, ld_634c, 634, ABC, Y, true,  400000.01604496,    289999.979504666,   1, zip_constant_i, bv_480v
-    # scheduled: base_power_B=ieeezipload.value*211009.48; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_645,  ld_645,  645, B,   Y, true,  169999.99857148,    125000.00454226874, 1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_B=ieeezipload.value*265186.73; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_646,  ld_646,  646, BC,  D, false, 229999.89835648998, 132000.18380327037, 1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_A=ieeezipload.value*154207.65; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_652,  ld_652,  652, A,   Y, true,  128000.05988249999, 85999.90691040843,  1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_A=ieeezipload.value*19723.08, base_power_B=ieeezipload.value*76157.73,
-    # base_power_C=ieeezipload.value*135325.53; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_670a, ld_670a, 670, ABC, Y, true,  199999.97490323998, 116000.02889512447, 1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_A=ieeezipload.value*443424.18, base_power_C=ieeezipload.value*443424.18,
-    # base_power_B=ieeezipload.value*443424.18; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_671,  ld_671,  671, ,    D, false, 1154999.82094722,   660000.336583203,   1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_A=ieeezipload.value*520888.66, base_power_B=ieeezipload.value*90686.27,
-    # base_power_C=ieeezipload.value*359226.95; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_675a, ld_675a, 675, ABC, Y, true,  842999.92877747,    462000.14665176696, 1, zip_constant_i, bv_4p16kv
-    # scheduled: base_power_C=ieeezipload.value*227378.54; the base is mapped, the schedule is not (S4a-2, TODO)
-    ld_ld_692,  ld_692,  692, AC,  D, false, 170000.02018808,    150999.9787701442,  1, zip_constant_i, bv_4p16kv
+# a base <player>.value*K or <schedule>*K: p, q from K; the player's or schedule's group (S8-1, S9-1)
+Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (W), q (VAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_IEEE13_cdpsm
+    ld_ld_611,  ld_611,  611, C,   Y, true,  170000.05388786,    79999.88013221203,  1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_634c, ld_634c, 634, ABC, Y, true,  400000.01604496,    289999.979504666,   1, zip_constant_i, bv_480v,   lg_ieeezipload
+    ld_ld_645,  ld_645,  645, B,   Y, true,  169999.99857148,    125000.00454226874, 1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_646,  ld_646,  646, BC,  D, false, 229999.89835648998, 132000.18380327037, 1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_652,  ld_652,  652, A,   Y, true,  128000.05988249999, 85999.90691040843,  1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_670a, ld_670a, 670, ABC, Y, true,  199999.97490323998, 116000.02889512447, 1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_671,  ld_671,  671, ,    D, false, 1154999.82094722,   660000.336583203,   1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_675a, ld_675a, 675, ABC, Y, true,  842999.92877747,    462000.14665176696, 1, zip_constant_i, bv_4p16kv, lg_ieeezipload
+    ld_ld_692,  ld_692,  692, AC,  D, false, 170000.02018808,    150999.9787701442,  1, zip_constant_i, bv_4p16kv, lg_ieeezipload
 
 # the phases differ, so each child carries its own p, q (a delta child is its branch)
 Update Table EnergyConsumerPhase: mRID, p (W), q (VAr)

@@ -1,4 +1,5 @@
-"""OpenDSS ``Load`` -> ``load.cimtbl``: one ``EnergyConsumer`` per load (DSS-7).
+"""OpenDSS ``Load`` -> ``load.cimtbl``: one ``EnergyConsumer`` per load (DSS-7), a ``ConformLoad`` of its shape's
+group when it names a ``yearly`` LoadShape (S8, ``loadshape.py``).
 
 p and q are the deck's kW and kvar (q from ``pf`` when kvar is unset). The voltage response is a shared
 ``LoadResponseCharacteristic``: ``zip_constant_pq`` / ``_z`` / ``_i`` from the fixed core ``zip_fractions.cimtbl``
@@ -19,6 +20,7 @@ from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, ph
 from cimhub_core.load_response import ZIP_CONSTANT_I, ZIP_CONSTANT_PQ, ZIP_CONSTANT_Z
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.importer.cimtbl.injection import device_terminal, is_delta, rated_phase_kv, reactive_power
+from cimhub_opendss.importer.cimtbl.loadshape import GROUP_PREFIX
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Load
@@ -28,6 +30,7 @@ _CONSUMER = "EnergyConsumer"
 _RESPONSE = "LoadResponseCharacteristic"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
 _SHAPE = "a LoadShape reference; LoadShape is not mapped (DSS-11)"
+_ROLE = "a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8)"
 _SOLVER = "DSS solution control; no home in the network profile parts"
 _HARMONIC = "harmonics model; no home in the network profile parts"
 _ORDER = ("raises with kW: the engine takes whichever of kW, kVA and xfkVA comes last, and the record keeps no "
@@ -49,9 +52,11 @@ FIELDS = {
     "model": Field("mapped", ((_CONSUMER, "LoadResponse", None),),
                    "1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, "
                    "8 raise; default 1"),
-    "yearly": Field("untranscribed", note=_SHAPE),
-    "daily": Field("untranscribed", note=_SHAPE),
-    "duty": Field("untranscribed", note=_SHAPE),
+    "yearly": Field("mapped", (("ConformLoad", "LoadGroup", None),),
+                    "the shape's group lg_<shape>: the load is a ConformLoad (S8); a shape the deck does not define "
+                    "raises"),
+    "daily": Field("untranscribed", note=_ROLE),
+    "duty": Field("untranscribed", note=_ROLE),
     "growth": Field("untranscribed", note="a GrowthShape reference; not mapped (DSS-11)"),
     "conn": Field("mapped", ((_CONSUMER, "phaseConnection", None), (_CONSUMER, "grounded", None)),
                   "wye -> Y, grounded; delta -> D, not grounded; default wye"),
@@ -98,7 +103,8 @@ _ZIP_OF_MODEL = {"ConstantPQ": ZIP_CONSTANT_PQ, "ConstantZ": ZIP_CONSTANT_Z, "Co
 _EXPONENTIAL = "CVR"
 _UNMAPPED = tuple(slot for slot, field in FIELDS.items() if field.note.startswith(_NOT_MAPPED))
 
-_PROVENANCE = """OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset).
+_PROVENANCE = """OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset);
+a ConformLoad of its yearly shape's group lg_<shape> (S8).
 Models 1, 2, 5 name the shared zip_fractions rows; model 4 an exp_<CVRwatts>_<CVRvars> row here.
 Source table: Load (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load"""
@@ -165,7 +171,8 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
     """Every ``Load`` of a DSS model as one ``load`` document; ``container`` is the Feeder mRID."""
     loads = native.list_by_class(NATIVE_CLASS)
     defaults = dss_defaults(NATIVE_CLASS)
-    rows, exponents = [], {}
+    shapes = {str(shape.name).lower() for shape in native.list_by_class(schema.Loadshape)}
+    rows, conform_rows, exponents = [], [], {}
     for original in loads:
         _check(original)
         load, defaulted = fill_defaults(FIELDS, original, _used_defaults(original, defaults))
@@ -180,12 +187,18 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
         if response.startswith("exp_"):
             exponents[response] = (float(load.CVRwatts), float(load.CVRvars))
         kw, kvar = _power(original, load)
-        rows.append(Row([
+        values = [
             mrid(PREFIX, load.name, lowercase=True), str(load.name), terminal.bus, phases_cell(terminal.phases),
             terminal.connection, cell(terminal.grounded), cell(kw), cell(kvar), cell(int(load.NumCust)), response,
-            cell(load.enabled), terminal.system.base_voltage,
-        ], comment="\n".join(part for part in (defaulted, untranscribed_values(FIELDS, load)) if part) or None))
-    if not rows:
+            cell(load.enabled), terminal.system.base_voltage]
+        comment = "\n".join(part for part in (defaulted, untranscribed_values(FIELDS, load)) if part) or None
+        if load.yearly is None:
+            rows.append(Row(values, comment=comment))
+            continue
+        if str(load.yearly).lower() not in shapes:
+            raise ValueError(f"{label}: yearly={load.yearly} names no LoadShape of the deck")
+        conform_rows.append(Row([*values, mrid(GROUP_PREFIX, load.yearly, lowercase=True)], comment=comment))
+    if not rows and not conform_rows:
         return Document(name="load", statements=[], profile=CIM_PROFILE)
     statements = []
     if exponents:
@@ -195,8 +208,12 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
                                 comment="model 4 (CVR): p = p0 (V/V0)^CVRwatts, q = q0 (V/V0)^CVRvars"))
     columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("phaseConnection"),
                Column("grounded"), Column("p", "kW"), Column("q", "kVAr"), Column("customerCount"),
-               Column("LoadResponse"), Column("normallyInService"), Column("BaseVoltage"),
-               Column("EquipmentContainer", default=container)]
-    statements.append(Table(_CONSUMER, columns, rows))
+               Column("LoadResponse"), Column("normallyInService"), Column("BaseVoltage")]
+    container_column = Column("EquipmentContainer", default=container)
+    if rows:
+        statements.append(Table(_CONSUMER, [*columns, container_column], rows))
+    if conform_rows:
+        statements.append(Table("ConformLoad", [*columns, Column("LoadGroup"), container_column], conform_rows,
+                                comment="a yearly LoadShape scales p and q: the shape's group (S8)"))
     return Document(name="load", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(loads)))

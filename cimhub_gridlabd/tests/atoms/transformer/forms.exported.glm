@@ -1,0 +1,158 @@
+clock {
+  timezone UTC0;
+  starttime '2000-01-01 00:00:00';
+  stoptime '2000-01-01 00:00:00';
+}
+#set relax_naming_rules=1
+module powerflow {
+  solver_method NR;
+  nominal_frequency 60;
+  line_capacitance TRUE;
+}
+object transformer_configuration {
+  name "3w_1_config";
+  connect_type "WYE_WYE";
+  primary_voltage 12470;
+  secondary_voltage 1000;
+  power_rating 1000;
+  impedance 0.003+0.06j;
+}
+object transformer_configuration {
+  name "3w_2_config";
+  connect_type "WYE_WYE";
+  primary_voltage 4160;
+  secondary_voltage 1000;
+  power_rating 1000;
+  impedance 0.003+0.02j;
+}
+object transformer_configuration {
+  name "3w_3_config";
+  connect_type "DELTA_GWYE";
+  primary_voltage 480;
+  secondary_voltage 1000;
+  power_rating 500;
+  impedance 0.006+0.02j;
+}
+object transformer_configuration {
+  name "auto_config";
+  connect_type "WYE_WYE";
+  primary_voltage 12470;
+  secondary_voltage 12470;
+  power_rating 2000;
+  impedance 0.001+0.01j;
+}
+object transformer_configuration {
+  name "dyn11_config";
+  connect_type "WYE_WYE";
+  primary_voltage 12470;
+  secondary_voltage 480;
+  power_rating 300;
+  impedance 0.008+0.05j;
+}
+object transformer_configuration {
+  name "ynd_config";
+  connect_type "WYE_WYE";
+  primary_voltage 12470;
+  secondary_voltage 4160;
+  power_rating 500;
+  impedance 0.01+0.06j;
+}
+object transformer_configuration {
+  name "ynz_config";
+  connect_type "WYE_WYE";
+  primary_voltage 12470;
+  secondary_voltage 4160;
+  power_rating 200;
+  impedance 0.012+0.04j;
+}
+object substation {
+  name "hv";
+  phases "ABCN";
+  nominal_voltage 7199.55785679463;
+  bustype "SWING";
+  positive_sequence_voltage 7199.55785679463+0j;
+}
+object node {
+  name "3w_star";
+  phases "ABCN";
+  nominal_voltage 577.350269189626;
+}
+object node {
+  name "lv_3w_d";
+  phases "ABCN";
+  nominal_voltage 277.12812921102;
+}
+object node {
+  name "lv_3w_y";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "lv_auto";
+  phases "ABCN";
+  nominal_voltage 7199.55785679463;
+}
+object node {
+  name "lv_dyn11";
+  phases "ABCN";
+  nominal_voltage 277.12812921102;
+}
+object node {
+  name "lv_ynd";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
+  name "lv_ynz";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object transformer {
+  name "3w_1";
+  phases "ABCN";
+  from "hv";
+  to "3w_star";
+  configuration "3w_1_config";
+}
+object transformer {
+  name "3w_2";
+  phases "ABCN";
+  from "lv_3w_y";
+  to "3w_star";
+  configuration "3w_2_config";
+}
+object transformer {
+  name "3w_3";
+  phases "ABCN";
+  from "lv_3w_d";
+  to "3w_star";
+  configuration "3w_3_config";
+}
+object transformer {
+  name "auto";
+  phases "ABCN";
+  from "hv";
+  to "lv_auto";
+  configuration "auto_config";
+}
+object transformer {
+  name "dyn11";
+  phases "ABCN";
+  from "hv";
+  to "lv_dyn11";
+  configuration "dyn11_config";
+}
+object transformer {
+  name "ynd";
+  phases "ABCN";
+  from "hv";
+  to "lv_ynd";
+  configuration "ynd_config";
+}
+object transformer {
+  name "ynz";
+  phases "ABCN";
+  from "hv";
+  to "lv_ynz";
+  configuration "ynz_config";
+}

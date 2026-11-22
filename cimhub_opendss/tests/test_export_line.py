@@ -18,6 +18,7 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter import switch
 from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.exporter.linegeometry import geometry_name
+from cimhub_opendss.exporter.options import earth_model
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -154,6 +155,20 @@ def test_shunt_conductance_raises():
 # geometry ------------------------------------------------------------------------------------------------------
 
 
+def test_a_template_line_code_beside_geometry_is_a_linecode_with_no_earth(tmp_path):
+    """DSS-14: a LineCode's WireConfiguration has no WireSpacing, so it is no LineGeometry and names no earth model."""
+    deck = tmp_path / "mixed.dss"
+    deck.write_text((ATOMS / "geometry.dss").read_text()
+                    + "New Linecode.c1 nphases=3 r1=0.3 x1=0.6 r0=0.6 x0=1.8 C1=10 C0=4 units=km\n"
+                    + "New Line.c1 bus1=n2 bus2=n4 linecode=c1 length=1 units=km\n")
+    network = DssImporter(deck.stem).to_cim(DssReader(deck).read_all())
+    assert earth_model(network) == earth_model(_network("geometry"))
+    model = _model(network)
+    line = _record(model, schema.Line, "c1")
+    assert (line.linecode, line.geometry) == ("c1", None)
+    assert {str(record.name) for record in model.list_by_class(schema.Linegeometry)} == {"601", "s510"}
+
+
 def test_geometry_per_offset_is_its_own_record():
     network = _network("geometry")
     line = _object(network, cim.ACLineSegment, "g_m")
@@ -256,6 +271,24 @@ def test_sequence_code_on_one_phase_raises():
     line = _object(network, cim.ACLineSegment, "seq3")
     line.PerLengthImpedance = _object(network, cim.ACLineSegment, "seq1").PerLengthImpedance
     with pytest.raises(ValueError, match="1 phase conductors on PerLengthSequenceImpedance .* of 3"):
+        _model(network)
+
+
+def test_a_lines_own_impedance_is_written_inline():
+    """isTemplate=false is the line's own impedance (skill wire-configuration): inline on the Line, no LineCode."""
+    model = _model(_network("codes"))
+    line = _record(model, schema.Line, "seq1")
+    assert (line.linecode, line.r1, line.x1, str(line.units)) == (None, pytest.approx(3e-4), pytest.approx(6e-4), "m")
+    assert {str(code.name) for code in model.list_by_class(schema.Linecode)} == {"mtx601", "mtx603"}
+
+
+def test_an_own_impedance_two_lines_use_raises():
+    network = _network("codes")
+    code = _object(network, cim.ACLineSegment, "seq1").PerLengthImpedance
+    other = _object(network, cim.ACLineSegment, "seq2")
+    other.PerLengthImpedance = code
+    code.ACLineSegments.append(other)
+    with pytest.raises(ValueError, match="isTemplate=false marks one line's own impedance, but 2 lines use it"):
         _model(network)
 
 

@@ -61,7 +61,7 @@ def dss_safe_name(name: str) -> str:
 #: Line before the Fuse/Recloser/SwtControl that switches it, a Transformer before its RegControl, a Capacitor
 #: before its CapControl). A class in the model and not here raises.
 WRITE_ORDER = (
-    schema.Wiredata, schema.Cndata, schema.Tsdata, schema.Linespacing, schema.Linegeometry, schema.Linecode,
+    schema.Loadshape, schema.Wiredata, schema.Cndata, schema.Tsdata, schema.Linespacing, schema.Linegeometry, schema.Linecode,
     schema.Xfmrcode, schema.Vsource, schema.Line, schema.Relay, schema.Fuse, schema.Recloser, schema.Swtcontrol,
     schema.Transformer, schema.Regcontrol, schema.Load, schema.Capacitor, schema.Capcontrol, schema.Pvsystem,
     schema.Storage, schema.Generator, schema.Reactor,

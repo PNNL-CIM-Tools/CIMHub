@@ -9,6 +9,7 @@ import pytest
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
+from cimhub_core.getters.line_impedance import get_line_geometry
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import line, switch
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
@@ -63,7 +64,10 @@ def test_atom_binds(scope):
         assert segment_phases(segments[name]) == spacing_phases(segments[name]), name
     assert segment_phases(segments["ln_tl_1"]) == {1: "s1", 2: "s2", 3: "N"}
     assert segment_phases(segments["ln_line_l2"]) == {1: "A", 2: "C"}  # written CA; matrix rows A, C
-    assert segments["ln_line_l2"].PerLengthImpedance.conductorCount == 2
+    # a matrix configuration is a template its lines share through a WireConfiguration with no spacing
+    matrix = segments["ln_line_l2"].WireConfiguration
+    assert segments["ln_line_l2"].PerLengthImpedance is None and matrix.WireSpacing is None
+    assert (matrix.PerLengthImpedance.conductorCount, matrix.PerLengthImpedance.isTemplate) == (2, True)
     assert float(segments["ln_overhead_line:3"].length.to("m")) == pytest.approx(21.0)
     # the child node n3 lands on its root n2 (GLM-4)
     terminals = {t.sequenceNumber: str(t.ConnectivityNode.mRID) for t in segments["ln_line_u1"].Terminals}
@@ -133,7 +137,7 @@ def test_a_written_zero_diagonal_is_no_phase(tmp_path, scope):
                                              "configuration zc; }")
     line = segment(network, "ln_x")
     assert segment_phases(line) == {1: "C"}
-    assert line.PerLengthImpedance.conductorCount == 1
+    assert line.WireConfiguration.PerLengthImpedance.conductorCount == 1
 
 
 def test_a_mutual_term_on_a_zero_diagonal_raises(tmp_path):
@@ -215,7 +219,8 @@ def assert_lines_and_switches(model, network) -> None:
     segments = network.list_by_class(cim.ACLineSegment)
     assert len(segments) == sum(model.count(cls) for cls, _, _ in line.LINES)
     for segment in segments:  # an all-zero spacing (S2-4) names no positions
-        if segment.WireConfiguration is not None and segment.WireConfiguration.WireSpacing.ConductorDistance:
+        geometry = get_line_geometry(segment)
+        if geometry is not None and geometry.WireSpacing.ConductorDistance:
             assert segment_phases(segment) == spacing_phases(segment), segment.mRID
     assert len(network.list_by_class(cim.LoadBreakSwitch)) == model.count(schema.Switch)
     assert len(network.list_by_class(cim.Fuse)) == model.count(schema.Fuse)

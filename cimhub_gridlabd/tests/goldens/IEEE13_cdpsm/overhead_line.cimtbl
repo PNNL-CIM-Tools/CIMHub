@@ -1,21 +1,21 @@
-# GridLAB-D overhead_line -> ACLineSegment (by its configuration's WireConfiguration or PerLengthPhaseImpedance).
+# GridLAB-D overhead_line -> ACLineSegment (by its configuration's WireConfiguration).
 # Source table: overhead_line (records: 11)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
 
 Profile = cim18v17
 
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
-    ln_line_632633, line_632633, 632,  633, ABC, 500.0,  lc_lcon_mtx602_ABC, bv_4p16kv
-    ln_line_632645, line_632645, 632,  645, BC,  500.0,  lc_lcon_mtx603_CB,  bv_4p16kv
-    ln_line_632670, line_632670, mid,  670, ABC, 667.0,  lc_lcon_mtx601_ABC, bv_4p16kv
-    ln_line_645646, line_645646, 645,  646, BC,  300.0,  lc_lcon_mtx603_CB,  bv_4p16kv
-    ln_line_650632, line_650632, rg60, 632, ABC, 2000.0, lc_lcon_mtx601_ABC, bv_4p16kv
-    ln_line_670671, line_670671, 670,  671, ABC, 1333.0, lc_lcon_mtx601_ABC, bv_4p16kv
-    ln_line_671680, line_671680, 671,  680, ABC, 1000.0, lc_lcon_mtx601_ABC, bv_4p16kv
-    ln_line_671684, line_671684, 671,  684, AC,  300.0,  lc_lcon_mtx604_AC,  bv_4p16kv
-    ln_line_684611, line_684611, tap,  611, C,   300.0,  lc_lcon_mtx605_C,   bv_4p16kv
-    ln_line_684652, line_684652, 684,  652, A,   800.0,  lc_lcon_mtx607_A,   bv_4p16kv
-    ln_line_692675, line_692675, 692,  675, ABC, 500.0,  lc_lcon_mtx606_ABC, bv_4p16kv
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+    ln_line_632633, line_632633, 632,  633, ABC, 500.0,  lc_lcon_mtx602_ABC_wc, bv_4p16kv
+    ln_line_632645, line_632645, 632,  645, BC,  500.0,  lc_lcon_mtx603_CB_wc,  bv_4p16kv
+    ln_line_632670, line_632670, mid,  670, ABC, 667.0,  lc_lcon_mtx601_ABC_wc, bv_4p16kv
+    ln_line_645646, line_645646, 645,  646, BC,  300.0,  lc_lcon_mtx603_CB_wc,  bv_4p16kv
+    ln_line_650632, line_650632, rg60, 632, ABC, 2000.0, lc_lcon_mtx601_ABC_wc, bv_4p16kv
+    ln_line_670671, line_670671, 670,  671, ABC, 1333.0, lc_lcon_mtx601_ABC_wc, bv_4p16kv
+    ln_line_671680, line_671680, 671,  680, ABC, 1000.0, lc_lcon_mtx601_ABC_wc, bv_4p16kv
+    ln_line_671684, line_671684, 671,  684, AC,  300.0,  lc_lcon_mtx604_AC_wc,  bv_4p16kv
+    ln_line_684611, line_684611, tap,  611, C,   300.0,  lc_lcon_mtx605_C_wc,   bv_4p16kv
+    ln_line_684652, line_684652, 684,  652, A,   800.0,  lc_lcon_mtx607_A_wc,   bv_4p16kv
+    ln_line_692675, line_692675, 692,  675, ABC, 500.0,  lc_lcon_mtx606_ABC_wc, bv_4p16kv
 
 Table OperationalLimitSet: mRID, Equipment
     ln_line_632633_limits, ln_line_632633

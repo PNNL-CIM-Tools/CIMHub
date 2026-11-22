@@ -90,12 +90,18 @@ def test_buses(dss_glm):
     assert dss - glm == {"650z"} and glm <= dss
 
 
+#: a load's classes: the Java export's loads name the ieeezipload player, so GLM's are ConformLoads (S8-1)
+CONSUMERS = (cim.EnergyConsumer, cim.ConformLoad)
+
+
 def base_voltages(network) -> dict:
-    """(class, buses) -> the line-to-line base voltages there (DSS has several consumers on one bus)."""
+    """(kind, buses) -> the line-to-line base voltages there (DSS has several consumers on one bus)."""
     found = defaultdict(set)
-    for cls in (cim.ACLineSegment, cim.EnergyConsumer, cim.LinearShuntCompensator):
-        for equipment in network.list_by_class(cls):
-            found[(cls.__name__, buses(equipment))].add(get_base_voltage(equipment, "V", form="LL"))
+    for kind, classes in (("line", (cim.ACLineSegment,)), ("load", CONSUMERS),
+                          ("shunt", (cim.LinearShuntCompensator,))):
+        for cls in classes:
+            for equipment in network.list_by_class(cls):
+                found[(kind, buses(equipment))].add(get_base_voltage(equipment, "V", form="LL"))
     return found
 
 
@@ -133,7 +139,7 @@ def test_switches(dss_glm):
 def phase_power(network) -> dict:
     """p, q by bus and phase: DSS has one EnergyConsumer per DSS Load (16), GLM one per GLM load (10)."""
     totals = defaultdict(lambda: [0.0, 0.0])
-    for consumer in network.list_by_class(cim.EnergyConsumer):
+    for consumer in (consumer for cls in CONSUMERS for consumer in network.list_by_class(cls)):
         for phase, power in get_phase_loads(consumer).per_phase.items():
             total = totals[(buses(consumer), phase.name)]
             total[0] += power.p
@@ -217,8 +223,8 @@ def test_2_substation_transformer(dss_glm):
 
 
 def test_4_regulator_controls(dss_glm):
-    """The Java export wrote Control MANUAL with the band commented out: GLM's controls are off with no target, and
-    the core getter cannot read them (S5-4). GLM's line drop is 1/5 of DSS's: the export wrote DSS's CT ratio
+    """The Java export wrote Control MANUAL with the band commented out: GLM's controls are off with no target, which
+    the core getter reads as None (S5-4). GLM's line drop is 1/5 of DSS's: the export wrote DSS's CT ratio
     (700 A / 0.2 A), which GridLAB-D reads as on a 1 A secondary (S5-5). neutralU: DSS's 2.4 kV winding; GLM's coil,
     the 4.16 kV bus over sqrt 3 (S3c)."""
     dss, glm = (taps(network) for network in dss_glm)
@@ -228,8 +234,8 @@ def test_4_regulator_controls(dss_glm):
         assert (get_tap_steps(dss[phase]).neutral_u, get_tap_steps(glm[phase]).neutral_u) == (2400, 2401.78)
         control = glm[phase].TapChangerControl
         assert (control.enabled, control.targetValue) == (False, None)
-        with pytest.raises(ValueError, match="targetValue is unset"):
-            get_tap_changer_control(glm[phase])
+        assert (get_tap_changer_control(glm[phase]).control.target, get_tap_changer_control(glm[phase]).control.enabled) == (
+            None, False)
         for name in ("lineDropR", "lineDropX"):
             assert float(getattr(control, name).to("ohm")) * 5 == pytest.approx(
                 float(getattr(dss[phase].TapChangerControl, name).to("ohm")))

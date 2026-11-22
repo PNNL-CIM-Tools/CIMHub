@@ -72,6 +72,23 @@ class PhotoVoltaicRating(NamedTuple):
     irradiance: float | None  # irradiance_unit; the gridappsd extension PhotoVoltaicUnit.irradiance
 
 
+class PhotoVoltaicDatasheet(NamedTuple):
+    """A PV unit's SolarArrayInfo and that array's SolarPanelInfo."""
+    tilt: float | None  # angle_unit
+    azimuth: float | None  # angle_unit
+    shading: float | None  # percent
+    panel_efficiency: float | None  # percent; None without a panel
+    reference_irradiance: float | None  # irradiance_unit; None without a panel
+
+
+class InverterDatasheet(NamedTuple):
+    """An inverter's GenerationInverterInfo or StorageInverterInfo."""
+    apparent_power_max: float | None  # apparent_unit
+    reactive_injected_max: float | None  # reactive_unit
+    reactive_absorbed_max: float | None  # reactive_unit
+    charge_rate_max: float | None  # active_unit; a StorageInverterInfo's only
+
+
 class UnitLimits(NamedTuple):
     min_p: float | None  # active_unit, in the caller's sign
     max_p: float | None
@@ -196,6 +213,47 @@ def get_photovoltaic_unit(unit: cim.PhotoVoltaicUnit, active_unit: str = "W", ir
         raise ValueError(f"{describe(unit)}: is not a PhotoVoltaicUnit")
     return PhotoVoltaicRating(*_limits(unit, "minP", "maxP", active_unit, sign),
                               irradiance=get_qty(unit, "irradiance", irradiance_unit))
+
+
+def get_photovoltaic_datasheet(unit: cim.PhotoVoltaicUnit, angle_unit: str = "deg",
+                               irradiance_unit: str = "W/m2") -> PhotoVoltaicDatasheet | None:
+    """The unit's SolarArrayInfo (its AssetDatasheet) and the array's one SolarPanelInfo; None without an array.
+    Another datasheet class or several panels raise."""
+    if not isinstance(unit, cim.PhotoVoltaicUnit):
+        raise ValueError(f"{describe(unit)}: is not a PhotoVoltaicUnit")
+    array = unit.AssetDatasheet
+    if array is None:
+        return None
+    if not isinstance(array, cim.SolarArrayInfo):
+        raise ValueError(f"{describe(unit)}: its AssetDatasheet is a {type(array).__name__}, not a SolarArrayInfo")
+    if len(array.SolarPanels) > 1:
+        raise ValueError(f"{describe(array)}: has {len(array.SolarPanels)} SolarPanelInfos; one is read")
+    panel = array.SolarPanels[0] if array.SolarPanels else None
+    return PhotoVoltaicDatasheet(
+        tilt=get_qty(array, "tiltAngle", angle_unit),
+        azimuth=get_qty(array, "orientationAzimuth", angle_unit),
+        shading=get_qty(array, "shadingFactor", "percent"),
+        panel_efficiency=None if panel is None else get_qty(panel, "efficiency", "percent"),
+        reference_irradiance=None if panel is None else get_qty(panel, "referenceIrradiation", irradiance_unit),
+    )
+
+
+def get_inverter_datasheet(connection: cim.PowerElectronicsConnection, apparent_unit: str = "VA",
+                           reactive_unit: str = "VAr", active_unit: str = "W") -> InverterDatasheet | None:
+    """The connection's GenerationInverterInfo or StorageInverterInfo (its AssetDatasheet); None without one.
+    Another datasheet class raises."""
+    info = connection.AssetDatasheet
+    if info is None:
+        return None
+    if not isinstance(info, (cim.GenerationInverterInfo, cim.StorageInverterInfo)):
+        raise ValueError(f"{describe(connection)}: its AssetDatasheet is a {type(info).__name__}, not an inverter's")
+    return InverterDatasheet(
+        apparent_power_max=get_qty(info, "apparentPowerMaximum", apparent_unit),
+        reactive_injected_max=get_qty(info, "reactivePowerInjectedMax", reactive_unit),
+        reactive_absorbed_max=get_qty(info, "reactivePowerAbsorbedMax", reactive_unit),
+        charge_rate_max=(get_qty(info, "chargeRateActiveMax", active_unit)
+                         if isinstance(info, cim.StorageInverterInfo) else None),
+    )
 
 
 def get_unit_limits(unit: cim.GeneratingUnit | cim.PowerElectronicsUnit, active_unit: str = "W", *,

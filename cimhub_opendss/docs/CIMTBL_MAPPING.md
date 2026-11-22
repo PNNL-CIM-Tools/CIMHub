@@ -22,15 +22,17 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineSpacing` | `linespacing.cimtbl` | `line_by_wire_configuration` (`XYSpacing`) | nothing |
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
-| `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; synthesized templates `ln_<name>_lc`, `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
+| `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; the line's own impedance `ln_<name>_lc` (`isTemplate=false`), synthesized `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
 | `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
-| `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
+| `LoadShape` (those a Load names as `yearly`) | `loadshape.cimtbl` | `load_schedule` (`ConformLoadGroup` + `ConformLoadSchedule`; the points in the Parquet sidecar, S8) | nothing |
+| | | a shape a PVSystem, Storage or Generator names as `yearly` is not here but that device's own `EnergyConnectionSchedule`, in its document (S9) | |
+| `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows; a `ConformLoad` of its yearly shape's group (S8) | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl`, `loadshape.cimtbl` |
 | `Capacitor` | `capacitor.cimtbl` | `shunt` (`LinearShuntCompensator`) | the master, `bus.cimtbl` |
 | `CapControl` | `capcontrol.cimtbl` | `shunt` (`RegulatingControl` + `Update` of the compensator) | `line.cimtbl`, `capacitor.cimtbl` |
-| `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der` | the master, `bus.cimtbl` |
-| `Generator` | `generator.cimtbl` | `synchronous_machine` | the master, `bus.cimtbl` |
+| `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der`; a yearly shape: nc_schedule `EnergyConnectionSchedule` `<mRID>_yearly` (the points in the Parquet sidecar, S9) | the master, `bus.cimtbl` |
+| `Generator` | `generator.cimtbl` | `synchronous_machine`; a yearly shape as for a PVSystem (S9) | the master, `bus.cimtbl` |
 | `Reactor` | `reactor.cimtbl` | `series_compensator` | the master, `bus.cimtbl` |
 | `Buscoords` (BusCoords / LatLongCoords files) | `buscoords.cimtbl` (last) | `location` | every equipment part (their bound Terminals: `bound_parts`, S5-2) |
 
@@ -160,6 +162,14 @@ Mapper: `cimhub_opendss/importer/cimtbl/linecode.py` (`map_linecode`). Atoms: `t
 **Identity.** `mRID` = `lc_` + `name`, lowercased (DSS names are case-insensitive). `PhaseImpedanceData` has no
 mRID; its `identifier` column is `<mRID>_<row><column>`.
 
+**Template (DSS-14, the user's rule 2026-11-21).** A LineCode is a template its lines share by name: its impedance
+has `isTemplate=true`, and a `WireConfiguration` `<template>_wc` (`lc_<name>_wc`, or `lc_<name>_<unit>_wc` per DSS-3)
+holds it as `PerLengthImpedance`, with no `WireSpacing`. Lines reference that WireConfiguration, not the impedance.
+The WireConfiguration is CIM's equivalence route: a configuration with a spacing is geometry, one with only a
+`PerLengthImpedance` is a template LineCode, and one with both is geometry with its equivalent impedance. Exporters
+read it through `get_line_geometry` and `get_line_code` (`cimhub_core.getters.line_impedance`). An impedance only one
+line uses, the line's own values, is `ACLineSegment.PerLengthImpedance` with `isTemplate=false` (Line, below).
+
 **Form.** A code that sets any of `r1 x1 r0 x0 C1 C0 B1 B0` is a sequence code (OpenDSS
 [Line properties](https://opendss.epri.com/Properties14.html)); one that sets `rmatrix`/`xmatrix`/`cmatrix` is a
 matrix code. DSS keeps whichever form was set last, and the reader does not record the order, so a code that sets
@@ -171,7 +181,7 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 
 | Linecode field | type | samples | kind | target |
 |---|---|---|---|---|
-| `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`; mRID = lc_ + name, lowercased |
+| `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`, `WireConfiguration.name`; mRID = lc_ + name, lowercased; its WireConfiguration's lc_<name>_wc (DSS-14) |
 | `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4) |
 | `r1` | `Optional[float]` | `0.769009`, `0.3489`, `0.535622` | copied | `PerLengthSequenceImpedance.r` (ohm/{length}) |
 | `x1` | `Optional[float]` | `0.312115`, `0.491691`, `0.560725` | copied | `PerLengthSequenceImpedance.x` (ohm/{length}) |
@@ -852,14 +862,15 @@ phases raises (found by the S6b export, 2026-11-09). The engine sets a fuse phas
   only as numerical stand-ins: `r1=1e-4`, or the `Switch=y` defaults.
 
 **Template (`ACLineSegment`).** Exactly one of the following; a line that combines two raises:
-- `linecode=` → `PerLengthImpedance` = the code's template for the line's unit (`lc_<code>`, or `lc_<code>_<unit>`
-  when the code's lines disagree, DSS-3);
+- `linecode=` → `WireConfiguration` = the WireConfiguration of the code's template for the line's unit
+  (`lc_<code>_wc`, or `lc_<code>_<unit>_wc` when the code's lines disagree, DSS-3, DSS-14);
 - `geometry=` → `WireConfiguration` = `wc_<geometry>`;
 - `spacing=` + `wires=`/`cncables=`/`tscables=` → a synthesized `WireConfiguration` `ln_<name>_wc` on
   `spc_<spacing>`, conductors in order (IEEE13_Assets `684652`). This is the counterpart of S2's synthesized
   spacing;
-- inline `r1`…`B0` or `rmatrix`/`xmatrix`/`cmatrix` → a synthesized `PerLengthSequenceImpedance` or
-  `PerLengthPhaseImpedance` `ln_<name>_lc` under `# synthesized` in `line.cimtbl` (DSS-8). It goes through the
+- inline `r1`…`B0` or `rmatrix`/`xmatrix`/`cmatrix` → `PerLengthImpedance` = a synthesized
+  `PerLengthSequenceImpedance` or `PerLengthPhaseImpedance` `ln_<name>_lc` of the line's own, `isTemplate=false`
+  (DSS-14), under `# synthesized` in `line.cimtbl` (DSS-8). It goes through the
   LineCode mapper's own functions, so DSS-3 (units, gate), DSS-3b and DSS-4 apply unchanged.
   - **Naming:** DSS-8 said `lc_<line>`. A line and a code may share a name, so this proposes `ln_<name>_lc`.
   - **Units:** a unitless inline line goes through the same magnitude gate, over the deck's unitless inline
@@ -910,18 +921,18 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `name` | `Union[str, LineName]` | `632633`, `632645`, `632670` | copied | `ACLineSegment.name`, `Switch.name`; mRID = ln_ + name (segment) or sw_ + name (switch), lowercased |
 | `bus1` | `str` | `632.1.2.3`, `632.3.2`, `MID.1.2.3` | structural | node1, and the phases from its nodes: 1/2/3 = A/B/C, s1/s2 on a split-phase island (DSS-5); no nodes = 1..phases |
 | `bus2` | `Optional[str]` | `633.1.2.3`, `645.3.2`, `670.1.2.3` | structural | node2; its phase nodes must equal bus1's (a transposition raises) |
-| `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.PerLengthImpedance = the code's template for the line's unit (lc_<code> or lc_<code>_<unit>, DSS-3) |
+| `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.WireConfiguration = the WireConfiguration of the code's template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc, DSS-3, DSS-14) |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({length}); default 1 (defaulted); none on a switch |
 | `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the phase count; unset = the code's or geometry's nphases, else 3; one that differs from the code's nphases raises (DSS-10) |
-| `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `x0` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `C1` | `Optional[float]` | `0.0`, `0.000212206590789194`, `0.000450939005427037` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `C0` | `Optional[float]` | `0.0`, `0.000636619772367581`, `0.00135281701628111` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `rmatrix` | `Union[float, list[float], NoneType]` | `[1.3238, 0.2066, 1.3294]`, `[0.0001]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `xmatrix` | `Union[float, list[float], NoneType]` | `[1.3569, 0.4591, 1.3471]`, `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `x0` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `C1` | `Optional[float]` | `0.0`, `0.000212206590789194`, `0.000450939005427037` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `C0` | `Optional[float]` | `0.0`, `0.000636619772367581`, `0.00135281701628111` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `rmatrix` | `Union[float, list[float], NoneType]` | `[1.3238, 0.2066, 1.3294]`, `[0.0001]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `xmatrix` | `Union[float, list[float], NoneType]` | `[1.3569, 0.4591, 1.3471]`, `[0.0]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
 | `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
 | `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
@@ -933,8 +944,8 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `tscables` | `Union[str, list[str], NoneType]` |  | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
 | `wires` | `Union[str, list[str], NoneType]` | `['ACSR_1/0', 'ACSR_1/0']` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
 | `EarthModel` | `Union[str, ForwardRef('EarthModelType'), NoneType]` |  | untranscribed | the earth model of the impedance calculation; the consumer's choice |
-| `B1` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
-| `B0` | `Optional[float]` |  | structural | a synthesized template ln_<name>_lc in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4); on a switch untranscribed |
+| `B1` | `Optional[float]` |  | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
+| `B0` | `Optional[float]` |  | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
 | `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (with Seasons) |
 | `LineType` | `Union[str, ForwardRef('LineTypeCode'), NoneType]` |  | untranscribed | no home in the network profile parts |
@@ -947,7 +958,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `faultrate` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `pct_perm` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `repair` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
-| `basefreq` | `Optional[float]` |  | structural | the synthesized template's calculatedFrequency and the frequency of its b; unset: the deck's (DSS-3b) |
+| `basefreq` | `Optional[float]` |  | structural | the line's own impedance's calculatedFrequency and the frequency of its b; unset: the deck's (DSS-3b) |
 | `enabled` | `Union[bool, Bool, NoneType]` | `True`, `False` | copied | `ACLineSegment.normallyInService`, `Switch.normallyInService` |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
@@ -1315,9 +1326,9 @@ On the atoms and the engine decks, as in S3:
 | `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p |
 | `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset (kvar wins in either order, engine-checked); default 0.88 |
 | `model` | `Union[str, ForwardRef('LoadModel'), NoneType]` | `ConstantI`, `ConstantPQ`, `ConstantZ` | mapped | `EnergyConsumer.LoadResponse`; 1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, 8 raise; default 1 |
-| `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
-| `daily` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
-| `duty` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | mapped | `ConformLoad.LoadGroup`; the shape's group lg_<shape>: the load is a ConformLoad (S8); a shape the deck does not define raises |
+| `daily` | `Optional[str]` | `com` | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
+| `duty` | `Optional[str]` |  | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
 | `growth` | `Optional[str]` |  | untranscribed | a GrowthShape reference; not mapped (DSS-11) |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `EnergyConsumer.phaseConnection`, `EnergyConsumer.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
 | `kvar` | `Optional[float]` | `80.0`, `110.0`, `90.0` | copied | `EnergyConsumer.q` (kVAr) |
@@ -1745,7 +1756,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `phases` | `Optional[int]` | `2`, `3`, `1` | structural | the conductor count; default 3 |
 | `bus1` | `Optional[str]` | `House.1.2`, `634`, `M1047PV-3` | structural | node and phases, by the S4 shared phase rule |
 | `kv` | `Optional[float]` | `0.208`, `0.48`, `12.47` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); not checked against the bus; default 12.47 |
-| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2), the gridappsd extension; also p (pv_power); default 1 |
+| `irradiance` | `Optional[float]` | `0.8`, `1.0` | copied | `PhotoVoltaicUnit.irradiance` (kW/m2); also p (pv_power); default 1 |
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
 | `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
@@ -1753,8 +1764,8 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
-| `pct_Cutin` | `Optional[float]` | `0.1` | untranscribed | acts only after the inverter turns off; the snapshot state uses %Cutout |
-| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = q = 0 when Pmpp x irradiance is below %Cutout of kVA; default 20 |
+| `pct_Cutin` | `Optional[float]` | `0.1` | structural | acts only after the inverter turns off; the snapshot state uses %Cutout; a yearly sample between %Cutout and %Cutin raises (S9); default 20 |
+| `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = 0 when Pmpp x irradiance is below %Cutout of kVA, q too unless kvar is set (VarFollowInverter); default 20 |
 | `EffCurve` | `Optional[str]` |  | structural | raises: an efficiency curve changes the snapshot power |
 | `P_TCurve` | `Optional[str]` |  | structural | raises: a temperature curve changes the snapshot power |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -1764,7 +1775,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the PV as constant Z; a power-flow setting |
 | `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the PV's EnergyConnectionSchedule <mRID>_yearly: pv_power at irradiance x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `Tyearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
@@ -1774,7 +1785,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
-| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | untranscribed | acts only with an InvControl |
+| `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | derived | yes: an inverter that is off gives no kvar either (pv_power, engine-checked); default no |
 | `DutyStart` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
 | `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
@@ -1838,10 +1849,10 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the battery as constant Z; a power-flow setting |
 | `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample (S9); with another DispMode raises |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `DispMode` | `Optional[str]` |  | structural | default only; another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `DispMode` | `Optional[str]` |  | structural | default, or follow with a yearly shape (S9); another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
 | `DischargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `ChargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `TimeChargeTrig` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
@@ -1878,13 +1889,13 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `model` | `Union[str, ForwardRef('GeneratorModel'), NoneType]` | `CurrentLimited`, `ConstantPQ`, `ConstantPV` | structural | 1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4, 5, 6 raise; default 1 |
 | `Vminpu` | `Optional[float]` |  | untranscribed | below it the engine models the machine as constant Z; a power-flow setting |
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the machine as constant Z; a power-flow setting |
-| `yearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the machine's EnergyConnectionSchedule <mRID>_yearly: -kW x mult, -kvar x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `dispmode` | `Union[str, ForwardRef('DispatchMode'), NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
-| `dispvalue` | `Optional[float]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
+| `dispmode` | `Union[str, ForwardRef('DispatchMode'), NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, another than Default raises |
+| `dispvalue` | `Optional[float]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, above 0 raises |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `SynchronousMachine.earthing`; wye -> earthing true, delta -> false (no phaseConnection on a machine, S4b-5); default wye |
-| `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it |
+| `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, Fixed raises |
 | `gen_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
 | `Vpu` | `Optional[float]` | `1.0` | derived | model 3: the control's targetValue (V) = Vpu x ratedU; default 1 |
 | `maxkvar` | `Optional[float]` |  | copied | `SynchronousMachine.maxQ` (kVAr); model 3 only (another model raises); default 2 x kvar |
@@ -2180,3 +2191,110 @@ Specified with the export in `EXPORT_MAPPING.md#s6g-earth-model-and-reclose-sequ
   `RecloseIntervals` (the engine's defaults filling either, listed). Both given and disagreeing raise, and so does
   Shots above 4 without intervals.
 
+## S8: load shapes (built 2026-11-21 at the user's word)
+
+GLM's S8 (`cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s8-load-players`) maps a player to the
+`ConformLoadSchedule → ConformLoadGroup ← ConformLoad` pattern (the user's call, 2026-11-21: ConformLoad groups,
+points in a Parquet sidecar). A DSS `LoadShape` a Load names as `yearly` is the same thing: one curve of multipliers
+that scales every load naming it. Mapper `importer/cimtbl/loadshape.py`, artifact `loadshape.cimtbl`, shape
+`load_schedule`; the loads in `load.cimtbl`. Atom `tests/atoms/loadshape/loadshapes.dss`:
+- an hourly shape with `qmult`, shared by two loads (`res`);
+- a 15-minute shape given as `minterval` and normalized (`com`, as K1's `action=normalize`);
+- a 900 s shape given as `sinterval` (`ind`);
+- M1's bare `mult=1` with no `npts` (`flat`), named in another case;
+- a shape no Load names (`pv`, as K1's PVSystem irradiance shape);
+- a load with no shape.
+
+| # | decision |
+|---|---|
+| S8-1 | A LoadShape a Load names as `yearly` is a `ConformLoadGroup` `lg_<name>` with one `ConformLoadSchedule` `ls_<name>` (lowercased); each Load naming it is a `ConformLoad` whose `LoadGroup` is the group, its p and q as for any load. Only `yearly`: a ConformLoad has one group, and every load in the sweep names only `yearly` (M1, K1, J1). `daily` and `duty` are untranscribed (listed on the row) |
+| S8-2 | Multipliers: `value1` = `mult`, `value1Unit` none; `value2` = `qmult` (`value2Unit` none) when given, else unset: Q follows `mult`, the engine's rule (engine-checked). `action=normalize` divides each array by its largest magnitude, as the engine does; an array assigned after it raises (the engine normalizes only what came before) |
+| S8-3 | Time: `timeStep` = the interval slot the deck assigned last (the engine's rule), copied in its unit (`interval` h, `minterval` min, `sinterval` s), one schedule table per unit; none gives the engine's 1 h. DSS has no date: sample k (from 1) is in force from k × interval (engine-checked: yearly mode, hour 1 gives sample 1), so `startTime` = 2020-01-01T00:00Z (ditto's epoch) + one interval (`cimhub_gdm` TIMESERIES_NEEDS.md X2). The engine wraps a shape around; CIM has no repeat, so the wrap is lost (X4) |
+| S8-4 | Points: `RegularTimePoint` rows in the Parquet sidecar (`cimhub_core.time_points`), as GLM's: `DssImporter(time_points={})` / `dss_to_cim(..., time_points=)` fills the caller's dict; without it the points are dropped with one warning |
+| S8-5 | `npts` unset: the engine reads none of `mult`, inline or from a file (engine-checked with DSS C-API 0.14.5: `Npts` 0, the load constant), so the group has no schedule, its name kept, as GLM's undefined player (M1's five `mult=1` shapes). `npts` set must equal the number of values |
+| S8-6 | `UseActual=Yes` raises: a Load naming it takes the shape's peak as its kW and kvar, or keeps its own, depending on whether `yearly=` comes after `kW=` (engine-checked), which the record does not keep. So no DSS form maps a `NonConformLoad` yet, either way |
+| S8-7 | A shape no Load names as `yearly` is not a group: one a PVSystem, Storage or Generator names is that device's schedule (S9); one nothing names (a Vsource's, an unused irradiance shape) is not mapped and not checked, and the master's comment counts it (`not mapped: Loadshape 1`) |
+
+**What raises:**
+- `UseActual=Yes`;
+- `hour`, `csvfile`, `sngfile`, `dblfile`, `PQCSVFile`, `Pmult`, `Pbase`, `Qbase` set (no deck sets them);
+- an interval of 0 (an hour array);
+- `npts` other than the number of `mult` values, `qmult` of another length, no `mult`;
+- an array assigned after `action=normalize`, or an `action` other than normalize, DblSave, SngSave;
+- a Load whose `yearly` names no shape of the deck.
+
+**Engine checks.** `test_cimtbl_loadshape.py` compiles the atom and reads each shape's `PMult`, `QMult` and
+`HrInterval` from the engine, against the mapper's values (the normalized `com` included, and `flat`'s 0 points).
+`test_export_loadshape.py` runs the original atom and its export in yearly mode every 5 minutes for 6 hours, every
+load's power equal at every step (rel 1e-9).
+
+**Not mapped:** an `Hour`-array shape and a file the reader does not read (`csvfile=`, ...). A `mult=(file=...)`
+with no `npts` is S8-5's case too: the engine reads no points from the file either (engine-checked).
+
+### LoadShape fields
+
+| Loadshape field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LoadshapeName]` | `com`, `flat`, `ind` | copied | `ConformLoadGroup.name`, `ConformLoadSchedule.name`; mRID = lg_ / ls_ + name, lowercased |
+| `npts` | `Optional[int]` | `4`, `3`, `2` | structural | the number of points the engine reads: unset, none of mult (inline or from a file; engine-checked), so the group has no schedule; else it must equal the number of mult values |
+| `interval` | `Optional[float]` | `1.0` | copied | `ConformLoadSchedule.timeStep` (h); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `mult` | `Union[float, list[float], NoneType]` | `[2.0, 4.0, 8.0, 6.0]`, `[1.0]`, `[1.0, 0.9, 0.95]` | copied | `RegularTimePoint.value1`; the points, in the Parquet sidecar (S8-4); action=normalize divides them by their peak |
+| `hour` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an irregular shape has no RegularIntervalSchedule) |
+| `mean` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
+| `stddev` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
+| `csvfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `sngfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `dblfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `action` | `Optional[str]` | `normalize` | derived | normalize: mult and qmult each divided by its largest magnitude, as the engine does (one assigned after it raises); DblSave, SngSave write files and are untranscribed; others raise |
+| `qmult` | `Union[float, list[float], NoneType]` | `[0.4, 0.6, 0.9, 0.7]` | copied | `RegularTimePoint.value2`; in the sidecar; unset: Q follows mult (the engine's rule), value2 unset |
+| `UseActual` | `Union[bool, Bool, NoneType]` |  | structural | Yes raises: a Load naming it takes the shape's peak as its kW, or keeps its own, by command order, which the record does not keep (engine-checked); default No |
+| `Pmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
+| `Qmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
+| `sinterval` | `Optional[str]` | `900` | copied | `ConformLoadSchedule.timeStep` (s); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `minterval` | `Optional[str]` | `15` | copied | `ConformLoadSchedule.timeStep` (min); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `Pbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Qbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Pmult` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a synonym of mult) |
+| `PQCSVFile` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `MemoryMapping` | `Union[bool, Bool, NoneType]` |  | untranscribed | how the engine stores the points |
+| `Mode` | `Optional[float]` |  | untranscribed | generator dispatch; no effect on a Load |
+| `Interpolation` | `Optional[str]` |  | untranscribed | AVG and EDGE agree at the solution steps, which are on the interval grid (TIMESERIES_NEEDS.md X3) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
+
+## S9: device shapes (built 2026-11-21 at the user's word: "shapes for PV, storage, etc using the nc_schedule profile classes")
+
+A `yearly` LoadShape on a PVSystem, Storage or Generator drives that one device's output, which the engine computes
+from the shape and the device's own settings (irradiance, kWrated, kW). So it is nc_schedule's per-device
+`EnergyConnectionSchedule` on the device's `PowerElectronicsConnection` or `SynchronousMachine`, its points the
+device's p and q at each sample as `EnergyConnectionTimePoint` rows in the Parquet sidecar (`TIME_POINT_SCHEMA`, as
+GDM's T1 schedules), not a load group. The user chose this over a `PowerSchedule` on the unit (2026-11-21). Mappers:
+`pvsystem.py`, `storage.py`, `generator.py` (`schedule_points`; the schedule row in their own document), with
+`loadshape.py`'s `device_shape`, `point_times` and `device_schedules`. Atom `tests/atoms/loadshape/devices.dss`:
+- `sun` (30 min) on two PVs: `p1` by pf with `%Cutin` = `%Cutout` = 10, off at both ends; `p2` by kvar, cut to fit
+  its kVA at the peak, off with its kvar kept at both ends;
+- `run` (hourly) on a model 1 generator by pf, down to 0;
+- `cycle` (hourly) on a follow-mode battery that discharges, charges, idles, and is capped at kVA;
+- a PV and a load with no shape.
+
+| # | decision |
+|---|---|
+| S9-1 | A device's `yearly` shape is an `EnergyConnectionSchedule` `<connection mRID>_yearly`, named after the shape, `timeSeriesKind` schedule, `interpolationKind` previous (a sample holds until the next), on the device's EnergyConnection. One per device: devices sharing a shape each get their own, as their outputs differ (a PV's cap). Only `yearly`, as for loads (S8-1): `daily`, `duty`, `Tyearly`.. are untranscribed. The snapshot p, q are the deck's, as before |
+| S9-2 | Times: sample k (from 1) at the epoch 2020-01-01T00:00Z + k intervals, the instant it is in force (S8-3's rule, engine-checked here per device). The wrap is lost (X4) |
+| S9-3 | Generator: p = -kW x mult, q = -kvar x mult (engine-checked: the engine scales kvar with kW, pf or kvar alike); a model 3 machine's schedule carries p only (its q is its control's). A shape with `dispmode` other than Default, `dispvalue` above 0 or `status=Fixed` raises (the engine then dispatches by load level, price, or not at all) |
+| S9-4 | PVSystem: each sample is `pv_power` at irradiance x mult (engine-checked: the shape scales the irradiance, so %Pmpp, %Cutout and the kVA cut apply per sample). A sample whose panel power lies between %Cutout and %Cutin raises: the engine keeps the inverter on or off as it was (hysteresis, engine-checked), which depends on the samples before and on a snapshot solved first |
+| S9-5 | An inverter that is off still gives a set kvar unless `VarFollowInverter` (engine-checked, snapshot and yearly alike): `pv_power` now keeps it. This changes no golden: no atom or sweep deck has an off PV with a kvar |
+| S9-6 | Storage: only `DispMode=follow` with a yearly shape (engine-checked: discharge at mult x kWrated for mult > 0, charge at -mult x kWrated below 0, idle at 0 with the idling loss, capped at kVA; %Charge, %Discharge and %kWrated have no effect); p only. It is the dispatch asked for: a battery that fills or reaches its reserve idles in the engine, which the schedule does not model (the export's deck idles it too, so a round trip agrees). A follow-mode battery with a kW or State raises (the engine's snapshot of one is not that of `battery_dispatch`); one with neither idles, as the importer has it. A yearly shape in the default (trigger) mode, or follow mode without a shape, raises |
+| S9-7 | A shape with `qmult` raises on a device: its output is scaled by `mult` alone. A shape with no `npts` is no schedule (S8-5); a `yearly` naming no shape raises |
+| S9-8 | Points: `DssImporter(time_points={})` fills the `EnergyConnectionTimePoint` table beside the `RegularTimePoint` one (`time_points.add_device_time_points`, CIM-Builder's builder converting kW, kVAr to SI); without it they are dropped with the one warning of S8-4 |
+
+**What raises:** a sample between %Cutout and %Cutin; a generator shape off Default dispatch; a storage shape off
+follow mode, follow mode with no shape, with a kW or with a State; a `qmult` on a device's shape; a `yearly` naming
+no shape.
+
+**Engine checks.** `test_cimtbl_device_shape.py` runs the atom in yearly mode at each shape's own interval and
+compares every device's kW and kvar at every sample with the schedule's points (rel 1e-6, a tight solver
+tolerance). `test_export_device_shape.py` runs the original atom and its export every 30 minutes for 8 hours, every
+device's power equal at every step.
+
+**Not mapped:** daily and duty shapes; a temperature shape (it acts only through a P-TCurve, which raises); a shape on
+a Vsource; a battery's trigger dispatch modes.

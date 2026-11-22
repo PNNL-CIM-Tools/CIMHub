@@ -133,11 +133,18 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, highStep=1
 
 # --- line catalogs -------------------------------------------------------------------------------------------------
 # mtx603 serves 632645, 645646 and (as IEEE13's 604) 671684; mtx605 serves 684611 and 684652.
-Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz)
+# templates (DSS-14): each behind the WireConfiguration <lc>_wc its lines name
+Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate=true
     lc_mtx601, mtx601, 3, 60
     lc_mtx602, mtx602, 3, 60
     lc_mtx603, mtx603, 2, 60
     lc_mtx605, mtx605, 1, 60
+
+Table WireConfiguration: mRID, name, PerLengthImpedance
+    lc_mtx601_wc, mtx601, lc_mtx601
+    lc_mtx602_wc, mtx602, lc_mtx602
+    lc_mtx603_wc, mtx603, lc_mtx603
+    lc_mtx605_wc, mtx605, lc_mtx605
 
 # Lower triangle; derived: b = 2 pi 60 C (nF/mi -> nS/mi)
 Table PhaseImpedanceData: identifier, PhaseImpedance, row, column, r (ohm/mi), x (ohm/mi), b (nS/mi)
@@ -173,16 +180,16 @@ Table WireSequenceConfiguration: mRID, WireConfiguration, sequenceNumber, WireIn
 
 # --- lines and the switch ------------------------------------------------------------------------------------------
 # phases as IEEE13 writes them: 632633 C A B, 632645 and 645646 C B, 671684 A C
-Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), PerLengthImpedance, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
-    ln_650632, 650632, rg60, 632, ABC, 2000, lc_mtx601
-    ln_632671, 632671, 632,  671, ABC, 2000, lc_mtx601
-    ln_671680, 671680, 671,  680, ABC, 1000, lc_mtx601
-    ln_632633, 632633, 632,  633, CAB, 500,  lc_mtx602
-    ln_632645, 632645, 632,  645, CB,  500,  lc_mtx603
-    ln_645646, 645646, 645,  646, CB,  300,  lc_mtx603
-    ln_671684, 671684, 671,  684, AC,  300,  lc_mtx603
-    ln_684611, 684611, 684,  611, C,   300,  lc_mtx605
-    ln_684652, 684652, 684,  652, A,   800,  lc_mtx605
+Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfiguration, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
+    ln_650632, 650632, rg60, 632, ABC, 2000, lc_mtx601_wc
+    ln_632671, 632671, 632,  671, ABC, 2000, lc_mtx601_wc
+    ln_671680, 671680, 671,  680, ABC, 1000, lc_mtx601_wc
+    ln_632633, 632633, 632,  633, CAB, 500,  lc_mtx602_wc
+    ln_632645, 632645, 632,  645, CB,  500,  lc_mtx603_wc
+    ln_645646, 645646, 645,  646, CB,  300,  lc_mtx603_wc
+    ln_671684, 671684, 671,  684, AC,  300,  lc_mtx603_wc
+    ln_684611, 684611, 684,  611, C,   300,  lc_mtx605_wc
+    ln_684652, 684652, 684,  652, A,   800,  lc_mtx605_wc
 Object ACLineSegment: mRID=ln_692675, name=692675, node1=692, node2=675, phases=ABC, length (ft)=500, WireConfiguration=wc_ug606, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13
 
 Object LoadBreakSwitch: mRID=sw_671692, name=671692, node1=671, node2=692, open=false, normalOpen=false, ratedCurrent (A)=600, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_ieee13

@@ -282,7 +282,7 @@ each name in only one catalog. A plain CableInfo (no neutral or shield) is a Wir
 
 ### LineCode
 
-One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.base_frequency`. A code whose
+One record per template PerLengthImpedance in the network (E3): `isTemplate` true or unset (unset is the CIM default for a code no producer marked). One with `isTemplate=false` is a line's own impedance and is written inline on its Line (skill `wire-configuration`). `baseFreq` is `network.base_frequency`. A code whose
 `calculatedFrequency` is set and differs from it raises: C is computed at the deck's frequency.
 - **Phase code:**
   - nphases = `conductorCount`;
@@ -308,7 +308,8 @@ One record per PerLengthImpedance in the network (E3). `baseFreq` is `network.ba
   `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
   mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
 - **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
-  default).
+  default). One with a PerLengthImpedance and no WireSpacing is a template LineCode, not geometry: LineCode writes
+  its code, and it has no earth (`options.earth_model` skips it).
 - **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
   ACLineSegmentPhase) gets one record per (spacing, ySpacingOffset, conductors), the conductors being each phase's
   sequence number, WireInfo and whether it is N. It is named `<line>_geometry` after the first line that has it.
@@ -350,7 +351,7 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 |---|---|
 | bus1 / bus2 | `bus_ref` over `get_terminal_nodes`, with the phase conductors of `get_conductor_phases` in order (645 CB is `.3.2`). The neutral is not on the bus: it is reduced (B4) |
 | phases | the phase conductors' count |
-| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry wins when both are set (skill `conductor-geometry`) |
+| linecode / geometry | the code's name, or the (configuration, offset) geometry's name, or a spacing line's `<line>_geometry`. Geometry is a WireConfiguration that names a WireSpacing (`get_line_geometry`); the code is the line's own PerLengthImpedance or its WireConfiguration's, a template LineCode (`get_line_code`, DSS-14). Geometry wins when both are set (skill `conductor-geometry`) |
 | rho | the configuration's EarthResistivity, or a spacing line's network EarthResistivity (ohm-m) |
 | length, units | `required_qty(line, "length", "m")`, `units=m` |
 | normamps / emergamps | `get_current_limits(line)` normal / emergency. Unset is left unset, and the engine copies the code's or geometry's. `short_term` and seasonal limits are not mapped |
@@ -364,8 +365,9 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
 
   The values come from `get_line_sequence_impedance(line, "ohm")` (`LUMPED`). An unset b is C = 0 (rule 8). An
   unset r0/x0 raises, as on a sequence code. A set and nonzero `gch`/`g0ch` raises.
-- **Inline values are never written.** The importer's synthesized `ln_<line>_lc` comes back as a LineCode (E3,
-  listed).
+- **A line's own impedance** (`isTemplate=false`, the importer's `ln_<line>_lc`, DSS-14) is written inline on the
+  Line, per metre as a LineCode writes it (`linecode.code_slots`): `r1 x1 r0 x0 C1 C0` or `rmatrix xmatrix cmatrix`.
+  So a deck's inline line comes back inline. One that two lines use raises: `isTemplate=false` marks one line's own.
 
 ### Switches (E6)
 
@@ -612,18 +614,18 @@ code-level tests in `test_getters_line_impedance.py`):
 | name | written | Names; a coupled group's: the group's, <line>_jumper1 for each circuit, and <line>_jumper2 or a longer line's remainder <line> (H1, H4) |
 | bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
 | bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
-| linecode | written | the PerLengthImpedance's LineCode name |
+| linecode | written | the template PerLengthImpedance's LineCode name (get_line_code); a line's own (isTemplate=false) is written inline |
 | length | written | required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
 | phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
-| r1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| x1 | written | lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| r0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| x0 | written | lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| C1 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| C0 | rule | lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
-| rmatrix | not mapped | a phase matrix is always a LineCode |
-| xmatrix | not mapped | a phase matrix is always a LineCode |
-| cmatrix | not mapped | a phase matrix is always a LineCode |
+| r1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| r0 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| x0 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); unset raises; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C1 | rule | the line's own sequence code (isTemplate=false), as a LineCode writes it; lumped only (B6): the whole-line value / length in km, c_from_b(bch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| C0 | rule | the line's own sequence code (isTemplate=false), as a LineCode writes it; lumped only (B6): the whole-line value / length in km, c_from_b(b0ch) (nF/km); unset -> 0; a jumper's: SWITCH_IMPEDANCE (B3, H1) |
+| rmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
+| xmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
+| cmatrix | written | the line's own phase code (isTemplate=false), lower triangle per m; a template's is its LineCode's |
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
@@ -1301,7 +1303,7 @@ As built (`tests/test_export_injection.py`, 24 tests; core `test_derived_control
 | kW | written | get_phase_loads total p (kW); per phase when the phases differ (E8) |
 | pf | not mapped | kvar carries q |
 | model | written | get_load_response: a pure ZIP 1 (PQ), 2 (Z), 5 (I); exponential 4 (CVR); a mix raises |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | a ConformLoad's group LoadShape (S8); unset otherwise |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | growth | unset | untranscribed or raising on import; not in CIM |
@@ -1571,12 +1573,12 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Pmpp | written | the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than 0 raises |
 | pct_Pmpp | rule | 100 x output / Pmpp when the output is below Pmpp x irradiance, else not written; an output above it raises |
 | Temperature | unset | untranscribed or raising on import; not in CIM |
-| pf | not mapped | kvar carries q |
+| pf | rule | with a yearly shape whose q is in proportion to p: p / hypot(p, q) with the sign of q; else kvar carries q |
 | conn | written | phaseConnection Y/Yn -> wye, D -> delta; others raise |
 | kvar | written | the unit's share of q (generation sign: -q) |
 | kVA | written | ratedS, the connection's, by the unit's share (inverter_pieces) |
-| pct_Cutin | unset | untranscribed or raising on import; not in CIM |
-| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, else not written |
+| pct_Cutin | rule | 0 with a yearly shape, else not written |
+| pct_Cutout | rule | 0 when the output is above 0 and Pmpp x irradiance below the engine's 20 % of kVA, or with a yearly shape; else not written |
 | EffCurve | unset | untranscribed or raising on import; not in CIM |
 | P_TCurve | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |
@@ -1586,7 +1588,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
 | Balanced | unset | untranscribed or raising on import; not in CIM |
 | LimitCurrent | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the connection's EnergyConnectionSchedule as a LoadShape, mult = p / (Pmpp x irradiance) (S9); %Cutin, %Cutout 0 and q by kvar or pf with it |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | Tyearly | unset | untranscribed or raising on import; not in CIM |
@@ -1662,10 +1664,10 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
 | Balanced | unset | untranscribed or raising on import; not in CIM |
 | LimitCurrent | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the connection's EnergyConnectionSchedule as a LoadShape, mult = output / kWrated (S9) |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
-| DispMode | unset | untranscribed or raising on import; not in CIM |
+| DispMode | rule | follow with a yearly shape, else not written |
 | DischargeTrigger | unset | untranscribed or raising on import; not in CIM |
 | ChargeTrigger | unset | untranscribed or raising on import; not in CIM |
 | TimeChargeTrig | unset | untranscribed or raising on import; not in CIM |
@@ -1704,7 +1706,7 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | model | written | 3 (ConstantPV) when an enabled control regulates its own terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1 |
 | Vminpu | unset | untranscribed or raising on import; not in CIM |
 | Vmaxpu | unset | untranscribed or raising on import; not in CIM |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | the machine's EnergyConnectionSchedule as a LoadShape, mult = p / kW (S9) |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | dispmode | unset | untranscribed or raising on import; not in CIM |
@@ -2122,3 +2124,130 @@ A `BusbarSection` is its node's bus. DSS has no element for it, so it writes no 
 | H5 | An underbuilt secondary in a group (user, 2026-11-19) | Only the lines at the group's highest nominal voltage are coupled; the others stay on their own positions |
 | H6 | A shared conductor (user, 2026-11-19) | One position on several lines is one conductor (EPRI ConductorPosition); SharedPhases is not required |
 | H7 | Series pieces of one circuit in a group (user, 2026-11-19) | The group is written uncoupled, with a warning |
+
+## S8: load shapes (built 2026-11-21 at the user's word)
+
+The importer's S8 inverted (`CIMTBL_MAPPING.md#s8-load-shapes`), as GLM's X29 writes players.
+
+### Layout
+
+- `exporter/loadshape.py`: each `ConformLoadSchedule` with points is a `LoadShape` named after its group (the
+  `Loadshape` namespace of `Names`); `CIM_CLASSES = ()`, as a schedule is not conducting equipment.
+- `exporter/load.py`: a ConformLoad whose group's schedule is a shape names it as `yearly`, on each per-phase load
+  too (E8).
+- `DssExporter(time_points)` / `cim_to_dss(..., time_points=)`: the caller's time point tables
+  (`read_time_points`, or the dict an importer filled), read through `cimhub_core.getters.load_schedule`
+  (`get_schedule_points`: the points numbered 0, 1, ... in order, value2 set at all points or none).
+  `ExportContext.points` holds the `RegularTimePoint` rows by schedule uri.
+- The writer writes `Loadshape` first (`WRITE_ORDER`): a Load names its shape when it is defined.
+
+### Rules
+
+- `npts` the number of points; `mult` value1; `qmult` value2, not written when value2 is unset (Q follows `mult`);
+  `sinterval` the `timeStep` in seconds, whatever unit the import read (an hourly `interval=1` comes back as
+  `sinterval=3600`: the engine's interval is the same).
+- `startTime` is not written: DSS has no date. The first point is sample 1, in force one interval into the run,
+  which is what the importer's `startTime` says of a DSS shape (S8-3). A GLM player's date (2009-07-21) is lost.
+- A value unit other than none (a multiplier) on a ConformLoadSchedule raises.
+- Written static, their groups named in one warning: a ConformLoad whose group has no schedule (M1's `npts`-less
+  shapes, GLM's undefined players), a schedule with no points (or no `time_points`), a group of days by season and
+  day type (a GLM schedule's, GLM S9: DSS has no calendar), and a NonConformLoad (its schedule is actual power, which
+  only `UseActual` holds, and a UseActual shape's snapshot depends on command order: S8-6).
+- Shapes are shared (`ShapeRegistry`, also S9's): owners whose export name, interval and multipliers agree name one
+  LoadShape; another of that name with other points takes a suffix `_2`, `_3`.
+
+### Expected differences (round trip)
+
+| what | why |
+|---|---|
+| `interval=`/`minterval=` come back as `sinterval=` | one written form; the engine's interval is equal |
+| a shape no Load names, and a Load's `daily` / `duty` | not imported (S8-1, S8-7) |
+| M1's `mult=1` shapes (no `npts`) are not written; their loads have no `yearly` | the engine reads no points from them: the loads are constant either way (S8-5) |
+
+### Tests
+
+- `test_export_loadshape.py`: the atom's export golden (`atoms/loadshape/export/loadshapes.dss`); the original and the
+  export in the engine in yearly mode every 5 minutes for 6 hours, every load's kW and kvar equal (rel 1e-9: the
+  intervals, the normalized shape, `qmult`, the wrap); without points the loads are static with the warning; the
+  loads made NonConform are static; a schedule in W raises.
+- `tests/cross_format/test_glm_player_to_dss.py`: a GLM player through CIM to a LoadShape, solved in yearly mode at
+  60 s steps as the deck fixed at each step's value (rel 1e-9, the fifth step wrapping to the first).
+
+### Slot tables (S8, generated from `SLOTS`)
+
+**LoadShape** (`exporter/loadshape.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | the group's name (Names) |
+| npts | written | the number of points |
+| interval | unset | not in CIM; the engine's default |
+| mult | written | value1 of each point, in sequence order |
+| hour | unset | not in CIM; the engine's default |
+| mean | unset | not in CIM; the engine's default |
+| stddev | unset | not in CIM; the engine's default |
+| csvfile | unset | not in CIM; the engine's default |
+| sngfile | unset | not in CIM; the engine's default |
+| dblfile | unset | not in CIM; the engine's default |
+| action | unset | not in CIM; the engine's default |
+| qmult | written | value2 of each point; unset when value2 is (Q follows mult) |
+| UseActual | unset | not in CIM; the engine's default |
+| Pmax | unset | not in CIM; the engine's default |
+| Qmax | unset | not in CIM; the engine's default |
+| sinterval | written | timeStep (s) |
+| minterval | unset | not in CIM; the engine's default |
+| Pbase | unset | not in CIM; the engine's default |
+| Qbase | unset | not in CIM; the engine's default |
+| Pmult | unset | not in CIM; the engine's default |
+| PQCSVFile | unset | not in CIM; the engine's default |
+| MemoryMapping | unset | not in CIM; the engine's default |
+| Mode | unset | not in CIM; the engine's default |
+| Interpolation | unset | not in CIM; the engine's default |
+| like | not mapped | the writer never writes like= |
+
+## S9: device shapes (built 2026-11-21 at the user's word)
+
+The importer's S9 inverted (`CIMTBL_MAPPING.md#s9-device-shapes`): a PV's, battery's or machine's own
+`EnergyConnectionSchedule` with points is its `yearly` LoadShape.
+
+### Layout
+
+- `cimhub_core.getters.device_schedule.get_device_schedule`: the equipment's one `EnergyConnectionSchedule` with
+  points, p and q in the caller's units and sign (here kW, kVAr, generation), the step when the points are even;
+  interpolation other than previous, a column null at some points only, and two schedules with points raise.
+- `exporter/loadshape.py`: `device_schedule` (uneven points raise; so does a schedule on a connection written as
+  several DSS objects, or with several units: one shape would scale them by one multiplier, which CIM does not say)
+  and `device_yearly` (the shared `ShapeRegistry`). `ExportContext.device_points` holds the `EnergyConnectionTimePoint`
+  rows by schedule uri.
+- `exporter/pvsystem.py`, `storage.py`, `generator.py`: the multipliers, the device's own slots, and the shape
+  record before the device's when it is new.
+
+### Rules
+
+- Generator: mult = p / kW (the written kW, generation sign); each point's q must be kvar x mult (the engine scales
+  them together), unless the machine is model 3; a kW of 0 raises.
+- PVSystem: mult = p / (Pmpp x irradiance), the irradiance it scales; `%Cutin=0 %Cutout=0`, so the engine gives each
+  point's p, low ones too (an off sample has p 0). q: `kvar` when every point's q is the written kvar (an off PV keeps
+  it, S9-5), else `pf` = p / hypot(p, q) with q's sign when q is in proportion to p; another q raises, as does a
+  point above the written %Pmpp cap.
+- Storage: `DispMode=follow`; mult = output / kWrated, 0 where the output is the idling loss; `State` is not written
+  (the importer raises on a follow-mode battery with one), so its snapshot idles, which batteryState must say
+  (waiting). A point above kVA or a q other than 0 raises.
+- As for loads, `startTime` is not written: the first point is sample 1, one interval into the run.
+
+### Expected differences (round trip)
+
+| what | why |
+|---|---|
+| a PV's `%Cutin`/`%Cutout` come back 0, its q rule as `kvar` or `pf` | the engine gives the points' p and q with them |
+| a battery's capped sample comes back at the cap (80 kVA: mult 0.8, not 1) | the schedule holds the output |
+| devices sharing a shape whose multipliers differ (a PV cut to fit) get their own shapes, `sun_2` | one shape scales one way |
+| a battery's `%Charge`, `%Discharge`, `State` | follow mode does not use them |
+
+### Tests
+
+`test_export_device_shape.py`: the atom's export golden (`atoms/loadshape/export/devices.dss`); the original and the
+export in the engine in yearly mode every 30 minutes for 8 hours, every device's kW and kvar equal (rel 1e-6:
+both intervals, the PVs off and cut to fit, the battery capped, the wrap); shared shapes; without points the devices
+are static; a generator's q off kvar x mult, a PV's q off both rules, a PV point above its cap, a battery's q or a
+point above its kVA, and uneven points raise.

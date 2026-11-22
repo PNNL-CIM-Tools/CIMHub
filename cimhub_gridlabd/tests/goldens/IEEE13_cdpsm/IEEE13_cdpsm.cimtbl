@@ -44,6 +44,8 @@ Import transformer.cimtbl
 
 Import regulator.cimtbl
 
+Import player.cimtbl
+
 Import load.cimtbl
 
 Import triplex_load.cimtbl

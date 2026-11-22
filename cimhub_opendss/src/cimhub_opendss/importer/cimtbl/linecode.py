@@ -6,6 +6,10 @@ conductor indices, not phases, so a line's phase order picks the row. A sequence
 (``r1``/``x1``/``r0``/``x0``/``C1``/``C0``/``B1``/``B0``) becomes a ``PerLengthSequenceImpedance``.
 Values are written as the reader holds them, per the code's own ``units`` (plan I2).
 
+A LineCode is a template its lines share by name: ``isTemplate=true``, and a ``WireConfiguration``
+``<template>_wc`` with that ``PerLengthImpedance`` and no ``WireSpacing``, which the lines reference (DSS-14).
+The Line mapper writes a line's own inline values through the same rules with ``isTemplate=false``.
+
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode``.
 """
 
@@ -33,9 +37,11 @@ _CARSON = ("Carson earth return per length; home PerLengthImpedance.rg/xg (ohm/<
 _KRON = "input of the matrix calculation; no CIM home"
 _SEQ = "PerLengthSequenceImpedance"
 _PHASE = "PerLengthPhaseImpedance"
+_CONFIGURATION = "WireConfiguration"
 
 FIELDS = {
-    "name": Field("copied", ((_PHASE, "name", None), (_SEQ, "name", None)), "mRID = lc_ + name, lowercased"),
+    "name": Field("copied", ((_PHASE, "name", None), (_SEQ, "name", None), (_CONFIGURATION, "name", None)),
+                  "mRID = lc_ + name, lowercased; its WireConfiguration's lc_<name>_wc (DSS-14)"),
     "nphases": Field("copied", ((_PHASE, "conductorCount", None),),
                      "the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a "
                      "phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase "
@@ -81,7 +87,8 @@ _SHUNT = (("C1", "B1", "bch"), ("C0", "B0", "b0ch"))
 #: DSS ``units`` code -> the length unit written in the headers. ``none`` has no length, so it raises.
 LENGTH_UNIT = {"mi": "mi", "kft": "kft", "km": "km", "m": "m", "ft": "ft", "in": "in", "cm": "cm", "mm": "mm"}
 
-_PROVENANCE = """OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (catalog).
+_PROVENANCE = """OpenDSS LineCode -> PerLengthPhaseImpedance + PhaseImpedanceData, PerLengthSequenceImpedance (templates),
+each with the WireConfiguration its lines reference (DSS-14).
 Source table: LineCode (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linecode"""
 
@@ -249,12 +256,12 @@ def _comment(*parts) -> str | None:
     return "\n".join(part for part in parts if part) or None
 
 
-def _phase_rows(code, template: Template, matrices, note: str | None) -> tuple[Row, list[Row]]:
+def _phase_rows(code, template: Template, matrices, note: str | None, is_template: bool) -> tuple[Row, list[Row]]:
     """The ``PerLengthPhaseImpedance`` row and its ``PhaseImpedanceData`` rows; ``matrices`` is ``(r, x, c)``,
     each ``{(row, column): value}`` (``c`` may be empty)."""
     lc = template.mrid
-    impedance = Row([lc, *(cell(getattr(code, slot)) for slot, _ in copied_columns(FIELDS, _PHASE))],
-                    comment=_comment(note, untranscribed_values(FIELDS, code)))
+    impedance = Row([lc, *(cell(getattr(code, slot)) for slot, _ in copied_columns(FIELDS, _PHASE)),
+                     cell(is_template)], comment=_comment(note, untranscribed_values(FIELDS, code)))
     r, x, c = matrices
     data = []
     for row, column in r:
@@ -293,7 +300,7 @@ def _short_sequence_matrices(code):
     return r, x, c, note
 
 
-def _sequence_row(code, template: Template, note: str | None) -> tuple[tuple[Column, ...], Row]:
+def _sequence_row(code, template: Template, note: str | None, is_template: bool) -> tuple[tuple[Column, ...], Row]:
     """The ``PerLengthSequenceImpedance`` columns and row of a 3-phase sequence code.
 
     ``bch``/``b0ch`` are copied from ``B1``/``B0`` (uS) or derived from ``C1``/``C0`` (nS),
@@ -313,15 +320,17 @@ def _sequence_row(code, template: Template, note: str | None) -> tuple[tuple[Col
                              "DSS keeps whichever was set last, which the reader does not record")
         cells[name] = (Column(name, f"nS/{unit}"),
                        cell(susceptance(c, code.baseFreq, name=code.name, slot=c_slot)))
+    cells["isTemplate"] = (Column("isTemplate"), cell(is_template))
     columns = tuple(column for column, _ in cells.values())
     row = Row([template.mrid, *(text for _, text in cells.values())],
               comment=_comment(note, untranscribed_values(FIELDS, code)))
     return columns, row
 
 
-def impedance_statements(entries, base_frequency: float) -> list:
-    """The template tables of ``(code, [Template, ...])`` pairs: a phase table, its data per length unit, and
-    the sequence tables per header. The Line mapper passes its synthesized inline codes the same way (DSS-8).
+def impedance_statements(entries, base_frequency: float, *, is_template: bool) -> list:
+    """The impedance tables of ``(code, [Template, ...])`` pairs: a phase table, its data per length unit, and
+    the sequence tables per header. LineCodes are templates; the Line mapper passes its inline values the same way
+    with ``is_template=False`` (DSS-8, DSS-14).
     """
     impedances: list[Row] = []
     data_by_unit: dict[str, list[Row]] = {}
@@ -334,7 +343,7 @@ def impedance_statements(entries, base_frequency: float) -> list:
         for template in code_templates:
             note = _comment(template.note, capacitance, defaulted)
             if sequence and code.nphases == 3:
-                columns, row = _sequence_row(code, template, note)
+                columns, row = _sequence_row(code, template, note, is_template)
                 sequences_by_columns.setdefault(columns, []).append(row)
                 continue
             if sequence:
@@ -342,14 +351,14 @@ def impedance_statements(entries, base_frequency: float) -> list:
                 matrices, note, derived_matrix = (r, x, c), _comment(derivation, note), True
             else:
                 matrices = _matrices(code)
-            impedance, data = _phase_rows(code, template, matrices, note)
+            impedance, data = _phase_rows(code, template, matrices, note, is_template)
             impedances.append(impedance)
             data_by_unit.setdefault(template.unit, []).extend(data)
 
     statements = []
     if impedances:
-        statements.append(Table(_PHASE, [Column("mRID"), *(column for _, column in copied_columns(FIELDS, _PHASE))],
-                                impedances))
+        statements.append(Table(_PHASE, [Column("mRID"), *(column for _, column in copied_columns(FIELDS, _PHASE)),
+                                         Column("isTemplate")], impedances))
     for unit, rows in data_by_unit.items():
         comment = (f"units={unit}. row/column are conductor indices of the lower triangle.\n"
                    "derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS")
@@ -379,7 +388,12 @@ def map_linecode(native, *, base_frequency: float, length_unit: str | None = Non
     if not codes:
         return Document(name="linecode", statements=[], profile=CIM_PROFILE)
     templates_of = templates(native, length_unit)
-    statements = impedance_statements([(code, templates_of[str(code.name).lower()]) for code in codes],
-                                      base_frequency)
+    entries = [(code, templates_of[str(code.name).lower()]) for code in codes]
+    statements = impedance_statements(entries, base_frequency, is_template=True)
+    configurations = [Row([f"{template.mrid}_wc", str(code.name), template.mrid])
+                      for code, code_templates in entries for template in code_templates]
+    statements.append(Table(_CONFIGURATION, [Column("mRID"), Column("name"), Column("PerLengthImpedance")],
+                            configurations, comment="the LineCodes' lines share each through its WireConfiguration, "
+                                                    "which has no WireSpacing (DSS-14)"))
     return Document(name="linecode", statements=statements, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(codes)))

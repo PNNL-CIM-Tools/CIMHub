@@ -49,8 +49,8 @@ class GdmExporter(FormatExporter):
     Required GDM fields CIM cannot hold get the neutral values of ``fills.py``, with one WARNING (X4).
 
     ``time_points``: the TimePoint tables of the network's schedules (``read_time_points``, or the dict the importer
-    filled); each EnergyConnectionSchedule becomes its load's series (``time_series.py``). Without them, schedules
-    are exported with no series and one WARNING.
+    filled); each EnergyConnectionSchedule becomes its load's series, and each load group's schedule one series
+    shared by its loads (``time_series.py``). Without them, schedules are exported with no series and one WARNING.
     """
 
     def __init__(self, time_points: dict | None = None):
@@ -70,6 +70,8 @@ class GdmExporter(FormatExporter):
                     for component in made if isinstance(made, tuple) else (made,):
                         system.add_component(component)
         time_series.add_time_series(system, context, self.time_points)
+        consumers = [obj for cls in load.CIM_CLASSES for obj in network.graph.get(cls, {}).values()]
+        time_series.add_group_series(system, context, consumers, self.time_points)
         fills.warn(context.filled)
         return system
 

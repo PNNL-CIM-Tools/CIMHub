@@ -1,0 +1,63 @@
+# Exporter atom (EXPORT_MAPPING.md X2, plan section 8.3): the transformer forms no GLM deck holds, as CIM by balanced
+# ends (the core transformer_by_ends shape). r is percent on each end's own ratedU^2/ratedS, x on the From end's.
+# A 12.47 kV source feeds each unit from bus hv to a bus of its own.
+
+Profile = cim18v17
+
+Object Substation: mRID=sub_forms, name=forms
+Object Feeder: mRID=fdr_forms, name=forms, NormalEnergizingSubstation=sub_forms
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_12p47kv, 12.47
+    bv_4p16kv,  4.16
+    bv_480v,    0.48
+
+Table ConnectivityNode: mRID, name, BaseVoltage, ConnectivityNodeContainer=fdr_forms
+    hv,       hv,       bv_12p47kv
+    lv_ynd,   lv_ynd,   bv_4p16kv
+    lv_dyn11, lv_dyn11, bv_480v
+    lv_ynz,   lv_ynz,   bv_4p16kv
+    lv_3w_y,  lv_3w_y,  bv_4p16kv
+    lv_3w_d,  lv_3w_d,  bv_480v
+    lv_auto,  lv_auto,  bv_12p47kv
+
+Object EnergySource: mRID=src_hv, name=hv, node=hv, nominalVoltage (kV)=12.47, voltageMagnitude (kV)=12.47, voltageAngle (deg)=0, r (ohm)=0.01, x (ohm)=0.1, r0 (ohm)=0.01, x0 (ohm)=0.1, BaseVoltage=bv_12p47kv, EquipmentContainer=sub_forms
+
+# YNd1: no GridLAB-D connection, written WYE_WYE (X3)
+Object PowerTransformer: mRID=xf_ynd, name=ynd, vectorGroup=YNd1, EquipmentContainer=fdr_forms
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer=xf_ynd
+    xf_ynd_1, hv,     ABCN, 1, Yn, true,  12.47, 500, 0.5, bv_12p47kv
+    xf_ynd_2, lv_ynd, ABC,  2, D,  false, 4.16,  500, 0.5, bv_4p16kv
+Object TransformerMeshImpedance: mRID=xf_ynd_mesh_12, FromTransformerEnd=xf_ynd_1, ToTransformerEnd=xf_ynd_2, x (percent)=6
+
+# Dyn11: GridLAB-D's DELTA_GWYE is Dyn1 only, so written WYE_WYE (X3)
+Object PowerTransformer: mRID=xf_dyn11, name=dyn11, vectorGroup=Dyn11, EquipmentContainer=fdr_forms
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, phaseShift (deg), ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer=xf_dyn11
+    xf_dyn11_1, hv,       ABC,  1, D,  false, ,   12.47, 300, 0.4, bv_12p47kv
+    xf_dyn11_2, lv_dyn11, ABCN, 2, Yn, true,  30, 0.48,  300, 0.4, bv_480v
+Object TransformerMeshImpedance: mRID=xf_dyn11_mesh_12, FromTransformerEnd=xf_dyn11_1, ToTransformerEnd=xf_dyn11_2, x (percent)=5
+
+# YNzn: a zigzag, written WYE_WYE (X3)
+Object PowerTransformer: mRID=xf_ynz, name=ynz, vectorGroup=YNzn1, EquipmentContainer=fdr_forms
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer=xf_ynz
+    xf_ynz_1, hv,     ABCN, 1, Yn, true, 12.47, 200, 0.6, bv_12p47kv
+    xf_ynz_2, lv_ynz, ABCN, 2, Zn, true, 4.16,  200, 0.6, bv_4p16kv
+Object TransformerMeshImpedance: mRID=xf_ynz_mesh_12, FromTransformerEnd=xf_ynz_1, ToTransformerEnd=xf_ynz_2, x (percent)=4
+
+# YNyn0d1: three windings, star split (X4); winding 3 on half the rating
+Object PowerTransformer: mRID=xf_3w, name=3w, vectorGroup=YNyn0d1, EquipmentContainer=fdr_forms
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, ratedU (kV), ratedS (kVA), r (percent), BaseVoltage, PowerTransformer=xf_3w
+    xf_3w_1, hv,      ABCN, 1, Yn, true,  12.47, 1000, 0.3, bv_12p47kv
+    xf_3w_2, lv_3w_y, ABCN, 2, Yn, true,  4.16,  1000, 0.3, bv_4p16kv
+    xf_3w_3, lv_3w_d, ABC,  3, D,  false, 0.48,  500,  0.6, bv_480v
+Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, x (percent)
+    xf_3w_mesh_12, xf_3w_1, xf_3w_2, 8
+    xf_3w_mesh_13, xf_3w_1, xf_3w_3, 10
+    xf_3w_mesh_23, xf_3w_2, xf_3w_3, 6
+
+# an AutoTransformer that is not a VoltageRegulator: no tap changer, written as a transformer
+Object AutoTransformer: mRID=xf_auto, name=auto, EquipmentContainer=fdr_forms
+Table AutoTransformerEnd: mRID, node, phase, endNumber, grounded, baseU (kV), ratedS (kVA), BaseVoltage, AutoTransformer=xf_auto
+    xf_auto_1, hv,      ABCN, 1, true, 12.47, 2000, bv_12p47kv
+    xf_auto_2, lv_auto, ABCN, 2, true, 12.47, 2000, bv_12p47kv
+Object TransformerMeshImpedance: mRID=xf_auto_mesh_12, FromTransformerEnd=xf_auto_1, ToTransformerEnd=xf_auto_2, r (percent)=0.1, x (percent)=1

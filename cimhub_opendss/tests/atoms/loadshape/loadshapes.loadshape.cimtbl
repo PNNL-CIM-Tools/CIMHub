@@ -1,0 +1,23 @@
+# OpenDSS LoadShape -> ConformLoadGroup + ConformLoadSchedule (S8): the shapes Loads name as yearly.
+# Multipliers of each Load's kW and kvar; the points are in the Parquet sidecar, not here. startTime: the epoch
+# 2020-01-01T00:00Z plus one interval, when the engine's sample 1 is in force (DSS has no date).
+# Source table: LoadShape (records: 5; 4 named by a Load's yearly)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#s8-load-shapes
+
+Profile = cim18v17
+
+Table ConformLoadGroup: mRID, name
+    lg_com,  com
+    # npts unset: the engine reads none of mult (S8), so no schedule
+    lg_flat, flat
+    lg_ind,  ind
+    lg_res,  res
+
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (h), value1Unit, value2Unit, ConformLoadGroup
+    ls_res, res, 2020-01-01T01:00:00+00:00, 1.0, none, none, lg_res
+
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (min), value1Unit, value2Unit, ConformLoadGroup
+    ls_com, com, 2020-01-01T00:15:00+00:00, 15.0, none, , lg_com
+
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, value2Unit, ConformLoadGroup
+    ls_ind, ind, 2020-01-01T00:15:00+00:00, 900.0, none, , lg_ind

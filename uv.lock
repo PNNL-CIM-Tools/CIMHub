@@ -234,7 +234,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "cim-graph", extras = ["sparql", "neo4j", "mysql", "gridappsd", "rdflib"], marker = "extra == 'all'" },
-    { name = "cim-profiles", specifier = ">=0.2.0a1,<0.3" },
+    { name = "cim-profiles", specifier = ">=0.2.0a6,<0.3" },
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "gridappsd-python", marker = "extra == 'gridappsd'", specifier = ">=2026.2.1" },
     { name = "mysql-connector-python", marker = "extra == 'mysql'", specifier = ">=9.2.0" },
@@ -291,6 +291,12 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.3.5" }]
+docs = [
+    { name = "ipykernel", specifier = ">=6.29" },
+    { name = "mkdocs-jupyter", marker = "python_full_version >= '3.12'", specifier = ">=0.27" },
+    { name = "mkdocs-material", specifier = ">=9.7" },
+    { name = "nbconvert", specifier = ">=7.16" },
+]
 
 [[package]]
 name = "cim-topology"
@@ -324,13 +330,14 @@ source = { virtual = "." }
 dependencies = [
     { name = "cimhub-core" },
     { name = "cimhub-gdm" },
-    { name = "cimhub-gridlabd" },
-    { name = "cimhub-opendss" },
+    { name = "cimhub-gridlabd", extra = ["time-points"] },
+    { name = "cimhub-opendss", extra = ["time-points"] },
     { name = "cimhub-raw" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "gridlabd" },
     { name = "nrel-ditto" },
     { name = "opendssdirect-py" },
     { name = "pydantic" },
@@ -343,13 +350,14 @@ dev = [
 requires-dist = [
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cimhub-gdm", editable = "cimhub_gdm" },
-    { name = "cimhub-gridlabd", editable = "cimhub_gridlabd" },
-    { name = "cimhub-opendss", editable = "cimhub_opendss" },
+    { name = "cimhub-gridlabd", extras = ["time-points"], editable = "cimhub_gridlabd" },
+    { name = "cimhub-opendss", extras = ["time-points"], editable = "cimhub_opendss" },
     { name = "cimhub-raw", editable = "cimhub_raw" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "gridlabd", specifier = "~=6.0.0" },
     { name = "nrel-ditto", specifier = "~=0.1.8" },
     { name = "opendssdirect-py", specifier = "~=0.9.4" },
     { name = "pydantic" },
@@ -425,14 +433,21 @@ dependencies = [
     { name = "pyyaml" },
 ]
 
+[package.optional-dependencies]
+time-points = [
+    { name = "cimhub-core", extra = ["time-points"] },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cimhub-core", extras = ["time-points"], marker = "extra == 'time-points'", editable = "cimhub_core" },
     { name = "linkml-runtime", specifier = "~=1.9.5" },
     { name = "pyyaml" },
 ]
+provides-extras = ["time-points"]
 
 [[package]]
 name = "cimhub-opendss"
@@ -445,13 +460,20 @@ dependencies = [
     { name = "pyyaml" },
 ]
 
+[package.optional-dependencies]
+time-points = [
+    { name = "cimhub-core", extra = ["time-points"] },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimhub-core", editable = "cimhub_core" },
+    { name = "cimhub-core", extras = ["time-points"], marker = "extra == 'time-points'", editable = "cimhub_core" },
     { name = "pyyaml" },
 ]
+provides-extras = ["time-points"]
 
 [[package]]
 name = "cimhub-raw"
@@ -753,6 +775,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f6/d2/b82b2b485a2fd5e656c39b3594355cc1a536fbc82537e18d4bbf51257476/grid_data_models-2.4.1.tar.gz", hash = "sha256:7ae96bb453e2b12277803b677983cd77cf48ac6208d5a9b07358c00d2df93ed6", size = 128181, upload-time = "2026-10-21T23:30:17.443Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fc/a3/9004f4f19a3883e6c1e2e9c123cd43d82ad65ea0810af34d1a776cc640ce/grid_data_models-2.4.1-py3-none-any.whl", hash = "sha256:b20e6e12429017af6e3b9cd4bf24209998b31a2be94c51fd90ee2344dabacc72", size = 194659, upload-time = "2026-10-21T23:30:15.599Z" },
+]
+
+[[package]]
+name = "gridlabd"
+version = "6.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nanobind-backend" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/3f/94d546de9276c314aa99784e7a3b72e5c839ff0b7f67503cf3b37a6cc379/gridlabd-6.0.0-cp310-abi3-macosx_11_0_universal2.whl", hash = "sha256:e73cb5d9e0126860ee81b3faf0820a75b3ab48aa6f9d46ce9878b0638e3b65e4", size = 6607512, upload-time = "2026-10-14T21:56:05.288Z" },
+    { url = "https://files.pythonhosted.org/packages/92/59/b06f3127087176c50daa98e443afbd927666fe14823d660571358d81e1c9/gridlabd-6.0.0-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:21e8a66c53c6fab9bfb35769c73fbdff518e0babd34947a2353ba344a1722116", size = 3497950, upload-time = "2026-10-14T21:56:07.214Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/6c/ac995a70cbc61af35b36c410504eb5c1e7d2982ce05ea476064db10de07d/gridlabd-6.0.0-cp310-abi3-win_amd64.whl", hash = "sha256:11329e5fcb8e7c523b585bc79b090e83f30aec9553648e2d2b60d73445804342", size = 4975064, upload-time = "2026-10-14T21:56:09.076Z" },
 ]
 
 [[package]]
@@ -1063,6 +1100,34 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "nanobind-backend"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/76/49/a4c01de9c358b5749560a5415b899a8b57399381e5c8ae64962381302a59/nanobind_backend-1.0.0-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:b20b3e4bbb672987f9d65e52f1829299589c1ccf0502360879846a922e9cb1ed", size = 80577, upload-time = "2026-08-22T04:22:45.852Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/65/c3ff5ef09109a163a3cbe8a69250ae7c4b0b4d8df79b1cb447d03747529f/nanobind_backend-1.0.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:89c582f83d491ba01aa1a5ad39ed6c59bdead67ec3b8c88b288b7e4b6bac18df", size = 76586, upload-time = "2026-08-22T04:22:46.756Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/14/40f0a465df491562debf55044bcfc728dca7cb8e3ef76f532aa8f75e775b/nanobind_backend-1.0.0-cp311-cp311-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fdf41e97cfb9f149c89b323b7850bd9dc6316d1d79adf99081511b9a1d0858b1", size = 98356, upload-time = "2026-08-22T04:22:47.682Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/9a/0db4d9982ac708b6c532ca6ea2a523d5c85a25f7fc288558c4d6fad725b0/nanobind_backend-1.0.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:33bdec0da2f78669d5c95bd546ff2bb7744dafa43a16bb72b2eecdf83d8c3b3a", size = 106460, upload-time = "2026-08-22T04:22:48.716Z" },
+    { url = "https://files.pythonhosted.org/packages/49/77/45d11f991aa78e8dfaac490c6330e38912d414b60a6b624024e8eaa4cadb/nanobind_backend-1.0.0-cp311-cp311-manylinux_2_39_riscv64.whl", hash = "sha256:d77ecad0d4b8526865f6bec7cd77603c686ef65b57cc7ec81795b3a468dba0f1", size = 100025, upload-time = "2026-08-22T04:22:49.763Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/22/8a2576123da22743a1ca6b683e2e1a046990dd75ab3f70c21c0c8690d936/nanobind_backend-1.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:691be892dcd6b4b1317d628b49bf3e688470f4f927ac316dca233ee19fab7ecd", size = 264783, upload-time = "2026-08-22T04:22:50.856Z" },
+    { url = "https://files.pythonhosted.org/packages/24/bb/fbaa64393f5ed253de5879e8d30477d05f53a3c2b106b9db4f33db7da310/nanobind_backend-1.0.0-cp311-cp311-win_arm64.whl", hash = "sha256:dc199056cbd534c5317899539a36245aa14bce6b8afd48c217e578b2463e0594", size = 435095, upload-time = "2026-08-22T04:22:52.035Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/57/f02cc977a0ba1ddf2a41ebad61bcf2fbfd905aef7753082d9f39389a13e1/nanobind_backend-1.0.0-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:9fd9145b1aa8e9b78029308a73e1ade94369d7250c826783655210d1800f1493", size = 80504, upload-time = "2026-08-22T04:22:53.269Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/3a/40e9ef3133573dddf32f7dcaf1bc7d4f459ecb632b2274c7a619fbfa40ea/nanobind_backend-1.0.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:dca8999e4e87a4e39e162c55b70f39fe1882913c4d7de1adab81cf82bb8cb9ad", size = 75568, upload-time = "2026-08-22T04:22:54.19Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/3b/806d3346ae8175746853b204efd59a4ad8bbddf91d48d03f4eac48d15245/nanobind_backend-1.0.0-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4a42503f65cd595f97a31f24d21c6ddbd017ffcb808626d0134e475e0db25f3d", size = 97730, upload-time = "2026-08-22T04:22:55.085Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/2c/7fb13ecb1e8c0c268e26c6bc44be4a7f51996b2a3c006749ce6fc4fd7da2/nanobind_backend-1.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6aa9864050cc5fd1ff59d1f9b79740efa278515eed27af848efae07125c029b8", size = 106063, upload-time = "2026-08-22T04:22:55.973Z" },
+    { url = "https://files.pythonhosted.org/packages/18/bf/2f6dbcedcca065c20b73346f037d69d78fdb545c9abbf7ad8b27da7890c5/nanobind_backend-1.0.0-cp312-cp312-manylinux_2_39_riscv64.whl", hash = "sha256:00dadccfa92d0f9eac0b1877fdc3fd99d2ebb1a651fbe44daff365a173bd2faa", size = 99415, upload-time = "2026-08-22T04:22:57.03Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/da/f6af805e0737652d4b6aa2e51e3ec1485d906e77ee9389b126adbb9f9644/nanobind_backend-1.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:9b1502e3f160358feff92f60a634e198c76754f50a60fdacd9a8b5dccbe5d9d0", size = 264454, upload-time = "2026-08-22T04:22:58.035Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/45/851847d5246c0c47dbebe473ecfbb0ed44a41fae9ef7e2ec73cd7c8975a3/nanobind_backend-1.0.0-cp312-cp312-win_arm64.whl", hash = "sha256:a1f6e6320aee495e5cad933d671e9d60ee42f4bf460930ef7afed191243aa733", size = 434441, upload-time = "2026-08-22T04:22:59.442Z" },
+    { url = "https://files.pythonhosted.org/packages/06/eb/1c4f3e1fcc41093e321b1c4eb7ca79f628a36057496398bb9fba4d97e417/nanobind_backend-1.0.0-cp313-cp313-macosx_10_14_x86_64.whl", hash = "sha256:a6dd7a66fb7416d62be577d41d64478a187d9f36d089759555698bb08addc2c3", size = 80547, upload-time = "2026-08-22T04:23:00.75Z" },
+    { url = "https://files.pythonhosted.org/packages/18/c2/d59e5b6af43e45088c18895035e053c4585bce7d1bde9679368ef5b960e0/nanobind_backend-1.0.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:28a4c397d6d36dfb712acbab817c02ad2f8658a85fb1dbbae7385689d28d20e9", size = 75630, upload-time = "2026-08-22T04:23:01.674Z" },
+    { url = "https://files.pythonhosted.org/packages/24/a1/97ffb303def8e5a4e48694b01d58477899392468295e8af5c60fdae5f035/nanobind_backend-1.0.0-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8ddf018fc62a2bd51e9d7cc6477af7ae13ccc0db69b775d67d837ba7e0bc41b4", size = 97824, upload-time = "2026-08-22T04:23:02.696Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/3e/0a2143308fd413ae10da3fb8732e9d2fc87de4605a1126d304ffe9f63414/nanobind_backend-1.0.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:de2c78ed4b88ef6c59a835eebe7f5e91ab6869f17f915a61c7d4eec24a1e2b85", size = 106253, upload-time = "2026-08-22T04:23:03.583Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/01/7bb71f0a2566cb398d6877e3540307c3d0e684797001eb1128c2c3732a52/nanobind_backend-1.0.0-cp313-cp313-manylinux_2_39_riscv64.whl", hash = "sha256:36a116471c3ca0b6cd3af1e1fa2e38c52086a2d2daf00b86f90a99da5efdde53", size = 99504, upload-time = "2026-08-22T04:23:04.644Z" },
+    { url = "https://files.pythonhosted.org/packages/90/49/8038eedfd35433968e638081ca4eb6881869e517f766beff0f095387dc9a/nanobind_backend-1.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:915c6ff4ce92584cdde18a24cc5d730f04a70c2f26bc0bc4db903ca54043eb86", size = 264501, upload-time = "2026-08-22T04:23:05.606Z" },
+    { url = "https://files.pythonhosted.org/packages/03/11/6c515cac31f723d2ce2c3155de4343a3ccf612025171cde25d48290c3680/nanobind_backend-1.0.0-cp313-cp313-win_arm64.whl", hash = "sha256:6b7c31403e6f39fd704359ce4a0687d894a9ffa67813da6a54c6d0eb6fde93aa", size = 434433, upload-time = "2026-08-22T04:23:06.626Z" },
 ]
 
 [[package]]
