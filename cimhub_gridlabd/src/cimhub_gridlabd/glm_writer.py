@@ -36,7 +36,7 @@ WRITE_ORDER = (
     schema.TransformerConfiguration, schema.RegulatorConfiguration,
     schema.Substation, schema.Node, schema.Meter, schema.TriplexNode, schema.TriplexMeter,
     schema.OverheadLine, schema.UndergroundLine, schema.TriplexLine,
-    schema.Switch, schema.Fuse, schema.Recloser, schema.Sectionalizer,
+    schema.Switch, schema.Fuse, schema.Recloser, schema.Sectionalizer, schema.SeriesReactor,
     schema.Transformer, schema.Regulator,
     schema.Load, schema.TriplexLoad, schema.Capacitor,
     schema.Inverter, schema.Solar, schema.Battery,

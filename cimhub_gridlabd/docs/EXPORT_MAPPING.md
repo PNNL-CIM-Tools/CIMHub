@@ -18,6 +18,7 @@ cimhub_gridlabd/src/cimhub_gridlabd/
         buses.py              node / triplex_node / substation, each bus's system and nominal_voltage
         line.py, line_catalog.py   lines and the conductors, spacings and configurations they name
         switch.py             switch, fuse, recloser, sectionalizer
+        series_reactor.py     series_reactor (X28)
         transformer.py        transformer + transformer_configuration: native, centre tap, wye-wye, star split, banks
         regulator.py          regulator + regulator_configuration
         load.py, capacitor.py, inverter.py
@@ -58,6 +59,9 @@ tables at the end of this file are the generated ones.
 - Otherwise its code (`get_line_code`: its own PerLengthImpedance, else its WireConfiguration's, a template LineCode;
   both set and different raise) is a matrix configuration by phase letter, a neutral Kron-reduced out, b as
   `c` = `c_from_b` at the base frequency (b unset: c unset, GridLAB-D's 0); a sequence code is expanded by the getter.
+  A triplex matrix's b is not written, logged once per configuration (X27): GridLAB-D 6.0's `triplex_line` has no
+  shunt admittance (`triplex_line.cpp:315` fills only the series matrix), so no `triplex_line_configuration` slot
+  holds it. IEEE 8500's triplex codes (3.0 / -2.4 nF per kft) carry about 0.1 VAr per kft at 240 V.
 - A template used on different phases is one GLM object per use, `<template>_<letters>`.
 - Conductors: `rAC50` (the GLM importer's), else `rAC25` (the DSS importer's). A bare wire buried in an underground
   configuration gets `outer_diameter` = 1.2 × its diameter (the Java exporter's rule; GridLAB-D needs one). A tape
@@ -67,6 +71,9 @@ tables at the end of this file are the generated ones.
   other Switch `switch`; `status` from `switch_state` (`actual`: `open`, `normal`: `normalOpen`).
 - Ratings: each link's own normal and emergency limits on its phases (D9); a triplex line's on its service
   letter, which GridLAB-D and the importer read.
+- Series reactors (X28): a SeriesCompensator is a `series_reactor` on its A, B, C, `phase_X_impedance` = r + jx
+  (ohm) on each, its ratings a link's. GridLAB-D's reactor has no coupling between phases (`series_reactor.cpp:105`),
+  so r0/x0 other than r/x raise (the DSS exporter's rule), as does a varistor. The importer's S7 inverted.
 
 ## X2: transformers and regulators
 
@@ -140,7 +147,9 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
   on all five; the IEEE 13 export is the committed golden `goldens/IEEE13_cdpsm/IEEE13_cdpsm.exported.glm`.
 - `tests/cross_format/test_dss_to_glm.py`: DSS decks through CIM to GLM, against OpenDSS's own solution of one
   frozen state (controls off, CIM's taps, loads' models at any voltage), line to line on three-phase buses, each
-  deck's tolerance the difference listed below.
+  deck's tolerance the difference listed below. IEEE 8500 (not vendored: `CIMHUB_DSS_DECKS`) sets no taps, so both
+  engines take OpenDSS's solved ones, and runs at 0.9 load: its undersized secondaries put full load past GridLAB-D's
+  NR (it solves at 0.9, not at 1.0 with constant-impedance loads or 2000 iterations).
 - `gridlabd_engine.py` notes the wheel's quirks: no CLI; load errors only from `DirectGridLabD`; polar text misread
   unless `complex_output_format` is `RECT`; the Java exports need GridAPPS-D's `ieeezipload` player.
 
@@ -157,6 +166,8 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 | geometry lines' impedances | each engine computes its own line constants | IEEE13_Assets 2 % |
 | an LTC's control, a capacitor's non-voltage control | GLM has no form for them | — |
 | a battery's DC voltage | no CIM home yet (TODO, DCConductingAssetInfo) | tier 2: numberOfCells 11 → 28 (GridLAB-D's 115 V) |
+| IEEE 8500 at 0.9 load | not isolated (candidates: 1,177 centre-tap services, ideal regulators, X27) | 5.3e-3 |
+| a triplex matrix's b | GridLAB-D's `triplex_line` has no shunt admittance (X27) | IEEE 8500: about 0.1 VAr per kft |
 | a template no equipment uses | GLM's configurations are written per use | tier 2: the atoms' `cn_250`, `xc_unused` |
 | a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, 1.2e-6 |
 | `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
@@ -442,6 +453,32 @@ default.
 | emergency_rating_C | written | get_current_limits emergency |
 
 58 other slots: unset
+
+### series_reactor
+
+| GLM slot | kind | from / why |
+|---|---|---|
+| name | written | Names (X1) |
+| phases | written | the compensator's A, B, C |
+| from_node | written | terminal 1's bus |
+| to | written | terminal 2's bus |
+| continuous_rating_A | written | get_current_limits normal |
+| continuous_rating_B | written | get_current_limits normal |
+| continuous_rating_C | written | get_current_limits normal |
+| emergency_rating_A | written | get_current_limits emergency |
+| emergency_rating_B | written | get_current_limits emergency |
+| emergency_rating_C | written | get_current_limits emergency |
+| phase_A_impedance | written | get_series_compensator r + jx (ohm), on each of its phases; r0/x0 other than r/x raise |
+| phase_A_resistance | not mapped | the impedance's parts; phase_X_impedance is written |
+| phase_A_reactance | not mapped | the impedance's parts; phase_X_impedance is written |
+| phase_B_impedance | written | get_series_compensator r + jx (ohm), on each of its phases; r0/x0 other than r/x raise |
+| phase_B_resistance | not mapped | the impedance's parts; phase_X_impedance is written |
+| phase_B_reactance | not mapped | the impedance's parts; phase_X_impedance is written |
+| phase_C_impedance | written | get_series_compensator r + jx (ohm), on each of its phases; r0/x0 other than r/x raise |
+| phase_C_resistance | not mapped | the impedance's parts; phase_X_impedance is written |
+| phase_C_reactance | not mapped | the impedance's parts; phase_X_impedance is written |
+
+52 other slots: unset
 
 ### transformer_configuration
 

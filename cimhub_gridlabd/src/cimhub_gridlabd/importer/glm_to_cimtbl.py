@@ -26,7 +26,7 @@ from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_core.load_response import zip_fractions
 from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, regulator,
-                                            spacing, switch, transformer, transformer_configuration)
+                                            series_reactor, spacing, switch, transformer, transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, service_buses, swing_buses
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -67,6 +67,8 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     *((native_class, lambda model, site, native_class=native_class:
        switch.map_switches(model, native_class, site.roots, site.buses, site.feeder))
       for native_class, _, _ in switch.SWITCHES),
+    (series_reactor.NATIVE_CLASS, lambda model, site: series_reactor.map_series_reactors(model, site.roots, site.buses,
+                                                                                         site.feeder)),
     (schema.Transformer, lambda model, site: transformer.map_transformers(model, site.roots, site.buses,
                                                                           site.feeder)),
     (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
@@ -81,11 +83,13 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
 #: on terminal 1 and ``to`` on terminal 2.
 LINK_PREFIXES: dict[type, str] = {**{native_class: line.PREFIX for native_class, _, _ in line.LINES},
                                   **{native_class: switch.PREFIX for native_class, _, _ in switch.SWITCHES},
+                                  series_reactor.NATIVE_CLASS: series_reactor.PREFIX,
                                   schema.Transformer: transformer.PREFIX}
 
 #: Every mapped class's field classification: the expression guard and the master's not-mapped list read it.
 CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, schema.LineSpacing: spacing.FIELDS,
                                             **configuration.FIELDS, **line.FIELDS, **switch.FIELDS,
+                                            series_reactor.NATIVE_CLASS: series_reactor.FIELDS,
                                             schema.TransformerConfiguration: transformer_configuration.FIELDS,
                                             schema.Transformer: transformer.FIELDS,
                                             schema.Regulator: regulator.FIELDS,
@@ -131,7 +135,7 @@ def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],
 def feeder_heads(model: GlmModel, roots: dict[str, str]) -> list[str]:
     """``Feeder.NormalHeadTerminal``: the Terminal on a swing bus of every link that touches one, ``<mRID>_T1`` for
     its ``from`` and ``_T2`` for its ``to`` (the loader's Terminal names). A head on a link no mapper writes (a
-    sectionalizer, a series reactor) raises: its Terminal would not exist."""
+    sectionalizer) raises: its Terminal would not exist."""
     swings = {str(record.name) for record in swing_buses(model)}
     heads = []
     for native_class in (*BRANCH_CLASSES, schema.Transformer):

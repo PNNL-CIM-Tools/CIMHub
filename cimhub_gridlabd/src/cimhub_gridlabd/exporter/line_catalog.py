@@ -12,7 +12,9 @@ CIM's templates are shared by lines on different phases, while a GLM configurati
   from ``diameter`` and ``insulation_thickness`` (D12 = d + 2t, D1N = D2N = d + t, the importer's S2-8 inverted).
 - matrix (``PerLengthImpedance``): ``zXY`` = r + jx and ``cXY`` = C(b) (``c_from_b`` at the base frequency) by the
   line's phase letters; a neutral row is Kron-reduced out (GLM's matrix is phases only); a sequence code is
-  expanded by the getter (``expand_sequence``: a transposed line, GLM has no sequence form).
+  expanded by the getter (``expand_sequence``: a transposed line, GLM has no sequence form). A triplex matrix's b is
+  dropped and logged (X27): GridLAB-D's ``triplex_line`` has no shunt admittance (``triplex_line.cpp``), so no
+  ``triplex_line_configuration`` slot holds it.
 
 A conductor is one GLM class per configuration kind: ``triplex_line_conductor`` in a triplex configuration,
 ``underground_line_conductor`` where any of the configuration's wires is a cable, ``overhead_line_conductor``
@@ -21,6 +23,7 @@ otherwise.
 
 from __future__ import annotations
 
+import logging
 import math
 from collections import defaultdict
 from typing import NamedTuple
@@ -58,6 +61,7 @@ if glm_unit(schema.LineConfiguration, "c11") != "nF/mile":
     raise ValueError("GLM line_configuration c11 is no longer in nF/mile; SUSCEPTANCE_UNIT must follow it")
 
 _NOT_IN_CIM = "not in CIM; GridLAB-D's default"
+_log = logging.getLogger(__name__)
 _RATING = Slot("unset", "the ratings are each line's own (D9): written on the line")
 _RATINGS = ("rating_summer_continuous", "rating_summer_emergency", "rating_winter_continuous",
             "rating_winter_emergency")
@@ -345,5 +349,6 @@ def _matrix_configuration(key: MatrixKey, line: cim.ACLineSegment, name: str, fr
                 first, second = MATRIX_INDEX[key.letters[row - 1]], MATRIX_INDEX[key.letters[column - 1]]
                 slots[f"c{first}{second}"] = slots[f"c{second}{first}"] = c_from_b(susceptance, frequency)
     elif matrix.b is not None and any(matrix.b.values()):
-        raise ValueError(f"ACLineSegment {line.mRID!r}: a triplex matrix with b; GLM's triplex configuration has no c")
+        _log.warning("%s: a triplex matrix's b is not written; GridLAB-D's triplex_line has no shunt admittance "
+                     "(X27)", name)
     return configuration_class(**slots)

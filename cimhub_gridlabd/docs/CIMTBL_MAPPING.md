@@ -12,7 +12,8 @@ S0 has no parts; S1 adds `bus.cimtbl` and `source.cimtbl`; S2 the six catalog fi
 files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transformer.cimtbl` (after the
 switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own);
 S4a the core `zip_fractions.cimtbl` (after `source.cimtbl`), then `load.cimtbl`, `triplex_load.cimtbl`,
-`triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators).
+`triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators); S7 `series_reactor.cimtbl` (after the
+switches).
 
 ## master
 
@@ -22,7 +23,7 @@ Mapper: `importer/glm_to_cimtbl.py` `map_master`. Test: `tests/test_glm_to_cimtb
 | row | from | rule |
 |---|---|---|
 | `Substation`, `Feeder` | `substation=` and `feeder=`, each the `name` the caller passes unless given (D7; the model's `Model` and file stem stay `name`) | mRIDs `sub_<substation>`, `fdr_<feeder>`, source case |
-| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer, a series reactor) raises |
+| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer) raises |
 | `BaseFrequency` | `module powerflow { nominal_frequency ...; }`, else `#set powerflow::nominal_frequency=...` | else GridLAB-D's 60 Hz, listed as `# defaulted` |
 | `BaseVoltage` | the topology walk's distinct bus voltages (`cimtopology.core`), highest first | `nominal_kv` rounding; mRIDs `bv_12p47kv`, `bv_240v` |
 | comment | every GLM type no mapper reads, with its count, including types the schema lacks (`recorder`) | GLM-14 |
@@ -2968,3 +2969,75 @@ Each repair answers a GridLAB-D error, not the converter's, so the converter is 
   GridLAB-D's ohms, a wye off its bus raises, a matrix line's N, a 0 diagonal, `REMOTE_NODE` on its own output against
   `OUTPUT_VOLTAGE`, a remote one raises, the two row notes, a one-phase `BANK`, an open tie across phases and a closed
   one raising); the walk has the coil-rated coils and the link-phase check. A triplex line and a regulator on phases their ends lack now stop at S6-5 first.
+
+## S7: series reactors (by the user's "go for the next phase", 2026-11-21; built the same day)
+
+No GLM deck has a `series_reactor`, so GLM-14 left it unmapped. The exporter now writes one for a SeriesCompensator
+(EXPORT_MAPPING.md X28: IEEE 8500's substation reactor, the DSS deck's source impedance), so the importer reads it
+back, or a DSS-origin deck would lose its feeder head on the way back.
+
+Mapper: `importer/cimtbl/series_reactor.py` `map_series_reactors`; shape `series_compensator`. Test:
+`tests/test_cimtbl_series_reactor.py`; atom `tests/atoms/series_reactor/series_reactor.glm` (on the S3a line atom).
+
+```
+# GridLAB-D series_reactor -> SeriesCompensator.
+# r0 = r, x0 = x: GridLAB-D's reactor has no coupling between phases
+Table SeriesCompensator: mRID, name, node1, node2, r (ohm), x (ohm), r0 (ohm), x0 (ohm), BaseVoltage, EquipmentContainer=fdr_atom
+    rx_hsb, hsb, n2,  rb1, 0.0, 14.798307, 0.0, 14.798307, bv_4p16kv
+    rx_r1,  r1,  rb1, rb2, 0.5, 2.0,       0.5, 2.0,       bv_4p16kv
+
+# SeriesCompensator has no per-phase class: a reactor on fewer than three phases gives its Terminals their phases here
+Update Table Terminal: mRID, phases
+    rx_r1_T1, B
+    rx_r1_T2, B
+```
+
+### Decisions for S7
+
+| # | question | decision |
+|---|---|---|
+| S7-1 | Identity | `rx_<name>`, source case (the DSS importer's prefix) |
+| S7-2 | Impedance | GridLAB-D's reactor is one impedance per phase with no coupling (`series_reactor.cpp:105`), CIM's SeriesCompensator one r + jx for every phase: the phases' `phase_X_impedance` must be equal, r and x copied from it, r0 = r and x0 = x (the DSS importer's rule) |
+| S7-3 | Phases | A, B, C, N dropped; three phases leave the Terminals' phases unset (the shape's balanced form), fewer give them by an `Update` |
+| S7-4 | Ratings | the link's own, on its own `OperationalLimitSet` (S3a-4) |
+
+### Fail fast (S7)
+
+| condition | why |
+|---|---|
+| phases whose `phase_X_impedance` differ | CIM's SeriesCompensator has one impedance |
+| a phase's `phase_X_impedance` unset | GridLAB-D's 0 is a switch stand-in under NR (1e4 + 1e4j S, `series_reactor.cpp:122`), not a reactor |
+| `phase_X_resistance` or `phase_X_reactance` set | GridLAB-D's aliases of the impedance's parts; no deck sets one |
+| `status OPEN` | the walk raises (S0): a reactor is not a switch |
+
+### Field tables (generated: `fields_table(cls, records, fields=FIELDS)`, samples from the atom; the link groups of S3a left out)
+
+#### series_reactor
+
+| SeriesReactor field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, SeriesReactorName]` | `hsb`, `r1` | copied | `SeriesCompensator.name`; mRID = rx_ + name |
+| `phases` | `Optional[str]` | `ABCN`, `BN` | structural | the reactor's A, B, C, N dropped; fewer than three: its Terminals' phases |
+| `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
+| `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises in the walk (a reactor is not a switch) |
+| `from_node` | `Optional[str]` | `n2`, `rb1` | structural | node1: the root bus of the object it names (GLM-4) |
+| `to` | `Optional[str]` | `rb1`, `rb2` | structural | node2: the root bus of the object it names (GLM-4) |
+| `pdispatch` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `pdispatch_offset` | `Optional[float]` |  | untranscribed | dispatch control; no network-profile home |
+| `set_pdispatch` | `Union[bool, Bool, NoneType]` |  | untranscribed | dispatch control; no network-profile home |
+| `mean_repair_time` | `Optional[float]` |  | untranscribed | reliability data |
+| `continuous_rating_A` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_B` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `continuous_rating_C` | `Optional[float]` | `400.0` | structural | the normal CurrentLimit of the equipment's own OperationalLimitSet <mRID>_limits (S3a-4, S3a-5); the set phases must agree |
+| `emergency_rating_A` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_B` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `emergency_rating_C` | `Optional[float]` | `400.0` | structural | the emergency CurrentLimit of that set |
+| `phase_A_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_A_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_A_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_B_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...`, `Complex({'real': 0.5, 'imag': 2.0})` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_B_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_B_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_C_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
+| `phase_C_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+| `phase_C_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |

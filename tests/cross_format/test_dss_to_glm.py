@@ -1,23 +1,27 @@
 """Tier 4: DSS import -> CIM -> GLM export, solved in GridLAB-D 6.0 against OpenDSS's own solution of the deck
 (GLM_REWRITE_PLAN.md section 8, X5). It exercises the exporter on CIM the GLM importer never writes: DSS line codes
 and geometry, the native transformer forms, the wye-wye replacement (X3), the three-winding star split (X4), single
--phase banks and a delta regulator bank.
+-phase banks, a delta regulator bank and IEEE 8500's series reactor (X28) and triplex codes (X27).
 
 Both engines solve one frozen state: OpenDSS with controls off, every regulated winding at CIM's tap (the deck's own
 Solve has moved them) and its loads' models kept at any voltage (``Vminpu=0``, as GridLAB-D's); the GLM deck's
-regulators MANUAL. Bus voltages are compared line to line on three-phase buses (an ungrounded delta's line-to-neutral
+regulators MANUAL. A deck that sets no tap freezes at OpenDSS's solved ones (``SOLVED_TAPS``), and one past
+GridLAB-D's NR at full load at a load multiplier (``LOAD_MULTIPLIER``). Decks outside git run under
+``CIMHUB_DSS_DECKS``, else skip. Bus voltages are compared line to line on three-phase buses (an ungrounded delta's line-to-neutral
 voltages float in either engine) and each deck's tolerance names the difference the spec lists for it.
 """
 from __future__ import annotations
 
 import cmath
 import math
+import os
 from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import gridlabd
 import opendssdirect as dss
 import pytest
+from cimtables.graph_write import get_qty
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.tap_changer import get_tap_ratio
@@ -39,6 +43,7 @@ TOLERANCE = {
     "IEEE13_CDPSM/IEEE13_CDPSM.dss": (5e-3, "the star split (X4) solidly grounds Sub3's Xneut winding"),
     "IEEE13_assets/IEEE13_Assets.dss": (3e-2, "geometry: each engine its own line constants"),
     "IEEE37/ieee37.dss": (3e-2, "the open-delta regulator bank written WYE_WYE (X3)"),
+    "IEEE8500/Master.dss": (1e-2, "at 0.9 load and OpenDSS's solved taps; measured 5.3e-3 (m1069311), not isolated"),
 }
 #: decks the export must solve, with no voltage bound: the change the rule makes is the point of the deck
 SOLVE_ONLY = {
@@ -50,28 +55,82 @@ SOLVE_ONLY = {
 }
 
 
+#: decks that set no regulator tap, so CIM's taps are neutral and the deck's Solve moves them: frozen there, the feeder
+#: collapses (IEEE 8500: 0.70 pu, which GridLAB-D's NR does not solve). Both engines take the taps OpenDSS's own
+#: controlled solve reaches, written into CIM's step before the export.
+SOLVED_TAPS = {"IEEE8500/Master.dss"}
+#: decks both engines solve at a load multiplier, and why: IEEE 8500's undersized secondaries put full load past what
+#: GridLAB-D's NR solves (it solves at 0.9, not at 1.0 even with constant-impedance loads or 2000 iterations), so
+#: OpenDSS takes ``loadmult`` and the GLM deck's loads the same factor
+LOAD_MULTIPLIER = {"IEEE8500/Master.dss": 0.9}
+#: the GLM load slots ``load.py`` writes a load's power in
+LOAD_POWER_SLOTS = {schema.Load: ("base_power_A", "base_power_B", "base_power_C"),
+                    schema.TriplexLoad: ("base_power_1", "base_power_2", "base_power_12")}
+
+
+def deck_path(relative: str) -> Path:
+    """The deck at ``relative`` under ``IEEE/``: vendored, else under ``CIMHUB_DSS_DECKS`` (the DSS spoke's rule for
+    the decks kept out of git), else the test skips."""
+    vendored = DECKS / relative
+    if vendored.exists():
+        return vendored
+    external = os.environ.get("CIMHUB_DSS_DECKS")
+    if external and (Path(external) / "IEEE" / relative).exists():
+        return Path(external) / "IEEE" / relative
+    pytest.skip(f"IEEE/{relative}: not vendored; set CIMHUB_DSS_DECKS to run it")
+
+
 def export(relative: str, path: Path) -> dict[tuple[str, int], float]:
     """Export the deck's CIM to ``path`` (regulators MANUAL); return CIM's tap ratio per regulated DSS winding."""
-    deck = DECKS / relative
+    deck = deck_path(relative)
     taps = {}
+    solved = solved_taps(relative) if relative in SOLVED_TAPS else {}
     with cim_scope():
         network = DssImporter(deck.stem).to_cim(DssReader(deck).read_all())
         for tap in network.graph.get(cim.RatioTapChanger, {}).values():
             end = tap.TransformerEnd
             owner = end.PowerTransformer if isinstance(end, cim.PowerTransformerEnd) else end.AutoTransformer
+            if solved:
+                increment = get_qty(tap, "stepVoltageIncrement", "percent")
+                tap.step = tap.neutralStep + round((solved[(owner.name.lower(), end.endNumber)] - 1) * 100 / increment)
             taps[(owner.name, end.endNumber)] = get_tap_ratio(tap, which="actual")
         model = GlmExporter().to_model(network, name_source="mrid")
     for configuration in model.list_by_class(schema.RegulatorConfiguration):
         configuration.Control = "MANUAL"
+    multiplier = LOAD_MULTIPLIER.get(relative, 1.0)
+    for load_class, slots in LOAD_POWER_SLOTS.items():
+        for load in model.list_by_class(load_class):
+            for slot in slots:
+                if getattr(load, slot) is not None:
+                    setattr(load, slot, getattr(load, slot) * multiplier)
     GlmWriter().write(model, path)
+    return taps
+
+
+def solved_taps(relative: str) -> dict[tuple[str, int], float]:
+    """Each winding's tap after OpenDSS's own controlled solve of the deck: ``{(transformer, winding): tap}``."""
+    dss.Text.Command("Clear")
+    dss.Text.Command(f"Compile [{deck_path(relative).resolve()}]")
+    dss.Text.Command("Set maxiterations=100")
+    dss.Text.Command(f"Set loadmult={LOAD_MULTIPLIER.get(relative, 1.0)}")
+    dss.Solution.Solve()
+    assert dss.Solution.Converged(), relative
+    taps = {}
+    for name in dss.Transformers.AllNames():
+        dss.Transformers.Name(name)
+        for winding in range(1, dss.Transformers.NumWindings() + 1):
+            dss.Transformers.Wdg(winding)
+            taps[(name.lower(), winding)] = dss.Transformers.Tap()
     return taps
 
 
 def opendss_voltages(relative: str, taps: dict) -> dict[str, dict[int, complex]]:
     dss.Text.Command("Clear")
     dss.Text.Command("Set defaultbasefreq=60")
-    dss.Text.Command(f"Compile [{(DECKS / relative).resolve()}]")
+    dss.Text.Command(f"Compile [{deck_path(relative).resolve()}]")
     dss.Text.Command("Set controlmode=off")
+    dss.Text.Command("Set maxiterations=100")  # a frozen state may take more than OpenDSS's 15
+    dss.Text.Command(f"Set loadmult={LOAD_MULTIPLIER.get(relative, 1.0)}")
     dss.Text.Command("BatchEdit Load..* Vminpu=0 Vmaxpu=10")
     for (name, winding), ratio in taps.items():
         dss.Text.Command(f"Transformer.{name}.wdg={winding} tap={ratio}")

@@ -15,7 +15,8 @@ import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.base import FormatExporter
 from cimhub_core.getters.switch_state import STATE_ATTRIBUTE
-from cimhub_gridlabd.exporter import buses, capacitor, inverter, line, load, regulator, switch, transformer
+from cimhub_gridlabd.exporter import (buses, capacitor, inverter, line, load, regulator, series_reactor, switch,
+                                      transformer)
 from cimhub_gridlabd.exporter.buses import Bus, bus_table
 from cimhub_gridlabd.exporter.naming import Names
 from cimhub_gridlabd.glm_reader import GlmModel
@@ -25,7 +26,7 @@ from cimhub_gridlabd.schema import gridlabd as schema
 #: Modules in export order. Each has ``CIM_CLASSES`` (what it exports), ``SLOTS`` (``{GLM class: {slot: Slot}}``)
 #: and ``export(context) -> list[record]`` over the whole network: a configuration is one per way lines use a
 #: template, and a transformer may add a star bus, so a module cannot work object by object.
-EXPORT_ORDER = (buses, line, switch, transformer, regulator, load, capacitor, inverter)
+EXPORT_ORDER = (buses, line, switch, series_reactor, transformer, regulator, load, capacitor, inverter)
 #: equipment no GLM object stands for: a busbar is its node's bus
 NOT_EXPORTED = (cim.BusbarSection,)
 #: one instant: the deck is a single power flow, not a time series
