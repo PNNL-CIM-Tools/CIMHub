@@ -3,10 +3,14 @@
 p and q are written as kW and kvar. ``kV`` is the bus's (CIM gives a load no rating: p is at the BaseVoltage, S4-2),
 so a deck's rounded kV (2.4 on a 4.16 kV bus) comes back as the bus's phase voltage. The voltage response is one
 pure ZIP model (1, 2, 5) or the exponential model 4. Unequal per-phase values give one 1-phase Load per phase (E8).
+A ConformLoad whose group's schedule is a LoadShape (``loadshape.py``) names it as ``yearly``; a ConformLoad whose
+group has no schedule or no points, and a NonConformLoad, are written static, their groups named in one warning
+(S8).
 """
 
 from __future__ import annotations
 
+import logging
 import math
 
 import cimprofiles.cim18.cim18v17 as cim
@@ -14,7 +18,8 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.load import LoadResponse, get_load_response, get_phase_loads
-from cimhub_core.getters.load_schedule import log_dropped_schedules
+from cimhub_core.getters.load_schedule import get_load_schedule
+from cimhub_opendss.exporter import loadshape
 from cimhub_opendss.exporter.injection import device_connection, device_kv, equal_phases
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
@@ -47,22 +52,43 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "conn": Slot("written", "phaseConnection Y/Yn -> wye, D -> delta; others raise"),
     "NumCust": Slot("written", "customerCount; unset -> not written; per phase on the first load, 0 on the others"),
     "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
+    "yearly": Slot("written", "a ConformLoad's group LoadShape (S8); unset otherwise"),
     **{slot: Slot("unset", _SOLVER) for slot in ("status", "Vminpu", "Vmaxpu", "Vminnorm", "Vminemerg", "Vlowpu")},
     "xfkVA": Slot("not mapped", "kW carries p"), "allocationfactor": Slot("not mapped", "kW carries p"),
     "like": Slot("not mapped", "the writer never writes like="),
 }, Slot("unset", _NOT_IN_CIM))}
 
 
+_log = logging.getLogger(__name__)
+
+
 def export(context) -> list[schema.Load]:
     """One Load per EnergyConsumer, or one per phase when its phases differ (E8)."""
-    consumers = context.objects(*CIM_CLASSES)
-    log_dropped_schedules(consumers, "OpenDSS")  # a LoadShape per group: the DSS spoke's own slice
-    return [record for consumer in consumers for record in _loads(consumer, context.names)]
+    records, static = [], set()
+    for consumer in context.objects(*CIM_CLASSES):
+        records += _loads(consumer, context.names, _shape(context, consumer, static))
+    if static:
+        _log.warning("%d load group(s) are written static (no schedule, no points, or a NonConformLoad's): %s",
+                     len(static), sorted(static))
+    return records
 
 
-def _loads(consumer: cim.EnergyConsumer, names: Names) -> list[schema.Load]:
+def _shape(context, consumer, static: set) -> str | None:
+    """The LoadShape the consumer names as ``yearly``, or None; ``static`` collects the groups written static. A
+    schedule with points is a shape (``loadshape.export`` reads and checks them)."""
+    found = get_load_schedule(consumer)
+    if found is None:
+        return None
+    if found.conform and found.schedule is not None and found.schedule.uri() in context.points:
+        return loadshape.shape_name(context, found.schedule)
+    static.add(str(found.group.name or found.group.mRID))
+    return None
+
+
+def _loads(consumer: cim.EnergyConsumer, names: Names, yearly: str | None) -> list[schema.Load]:
     loads = get_phase_loads(consumer, "kW", "kVAr")
-    common = dict(**_model(consumer, get_load_response(consumer)), enabled=get_in_service(consumer, which="normal"))
+    common = dict(**_model(consumer, get_load_response(consumer)), enabled=get_in_service(consumer, which="normal"),
+                  yearly=yearly)
     if loads.split or equal_phases(loads.per_phase):
         name = names.name(consumer, NAMESPACE)
         return [_load(consumer, loads, name, loads.phases, loads.total, consumer.customerCount, common, names)]

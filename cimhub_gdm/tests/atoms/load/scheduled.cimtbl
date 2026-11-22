@@ -1,0 +1,30 @@
+# Load groups (shape load_schedule): res, a ConformLoadGroup whose schedule multiplies a and b (value2 its own Q
+# multipliers); unknown, a group with no schedule (c); plant, a NonConformLoadGroup whose schedule is p's actual
+# kW and kvar. The points are not here: the test builds them as the sidecar's RegularTimePoint rows. Every load is
+# on b1 with add_source()'s EnergySource (atoms/source/balanced_3ph.cimtbl), so ditto's deck solves.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = atom
+
+Import ../prereqs/shell.cimtbl
+
+Object EnergySource: mRID=src_src, name=src, node=b1, nominalVoltage (kV)=4.16, voltageMagnitude (kV)=4.160039630, voltageAngle (deg)=0, r (ohm)=0.160377, x (ohm)=0.641507, r0 (ohm)=0.179604, x0 (ohm)=0.538811, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr_atom
+
+Object LoadResponseCharacteristic: mRID=zip_constant_pq, exponentModel=false, pConstantImpedance=0, pConstantCurrent=0, pConstantPower=1, qConstantImpedance=0, qConstantCurrent=0, qConstantPower=1
+
+Table ConformLoadGroup: mRID, name
+    lg_res,     res
+    lg_unknown, unknown
+Object ConformLoadSchedule: mRID=ls_res, name=res, startTime=2020-01-01T01:00:00+00:00, timeStep (h)=1, value1Unit=none, value2Unit=none, ConformLoadGroup=lg_res
+
+Object NonConformLoadGroup: mRID=lg_plant, name=plant
+Object NonConformLoadSchedule: mRID=ls_plant, name=plant, startTime=2009-07-21T00:00:00-04:00, timeStep (min)=15, value1Unit=W, value1Multiplier=k, value2Unit=VAr, value2Multiplier=k, NonConformLoadGroup=lg_plant
+
+Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    ld_a, a, b1, , Y, true, 300, 150, 1, zip_constant_pq, bv_4p16kv, lg_res
+    ld_b, b, b1, B, Y, true, 50, 25, 1, zip_constant_pq, bv_4p16kv, lg_res
+    ld_c, c, b1, , Y, true, 100, 40, 1, zip_constant_pq, bv_4p16kv, lg_unknown
+
+Table NonConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    ld_p, p, b1, , Y, true, 500, 200, 1, zip_constant_pq, bv_4p16kv, lg_plant

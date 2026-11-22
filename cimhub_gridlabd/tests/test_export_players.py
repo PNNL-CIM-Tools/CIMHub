@@ -65,7 +65,7 @@ def test_a_value2_other_than_value1_raises(atom):
 def test_a_gap_in_the_points_raises(atom):
     network, time_points, _ = atom
     table = time_points[REGULAR_TIME_POINT_CLASS]
-    with pytest.raises(ValueError, match="a player needs every step from 0"):
+    with pytest.raises(ValueError, match="every step from 0 is read"):
         GlmExporter({REGULAR_TIME_POINT_CLASS: table.take([0, 2, 3])}).to_model(network)
 
 

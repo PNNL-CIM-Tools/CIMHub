@@ -21,7 +21,6 @@ import logging
 import textwrap
 from typing import Callable, NamedTuple
 
-import cimprofiles.cim18.cim18v17 as cim
 
 from cimtables.document import Column, Document, DocumentSet, Import, ObjectStatement, Row, Table
 from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
@@ -255,13 +254,9 @@ class GlmImporter(CimtblImporter):
             _log.warning("the points of %d player(s) are dropped: pass GlmImporter(time_points={}) to keep them: %s",
                          len(points), sorted(points))
             return bound
-        from cimhub_core.time_points import REGULAR_TIME_POINT_CLASS, regular_time_points  # the time-points extra
+        from cimhub_core.time_points import add_regular_time_points  # the time-points extra
 
-        if REGULAR_TIME_POINT_CLASS in self.time_points:
-            raise ValueError(f"time_points already holds a {REGULAR_TIME_POINT_CLASS} table")
-        schedules = {schedule.mRID: schedule for schedule in bound.graph.get(cim.ConformLoadSchedule, {}).values()}
-        self.time_points[REGULAR_TIME_POINT_CLASS] = regular_time_points(
-            {schedules[mrid_].uri(): values for mrid_, values in points.items()})
+        add_regular_time_points(self.time_points, bound, points)
         return bound
 
 

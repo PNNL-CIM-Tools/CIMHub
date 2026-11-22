@@ -1,4 +1,5 @@
-# OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset).
+# OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset);
+# a ConformLoad of its yearly shape's group lg_<shape> (S8).
 # Models 1, 2, 5 name the shared zip_fractions rows; model 4 an exp_<CVRwatts>_<CVRvars> row here.
 # Source table: Load (records: 9)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load

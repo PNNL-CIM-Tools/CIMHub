@@ -6,13 +6,15 @@ The topology walk runs once (``site``); the master holds the containers, BaseFre
 order of the class parts (DSS_REWRITE_PLAN.md section 2): catalogs before the instances that use them. Each slice
 adds its mappers here. ``buscoords.cimtbl`` is the one ``bound_parts`` part, imported last: it reads the bound
 Terminals of every other part's equipment (S5-2). A DSS class nothing reads is listed by count on the master's
-comment (DSS-11), so nothing disappears silently.
+comment (DSS-11), so nothing disappears silently; a LoadShape no Load names as ``yearly`` is counted there too. The
+yearly shapes' points are not in the artifact but in the caller's ``time_points`` (S8, ``DssImporter``).
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#master`` and ``#buses``.
 """
 
 from __future__ import annotations
 
+import logging
 import textwrap
 from typing import NamedTuple
 
@@ -24,10 +26,12 @@ from cimhub_core.cimtbl import CIM_PROFILE, cell, mrid
 from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_core.load_response import zip_fractions
 from cimhub_opendss.importer.cimtbl import (buscoords, capacitor, capcontrol, generator, geometry, line, linecode,
-                                            load, pvsystem, reactor, regcontrol, storage, transformer, vsource,
-                                            wire, xfmrcode)
+                                            load, loadshape, pvsystem, reactor, regcontrol, storage, transformer,
+                                            vsource, wire, xfmrcode)
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
+
+_log = logging.getLogger(__name__)
 
 
 class Site(NamedTuple):
@@ -60,6 +64,7 @@ MAPPING_ORDER = (
     (reactor.NATIVE_CLASS, lambda native, site: reactor.map_reactor(native, site.buses, site.feeder)),
     (transformer.NATIVE_CLASS, lambda native, site: transformer.map_transformer(native, site.buses, site.feeder)),
     (regcontrol.NATIVE_CLASS, lambda native, site: regcontrol.map_regcontrol(native)),
+    (loadshape.NATIVE_CLASS, lambda native, site: loadshape.map_loadshape(native)),
     (load.NATIVE_CLASS, lambda native, site: load.map_load(native, site.buses, site.feeder)),
     (capacitor.NATIVE_CLASS, lambda native, site: capacitor.map_capacitor(native, site.buses, site.feeder)),
     (capcontrol.NATIVE_CLASS, lambda native, site: capcontrol.map_capcontrol(native, site.buses)),
@@ -132,7 +137,10 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
     """The master document: containers, BaseFrequency, BaseVoltages, then one ``Import`` per non-empty part."""
     mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options, buscoords.NATIVE_CLASS,
                                                                     *READ_BY_OTHERS}
-    counts = sorted((cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped)
+    counts = [(cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped]
+    if loadshape.unmapped_count(native):
+        counts.append((loadshape.NATIVE_CLASS.__name__, loadshape.unmapped_count(native)))  # no Load's yearly
+    counts.sort()
     comment = f"OpenDSS deck {name}\nMapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#master"
     if counts:
         comment += "\n" + textwrap.fill("not mapped: " + ", ".join(f"{cls_name} {count}" for cls_name, count in counts),
@@ -167,17 +175,20 @@ class DssImporter(CimtblImporter):
     ``name`` is the master's ``Model`` and file stem (the deck's name, e.g. ``IEEE13_CDPSM``). ``length_unit``
     is the per-length unit of line codes with no units on code or line, overriding the magnitude gate (DSS-3).
     ``device_geometry`` draws a two-terminal device's coordinates as a ``"point"`` midway between its buses (the
-    default, as a GIS does) or a ``"linestring"`` from bus to bus (S5-9).
+    default, as a GIS does) or a ``"linestring"`` from bus to bus (S5-9). ``time_points`` is the caller's dict of
+    time point tables: ``to_cim`` adds the yearly shapes' ``RegularTimePoint`` table to it (S8); without it the
+    points are dropped with one warning.
     """
 
     def __init__(self, name: str, *, authority: str = AUTHORITY, length_unit: str | None = None,
-                 device_geometry: str = "point"):
+                 device_geometry: str = "point", time_points: dict | None = None):
         if device_geometry not in buscoords.DEVICE_GEOMETRIES:
             raise ValueError(f"device_geometry {device_geometry!r} is not one of {buscoords.DEVICE_GEOMETRIES}")
         self.name = name
         self.authority = authority
         self.length_unit = length_unit
         self.device_geometry = device_geometry
+        self.time_points = time_points
 
     def to_cimtbl(self, model) -> DocumentSet:
         walked = site(model, self.length_unit)
@@ -186,6 +197,20 @@ class DssImporter(CimtblImporter):
         return DocumentSet(master=map_master(model, parts, walked, name=self.name, authority=self.authority),
                            parts=parts)
 
+    def to_cim(self, model, *, network=None, artifact_dir=None):
+        """The core ``to_cim``, then the yearly shapes' points, keyed by their bound schedules' uri (S8)."""
+        bound = super().to_cim(model, network=network, artifact_dir=artifact_dir)
+        value1, value2 = loadshape.shape_points(model)
+        if not value1:
+            return bound
+        if self.time_points is None:
+            _log.warning("the points of %d LoadShape(s) are dropped: pass DssImporter(time_points={}) to keep them: "
+                         "%s", len(value1), sorted(value1))
+            return bound
+        from cimhub_core.time_points import add_regular_time_points  # the time-points extra
+
+        add_regular_time_points(self.time_points, bound, value1, value2)
+        return bound
 
     def bound_parts(self, model, network) -> list[Document]:
         """``buscoords.cimtbl``: each piece of equipment located at its bound Terminals' buses (S5-2)."""
@@ -193,7 +218,9 @@ class DssImporter(CimtblImporter):
 
 
 def dss_to_cim(model, *, name: str, authority: str = AUTHORITY, length_unit: str | None = None,
-               device_geometry: str = "point", network=None, artifact_dir=None):
-    """A DSS model (``DssReader(path).read_all()``) as a cim18v17 network, built from its written artifacts."""
-    importer = DssImporter(name, authority=authority, length_unit=length_unit, device_geometry=device_geometry)
+               device_geometry: str = "point", network=None, artifact_dir=None, time_points: dict | None = None):
+    """A DSS model (``DssReader(path).read_all()``) as a cim18v17 network, built from its written artifacts; the
+    yearly shapes' points go to ``time_points`` (``DssImporter``)."""
+    importer = DssImporter(name, authority=authority, length_unit=length_unit, device_geometry=device_geometry,
+                           time_points=time_points)
     return importer.to_cim(model, network=network, artifact_dir=artifact_dir)

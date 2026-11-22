@@ -1303,7 +1303,7 @@ As built (`tests/test_export_injection.py`, 24 tests; core `test_derived_control
 | kW | written | get_phase_loads total p (kW); per phase when the phases differ (E8) |
 | pf | not mapped | kvar carries q |
 | model | written | get_load_response: a pure ZIP 1 (PQ), 2 (Z), 5 (I); exponential 4 (CVR); a mix raises |
-| yearly | unset | untranscribed or raising on import; not in CIM |
+| yearly | written | a ConformLoad's group LoadShape (S8); unset otherwise |
 | daily | unset | untranscribed or raising on import; not in CIM |
 | duty | unset | untranscribed or raising on import; not in CIM |
 | growth | unset | untranscribed or raising on import; not in CIM |
@@ -2124,3 +2124,81 @@ A `BusbarSection` is its node's bus. DSS has no element for it, so it writes no 
 | H5 | An underbuilt secondary in a group (user, 2026-11-19) | Only the lines at the group's highest nominal voltage are coupled; the others stay on their own positions |
 | H6 | A shared conductor (user, 2026-11-19) | One position on several lines is one conductor (EPRI ConductorPosition); SharedPhases is not required |
 | H7 | Series pieces of one circuit in a group (user, 2026-11-19) | The group is written uncoupled, with a warning |
+
+## S8: load shapes (built 2026-11-21 at the user's word)
+
+The importer's S8 inverted (`CIMTBL_MAPPING.md#s8-load-shapes`), as GLM's X29 writes players.
+
+### Layout
+
+- `exporter/loadshape.py`: each `ConformLoadSchedule` with points is a `LoadShape` named after its group (the
+  `Loadshape` namespace of `Names`); `CIM_CLASSES = ()`, as a schedule is not conducting equipment.
+- `exporter/load.py`: a ConformLoad whose group's schedule is a shape names it as `yearly`, on each per-phase load
+  too (E8).
+- `DssExporter(time_points)` / `cim_to_dss(..., time_points=)`: the caller's time point tables
+  (`read_time_points`, or the dict an importer filled), read through `cimhub_core.getters.load_schedule`
+  (`get_schedule_points`: the points numbered 0, 1, ... in order, value2 set at all points or none).
+  `ExportContext.points` holds the `RegularTimePoint` rows by schedule uri.
+- The writer writes `Loadshape` first (`WRITE_ORDER`): a Load names its shape when it is defined.
+
+### Rules
+
+- `npts` the number of points; `mult` value1; `qmult` value2, not written when value2 is unset (Q follows `mult`);
+  `sinterval` the `timeStep` in seconds, whatever unit the import read (an hourly `interval=1` comes back as
+  `sinterval=3600`: the engine's interval is the same).
+- `startTime` is not written: DSS has no date. The first point is sample 1, in force one interval into the run,
+  which is what the importer's `startTime` says of a DSS shape (S8-3). A GLM player's date (2009-07-21) is lost.
+- A value unit other than none (a multiplier) on a ConformLoadSchedule raises.
+- Written static, their groups named in one warning: a ConformLoad whose group has no schedule (M1's `npts`-less
+  shapes, GLM's undefined players), a schedule with no points (or no `time_points`), and a NonConformLoad (its
+  schedule is actual power, which only `UseActual` holds, and a UseActual shape's snapshot depends on command order:
+  S8-6).
+
+### Expected differences (round trip)
+
+| what | why |
+|---|---|
+| `interval=`/`minterval=` come back as `sinterval=` | one written form; the engine's interval is equal |
+| a shape no Load names, and a Load's `daily` / `duty` | not imported (S8-1, S8-7) |
+| M1's `mult=1` shapes (no `npts`) are not written; their loads have no `yearly` | the engine reads no points from them: the loads are constant either way (S8-5) |
+
+### Tests
+
+- `test_export_loadshape.py`: the atom's export golden (`atoms/loadshape/export/loadshapes.dss`); the original and the
+  export in the engine in yearly mode every 5 minutes for 6 hours, every load's kW and kvar equal (rel 1e-9: the
+  intervals, the normalized shape, `qmult`, the wrap); without points the loads are static with the warning; the
+  loads made NonConform are static; a schedule in W raises.
+- `tests/cross_format/test_glm_player_to_dss.py`: a GLM player through CIM to a LoadShape, solved in yearly mode at
+  60 s steps as the deck fixed at each step's value (rel 1e-9, the fifth step wrapping to the first).
+
+### Slot tables (S8, generated from `SLOTS`)
+
+**LoadShape** (`exporter/loadshape.py`)
+
+| DSS slot | kind | from / why |
+|---|---|---|
+| name | written | the group's name (Names) |
+| npts | written | the number of points |
+| interval | unset | not in CIM; the engine's default |
+| mult | written | value1 of each point, in sequence order |
+| hour | unset | not in CIM; the engine's default |
+| mean | unset | not in CIM; the engine's default |
+| stddev | unset | not in CIM; the engine's default |
+| csvfile | unset | not in CIM; the engine's default |
+| sngfile | unset | not in CIM; the engine's default |
+| dblfile | unset | not in CIM; the engine's default |
+| action | unset | not in CIM; the engine's default |
+| qmult | written | value2 of each point; unset when value2 is (Q follows mult) |
+| UseActual | unset | not in CIM; the engine's default |
+| Pmax | unset | not in CIM; the engine's default |
+| Qmax | unset | not in CIM; the engine's default |
+| sinterval | written | timeStep (s) |
+| minterval | unset | not in CIM; the engine's default |
+| Pbase | unset | not in CIM; the engine's default |
+| Qbase | unset | not in CIM; the engine's default |
+| Pmult | unset | not in CIM; the engine's default |
+| PQCSVFile | unset | not in CIM; the engine's default |
+| MemoryMapping | unset | not in CIM; the engine's default |
+| Mode | unset | not in CIM; the engine's default |
+| Interpolation | unset | not in CIM; the engine's default |
+| like | not mapped | the writer never writes like= |

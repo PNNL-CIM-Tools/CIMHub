@@ -542,6 +542,11 @@ Decision X7. `EnergyConsumer` → `DistributionLoad` + `LoadEquipment` + one `Ph
   or the voltage exponents. GDM still requires the fractions with exponents, so they are filled as constant power
   (`fills.ZIP_UNDER_EXPONENTS`); ditto then writes `Model=4`.
 - `num_customers` is `customerCount` on every phase.
+- **Load groups** (TIMESERIES_NEEDS.md §8). A ConformLoad and a NonConformLoad export as any load. Their group's one
+  schedule, with `RegularTimePoint` rows in `time_points`, is one `SingleTimeSeries` per value column shared by the
+  group's loads (`time_series.add_group_series`): a ConformLoad's multipliers (`use_actual=False`), a
+  NonConformLoad's actual kW and kvar (`use_actual=True`). A group with no schedule or no points is written static,
+  named in one WARNING.
 
 **DistributionLoad**
 
@@ -1057,6 +1062,8 @@ X4. `SeriesCompensator` → `DistributionReactor` between its two terminals' bus
     line bus as if line to ground, and the atoms' irradiance is not their output's share.
   - Each exported PV makes the p and q CIM holds, its irradiance set to its output's share of the panel.
   - Exported load series become one LoadShape per load, `UseActual=yes`, in kW and kvar (T1, T6).
+  - A ConformLoad group's series becomes one LoadShape of multipliers both its loads name as `yearly`; a
+    NonConformLoad group's one of actual kW, `UseActual=yes`, at its 15-minute interval (§8).
   - With capacitors and t_ln, it still solves.
   - An exported regulator bank (rb alone) holds its band, 121–123 V on its PT.
   - A strict xfail pins ditto 0.1.8's missing CircuitBreaker and Disconnector equipment writers. ditto writes their

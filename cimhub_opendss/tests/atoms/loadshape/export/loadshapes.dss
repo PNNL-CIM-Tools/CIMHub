@@ -1,0 +1,15 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
+new Loadshape.com npts=4 mult=[0.25 0.5 1 0.75] sinterval=900
+new Loadshape.ind npts=3 mult=[1 0.9 0.95] sinterval=900
+new Loadshape.res npts=4 mult=[0.5 0.75 1 0.8] qmult=[0.4 0.6 0.9 0.7] sinterval=3600
+new Line.l1 phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m
+new Load.c1 phases=3 bus1=b1.1.2.3 kV=4.16 kW=300 model=1 yearly=com conn=wye kvar=100 NumCust=1 enabled=Yes
+new Load.f1 phases=3 bus1=b1.1.2.3 kV=4.16 kW=10 model=1 conn=wye kvar=5 NumCust=1 enabled=Yes
+new Load.i1 phases=1 bus1=b1.3 kV=2.40177711982884 kW=80 model=1 yearly=ind conn=wye kvar=30 NumCust=1 enabled=Yes
+new Load.r1 phases=1 bus1=b1.1 kV=2.40177711982884 kW=100 model=1 yearly=res conn=wye kvar=40 NumCust=1 enabled=Yes
+new Load.r2 phases=1 bus1=b1.2 kV=2.40177711982884 kW=50 model=1 yearly=res conn=wye kvar=20 NumCust=1 enabled=Yes
+new Load.static phases=3 bus1=b1.1.2.3 kV=4.16 kW=200 model=1 conn=wye kvar=50 NumCust=1 enabled=Yes
+Set voltagebases=[4.16]
+CalcVoltageBases

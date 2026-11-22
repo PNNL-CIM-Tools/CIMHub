@@ -1,0 +1,25 @@
+# OpenDSS Load -> EnergyConsumer on its bus (DSS-7); p, q as given (q from pf when kvar is unset);
+# a ConformLoad of its yearly shape's group lg_<shape> (S8).
+# Models 1, 2, 5 name the shared zip_fractions rows; model 4 an exp_<CVRwatts>_<CVRvars> row here.
+# Source table: Load (records: 6)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load
+
+Profile = cim18v17
+
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_static, static, b1, , Y, true, 200.0, 50.0, 1, zip_constant_pq, true, bv_4p16kv
+
+# a yearly LoadShape scales p and q: the shape's group (S8)
+Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, normallyInService, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_c1, c1, b1, ,  Y, true, 300.0, 100.0, 1, zip_constant_pq, true, bv_4p16kv, lg_com
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_f1, f1, b1, ,  Y, true, 10.0,  5.0,   1, zip_constant_pq, true, bv_4p16kv, lg_flat
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_i1, i1, b1, C, Y, true, 80.0,  30.0,  1, zip_constant_pq, true, bv_4p16kv, lg_ind
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    ld_r1, r1, b1, A, Y, true, 100.0, 40.0,  1, zip_constant_pq, true, bv_4p16kv, lg_res
+    # defaulted: model=ConstantPQ, conn=wye, NumCust=1, enabled=true
+    # untranscribed: daily=com
+    ld_r2, r2, b1, B, Y, true, 50.0,  20.0,  1, zip_constant_pq, true, bv_4p16kv, lg_res

@@ -18,7 +18,7 @@ from cimhub_gdm.exporter import fills
 from cimhub_gdm.exporter.shared import ExportContext, connection_type, containers, gdm_phases, in_service
 from cimhub_gdm.exporter.slots import UUID, Slot
 
-CIM_CLASSES = (cim.EnergyConsumer, cim.ConformLoad, cim.NonConformLoad)  # group schedules: dropped, warned
+CIM_CLASSES = (cim.EnergyConsumer, cim.ConformLoad, cim.NonConformLoad)  # group schedules: time_series.py
 
 _ZIP = "get_load_response, ZIP form; the exponent form writes fills.ZIP_UNDER_EXPONENTS (constant power)"
 _UNTRANSCRIBED = "untranscribed on import: no home on LoadResponseCharacteristic"

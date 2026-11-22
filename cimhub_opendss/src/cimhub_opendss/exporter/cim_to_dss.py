@@ -16,8 +16,8 @@ from cimhub_core.names import export_name
 from cimhub_opendss.dss_reader import DssModel
 from cimhub_opendss.dss_writer import DssWriter
 from cimhub_opendss.exporter import (buscoords, buses, capacitor, capcontrol, generator, line, linecode, linegeometry, load,
-                                     pvsystem, reactor, regcontrol, storage, switch, transformer, vsource, wire,
-                                     xfmrcode)
+                                     loadshape, pvsystem, reactor, regcontrol, storage, switch, transformer, vsource,
+                                     wire, xfmrcode)
 from cimhub_opendss.exporter.linegeometry import CoupledGroup, coupled_groups
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.exporter.options import options_record
@@ -25,8 +25,8 @@ from cimhub_opendss.exporter.options import options_record
 #: Modules in export order. Each has ``CIM_CLASSES`` (what it exports), ``SLOTS`` (``{DSS class: {slot: Slot}}``)
 #: and ``export(context) -> list[record]`` over the whole network: a LineGeometry is one per (WireConfiguration,
 #: offset) over the lines, so a module cannot work object by object.
-EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch, xfmrcode, transformer, regcontrol, load, capacitor,
-                capcontrol, pvsystem, storage, generator, reactor, buscoords)
+EXPORT_ORDER = (vsource, wire, linecode, linegeometry, line, switch, xfmrcode, transformer, regcontrol, loadshape, load,
+                capacitor, capcontrol, pvsystem, storage, generator, reactor, buscoords)
 
 __all__ = ["DssExporter", "EXPORT_ORDER", "cim_to_dss"]
 
@@ -37,6 +37,7 @@ class ExportContext(NamedTuple):
     circuit_source: cim.EnergySource
     switch_state: str
     coupled: dict[cim.MultiCircuitGroup, CoupledGroup]  # linegeometry.coupled_groups, found once (H1)
+    points: dict  # schedule uri -> its RegularTimePoint rows (time_points.rows_by_schedule); {} without time_points
 
     def objects(self, *cim_classes: type) -> list:
         """The network's objects of ``cim_classes``, class by class in the order given."""
@@ -52,7 +53,13 @@ class DssExporter(FormatExporter):
     command (E6): ``'actual'`` reads ``Switch.open``, ``'normal'`` reads ``Switch.normalOpen`` (an as-built model
     whose ``open`` is unset). ``Normal`` always reads ``normalOpen``. Conducting equipment of a class no module
     exports raises.
+
+    ``time_points``: the TimePoint tables of the network's schedules (``read_time_points``, or the dict an importer
+    filled); each ConformLoadSchedule with points becomes a LoadShape (S8). Without them the loads are static.
     """
+
+    def __init__(self, time_points: dict | None = None):
+        self.time_points = time_points
 
     def to_model(self, network, *, name_source: str | None = None, circuit_source: str = "source",
                  switch_state: str = "actual") -> DssModel:
@@ -61,7 +68,7 @@ class DssExporter(FormatExporter):
         _check_exported(network)
         names = Names(name_source)
         context = ExportContext(network, names, _circuit_source(network, names.source, circuit_source), switch_state,
-                                coupled_groups(network))
+                                coupled_groups(network), self._points())
         model = DssModel()
         for module in EXPORT_ORDER:
             for record in module.export(context):
@@ -69,11 +76,20 @@ class DssExporter(FormatExporter):
         model.add_to_graph(options_record(network, names, switch.open_terminals(context)))
         return model
 
+    def _points(self) -> dict:
+        """Each schedule's RegularTimePoint rows by uri, or {} with no time_points (or no such table)."""
+        table = (self.time_points or {}).get("RegularTimePoint")
+        if table is None:
+            return {}
+        from cimhub_core.time_points import rows_by_schedule  # the time-points extra
 
-def cim_to_dss(network, destination, *, per_class: bool = False, **opts) -> None:
+        return rows_by_schedule(table)
+
+
+def cim_to_dss(network, destination, *, per_class: bool = False, time_points: dict | None = None, **opts) -> None:
     """Export ``network`` and write the deck ``destination`` (a ``.dss`` path), one file per DSS class beside it
-    when ``per_class`` (``DssWriter.write``); ``opts`` go to ``to_model``."""
-    DssWriter().write(DssExporter().to_model(network, **opts), destination, per_class=per_class)
+    when ``per_class`` (``DssWriter.write``); ``time_points`` as ``DssExporter``, ``opts`` go to ``to_model``."""
+    DssWriter().write(DssExporter(time_points).to_model(network, **opts), destination, per_class=per_class)
 
 
 def _circuit_source(network, name_source: str, circuit_source: str) -> cim.EnergySource:

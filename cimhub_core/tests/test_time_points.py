@@ -14,8 +14,8 @@ from cimbuilder.object_builder.schedule import TIME_POINT_CLASS, EnergyConnectio
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
-from cimhub_core.time_points import (REGULAR_TIME_POINT_CLASS, read_time_points, regular_time_points, rows_by_schedule,
-                                     time_points_path, write_time_points)
+from cimhub_core.time_points import (REGULAR_TIME_POINT_CLASS, add_regular_time_points, read_time_points,
+                                     regular_time_points, rows_by_schedule, time_points_path, write_time_points)
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
 HOURS = [datetime(2020, 1, 1) + timedelta(hours=hour) for hour in range(3)]
@@ -139,3 +139,36 @@ def test_a_group_schedule_with_no_points_warns(tmp_path, regular, caplog):
     with caplog.at_level(logging.WARNING, logger="cimhub_core.time_points"):
         read_time_points(tmp_path / "feeder.xml", network)
     assert "2 RegularIntervalSchedule(s) have no time points: ['ls_plant', 'ls_zipload']" in caplog.text
+
+
+def test_regular_points_keep_a_second_value(regular):
+    _, schedules, _ = regular
+    plant = schedules["ls_plant"].uri()
+    table = regular_time_points({plant: [400.0, 450.0]}, {plant: [100.0, 120.0]})
+    assert table.column("value2").to_pylist() == [100.0, 120.0]
+
+
+@pytest.mark.parametrize(("value2", "match"), (
+    ({"other": [1.0]}, r"value2 for schedules with no value1: \['other'\]"),
+    ({"plant": [1.0]}, "2 value1 and 1 value2 points"),
+), ids=("unknown schedule", "length"))
+def test_a_second_value_off_its_points_raises(value2, match):
+    with pytest.raises(ValueError, match=match):
+        regular_time_points({"plant": [400.0, 450.0]}, value2)
+
+
+def test_points_are_added_by_mrid(regular):
+    network, schedules, _ = regular
+    time_points = {}
+    add_regular_time_points(time_points, network, {"ls_plant": [400.0, 450.0]}, {"ls_plant": [100.0, 120.0]})
+    [rows] = rows_by_schedule(time_points[REGULAR_TIME_POINT_CLASS]).items()
+    assert rows[0] == schedules["ls_plant"].uri()
+    assert rows[1].column("value2").to_pylist() == [100.0, 120.0]
+
+
+def test_points_added_twice_or_for_no_schedule_raise(regular):
+    network, _, points = regular
+    with pytest.raises(ValueError, match="already holds a RegularTimePoint table"):
+        add_regular_time_points(dict(points), network, {"ls_plant": [1.0]})
+    with pytest.raises(ValueError, match=r"no RegularIntervalSchedule with mRID \['ls_none'\]"):
+        add_regular_time_points({}, network, {"ls_none": [1.0]})

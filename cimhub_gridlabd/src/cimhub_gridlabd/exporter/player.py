@@ -18,6 +18,7 @@ from cimtables.graph_write import get_qty
 
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.getters import describe
+from cimhub_core.getters.load_schedule import get_schedule_points
 from cimhub_gridlabd.glm_reader import PLAYER_CLASS
 from cimhub_gridlabd.glm_writer import format_float
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -34,18 +35,14 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 
 
 def points(context, schedule) -> list[float] | None:
-    """The schedule's value1 per point from the context's time points, or None when it has none; a gap in the
-    sequence or a value2 other than value1 raises."""
-    rows = context.points.get(schedule.uri())
-    if rows is None:
+    """The schedule's value1 per point from the context's time points (``get_schedule_points``: its rules raise),
+    or None when it has none; a value2 other than value1 raises."""
+    found = get_schedule_points(schedule, context.points)
+    if found is None:
         return None
-    numbers = rows.column("sequenceNumber").to_pylist()
-    if numbers != list(range(len(numbers))):
-        raise ValueError(f"{describe(schedule)}: points {numbers[:5]}...; a player needs every step from 0")
-    value1, value2 = rows.column("value1").to_pylist(), rows.column("value2").to_pylist()
-    if any(second is not None and second != first for first, second in zip(value1, value2)):
+    if found.value2 is not None and found.value2 != found.value1:
         raise ValueError(f"{describe(schedule)}: value2 differs from value1; a GLM base scales p and q together")
-    return value1
+    return found.value1
 
 
 def player_name(context, schedule) -> str:

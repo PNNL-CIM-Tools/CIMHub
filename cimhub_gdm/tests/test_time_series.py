@@ -8,6 +8,7 @@ reload diff.
 import logging
 from datetime import datetime, timedelta, timezone
 
+import cimtables
 import gdm_atoms
 import pytest
 from cimgraph.databases import XMLFile
@@ -19,7 +20,8 @@ from gdm.systems.distribution.components import DistributionLoad, DistributionSo
 from infrasys.normalization import NormalizationMax
 from infrasys.time_series_models import NonSequentialTimeSeries, SingleTimeSeries
 
-from cimhub_core.time_points import rows_by_schedule
+from cimhub_core.cimtbl_testing import cim_scope
+from cimhub_core.time_points import add_regular_time_points, rows_by_schedule
 from cimhub_gdm import GdmExporter, gdm_to_cim, read_time_points, write_time_points
 
 POINTS = "EnergyConnectionTimePoint"
@@ -228,3 +230,82 @@ def test_schedules_without_points_export_with_one_warning(caplog):
         exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
     assert "2 EnergyConnectionSchedule(s) exported without their time points" in caplog.text
     assert not exported.has_time_series(exported.get_component(DistributionLoad, "bal"))
+
+
+# --- load groups (§8): one shared series per group schedule -----------------------------------------------------
+
+SCHEDULED = gdm_atoms.ATOMS / "load" / "scheduled.cimtbl"
+#: res: 3 hourly P and Q multipliers; plant: 2 quarter-hours of kW and kvar
+GROUP_POINTS = ({"ls_res": [0.5, 1.0, 0.75], "ls_plant": [400.0, 450.0]},
+                {"ls_res": [0.4, 0.9, 0.6], "ls_plant": [100.0, 120.0]})
+
+
+def _scheduled():
+    """(network, time points) of the scheduled-load atom."""
+    network = cimtables.load_model(SCHEDULED)
+    time_points = {}
+    add_regular_time_points(time_points, network, *GROUP_POINTS)
+    return network, time_points
+
+
+def _series(system, name):
+    load = _load(system, name)
+    return {m.name: (m, system.get_time_series(load, m.name, **m.features))
+            for m in system.list_time_series_metadata(load)}
+
+
+def test_a_conform_group_is_one_shared_multiplier_series():
+    with cim_scope():
+        network, time_points = _scheduled()
+        exported = GdmExporter(time_points).to_model(network, name_source="name", system_name="atom")
+    a, b = _series(exported, "a"), _series(exported, "b")
+    for variable, values, profile_type in (("active_power", [0.5, 1.0, 0.75], "PMult"),
+                                           ("reactive_power", [0.4, 0.9, 0.6], "QMult")):
+        metadata, series = a[variable]
+        assert metadata.time_series_uuid == b[variable][0].time_series_uuid  # shared, as ditto shares a loadshape
+        assert metadata.features == {"profile_type": profile_type, "profile_name": "res", "use_actual": False}
+        assert list(series.data.magnitude) == values  # labelled kW / kvar, as ditto labels multipliers
+        assert (series.initial_timestamp, series.resolution) == (datetime(2020, 1, 1, 1), HOUR)
+
+
+def test_a_non_conform_group_is_actual_power():
+    with cim_scope():
+        network, time_points = _scheduled()
+        exported = GdmExporter(time_points).to_model(network, name_source="name", system_name="atom")
+    series = _series(exported, "p")
+    assert series["active_power"][0].features["use_actual"] is True
+    assert series["active_power"][1].data.to("kilowatt").magnitude == pytest.approx([400.0, 450.0])
+    assert series["reactive_power"][1].data.to("kilovar").magnitude == pytest.approx([100.0, 120.0])
+    # 00:00 EDT is 04:00 UTC, GDM's naive time
+    assert series["active_power"][1].initial_timestamp == datetime(2009, 7, 21, 4)
+    assert series["active_power"][1].resolution == timedelta(minutes=15)
+
+
+def test_groups_with_no_schedule_or_points_are_static_with_one_warning(caplog):
+    with cim_scope():
+        network, _ = _scheduled()
+        with caplog.at_level(logging.WARNING, logger="cimhub_gdm.exporter.time_series"):
+            exported = GdmExporter().to_model(network, name_source="name", system_name="atom")
+    assert "3 load group(s) are written static (no schedule, or no points): ['plant', 'res', 'unknown']" in caplog.text
+    assert not exported.has_time_series(_load(exported, "a"))
+
+
+def test_a_non_conform_schedule_in_other_units_raises():
+    with cim_scope():
+        network, time_points = _scheduled()
+        [schedule] = network.graph[network.cim.NonConformLoadSchedule].values()
+        schedule.value1Unit = network.cim.UnitSymbol.A
+        with pytest.raises(ValueError, match="value1 in .*A.*; a load's actual power is in W or kW"):
+            GdmExporter(time_points).to_model(network, name_source="name", system_name="atom")
+
+
+def test_a_group_series_comes_back_as_each_loads_actual_schedule():
+    """CIM → GDM → CIM: the group's multipliers become one actual-value schedule per load (T1): a at 300 kW, 150 kVAr;
+    the group is not kept (a listed difference)."""
+    with cim_scope():
+        network, time_points = _scheduled()
+        exported = GdmExporter(time_points).to_model(network, name_source="name", system_name="atom")
+    back, points = _import(exported)
+    times, p, q = _rows(points, _schedule(back, "ld_a_pq"))
+    assert times == [datetime(2020, 1, 1, 1 + i, tzinfo=timezone.utc) for i in range(3)]
+    assert p == pytest.approx([150e3, 300e3, 225e3]) and q == pytest.approx([60e3, 135e3, 90e3])

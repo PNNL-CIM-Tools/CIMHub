@@ -463,11 +463,13 @@ owner):
 | GLM reader | `class player { double value; }` (any other `class` raises), each player's file into `GlmModel.tapes` |
 | GLM importer | S8 (`CIMTBL_MAPPING.md`): `importer/cimtbl/player.py`, `load.py`'s ConformLoad rows, `GlmImporter(time_points=)` |
 | GLM exporter | X29 (`EXPORT_MAPPING.md`): `exporter/player.py`, `load.py`'s `<player>.value*K`, the clock at the earliest start, `GlmExporter(time_points)`; `GlmWriter` writes expressions, class blocks and tapes |
-| DSS, RAW, GDM | ConformLoad and NonConformLoad are loads (DSS and RAW already read them; GDM now does); each logs the group schedules it drops |
+| DSS, RAW, GDM | ConformLoad and NonConformLoad are loads (DSS and RAW already read them; GDM now does); RAW logs the group schedules it drops. **Since 2026-11-21 (the user's "implement the remaining changes across the other spokes"):** DSS maps yearly LoadShapes both ways (`DSS_REWRITE_PLAN.md` §9); GDM exports a group's schedule as one shared series (`cimhub_gdm/docs/TIMESERIES_NEEDS.md` §8) |
 | NonConformLoad | the user's "maybe also": a CIM class every exporter reads, its group schedule in the shape and the getter. No GLM form: a NonConformLoadSchedule is in power units with independent P and Q, and GLM's base form holds one multiplier, so it is written static with the warning. A DSS LoadShape (`useactual`) can hold it: the DSS slice |
 | tests | core 488 (+11); GLM `test_cimtbl_player.py` (28), `test_export_players.py` (8: the rules, and IEEE 13 with GridAPPS-D's 1,440-point player, vendored, solved in GridLAB-D at its first two instants against fixed bases, 1e-9) |
 
-Not built: GLM `schedule` blocks (cron rows, `SeasonDayTypeSchedule`), DSS LoadShapes (the DSS spoke's slice onto this
-CIM), GDM reading a ConformLoadSchedule. `cimhub_gridlabd` imports `cimhub_core.time_points` only when points are
+Not built: GLM `schedule` blocks (cron rows, `SeasonDayTypeSchedule`). ~~DSS LoadShapes, GDM reading a
+ConformLoadSchedule~~: built 2026-11-21 (above). The player export now reads its points through the core
+`get_schedule_points`, and the importer adds them through `time_points.add_regular_time_points`, both shared with
+the DSS spoke. `cimhub_gridlabd` imports `cimhub_core.time_points` only when points are
 passed; its pyproject should gain a `time-points` extra (`cimhub-core[time-points]`) when the bootstrap session next
 touches the lock.

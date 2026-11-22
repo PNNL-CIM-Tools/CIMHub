@@ -3,7 +3,8 @@
 A conform load follows its group's curve as a multiplier of its own p and q (a GridLAB-D player, a DSS LoadShape);
 a non-conform load's group schedule is in its value units (``value1Unit``). One schedule per group: CIM allows one
 per season and day type, which no format here holds yet, so several raise. The points are in the Parquet sidecar
-(``cimhub_core.time_points``, ``RegularTimePoint``), not on the schedule.
+(``cimhub_core.time_points``, ``RegularTimePoint``), not on the schedule: ``get_schedule_points`` reads a schedule's
+from the sidecar's rows split by schedule (``time_points.rows_by_schedule``), so this module needs no pyarrow.
 """
 
 from __future__ import annotations
@@ -45,6 +46,31 @@ def get_load_schedule(consumer: cim.EnergyConsumer) -> LoadSchedule | None:
         return LoadSchedule(conform, group, None, None, None)
     [schedule] = schedules
     return LoadSchedule(conform, group, schedule, schedule.startTime, get_qty(schedule, "timeStep", "s"))
+
+
+class SchedulePoints(NamedTuple):
+    value1: list[float]  # one per point, sequenceNumber 0, 1, ...
+    value2: list[float] | None  # None: value2 is unset at every point
+
+
+def get_schedule_points(schedule: cim.RegularIntervalSchedule, rows_by_schedule: dict) -> SchedulePoints | None:
+    """The schedule's points from its ``RegularTimePoint`` rows (``rows_by_schedule``: ``{uri: rows}``), or ``None``
+    when it has none. Sequence numbers other than 0, 1, ... in order, or a value2 set at only some points, raise."""
+    rows = rows_by_schedule.get(schedule.uri())
+    if rows is None:
+        return None
+    numbers = rows.column("sequenceNumber").to_pylist()
+    if numbers != list(range(len(numbers))):
+        raise ValueError(f"{describe(schedule)}: points numbered {numbers[:5]}...; every step from 0 is read, in order")
+    value1, value2 = rows.column("value1").to_pylist(), rows.column("value2").to_pylist()
+    if None in value1:
+        raise ValueError(f"{describe(schedule)}: value1 is unset at {value1.count(None)} of {len(value1)} points")
+    unset = value2.count(None)
+    if unset == len(value2):
+        return SchedulePoints(value1, None)
+    if unset:
+        raise ValueError(f"{describe(schedule)}: value2 is unset at {unset} of {len(value2)} points")
+    return SchedulePoints(value1, value2)
 
 
 def log_dropped_schedules(consumers, target: str) -> None:

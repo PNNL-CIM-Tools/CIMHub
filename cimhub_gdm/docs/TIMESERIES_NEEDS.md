@@ -276,3 +276,26 @@ CIM agree (`tests/cross_format/`)? Neither spoke maps time series today: DSS mar
 | X8 | **Shapes with no CIM home:** PV irradiance shapes (P1), PV temperature `TShape` (`Tyearly` / `Tdaily` / `Tduty`; no class), Vsource / Isource (P2), GrowthShape, PriceShape, StorageController shapes, GLM `climate` weather files. | all | Drop with the one warning, as T2 and T3. XYCurves (`EffCurve`, `P-TCurve`, InvControl curves) are Curves (B12), not time series. |
 | X9 | **Scale with no sharing (T1).** As objects, a DSS yearly shape on every load of IEEE 8500 (about 1,200 loads) would be about 10 million points: about 7 GB of XML and tens of GB of memory. | DSS, GDM | **Resolved by T6**: the points live in Parquet (§6: 876,000 points in under 1 s and well under 25 MB). Duplication across loads remains (T1), at a few MB per hundred yearly series. |
 | X10 | **ditto upstream.** An `Hour`-array shape has `SInterval` 0, so ditto stamps every sample at 2020-01-01 (all times equal); the shape's role is not kept; sample 1 is at t = 0 (X2). | GDM | Report upstream. The GDM importer raises on repeated timestamps rather than importing them. |
+
+## 8. Load groups (2026-11-21)
+
+GridLAB-D players (`GLM_REWRITE_PLAN.md` §8.9) and OpenDSS yearly LoadShapes (`DSS_REWRITE_PLAN.md` §9) now import
+as the user's `ConformLoadSchedule → ConformLoadGroup ← ConformLoad` pattern (2026-11-21): one regular schedule of
+multipliers shared by the group's loads, its points `RegularTimePoint` rows in the same sidecar (T6;
+`cimhub_core.time_points`). The core shape `load_schedule` also holds a `NonConformLoadGroup` whose schedule is
+actual power (`value1Unit` W, `value2Unit` VAr). The GDM export reads both (`exporter/time_series.add_group_series`,
+built at the user's "implement the remaining changes across the other spokes"):
+
+| CIM | GDM |
+|---|---|
+| the group's schedule, `startTime` + n × `timeStep` | one `SingleTimeSeries` per value column: `initial_timestamp` = `startTime` as naive UTC, `resolution` = `timeStep` |
+| its loads | the one series attached to every member's DistributionLoad (one `time_series_uuid`), as ditto shares a loadshape |
+| ConformLoad: value1, value2 (multipliers) | `active_power` `PMult`, `reactive_power` `QMult` (none when value2 is unset: Q follows P, as in OpenDSS), `use_actual=False`, labelled kilowatt and kilovar as ditto labels a loadshape's multipliers (its writer needs units) |
+| NonConformLoad: value1 in W or kW, value2 in VAr or kVAr | the same, in kilowatt and kilovar, `use_actual=True` |
+| `profile_name` | the group's name; its uri when two groups share a name |
+| a group with no schedule, or no points | no series; one WARNING naming the groups |
+
+**The import is unchanged (T1).** A GDM series still imports as one `EnergyConnectionSchedule` per load in actual
+values, so CIM → GDM → CIM turns a group into per-load schedules (the test pins it: the group's multipliers times
+each load's p and q). Importing a shared multiplier series as a ConformLoad group instead would change T1, which is
+the user's call. Tests: `test_time_series.py` (5), `test_export_ditto.py` (1).

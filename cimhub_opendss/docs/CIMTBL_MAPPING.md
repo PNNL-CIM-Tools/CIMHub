@@ -26,7 +26,8 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
 | `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
-| `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl` |
+| `LoadShape` (those a Load names as `yearly`) | `loadshape.cimtbl` | `load_schedule` (`ConformLoadGroup` + `ConformLoadSchedule`; the points in the Parquet sidecar, S8) | nothing |
+| `Load` | `load.cimtbl` | `load`; `exp_<CVRwatts>_<CVRvars>` response rows; a `ConformLoad` of its yearly shape's group (S8) | the master (Feeder, BaseVoltage, `zip_fractions.cimtbl`), `bus.cimtbl`, `loadshape.cimtbl` |
 | `Capacitor` | `capacitor.cimtbl` | `shunt` (`LinearShuntCompensator`) | the master, `bus.cimtbl` |
 | `CapControl` | `capcontrol.cimtbl` | `shunt` (`RegulatingControl` + `Update` of the compensator) | `line.cimtbl`, `capacitor.cimtbl` |
 | `PVSystem`, `Storage` | `pvsystem.cimtbl`, `storage.cimtbl` | `der` | the master, `bus.cimtbl` |
@@ -1324,9 +1325,9 @@ On the atoms and the engine decks, as in S3:
 | `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p |
 | `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset (kvar wins in either order, engine-checked); default 0.88 |
 | `model` | `Union[str, ForwardRef('LoadModel'), NoneType]` | `ConstantI`, `ConstantPQ`, `ConstantZ` | mapped | `EnergyConsumer.LoadResponse`; 1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, 8 raise; default 1 |
-| `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
-| `daily` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
-| `duty` | `Optional[str]` |  | untranscribed | a LoadShape reference; LoadShape is not mapped (DSS-11) |
+| `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | mapped | `ConformLoad.LoadGroup`; the shape's group lg_<shape>: the load is a ConformLoad (S8); a shape the deck does not define raises |
+| `daily` | `Optional[str]` | `com` | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
+| `duty` | `Optional[str]` |  | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
 | `growth` | `Optional[str]` |  | untranscribed | a GrowthShape reference; not mapped (DSS-11) |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `EnergyConsumer.phaseConnection`, `EnergyConsumer.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
 | `kvar` | `Optional[float]` | `80.0`, `110.0`, `90.0` | copied | `EnergyConsumer.q` (kVAr) |
@@ -2189,3 +2190,72 @@ Specified with the export in `EXPORT_MAPPING.md#s6g-earth-model-and-reclose-sequ
   `RecloseIntervals` (the engine's defaults filling either, listed). Both given and disagreeing raise, and so does
   Shots above 4 without intervals.
 
+## S8: load shapes (built 2026-11-21 at the user's word)
+
+GLM's S8 (`cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s8-load-players`) maps a player to the
+`ConformLoadSchedule → ConformLoadGroup ← ConformLoad` pattern (the user's call, 2026-11-21: ConformLoad groups,
+points in a Parquet sidecar). A DSS `LoadShape` a Load names as `yearly` is the same thing: one curve of multipliers
+that scales every load naming it. Mapper `importer/cimtbl/loadshape.py`, artifact `loadshape.cimtbl`, shape
+`load_schedule`; the loads in `load.cimtbl`. Atom `tests/atoms/loadshape/loadshapes.dss`:
+- an hourly shape with `qmult`, shared by two loads (`res`);
+- a 15-minute shape given as `minterval` and normalized (`com`, as K1's `action=normalize`);
+- a 900 s shape given as `sinterval` (`ind`);
+- M1's bare `mult=1` with no `npts` (`flat`), named in another case;
+- a shape no Load names (`pv`, as K1's PVSystem irradiance shape);
+- a load with no shape.
+
+| # | decision |
+|---|---|
+| S8-1 | A LoadShape a Load names as `yearly` is a `ConformLoadGroup` `lg_<name>` with one `ConformLoadSchedule` `ls_<name>` (lowercased); each Load naming it is a `ConformLoad` whose `LoadGroup` is the group, its p and q as for any load. Only `yearly`: a ConformLoad has one group, and every load in the sweep names only `yearly` (M1, K1, J1). `daily` and `duty` are untranscribed (listed on the row) |
+| S8-2 | Multipliers: `value1` = `mult`, `value1Unit` none; `value2` = `qmult` (`value2Unit` none) when given, else unset: Q follows `mult`, the engine's rule (engine-checked). `action=normalize` divides each array by its largest magnitude, as the engine does; an array assigned after it raises (the engine normalizes only what came before) |
+| S8-3 | Time: `timeStep` = the interval slot the deck assigned last (the engine's rule), copied in its unit (`interval` h, `minterval` min, `sinterval` s), one schedule table per unit; none gives the engine's 1 h. DSS has no date: sample k (from 1) is in force from k × interval (engine-checked: yearly mode, hour 1 gives sample 1), so `startTime` = 2020-01-01T00:00Z (ditto's epoch) + one interval (`cimhub_gdm` TIMESERIES_NEEDS.md X2). The engine wraps a shape around; CIM has no repeat, so the wrap is lost (X4) |
+| S8-4 | Points: `RegularTimePoint` rows in the Parquet sidecar (`cimhub_core.time_points`), as GLM's: `DssImporter(time_points={})` / `dss_to_cim(..., time_points=)` fills the caller's dict; without it the points are dropped with one warning |
+| S8-5 | `npts` unset: the engine reads none of `mult`, inline or from a file (engine-checked with DSS C-API 0.14.5: `Npts` 0, the load constant), so the group has no schedule, its name kept, as GLM's undefined player (M1's five `mult=1` shapes). `npts` set must equal the number of values |
+| S8-6 | `UseActual=Yes` raises: a Load naming it takes the shape's peak as its kW and kvar, or keeps its own, depending on whether `yearly=` comes after `kW=` (engine-checked), which the record does not keep. So no DSS form maps a `NonConformLoad` yet, either way |
+| S8-7 | A shape no Load names as `yearly` (a PVSystem's irradiance, a Vsource's) is not mapped and not checked; the master's comment counts it (`not mapped: Loadshape 1`) |
+
+**What raises:**
+- `UseActual=Yes`;
+- `hour`, `csvfile`, `sngfile`, `dblfile`, `PQCSVFile`, `Pmult`, `Pbase`, `Qbase` set (no deck sets them);
+- an interval of 0 (an hour array);
+- `npts` other than the number of `mult` values, `qmult` of another length, no `mult`;
+- an array assigned after `action=normalize`, or an `action` other than normalize, DblSave, SngSave;
+- a Load whose `yearly` names no shape of the deck.
+
+**Engine checks.** `test_cimtbl_loadshape.py` compiles the atom and reads each shape's `PMult`, `QMult` and
+`HrInterval` from the engine, against the mapper's values (the normalized `com` included, and `flat`'s 0 points).
+`test_export_loadshape.py` runs the original atom and its export in yearly mode every 5 minutes for 6 hours, every
+load's power equal at every step (rel 1e-9).
+
+**Not mapped:** an `Hour`-array shape and a file the reader does not read (`csvfile=`, ...). A `mult=(file=...)`
+with no `npts` is S8-5's case too: the engine reads no points from the file either (engine-checked).
+
+### LoadShape fields
+
+| Loadshape field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, LoadshapeName]` | `com`, `flat`, `ind` | copied | `ConformLoadGroup.name`, `ConformLoadSchedule.name`; mRID = lg_ / ls_ + name, lowercased |
+| `npts` | `Optional[int]` | `4`, `3`, `2` | structural | the number of points the engine reads: unset, none of mult (inline or from a file; engine-checked), so the group has no schedule; else it must equal the number of mult values |
+| `interval` | `Optional[float]` | `1.0` | copied | `ConformLoadSchedule.timeStep` (h); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `mult` | `Union[float, list[float], NoneType]` | `[2.0, 4.0, 8.0, 6.0]`, `[1.0]`, `[1.0, 0.9, 0.95]` | copied | `RegularTimePoint.value1`; the points, in the Parquet sidecar (S8-4); action=normalize divides them by their peak |
+| `hour` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an irregular shape has no RegularIntervalSchedule) |
+| `mean` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
+| `stddev` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
+| `csvfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `sngfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `dblfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `action` | `Optional[str]` | `normalize` | derived | normalize: mult and qmult each divided by its largest magnitude, as the engine does (one assigned after it raises); DblSave, SngSave write files and are untranscribed; others raise |
+| `qmult` | `Union[float, list[float], NoneType]` | `[0.4, 0.6, 0.9, 0.7]` | copied | `RegularTimePoint.value2`; in the sidecar; unset: Q follows mult (the engine's rule), value2 unset |
+| `UseActual` | `Union[bool, Bool, NoneType]` |  | structural | Yes raises: a Load naming it takes the shape's peak as its kW, or keeps its own, by command order, which the record does not keep (engine-checked); default No |
+| `Pmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
+| `Qmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
+| `sinterval` | `Optional[str]` | `900` | copied | `ConformLoadSchedule.timeStep` (s); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `minterval` | `Optional[str]` | `15` | copied | `ConformLoadSchedule.timeStep` (min); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `Pbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Qbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Pmult` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a synonym of mult) |
+| `PQCSVFile` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `MemoryMapping` | `Union[bool, Bool, NoneType]` |  | untranscribed | how the engine stores the points |
+| `Mode` | `Optional[float]` |  | untranscribed | generator dispatch; no effect on a Load |
+| `Interpolation` | `Optional[str]` |  | untranscribed | AVG and EDGE agree at the solution steps, which are on the interval grid (TIMESERIES_NEEDS.md X3) |
+| `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |

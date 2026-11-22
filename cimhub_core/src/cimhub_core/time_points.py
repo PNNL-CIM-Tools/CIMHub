@@ -83,8 +83,7 @@ def read_time_points(xml_path, network) -> dict[str, pa.Table]:
     time_points = {}
     for class_name, kind in TIME_POINT_TABLES.items():
         path = time_points_path(xml_path, class_name)
-        schedules = {schedule.uri(): schedule for cls, objects in network.graph.items()
-                     if issubclass(cls, kind.schedule_class) for schedule in objects.values()}
+        schedules = _schedules(network, kind.schedule_class)
         table = pq.read_table(path) if path.exists() else None
         if table is not None:
             _check_schema(table, kind.schema, class_name)
@@ -94,16 +93,41 @@ def read_time_points(xml_path, network) -> dict[str, pa.Table]:
     return time_points
 
 
-def regular_time_points(values: dict[str, list[float]]) -> pa.Table:
-    """``{schedule uri: value1 per point}`` as a ``RegularTimePoint`` table, the points numbered from 0 (pure)."""
-    keys, numbers, value1 = [], [], []
+def regular_time_points(values: dict[str, list[float]], value2: dict[str, list[float]] | None = None) -> pa.Table:
+    """``{schedule uri: value1 per point}`` as a ``RegularTimePoint`` table, the points numbered from 0 (pure).
+    ``value2`` gives the second value per point of the schedules it names (null elsewhere); another length raises."""
+    value2 = value2 or {}
+    unknown = sorted(set(value2) - set(values))
+    if unknown:
+        raise ValueError(f"value2 for schedules with no value1: {unknown[:5]}")
+    keys, numbers, first, second = [], [], [], []
     for uri, points in values.items():
+        seconds = value2.get(uri, [None] * len(points))
+        if len(seconds) != len(points):
+            raise ValueError(f"schedule {uri}: {len(points)} value1 and {len(seconds)} value2 points")
         keys += [uri] * len(points)
         numbers += range(len(points))
-        value1 += points
-    columns = {"IntervalSchedule": keys, "sequenceNumber": numbers, "value1": value1,
-               "value2": [None] * len(keys), "value3": [None] * len(keys)}
+        first += points
+        second += seconds
+    columns = {"IntervalSchedule": keys, "sequenceNumber": numbers, "value1": first, "value2": second,
+               "value3": [None] * len(keys)}
     return pa.table(columns, schema=REGULAR_TIME_POINT_SCHEMA)
+
+
+def add_regular_time_points(time_points: dict, network, values: dict[str, list[float]],
+                            value2: dict[str, list[float]] | None = None) -> None:
+    """Put the ``RegularTimePoint`` table of ``values`` (``{schedule mRID: value1 per point}``, ``value2`` likewise)
+    into the caller's ``time_points``, keyed by each schedule's uri in ``network`` (an importer's, once bound). A
+    table there already raises, as does an mRID no ``RegularIntervalSchedule`` of the network has."""
+    if REGULAR_TIME_POINT_CLASS in time_points:
+        raise ValueError(f"time_points already holds a {REGULAR_TIME_POINT_CLASS} table")
+    uris = {schedule.mRID: uri for uri, schedule in _schedules(network, cim.RegularIntervalSchedule).items()}
+    missing = sorted(set(values) - set(uris))
+    if missing:
+        raise ValueError(f"no RegularIntervalSchedule with mRID {missing[:5]} in the network")
+    time_points[REGULAR_TIME_POINT_CLASS] = regular_time_points(
+        {uris[mrid]: points for mrid, points in values.items()},
+        {uris[mrid]: points for mrid, points in (value2 or {}).items()})
 
 
 def rows_by_schedule(table: pa.Table) -> dict[str, pa.Table]:
@@ -117,6 +141,13 @@ def rows_by_schedule(table: pa.Table) -> dict[str, pa.Table]:
         groups[uri] = rows.slice(start, end - start)
         start = end
     return groups
+
+
+def _schedules(network, schedule_class: type) -> dict:
+    """``{uri: schedule}`` of every ``schedule_class`` object in ``network``, subclasses included (the graph is keyed
+    by exact class)."""
+    return {schedule.uri(): schedule for cls, objects in network.graph.items() if issubclass(cls, schedule_class)
+            for schedule in objects.values()}
 
 
 def _table_kind(class_name: str) -> TimePointTable:
