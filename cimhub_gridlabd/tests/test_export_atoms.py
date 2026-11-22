@@ -15,12 +15,15 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import datetime
 from pathlib import Path
 
+import cimprofiles.cim18.cim18v17 as cim
 import cimtables
 import pytest
 
 from cimhub_core.cimtbl_testing import assert_text_matches_golden, cim_scope
+from cimhub_core.time_points import REGULAR_TIME_POINT_CLASS, rows_by_schedule
 from gridlabd_engine import solve
 from cimhub_gridlabd.exporter.cim_to_glm import GlmExporter
 from cimhub_gridlabd.exporter.naming import glm_safe_name
@@ -40,16 +43,22 @@ EXPECTED = [
      "a bus's nominal_voltage is its BaseVoltage's (X0): the deck's 2401.78 V is 4160 V / sqrt 3, rounded"),
     (r"BatteryInfo \S+\.numberOfCells: expected 11, got 28",
      "a battery's nominal_voltage is unset (X12, the DCConductingAssetInfo TODO): GridLAB-D's 115 V gives 28 cells"),
+    (r"ConformLoad (ld_ld_sched|ld_tl_house): missing|EnergyConsumer (ld_ld_sched|ld_tl_house): extra"
+     r"|ConformLoadGroup lg_zipsched: missing",
+     "a group with no schedule (zipsched, a player the deck does not define) is written static (X29), so its loads "
+     "come back EnergyConsumers"),
 ]
 #: plain floats (ZIP fractions) compare to the last digits the writer's 15 keep
 FLOAT_REL = 1e-12
 _FLOATS = re.compile(r"expected (-?[0-9.]+(?:e-?\d+)?), got (-?[0-9.]+(?:e-?\d+)?)$")
+#: a player's rows are written in GMT (X29): its start comes back the same instant at +00:00
+_START = re.compile(r"\.startTime: expected '(.+)', got '(.+)'$")
 
 
-def _first_import(deck: Path, directory: Path):
+def _first_import(deck: Path, directory: Path, time_points: dict):
     """The atom's own import, written to ``directory``, then re-read under its GLM-safe names."""
     model = GlmReader(deck).read_all()
-    network = glm_to_cim(model, name="atom", artifact_dir=directory)
+    network = glm_to_cim(model, name="atom", artifact_dir=directory, time_points=time_points)
     renames = sorted({(obj.name, glm_safe_name(obj.name)) for obj in model.iter_all()
                       if getattr(obj, "name", None) and glm_safe_name(obj.name) != obj.name},
                      key=lambda rename: -len(rename[0]))
@@ -66,23 +75,40 @@ def _unexpected(difference: str) -> bool:
         return False
     if any(re.fullmatch(pattern, difference) for pattern, _ in EXPECTED):
         return False
+    start = _START.search(difference)
+    if start and datetime.fromisoformat(start[1]) == datetime.fromisoformat(start[2]):
+        return False
     floats = _FLOATS.search(difference)
     return not (floats and math.isclose(float(floats[1]), float(floats[2]), rel_tol=FLOAT_REL))
+
+
+def _points(network, time_points: dict) -> dict[str, list[float]]:
+    """Schedule mRID -> its value1 per point (the sidecar's rows; the two imports' uris may differ)."""
+    if not time_points:
+        return {}
+    rows = rows_by_schedule(time_points[REGULAR_TIME_POINT_CLASS])
+    return {schedule.mRID: rows[schedule.uri()].column("value1").to_pylist()
+            for schedule in network.graph.get(cim.ConformLoadSchedule, {}).values()}
 
 
 @pytest.mark.parametrize("deck", DECKS, ids=lambda deck: deck.stem)
 def test_an_atom_round_trips_through_the_exporter(deck, tmp_path):
     exported = tmp_path / "exported.glm"
+    first_points, second_points = {}, {}
     with cim_scope():
-        network = _first_import(deck, tmp_path / "first")
-        GlmWriter().write(GlmExporter().to_model(network, name_source="name"), exported)
-        glm_to_cim(GlmReader(exported).read_all(), name="atom", artifact_dir=tmp_path / "second")
+        network = _first_import(deck, tmp_path / "first", first_points)
+        GlmWriter().write(GlmExporter(first_points).to_model(network, name_source="name"), exported)
+        second_network = glm_to_cim(GlmReader(exported).read_all(), name="atom", artifact_dir=tmp_path / "second",
+                                    time_points=second_points)
+        assert _points(second_network, second_points) == _points(network, first_points)
     with cim_scope():
         first = cimtables.load_model(tmp_path / "first" / "atom.cimtbl")
         second = cimtables.load_model(tmp_path / "second" / "atom.cimtbl")
         differences = [line for line in cimtables.diff_models(first, second, rel_tol=1e-9) if _unexpected(line)]
     assert not differences, "\n".join(differences)
     assert_text_matches_golden(exported.read_text(), deck.with_suffix(".exported.glm"))
+    for tape in sorted(tmp_path.glob("*.player")):  # a player's file, beside the deck (X29)
+        assert_text_matches_golden(tape.read_text(), deck.parent / f"{tape.stem}.exported.player")
 
 
 FORMS = ATOMS / "transformer" / "forms.cimtbl"

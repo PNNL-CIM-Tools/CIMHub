@@ -1,0 +1,30 @@
+# Shape: load schedule. Loads that follow one shared curve are ConformLoads of one ConformLoadGroup (lg_), whose
+# ConformLoadSchedule (ls_) gives the curve as a multiplier of each load's own p and q (value1Unit none). Loads
+# with their own curve in power units are NonConformLoads of a NonConformLoadGroup, its NonConformLoadSchedule in
+# value1Unit W / value2Unit VAr. A schedule is regular: startTime (ISO 8601 with its offset) + n x timeStep; its
+# points are not rows here but RegularTimePoints in the Parquet sidecar (cimhub_core.time_points), the first n = 0.
+# A group may have no schedule (a load names a curve the source does not define): only its name is kept.
+# A ConformLoad or NonConformLoad is an EnergyConsumer in every other column (shape load).
+
+Profile = cim18v17
+
+Import common.cimtbl
+
+Table ConformLoadGroup: mRID, name
+    lg_zipload, zipload
+    lg_unknown, unknown
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, ConformLoadGroup
+    ls_zipload, zipload, 2009-07-21T00:00:00-04:00, 60, none, lg_zipload
+
+Table NonConformLoadGroup: mRID, name
+    lg_plant, plant
+Table NonConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, value1Multiplier, value2Unit, value2Multiplier, NonConformLoadGroup
+    ls_plant, plant, 2009-07-21T00:00:00-04:00, 3600, W, k, VAr, k, lg_plant
+
+Table ConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_shapes
+    ld_z1, z1, n1, ,  Y, true, 1155, 660, 1, zip_constant_pq, bv_4p16kv, lg_zipload
+    ld_z2, z2, n3, C, Y, true, 170,  80,  1, zip_constant_i,  bv_4p16kv, lg_zipload
+    ld_z3, z3, n3, B, Y, true, 100,  50,  1, zip_constant_pq, bv_4p16kv, lg_unknown
+
+Table NonConformLoad: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), customerCount, LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_shapes
+    ld_p1, p1, n1, , Y, true, 500, 200, 1, zip_constant_pq, bv_4p16kv, lg_plant

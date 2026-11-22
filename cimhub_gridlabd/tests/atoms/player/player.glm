@@ -1,0 +1,18 @@
+// S8 atom: a player read as <name>.value (the GridAPPS-D run-file pattern) driving a load and a triplex_load on the
+// S3a line atom (its n5, tm2). The rows are the first four of GridAPPS-D's zipload_schedule.player.
+#include "../line/line.glm"
+
+module tape;
+class player {
+  double value;
+}
+// all_events_delta: untranscribed (deltamode)
+object player { name zipload; file zipload.player; loop 0; all_events_delta false; }
+
+// IEEE13_cdpsm ld_670a phase A's constant-current base, on the player
+object load { name ld_play; parent n5; phases AN; nominal_voltage 2401.78;
+  base_power_A zipload.value*19723.08; current_fraction_A 1.0; current_pf_A 0.861934; }
+// a split-phase house, both legs on the player
+object triplex_load { name tl_play; parent tm2; phases AS; nominal_voltage 120;
+  base_power_1 zipload.value*2941.18; power_fraction_1 1.0; power_pf_1 0.95;
+  base_power_2 zipload.value*2941.18; power_fraction_2 1.0; power_pf_2 0.95; }

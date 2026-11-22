@@ -14,6 +14,7 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.load import LoadResponse, get_load_response, get_phase_loads
+from cimhub_core.getters.load_schedule import log_dropped_schedules
 from cimhub_opendss.exporter.injection import device_connection, device_kv, equal_phases
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
@@ -54,7 +55,9 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 
 def export(context) -> list[schema.Load]:
     """One Load per EnergyConsumer, or one per phase when its phases differ (E8)."""
-    return [record for consumer in context.objects(*CIM_CLASSES) for record in _loads(consumer, context.names)]
+    consumers = context.objects(*CIM_CLASSES)
+    log_dropped_schedules(consumers, "OpenDSS")  # a LoadShape per group: the DSS spoke's own slice
+    return [record for consumer in consumers for record in _loads(consumer, context.names)]
 
 
 def _loads(consumer: cim.EnergyConsumer, names: Names) -> list[schema.Load]:

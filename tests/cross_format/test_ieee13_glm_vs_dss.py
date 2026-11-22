@@ -90,12 +90,18 @@ def test_buses(dss_glm):
     assert dss - glm == {"650z"} and glm <= dss
 
 
+#: a load's classes: the Java export's loads name the ieeezipload player, so GLM's are ConformLoads (S8-1)
+CONSUMERS = (cim.EnergyConsumer, cim.ConformLoad)
+
+
 def base_voltages(network) -> dict:
-    """(class, buses) -> the line-to-line base voltages there (DSS has several consumers on one bus)."""
+    """(kind, buses) -> the line-to-line base voltages there (DSS has several consumers on one bus)."""
     found = defaultdict(set)
-    for cls in (cim.ACLineSegment, cim.EnergyConsumer, cim.LinearShuntCompensator):
-        for equipment in network.list_by_class(cls):
-            found[(cls.__name__, buses(equipment))].add(get_base_voltage(equipment, "V", form="LL"))
+    for kind, classes in (("line", (cim.ACLineSegment,)), ("load", CONSUMERS),
+                          ("shunt", (cim.LinearShuntCompensator,))):
+        for cls in classes:
+            for equipment in network.list_by_class(cls):
+                found[(kind, buses(equipment))].add(get_base_voltage(equipment, "V", form="LL"))
     return found
 
 
@@ -133,7 +139,7 @@ def test_switches(dss_glm):
 def phase_power(network) -> dict:
     """p, q by bus and phase: DSS has one EnergyConsumer per DSS Load (16), GLM one per GLM load (10)."""
     totals = defaultdict(lambda: [0.0, 0.0])
-    for consumer in network.list_by_class(cim.EnergyConsumer):
+    for consumer in (consumer for cls in CONSUMERS for consumer in network.list_by_class(cls)):
         for phase, power in get_phase_loads(consumer).per_phase.items():
             total = totals[(buses(consumer), phase.name)]
             total[0] += power.p

@@ -17,22 +17,31 @@ sign). Per phase is ``get_phase_loads``' (EnergyConsumerPhase values, else the t
 A voltage-exponent model whose exponents are 0, 1 or 2 is exactly constant power, current or impedance (``EXPONENT_KIND``);
 another exponent raises, as does a negative part (generation): GLM's base_power form has neither. A consumer of no
 power is a load with no base.
+
+A ConformLoad whose group's schedule is a player (``player.py``) writes each base as ``<player>.value*<base>`` (an
+expression, as the reader keeps it); its 240 V part must follow the same player. A ConformLoad whose group has no
+schedule or no points, and a NonConformLoad, are written static, their groups named in one warning (X29).
 """
 
 from __future__ import annotations
+
+import logging
 
 import cimprofiles.cim18.cim18v17 as cim
 from cimtopology.core import System
 
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.getters.load import get_load_response, get_phase_loads
+from cimhub_core.getters.load_schedule import get_load_schedule
 from cimhub_core.getters.terminals import get_terminal_nodes
 from cimhub_core.names import export_name
+from cimhub_gridlabd.exporter import player
 from cimhub_gridlabd.exporter.buses import letters
 from cimhub_gridlabd.exporter.units import glm_unit
+from cimhub_gridlabd.glm_writer import format_float
 from cimhub_gridlabd.schema import gridlabd as schema
 
-CIM_CLASSES = (cim.EnergyConsumer,)
+CIM_CLASSES = (cim.EnergyConsumer, cim.ConformLoad, cim.NonConformLoad)
 KINDS = ("impedance", "current", "power")
 #: a voltage exponent GLM holds exactly -> its ZIP part
 EXPONENT_KIND = {0.0: "power", 1.0: "current", 2.0: "impedance"}
@@ -50,7 +59,8 @@ _SLOTS = {
     "phases": Slot("written", "the letters then N (wye) or D (delta); a split-phase bus's letter then S"),
     "nominal_voltage": Slot("written", "its bus's"),
 }
-_PER_PHASE = Slot("written", "base_power form: module docstring")
+_PER_PHASE = Slot("written", "base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's "
+                             "schedule is a player (X29)")
 SLOTS = {
     schema.Load: with_default(schema.Load, {
         **_SLOTS, **{f"base_power_{letter}": _PER_PHASE for letter in "ABC"},
@@ -64,11 +74,14 @@ SLOTS = {
 }
 
 
+_log = logging.getLogger(__name__)
+
+
 def export(context) -> list:
     consumers = context.objects(*CIM_CLASSES)
     by_name = {(get_terminal_nodes(consumer)[0], export_name(consumer, context.names.source)): consumer
                for consumer in consumers}
-    records, merged = [], set()
+    records, merged, players, static = [], set(), {}, set()
     for consumer in consumers:
         if consumer.mRID in merged:
             continue
@@ -81,13 +94,41 @@ def export(context) -> list:
             if base is not None:
                 continue  # written with its legs, below
             drop = "_12"
+        follows = _player(context, consumer, players, static)
         part = by_name.get((node, text + "_12"))
         if part is not None and _is_240v_part(part, text + "_12", context.buses[node]):
+            if _player(context, part, players, static) != follows:
+                raise ValueError(f"EnergyConsumer {part.mRID!r}: the 240 V part of {consumer.mRID!r} follows another "
+                                 "player; a GLM record's bases follow one")
             slots.update({slot: value for slot, value in _load(part, context.buses[node])[1].items()
                           if slot.endswith("_12")})
             merged.add(part.mRID)
-        records.append(native_class(name=context.names.name(consumer, drop=drop), **slots))
+        name = context.names.name(consumer, drop=drop)
+        if follows is not None:
+            for slot in [slot for slot in slots if slot.startswith("base_power_")]:
+                context.model.expressions[(name, slot)] = f"{follows}.value*{format_float(slots.pop(slot))}"
+        records.append(native_class(name=name, **slots))
+    if static:
+        _log.warning("%d load group(s) are written static (no schedule, no points, or a NonConformLoad's): %s",
+                     len(static), sorted(static))
     return records
+
+
+def _player(context, consumer, players: dict, static: set) -> str | None:
+    """The player the consumer's base follows, or None (``players``: schedule uri -> player name or None, so each
+    schedule's points are checked once; ``static``: the groups written static)."""
+    found = get_load_schedule(consumer)
+    if found is None:
+        return None
+    if found.conform and found.schedule is not None:
+        uri = found.schedule.uri()
+        if uri not in players:
+            has_points = player.points(context, found.schedule) is not None
+            players[uri] = player.player_name(context, found.schedule) if has_points else None
+        if players[uri] is not None:
+            return players[uri]
+    static.add(str(found.group.name or found.group.mRID))
+    return None
 
 
 def _is_240v_part(consumer: cim.EnergyConsumer, text: str, bus) -> bool:

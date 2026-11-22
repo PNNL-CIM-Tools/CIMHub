@@ -1,7 +1,8 @@
-"""cimhub_core.time_points: the Parquet sidecar of nc_schedule time points (the ``time-points`` extra).
+"""cimhub_core.time_points: the Parquet sidecar of schedule time points (the ``time-points`` extra).
 
-Two schedules on the ``load`` shape's consumers, made by CIM-Builder as a spoke makes them; the sidecar writes their
-points beside an XML path and reads them back against the network.
+Two nc_schedule schedules on the ``load`` shape's consumers, made by CIM-Builder as a spoke makes them, and the
+``load_schedule`` shape's regular group schedules; the sidecar writes their points beside an XML path and reads them
+back against the network.
 """
 import logging
 from datetime import datetime, timedelta
@@ -13,7 +14,8 @@ from cimbuilder.object_builder.schedule import TIME_POINT_CLASS, EnergyConnectio
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
-from cimhub_core.time_points import read_time_points, rows_by_schedule, time_points_path, write_time_points
+from cimhub_core.time_points import (REGULAR_TIME_POINT_CLASS, read_time_points, regular_time_points, rows_by_schedule,
+                                     time_points_path, write_time_points)
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
 HOURS = [datetime(2020, 1, 1) + timedelta(hours=hour) for hour in range(3)]
@@ -86,7 +88,7 @@ def test_a_schedule_with_no_points_warns(tmp_path, scheduled, caplog):
 def test_a_table_off_the_schema_raises(tmp_path, scheduled):
     _, _, points = scheduled
     table = points[TIME_POINT_CLASS].drop_columns(["q"])
-    with pytest.raises(ValueError, match="not the builder's TIME_POINT_SCHEMA"):
+    with pytest.raises(ValueError, match="not its TimePoint schema"):
         write_time_points({TIME_POINT_CLASS: table}, tmp_path / "feeder.xml")
 
 
@@ -94,3 +96,46 @@ def test_an_unknown_time_point_class_raises(tmp_path, scheduled):
     _, _, points = scheduled
     with pytest.raises(ValueError, match="no time point table for 'LoadTimePoint'"):
         write_time_points({"LoadTimePoint": points[TIME_POINT_CLASS]}, tmp_path / "feeder.xml")
+
+
+@pytest.fixture
+def regular():
+    """(network, its two group schedules by mRID, their points): ls_zipload 3 multipliers, ls_plant 2 powers."""
+    network = load_model(SHAPES / "load_schedule.cimtbl")
+    schedules = {schedule.mRID: schedule for cls in (network.cim.ConformLoadSchedule, network.cim.NonConformLoadSchedule)
+                 for schedule in network.graph[cls].values()}
+    points = regular_time_points({schedules["ls_zipload"].uri(): [0.5, 0.75, 1.0],
+                                  schedules["ls_plant"].uri(): [400.0, 450.0]})
+    return network, schedules, {REGULAR_TIME_POINT_CLASS: points}
+
+
+def test_regular_points_are_numbered_from_zero(regular):
+    _, schedules, points = regular
+    groups = rows_by_schedule(points[REGULAR_TIME_POINT_CLASS])
+    zipload = groups[schedules["ls_zipload"].uri()]
+    assert zipload.column("sequenceNumber").to_pylist() == [0, 1, 2]
+    assert zipload.column("value1").to_pylist() == [0.5, 0.75, 1.0]
+    assert zipload.column("value2").to_pylist() == [None, None, None]
+
+
+def test_regular_points_round_trip_for_every_schedule_subclass(tmp_path, regular):
+    network, _, points = regular
+    xml_path = tmp_path / "feeder.xml"
+    assert write_time_points(points, xml_path) == [tmp_path / "feeder.RegularTimePoint.parquet"]
+    read = read_time_points(xml_path, network)  # ConformLoad and NonConformLoad schedules: RegularIntervalSchedules
+    assert read[REGULAR_TIME_POINT_CLASS].to_pylist() == points[REGULAR_TIME_POINT_CLASS].to_pylist()
+
+
+def test_a_repeated_sequence_number_raises(tmp_path, regular):
+    network, _, points = regular
+    table = points[REGULAR_TIME_POINT_CLASS]
+    write_time_points({REGULAR_TIME_POINT_CLASS: pa.concat_tables([table, table.slice(1, 1)])}, tmp_path / "f.xml")
+    with pytest.raises(ValueError, match=r"1 repeated \(schedule, sequenceNumber\)"):
+        read_time_points(tmp_path / "f.xml", network)
+
+
+def test_a_group_schedule_with_no_points_warns(tmp_path, regular, caplog):
+    network, _, _ = regular
+    with caplog.at_level(logging.WARNING, logger="cimhub_core.time_points"):
+        read_time_points(tmp_path / "feeder.xml", network)
+    assert "2 RegularIntervalSchedule(s) have no time points: ['ls_plant', 'ls_zipload']" in caplog.text

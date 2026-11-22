@@ -13,6 +13,7 @@ from cimhub_core.export_slots import Slot
 from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.load import get_load_response, get_phase_loads
+from cimhub_core.getters.load_schedule import log_dropped_schedules
 from cimhub_core.getters.terminals import get_terminal_nodes
 from cimhub_raw.exporter.bus import bus_zone
 from cimhub_raw.exporter.identity import keyed_ids, terminal_buses
@@ -50,6 +51,7 @@ SLOTS = {NATIVE_CLASS: {
 def export(context) -> list[schema.LoadRecord]:
     """One Load per EnergyConsumer, by key."""
     loads = [(load, terminal_buses(load, context)) for load in context.objects(*CIM_CLASSES)]
+    log_dropped_schedules([load for load, _ in loads], "RAW")  # a static case: no time series
     ids = keyed_ids([(load, PREFIX, buses) for load, buses in loads], ID_WIDTH)
     records = []
     for load, (bus,) in loads:

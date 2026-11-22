@@ -13,7 +13,7 @@ files; S3b `transformer_configuration.cimtbl` (after the catalogs) and `transfor
 switches); S3c `regulator.cimtbl` (after the transformers; `regulator_configuration` has no file of its own);
 S4a the core `zip_fractions.cimtbl` (after `source.cimtbl`), then `load.cimtbl`, `triplex_load.cimtbl`,
 `triplex_node.cimtbl` and `capacitor.cimtbl` (after the regulators); S7 `series_reactor.cimtbl` (after the
-switches).
+switches); S8 `player.cimtbl` (after the regulators, before the loads that name its groups).
 
 ## master
 
@@ -2160,7 +2160,7 @@ The mapper raises on:
 | # | topic | proposal |
 |---|---|---|
 | S4a-1 | Load shape | One `EnergyConsumer` per GLM load (GLM-8). A load with no power on any phase is a consumer of p = q = 0 on its wired phases (a split-phase record on s1s2), listed in the artifact header (amended 2026-11-16 for the Clallam decks, where every Milsoft consumer is a service: earlier it wrote only a bus; the draft raised). Each record is one service: `customerCount` 1 on its first consumer, unset on a split-phase record's 240 V part (defaulted: GLM has no customer count). Its `phases` are the phases that carry power. On wye these are the letters with a value. On delta they are the letters of the set branches: GLM's A/B/C on a D load are AB/BC/CA (`node.cpp:2535`), so `ld_692`'s phase C is `AC`, as DSS's `CA`. An unset branch inside those letters gets 0. Wye is `Y`, grounded; delta is `D`, not grounded. `p`/`q` on the consumer are the totals. When its phase children differ, each gets an `Update Table EnergyConsumerPhase` row with its p and q (the binder's `ld_x_A`, or `ld_x_AB` on delta), which the load getter reads (`split` False). Equal children, and a single child (one delta branch such as `ld_692`'s `AC`, or the 240 V part), get no rows: the consumer's total is the value. The load getter requires valued children to be the conductors, which one delta branch on two conductors is not, and an equal `ABC` load leaves `phases` blank, as the core load shape's balanced device |
-| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today |
+| **S4a-2** | **Schedule-scaled base (approved, with a TODO)** | **`<name>.value*K` is K: CIM's p is the base, and a schedule only scales it over time, as DSS-11 keeps a load's kW and lists its load shape untranscribed. The reference goes in the row comment. Any other expression raises. This amends GLM-8, which said a scheduled base raises. Without it the three Java exports (103 loads) do not map.** TODO (the user, 2026-11-10): map the schedule to the CGMES schedule classes (cim18v17 has `ConformLoadSchedule` and `SeasonDayTypeSchedule`) once profile export works again; it is broken today. **Done 2026-11-21 (S8): a player is a ConformLoadGroup and its ConformLoadSchedule, its loads ConformLoads; GLM `schedule` blocks stay unmapped** |
 | S4a-3 | Base power form | As GridLAB-D does at nominal voltage (`load.cpp:940-1073`, `triplex_load.cpp:410-731`). Per part k (power, current, impedance), with `pf` defaulting to 1: P_k = base × f_k × \|pf_k\| and Q_k = P_k × √(1/pf_k² - 1), negative when pf_k < 0 (leading). pf_k = 0 gives P_k = 0 and Q_k = base × f_k. When the fractions don't sum to 1, the power fraction becomes 1 - I - Z (GridLAB-D's own repair, `load.cpp:945`), noted as `defaulted:` |
 | S4a-4 | Voltage response | ZIP fractions from the load's totals (each part's P and Q over the totals). When every part is one kind, the shared `zip_constant_pq`/`_i`/`_z` row (core `zip_fractions.cimtbl`, which the master imports as DSS's does); otherwise a `zip_<pP>_<pI>_<pZ>_<qP>_<qI>_<qZ>` row in the artifact (GDM's naming; the mRID rounds the fractions to 6 places, the row holds them exactly, and two sets that round alike raise). When Q is 0, the Q fractions are the P fractions. Two artifacts that both use one mixed set would both write the row and fail to bind; no deck has a mixed set. Every deck is one kind: taxonomy constant power, Java exports constant current |
 | **S4a-5** | **Explicit current and impedance (approved)** | **`constant_current_X`, `constant_impedance_X`, the `_AN`/`_AB` forms, and `current_*`/`shunt_*` on triplex nodes raise until a deck sets them. They carry angle conventions that no deck exercises: the current is relative to the nominal phasor (0/-120/+120, +30 on delta; `solver_nr.cpp:9409`), and triplex leg 2 has reversed polarity (`node.cpp:1233`). This amends GLM-8, which said they derive** |
@@ -2348,9 +2348,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `measured_power_B` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power_C` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_A` | `Optional[float]` | `100.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_B` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_C` | `Optional[float]` | `50000.0` | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
 | `power_pf_A` | `Optional[float]` | `0.9` | derived | with base_power; default 1 |
 | `current_pf_A` | `Optional[float]` | `0.824042`, `0.83005`, `0.861934` | derived | with base_power; default 1 |
 | `impedance_pf_A` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -2413,9 +2413,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `indiv_measured_power_2` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `indiv_measured_power_12` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
 | `measured_power` | `Union[dict, Complex, NoneType]` |  | untranscribed | solver output |
-| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
-| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <schedule>.value*K is K (S4a-2) |
+| `base_power_1` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_2` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
+| `base_power_12` | `Optional[float]` |  | derived | GridLAB-D's split at nominal voltage (S4a-3): P = base x fraction x |pf|, Q = P x sqrt(1/pf^2 - 1), negative on a negative pf; pf 0 is all Q; <player>.value*K is K, the load a ConformLoad of its group (S4a-2, S8-1) |
 | `power_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
 | `current_pf_1` | `Optional[float]` | `0.85` | derived | with base_power; default 1 |
 | `impedance_pf_1` | `Optional[float]` |  | derived | with base_power; default 1 |
@@ -3041,3 +3041,81 @@ Update Table Terminal: mRID, phases
 | `phase_C_impedance` | `Union[dict, Complex, NoneType]` | `Complex({'real': 0.0, 'imag': 14.7983...` | copied | `SeriesCompensator.r` ({unit}), `SeriesCompensator.x` ({unit}), `SeriesCompensator.r0` ({unit}), `SeriesCompensator.x0` ({unit}); real part r, imaginary x; r0 = r, x0 = x (no coupling); every phase's equal, unset raises |
 | `phase_C_resistance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
 | `phase_C_reactance` | `Optional[float]` |  | structural | GridLAB-D's alias of the impedance's real or imaginary part; set raises (no deck sets one; the impedance is mapped) |
+
+## S8: load players (by the user's direction, 2026-11-21: ConformLoad groups, points in a Parquet sidecar)
+
+GLM_REWRITE_PLAN.md §8.9 (S4a-2's TODO). A load base `<player>.value*K` scales K by the player's value over time,
+through the GridAPPS-D run file's pattern: `module tape;`, `class player { double value; }`, then
+`object player { name ieeezipload; file zipload_schedule.player; }`. One player drives many loads, as a DSS LoadShape
+does, so it is the classic shared schedule: a `ConformLoadGroup` whose `ConformLoadSchedule` gives the curve as a
+multiplier, its loads `ConformLoad`s (shape `load_schedule`). Not nc_schedule's `EnergyConnectionSchedule`: one
+actual-value schedule per device (GDM's T1), which would copy one shape onto every load.
+
+Mappers: `importer/cimtbl/player.py` `map_players` (the groups and schedules; `player_points`, the points) and
+`load.py` (a scheduled record's consumers are `ConformLoad` rows with a `LoadGroup`). The reader reads the `class`
+block and each player's file (`GlmModel.classes`, `GlmModel.tapes`). Tests: `tests/test_cimtbl_player.py`; atom
+`tests/atoms/player/player.glm` (on the S3a line atom, the first four rows of GridAPPS-D's zipload schedule).
+
+```
+# one group per player: the loads whose base is <player>.value*K
+Table ConformLoadGroup: mRID, name
+    lg_zipload, zipload
+
+# value1: the player's value, a multiplier of each load's p and q; the points are RegularTimePoints in the Parquet sidecar
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, ConformLoadGroup
+    ls_zipload, zipload, 2009-07-21T00:00:00-04:00, 60.0, none, lg_zipload
+
+# a base <player>.value*K: p, q from K; the player's group (S8-1)
+Table ConformLoad: mRID, name, node, phases, ..., LoadResponse, BaseVoltage, LoadGroup, EquipmentContainer=fdr_atom
+    ld_ld_play, ld_play, n5, A, Y, true, 16999.99323672, 10000.005731892072, 1, zip_constant_i, bv_4p16kv, lg_zipload
+```
+
+The points are not in the artifact: `GlmImporter(time_points={})` (or `glm_to_cim(..., time_points=...)`) adds a
+`RegularTimePoint` table (`cimhub_core.time_points`: the schedule's uri, `sequenceNumber` from 0, `value1`) to the
+caller's dict after binding, as GDM's importer does; `write_time_points` puts it beside the XML. Without the dict the
+points are dropped with one warning.
+
+### Decisions for S8
+
+| # | question | decision |
+|---|---|---|
+| S8-1 | Shape | one player → `ConformLoadGroup` `lg_<player>` + `ConformLoadSchedule` `ls_<player>`. A load whose bases name it is a `ConformLoad` of that group, its p, q K's split as before (S4a-2). A ConformLoad has one group and scales every phase: two players on one record, or a phase with power but no player beside one with it, raise |
+| S8-2 | Values | `value1` = the player's value, `value1Unit` none: a multiplier of p and q together (GLM scales the base) |
+| S8-3 | Times | `startTime` = the first row's time, its zone an offset (`2009-07-21 00:00:00 EDT` → `2009-07-21T00:00:00-04:00`; US zones and UTC/GMT, `player.ZONES`, others raise); `timeStep` = the one step between rows (`+1m` → 60 s; `+N[smhd]` after the row before, or absolute), steps that differ raise; a one-row tape has no step |
+| S8-4 | Points | `RegularTimePoint` rows in the Parquet sidecar, never graph objects (GDM's T6), numbered from 0 (CIM: a point's time is startTime + sequenceNumber × timeStep) |
+| S8-5 | A player the deck does not define | a group with no schedule and one warning, so the name survives (the Java exports: their run file defines `ieeezipload`). The exporter writes such loads static (X29) |
+| S8-6 | Players read | only the run-file pattern: no `parent`, `property`, `filetype`, `mode`; `loop` unset or 0; the deck's `class player { double value; }` |
+
+### Fail fast (S8)
+
+| condition | why |
+|---|---|
+| a player with `parent`, `property`, `filetype` or `mode` | only a player read as `<name>.value` is mapped (S8-6) |
+| `loop` above 0 | a schedule has one pass |
+| no `file`, a missing file, a row with no comma (reader), no rows | the rows are the schedule |
+| no `class player { double value; }`; any other `class` block (reader) | the pattern GridLAB-D needs for `<name>.value` |
+| a first row that is not absolute with a zone; an unknown zone; steps that differ; a value that is not a number | S8-3 |
+| two players on one load record, or a phase off the player | S8-1 |
+
+### Field tables (generated: `fields_table(cls, records, fields=FIELDS)`, samples from the atom)
+
+#### player
+
+| Player field | type | samples | kind | target |
+|---|---|---|---|---|
+| `name` | `Union[str, PlayerName]` | `zipload` | copied | `ConformLoadGroup.name`, `ConformLoadSchedule.name`; mRID = lg_ / ls_ + name |
+| `parent` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `groupid` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `latitude` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `longitude` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `in_svc` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `out_svc` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `rank` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `flags` | `Optional[str]` |  | untranscribed | object header: a player has no place or service state |
+| `property` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `file` | `Optional[str]` | `zipload.player` | structural | its rows: startTime, timeStep and the points (the sidecar); unset raises |
+| `filetype` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `mode` | `Optional[str]` |  | structural | unset: a player read as <name>.value plays into its own value; set raises |
+| `loop` | `Optional[int]` | `0` | structural | unset or 0; a repeated tape raises (a schedule has one pass) |
+| `all_events_delta` | `Union[bool, Bool, NoneType]` | `False` | untranscribed | deltamode: an engine option |
+

@@ -13,6 +13,7 @@ the Powergrid-Models checkout carries no license file.
 | `IEEE/IEEE13_cdpsm.glm`, `IEEE/IEEE13_assets.glm`, `IEEE/IEEE123.glm` | IEEE PES distribution test feeders, exported to GLM by the GridAPPS-D CIMHub Java tools (<https://github.com/GRIDAPPSD/CIMHub>) |
 | `IEEE/IEEE13_houses.glm` | the IEEE 13-node feeder with GridLAB-D houses, as distributed in Powergrid-Models |
 | `PNNL/orig_GC-12.47-1.glm`, `PNNL/orig_R1-12.47-3.glm` | PNNL taxonomy prototypical feeders (GridLAB-D `models/taxonomy_feeders`, Battelle) |
+| `IEEE/zipload_schedule.player` | GridAPPS-D's ZIP load schedule (1,440 one-minute multipliers from 2009-07-21 00:00 EDT), the player the Java exports' `ieeezipload.value*K` bases read through the GridAPPS-D run file. Copied 2026-11-21, unmodified, from Powergrid-Models `archive/blazegraph/zipload_schedule.player` (commit `7610406`); a GridAPPS-D public release, BSD-3-Clause (the user, 2026-11-21) |
 
 Known deck defects (the tests list them; the decks are not edited):
 

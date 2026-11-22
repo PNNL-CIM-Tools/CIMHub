@@ -9,10 +9,12 @@ deck reads back through the reader and the importer, and GridLAB-D 6.0 solves it
 
 ```
 cimhub_gridlabd/src/cimhub_gridlabd/
-    glm_writer.py             GlmWriter: clock, #set, modules, then objects in WRITE_ORDER; values a+bj, TRUE/FALSE, "text"
+    glm_writer.py             GlmWriter: clock, #set, modules, class blocks, then objects in WRITE_ORDER; values a+bj,
+                              TRUE/FALSE, "text", an unset slot's expression as is; each player's tape beside the deck
     exporter/
-        cim_to_glm.py         GlmExporter(FormatExporter).to_model(network, *, name_source, switch_state), EXPORT_ORDER,
-                              cim_to_glm(network, destination, **opts); raises on equipment no module exports
+        cim_to_glm.py         GlmExporter(time_points=None).to_model(network, *, name_source, switch_state), EXPORT_ORDER,
+                              cim_to_glm(network, destination, *, time_points=None, **opts); raises on equipment no
+                              module exports
         naming.py             Names: the shared name switch (X1) + glm_safe_name, one namespace per deck
         units.py              glm_unit(class, slot): the schema's unit as a pint unit; from_percent
         buses.py              node / triplex_node / substation, each bus's system and nominal_voltage
@@ -21,6 +23,7 @@ cimhub_gridlabd/src/cimhub_gridlabd/
         series_reactor.py     series_reactor (X28)
         transformer.py        transformer + transformer_configuration: native, centre tap, wye-wye, star split, banks
         regulator.py          regulator + regulator_configuration
+        player.py             player: a ConformLoadSchedule with points (X29)
         load.py, capacitor.py, inverter.py
 ```
 
@@ -107,15 +110,36 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 
 ## X3: loads and capacitors
 
-- A load per EnergyConsumer, parented to its bus, in GLM's base_power form per phase (each ZIP part's |S|, fraction
-  and power factor, negative when its Q is). Delta: A, B, C are the branches AB, BC, CA (as cimtables' branch
-  children). A voltage-exponent model with exponents 0, 1 or 2 is constant power, current or impedance; another
+- A load per EnergyConsumer (a ConformLoad or NonConformLoad too, X29), parented to its bus, in GLM's base_power
+  form per phase (each ZIP part's |S|, fraction and power factor, negative when its Q is). Delta: A, B, C are the
+  branches AB, BC, CA (as cimtables' branch children). A voltage-exponent model with exponents 0, 1 or 2 is constant power, current or impedance; another
   raises. On a split-phase bus a wye consumer is the legs `_1`/`_2`, a delta one the 240 V part `_12`; the
   importer's `<base>_12` consumer is its base's `_12` again (S4a-6).
 - A capacitor per LinearShuntCompensator: `capacitor_X` at nomU with every section in, `switchX` from the actual
   sections, VOLT from an enabled voltage control (the target ± half the deadband, `pt_phase` the monitored phases,
   else the unit's own: a BANK capacitor senses one phase). A control of another mode is MANUAL at the actual state,
   logged. The importer's per-phase units `<base>_<phase>` are `<base>` again (S4a-8).
+
+## X29: load players
+
+GLM_REWRITE_PLAN.md §8.9, the importer's S8 inverted; the points are the caller's `time_points`
+(`GlmExporter(time_points)`, the `RegularTimePoint` table of `cimhub_core.time_points`).
+
+- A ConformLoadSchedule with points is a `player` named after its group, its file `<name>.player` beside the deck
+  (written by `GlmWriter`), read through `module tape;` and `class player { double value; }`. Rows: the first at
+  `startTime` in GMT (GridLAB-D reads GMT under any clock zone, `timestamp.cpp:595`), each later one `+<step>s`; a
+  step that is not whole seconds, a gap in the sequence numbers, or a `value2` other than `value1` raise (a GLM base
+  scales p and q together).
+- Each ConformLoad of that group writes its bases as `<player>.value*<base>` (the expression the reader keeps); a
+  merged 240 V part must follow the same player.
+- The clock's one instant is the earliest player start, so each base is K times the first point; a later `stoptime`
+  plays the schedule.
+- Written static, their groups named in one warning: a ConformLoad whose group has no schedule (the Java exports'
+  `ieeezipload`, which their run file defines; writing the reference would leave a deck GridLAB-D cannot load), a
+  schedule with no points (no `time_points`), and a NonConformLoad (its schedule is in power units: GLM's base form
+  holds a multiplier only).
+- The DSS, RAW and GDM exporters read ConformLoad and NonConformLoad as loads and log their groups' schedules as
+  dropped (`cimhub_core.getters.load_schedule.log_dropped_schedules`), until a DSS LoadShape slice.
 
 ## X4: DER
 
@@ -150,6 +174,10 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
   deck's tolerance the difference listed below. IEEE 8500 (not vendored: `CIMHUB_DSS_DECKS`) sets no taps, so both
   engines take OpenDSS's solved ones, and runs at 0.9 load: its undersized secondaries put full load past GridLAB-D's
   NR (it solves at 0.9, not at 1.0 with constant-impedance loads or 2000 iterations).
+- `test_export_players.py` (X29): the player atom's expressions, tape and clock; static loads without points, for a
+  NonConformLoad, and the raises; IEEE 13 with GridAPPS-D's 1,440-point `zipload_schedule.player` (vendored) through
+  CIM (one group, every point) and back, solved in GridLAB-D 6.0 at the schedule's first two instants against the same
+  deck with each base fixed at K times that point (1e-9).
 - `gridlabd_engine.py` notes the wheel's quirks: no CLI; load errors only from `DirectGridLabD`; polar text misread
   unless `complex_output_format` is `RECT`; the Java exports need GridAPPS-D's `ieeezipload` player.
 
@@ -170,6 +198,8 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 | a triplex matrix's b | GridLAB-D's `triplex_line` has no shunt admittance (X27) | IEEE 8500: about 0.1 VAr per kft |
 | a template no equipment uses | GLM's configurations are written per use | tier 2: the atoms' `cn_250`, `xc_unused` |
 | a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, 1.2e-6 |
+| a load group with no schedule | written static (X29): a reference to no player would not load | tier 2: the load atoms' `zipsched` loads come back EnergyConsumers |
+| a player's start zone | its rows are written in GMT (X29) | tier 2: `startTime` the same instant at +00:00 |
 | `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
 
 ## Slot tables
@@ -567,6 +597,15 @@ default.
 
 64 other slots: unset
 
+### player
+
+| GLM slot | kind | from / why |
+|---|---|---|
+| name | written | the group's name (X1) |
+| file | written | <name>.player beside the deck: the schedule's startTime, timeStep and points |
+
+13 other slots: unset
+
 ### load
 
 | GLM slot | kind | from / why |
@@ -575,27 +614,27 @@ default.
 | parent | written | its bus |
 | phases | written | the letters then N (wye) or D (delta); a split-phase bus's letter then S |
 | nominal_voltage | written | its bus's |
-| base_power_A | written | base_power form: module docstring |
-| base_power_B | written | base_power form: module docstring |
-| base_power_C | written | base_power form: module docstring |
-| power_pf_A | written | base_power form: module docstring |
-| current_pf_A | written | base_power form: module docstring |
-| impedance_pf_A | written | base_power form: module docstring |
-| power_pf_B | written | base_power form: module docstring |
-| current_pf_B | written | base_power form: module docstring |
-| impedance_pf_B | written | base_power form: module docstring |
-| power_pf_C | written | base_power form: module docstring |
-| current_pf_C | written | base_power form: module docstring |
-| impedance_pf_C | written | base_power form: module docstring |
-| power_fraction_A | written | base_power form: module docstring |
-| current_fraction_A | written | base_power form: module docstring |
-| impedance_fraction_A | written | base_power form: module docstring |
-| power_fraction_B | written | base_power form: module docstring |
-| current_fraction_B | written | base_power form: module docstring |
-| impedance_fraction_B | written | base_power form: module docstring |
-| power_fraction_C | written | base_power form: module docstring |
-| current_fraction_C | written | base_power form: module docstring |
-| impedance_fraction_C | written | base_power form: module docstring |
+| base_power_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_A | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_B | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_C | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
 
 198 other slots: unset
 
@@ -607,27 +646,27 @@ default.
 | parent | written | its bus |
 | phases | written | the letters then N (wye) or D (delta); a split-phase bus's letter then S |
 | nominal_voltage | written | its bus's |
-| base_power_1 | written | base_power form: module docstring |
-| base_power_2 | written | base_power form: module docstring |
-| base_power_12 | written | base_power form: module docstring |
-| power_pf_1 | written | base_power form: module docstring |
-| current_pf_1 | written | base_power form: module docstring |
-| impedance_pf_1 | written | base_power form: module docstring |
-| power_pf_2 | written | base_power form: module docstring |
-| current_pf_2 | written | base_power form: module docstring |
-| impedance_pf_2 | written | base_power form: module docstring |
-| power_pf_12 | written | base_power form: module docstring |
-| current_pf_12 | written | base_power form: module docstring |
-| impedance_pf_12 | written | base_power form: module docstring |
-| power_fraction_1 | written | base_power form: module docstring |
-| current_fraction_1 | written | base_power form: module docstring |
-| impedance_fraction_1 | written | base_power form: module docstring |
-| power_fraction_2 | written | base_power form: module docstring |
-| current_fraction_2 | written | base_power form: module docstring |
-| impedance_fraction_2 | written | base_power form: module docstring |
-| power_fraction_12 | written | base_power form: module docstring |
-| current_fraction_12 | written | base_power form: module docstring |
-| impedance_fraction_12 | written | base_power form: module docstring |
+| base_power_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| base_power_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_pf_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_1 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_2 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| power_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| current_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
+| impedance_fraction_12 | written | base_power form: module docstring; <player>.value*<base> on a ConformLoad whose group's schedule is a player (X29) |
 
 115 other slots: unset
 

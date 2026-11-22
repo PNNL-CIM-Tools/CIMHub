@@ -4,8 +4,8 @@
 One ``EnergyConsumer`` per load on its root bus (GLM-4), on the phases that carry power (S4a-1). GLM loads are per
 phase, so the consumer's p and q are the totals and, when its phase children differ, each child gets its own p and q
 (``Update Table EnergyConsumerPhase``). A phase's power is its constant power, or GridLAB-D's split of
-``base_power`` by the fractions and power factors at nominal voltage (S4a-3); a ``<schedule>.value*K`` base is K
-(S4a-2). The voltage response is the shared ZIP row of the one kind every phase uses, else a ``zip_`` row of the
+``base_power`` by the fractions and power factors at nominal voltage (S4a-3); a ``<player>.value*K`` base is K
+(S4a-2), and the consumer is a ``ConformLoad`` of the player's group (S8-1, ``player.py``). The voltage response is the shared ZIP row of the one kind every phase uses, else a ``zip_`` row of the
 load's fractions (S4a-4). A split-phase record has the legs (1, 2: s1, s2 to neutral) and the 240 V part (12) as two
 consumers (S4a-6). Explicit constant current and impedance raise (S4a-5). A record with no power is a consumer
 of p = q = 0 on its wired phases, and each record is one service: ``customerCount`` 1 on its first consumer
@@ -31,6 +31,7 @@ from cimhub_core.load_response import ZIP_CONSTANT_I, ZIP_CONSTANT_PQ, ZIP_CONST
 from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.glm_schema import registry_unit
 from cimhub_gridlabd.importer.cimtbl import bus
+from cimhub_gridlabd.importer.cimtbl import player as player_module
 from cimhub_gridlabd.importer.cimtbl.catalog import label
 from cimhub_gridlabd.importer.cimtbl.link import provenance
 from cimhub_gridlabd.importer.topology import phase_letters
@@ -46,7 +47,7 @@ KINDS = ("power", "current", "impedance")
 SHARED_RESPONSE = {"power": ZIP_CONSTANT_PQ, "current": ZIP_CONSTANT_I, "impedance": ZIP_CONSTANT_Z}
 #: a delta load's A/B/C are the branches AB/BC/CA (node.cpp:2535); the binder names a branch child by its PhaseCode
 DELTA_BRANCH = {"A": "AB", "B": "BC", "C": "AC"}
-#: ``<schedule>.value*<number>``: a base scaled by a schedule (S4a-2)
+#: ``<player>.value*<number>``: a base scaled by a player (S4a-2, S8-1)
 SCHEDULED = re.compile(r"^\s*([A-Za-z_][\w.:-]*)\.value\s*\*\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)\s*$")
 
 #: An explicit current, impedance or connection form: raises when set (S4a-5, ``check``).
@@ -80,7 +81,8 @@ def _own_fields(load_class: LoadClass) -> dict[str, Field]:
     for suffix in load_class.suffixes:
         fields[f"constant_power_{suffix}"] = Field("copied", ((_CONSUMER, "p", "VA"), (_CONSUMER, "q", "VA")),
                                                    "the phase's p + jq, VA via pint; with base_power_X raises")
-        fields[f"base_power_{suffix}"] = Field("derived", note=_ZIP_NOTE + "; <schedule>.value*K is K (S4a-2)")
+        fields[f"base_power_{suffix}"] = Field("derived", note=_ZIP_NOTE + "; <player>.value*K is K, the load a "
+                                                                            "ConformLoad of its group (S4a-2, S8-1)")
         for kind in KINDS:
             fields[f"{kind}_fraction_{suffix}"] = Field("derived", note="with base_power; default 0, the power "
                                                                         "fraction 1 - I - Z when they don't sum to 1")
@@ -124,7 +126,7 @@ def _va(model: GlmModel, record, slot: str) -> complex:
 
 
 def scheduled_base(model: GlmModel, record, slot: str) -> tuple[float | None, str | None]:
-    """``(base VA, the schedule reference)`` of a ``base_power`` slot: as written, or K of ``<schedule>.value*K``
+    """``(base VA, the player it names)`` of a ``base_power`` slot: as written, or K of ``<player>.value*K``
     (S4a-2); any other expression raises."""
     text = model.expressions.get((str(record.name), slot))
     unit = registry_unit(model.unit(record, slot))
@@ -133,7 +135,7 @@ def scheduled_base(model: GlmModel, record, slot: str) -> tuple[float | None, st
         return (None, None) if value is None else (units.Quantity(float(value), unit).to("VA").magnitude, None)
     match = SCHEDULED.match(text)
     if match is None:
-        raise ValueError(f"{label(record)}: {slot} is the expression {text!r}; only <schedule>.value*<number> is "
+        raise ValueError(f"{label(record)}: {slot} is the expression {text!r}; only <player>.value*<number> is "
                          "mapped (S4a-2)")
     return units.Quantity(float(match.group(2)), unit).to("VA").magnitude, match.group(1)
 
@@ -161,7 +163,7 @@ def zip_split(base: float, fractions: dict[str, float], factors: dict[str, float
 
 class _Phase(NamedTuple):
     parts: dict[str, complex]  # kind -> S (VA)
-    scheduled: str | None = None  # "base_power_A=ieeezipload.value*19723.08" (S4a-2)
+    player: str | None = None  # the player of a <player>.value*K base (S4a-2, S8-1)
     repaired: str | None = None  # "power_fraction_A=0.4": GridLAB-D's repair of fractions that don't sum to 1
 
     @property
@@ -182,8 +184,7 @@ def phase_power(model: GlmModel, record, load_class: LoadClass, suffix: str) -> 
         factors = {kind: float(1.0 if getattr(record, f"{kind}_pf_{suffix}") is None
                                else getattr(record, f"{kind}_pf_{suffix}")) for kind in KINDS}
         parts, repaired = zip_split(base, fractions, factors)
-        return _Phase(parts,
-                      None if schedule is None else f"base_power_{suffix}={schedule}.value*{cell(base)}",
+        return _Phase(parts, schedule,
                       f"power_fraction_{suffix}={cell(1.0 - fractions['current'] - fractions['impedance'])}"
                       if repaired else None)
     if explicit is None:
@@ -283,17 +284,37 @@ def response(consumer_list: list[Consumer]) -> tuple[str, tuple[float, ...] | No
 
 
 def _notes(found: list[Consumer]) -> list[str]:
-    """The record's scheduled bases (S4a-2) and repaired fractions (S4a-3), one line each."""
-    phases = [phase for consumer in found for phase in consumer.children.values()]
-    scheduled = [phase.scheduled for phase in phases if phase.scheduled]
-    repaired = [phase.repaired for phase in phases if phase.repaired]
-    notes = []
-    if scheduled:
-        notes.append(f"scheduled: {', '.join(scheduled)}; the base is mapped, the schedule is not (S4a-2, TODO)")
-    if repaired:
-        notes.append(f"defaulted: {', '.join(repaired)} (the fractions did not sum to 1: GridLAB-D's repair, "
-                     "load.cpp:945)")
-    return [textwrap.fill(note, width=_WIDTH, break_long_words=False, break_on_hyphens=False) for note in notes]
+    """The record's repaired fractions (S4a-3), one line."""
+    repaired = [phase.repaired for consumer in found for phase in consumer.children.values() if phase.repaired]
+    if not repaired:
+        return []
+    note = f"defaulted: {', '.join(repaired)} (the fractions did not sum to 1: GridLAB-D's repair, load.cpp:945)"
+    return [textwrap.fill(note, width=_WIDTH, break_long_words=False, break_on_hyphens=False)]
+
+
+def load_player(record, found: list[Consumer]) -> str | None:
+    """The one player the record's bases name (S8-1): a ConformLoad has one group, and it scales every phase, so two
+    players, or a phase with power but no player beside one that has it, raise."""
+    phases = [phase for consumer in found for phase in consumer.children.values() if phase.total != 0]
+    players = {phase.player for phase in phases}
+    if players <= {None}:  # no power, or none scheduled
+        return None
+    if len(players) > 1:
+        named = sorted(str(player) for player in players)
+        raise ValueError(f"{label(record)}: its bases name {named}; a ConformLoad follows one player (S8-1)")
+    return players.pop()
+
+
+def references(model: GlmModel) -> dict[str, list[str]]:
+    """``{player: the loads whose base names it}``, for the player mapper (S8-5)."""
+    found: dict[str, list[str]] = {}
+    for load_class in (LOAD, TRIPLEX_LOAD):
+        for record in model.list_by_class(load_class.native):
+            for suffix in load_class.suffixes:
+                _, player = scheduled_base(model, record, f"base_power_{suffix}")
+                if player is not None and str(record.name) not in found.get(player, []):
+                    found.setdefault(player, []).append(str(record.name))
+    return found
 
 
 def _equal(consumer: Consumer) -> bool:
@@ -315,7 +336,7 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
     if not records:
         return Document(name=load_class.artifact, statements=[], profile=CIM_PROFILE)
     own = OWN.get(load_class.native, {})
-    consumer_rows, phase_rows, responses, powerless = [], [], {}, []
+    consumer_rows, conform_rows, phase_rows, responses, powerless = [], [], [], {}, []
     for record in records:
         check(record, own)
         found = consumers(model, record, load_class)
@@ -330,6 +351,7 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
                 raise ValueError(f"{label(record)}: its ZIP fractions {fractions} differ from another load's beyond "
                                  f"the 6 places of {load_response}")
         comment = "\n".join(part for part in (*_notes(found), untranscribed_values(own, record)) if part) or None
+        player = load_player(record, found)
         for index, consumer in enumerate(found):
             name = f"{record.name}{consumer.suffix}"
             consumer_mrid = mrid(PREFIX, name)
@@ -337,21 +359,24 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
             balanced = _equal(consumer)
             phases = phases_cell(consumer.phases) if balanced else consumer.phases
             customers = cell(1) if index == 0 else None  # one service per record, counted once
-            consumer_rows.append(Row([consumer_mrid, name, node, phases, "D" if consumer.delta else "Y",
-                                      cell(not consumer.delta), cell(total.real), cell(total.imag), customers,
-                                      load_response, buses[node].base_voltage],
-                                     comment=comment if index == 0 else None))  # the record's notes, once
+            values = [consumer_mrid, name, node, phases, "D" if consumer.delta else "Y", cell(not consumer.delta),
+                      cell(total.real), cell(total.imag), customers, load_response, buses[node].base_voltage]
+            row_comment = comment if index == 0 else None  # the record's notes, once
+            if player is None:
+                consumer_rows.append(Row(values, comment=row_comment))
+            else:
+                conform_rows.append(Row([*values, mrid(player_module.GROUP_PREFIX, player)], comment=row_comment))
             if not balanced:
                 for child, phase in consumer.children.items():
                     phase_rows.append(Row([f"{consumer_mrid}_{child}", cell(phase.total.real),
                                            cell(phase.total.imag)]))
     statements = []
-    header = provenance(load_class.native.class_name, "EnergyConsumer (+ EnergyConsumerPhase values)", len(records),
-                        ANCHOR)
+    header = provenance(load_class.native.class_name, "EnergyConsumer or ConformLoad (+ EnergyConsumerPhase values)",
+                        len(records), ANCHOR)
     if powerless:
         header += "\n" + textwrap.fill(f"no power on any phase (a consumer of p = q = 0): {', '.join(powerless)}",
                                         width=_WIDTH, break_long_words=False)
-    if not consumer_rows:
+    if not consumer_rows and not conform_rows:
         return Document(name=load_class.artifact, statements=[], profile=CIM_PROFILE)
     if responses:
         statements.append(Table("LoadResponseCharacteristic", [Column(name) for name in RESPONSE_COLUMNS],
@@ -360,17 +385,24 @@ def map_loads(model: GlmModel, load_class: LoadClass, roots: dict[str, str], bus
                                 comment="the loads' own ZIP fractions of P and Q (S4a-4)"))
     fields = FIELDS.get(load_class.native, bus.FIELDS.get(load_class.native))
     counted = bus.untranscribed_set(model, records, {load_class.native: bus.inherited(fields, own)})
-    statements.append(Table(_CONSUMER, [Column("mRID"), Column("name"), Column("node"), Column("phases"),
-                                        Column("phaseConnection"), Column("grounded"), Column("p", "W"),
-                                        Column("q", "VAr"), Column("customerCount"), Column("LoadResponse"),
-                                        Column("BaseVoltage"),
-                                        Column("EquipmentContainer", default=feeder)], consumer_rows,
-                            comment="\n".join(part for part in (
-                                "p, q: the totals at nominal voltage, consumption positive; phases: the phases that "
-                                "carry power, blank when ABC and equal (S4a-1)",
-                                "defaulted: customerCount=1 on each record's first consumer (GLM has no customer "
-                                "count; a record is one service, its 240 V part not counted again)", counted)
-                                if part)))
+    columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("phaseConnection"),
+               Column("grounded"), Column("p", "W"), Column("q", "VAr"), Column("customerCount"),
+               Column("LoadResponse"), Column("BaseVoltage")]
+    notes = ("p, q: the totals at nominal voltage, consumption positive; phases: the phases that carry power, blank "
+             "when ABC and equal (S4a-1)",
+             "defaulted: customerCount=1 on each record's first consumer (GLM has no customer count; a record is one "
+             "service, its 240 V part not counted again)", counted)
+    comment = "\n".join(part for part in notes if part)
+    if consumer_rows:
+        statements.append(Table(_CONSUMER, [*columns, Column("EquipmentContainer", default=feeder)], consumer_rows,
+                                comment=comment))
+        comment = None  # the notes, on the first table
+    if conform_rows:
+        statements.append(Table("ConformLoad", [*columns, Column("LoadGroup"),
+                                                Column("EquipmentContainer", default=feeder)], conform_rows,
+                                comment="\n".join(part for part in (
+                                    comment, "a base <player>.value*K: p, q from K; the player's group (S8-1)")
+                                    if part)))
     if phase_rows:
         statements.append(Table("EnergyConsumerPhase", [Column("mRID"), Column("p", "W"), Column("q", "VAr")],
                                 phase_rows, update=True, comment="the phases differ, so each child carries its own "

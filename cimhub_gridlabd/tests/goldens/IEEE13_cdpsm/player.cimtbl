@@ -1,0 +1,10 @@
+# GridLAB-D player -> ConformLoadGroup + ConformLoadSchedule.
+# Source table: player (records: 0)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s8-load-players
+
+Profile = cim18v17
+
+# one group per player: the loads whose base is <player>.value*K
+Table ConformLoadGroup: mRID, name
+    # not in the deck: no schedule (S8-5)
+    lg_ieeezipload, ieeezipload

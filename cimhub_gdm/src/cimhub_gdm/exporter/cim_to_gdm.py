@@ -11,6 +11,7 @@ from collections import Counter
 
 import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.base import FormatExporter
+from cimhub_core.getters.load_schedule import log_dropped_schedules
 from cimhub_core.names import export_name
 from gdm.systems.distribution import DistributionSystem
 
@@ -70,6 +71,8 @@ class GdmExporter(FormatExporter):
                     for component in made if isinstance(made, tuple) else (made,):
                         system.add_component(component)
         time_series.add_time_series(system, context, self.time_points)
+        consumers = [obj for cls in load.CIM_CLASSES for obj in network.graph.get(cls, {}).values()]
+        log_dropped_schedules(consumers, "GDM")  # its series are EnergyConnectionSchedules (T1)
         fills.warn(context.filled)
         return system
 

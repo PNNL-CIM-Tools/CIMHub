@@ -1,0 +1,14 @@
+# GridLAB-D player -> ConformLoadGroup + ConformLoadSchedule.
+# Source table: player (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s8-load-players
+
+Profile = cim18v17
+
+# one group per player: the loads whose base is <player>.value*K
+Table ConformLoadGroup: mRID, name
+    lg_zipload, zipload
+
+# value1: the player's value, a multiplier of each load's p and q; the points are RegularTimePoints in the Parquet sidecar
+Table ConformLoadSchedule: mRID, name, startTime, timeStep (s), value1Unit, ConformLoadGroup
+    # untranscribed: all_events_delta=false
+    ls_zipload, zipload, 2009-07-21T00:00:00-04:00, 60.0, none, lg_zipload

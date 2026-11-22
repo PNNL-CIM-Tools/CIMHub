@@ -1,5 +1,5 @@
 # Auto generated from main.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-09T16:58:44
+# Generation date: 2026-11-21T16:44:34
 # Schema: gridlabd_glm
 #
 # id: https://gridlabd.org/schema/glm
@@ -392,6 +392,10 @@ class ThermalStorageName(ResidentialEnduseName):
 
 
 class WaterheaterName(ResidentialEnduseName):
+    pass
+
+
+class PlayerName(GlmObjectName):
     pass
 
 
@@ -15584,6 +15588,60 @@ class Waterheater(ResidentialEnduse):
         super().__post_init__(**kwargs)
 
 
+@dataclass(repr=False)
+class Player(GlmObject):
+    """
+    The tape module's player: it plays a file of time,value rows into its parent's property, or
+    into its own value when the deck declares class player { double value; } (the GridAPPS-D run-file pattern,
+    read as <player>.value by an expression). Written by hand from tape/tape.cpp:291-296 (PUBLISH_STRUCT, which
+    the C++ scrape does not read); the hidden checkpoint cursor (tape.cpp:306-333) is left out.
+
+    Type: Instance (tape)
+
+    CIM Mapping: ConformLoadGroup + ConformLoadSchedule (GLM_REWRITE_PLAN.md 8.9)
+    """
+    _inherited_slots: ClassVar[list[str]] = []
+
+    class_class_uri: ClassVar[URIRef] = GLM["Player"]
+    class_class_curie: ClassVar[str] = "glm:Player"
+    class_name: ClassVar[str] = "player"
+    class_model_uri: ClassVar[URIRef] = GLM.Player
+
+    name: Union[str, PlayerName] = None
+    property: Optional[str] = None
+    file: Optional[str] = None
+    filetype: Optional[str] = None
+    mode: Optional[str] = None
+    loop: Optional[int] = None
+    all_events_delta: Optional[Union[bool, Bool]] = None
+
+    def __post_init__(self, *_: str, **kwargs: Any):
+        if self._is_empty(self.name):
+            self.MissingRequiredField("name")
+        if not isinstance(self.name, PlayerName):
+            self.name = PlayerName(self.name)
+
+        if self.property is not None and not isinstance(self.property, str):
+            self.property = str(self.property)
+
+        if self.file is not None and not isinstance(self.file, str):
+            self.file = str(self.file)
+
+        if self.filetype is not None and not isinstance(self.filetype, str):
+            self.filetype = str(self.filetype)
+
+        if self.mode is not None and not isinstance(self.mode, str):
+            self.mode = str(self.mode)
+
+        if self.loop is not None and not isinstance(self.loop, int):
+            self.loop = int(self.loop)
+
+        if self.all_events_delta is not None and not isinstance(self.all_events_delta, Bool):
+            self.all_events_delta = Bool(self.all_events_delta)
+
+        super().__post_init__(**kwargs)
+
+
 # Enumerations
 class RectifierType(EnumDefinitionImpl):
     """
@@ -28145,4 +28203,22 @@ slots.waterheater__lower_heating_element_state = Slot(uri=GLM.lower_heating_elem
 
 slots.waterheater__upper_heating_element_state = Slot(uri=GLM.upper_heating_element_state, name="waterheater__upper_heating_element_state", curie=GLM.curie('upper_heating_element_state'),
                    model_uri=GLM.waterheater__upper_heating_element_state, domain=None, range=Optional[str])
+
+slots.player__property = Slot(uri=GLM.property, name="player__property", curie=GLM.curie('property'),
+                   model_uri=GLM.player__property, domain=None, range=Optional[str])
+
+slots.player__file = Slot(uri=GLM.file, name="player__file", curie=GLM.curie('file'),
+                   model_uri=GLM.player__file, domain=None, range=Optional[str])
+
+slots.player__filetype = Slot(uri=GLM.filetype, name="player__filetype", curie=GLM.curie('filetype'),
+                   model_uri=GLM.player__filetype, domain=None, range=Optional[str])
+
+slots.player__mode = Slot(uri=GLM.mode, name="player__mode", curie=GLM.curie('mode'),
+                   model_uri=GLM.player__mode, domain=None, range=Optional[str])
+
+slots.player__loop = Slot(uri=GLM.loop, name="player__loop", curie=GLM.curie('loop'),
+                   model_uri=GLM.player__loop, domain=None, range=Optional[int])
+
+slots.player__all_events_delta = Slot(uri=GLM.all_events_delta, name="player__all_events_delta", curie=GLM.curie('all_events_delta'),
+                   model_uri=GLM.player__all_events_delta, domain=None, range=Optional[Union[bool, Bool]])
 

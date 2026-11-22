@@ -7,16 +7,21 @@ parts in the plan's section 2 order (catalogs before the instances that use them
 ``CLASSIFIED`` holds every mapped class's ``FIELDS``. A GLM class not in it is listed by count on the master's
 comment (GLM-14), so nothing disappears silently. A value the reader kept as an expression (``LIGHTS*1.2``) in a
 slot a mapper reads raises (GLM-8): the mapper would otherwise see the slot as unset. The exception is a load's
-``base_power``, whose mapper reads a ``<schedule>.value*K`` itself (S4a-2). A bus's own load accumulators raise
+``base_power``, whose mapper reads a ``<player>.value*K`` itself (S4a-2). A bus's own load accumulators raise
 (S4a-7). An inverter's ``solar`` or ``battery`` is classified with it and written in ``inverter.cimtbl`` (S4b).
+A player is a load group and its schedule (S8); the schedule's points are not in the artifact but in the caller's
+``time_points`` (``GlmImporter(time_points=...)``, the Parquet sidecar's tables, as GDM's).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#master``.
 """
 
 from __future__ import annotations
 
+import logging
 import textwrap
 from typing import Callable, NamedTuple
+
+import cimprofiles.cim18.cim18v17 as cim
 
 from cimtables.document import Column, Document, DocumentSet, Import, ObjectStatement, Row, Table
 from cimtopology.core import BusSystem, base_voltage_mrid, nominal_kv, walk
@@ -25,8 +30,9 @@ from cimhub_core.base import CimtblImporter
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid
 from cimhub_core.load_response import zip_fractions
 from cimhub_gridlabd.glm_reader import GlmModel
-from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, regulator,
-                                            series_reactor, spacing, switch, transformer, transformer_configuration)
+from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configuration, inverter, line, load, player,
+                                            regulator, series_reactor, spacing, switch, transformer,
+                                            transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
 from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, service_buses, swing_buses
 from cimhub_gridlabd.schema import gridlabd as schema
@@ -36,6 +42,8 @@ AUTHORITY = "https://github.com/PNNL-CIM-Tools/CIMHub"
 
 #: GridLAB-D's ``powerflow::nominal_frequency`` default (powerflow/powerflow.h).
 DEFAULT_FREQUENCY_HZ = 60.0
+
+_log = logging.getLogger(__name__)
 
 
 class Site(NamedTuple):
@@ -72,6 +80,7 @@ MAPPING_ORDER: tuple[tuple[type, Callable[[GlmModel, Site], Document]], ...] = (
     (schema.Transformer, lambda model, site: transformer.map_transformers(model, site.roots, site.buses,
                                                                           site.feeder)),
     (schema.Regulator, lambda model, site: regulator.map_regulators(model, site.roots, site.buses, site.feeder)),
+    (player.NATIVE_CLASS, lambda model, site: player.map_players(model, load.references(model))),
     *((load_class.native, lambda model, site, load_class=load_class:
        load.map_loads(model, load_class, site.roots, site.buses, site.feeder, site.services))
       for load_class in load.LOAD_CLASSES),
@@ -94,7 +103,8 @@ CLASSIFIED: dict[type, dict[str, Field]] = {**bus.FIELDS, **conductor.FIELDS, sc
                                             schema.Transformer: transformer.FIELDS,
                                             schema.Regulator: regulator.FIELDS,
                                             schema.RegulatorConfiguration: regulator.CONFIGURATION_FIELDS,
-                                            **load.FIELDS, schema.Capacitor: capacitor.FIELDS, **inverter.CLASSIFIED}
+                                            player.NATIVE_CLASS: player.FIELDS, **load.FIELDS,
+                                            schema.Capacitor: capacitor.FIELDS, **inverter.CLASSIFIED}
 
 
 def base_frequency(model: GlmModel) -> tuple[float, bool]:
@@ -212,15 +222,18 @@ class GlmImporter(CimtblImporter):
 
     ``name`` is the master's ``Model`` and file stem (the model's name, e.g. ``IEEE13_cdpsm``). ``substation`` and
     ``feeder`` name the containers (``sub_<substation>``, ``fdr_<feeder>``), each ``name`` unless given, so a model's
-    scope and its container keys can differ (a utility code over a feeder's own key).
+    scope and its container keys can differ (a utility code over a feeder's own key). ``time_points`` is the
+    caller's dict of time point tables: ``to_cim`` adds the players' ``RegularTimePoint`` table to it (S8-4); without
+    it the points are dropped with one warning.
     """
 
     def __init__(self, name: str, *, authority: str = AUTHORITY, substation: str | None = None,
-                 feeder: str | None = None):
+                 feeder: str | None = None, time_points: dict | None = None):
         self.name = name
         self.authority = authority
         self.substation = substation
         self.feeder = feeder
+        self.time_points = time_points
 
     def to_cimtbl(self, model: GlmModel) -> DocumentSet:
         check_expressions(model, CLASSIFIED, load.EXPRESSION_SLOTS)
@@ -232,9 +245,29 @@ class GlmImporter(CimtblImporter):
         parts = [part for part in documents if part.statements]
         return DocumentSet(master=map_master(model, parts, walked, authority=self.authority), parts=parts)
 
+    def to_cim(self, model: GlmModel, *, network=None, artifact_dir=None):
+        """The core ``to_cim``, then the players' points, keyed by their bound schedules' uri (S8-4)."""
+        bound = super().to_cim(model, network=network, artifact_dir=artifact_dir)
+        points = player.player_points(model)
+        if not points:
+            return bound
+        if self.time_points is None:
+            _log.warning("the points of %d player(s) are dropped: pass GlmImporter(time_points={}) to keep them: %s",
+                         len(points), sorted(points))
+            return bound
+        from cimhub_core.time_points import REGULAR_TIME_POINT_CLASS, regular_time_points  # the time-points extra
+
+        if REGULAR_TIME_POINT_CLASS in self.time_points:
+            raise ValueError(f"time_points already holds a {REGULAR_TIME_POINT_CLASS} table")
+        schedules = {schedule.mRID: schedule for schedule in bound.graph.get(cim.ConformLoadSchedule, {}).values()}
+        self.time_points[REGULAR_TIME_POINT_CLASS] = regular_time_points(
+            {schedules[mrid_].uri(): values for mrid_, values in points.items()})
+        return bound
+
 
 def glm_to_cim(model: GlmModel, *, name: str, authority: str = AUTHORITY, substation: str | None = None,
-               feeder: str | None = None, network=None, artifact_dir=None):
-    """A GLM model (``GlmReader(path).read_all()``) as a cim18v17 network, built from its written artifacts."""
-    importer = GlmImporter(name, authority=authority, substation=substation, feeder=feeder)
+               feeder: str | None = None, network=None, artifact_dir=None, time_points: dict | None = None):
+    """A GLM model (``GlmReader(path).read_all()``) as a cim18v17 network, built from its written artifacts; the
+    players' points go to ``time_points`` (``GlmImporter``)."""
+    importer = GlmImporter(name, authority=authority, substation=substation, feeder=feeder, time_points=time_points)
     return importer.to_cim(model, network=network, artifact_dir=artifact_dir)
