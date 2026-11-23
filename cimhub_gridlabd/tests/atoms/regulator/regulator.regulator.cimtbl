@@ -8,44 +8,53 @@ Profile = cim18v17
 # one unit per wired phase (INDIVIDUAL) or a gang unit (BANK), GLM-7
 Table VoltageRegulator: mRID, name, construction, EquipmentContainer=fdr_reg
     # configuration rc_bank
-    # defaulted: dwell_time=0.0, Type=B
+    # defaulted: dwell_time=0.0, Type=B, regulator_resistance=0.0001
     xf_reg_bank,     reg_bank,     typeB
     # configuration rc_ldc
     # defaulted: time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL, Type=B
-    # untranscribed: regulator_resistance=0.001
     xf_reg_ldc_A,    reg_ldc_A,    typeB
     # configuration rc_output
-    # defaulted: control_level=INDIVIDUAL, Type=B
+    # defaulted: control_level=INDIVIDUAL, Type=B, regulator_resistance=0.0001
     xf_reg_output_A, reg_output_A, typeB
     # configuration rc_output
-    # defaulted: control_level=INDIVIDUAL, Type=B
+    # defaulted: control_level=INDIVIDUAL, Type=B, regulator_resistance=0.0001
     xf_reg_output_B, reg_output_B, typeB
     # configuration rc_output
-    # defaulted: control_level=INDIVIDUAL, Type=B
+    # defaulted: control_level=INDIVIDUAL, Type=B, regulator_resistance=0.0001
     xf_reg_output_C, reg_output_C, typeB
     # configuration rcon_creg3c
-    # defaulted: time_delay=0.0, control_level=INDIVIDUAL
+    # defaulted: time_delay=0.0, control_level=INDIVIDUAL, regulator_resistance=0.0001
     xf_xf_reg3_A,    xf_reg3_A,    typeA
     # configuration rcon_creg3c
-    # defaulted: time_delay=0.0, control_level=INDIVIDUAL
+    # defaulted: time_delay=0.0, control_level=INDIVIDUAL, regulator_resistance=0.0001
     xf_xf_reg3_C,    xf_reg3_C,    typeA
 
-# ideal (S3c-2): GridLAB-D's regulator has no impedance or kVA; baseU = the from bus's nominal_voltage (the coil, phase to neutral; a gang unit's x sqrt 3)
-Table AutoTransformerEnd: mRID, AutoTransformer, node, phase, endNumber, grounded=true, baseU (V), BaseVoltage
-    xf_reg_bank_1,     xf_reg_bank,     n2, ABCN, 1, 4160.004988602778, bv_4p16kv
-    xf_reg_bank_2,     xf_reg_bank,     r4, ABCN, 2, 4160.004988602778, bv_4p16kv
-    xf_reg_ldc_A_1,    xf_reg_ldc_A,    n5, AN,   1, 2401.78,           bv_4p16kv
-    xf_reg_ldc_A_2,    xf_reg_ldc_A,    r3, AN,   2, 2401.78,           bv_4p16kv
-    xf_reg_output_A_1, xf_reg_output_A, n2, AN,   1, 2401.78,           bv_4p16kv
-    xf_reg_output_A_2, xf_reg_output_A, r1, AN,   2, 2401.78,           bv_4p16kv
-    xf_reg_output_B_1, xf_reg_output_B, n2, BN,   1, 2401.78,           bv_4p16kv
-    xf_reg_output_B_2, xf_reg_output_B, r1, BN,   2, 2401.78,           bv_4p16kv
-    xf_reg_output_C_1, xf_reg_output_C, n2, CN,   1, 2401.78,           bv_4p16kv
-    xf_reg_output_C_2, xf_reg_output_C, r1, CN,   2, 2401.78,           bv_4p16kv
-    xf_xf_reg3_A_1,    xf_xf_reg3_A,    n4, AN,   1, 2401.78,           bv_4p16kv
-    xf_xf_reg3_A_2,    xf_xf_reg3_A,    r2, AN,   2, 2401.78,           bv_4p16kv
-    xf_xf_reg3_C_1,    xf_xf_reg3_C,    n4, CN,   1, 2401.78,           bv_4p16kv
-    xf_xf_reg3_C_2,    xf_xf_reg3_C,    r2, CN,   2, 2401.78,           bv_4p16kv
+# baseU = the from bus's nominal_voltage (the coil, phase to neutral; a gang unit's x sqrt 3); ratedS = the continuous rating x baseU (x sqrt 3 on a gang unit; S3c-2)
+Table AutoTransformerEnd: mRID, AutoTransformer, node, phase, endNumber, grounded=true, baseU (V), ratedS (VA), BaseVoltage
+    xf_reg_bank_1,     xf_reg_bank,     n2, ABCN, 1, 4160.004988602778, 2882136.0,          bv_4p16kv
+    xf_reg_bank_2,     xf_reg_bank,     r4, ABCN, 2, 4160.004988602778, 2882136.0,          bv_4p16kv
+    xf_reg_ldc_A_1,    xf_reg_ldc_A,    n5, AN,   1, 2401.78,           1681246.0000000002, bv_4p16kv
+    xf_reg_ldc_A_2,    xf_reg_ldc_A,    r3, AN,   2, 2401.78,           1681246.0000000002, bv_4p16kv
+    xf_reg_output_A_1, xf_reg_output_A, n2, AN,   1, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_reg_output_A_2, xf_reg_output_A, r1, AN,   2, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_reg_output_B_1, xf_reg_output_B, n2, BN,   1, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_reg_output_B_2, xf_reg_output_B, r1, BN,   2, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_reg_output_C_1, xf_reg_output_C, n2, CN,   1, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_reg_output_C_2, xf_reg_output_C, r1, CN,   2, 2401.78,           1833951.1724000003, bv_4p16kv
+    xf_xf_reg3_A_1,    xf_xf_reg3_A,    n4, AN,   1, 2401.78,           600445.0,           bv_4p16kv
+    xf_xf_reg3_A_2,    xf_xf_reg3_A,    r2, AN,   2, 2401.78,           600445.0,           bv_4p16kv
+    xf_xf_reg3_C_1,    xf_xf_reg3_C,    n4, CN,   1, 2401.78,           600445.0,           bv_4p16kv
+    xf_xf_reg3_C_2,    xf_xf_reg3_C,    r2, CN,   2, 2401.78,           600445.0,           bv_4p16kv
+
+# r = regulator_resistance (default 1e-4 ohm); x = a 0.01 % stand-in on ratedS (S3c-2)
+Table TransformerMeshImpedance: mRID, FromTransformerEnd, ToTransformerEnd, r (ohm), x (percent)
+    xf_reg_bank_mesh_12,     xf_reg_bank_1,     xf_reg_bank_2,     0.0001, 0.01
+    xf_reg_ldc_A_mesh_12,    xf_reg_ldc_A_1,    xf_reg_ldc_A_2,    0.001,  0.01
+    xf_reg_output_A_mesh_12, xf_reg_output_A_1, xf_reg_output_A_2, 0.0001, 0.01
+    xf_reg_output_B_mesh_12, xf_reg_output_B_1, xf_reg_output_B_2, 0.0001, 0.01
+    xf_reg_output_C_mesh_12, xf_reg_output_C_1, xf_reg_output_C_2, 0.0001, 0.01
+    xf_xf_reg3_A_mesh_12,    xf_xf_reg3_A_1,    xf_xf_reg3_A_2,    0.0001, 0.01
+    xf_xf_reg3_C_mesh_12,    xf_xf_reg3_C_1,    xf_xf_reg3_C_2,    0.0001, 0.01
 
 # targetValue/Deadband = band_center/band_width, primary volts (x ptRatio on LINE_DROP_COMP); lineDropR/X = compensator setting x ptRatio / ctRatio (line_drop_ohms); enabled = Control is not MANUAL
 Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled, monitoredPhase, ptRatio, targetValue, targetDeadband, lineDropCompensation, lineDropR (ohm), lineDropX (ohm), Terminal
@@ -68,14 +77,22 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
     rc_xf_reg3_C_tap,    xf_reg3_C,    xf_xf_reg3_C_2,    rc_xf_reg3_C,    -16, 16, 0, 0.625, 2401.78,           false, 20.0, 250.0, 15.0, 15.0
 
 Table OperationalLimitSet: mRID, Equipment
+    xf_reg_bank_limits,     xf_reg_bank
+    xf_reg_ldc_A_limits,    xf_reg_ldc_A
     xf_reg_output_A_limits, xf_reg_output_A
     xf_reg_output_B_limits, xf_reg_output_B
     xf_reg_output_C_limits, xf_reg_output_C
+    xf_xf_reg3_A_limits,    xf_xf_reg3_A
+    xf_xf_reg3_C_limits,    xf_xf_reg3_C
 
 Table CurrentLimit: mRID, normalValue (A), OperationalLimitType, OperationalLimitSet
+    xf_reg_bank_norm,      400.0,   olt_normal,    xf_reg_bank_limits
+    xf_reg_ldc_A_norm,     700.0,   olt_normal,    xf_reg_ldc_A_limits
     xf_reg_output_A_norm,  763.58,  olt_normal,    xf_reg_output_A_limits
     xf_reg_output_A_emerg, 1041.25, olt_emergency, xf_reg_output_A_limits
     xf_reg_output_B_norm,  763.58,  olt_normal,    xf_reg_output_B_limits
     xf_reg_output_B_emerg, 1041.25, olt_emergency, xf_reg_output_B_limits
     xf_reg_output_C_norm,  763.58,  olt_normal,    xf_reg_output_C_limits
     xf_reg_output_C_emerg, 1041.25, olt_emergency, xf_reg_output_C_limits
+    xf_xf_reg3_A_norm,     250.0,   olt_normal,    xf_xf_reg3_A_limits
+    xf_xf_reg3_C_norm,     250.0,   olt_normal,    xf_xf_reg3_C_limits

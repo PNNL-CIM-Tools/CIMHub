@@ -1933,8 +1933,8 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 | `dwell_time`, `time_delay` | derived | `initialDelay` = `subsequentDelay` = dwell_time + time_delay (S3c-5) |
 | `control_level` | structural | `INDIVIDUAL`: a unit per wired phase; `BANK`: one gang unit on ABC (GLM-7), or one unit on its one `PT_phase` (S6-7) |
 | `PT_phase`, `CT_phase` | structural | `BANK`: `monitoredPhase` (the two must agree); `INDIVIDUAL`: GridLAB-D ignores them, listed on the row (S6-7) |
-| `regulator_resistance` | untranscribed | NR's stand-in (default `powerflow::default_resistance`, 1e-4 Ω); the ends are ideal (S3c-2) |
-| the link's ratings | structural | each unit's own `OperationalLimitSet`, its phase's `continuous_rating_X`/`emergency_rating_X` (a gang unit: as S3a-5) |
+| `regulator_resistance` | copied | the unit's `TransformerMeshImpedance.r` (Ω), GridLAB-D's series resistance (default `powerflow::default_resistance`, 1e-4 Ω; S3c-2) |
+| the link's ratings | structural | each unit's own `OperationalLimitSet`, its phase's `continuous_rating_X`/`emergency_rating_X` (a gang unit: as S3a-5); the continuous rating also gives `ratedS` (S3c-2) |
 | `msg_mode`, `remote_voltage_X`, `tap_X_change_count`, the link outputs and header slots | untranscribed | co-simulation messaging, solver output or state, as S3a |
 
 ### Fail fast (S3c)
@@ -1948,13 +1948,14 @@ Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, h
 | a tap outside -lower_taps..+raise_taps | GridLAB-D would clamp it on the first tap change, not at init |
 | compensator settings without both transducer ratios | the primary ohms need both; in no deck |
 | phases with S or nothing in ABC; status `OPEN` | as S3b |
+| a unit with no `continuous_rating_X` (its phase's; a gang unit's any) | `ratedS` is the rating × `baseU` (S3c-2); the PNNL taxonomy decks stop here |
 
 ### Decisions for S3c
 
 | # | question | decision |
 |---|---|---|
 | S3c-1 | Form (GLM-7) | **The user's: a `VoltageRegulator` with two `AutoTransformerEnd`s, no tank end; an LTC on a step-down transformer would be a `PowerTransformerEnd`, and GLM has none.** One unit per wired phase on `INDIVIDUAL` (each its own `RatioTapChanger` on end 2 and `TapChangerControl` on its `T2`, as the DSS import's IEEE 13), one gang unit on `BANK`. `mRID` `xf_` as the core shape and the DSS import |
-| S3c-2 | Impedance and kVA | **The user's: the lack of impedance is why `AutoTransformerEnd` exists.** GridLAB-D's regulator has no impedance and no kVA (its NR stand-in resistance is a solver setting), so the ends carry no `ratedS` and there is no `TransformerMeshImpedance` |
+| S3c-2 | Impedance and kVA | **The user's, 2026-11-22 (replaces "ideal ends"): `ratedS`, `baseU` and `phase` are required on an `AutoTransformerEnd`, and each unit has a `TransformerMeshImpedance`.** GridLAB-D's regulator has no kVA, so both ends' `ratedS` = the unit's continuous rating × `baseU` (× √3 on a gang unit, whose `baseU` is line to line); an unset rating raises (GridLAB-D's 1000 A default is not the regulator's, as S2-7), and glm-repair rates the deck. The mesh r is `regulator_resistance` (GridLAB-D's series resistance, default 1e-4 Ω) and its x a 0.01 % stand-in on `ratedS` (an engine may need one: OpenDSS solves `XHL=0` wrong, 0.26 pu on a probe; 0.01 is the IEEE 13 deck's regulators' `XHL`) |
 | S3c-3 | Coil voltage | `baseU` = `neutralU` = the from bus's `nominal_voltage` as written (phase to neutral, 2401.78 V): the coil the band works against (`regulator.cpp:1380` compares the to-node's phase voltage). A gang unit's is that × √3 (line to line, as the core shape's 3-phase `vr3`) |
 | S3c-4 | Line drop | GridLAB-D's compensator drop is `(I / current_transducer_ratio) × (R + jX)` on the PT secondary (`:1330`), so the primary ohms are the setting × PT ratio / CT ratio: `line_drop_ohms` with the CT ratio where it takes a CT primary rating (GridLAB-D's CT secondary is 1 A). `ctRating` is not written (GLM has no CT primary rating). The settings are written on every unit that has them, also on `MANUAL`, where `lineDropCompensation` is false |
 | S3c-5 | Delays | GridLAB-D waits `dwell_time` and then `time_delay` before every tap change, the first and each later one (`regulator.cpp:598`-`611`: a change re-arms the dwell, and the out-of-band branch then sets the mechanism time after it), so `initialDelay` = `subsequentDelay` = the sum. An exporter writes `dwell_time` 0 and `time_delay` = `subsequentDelay` |
@@ -1969,11 +1970,13 @@ with a mesh still requires winding 1's `ratedS`. S3c's tests read every bound un
 regulator `tap_B`, IEEE123's `MANUAL` `CA` unit (`Type A`, compensator settings), a `LINE_DROP_COMP` 1-phase unit with
 `regulator_resistance`, a `BANK` gang unit monitoring B, and an unused configuration; its golden, 10 fail-fast
 cases, the IEEE13_cdpsm golden, and on every deck **the engine check (GLM-16):** each unit's tap changer gives
-GridLAB-D's tap and step, its control GridLAB-D's band and enabled state, a unit per wired phase, and no mesh.
+GridLAB-D's tap and step, its control GridLAB-D's band and enabled state, a unit per wired phase, and its `ratedS`
+and mesh as S3c-2 (amended 2026-11-22: the getter read no mesh before).
 
 **Expected differences from the DSS import of IEEE13 (GLM-16).** Equal: three units AN/BN/CN on brkr→rg60, the
 taps 10/8/11, ±16 steps of 0.625 %, PT ratio 20, CT ratio 3500, the control on `T2`. Different, all from what GLM
-holds: no `ratedS` (DSS 1666 kVA) and no mesh (DSS 0.01 % r and x); `baseU`/`neutralU` 2401.78 V (DSS 2.4 kV);
+holds: `ratedS` 763.58 A × 2401.78 V = 1833.95 kVA (DSS 1666 kVA) and mesh r 1e-4 Ω, 0.0032 % (DSS 0.01 %; x 0.01 % on
+both, S3c-2); `baseU`/`neutralU` 2401.78 V (DSS 2.4 kV);
 `enabled`/`controlEnabled` false and no band (the Java export wrote `MANUAL` and commented the band out);
 `lineDropR`/`X` 0.0171 / 0.0514 Ω against DSS 0.0857 / 0.2571 Ω (the Java export copied the DSS dial volts with the
 DSS CT ratio 700 / 0.2 A, which GridLAB-D reads on a 1 A secondary); `initialDelay` 15 and `subsequentDelay` 15
@@ -2049,7 +2052,7 @@ The object header and the link slots (as S3a) are left out.
 | `tap_B_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
 | `tap_C_change_count` | `Optional[float]` |  | untranscribed | solver output or state |
 | `sense_node` | `Optional[str]` |  | structural | REMOTE_NODE's monitored node: must solve as the regulator's to bus; on another Control GridLAB-D ignores it, listed on the row (S6) |
-| `regulator_resistance` | `Optional[float]` | `0.001` | untranscribed | NR's stand-in series resistance (default powerflow::default_resistance, 1e-4 ohm); the AutoTransformerEnds are ideal (S3c-2) |
+| `regulator_resistance` | `Optional[float]` | `0.001` | copied | `TransformerMeshImpedance.r` (ohm); GridLAB-D's series resistance, on every unit; default powerflow::default_resistance, 1e-4 ohm (S3c-2) |
 
 ## S4a: loads and capacitors (approved and built 2026-11-10)
 

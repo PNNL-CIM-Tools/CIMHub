@@ -50,6 +50,8 @@ VENDORED_DECKS = [
 BIND_STOPS = {
     "IEEE/IEEE123_transactive.glm": "unknown block 'Object battery'",
     "IEEE/IEEE13_houses.glm": "Transformer 633-634: its coil on bus 634 gives 0.48 kV",
+    "PNNL/orig_GC-12.47-1.glm": "regulator GC-12-47-1_reg_1: no continuous_rating_A;",
+    "PNNL/orig_R1-12.47-3.glm": "regulator R1-12-47-3_reg_1: no continuous_rating_A;",
 }
 
 

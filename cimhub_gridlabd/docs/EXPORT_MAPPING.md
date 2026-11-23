@@ -207,7 +207,7 @@ season and day type (`get_load_schedule`'s `days`), with their points, is a GLM 
 | what | why | measured (worst, line to line unless noted) |
 |---|---|---|
 | a source's impedance is not written | GLM's swing is ideal (X6) | IEEE 13 original 3e-4 |
-| a VoltageRegulator's own impedance | GLM's regulator is ideal | (in the row above) |
+| a VoltageRegulator's reactance and kVA | GLM's regulator has neither: only its mesh r is written (`regulator_resistance`, S3c-2) | (in the row above) |
 | a winding's grounding impedance (`rground`/`xground`) | GLM grounds a wye solidly | IEEE13_CDPSM's Sub3: 3e-3 (3 % line to neutral) |
 | a non-native two-winding model's phase shift and zero sequence | the wye-wye replacement (X3) | YD, GrdYD 1.4e-3 |
 | an open-delta bank as a full bank | the wye-wye replacement (X3) | OYOD 11 % (balanced), 16 % (unbalanced); solve only |
@@ -218,7 +218,7 @@ season and day type (`get_load_schedule`'s `days`), with their points, is a GLM 
 | IEEE 8500 at 0.9 load | not isolated (candidates: 1,177 centre-tap services, ideal regulators, X27) | 5.3e-3 |
 | a triplex matrix's b | GridLAB-D's `triplex_line` has no shunt admittance (X27) | IEEE 8500: about 0.1 VAr per kft |
 | a template no equipment uses | GLM's configurations are written per use | tier 2: the atoms' `cn_250`, `xc_unused` |
-| a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, 1.2e-6 |
+| a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, and its ratedS and mesh x, which follow baseU (S3c-2), 1.2e-6 |
 | a load group with no schedule | written static (X29): a reference to no player would not load | tier 2: the load atoms' `zipsched` loads come back EnergyConsumers |
 | a player's start zone | its rows are written in GMT (X29) | tier 2: `startTime` the same instant at +00:00 |
 | `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
@@ -615,8 +615,9 @@ default.
 | emergency_rating_B | written | get_current_limits emergency |
 | emergency_rating_C | written | get_current_limits emergency |
 | configuration | written | its regulator_configuration |
+| regulator_resistance | written | the mesh r (ohm), S3c-2; unset without a mesh r |
 
-64 other slots: unset
+63 other slots: unset
 
 ### player
 

@@ -1,7 +1,7 @@
 """GLM import -> CIM -> DSS export, solved in the engine: the transformer forms the GLM importer writes (S3b) export
 and solve. A synthetic deck (no utility data): a template unit by %Z (3-phase WYE_WYE), a 2-phase WYE_WYE and an
 unequal bank, both lugged cans (TankEnds are three-phase only), and a center tap, each loaded, behind a recloser at
-the feeder head.
+the feeder head; and a 1-phase and a gang regulator (S3c-2).
 
 GridLAB-D's per unit is on ``secondary_voltage``² / ``power_rating``; each tank's %Z is that moved to its own
 nameplate by ``k = 3 S_coil / S_total`` (S3b-4), which DSS reads per phase: 1 on the 3-phase unit, 1.5 on each 25
@@ -68,6 +68,18 @@ object node { name lat_c; phases CN; nominal_voltage 7200; }
 object switch { name fb; phases BN; from p; to lat_b; status CLOSED; }
 object switch { name fc; phases CN; from p; to lat_c; status CLOSED; }
 object switch { name tie; phases BN; from lat_b; to lat_c; status OPEN; }
+object regulator_configuration { name cr; connect_type WYE_WYE; Control OUTPUT_VOLTAGE; band_center 7300;
+    band_width 120; raise_taps 16; lower_taps 16; regulation 0.1; power_transducer_ratio 60; }
+object regulator_configuration { name crg; connect_type WYE_WYE; Control OUTPUT_VOLTAGE; control_level BANK;
+    PT_phase A; CT_phase A; band_center 7300; band_width 120; raise_taps 16; lower_taps 16; regulation 0.1; power_transducer_ratio 60; }
+object node { name ro; phases AN; nominal_voltage 7200; }
+object node { name rgo; phases ABCN; nominal_voltage 7200; }
+object regulator { name rg; phases AN; from p; to ro; configuration cr; continuous_rating_A 100; }
+object regulator { name rgg; phases ABCN; from p; to rgo; configuration crg; regulator_resistance 0.001;
+    continuous_rating_A 200; continuous_rating_B 200; continuous_rating_C 200; }
+object load { name lro; parent ro; phases AN; nominal_voltage 7200; constant_power_A 50000+10000j; }
+object load { name lrgo; parent rgo; phases ABCN; nominal_voltage 7200; constant_power_A 50000+10000j;
+    constant_power_B 50000+10000j; constant_power_C 50000+10000j; }
 """
 #: XfmrCode -> (phases, kVs, kVAs, %Rs, X): GLM's z x k, %R split over the windings (a center tap by Hopkinson's rule)
 CODES = {
@@ -85,7 +97,12 @@ CODES = {
 }
 BUSES = {"t2_b": ["p.2.0", "s2.2.0"], "t2_c": ["p.3.0", "s2.3.0"], "t3": ["p.1.2.3", "s3.1.2.3"], "tb_a": ["p.1.0", "sb.1.0"],
          "tb_b": ["p.2.0", "sb.2.0"], "tb_c": ["p.3.0", "sb.3.0"], "tct": ["p.1.0", "h.1.0", "h.0.2"],
-         "t120": ["p.3.0", "v120.1.0"], "t240": ["p.2.0", "v240.1.0", "v240.0.2"], "t277": ["p.1.0", "v277.1.0"]}
+         "t120": ["p.3.0", "v120.1.0"], "t240": ["p.2.0", "v240.1.0", "v240.0.2"], "t277": ["p.1.0", "v277.1.0"],
+         "rg_a": ["p.1.0", "ro.1.0"], "rgg": ["p.1.2.3", "rgo.1.2.3"]}
+#: regulator -> (kVAs, %Rs, XHL): ratedS = the continuous rating x baseU (x sqrt 3 on the gang unit), the mesh r =
+#: regulator_resistance (default 1e-4 ohm) halved over the windings, x the 0.01 % stand-in (GLM S3c-2)
+REGULATORS = {"rg_a": ([720, 720], [1e-4 / 72 * 100 / 2] * 2, 0.01),
+              "rgg": ([4320, 4320], [1e-3 / 36 * 100 / 2] * 2, 0.01)}
 #: a one-phase service (the user's rule): 120 V is the s1 leg to N, 240 V a center tap across s1-s2, both on 240 V
 #: systems
 SERVICE_LOADS = {"l120": ("v120.1", 0.12), "l240": ("v240.1.2", 0.24)}
@@ -113,6 +130,18 @@ def test_template_units_export_with_their_percent_impedance(exported):
     assert {name: [bus.lower() for bus in record.buses] for name, record in transformers.items()} == BUSES
 
 
+def test_regulators_export_rated_with_their_mesh(exported):
+    """GLM has no regulator kVA or reactance: the importer rates each unit and writes its mesh (S3c-2)."""
+    model = DssReader(exported).read_all()
+    transformers = {str(record.name).lower(): record for record in model.list_by_class(schema.Transformer)}
+    for name, (kvas, resistances, xhl) in REGULATORS.items():
+        record = transformers[name]
+        assert (record.kVAs, record.pct_Rs, record.XHL) == (pytest.approx(kvas), pytest.approx(resistances),
+                                                            pytest.approx(xhl)), name
+    controls = {str(record.name).lower() for record in model.list_by_class(schema.Regcontrol)}
+    assert controls == set(REGULATORS)
+
+
 def test_open_tie_across_phases_lands_on_each_sides_node(exported):
     """An open tie between a B and a C lateral (GLM S6-9, SwitchPhase B -> C) is written side by side, open."""
     model = DssReader(exported).read_all()
@@ -128,7 +157,8 @@ def test_deck_solves_near_nominal(exported):
     dss.Text.Command("solve")
     assert dss.Solution.Converged()
     for bus, nominal in (("s3", 277.128), ("s2", 277.128), ("h", 120.0), ("sb", 120.089), ("v120", 120.0),
-                         ("v240", 120.0), ("v277", 277.0), ("lat_b", 7200.0), ("lat_c", 7200.0)):
+                         ("v240", 120.0), ("v277", 277.0), ("lat_b", 7200.0), ("lat_c", 7200.0), ("ro", 7200.0),
+                         ("rgo", 7200.0)):
         dss.Circuit.SetActiveBus(bus)
         assert dss.Bus.VMagAngle()[::2] == pytest.approx([nominal] * len(dss.Bus.Nodes()), rel=0.02), bus
 

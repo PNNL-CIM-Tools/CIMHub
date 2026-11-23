@@ -1,8 +1,9 @@
 """GLM ``regulator`` (with its ``regulator_configuration``) -> ``regulator.cimtbl`` (S3c).
 
 A GridLAB-D regulator is a 1:1 step-voltage regulator with no nameplate impedance and no kVA, so each unit is a
-``VoltageRegulator`` (an AutoTransformer) with two ideal ``AutoTransformerEnd``s: node, phase, grounding and the
-coil voltage, and no mesh impedance (S3c-2). There is no step-down LTC in GLM (a regulator has no voltage ratio),
+``VoltageRegulator`` (an AutoTransformer) with two ``AutoTransformerEnd``s: node, phase, grounding, the coil voltage
+and a ``ratedS`` from the continuous rating, and a ``TransformerMeshImpedance`` of ``regulator_resistance`` and a
+stand-in x (S3c-2). There is no step-down LTC in GLM (a regulator has no voltage ratio),
 so no ``PowerTransformerEnd`` and no tank. ``control_level INDIVIDUAL`` (GridLAB-D's default) is one 1-phase unit
 per wired phase with its own ``RatioTapChanger`` and ``TapChangerControl``, as the DSS import's IEEE 13; ``BANK``
 is one gang unit (GLM-7). CIM has no regulator template, so a configuration's values go on every unit that names
@@ -13,6 +14,7 @@ Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3c-regulators``.
 
 from __future__ import annotations
 
+import math
 from typing import NamedTuple
 
 from cimprofiles.units import units
@@ -43,6 +45,11 @@ DEFAULTS = {"Control": "MANUAL", "control_level": "INDIVIDUAL", "Type": "B", "dw
 CONSTRUCTION = {"A": "typeA", "B": "typeB"}
 #: The ``Control`` modes mapped; ``REMOTE_NODE`` only on the regulator's own output (S3c-6, S6).
 CONTROLS = ("MANUAL", "OUTPUT_VOLTAGE", "LINE_DROP_COMP", "REMOTE_NODE")
+#: S3c-2: GridLAB-D's ``powerflow::default_resistance`` (ohm), the regulator's series r when unset, and the mesh x
+#: (percent on ratedS) that stands in for none: an exporter's engine may need one (DSS solves XHL=0 wrong), and 0.01 is
+#: the IEEE 13 deck's regulators' XHL
+DEFAULT_RESISTANCE = 1e-4
+STAND_IN_X = 0.01
 
 _BAND = ("{target} = {slot} (V): primary volts on OUTPUT_VOLTAGE and MANUAL, x power_transducer_ratio on "
          "LINE_DROP_COMP, whose band is on the PT secondary (regulator.cpp:1316)")
@@ -103,9 +110,9 @@ FIELDS = classify(NATIVE_CLASS, {
     **{f"tap_{phase}_change_count": Field("untranscribed", note="solver output or state") for phase in "ABC"},
     "sense_node": Field("structural", note="REMOTE_NODE's monitored node: must solve as the regulator's to bus; "
                                            "on another Control GridLAB-D ignores it, listed on the row (S6)"),
-    "regulator_resistance": Field("untranscribed", note="NR's stand-in series resistance (default "
-                                                        "powerflow::default_resistance, 1e-4 ohm); the "
-                                                        "AutoTransformerEnds are ideal (S3c-2)"),
+    "regulator_resistance": Field("copied", (("TransformerMeshImpedance", "r", "ohm"),),
+                                  "GridLAB-D's series resistance, on every unit; default powerflow::default_resistance, "
+                                  "1e-4 ohm (S3c-2)"),
 })
 
 def _quantity(model: GlmModel, record, slot: str, unit: str) -> float:
@@ -240,10 +247,22 @@ def _phase_ratings(reg, letter: str) -> dict[str, float]:
             if getattr(reg, slots[index]) is not None}
 
 
+def rated_s(reg, unit: _Unit, base_u: float) -> float:
+    """The unit's ``ratedS`` (VA): its continuous rating x ``baseU``, x sqrt 3 on a gang unit (``baseU`` line to line;
+    S3c-2). GLM has no kVA, and GridLAB-D's default rating is not the regulator's (S2-7), so an unset one raises."""
+    one_phase = len(unit.letters) == 1
+    rating = (_phase_ratings(reg, unit.letters) if one_phase else link_ratings(reg)).get("norm")
+    if rating is None:
+        slots = f"continuous_rating_{unit.letters}" if one_phase else "continuous_rating_A/B/C"
+        raise ValueError(f"{label(reg)}: no {slots}; ratedS is the continuous rating x baseU (S3c-2)")
+    return rating * base_u if one_phase else rating * base_u * math.sqrt(3)
+
+
 class _Rows:
     def __init__(self):
         self.regulators: list[Row] = []
         self.ends: list[Row] = []
+        self.meshes: list[Row] = []
         self.controls: list[Row] = []
         self.taps: list[Row] = []
         self.limits = Limits()
@@ -266,6 +285,12 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
             for slot in ("band_center", "band_width")]
     if control == "LINE_DROP_COMP":
         band = [None if value is None else secondary_to_primary(value, pt) for value in band]
+    if reg.regulator_resistance is None:
+        resistance = DEFAULT_RESISTANCE
+        written = f"regulator_resistance={DEFAULT_RESISTANCE:g}"
+        defaulted = f"{defaulted}, {written}" if defaulted else f"defaulted: {written}"
+    else:
+        resistance = _quantity(model, reg, "regulator_resistance", "ohm")
     comment = "\n".join(part for part in (f"configuration {config.name}", defaulted, untranscribed_values(FIELDS, reg),
                                           untranscribed_values(CONFIGURATION_FIELDS, config), ignored_phases(config),
                                           ignored_sense)
@@ -275,9 +300,11 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
         vr = mrid(PREFIX, name)  # as unit_mrids
         base_u = coil if len(unit.letters) == 1 else line_voltage(coil, System.THREE_PHASE)
         rows.regulators.append(Row([vr, name, CONSTRUCTION[str(config.Type)]], comment=comment))
+        rating = rated_s(reg, unit, base_u)
         for number, node in enumerate((node1, node2), start=1):
             rows.ends.append(Row([f"{vr}_{number}", vr, node, f"{unit.letters}N", str(number), cell(base_u),
-                                  buses[node].base_voltage]))
+                                  cell(rating), buses[node].base_voltage]))
+        rows.meshes.append(Row([f"{vr}_mesh_12", f"{vr}_1", f"{vr}_2", cell(resistance), cell(STAND_IN_X)]))
         r, x = line_drop(config, unit.monitored)
         control_id = mrid(CONTROL_PREFIX, name)
         rows.controls.append(Row([control_id, name, cell(enabled), unit.monitored, cell(pt), cell(band[0]),
@@ -305,9 +332,12 @@ def map_regulators(model: GlmModel, roots: dict[str, str], buses: dict[str, BusS
               comment="one unit per wired phase (INDIVIDUAL) or a gang unit (BANK), GLM-7"),
         Table("AutoTransformerEnd", [Column("mRID"), Column("AutoTransformer"), Column("node"), Column("phase"),
                                      Column("endNumber"), Column("grounded", default="true"), Column("baseU", "V"),
-                                     Column("BaseVoltage")], rows.ends,
-              comment="ideal (S3c-2): GridLAB-D's regulator has no impedance or kVA; baseU = the from bus's "
-                      "nominal_voltage (the coil, phase to neutral; a gang unit's x sqrt 3)"),
+                                     Column("ratedS", "VA"), Column("BaseVoltage")], rows.ends,
+              comment="baseU = the from bus's nominal_voltage (the coil, phase to neutral; a gang unit's x sqrt 3); "
+                      "ratedS = the continuous rating x baseU (x sqrt 3 on a gang unit; S3c-2)"),
+        Table("TransformerMeshImpedance", [Column("mRID"), Column("FromTransformerEnd"), Column("ToTransformerEnd"),
+                                           Column("r", "ohm"), Column("x", "percent")], rows.meshes,
+              comment="r = regulator_resistance (default 1e-4 ohm); x = a 0.01 % stand-in on ratedS (S3c-2)"),
         Table(_CONTROL, [Column("mRID"), Column("name"), Column("mode", default="voltage"),
                          Column("discrete", default="true"), Column("enabled"), Column("monitoredPhase"),
                          Column("ptRatio"), Column("targetValue"), Column("targetDeadband"),

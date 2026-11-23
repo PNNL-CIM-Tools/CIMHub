@@ -3,7 +3,7 @@
 - Parity: the Java CIMHub exports (IEEE 13 cdpsm and assets, IEEE 123) solve to the original's bus voltages within
   ``PARITY_REL``. The original is run as the importer reads it (``AS_IMPORTED``): a bus GridLAB-D would make a second
   swing is a plain bus (S1-2), and a battery written CONSTANT_PF is at its CONSTANT_PQ set point (S4b-2).
-- The PNNL taxonomy feeders' houses, climate and recorders are not mapped, so their exports are only solved.
+- The PNNL taxonomy feeders stop at the bind: their regulators are unrated (S3c-2, ``BIND_STOPS``).
 - Idempotence: a second export(import()) pass is the same text as the first.
 """
 from __future__ import annotations
@@ -23,7 +23,6 @@ from cimhub_gridlabd.importer.glm_to_cimtbl import glm_to_cim
 #: the original and the export agree to GLM's six written digits, compounded over a feeder
 PARITY_REL = 1e-4
 JAVA_EXPORTS = ["IEEE/IEEE13_cdpsm.glm", "IEEE/IEEE13_assets.glm", "IEEE/IEEE123.glm"]
-SOLVE_ONLY = ["PNNL/orig_GC-12.47-1.glm", "PNNL/orig_R1-12.47-3.glm"]
 #: (deck, text, replacement): the original as the importer reads it
 AS_IMPORTED = [
     ("IEEE/IEEE13_cdpsm.glm", "  nominal_voltage 277.13;\n  bustype SWING_PQ;\n", "  nominal_voltage 277.13;\n"),
@@ -61,14 +60,7 @@ def test_the_export_solves_as_the_original(relative, scope, tmp_path):
     assert worst < PARITY_REL, f"{relative}: {where} differs by {worst:.2e}"
 
 
-@pytest.mark.parametrize("relative", SOLVE_ONLY)
-def test_the_export_solves(relative, scope, tmp_path):
-    exported = tmp_path / "exported.glm"
-    export_deck(GlmReader(deck(relative), defines=defines(relative)).read_all(), Path(relative).stem, exported)
-    assert solve(exported)
-
-
-@pytest.mark.parametrize("relative", JAVA_EXPORTS + SOLVE_ONLY)
+@pytest.mark.parametrize("relative", JAVA_EXPORTS)
 def test_a_second_pass_is_a_fixed_point(relative, scope, tmp_path):
     first = export_deck(GlmReader(deck(relative), defines=defines(relative)).read_all(), Path(relative).stem,
                         tmp_path / "first.glm")

@@ -48,6 +48,11 @@ EXPECTED = [
      "a group with no schedule (zipsched, a player the deck does not define) is written static (X29), so its loads "
      "come back EnergyConsumers"),
 ]
+#: a regulator's ratedS is its rating x baseU and its x is in percent on them (S3c-2): both follow the rounded baseU
+#: above, by its 1.2e-6
+_FOLLOWS_BASE_U = re.compile(r"(?:AutoTransformerEnd \S+\.ratedS|TransformerMeshImpedance \S+\.x): "
+                             r"expected (\S+) \w+, got (\S+) \w+")
+BASE_U_REL = 2e-6
 #: plain floats (ZIP fractions) compare to the last digits the writer's 15 keep
 FLOAT_REL = 1e-12
 _FLOATS = re.compile(r"expected (-?[0-9.]+(?:e-?\d+)?), got (-?[0-9.]+(?:e-?\d+)?)$")
@@ -77,6 +82,9 @@ def _unexpected(difference: str) -> bool:
         return False
     start = _START.search(difference)
     if start and datetime.fromisoformat(start[1]) == datetime.fromisoformat(start[2]):
+        return False
+    follows = _FOLLOWS_BASE_U.fullmatch(difference)
+    if follows and math.isclose(float(follows[1]), float(follows[2]), rel_tol=BASE_U_REL):
         return False
     floats = _FLOATS.search(difference)
     return not (floats and math.isclose(float(floats[1]), float(floats[2]), rel_tol=FLOAT_REL))

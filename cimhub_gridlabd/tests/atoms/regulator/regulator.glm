@@ -56,9 +56,10 @@ object regulator_configuration {
   compensator_x_setting_A 0.400000;
   tap_pos_A 2;
 }
-object regulator { name xf_reg3; from n4; to r2; phases CA; configuration rcon_creg3c; }
+object regulator { name xf_reg3; from n4; to r2; phases CA; configuration rcon_creg3c; continuous_rating_A 250;
+                   continuous_rating_C 250; }
 
-// LINE_DROP_COMP on one phase: band on the PT secondary; NR's stand-in resistance is listed on the row
+// LINE_DROP_COMP on one phase: band on the PT secondary; NR's series resistance is the mesh r (S3c-2)
 object regulator_configuration {
   name rc_ldc;
   connect_type WYE_WYE;
@@ -74,7 +75,8 @@ object regulator_configuration {
   regulation 0.10;
   tap_pos_A 5;
 }
-object regulator { name reg_ldc; from n5; to r3; phases AN; configuration rc_ldc; regulator_resistance 0.001; }
+object regulator { name reg_ldc; from n5; to r3; phases AN; configuration rc_ldc; regulator_resistance 0.001;
+                   continuous_rating_A 700; }
 
 // BANK: one gang unit, monitoring B
 object regulator_configuration {
@@ -94,7 +96,8 @@ object regulator_configuration {
   tap_pos_B 4;
   tap_pos_C 4;
 }
-object regulator { name reg_bank; from n2; to r4; phases ABC; configuration rc_bank; }
+object regulator { name reg_bank; from n2; to r4; phases ABC; configuration rc_bank; continuous_rating_A 400;
+                   continuous_rating_B 400; continuous_rating_C 400; }
 
 // no regulator names it: listed on the file's comment
 object regulator_configuration { name rc_unused; connect_type WYE_WYE; raise_taps 16; lower_taps 16; }

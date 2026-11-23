@@ -390,14 +390,20 @@ object regulator {
   phases "ABC";
   from "n2";
   to "r4";
+  continuous_rating_A 400;
+  continuous_rating_B 400;
+  continuous_rating_C 400;
   configuration "reg_bank_config";
+  regulator_resistance 0.0001;
 }
 object regulator {
   name "reg_ldc";
   phases "A";
   from "n5";
   to "r3";
+  continuous_rating_A 700;
   configuration "reg_ldc_config";
+  regulator_resistance 0.001;
 }
 object regulator {
   name "reg_output";
@@ -411,11 +417,15 @@ object regulator {
   emergency_rating_B 1041.25;
   emergency_rating_C 1041.25;
   configuration "reg_output_config";
+  regulator_resistance 0.0001;
 }
 object regulator {
   name "xf_reg3";
   phases "AC";
   from "n4";
   to "r2";
+  continuous_rating_A 250;
+  continuous_rating_C 250;
   configuration "xf_reg3_config";
+  regulator_resistance 0.0001;
 }

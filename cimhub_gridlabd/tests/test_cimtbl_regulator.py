@@ -39,12 +39,9 @@ def test_every_slot_is_classified(fields, native):
 
 def assert_gridlabd_regulation(model, network) -> None:
     """Every unit's tap changer gives GridLAB-D's tap and step (``regulator.cpp:244``, ``:262``) and its control
-    GridLAB-D's band (``:245``); a unit per wired phase on INDIVIDUAL, all ideal (no mesh) as the transformer getter
-    reads them."""
+    GridLAB-D's band (``:245``); a unit per wired phase on INDIVIDUAL, rated at its continuous rating x baseU, with
+    the series ``regulator_resistance`` and the stand-in x as the transformer getter reads them (S3c-2)."""
     units = {str(vr.mRID): vr for vr in network.list_by_class(cim.VoltageRegulator)}
-    assert not network.list_by_class(cim.TransformerMeshImpedance) or all(
-        not isinstance(m.FromTransformerEnd, cim.AutoTransformerEnd)
-        for m in network.list_by_class(cim.TransformerMeshImpedance))
     for reg in model.list_by_class(schema.Regulator):
         config = model.by_name(reg.configuration)
         letters = "".join(letter for letter in "ABC" if letter in str(reg.phases))
@@ -56,7 +53,14 @@ def assert_gridlabd_regulation(model, network) -> None:
             assert vr.construction.value == f"type{config.Type or 'B'}"
             ends = sorted(vr.AutoTransformerEnd, key=lambda end: end.endNumber)
             read = get_transformer_model(vr)
-            assert (read.form, read.mesh, read.base_power) == (TransformerForm.AUTO, {}, None), name
+            base_u = float(ends[0].baseU.to("V"))
+            amps = float(getattr(reg, f"continuous_rating_{letters[0] if bank else letter}"))
+            rated_s = amps * base_u * (3 ** 0.5 if bank and len(letters) == 3 else 1)
+            assert [float(end.ratedS.to("VA")) for end in ends] == pytest.approx([rated_s] * 2), name
+            ohms = 1e-4 if reg.regulator_resistance is None else float(reg.regulator_resistance)
+            [mesh] = read.mesh.values()
+            assert (read.form, list(read.mesh)) == (TransformerForm.AUTO, [(1, 2)]), name
+            assert (mesh.r, mesh.x) == (pytest.approx(ohms / (base_u ** 2 / rated_s) * 100), pytest.approx(0.01))
             assert [winding.end for winding in read.windings] == ends
             assert [end.Terminal.phases.value for end in ends] == [f"{letters if bank else letter}N"] * 2
             tap = ends[1].RatioTapChanger
@@ -108,9 +112,18 @@ def raises(tmp_path, text: str, match: str):
         GlmImporter(MODEL).to_cimtbl(read(path))
 
 
-def _regulator(body: str, phases: str = "ABCN", regulator_body: str = "") -> str:
+RATED = "continuous_rating_A 300; continuous_rating_B 300; continuous_rating_C 300;"
+
+
+def _regulator(body: str, phases: str = "ABCN", regulator_body: str = RATED) -> str:
     return (f"object regulator_configuration {{ name cx; raise_taps 16; lower_taps 16; {body} }}\n"
             f"object regulator {{ name x; from n2; to rx; phases {phases}; configuration cx; {regulator_body} }}\n")
+
+
+def test_unrated_regulator_raises(tmp_path):
+    """GLM has no kVA and GridLAB-D's 1000 A default is not the regulator's: glm-repair rates the deck (S3c-2)."""
+    raises(tmp_path, _regulator("connect_type WYE_WYE;", phases="BN", regulator_body=""),
+           r"regulator x: no continuous_rating_B; ratedS is the continuous rating x baseU")
 
 
 def test_delta_connection_raises(tmp_path):
@@ -137,19 +150,20 @@ def regulator_text(tmp_path, text: str) -> str:
 def test_remote_node_on_its_own_output_is_output_voltage(tmp_path):
     """GridLAB-D reads the voltages OUTPUT_VOLTAGE reads (regulator.cpp:1376-1420), S6."""
     band = "connect_type WYE_WYE; regulation 0.1; band_center 2401; band_width 20;"
-    remote = regulator_text(tmp_path, _regulator(f"{band} Control REMOTE_NODE;", regulator_body="sense_node rx;"))
+    remote = regulator_text(tmp_path, _regulator(f"{band} Control REMOTE_NODE;",
+                                                 regulator_body=f"{RATED} sense_node rx;"))
     output = regulator_text(tmp_path, _regulator(f"{band} Control OUTPUT_VOLTAGE;"))
     assert record_diff(output, remote) == []
 
 
 def test_remote_node_elsewhere_raises(tmp_path):
     raises(tmp_path, _regulator("connect_type WYE_WYE; Control REMOTE_NODE; regulation 0.1;", regulator_body=
-                                "sense_node r1;"), "REMOTE_NODE senses r1, not its own output rx")
+                                f"{RATED} sense_node r1;"), "REMOTE_NODE senses r1, not its own output rx")
 
 
 def test_sense_node_on_another_control_is_listed(tmp_path):
     text = regulator_text(tmp_path, _regulator("connect_type WYE_WYE; Control OUTPUT_VOLTAGE; regulation 0.1;",
-                                               regulator_body="sense_node rx;"))
+                                               regulator_body=f"{RATED} sense_node rx;"))
     assert "ignored on Control OUTPUT_VOLTAGE: sense_node rx" in text
 
 

@@ -12,8 +12,8 @@ AB, BC, CA on A, B, C), and logged. Their shared settings must agree. A group of
 ``control_level`` INDIVIDUAL (its default); one VoltageRegulator alone (a gang unit on ABC, or one phase not named as
 the importer's split) is BANK, which GridLAB-D and the importer read as one unit (GLM-7, S6), sensing
 ``PT_phase``/``CT_phase`` = the control's monitored phase (its first phase when it has none: MANUAL reads no phase;
-an enabled control without one raises). GLM's regulator is ideal, so only the tap changer and its control are
-written:
+an enabled control without one raises). GLM's regulator has no kVA and no reactance, so its mesh r (GridLAB-D's
+series ``regulator_resistance``, S3c-2) and the tap changer and its control are written:
 
 - ``raise_taps`` = highStep - neutralStep, ``lower_taps`` = neutralStep - lowStep, ``regulation`` =
   stepVoltageIncrement x raise_taps, ``tap_pos_X`` = step - neutralStep on each of its phases;
@@ -31,6 +31,8 @@ from __future__ import annotations
 import logging
 
 import cimprofiles.cim18.cim18v17 as cim
+
+from cimtables.graph_write import get_qty
 
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.names import export_name
@@ -71,6 +73,7 @@ _REGULATOR_SLOTS = {
     "configuration": Slot("written", "its regulator_configuration"),
     **{f"continuous_rating_{letter}": Slot("written", "get_current_limits normal") for letter in "ABC"},
     **{f"emergency_rating_{letter}": Slot("written", "get_current_limits emergency") for letter in "ABC"},
+    "regulator_resistance": Slot("written", "the mesh r (ohm), S3c-2; unset without a mesh r"),
 }
 SLOTS = {
     schema.RegulatorConfiguration: with_default(schema.RegulatorConfiguration, _CONFIGURATION_SLOTS,
@@ -149,12 +152,13 @@ def _ends(regulator: cim.VoltageRegulator) -> list:
 def _regulator(group: list[tuple], drop: str, context) -> list:
     first, _ = group[0]
     ends = _ends(first)
-    slots = {}
+    slots, resistance = {}, {}
     for regulator, phase_letters in group:
         taps = [end.RatioTapChanger for end in _ends(regulator) if end.RatioTapChanger is not None]
         if len(taps) != 1:
             raise ValueError(f"VoltageRegulator {regulator.mRID!r}: has {len(taps)} RatioTapChangers, not 1")
         _merge(slots, _configuration_slots(regulator, taps[0], phase_letters), regulator)
+        _merge(resistance, _resistance(regulator), regulator)
     phase_letters = "".join(sorted(letter for _, letters_on in group for letter in letters_on))
     if len(group) == 1 and not drop:
         slots.update(_bank_slots(first, phase_letters))
@@ -163,9 +167,19 @@ def _regulator(group: list[tuple], drop: str, context) -> list:
     record = schema.Regulator(name=context.names.name(first, drop=drop), phases=phase_letters,
                               from_node=context.buses[ends[0].Terminal.ConnectivityNode].name,
                               to=context.buses[ends[1].Terminal.ConnectivityNode].name,
-                              configuration=configuration.name,
+                              configuration=configuration.name, **resistance,
                               **ratings(first, phase_letters, schema.Regulator))
     return [configuration, record]
+
+
+def _resistance(regulator: cim.VoltageRegulator) -> dict:
+    """``{"regulator_resistance": ohm}`` from the unit's mesh r, or nothing when it has none (GridLAB-D's default)."""
+    meshes = [mesh for end in _ends(regulator) for mesh in end.FromMeshImpedance]
+    if len(meshes) > 1:
+        raise ValueError(f"VoltageRegulator {regulator.mRID!r}: has {len(meshes)} TransformerMeshImpedances, not 1")
+    if not meshes or meshes[0].r is None:
+        return {}
+    return {"regulator_resistance": get_qty(meshes[0], "r", glm_unit(schema.Regulator, "regulator_resistance"))}
 
 
 def _bank_slots(regulator: cim.VoltageRegulator, phase_letters: str) -> dict:

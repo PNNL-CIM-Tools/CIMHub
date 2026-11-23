@@ -510,6 +510,7 @@ object regulator {
   emergency_rating_B 1041.25;
   emergency_rating_C 1041.25;
   configuration "xf_Reg_config";
+  regulator_resistance 0.0001;
 }
 object load {
   name "ld_611";

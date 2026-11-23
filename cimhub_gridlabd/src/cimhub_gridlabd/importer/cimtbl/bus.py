@@ -284,9 +284,14 @@ def _source_row(model: GlmModel, record, bus: BusSystem) -> tuple[tuple[str, str
         raise ValueError(f"{record.class_name} {name}: a swing bus with no nominal_voltage")
     nominal_unit = model.unit(record, "nominal_voltage")
     slot, voltage, voltage_unit = _source_voltage(model, record)
-    # a polar value as written: |V| and arg(V) of its rectangular form differ in the last bit between C libraries
+    # a polar value as written: |V| and arg(V) of its rectangular form differ in the last bit between C libraries.
+    # A rectangular one's |V| is math.hypot, not abs(complex): abs() calls the C library's hypot, whose last bit varies
+    # with the CPU (a golden written on one machine failed on the CI runner); CPython's math.hypot is the same everywhere.
     written = model.polar.get((name, slot))
-    magnitude, angle = written if written is not None else (abs(voltage), math.degrees(cmath.phase(voltage)))
+    if written is not None:
+        magnitude, angle = written
+    else:
+        magnitude, angle = math.hypot(voltage.real, voltage.imag), math.degrees(cmath.phase(voltage))
     in_nominal_unit = units.Quantity(magnitude, voltage_unit).to(nominal_unit).magnitude
     if abs(in_nominal_unit - record.nominal_voltage) > NOMINAL_TOLERANCE * record.nominal_voltage:
         raise ValueError(f"{record.class_name} {name}: source voltage {magnitude:g} {voltage_unit} ({slot}) is more "

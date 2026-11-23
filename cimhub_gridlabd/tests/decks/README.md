@@ -22,3 +22,5 @@ Known deck defects (the tests list them; the decks are not edited):
 - `IEEE/IEEE13_houses.glm` rates its bus-634 center-tap transformers for a 2401 V primary on the 480 V bus, so the
   topology walk stops on it.
 - Every PNNL taxonomy meter has `nominal_voltage 480`, whatever bus it is on.
+- The PNNL taxonomy regulators set no `continuous_rating_X`, and a regulator's `ratedS` is its continuous rating x
+  `baseU` (GLM S3c-2: GridLAB-D's 1000 A default is not its rating), so both decks stop at the bind.
