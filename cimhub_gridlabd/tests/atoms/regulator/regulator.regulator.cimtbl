@@ -66,15 +66,15 @@ Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled, monit
     rc_xf_reg3_A,    xf_reg3_A,    false, A, 20.0, ,       ,     false, 0.032,               0.032,              xf_xf_reg3_A_T2
     rc_xf_reg3_C,    xf_reg3_C,    false, C, 20.0, ,       ,     false, 0.032,               0.032,              xf_xf_reg3_C_T2
 
-# stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5)
-Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, initialDelay (s), subsequentDelay (s)
-    rc_reg_bank_tap,     reg_bank,     xf_reg_bank_2,     rc_reg_bank,     -16, 16, 4, 0.625, 4160.004988602778, true,  ,     ,      30.0, 30.0
-    rc_reg_ldc_A_tap,    reg_ldc_A,    xf_reg_ldc_A_2,    rc_reg_ldc_A,    -16, 16, 5, 0.625, 2401.78,           true,  20.0, 700.0, 0.0,  0.0
-    rc_reg_output_A_tap, reg_output_A, xf_reg_output_A_2, rc_reg_output_A, -16, 16, 2, 0.625, 2401.78,           true,  ,     ,      45.0, 45.0
-    rc_reg_output_B_tap, reg_output_B, xf_reg_output_B_2, rc_reg_output_B, -16, 16, 3, 0.625, 2401.78,           true,  ,     ,      45.0, 45.0
-    rc_reg_output_C_tap, reg_output_C, xf_reg_output_C_2, rc_reg_output_C, -16, 16, 0, 0.625, 2401.78,           true,  ,     ,      45.0, 45.0
-    rc_xf_reg3_A_tap,    xf_reg3_A,    xf_xf_reg3_A_2,    rc_xf_reg3_A,    -16, 16, 2, 0.625, 2401.78,           false, 20.0, 250.0, 15.0, 15.0
-    rc_xf_reg3_C_tap,    xf_reg3_C,    xf_xf_reg3_C_2,    rc_xf_reg3_C,    -16, 16, 0, 0.625, 2401.78,           false, 20.0, 250.0, 15.0, 15.0
+# stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5); ctRating = current_transducer_ratio A (a 1 A CT secondary)
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, ctRating (A), initialDelay (s), subsequentDelay (s)
+    rc_reg_bank_tap,     reg_bank,     xf_reg_bank_2,     rc_reg_bank,     -16, 16, 4, 0.625, 4160.004988602778, true,  ,     ,      ,      30.0, 30.0
+    rc_reg_ldc_A_tap,    reg_ldc_A,    xf_reg_ldc_A_2,    rc_reg_ldc_A,    -16, 16, 5, 0.625, 2401.78,           true,  20.0, 700.0, 700.0, 0.0,  0.0
+    rc_reg_output_A_tap, reg_output_A, xf_reg_output_A_2, rc_reg_output_A, -16, 16, 2, 0.625, 2401.78,           true,  ,     ,      ,      45.0, 45.0
+    rc_reg_output_B_tap, reg_output_B, xf_reg_output_B_2, rc_reg_output_B, -16, 16, 3, 0.625, 2401.78,           true,  ,     ,      ,      45.0, 45.0
+    rc_reg_output_C_tap, reg_output_C, xf_reg_output_C_2, rc_reg_output_C, -16, 16, 0, 0.625, 2401.78,           true,  ,     ,      ,      45.0, 45.0
+    rc_xf_reg3_A_tap,    xf_reg3_A,    xf_xf_reg3_A_2,    rc_xf_reg3_A,    -16, 16, 2, 0.625, 2401.78,           false, 20.0, 250.0, 250.0, 15.0, 15.0
+    rc_xf_reg3_C_tap,    xf_reg3_C,    xf_xf_reg3_C_2,    rc_xf_reg3_C,    -16, 16, 0, 0.625, 2401.78,           false, 20.0, 250.0, 250.0, 15.0, 15.0
 
 Table OperationalLimitSet: mRID, Equipment
     xf_reg_bank_limits,     xf_reg_bank

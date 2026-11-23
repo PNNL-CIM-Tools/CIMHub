@@ -71,7 +71,10 @@ CONFIGURATION_FIELDS = {
     "raise_taps": Field("copied", ((_TAP, "highStep", None),), "also the stepVoltageIncrement divisor; 0 raises "
                                                                 "(regulator_configuration.cpp:198)"),
     "lower_taps": Field("derived", note="RatioTapChanger.lowStep = -lower_taps; 0 raises"),
-    "current_transducer_ratio": Field("copied", ((_TAP, "ctRatio", None),), "and the line drop's CT ratio"),
+    "current_transducer_ratio": Field("copied", ((_TAP, "ctRatio", None), (_TAP, "ctRating", "A")),
+                                      "and the line drop's CT ratio; ctRating too: GridLAB-D's compensator takes amps "
+                                      "on a 1 A CT secondary (regulator.cpp:1330), so the ratio is the CT primary "
+                                      "rating in A"),
     "power_transducer_ratio": Field("copied", ((_CONTROL, "ptRatio", None), (_TAP, "ptRatio", None)),
                                     "and the line drop's and LINE_DROP_COMP band's PT ratio"),
     **{f"compensator_r_setting_{phase}": Field("derived", note=_LDC.format(target="lineDropR")) for phase in "ABC"},
@@ -312,7 +315,7 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
         rows.taps.append(Row([f"{control_id}_tap", name, f"{vr}_2", control_id, str(-config.lower_taps),
                               str(config.raise_taps), str(tap_step(reg, config, unit.letters[0])), cell(increment),
                               cell(base_u), cell(enabled), cell(pt), cell(config.current_transducer_ratio),
-                              cell(delay), cell(delay)]))
+                              cell(config.current_transducer_ratio), cell(delay), cell(delay)]))
         rows.limits.add(vr, _phase_ratings(reg, unit.letters) if len(unit.letters) == 1 else link_ratings(reg))
 
 
@@ -350,9 +353,10 @@ def map_regulators(model: GlmModel, roots: dict[str, str], buses: dict[str, BusS
                      Column("lowStep"), Column("highStep"), Column("neutralStep", default="0"), Column("step"),
                      Column("stepVoltageIncrement", "percent"), Column("neutralU", "V"),
                      Column("ltcFlag", default="true"), Column("controlEnabled"), Column("ptRatio"),
-                     Column("ctRatio"), Column("initialDelay", "s"), Column("subsequentDelay", "s")], rows.taps,
+                     Column("ctRatio"), Column("ctRating", "A"), Column("initialDelay", "s"), Column("subsequentDelay", "s")], rows.taps,
               comment="stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; "
-                      "initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5)"),
+                      "initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5); ctRating = current_transducer_ratio A (a 1 A "
+                      "CT secondary)"),
         *rows.limits.tables(),
     ]
     header = provenance(NATIVE_CLASS.class_name, "VoltageRegulator + AutoTransformerEnd + TapChangerControl + "

@@ -70,8 +70,9 @@ object switch { name fc; phases CN; from p; to lat_c; status CLOSED; }
 object switch { name tie; phases BN; from lat_b; to lat_c; status OPEN; }
 object regulator_configuration { name cr; connect_type WYE_WYE; Control OUTPUT_VOLTAGE; band_center 7300;
     band_width 120; raise_taps 16; lower_taps 16; regulation 0.1; power_transducer_ratio 60; }
-object regulator_configuration { name crg; connect_type WYE_WYE; Control OUTPUT_VOLTAGE; control_level BANK;
-    PT_phase A; CT_phase A; band_center 7300; band_width 120; raise_taps 16; lower_taps 16; regulation 0.1; power_transducer_ratio 60; }
+object regulator_configuration { name crg; connect_type WYE_WYE; Control LINE_DROP_COMP; control_level BANK;
+    PT_phase A; CT_phase A; band_center 122; band_width 2; raise_taps 16; lower_taps 16; regulation 0.1;
+    power_transducer_ratio 60; current_transducer_ratio 250; compensator_r_setting_A 3; compensator_x_setting_A 9; }
 object node { name ro; phases AN; nominal_voltage 7200; }
 object node { name rgo; phases ABCN; nominal_voltage 7200; }
 object regulator { name rg; phases AN; from p; to ro; configuration cr; continuous_rating_A 100; }
@@ -140,6 +141,16 @@ def test_regulators_export_rated_with_their_mesh(exported):
                                                             pytest.approx(xhl)), name
     controls = {str(record.name).lower() for record in model.list_by_class(schema.Regcontrol)}
     assert controls == set(REGULATORS)
+
+
+def test_line_drop_keeps_its_dial_settings(exported):
+    """GridLAB-D's CT secondary is 1 A, so current_transducer_ratio is the CT primary rating (GLM S3c-4): CTprim,
+    and the compensator's dial volts come back as R and X. An OUTPUT_VOLTAGE unit has no CT."""
+    model = DssReader(exported).read_all()
+    controls = {str(record.name).lower(): record for record in model.list_by_class(schema.Regcontrol)}
+    ldc, plain = controls["rgg"], controls["rg_a"]
+    assert (ldc.vreg, ldc.band, ldc.ptratio, ldc.CTprim, ldc.R, ldc.X) == pytest.approx((122, 2, 60, 250, 3, 9))
+    assert (plain.vreg, plain.ptratio, plain.CTprim) == (pytest.approx(7300 / 60), 60, None)
 
 
 def test_open_tie_across_phases_lands_on_each_sides_node(exported):

@@ -37,11 +37,11 @@ Table TapChangerControl: mRID, name, mode=voltage, discrete=true, enabled, monit
     rc_xf_Reg_B, xf_Reg_B, false, B, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_B_T2
     rc_xf_Reg_C, xf_Reg_C, false, C, 20.0, , , false, 0.017142857142857144, 0.05142857142857143, xf_xf_Reg_C_T2
 
-# stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5)
-Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, initialDelay (s), subsequentDelay (s)
-    rc_xf_Reg_A_tap, xf_Reg_A, xf_xf_Reg_A_2, rc_xf_Reg_A, -16, 16, 10, 0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
-    rc_xf_Reg_B_tap, xf_Reg_B, xf_xf_Reg_B_2, rc_xf_Reg_B, -16, 16, 8,  0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
-    rc_xf_Reg_C_tap, xf_Reg_C, xf_xf_Reg_C_2, rc_xf_Reg_C, -16, 16, 11, 0.625, 2401.78, false, 20.0, 3500.0, 15.0, 15.0
+# stepVoltageIncrement = regulation / raise_taps; step = tap_X, else tap_pos_X, else 0; initialDelay = subsequentDelay = dwell_time + time_delay (S3c-5); ctRating = current_transducer_ratio A (a 1 A CT secondary)
+Table RatioTapChanger: mRID, name, TransformerEnd, TapChangerControl, lowStep, highStep, neutralStep=0, step, stepVoltageIncrement (percent), neutralU (V), ltcFlag=true, controlEnabled, ptRatio, ctRatio, ctRating (A), initialDelay (s), subsequentDelay (s)
+    rc_xf_Reg_A_tap, xf_Reg_A, xf_xf_Reg_A_2, rc_xf_Reg_A, -16, 16, 10, 0.625, 2401.78, false, 20.0, 3500.0, 3500.0, 15.0, 15.0
+    rc_xf_Reg_B_tap, xf_Reg_B, xf_xf_Reg_B_2, rc_xf_Reg_B, -16, 16, 8,  0.625, 2401.78, false, 20.0, 3500.0, 3500.0, 15.0, 15.0
+    rc_xf_Reg_C_tap, xf_Reg_C, xf_xf_Reg_C_2, rc_xf_Reg_C, -16, 16, 11, 0.625, 2401.78, false, 20.0, 3500.0, 3500.0, 15.0, 15.0
 
 Table OperationalLimitSet: mRID, Equipment
     xf_xf_Reg_A_limits, xf_xf_Reg_A

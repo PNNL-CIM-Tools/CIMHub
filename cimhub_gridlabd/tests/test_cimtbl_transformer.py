@@ -99,7 +99,10 @@ def assert_gridlabd_ohms(model, network) -> None:
         for tank in mine:
             z, g, b, _ = _tank_impedance(tank.TankConfiguration)
             secondary = _winding(tank.TankConfiguration, 2)
-            coil_base = float(secondary.baseU.to("V")) ** 2 / float(secondary.baseS.to("VA"))
+            coil = float(secondary.baseU.to("V"))
+            if len(tank.TankConfiguration.TransformerWinding) == 3:  # a 240 V service as a center tap (S6-10): its
+                coil *= 2  # %Z is the full winding's, X1 to X3, two halves; the star sums to GridLAB-D's zt on 240 V
+            coil_base = coil ** 2 / float(secondary.baseS.to("VA"))
             delta = str(config.connect_type) == "DELTA_DELTA"
             per_phase = coil_base / 3 if delta else coil_base  # GridLAB-D's zt is the wye equivalent
             assert z * per_phase == pytest.approx(zt, rel=1e-9), tank.mRID
@@ -177,20 +180,25 @@ COIL_RATED = """
 object meter { name m_s1; phases AN; nominal_voltage 120; }
 object meter { name m_s1b; phases BN; nominal_voltage 120; }
 object meter { name m_s3; phases ABCN; nominal_voltage 277.13; }
+object meter { name m_s2; phases CN; nominal_voltage 120; }
 object transformer_configuration { name xc_s1; connect_type SINGLE_PHASE; primary_voltage 2401.78;
                                    secondary_voltage 120; power_rating 25; impedance 0.01+0.02j; }
 object transformer_configuration { name xc_s3; connect_type WYE_WYE; primary_voltage 2401.78;
                                    secondary_voltage 277.13; power_rating 150; impedance 0.01+0.02j; }
+object transformer_configuration { name xc_s2; connect_type SINGLE_PHASE; primary_voltage 2401.78;
+                                   secondary_voltage 240; power_rating 50; impedance 0.011+0.018j; }
 object transformer { name xf_s1; phases AN; from n2; to m_s1; configuration xc_s1; }
 object transformer { name xf_s1b; phases BN; from n2; to m_s1b; configuration xc_s1; }
 object transformer { name xf_s3; phases ABCN; from n2; to m_s3; configuration xc_s3; }
+object transformer { name xf_s2; phases CN; from n2; to m_s2; configuration xc_s2; }
 """
 
 
 def test_coil_rated_wyes_keep_gridlabds_ohms(tmp_path, scope):
     """A wye whose voltages are its buses' nominal_voltage (phase to neutral, the Milsoft exports) is rated by the
     coil: baseU as written, ratedU on its bus's system, %Z x S_coil / S_total; SINGLE_PHASE is a WYE_WYE, and one
-    template serves A and B (S6). A 120 V one-phase service is a split-phase leg: ratedU 240, its bus 240 V."""
+    template serves A and B (S6). A 120 V one-phase service is a split-phase leg: ratedU 240, its bus 240 V; a 240 V one is a center tap whose
+    %Z is on the full winding (S6-10)."""
     path = tmp_path / "model.glm"
     path.write_text(f'#include "{ATOM / "transformer.glm"}"\n' + COIL_RATED)
     model = read(path)
