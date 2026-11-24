@@ -56,12 +56,15 @@ python cimhub_gridlabd/src/cimhub_gridlabd/schema/linkml_generator.py \
 serialization annotations) is the **single source of truth**. The converters and
 writer import the generated dataclasses from `cimhub_gridlabd.schema.gridlabd`.
 
-Regenerate the dataclasses after any LinkML change:
+Regenerate the dataclasses after any LinkML change, from the repo root, and commit the YAML and the generated module
+together:
 
 ```bash
-gen-python cimhub_gridlabd/src/cimhub_gridlabd/schema/linkml/main.yaml \
-  > cimhub_gridlabd/src/cimhub_gridlabd/schema/gridlabd.py
+scripts/gen-schema.sh gridlabd
 ```
+
+The script runs `gen-python` through `uvx` on `linkml/main.yaml` and writes `gridlabd.py` (see the script for the
+exact command; it passes `--no-generation-date` so the diff shows only what the YAML changed).
 
 `gridlabd.py` is **generated — never hand-edit**. Any field fix goes in the LinkML
 YAML, then regenerate.

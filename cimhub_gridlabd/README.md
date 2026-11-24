@@ -10,3 +10,9 @@ pip install --pre cimhub-gridlabd      # also installs cimhub-core
 ```
 
 Python 3.11 or later. Version 2.1 is in alpha.
+
+## Documentation
+
+- [Documentation](https://pnnl-cim-tools.github.io/CIMHub/gridlabd/): user guide, conversion reference, developer docs and the LinkML schema reference
+- [GridLAB-D to `.cimtbl` mapping spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_gridlabd/docs/CIMTBL_MAPPING.md)
+- [CIM to GridLAB-D export spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_gridlabd/docs/EXPORT_MAPPING.md)

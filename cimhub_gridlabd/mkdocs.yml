@@ -1,0 +1,51 @@
+# cimhub-gridlabd's site, served at https://pnnl-cim-tools.github.io/CIMHub/gridlabd/. Build everything with
+# scripts/build-docs.sh, or this site alone: scripts/build-docs.sh gridlabd (add --serve to preview). The schema
+# reference (docs/schema/) is generated from the LinkML schema by that script and never committed.
+INHERIT: ../mkdocs.base.yml
+site_name: CIMHub GridLAB-D
+site_url: https://pnnl-cim-tools.github.io/CIMHub/gridlabd/
+site_description: GridLAB-D models to and from CIM (cim18v17) - the reader, writer, importer and exporter
+edit_uri: edit/develop/cimhub_gridlabd/docs/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_gridlabd
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cimhub-gridlabd/
+
+not_in_nav: |
+  schema/*
+
+nav:
+  - Home: index.md
+  - User guide:
+      - guide/index.md
+      - Getting started:
+          - Installation: guide/installation.md
+          - Quick start: guide/quickstart.ipynb
+      - Converting:
+          - Import (GLM to CIM): guide/import.md
+          - Export (CIM to GLM): guide/export.md
+          - Players and schedules: guide/time-series.md
+          - Round trip: guide/roundtrip.md
+          - What converts: guide/coverage.md
+  - Conversion reference:
+      - reference/index.md
+      - Buses, meters and the source: reference/buses.md
+      - Lines, conductors and switches: reference/lines.md
+      - Transformers and regulators: reference/transformers.md
+      - Loads, capacitors, players and schedules: reference/loads.md
+      - Inverters, solar and batteries: reference/der.md
+  - Developer docs:
+      - developer/index.md
+      - Architecture: developer/architecture.md
+      - Reader and writer: developer/reader-writer.md
+      - The importer: developer/importer.md
+      - The exporter: developer/exporter.md
+      - The LinkML schema: developer/schema.md
+      - Testing: developer/testing.md
+      - Mapping specs:
+          - Import mapping (.cimtbl): CIMTBL_MAPPING.md
+          - Export mapping: EXPORT_MAPPING.md
+  - Schema reference: schema/index.md

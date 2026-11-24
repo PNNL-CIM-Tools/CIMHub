@@ -70,10 +70,13 @@ cim_to_dss(network, "ieee13_export.dss")
 | [cimhub_core/docs/developer/testing.md](cimhub_core/docs/developer/testing.md) | atoms, goldens and the test types |
 | [cimhub_opendss/docs/CIMTBL_MAPPING.md](cimhub_opendss/docs/CIMTBL_MAPPING.md) | OpenDSS to `.cimtbl` mapping spec |
 | [cimhub_opendss/docs/EXPORT_MAPPING.md](cimhub_opendss/docs/EXPORT_MAPPING.md) | CIM to OpenDSS export spec |
+| [cimhub_gridlabd/docs/CIMTBL_MAPPING.md](cimhub_gridlabd/docs/CIMTBL_MAPPING.md) | GridLAB-D to `.cimtbl` mapping spec |
+| [cimhub_gridlabd/docs/EXPORT_MAPPING.md](cimhub_gridlabd/docs/EXPORT_MAPPING.md) | CIM to GridLAB-D export spec |
 | [cimhub_raw/docs/CIMTBL_MAPPING.md](cimhub_raw/docs/CIMTBL_MAPPING.md) | PSS/E RAW v34 to `.cimtbl` mapping spec |
 | [cimhub_gdm/docs/GDM_MAPPING.md](cimhub_gdm/docs/GDM_MAPPING.md), [EXPORT_MAPPING.md](cimhub_gdm/docs/EXPORT_MAPPING.md) | GDM import and export specs |
 
-User-facing OpenDSS documentation is the site configured in `cimhub_opendss/mkdocs.yml`.
+User-facing OpenDSS and GridLAB-D documentation lives in the sites configured in `cimhub_opendss/mkdocs.yml` and
+`cimhub_gridlabd/mkdocs.yml`.
 
 ## Contributing
 

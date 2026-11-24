@@ -40,7 +40,7 @@ convert through it. Every package has its own documentation.</p>
 
     GridLAB-D models (`.glm`) to and from CIM, players and schedules included.
 
-    [:octicons-arrow-right-24: Source and README](https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_gridlabd)
+    [:octicons-arrow-right-24: GridLAB-D docs](https://pnnl-cim-tools.github.io/CIMHub/gridlabd/)
 
 -   :material-transmission-tower-export:{ .lg .middle } __cimhub-raw__
 
