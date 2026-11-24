@@ -1,0 +1,47 @@
+# cimhub-core's site, served at https://pnnl-cim-tools.github.io/CIMHub/core/. Build everything with
+# scripts/build-docs.sh, or this site alone: scripts/build-docs.sh core (add --serve to preview).
+INHERIT: ../mkdocs.base.yml
+site_name: CIMHub core
+site_url: https://pnnl-cim-tools.github.io/CIMHub/core/
+site_description: The shared CIMHub layer - export getters, the .cimtbl import contract, shapes and the test harness
+edit_uri: edit/develop/cimhub_core/docs/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_core
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cimhub-core/
+
+not_in_nav: |
+  guide/*.cimtbl
+
+nav:
+  - Home: index.md
+  - User guide:
+      - guide/index.md
+      - Getting started:
+          - Installation: guide/installation.md
+          - Quick start: guide/quickstart.ipynb
+      - Reading CIM:
+          - Using the getters: guide/getters.md
+          - Units, bases and signs: guide/units.md
+          - Time series and schedules: guide/time-points.md
+  - Getter reference:
+      - reference/index.md
+      - Lines and wires: reference/lines.md
+      - Transformers and regulators: reference/transformers.md
+      - Loads, shunts and compensators: reference/loads.md
+      - Sources, DER and machines: reference/der.md
+      - Topology, voltage and state: reference/topology.md
+      - Derived values: reference/derived.md
+  - Developer docs:
+      - developer/index.md
+      - Architecture: developer/architecture.md
+      - Converter API: developer/converter-api.md
+      - The .cimtbl import contract: developer/cimtbl.md
+      - Canonical shapes: developer/shapes.md
+      - Writing a getter: developer/writing-getters.md
+      - Units: developer/units.md
+      - Testing: developer/testing.md
+      - Building the docs: developer/docs.md

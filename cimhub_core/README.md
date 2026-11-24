@@ -48,10 +48,10 @@ Topology (spanning trees, islands, voltage zones) comes from `cimtopology`, not 
 
 ## Documentation
 
-- [Architecture](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/ARCHITECTURE.md)
-- [Converter API](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/CONVERTER_API.md)
-- [Units](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/UNITS.md)
-- [Testing](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/TESTING.md)
+- [Architecture](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/architecture.md)
+- [Converter API](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/converter-api.md)
+- [Units](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/units.md)
+- [Testing](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/testing.md)
 - [Repository README](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/README.md)
 
 BSD 3-Clause. Source and issues: <https://github.com/PNNL-CIM-Tools/CIMHub>.

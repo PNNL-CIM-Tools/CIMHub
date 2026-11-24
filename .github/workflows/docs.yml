@@ -1,0 +1,55 @@
+# Builds every docs site (scripts/build-docs.sh: the landing page plus one site per package) on a PR that touches
+# them, and deploys the lot to GitHub Pages on a push to develop. Notebooks are stored with their outputs and not
+# executed here, so the packages themselves are not installed.
+name: Docs
+
+on:
+  push:
+    branches: [develop]
+    paths: ['docs/**', 'mkdocs*.yml', 'cimhub_*/docs/**', 'cimhub_*/mkdocs.yml', 'cimhub_*/src/*/schema/**',
+            'scripts/build-docs.sh', '.github/workflows/docs.yml']
+  pull_request:
+    paths: ['docs/**', 'mkdocs*.yml', 'cimhub_*/docs/**', 'cimhub_*/mkdocs.yml', 'cimhub_*/src/*/schema/**',
+            'scripts/build-docs.sh', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v10.3.2
+
+      - name: Build
+        env:
+          NO_MKDOCS_2_WARNING: "1"
+        run: scripts/build-docs.sh
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/develop'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

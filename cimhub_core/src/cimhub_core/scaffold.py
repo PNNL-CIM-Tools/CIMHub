@@ -262,7 +262,7 @@ def _create_importer_tree(conv_dir: Path, fmt: str, pkg: str) -> None:
 
 
 def _create_exporter_tree(conv_dir: Path, fmt: str) -> None:
-    """Registry, writer stub, orchestrator and one stub converter per CIM class (cimhub_core/docs/CONVERTER_API.md)."""
+    """Registry, writer stub, orchestrator and one stub converter per CIM class (cimhub_core/docs/developer/converter-api.md)."""
     pkg = f"cimhub_{fmt}"
     direction = "exporter"
     conv_dir.mkdir(parents=True, exist_ok=True)
@@ -445,7 +445,7 @@ def _create_exporter_orchestrator_stub(conv_dir: Path, fmt: str, pkg: str, reg_n
         "",
         "",
         f"class {exporter_cls}(FormatExporter):",
-        f'    """CIM → {fmt.upper()} exporter (see cimhub_core/docs/CONVERTER_API.md)."""',
+        f'    """CIM → {fmt.upper()} exporter (see cimhub_core/docs/developer/converter-api.md)."""',
         "",
         "    def to_model(self, network, **opts) -> GraphModel:",
         "        model = GraphModel()",

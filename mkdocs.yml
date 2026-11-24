@@ -1,0 +1,17 @@
+# The landing site: one page that links to each package's own site. Build everything with scripts/build-docs.sh.
+INHERIT: mkdocs.base.yml
+site_name: CIMHub
+site_url: https://pnnl-cim-tools.github.io/CIMHub/
+site_description: Convert power-system models to and from IEC CIM (cim18v17), one package per native format
+edit_uri: edit/develop/docs/
+
+exclude_docs: |
+  requirements.txt
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PNNL-CIM-Tools/CIMHub
+
+nav:
+  - Home: index.md

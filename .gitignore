@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# generated LinkML schema reference of each docs site (scripts/build-docs.sh)
+cimhub_*/docs/schema/

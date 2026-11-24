@@ -256,7 +256,7 @@ class FormatExporter(ABC):
 
     Each format may still expose a thin ``cim_to_<fmt>(network, path)``
     convenience function that does the build-then-write in one call. See
-    ``cimhub_core/docs/CONVERTER_API.md`` for the full spec.
+    ``cimhub_core/docs/developer/converter-api.md`` for the full spec.
     """
 
     @abstractmethod

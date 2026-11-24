@@ -64,10 +64,10 @@ cim_to_dss(network, "ieee13_export.dss")
 
 | Document | Contents |
 |---|---|
-| [cimhub_core/docs/ARCHITECTURE.md](cimhub_core/docs/ARCHITECTURE.md) | hub and spokes, the import and export paths, the invariants |
-| [cimhub_core/docs/CONVERTER_API.md](cimhub_core/docs/CONVERTER_API.md) | the reader, writer, importer and exporter classes and the `<fmt>_to_cim` functions |
-| [cimhub_core/docs/UNITS.md](cimhub_core/docs/UNITS.md) | units on import and export |
-| [cimhub_core/docs/TESTING.md](cimhub_core/docs/TESTING.md) | atoms, goldens and the test tiers |
+| [cimhub_core/docs/developer/architecture.md](cimhub_core/docs/developer/architecture.md) | hub and spokes, the import and export paths, the invariants |
+| [cimhub_core/docs/developer/converter-api.md](cimhub_core/docs/developer/converter-api.md) | the reader, writer, importer and exporter classes and the `<fmt>_to_cim` functions |
+| [cimhub_core/docs/developer/units.md](cimhub_core/docs/developer/units.md) | units on import and export |
+| [cimhub_core/docs/developer/testing.md](cimhub_core/docs/developer/testing.md) | atoms, goldens and the test tiers |
 | [cimhub_opendss/docs/CIMTBL_MAPPING.md](cimhub_opendss/docs/CIMTBL_MAPPING.md) | OpenDSS to `.cimtbl` mapping spec |
 | [cimhub_opendss/docs/EXPORT_MAPPING.md](cimhub_opendss/docs/EXPORT_MAPPING.md) | CIM to OpenDSS export spec |
 | [cimhub_raw/docs/CIMTBL_MAPPING.md](cimhub_raw/docs/CIMTBL_MAPPING.md) | PSS/E RAW v34 to `.cimtbl` mapping spec |

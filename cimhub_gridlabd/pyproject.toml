@@ -29,7 +29,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-  "cimhub-core>=2.1.0a1,<2.2",
+  "cimhub-core>=2.1.0a2,<2.2",
   "cim-topology>=0.1.2a1,<0.2",
   "cim-tables>=0.1.1a1,<0.2",
   "linkml-runtime~=1.9.5",
@@ -39,7 +39,7 @@ dependencies = [
 [project.optional-dependencies]
 # schedule time points (players, LoadShapes) in the Parquet sidecar: cimhub_core.time_points
 time-points = [
-  "cimhub-core[time-points]>=2.1.0a1,<2.2",
+  "cimhub-core[time-points]>=2.1.0a2,<2.2",
 ]
 
 [project.urls]

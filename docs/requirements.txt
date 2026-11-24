@@ -1,0 +1,3 @@
+# Tools for every CIMHub docs site (scripts/build-docs.sh). Run through uvx, so they stay out of the workspace's uv.lock.
+mkdocs-material>=9.7
+mkdocs-jupyter>=0.27

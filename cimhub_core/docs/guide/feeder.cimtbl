@@ -1,0 +1,60 @@
+# A small feeder for the quick start: a source, a 4.16 kV to 480 V transformer, a line with its own sequence
+# impedance, a PV unit and three loads, one of them on a daily curve. The transformer follows the
+# transformer_template shape and the load schedule follows the load_schedule shape, both in cimhub_core/shapes.
+# Written for these docs; no external origin.
+
+Profile = cim18v17
+Authority = https://github.com/PNNL-CIM-Tools/CIMHub
+Model = guide_feeder
+
+Object BasePower: mRID=sbase, basePower (MVA)=10
+Object BaseFrequency: mRID=base_freq, frequency (Hz)=60
+Object Substation: mRID=sub, name=sub
+Object Feeder: mRID=fdr, name=guide_feeder, NormalEnergizingSubstation=sub
+
+Table BaseVoltage: mRID, nominalVoltage (kV)
+    bv_4p16kv, 4.16
+    bv_480v,   0.48
+
+Table LoadResponseCharacteristic: mRID, exponentModel, pConstantPower, pConstantCurrent, pConstantImpedance, qConstantPower, qConstantCurrent, qConstantImpedance
+    zip_pq, false, 1, 0, 0, 1, 0, 0
+    zip_z,  false, 0, 0, 1, 0, 0, 1
+
+Object EnergySource: mRID=src, name=source, node=sourcebus, phases=ABC, nominalVoltage (kV)=4.16, voltageMagnitude (kV)=4.16, voltageAngle (deg)=0, r (ohm)=0.1, x (ohm)=0.4, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr
+
+# The line's own impedance (isTemplate=false), per length in the source's units.
+Object PerLengthSequenceImpedance: mRID=ln_trunk_lc, name=trunk, isTemplate=false, calculatedFrequency (Hz)=60, r (ohm/km)=0.35, x (ohm/km)=0.43, r0 (ohm/km)=0.59, x0 (ohm/km)=1.3, bch (nS/km)=3900, b0ch (nS/km)=1700
+Object ACLineSegment: mRID=ln_trunk, name=trunk, node1=sourcebus, node2=n1, phases=ABC, length (ft)=2000, PerLengthImpedance=ln_trunk_lc, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr
+
+# A 500 kVA Yn-Yn transformer; the ratings and impedance are in the template (the tank configuration).
+Object TransformerTankConfiguration: mRID=xc_xfm1, name=xfm1, percentImpedance=2.2825, percentMagnetizingCurrent=0, noLoadLoss (kW)=0
+Table TransformerTankEnd: mRID, endNumber, connectionKind, grounded, rground (ohm), xground (ohm), TankConfiguration=xc_xfm1
+    xc_xfm1_end_1, 1, Yn, true, 0, 0
+    xc_xfm1_end_2, 2, Yn, true, 0, 0
+Table TransformerWinding: mRID, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), FromTransformerEnd, TankConfiguration=xc_xfm1
+    xc_xfm1_wdg_1, 4.16, 2.4,   500, 166.667, xc_xfm1_end_1
+    xc_xfm1_wdg_2, 0.48, 0.277, 500, 166.667, xc_xfm1_end_2
+Object TransformerMeshImpedance: mRID=xc_xfm1_mesh_12, FromWinding=xc_xfm1_wdg_1, ToWinding=xc_xfm1_wdg_2, r (percent)=1.1, x (percent)=2.0
+
+Object PowerTransformer: mRID=xf1, name=xf1, EquipmentContainer=fdr
+Object TransformerTank: mRID=xf1_tank, PowerTransformer=xf1, TankConfiguration=xc_xfm1, EquipmentContainer=fdr
+Table PowerTransformerEnd: mRID, node, phases, endNumber, connectionKind, grounded, BaseVoltage, PowerTransformer=xf1
+    xf1_1, n1, ABCN, 1, Yn, true, bv_4p16kv
+    xf1_2, n2, ABCN, 2, Yn, true, bv_480v
+
+# ld_n1 is balanced; ld_n2 is unbalanced, its own p and q on each phase.
+Table EnergyConsumer: mRID, name, node, phases, phaseConnection, grounded, p (kW), q (kVAr), LoadResponse, BaseVoltage, EquipmentContainer=fdr
+    ld_n1, n1, n1, ABC, Y, true, 1155, 660, zip_pq, bv_4p16kv
+    ld_n2, n2, n2, ABC, Y, true, 400,  290, zip_pq, bv_480v
+Update Table EnergyConsumerPhase: mRID, p (kW), q (kVAr)
+    ld_n2_A, 160, 110
+    ld_n2_B, 120, 90
+    ld_n2_C, 120, 90
+
+# A single-phase load on the daily curve of a ConformLoadGroup; its points are in a Parquet sidecar.
+Object ConformLoadGroup: mRID=lg_daily, name=daily
+Object ConformLoadSchedule: mRID=ls_daily, name=daily, startTime=2009-07-21T00:00:00-04:00, timeStep (s)=3600, value1Unit=none, ConformLoadGroup=lg_daily
+Object ConformLoad: mRID=ld_c1, name=c1, node=n1, phases=C, phaseConnection=Y, grounded=true, p (kW)=170, q (kVAr)=80, LoadResponse=zip_z, BaseVoltage=bv_4p16kv, LoadGroup=lg_daily, EquipmentContainer=fdr
+
+Object PowerElectronicsConnection: mRID=pv_p1, name=p1, node=n2, phases=ABC, phaseConnection=Y, ratedS (kVA)=300, ratedU (V)=480, p (kW)=-240, q (kVAr)=0, BaseVoltage=bv_480v, EquipmentContainer=fdr
+Object PhotoVoltaicUnit: mRID=pv_p1_unit, maxP (kW)=300, minP (kW)=0, PowerElectronicsConnection=pv_p1, EquipmentContainer=fdr
