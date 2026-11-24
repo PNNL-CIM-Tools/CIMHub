@@ -1,4 +1,5 @@
-# Shape: line by geometry. XYSpacing + XYConductorPosition (OpenDSS LineSpacing, GLM line_spacing),
+# Shape: line by geometry. XYSpacing + XYConductorPosition (OpenDSS LineSpacing; a GLM line_spacing, which holds
+# distances and no coordinates, is a ConductorDistanceSpacing + ConductorDistance instead),
 # WireConfiguration + one WireSequenceConfiguration per conductor (OpenDSS LineGeometry), ACLineSegment
 # referencing the WireConfiguration. Never substitute an impedance matrix for this geometry.
 

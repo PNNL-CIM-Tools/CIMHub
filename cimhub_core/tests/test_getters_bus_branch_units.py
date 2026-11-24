@@ -70,9 +70,10 @@ def test_shunt_admittance_of_the_sections_in_service(tmp_path):
     assert (in_pu.g, in_pu.b) == (pytest.approx(2 * 0.09522), pytest.approx(2 * 0.19044))
 
 
-def test_shunt_admittance_unset_g_is_zero(tmp_path):
+def test_shunt_admittance_unset_g_is_none(tmp_path):
+    """Unset is None, never 0.0: the spoke decides (RAW writes its spec default, 0)."""
     shunt = _get(_network(tmp_path), cim.LinearShuntCompensator, "cap_nb")
-    assert get_shunt_admittance(shunt, sections="maximum").g == 0.0
+    assert get_shunt_admittance(shunt, sections="maximum").g is None
 
 
 def test_limits_by_type(tmp_path):

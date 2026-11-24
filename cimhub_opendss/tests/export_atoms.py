@@ -2,12 +2,11 @@
 exported deck's golden."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 
-from cimhub_core.cimtbl_testing import UPDATE_GOLDENS
+from cimhub_core.cimtbl_testing import assert_text_matches_golden
 from cimhub_core.names import export_name
 from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter.cim_to_dss import cim_to_dss
@@ -34,9 +33,4 @@ def bus_names(network, name_source: str) -> dict[str, str]:
 
 def assert_matches_dss_golden(written: Path, golden: Path) -> None:
     """The exported deck equals its reviewed golden (``CIMHUB_UPDATE_GOLDENS=1`` rewrites it; review it in git)."""
-    text = written.read_text(encoding="utf-8")
-    if os.environ.get(UPDATE_GOLDENS):
-        golden.parent.mkdir(parents=True, exist_ok=True)
-        golden.write_text(text, encoding="utf-8")
-    assert golden.exists(), f"{golden}: no golden; run with {UPDATE_GOLDENS}=1 and review it"
-    assert text == golden.read_text(encoding="utf-8"), f"{golden.name}: the export differs from its golden"
+    assert_text_matches_golden(written.read_text(encoding="utf-8"), golden)

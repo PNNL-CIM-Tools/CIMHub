@@ -94,9 +94,7 @@ def get_spacing_distances(spacing: cim.WireSpacing, unit: str = "m") -> dict[tup
     ``ConductorDistanceSpacing`` gives its stored values and must hold a distance for every pair; its heights are not
     needed."""
     if isinstance(spacing, cim.XYSpacing):
-        positions = _stored_positions(spacing, unit)
-        return {(first.sequence_number, second.sequence_number): math.dist((first.x, first.y), (second.x, second.y))
-                for first, second in combinations(positions, 2)}
+        return get_stored_distances(spacing, unit).distances  # an XYSpacing holds every pair
     if isinstance(spacing, cim.ConductorDistanceSpacing):
         kinds, _, distances = _stored_distances(spacing, unit, heights_required=False)
         missing = [pair for pair in combinations(sorted(kinds), 2) if pair not in distances]

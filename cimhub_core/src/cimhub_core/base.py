@@ -89,7 +89,7 @@ class FormatWriter(ABC):
     ``SpokeGraphModel`` that ``read_all`` produces, so a round trip is::
 
         network = DssReader("Master.dss").read_all()
-        DSSWriter().write(network, "out.dss")
+        DssWriter().write(network, "out.dss")
 
     Taking the graph rather than a flat list keeps the by-class grouping the
     graph already has. Formats that emit one file per class (distOPF CSVs) or
@@ -136,11 +136,11 @@ class FormatImporter(ABC):
     three explicit steps and each stage is independently inspectable::
 
         native = DssReader("Master.dss").read_all()      # parse
-        feeder = DssConverter().to_cim(native)           # convert
+        feeder = DssImporter().to_cim(native)            # convert
         write_xml(feeder, "out.xml")                     # persist
 
-    The thin ``<fmt>_to_cim(path)`` convenience function collapses the first two
-    steps for the common case; it is the only place a path and an importer meet.
+    The thin ``<fmt>_to_cim(model, *, name=...)`` function builds the importer and calls ``to_cim``; it takes the
+    parsed model too, never a path.
 
     Taking a ``SpokeGraphModel`` rather than a path is what removes the old
     ambiguity: there is no ``source`` whose type varies per format, and no
@@ -191,8 +191,8 @@ class CimtblImporter(FormatImporter):
     from the written text, so the artifact a reviewer reads is exactly what the
     model was built from::
 
-        native = SxstReader("feeder.sxst").read_all()
-        feeder = SxstImporter().to_cim(native, artifact_dir="out/feeder")
+        native = DssReader("Master.dss").read_all()
+        feeder = DssImporter().to_cim(native, artifact_dir="out/feeder")
 
     Spokes with no file format (GDM builds CIM with CIM-Builder's keyword
     methods) subclass :class:`FormatImporter` directly.
@@ -244,7 +244,7 @@ class FormatExporter(ABC):
     :meth:`FormatReader.read_all`. Exporters do no file I/O — they return a
     ``SpokeGraphModel``, and :class:`FormatWriter` persists it::
 
-        raw = Raw34Exporter().to_model(network)   # convert
+        raw = RawExporter().to_model(network)     # convert
         Raw34Writer().write(raw, "out.raw")       # persist
 
     There is deliberately no ``destination`` argument. An exporter that took a

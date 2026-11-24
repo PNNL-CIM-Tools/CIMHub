@@ -26,4 +26,6 @@ def bus_base_admittance(shunt, sections: str, base_power) -> ShuntAdmittance:
     if rated_kv is None or not math.isclose(rated_kv, base_kv, rel_tol=REL_TOL):
         raise ValueError(f"{describe(shunt)}: nomU {rated_kv} kV is not its BaseVoltage {base_kv} kV; RAW states a "
                          "shunt at 1 pu of its bus voltage")
-    return get_shunt_admittance(shunt, "pu", sections=sections, base_power=base_power)
+    admittance = get_shunt_admittance(shunt, "pu", sections=sections, base_power=base_power)
+    # RAW has no blank for GL or a line shunt's G: an unset gPerSection is its spec default, 0
+    return admittance._replace(g=admittance.g or 0.0)

@@ -147,7 +147,7 @@ them.
 
 | Form | The unit holds | Windings come from | Mesh | Core |
 |---|---|---|---|---|
-| `BY_ENDS` | a `PowerTransformer` without tanks | `PowerTransformerEnd` ratings and `r`. A single-phase coil takes its voltage from `ratedU` (see `base_u`) | `TransformerMeshImpedance` between ends, or each end's star `x` summed by pair; both together raise | `g` and `b` on the one end that holds them (zeros on several ends are one zero core; a non-zero core on several raises) |
+| `BY_ENDS` | a `PowerTransformer` without tanks | `PowerTransformerEnd` ratings and `r`. A single-phase coil takes its voltage from `ratedU` (see `base_u`) | `TransformerMeshImpedance` between ends, or each end's star `x` summed by pair (two windings: an unset end `x` counts as 0, CIM's two-winding rule; three or more: any unset end `x` raises); both together raise | `g` and `b` on the one end that holds them (zeros on several ends are one zero core; a non-zero core on several raises) |
 | `AUTO` | an `AutoTransformer` | `AutoTransformerEnd` (`baseU`, `ratedS`) | a mesh between ends | none: `CoreAdmittance(None, None)` |
 | `BY_PHASE_ENDS` | a `TransformerTank` with its own `TransformerWinding`s and no `TankConfiguration` | each winding is a coil between two `TransformerPhaseEnd`s, matched to the `PowerTransformerEnd` by `endNumber` | a mesh between windings | the tank's `noLoadLoss` and `percentMagnetizingCurrent` |
 | `BY_TANK_ENDS` | a tank with a `TankConfiguration` whose windings start at a `TransformerTankEnd` | one winding per `TransformerTankEnd`; template end n is instance end n. Connection and grounding set on both must agree, up to the grounding (Y and Yn): the instance's wins. Phases are the instance end's `TransformerPhaseEnd`s in `sequenceNumber` order, else its terminal phases | the configuration's mesh | the tank's or configuration's `noLoadLoss` and `percentMagnetizingCurrent` |
@@ -225,6 +225,7 @@ The `get_transformer_model` raises that you will meet most often:
 | `... two windings have the same place` | duplicate end numbers or phase-end sequence numbers |
 | `... both a star impedance (PowerTransformerEnd.x) and a mesh impedance` | two homes for the impedance |
 | `... ratedS is unset` | winding 1 has no rating and the base is not `base_power` on an end form |
+| `... the star x of winding(s) [...] is unset` | three or more windings, and an end has no `x` |
 | `... more than one end holds the core admittance` | a non-zero `g` or `b` on two ends |
 
 ## Tap changers

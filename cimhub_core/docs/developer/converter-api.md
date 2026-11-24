@@ -71,14 +71,15 @@ identifier to a class raises `ValueError`, because the identifier seeds the obje
 one identifier (an OpenDSS `Line.l1` and `Load.l1`).
 
 The identifier field is the one the LinkML schema flags `identifier: true`. A class without one falls back to the
-first of `ID`, `name`, `identifier` that is set. A class with none of these is stored under `str(id(obj))` with a
-logged warning, so its order and mRID change from run to run: give every native class an `identifier: true` slot.
+first of `ID`, `name`, `identifier` that is set. An object with none of these raises `ValueError`, because an
+identifier made up per run would change the model's order and every mRID derived from it: give every native class
+an `identifier: true` slot.
 
 | Method | Use |
 |---|---|
 | `add_to_graph(obj)` | insert an object under its identifier |
 | `GraphModel.from_objects(objects)` | build from a flat iterable |
-| `list_by_class(cls)` | all objects of one class, sorted by identifier |
+| `list_by_class(cls)` | all objects of one class, sorted by the identifier each was stored under |
 | `iter_by_class(cls)` | the same objects in insertion order |
 | `iter_all()` | every object, grouped by class |
 | `first(cls)`, `next(cls)` | step through a class, sorted; `None` at the end |
@@ -236,47 +237,13 @@ FeederModel
 The example starts from a `.cimtbl` file because GDM has no text format to import. In real use the CIM comes from
 another importer, such as `dss_to_cim`, and `cim_to_gdm` writes the GDM JSON.
 
-## ConverterRegistry
-
-`ConverterRegistry` maps native or CIM classes to converter functions by decorator:
-
-```python
-from cimhub_core import ConverterRegistry
-from cimhub_opendss import DssReader
-import cimhub_opendss.schema.opendss_schema as schema
-
-registry = ConverterRegistry()
-
-@registry.register(schema.Load)
-def convert_load(obj, network):
-    return obj.name
-
-model = DssReader("cimhub_opendss/tests/decks/IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss").read_all()
-load = model.list_by_class(schema.Load)[0]
-print(registry.get(schema.Load)(load, None), registry.get(schema.Line), len(registry), schema.Load in registry)
-print(registry)
-```
-
-```
-611 None 1 True
-ConverterRegistry(['Load'])
-```
-
-It also has `classes()` and iteration. It is a plain dispatch table with no behavior of its own: `get` returns
-`None` for an unregistered class, and `register` overwrites an earlier registration for the same class without
-warning. The shipped OpenDSS, GridLAB-D, RAW and GDM packages do not use it; they dispatch through their own ordered
-module lists (`MAPPING_ORDER` for importers, `EXPORT_ORDER` for exporters). Only the exporter stubs that
-`scaffold_package` generates create one.
-
 ## Naming and text helpers
 
 | Function | Module | Use |
 |---|---|---|
 | `resolve_name_source(source=None)`, `export_name(obj, source)` | `cimhub_core.names` | The export naming switch, above. Used by the OpenDSS, GridLAB-D and GDM exporters. |
-| `clean_cim_name(raw, default="UNKNOWN")` | `cimhub_core.names` | Replaces whitespace and `. < > & " ' [ ] { } ( ) , = ~ \|` with `_`; `None` or blank gives `default`. No spoke calls it, and it must not be used for mRIDs (I8: IDs are quoted, never sanitized). |
-| `AnnotationSerializer`, `format_by_spec`, `get_field_order`, `get_native_name` | `cimhub_core.serialization` | Native text driven by the LinkML annotations `order`, `format`, `separator`, `serialize_if` and `line_number`. A writer uses it from `serialize`. Limits: `serialize_if: not_default` looks the default up in dataclass field metadata, which generated classes do not have, so it always serializes; a `custom` expression that raises (a misspelled field name) counts as true; `skip_defaults` is stored but never read. |
-| `get_schema_annotations(cls)` | `cimhub_core.serialization` | The slot annotations of a native class, read from the schema YAML beside the generated module and cached. Returns `{}` when no schema is found, and silently skips a schema file that fails to load. Spoke readers and writers use it for slot order and defaults. |
-| `get_mermaid(root, show_attributes=True, theme="neutral")`, `download_mermaid(mermaid, filename, timeout=30)` | `cimhub_core.mermaid` | A mermaid mindmap for one native object, or a class diagram for a class or list of classes. `download_mermaid` fetches a rendered image from mermaid.ink and returns `False` on a network or HTTP error; a diagram with a non-ASCII character raises `UnicodeEncodeError` instead. |
+| `get_schema_annotations(cls)` | `cimhub_core.serialization` | The slot annotations of a native class, read from the schema YAML beside the generated module and cached. Returns `{}` when no schema is found; a schema file that fails to load raises. Each spoke formats its own records from these annotations: `dss_writer` writes `key=value`, RAW's `record_layout` and `raw34_writer` write positional lines, and GridLAB-D's `glm_schema` and `glm_writer` index by GLM type name and walk `is_a`. Core has no serializer. |
+| `get_mermaid(root, show_attributes=True, theme="neutral")`, `download_mermaid(mermaid, filename, timeout=30)` | `cimhub_core.mermaid` | A mermaid mindmap for one native object, or a class diagram for a class or list of classes. `download_mermaid` fetches a rendered image from mermaid.ink and returns `False` on a network or HTTP error; the diagram is encoded as UTF-8, so non-ASCII text such as `Ω` is sent as is. |
 
 `get_mermaid` takes an instance (a mindmap, which ignores `show_attributes` and `theme`), a class, a list of classes, or a list of instances, and raises `TypeError` for anything else (including a mixed list):
 
@@ -306,18 +273,18 @@ parent = tempfile.mkdtemp()
 print(scaffold_package("matpower", direction="both", parent_dir=parent))   # <parent>/cimhub_matpower
 ```
 
-`direction` is `"importer"`, `"exporter"` or `"both"`; any other value is not rejected and creates only the schema
-skeleton and `service.py`. It returns the path of the new package and creates
-`cimhub_<fmt>/src/cimhub_<fmt>/` with:
+`direction` is `"importer"`, `"exporter"` or `"both"`; any other value raises `ValueError`. An existing
+`cimhub_<fmt>` directory raises `FileExistsError` and nothing is written. It returns the path of the new package and
+creates `cimhub_<fmt>/src/cimhub_<fmt>/` with:
 
 - a schema skeleton (`schema/main.yaml`, `types/common_types.yaml`, a placeholder `<fmt>.py`);
-- the importer tree: `importer/<fmt>_reader.py`, `importer/<fmt>_to_cimtbl.py` (`MAPPING_ORDER`, `map_master`, the
-  `CimtblImporter` subclass and `<fmt>_to_cim`) and an empty `importer/cimtbl/`;
-- the exporter tree: `exporter/registry.py`, `exporter/<fmt>_writer.py`, `exporter/cim_to_<fmt>.py` and one stub per
-  CIM class, grouped by domain (`topology/`, `lines/`, `loads/`, `generators/`, `transformers/`, `switches/`,
-  `shunts/`, `series/`, `hvdc/`, `inverters/`), each registered on the exporter's `ConverterRegistry`;
-- a `service.py` stub. It imports `cimhub_core.mcp.DualTransportMCPService`, which does not exist in core, so the
-  stub cannot be imported as generated; delete it or replace it.
+- for an importer: `<fmt>_reader.py` at the package root, `importer/<fmt>_to_cimtbl.py` (`MAPPING_ORDER`,
+  `map_master`, the `CimtblImporter` subclass and `<fmt>_to_cim`) and an empty `importer/cimtbl/`;
+- for an exporter: `<fmt>_writer.py` at the package root and `exporter/cim_to_<fmt>.py` (an empty `EXPORT_ORDER`,
+  `export_tables`, the `FormatExporter` subclass and `cim_to_<fmt>`). The exporter raises on conducting equipment
+  that no module of `EXPORT_ORDER` exports, so nothing is dropped silently.
+
+This is the layout `cimhub_raw` and `cimhub_opendss` use. There is no `service.py`.
 
 Once the schema exists, `scaffold_mapper` adds one mapper module and its test per native table:
 
@@ -334,7 +301,7 @@ scaffold_mapper("demo", schema.Load, prefix="ld_", parent_dir="/tmp/scaf")
 `PREFIX`, a `FIELDS` dict with one `Field('TODO', note=...)` per slot (a `TODO` kind does not import, so every field
 must be classified first) and a `map_<table>` function that raises `NotImplementedError`. The test file
 `tests/test_cimtbl_<table>.py` gets `test_classification_is_complete`. `scaffold_mapper` raises `FileExistsError`
-rather than overwrite either file; `scaffold_package` overwrites whatever is at its paths.
+rather than overwrite either file.
 
 The scaffold creates files only. A package is added to the workspace in the root `pyproject.toml` by the repository
 owner when its wave starts. Naming follows the rule: `{Fmt}Reader`, `{Fmt}Writer`, `{Fmt}Importer`,

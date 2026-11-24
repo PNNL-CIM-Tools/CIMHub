@@ -1,8 +1,9 @@
 # LinkML native schemas: reference
 
-Companion to [SKILL.md](SKILL.md). Every annotation shown here is read by
-`cimhub_core/src/cimhub_core/serialization.py` (`get_schema_annotations`, `AnnotationSerializer`,
-`format_by_spec`). If you need a key that isn't listed, add it to the serializer with a test first.
+Companion to [SKILL.md](SKILL.md). `cimhub_core/src/cimhub_core/serialization.py` (`get_schema_annotations`) loads
+a class's annotations; the spoke's own writer (`dss_writer`, RAW's `record_layout` and `raw34_writer`, GridLAB-D's
+`glm_schema` and `glm_writer`) reads the keys it formats from. A key no spoke reads does nothing: if you need one,
+add it to that spoke's writer with a test first.
 
 ## Root schema (`main.yaml`)
 
@@ -36,8 +37,8 @@ Integer with a default:
 area:
   range: integer
   ifabsent: int(1)
-  annotations: {order: 5, value_type: int, separator: ","}
-# -> 1,
+  annotations: {order: 5, value_type: int}
+# -> 1
 ```
 
 Float with precision and a unit:
@@ -47,8 +48,8 @@ voltage_magnitude:
   range: float
   ifabsent: float(1.0)
   unit: {ucum_code: "pu"}
-  annotations: {order: 8, value_type: float, precision: 5, separator: ","}
-# -> 1.00000,
+  annotations: {order: 8, value_type: float, precision: 5}
+# -> 1.00000
 ```
 
 Quoted fixed-width string:
@@ -57,55 +58,12 @@ Quoted fixed-width string:
 name:
   range: string
   ifabsent: string("            ")
-  annotations: {order: 2, value_type: string, width: 12, quote: true, quote_char: "'", separator: ","}
-# -> 'BUS_NAME    ',
+  annotations: {order: 2, value_type: string, width: 12, quote: true, quote_char: "'"}
+# -> 'BUS_NAME    '
 ```
 
-Boolean written as 1/0:
-
-```yaml
-in_service:
-  range: boolean
-  ifabsent: "true"              # quoted for the LinkML parser
-  annotations: {order: 4, value_type: bool, bool_as_int: true, separator: ","}
-# -> 1,
-```
-
-Right-aligned, space-separated:
-
-```yaml
-zone:
-  range: integer
-  ifabsent: int(1)
-  annotations: {order: 3, value_type: int, width: 4, align: right, separator: " "}
-# -> "   1 "
-```
-
-Last field of the record:
-
-```yaml
-rate_c:
-  range: float
-  ifabsent: float(0.0)
-  annotations: {order: 13, value_type: float, precision: 5, separator: ""}
-```
-
-Conditional output:
-
-```yaml
-length:
-  range: float
-  annotations:
-    order: 7
-    value_type: float
-    separator: " "
-    serialize_if:
-      condition: not_null       # always | not_null | not_default | custom
-# custom form: serialize_if: "custom:n1 != 0"  (an expression over the record's own fields)
-```
-
-`AnnotationSerializer(separator=",", skip_none=True, skip_defaults=False)` is the constructor; with
-`skip_none=True` a `None` field is not written at all.
+Conditional output. A keyword format (DSS, GLM) leaves an unset slot out; a positional format (RAW) writes it blank.
+Both are the writer's rule for `None`, not an annotation.
 
 Enum / coded value:
 
@@ -113,7 +71,7 @@ Enum / coded value:
 status:
   range: StatusEnum
   ifabsent: StatusEnum(1)
-  annotations: {order: 5, value_type: int, separator: ","}
+  annotations: {order: 5, value_type: int}
 
 # types/common_types.yaml
 enums:
@@ -128,22 +86,22 @@ unmapped code.
 
 ## Multi-line records (RAW transformers)
 
-Give each field a `line_number`. The serializer groups fields by line, orders each line by `order`, and joins the
-lines with newlines.
+Give each field a `line_number`. RAW's `record_layout` groups fields by line and orders each line by `order`, and
+`raw34_writer` joins the lines with newlines.
 
 ```yaml
 Transformer:
   attributes:
-    bus_i:      {annotations: {line_number: 1, order: 1, value_type: int, separator: ","}}
-    bus_j:      {annotations: {line_number: 1, order: 2, value_type: int, separator: ","}}
-    resistance: {annotations: {line_number: 2, order: 1, value_type: float, precision: 5, separator: ","}}
-    reactance:  {annotations: {line_number: 2, order: 2, value_type: float, precision: 5, separator: ""}}
+    bus_i:      {annotations: {line_number: 1, order: 1, value_type: int}}
+    bus_j:      {annotations: {line_number: 1, order: 2, value_type: int}}
+    resistance: {annotations: {line_number: 2, order: 1, value_type: float, precision: 5}}
+    reactance:  {annotations: {line_number: 2, order: 2, value_type: float, precision: 5}}
 ```
 
 ## Variable-length values
 
-Declare `multivalued: true` on the slot. The serializer formats each item with the field's own annotations and
-joins them with the field's `separator`. Formats with bracketed arrays (DSS `x=[0 2.5 7]`) handle the brackets in
+Declare `multivalued: true` on the slot. RAW's writer formats each item of a fixed-size list (`count`) with the
+field's own annotations; a keyword format writes the list as the writer decides. Formats with bracketed arrays (DSS `x=[0 2.5 7]`) handle the brackets in
 the writer, keyed off the schema field.
 
 ## Shared types
@@ -238,26 +196,26 @@ classes:
         identifier: true
         range: string
         required: true
-        annotations: {order: 1, value_type: string, width: 12, quote: true, quote_char: "'", separator: ","}
+        annotations: {order: 1, value_type: string, width: 12, quote: true, quote_char: "'"}
       bus:
         range: string
         required: true
         related_mappings: [cim:Terminal.ConnectivityNode]
-        annotations: {order: 2, value_type: string, separator: ","}
+        annotations: {order: 2, value_type: string}
       active_power:
         range: float
         ifabsent: float(0.0)
         unit: {ucum_code: "MW"}
         exact_mappings: [cim:EnergyConsumer.p]
         comments: ["Copied to p (MW)."]
-        annotations: {order: 3, value_type: float, precision: 3, separator: ","}
+        annotations: {order: 3, value_type: float, precision: 3}
       reactive_power:
         range: float
         ifabsent: float(0.0)
         unit: {ucum_code: "MVAr"}
         exact_mappings: [cim:EnergyConsumer.q]
         comments: ["Copied to q (MVAr)."]
-        annotations: {order: 4, value_type: float, precision: 3, separator: ""}
+        annotations: {order: 4, value_type: float, precision: 3}
 ```
 
 Output: `'LOAD_001    ',BUS_1,45.500,12.300`

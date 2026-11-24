@@ -53,12 +53,12 @@ Rules:
 
 ## Reader rules
 
-- **The schema drives parsing.** Field order comes from the `order` annotations (`get_field_order`,
-  `get_schema_annotations` in `cimhub_core/src/cimhub_core/serialization.py`), types from the dataclass. Don't
+- **The schema drives parsing.** Field order comes from the `order` annotations
+  (`get_schema_annotations` in `cimhub_core/src/cimhub_core/serialization.py`), types from the dataclass. Don't
   hard-code field lists.
 - **Deterministic identifiers.** Each class has an `identifier: true` field. Assign composite identifiers (RAW
-  branch `from-to-ckt`) before `add_to_graph`. On a collision `add_to_graph` keeps the first object and logs a
-  warning. Treat that warning as a bug.
+  branch `from-to-ckt`) before `add_to_graph`. A collision raises `ValueError`, and so does an object with no
+  identifier.
 - **Keep values as the source wrote them.** No unit conversion and no rounding in the reader (`cim-units` skill).
   Resolve native-only conveniences (DSS `like=`, redirects, continuation lines) here, in the reader.
 - **Fail fast with location.** Raise a format-specific parse error with file, line number and the line text. No
@@ -71,9 +71,11 @@ Rules:
 
 ## Writer rules
 
-- **Annotations drive output.** Use `AnnotationSerializer` (positional and fixed-width formats such as RAW,
-  MATPOWER) or a format serializer that reads the same annotations (DSS `key=value`, GLM). Never hand-code
-  f-strings per class. If a field formats wrongly, fix its annotations.
+- **Annotations drive output.** Core has no serializer: `get_schema_annotations` only loads them, and each spoke
+  formats its own records. Copy the nearest one: `dss_writer` (`key=value`, ordered by `order`, named by
+  `dss_name`), RAW's `record_layout` + `raw34_writer` (positional, by `line_number` and `order`), GridLAB-D's
+  `glm_schema` + `glm_writer` (indexed by GLM type name, walking `is_a`). Never hand-code f-strings per class. If
+  a field formats wrongly, fix its annotations or the format function.
 - **Section and file order** is a class-level list in the writer (RAW section order, DSS master command order).
 - **Create output directories** as needed. Write UTF-8.
 
@@ -96,6 +98,6 @@ Skeletons, parsing strategies and test templates are in [reference.md](reference
 | `dss_to_cim("Master.dss")` | `dss_to_cim(DssReader("Master.dss").read_all())` |
 | an exporter that writes files or takes `destination` | `to_model(network)` + the writer |
 | `writer.write(list_of_objects, path)` | `writer.write(model, path)` |
-| `f"{bus.number},'{bus.name}',{bus.kv:.5f}"` | `self.serializer.serialize(bus)` |
+| `f"{bus.number},'{bus.name}',{bus.kv:.5f}"` | the layout from `get_schema_annotations` (RAW: `format_record(bus)`) |
 | `except Exception: continue` while parsing | raise a parse error with file and line |
 | identifiers from `id(obj)` or row order | `identifier: true` + a deterministic composite key |

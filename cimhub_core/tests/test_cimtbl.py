@@ -371,3 +371,13 @@ def test_record_diff():
         "BaseVoltage bv_1.nominalVoltage (kV): expected '4.16', got '<no column>'",
         "BaseVoltage bv_1.nominalVoltage (V): expected '<no column>', got '4160'",
     ]
+
+
+def test_record_diff_keeps_an_update_apart_from_the_object_it_updates():
+    """An Update row shares its object's mRID; keyed together, the Update would hide the object's own columns."""
+    expected = ("Profile = cim18v17\nObject BaseVoltage: mRID=bv_1, nominalVoltage (kV)=4.16\n"
+                "Update BaseVoltage: mRID=bv_1, name=a\n")
+    actual = ("Profile = cim18v17\nObject BaseVoltage: mRID=bv_1, nominalVoltage (kV)=0.48\n"
+              "Update BaseVoltage: mRID=bv_1, name=a\n")
+    assert record_diff(expected, actual) == [
+        "BaseVoltage bv_1.nominalVoltage (kV): expected '4.16', got '0.48'"]

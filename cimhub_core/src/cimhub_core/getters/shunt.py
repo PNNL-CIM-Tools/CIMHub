@@ -13,7 +13,7 @@ writes one.
 
 **Admittance** (bus-branch formats: RAW's G + jB): g and b of the sections in service, ``gPerSection`` and
 ``bPerSection`` times the section count, in siemens or in pu on the shunt's ``nomU`` and the system base power
-(``cimtables.impedance.z_base``, as a ``(pu system)`` column writes it). An unset ``gPerSection`` is 0.
+(``cimtables.impedance.z_base``, as a ``(pu system)`` column writes it). An unset ``gPerSection`` gives g None; the spoke decides what to write.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ class ShuntReactivePower(NamedTuple):
 
 
 class ShuntAdmittance(NamedTuple):
-    g: float  # unit, the sections in service; 0 when gPerSection is unset
+    g: float | None  # unit, the sections in service; None when gPerSection is unset
     b: float
     sections: float
 
@@ -87,8 +87,8 @@ def get_shunt_admittance(shunt: cim.LinearShuntCompensator, unit: str = "S", *, 
     _check_linear(shunt)
     count = _section_count(shunt, sections)
     b = required_qty(shunt, "bPerSection", unit, system_base=base_power)
-    g = get_qty(shunt, "gPerSection", unit, system_base=base_power) or 0.0
-    return ShuntAdmittance(g=g * count, b=b * count, sections=count)
+    g = get_qty(shunt, "gPerSection", unit, system_base=base_power)
+    return ShuntAdmittance(g=None if g is None else g * count, b=b * count, sections=count)
 
 
 def _check_linear(shunt) -> None:

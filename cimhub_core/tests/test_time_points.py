@@ -174,6 +174,8 @@ def test_points_added_twice_or_for_no_schedule_raise(regular):
         add_regular_time_points(dict(points), network, {"ls_plant": [1.0]})
     with pytest.raises(ValueError, match=r"no RegularIntervalSchedule with mRID \['ls_none'\]"):
         add_regular_time_points({}, network, {"ls_none": [1.0]})
+    with pytest.raises(ValueError, match=r"no RegularIntervalSchedule with mRID \['ls_none'\]"):
+        add_regular_time_points({}, network, {"ls_plant": [1.0]}, {"ls_none": [1.0]})
 
 
 def test_device_points_are_added_by_mrid(scheduled):

@@ -122,7 +122,7 @@ def add_regular_time_points(time_points: dict, network, values: dict[str, list[f
     if REGULAR_TIME_POINT_CLASS in time_points:
         raise ValueError(f"time_points already holds a {REGULAR_TIME_POINT_CLASS} table")
     uris = {schedule.mRID: uri for uri, schedule in _schedules(network, cim.RegularIntervalSchedule).items()}
-    missing = sorted(set(values) - set(uris))
+    missing = sorted((set(values) | set(value2 or {})) - set(uris))
     if missing:
         raise ValueError(f"no RegularIntervalSchedule with mRID {missing[:5]} in the network")
     time_points[REGULAR_TIME_POINT_CLASS] = regular_time_points(

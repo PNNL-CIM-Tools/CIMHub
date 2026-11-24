@@ -73,8 +73,7 @@ print(z.r0, z.g)    # 0.359664 None
 Your code decides what an unset value means in your format. Which fields of a result can be `None` is in the
 [reference](../reference/index.md); the type annotation of the field says it too (`float | None`).
 
-One value does have a documented default. `get_shunt_admittance` returns `g` as `0.0` when the shunt's
-`gPerSection` is unset.
+`get_shunt_admittance` follows the same rule: `g` is `None` when the shunt's `gPerSection` is unset.
 
 ## Errors
 
@@ -140,11 +139,12 @@ A line's impedance can be on the line itself, in a per-length code, in a matrix,
 | `LUMPED` | `ACLineSegment.r`, `x`, `bch`, `gch` (and the zero-sequence ones) |
 | `PER_LENGTH_SEQ` | a `PerLengthSequenceImpedance`, times the length |
 | `MATRIX_REDUCED` | a `PerLengthPhaseImpedance` reduced to sequence values |
-| `GEOMETRY` | a WireConfiguration's spacing and wires through line constants (not built: it raises `NotImplementedError`) |
+| `GEOMETRY` | a WireConfiguration's spacing and wires through line constants (not built: a line with geometry and no lumped values raises `NotImplementedError`) |
 
 The default for `get_line_sequence_impedance` is `LUMPED`, and for the per-length getter it is `PER_LENGTH_SEQ`. The
 result's `source` field says which step produced it. When the lumped values and a per-length source both lie within the
-cap and disagree, the getter raises; when they agree, the lumped values win.
+cap and disagree, the getter raises; when they agree, the lumped values win. With lumped values the per-length source is
+only a check: it is skipped when the line has no length, and geometry is never read.
 
 ```python
 z = get_line_sequence_impedance(line, 'ohm', derive=ImpedanceSource.PER_LENGTH_SEQ)

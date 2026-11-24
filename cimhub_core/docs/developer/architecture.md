@@ -167,13 +167,12 @@ Everything is under
 | `base.py` | The ABCs: `FormatReader`, `FormatWriter`, `FormatImporter`, `CimtblImporter`, `FormatExporter`. Objects in, objects out; only readers and writers touch the filesystem. |
 | `graph_model.py` | `GraphModel`, the indexed store for native dataclasses (`list_by_class`, `find_by_attribute`). It is not a cimgraph model. |
 | `cimtbl.py` | Import helpers: `cell`, `mrid`, `lookup`, `Field` and `copied_columns`, `check_fields`, `fields_table`, `fields_stub`, `cimtbl_to_cim`. |
-| `cimtbl_testing.py` | Atom-test harness: `cim_scope`, `atom_documents`, `assert_matches_golden` (set `CIMHUB_UPDATE_GOLDENS=1` to regenerate; review the diff), `record_diff`. |
+| `cimtbl_testing.py` | Atom-test harness: `cim_scope`, `atom_documents`, `assert_matches_golden`, `assert_text_matches_golden` (set `CIMHUB_UPDATE_GOLDENS=1` to regenerate; review the diff), `record_diff`. |
 | `getters/` | One module per CIM concept (terminals, line impedance, spacing, transformer, shunt, tap changer, limits, DER, and more). cim18v17 only. |
 | `derived/` | Pure, named, tested functions for values CIM has no attribute for (Kron reduction, capacitance to susceptance, sequence to phase matrix, spacing from distances, control band, regulator settings). |
 | `shapes/` | Canonical `.cimtbl` table shapes, one example file per shape. Catalog: skill [`cimtbl-shapes`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/cimtbl-shapes/SKILL.md). |
-| `names.py` | The export naming switch: `NAME_SOURCES`, `resolve_name_source`, `export_name`. Also `clean_cim_name`, which no spoke calls. |
-| `registry.py` | `ConverterRegistry`, a decorator-based class to function dispatch table. Only the scaffold's exporter stubs use it. |
-| `serialization.py` | `AnnotationSerializer` and helpers for native text driven by LinkML annotations. `get_schema_annotations` is the one spokes use: it reads a class's slot annotations (`order`, `unit`, a default) from the schema YAML. |
+| `names.py` | The export naming switch: `NAME_SOURCES`, `resolve_name_source`, `export_name`. |
+| `serialization.py` | `get_schema_annotations`: a class's slot annotations (`order`, `unit`, a default) from the schema YAML. Each spoke formats its own records from them: `dss_writer` (`key=value`), RAW's `record_layout` and `raw34_writer` (positional), GridLAB-D's `glm_schema` and `glm_writer` (indexed by GLM type name, walking `is_a`). |
 | `export_slots.py`, `load_response.py`, `time_points.py` | The exporters' slot classification, the shared `zip_fractions.cimtbl`, and the Parquet time-point tables (needs the `time-points` extra). |
 | `mermaid.py`, `scaffold.py` | Diagrams of native dataclasses, and `scaffold_package` / `scaffold_mapper` for a new spoke. |
 
@@ -233,9 +232,9 @@ cimhub_<fmt>/
   docs/EXPORT_MAPPING.md          the spoke's export spec
 ```
 
-The scaffold (`scaffold_package`) produces a different, older layout: its reader sits in `importer/`, its writer
-in `exporter/`, and its exporter stubs register one function per CIM class on a `ConverterRegistry` instead of
-listing modules. See [Starting a new package](converter-api.md#starting-a-new-package).
+The scaffold (`scaffold_package`) writes this layout: reader and writer at the package root, `importer/<fmt>_to_cimtbl.py`
+and `exporter/cim_to_<fmt>.py` with an empty `EXPORT_ORDER`. See
+[Starting a new package](converter-api.md#starting-a-new-package).
 
 Skills:
 [`reader-writer`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/reader-writer/SKILL.md),

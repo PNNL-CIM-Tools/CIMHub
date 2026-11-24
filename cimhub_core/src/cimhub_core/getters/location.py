@@ -17,7 +17,6 @@ from typing import NamedTuple
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.getters import describe
-from cimhub_core.getters.terminals import get_terminal_nodes
 
 Point = tuple[float, float]
 
@@ -45,7 +44,7 @@ def get_location_coordinates(equipment: cim.ConductingEquipment) -> LocationCoor
                              f"{point.sequenceNumber}")
         numbered[point.sequenceNumber] = (float(point.xPosition), float(point.yPosition))
     points = tuple(numbered[number] for number in sorted(numbered))
-    terminals = len(get_terminal_nodes(equipment))
+    terminals = len(equipment.Terminals)  # counted, not walked: a bus-branch Terminal has no ConnectivityNode
     if len(points) == terminals:
         by_terminal = points
     elif terminals == 2 and len(points) > 2:

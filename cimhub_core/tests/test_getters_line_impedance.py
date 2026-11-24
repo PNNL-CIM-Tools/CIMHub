@@ -214,6 +214,26 @@ def test_disagreeing_sources_raise(tmp_path):
         get_line_sequence_impedance(line, derive=ImpedanceSource.PER_LENGTH_SEQ)
 
 
+def test_lumped_values_stand_when_the_code_has_no_length(tmp_path):
+    """The per-length source only checks the lumped values; with no length there is nothing to check."""
+    line = _line(_load_atom(tmp_path, """
+Object PerLengthSequenceImpedance: mRID=seq, r (ohm/km)=0.5, x (ohm/km)=1.0
+Object ACLineSegment: mRID=ln, node1=a, node2=b, phases=ABC, r (ohm)=1.5, x (ohm)=2.0, PerLengthImpedance=seq, BaseVoltage=bv_4p16kv, EquipmentContainer=fdr
+"""), "ln")
+    z = get_line_sequence_impedance(line, derive=ImpedanceSource.PER_LENGTH_SEQ)
+    assert (z.r, z.source) == (pytest.approx(1.5), ImpedanceSource.LUMPED)
+
+
+def test_lumped_values_stand_on_a_line_with_geometry(tmp_path):
+    """derive=GEOMETRY caps the search; it does not make the unbuilt step 4 run when lumped values exist."""
+    path = tmp_path / "lumped_geometry.cimtbl"
+    path.write_text(f"Profile = cim18v17\nImport {SHAPES / 'line_by_wire_configuration.cimtbl'}\n"
+                    "Update ACLineSegment: mRID=ln_g1, r (ohm)=1.0, x (ohm)=2.0\n")
+    line = _line(load_model(path), "ln_g1")
+    z = get_line_sequence_impedance(line, derive=ImpedanceSource.GEOMETRY)
+    assert (z.r, z.x, z.source) == (pytest.approx(1.0), pytest.approx(2.0), ImpedanceSource.LUMPED)
+
+
 # step 4 and input checks ---------------------------------------------------------------------------------------
 
 

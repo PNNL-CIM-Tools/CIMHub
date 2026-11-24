@@ -1,9 +1,9 @@
 # cimhub-raw
 
-PSS/E RAW v34 importer for CIMHub: RAW cases to CIM (cim18v17). `Raw34Reader` parses a case into native records.
+PSS/E RAW v34 importer and exporter for CIMHub: RAW cases to and from CIM (cim18v17). `Raw34Reader` parses a case into native records.
 `RawImporter` maps them to `.cimtbl` text (one file per RAW table, values copied verbatim in the case's units),
-and cimtables builds the CIM model from that text. `Raw34Writer` writes native records back to a `.raw` file.
-There is no CIM to RAW exporter yet.
+and cimtables builds the CIM model from that text. `RawExporter` reads a CIM network through the core getters
+and returns RAW records, which `Raw34Writer` writes as a `.raw` file (`cim_to_raw(network, path)` does both).
 
 ```bash
 pip install --pre cimhub-raw      # also installs cimhub-core
@@ -25,6 +25,9 @@ model = Raw34Reader("IEEE_14_bus.raw").read_all()
 network = raw_to_cim(model, name="IEEE14", artifact_dir="ieee14_cimtbl")
 print(len(network.graph[cim.TopologicalNode]), "buses")   # 14 buses
 Raw34Writer().write(model, "ieee14_copy.raw")
+
+from cimhub_raw.exporter.cim_to_raw import cim_to_raw
+cim_to_raw(network, "ieee14_from_cim.raw")                # CIM back to RAW
 ```
 
 `raw_to_cim(model, *, name, authority=..., network=None, artifact_dir=None)` returns the CIM network. Without
@@ -52,6 +55,7 @@ WECC 240 bus case. Other cases are not distributed.
 ## Documentation
 
 - [RAW v34 to `.cimtbl` mapping spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_raw/docs/CIMTBL_MAPPING.md)
+- [CIM to RAW v34 export spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_raw/docs/EXPORT_MAPPING.md)
 - [CIMHub architecture](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/architecture.md) and [converter API](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/converter-api.md)
 
 BSD 3-Clause. Source and issues: <https://github.com/PNNL-CIM-Tools/CIMHub>.

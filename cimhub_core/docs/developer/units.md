@@ -92,6 +92,12 @@ If the class is rated but a rating is unset, the import fails with, for a windin
 baseS set` (`ratedU` and `ratedS` on a `PowerTransformerEnd`); it does not fall through to another base. If no base is found, the message ends `in .cimtbl: a
 BasePower declared before this row`.
 
+Importing never invents a system base: a `(pu system)` row with no `BasePower` bound before it raises. A loaded
+network always has `network.base_power` and `network.base_frequency`, though. cim-graph's `set_default_bases` takes
+the file's `BasePower` and `BaseFrequency`, and when the file sets none it uses 100 MVA and 60 Hz. So an exporter
+that reads `network.base_power` from a file without a `BasePower` gets cim-graph's default, not a value the case
+declared. A case whose per-unit values matter declares both.
+
 The artifact must hold what the base needs: the ratings, the `BaseVoltage` and `From*` references, and for a
 system-base row a `BasePower` bound before it. A bus-branch shape
 ([`line_bus_branch.cimtbl`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/cimhub_core/src/cimhub_core/shapes/line_bus_branch.cimtbl))
@@ -155,7 +161,9 @@ It returns `None` when the attribute is unset, so a getter can pass an unset val
 (`EnergyConsumer.LoadResponse is an association, not a quantity`), an attribute that is not a `CIMUnit`
 (`EnergyConsumer.customerCount is not a CIMUnit-typed attribute (holds 1)`), a `base` or `power_base` with a
 non-relative unit, and a missing rating, `BaseVoltage` or `system_base`. pint raises `DimensionalityError` on a
-dimension mismatch.
+dimension mismatch, with one gap: W and VAr convert into each other (`cim.ActivePower(1, 'kW').to('VAr')` is
+`1000.0`), so a swapped active and reactive unit is silent. Core adds no check of its own; the fix is upstream
+(U18 in `UPSTREAM_REQUESTS.md`).
 
 Real calls from the repo:
 

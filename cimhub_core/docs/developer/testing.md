@@ -50,9 +50,8 @@ Run the whole-deck tests like this:
 CIMHUB_DSS_DECKS=/path/to/decks scripts/test-all.sh opendss -- --roundtrip
 ```
 
-`CIMHUB_UPDATE_GOLDENS` is read in two places. `cimtbl_testing` rewrites a golden only when it is exactly `1`. The
-OpenDSS exporter's deck goldens (`cimhub_opendss/tests/export_atoms.py`) rewrite on any non-empty value, so set
-it to `1` in both cases.
+`CIMHUB_UPDATE_GOLDENS` is read in one place, `cimtbl_testing`, and a golden is rewritten only when it is exactly
+`1`. The OpenDSS exporter's deck goldens (`cimhub_opendss/tests/export_atoms.py`) go through the same helper.
 
 ## Test tiers
 
@@ -135,8 +134,8 @@ Some conventions:
 |---|---|
 | `cim_scope()` | Context manager that restores `CIMG_CIM_PROFILE`, the model scope and the cached CIM profile after a load. |
 | `atom_documents(*parts, name="atom")` | A master (`Profile = cim18v17`) that imports `parts` in order. Empty parts (no statements) are left out. Returns a `DocumentSet`. |
-| `assert_matches_golden(document, golden_path)` | Text equality of `format_document(document)` with the golden. With `CIMHUB_UPDATE_GOLDENS=1` it rewrites the golden. |
-| `assert_text_matches_golden(text, golden_path)` | The same for text you already have: a written artifact file, or a native file an exporter wrote. A `.cimtbl` golden's failure lists records, any other golden's a unified diff. |
+| `assert_matches_golden(document, golden_path)` | Text equality of `format_document(document)` with the golden. With `CIMHUB_UPDATE_GOLDENS=1` it rewrites the golden, creating its directory. A missing golden raises `AssertionError` naming the variable. |
+| `assert_text_matches_golden(text, golden_path)` | The same for text you already have: a written artifact file, or a native file an exporter wrote. A `.cimtbl` golden's failure lists records, any other golden's a unified diff. Only `CIMHUB_UPDATE_GOLDENS=1` rewrites a golden, including the OpenDSS deck goldens (`export_atoms.py` delegates here). |
 | `record_diff(expected, actual)` | Record-level differences: `expected X, got Y`, `missing ...`, `extra ...`. Ignores comments, column order and padding. Empty when the records agree. |
 | `UPDATE_GOLDENS` | The name of the environment variable, `"CIMHUB_UPDATE_GOLDENS"`. |
 
@@ -176,11 +175,9 @@ Records match by mRID, else `identifier`, else `path`, else position in the clas
 comments or layout differ, the message says `the records match; comments or layout differ:` and shows the first
 40 lines of a unified diff.
 
-One limit: an `Update` row has the same key as the object it updates (`BaseVoltage a`), so the two share one entry in
-the comparison and the later row replaces the earlier one. A changed value in the earlier row is then hidden. The
-test still fails (the text differs), but the message says the records match and shows a unified diff. If only one
-side has the `Update` row, the columns of the earlier row are reported as `<no column>`. When either message appears
-on a file with `Update` rows, diff the files with `git diff`.
+An `Update` row is its own record, keyed as `Update <Class>` (`Update BaseVoltage a`), so it does not collide with
+the object it updates. Two records with the same key in one text raise `ValueError` (`two BaseVoltage records keyed
+'a'`); give each row its own `mRID`.
 
 ## Adding an atom test (OpenDSS walkthrough)
 

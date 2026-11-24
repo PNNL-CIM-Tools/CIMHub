@@ -85,8 +85,6 @@ inverter, switch). It returns `None` for `"ABC"`, so cimtables writes no per-pha
 `Terminal.phases`, and returns `phases` otherwise. A line keeps its phases, because its `ACLineSegmentPhase` order
 is the conductor order. `BALANCED_PHASES` is the constant `"ABC"`.
 
-`phases_cell` and `BALANCED_PHASES` are not in `cimtbl.__all__`; import them by name.
-
 ```python
 >>> from cimhub_core.cimtbl import phases_cell
 >>> phases_cell("ABC"), phases_cell("AB")

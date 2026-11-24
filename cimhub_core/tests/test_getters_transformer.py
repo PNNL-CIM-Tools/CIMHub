@@ -684,6 +684,14 @@ def test_star_impedance_of_three_windings_adds_by_pair(tmp_path):
     assert _mesh(model) == {(1, 2): (None, 8.0), (1, 3): (None, 10.0), (2, 3): (None, 10.0)}
 
 
+def test_three_windings_with_an_unset_star_x_raise(tmp_path):
+    """Only two windings may hold the whole x on one end; a third winding's unset x is not a zero."""
+    path = tmp_path / "star.cimtbl"
+    path.write_text(STAR_THREE_WINDING.replace("0.5, 3\n", "0.5,\n"))
+    with pytest.raises(ValueError, match=r"the star x of winding\(s\) \[3\] is unset; with 3 windings"):
+        _model(load_model(path), "xf_3w")
+
+
 def test_star_and_mesh_impedance_raise():
     network = _shape("transformer_by_ends")
     _get(network, cim.PowerTransformerEnd, "xf_sub_1").x = cim.Reactance(1.0)

@@ -205,12 +205,11 @@ sections named by `sections=` (`'actual'`, `'normal'` or `'maximum'`): `gPerSect
 section count.
 
 `unit` is `'S'` for siemens, or `'pu'` for per unit on the shunt's `nomU` and the system base power. The pu form
-needs `base_power` (`network.base_power`). `gPerSection` unset reads as 0.0 here, the one place a shunt getter
-defaults a value; `bPerSection` is required.
+needs `base_power` (`network.base_power`). `gPerSection` unset gives `g = None`, like any unset optional value, and the spoke decides what to write (RAW writes 0, its spec default); `bPerSection` is required.
 
 | Field | Meaning |
 |---|---|
-| `g` | conductance of the sections in service, in `unit` |
+| `g` | conductance of the sections in service, in `unit`; `None` when `gPerSection` is unset |
 | `b` | susceptance of the sections in service, in `unit` |
 | `sections` | the section count used |
 
@@ -223,7 +222,7 @@ with cim_scope():
     network = dss_network("capacitor/caps.dss")
     shunt = find(network, cim.LinearShuntCompensator, "cap_c3")
     print(get_shunt_admittance(shunt, "S", sections="normal"))
-# ShuntAdmittance(g=0.0, b=0.03467085798816568, sections=1)
+# ShuntAdmittance(g=None, b=0.03467085798816568, sections=1)
 ```
 
 Called by cimhub_raw.

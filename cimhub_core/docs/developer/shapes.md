@@ -145,9 +145,8 @@ picks the row.
 
 `rho` is typed `Resistance` in cim18v17, so the header is `rho (ohm)` and the value is ohm-metres. The `WireInfo`
 mRIDs come from [wire_info](#wire_info). OpenDSS `LineSpacing` and `LineGeometry` map here, and so do GDM geometry
-branches. The shape's own header names GLM `line_spacing` as a source too, but GridLAB-D's importer writes
-`ConductorDistanceSpacing` and `ConductorDistance` for a spacing (pairwise distances and heights, never
-coordinates), so it does not use `XYSpacing`.
+branches. A GLM `line_spacing` does not map here: it holds pairwise distances and heights, never coordinates, so
+GridLAB-D's importer writes `ConductorDistanceSpacing` and `ConductorDistance` instead of `XYSpacing`.
 
 ## line_bus_branch
 

@@ -68,10 +68,14 @@ def _keyed_records(text: str, source_file: str) -> dict[tuple[str, str], dict[st
         if isinstance(record, ImportRecord):
             keyed[("Import", record.path)] = {}
             continue
-        counts[record.cim_class] = counts.get(record.cim_class, 0) + 1
+        # an Update row adds to an object defined earlier under the same mRID, so it is its own record
+        cim_class = f"Update {record.cim_class}" if record.form == "Update" else record.cim_class
+        counts[cim_class] = counts.get(cim_class, 0) + 1
         key = (record.fields.get("mRID") or record.fields.get("identifier") or record.fields.get("path")
-               or f"#{counts[record.cim_class]}")
-        keyed[(record.cim_class, key)] = {
+               or f"#{counts[cim_class]}")
+        if (cim_class, key) in keyed:
+            raise ValueError(f"{source_file}: two {cim_class} records keyed {key!r}")
+        keyed[(cim_class, key)] = {
             (f"{column} ({record.units[column]})" if record.units.get(column) else column): value
             for column, value in record.fields.items()
         }
@@ -115,8 +119,11 @@ def assert_text_matches_golden(actual: str, golden_path: str | Path) -> None:
     unified diff."""
     golden_path = Path(golden_path)
     if os.environ.get(UPDATE_GOLDENS) == "1":
+        golden_path.parent.mkdir(parents=True, exist_ok=True)
         golden_path.write_text(actual)
         return
+    if not golden_path.exists():
+        raise AssertionError(f"{golden_path}: no golden; run with {UPDATE_GOLDENS}=1 and review it")
     expected = golden_path.read_text()
     if actual == expected:
         return

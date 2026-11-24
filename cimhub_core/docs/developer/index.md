@@ -23,7 +23,7 @@ that what a reviewer reads is exactly what was built). Every stage returns somet
 | Page | Covers |
 |---|---|
 | [Architecture](architecture.md) | Hub and spoke, the import and export flows, what core holds, what upstream owns, the spoke layout. |
-| [Converter API](converter-api.md) | The five base classes, `GraphModel`, the one-call functions of each package, options, `ConverterRegistry`, the scaffold. |
+| [Converter API](converter-api.md) | The five base classes, `GraphModel`, the one-call functions of each package, options, the scaffold. |
 | [The .cimtbl import contract](cimtbl.md) | `cimhub_core.cimtbl`: `Field` classification, `cell`, `mrid`, `lookup`, `cimtbl_to_cim`. |
 | [Canonical shapes](shapes.md) | The `.cimtbl` table shapes in `shapes/` that every importer emits. |
 | [Writing a getter](writing-getters.md) | How a getter in `getters/` is written: NamedTuple returns, `get_qty`, explicit resolution order. |
@@ -41,16 +41,15 @@ Everything is under
 | `base.py` | The ABCs: `FormatReader`, `FormatWriter`, `FormatImporter`, `CimtblImporter`, `FormatExporter`. |
 | `graph_model.py` | `GraphModel`: the indexed `{class: {identifier: instance}}` store for native LinkML dataclasses. |
 | `cimtbl.py` | Import helpers: `cell`, `mrid`, `lookup`, `Field`, `copied_columns`, `check_fields`, `fields_table`, `fields_stub`, `cimtbl_to_cim`. |
-| `cimtbl_testing.py` | Atom-test harness: `cim_scope`, `atom_documents`, `assert_matches_golden`, `record_diff`. |
+| `cimtbl_testing.py` | Atom-test harness: `cim_scope`, `atom_documents`, `assert_matches_golden`, `assert_text_matches_golden`, `record_diff`. |
 | `getters/` | One module per CIM concept (terminals, line impedance, spacing, transformer, shunt, tap changer, limits, DER, schedules and more). cim18v17 only. |
 | `derived/` | Pure, named functions for values CIM has no attribute for: Kron reduction, capacitance to susceptance, sequence to phase matrix, spacing, control band, regulator settings. |
 | `shapes/` | One example `.cimtbl` file per canonical table shape. |
-| `registry.py` | `ConverterRegistry`: a decorator-based class to function dispatch table. |
-| `names.py` | Export naming: `resolve_name_source`, `export_name` (the `name_source` switch), and the legacy `clean_cim_name`. |
+| `names.py` | Export naming: `resolve_name_source`, `export_name` (the `name_source` switch). |
 | `export_slots.py` | `Slot`, `check_slots`, `with_default`, `slots_table`: the export mirror of the importer's `FIELDS`. |
 | `load_response.py` | `zip_fractions()`: the three shared constant-power, impedance and current load models. |
 | `time_points.py` | Parquet sidecar tables for schedule time points (needs the `time-points` extra). |
-| `serialization.py` | `AnnotationSerializer`, `format_by_spec`, `get_schema_annotations`: native text driven by LinkML annotations. |
+| `serialization.py` | `get_schema_annotations`: a native class's LinkML slot annotations. Each spoke formats its own records from them. |
 | `mermaid.py` | `get_mermaid`, `download_mermaid`: diagrams of native dataclasses. |
 | `scaffold.py` | `scaffold_package`, `scaffold_mapper`: stubs for a new spoke and for one mapper. |
 

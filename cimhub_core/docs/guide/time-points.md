@@ -73,8 +73,8 @@ add_regular_time_points(time_points, network, {'ls_daily': [0.4, 0.35, 0.3, 0.5]
 ```
 
 `value2` gives the second value of the schedules it names. A `value2` list of another length than its `value1`
-raises, and so does an mRID that no `RegularIntervalSchedule` of the network has (a `value2` mRID that has no `value1`
-raises too). Adding a second `RegularTimePoint` table to the same dict raises as well.
+raises, and so does an mRID, in `values` or in `value2`, that no `RegularIntervalSchedule` of the network has (a
+`value2` mRID that has no `value1` raises too). Adding a second `RegularTimePoint` table to the same dict raises as well.
 
 `regular_time_points(values, value2=None)` is the pure core: the same, keyed by uri, with no network.
 

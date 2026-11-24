@@ -52,16 +52,16 @@ step the getter may go.
 | `LUMPED` (1) | 1 | `ACLineSegment.r/x/bch/gch` and the zero-sequence set, as stored | none |
 | `PER_LENGTH_SEQ` (2) | 2 | `PerLengthSequenceImpedance`, times `length` for whole-line values | the line's length |
 | `MATRIX_REDUCED` (3) | 3 | `PerLengthPhaseImpedance`, Kron-reduced if it has neutral conductors, then reduced to sequence values | a transposed line; neutrals grounded at both ends. A conductor other than A, B, C and N raises |
-| `GEOMETRY` (4) | 4 | the WireConfiguration's spacing and wires through line constants | not built: asking for it on a geometry line raises `NotImplementedError`, even when the line also has valid lumped values |
+| `GEOMETRY` (4) | 4 | the WireConfiguration's spacing and wires through line constants | not built: a line with geometry and no lumped values raises `NotImplementedError` at `derive=GEOMETRY` |
 
 The resolution order is the caller's, not a hidden fallback chain:
 
 - `derive=` caps the step. The default `ImpedanceSource.LUMPED` reads stored lumped values only and raises when they
   are absent.
-- A per-length source is read whenever the cap reaches it, before the lumped values are chosen. So a line with lumped
-  values and a per-length code but no `length` raises at `derive=PER_LENGTH_SEQ` although the default returns its
-  lumped values.
-- When the lumped values and a per-length source are both within the cap, they must agree to a relative tolerance of
+- When the line has lumped values, the per-length source is read only to check them. It is read at most to
+  `MATRIX_REDUCED` (geometry is never reached), and not at all when the line has no `length`: the lumped values
+  are then returned as they stand, instead of raising.
+- When the lumped values and a per-length source are both read, they must agree to a relative tolerance of
   `DISAGREEMENT_REL_TOL` (1e-6) on every value both set, and the lumped values win. A difference raises.
 - No spoke passes `derive=` yet; `cimhub_raw` and `cimhub_opendss` call `get_line_sequence_impedance` with the default.
 
@@ -101,12 +101,12 @@ It reads the lumped values first. When `derive` allows, it also reads the per-le
 - nothing within `derive` gives r and x (the message lists whether lumped r/x are set, the `PerLengthImpedance` class
   and whether there is geometry);
 - only one of lumped `r` and `x` is set;
-- a per-length source is read and the line has no `length` (`a per-length impedance needs the line's length`), even
-  when lumped values are set;
+- the line has no lumped values, a per-length source gives them and the line has no `length`
+  (`a per-length impedance needs the line's length`);
 - two sources disagree beyond the tolerance.
 
-It raises `NotImplementedError` (not `ValueError`) when `derive` reaches `GEOMETRY` on a line with geometry, even when
-the line has lumped values that would win.
+It raises `NotImplementedError` (not `ValueError`) only when the line has no lumped values and `derive` reaches
+`GEOMETRY` on a line with geometry. A line with lumped values and geometry returns the lumped values.
 
 ```python
 from cimhub_core.getters.line_impedance import ImpedanceSource, get_line_sequence_impedance
@@ -307,7 +307,8 @@ get_stored_distances(spacing, unit="m") -> StoredDistances
   `ConductorDistanceSpacing` needs a height for every conductor and distances that determine one geometry; a distance
   shorter than the height difference, or a stored distance that disagrees with the solved positions by more than a
   relative 1e-4 (`DISTANCE_REL_TOL`), raises.
-- `get_spacing_distances`: `{(i, j): d}` for every pair i < j. A `ConductorDistanceSpacing` must hold a distance for
+- `get_spacing_distances`: `{(i, j): d}` for every pair i < j. An `XYSpacing` takes them from
+  `get_stored_distances`, which holds every pair. A `ConductorDistanceSpacing` must hold a distance for
   every pair; its heights are not needed.
 - `get_stored_distances`: what the spacing holds, as it holds it: an `XYSpacing`'s every pair and its y, a
   `ConductorDistanceSpacing`'s stored rows only. A spacing with no `ConductorDistance` rows at all (GLM's all-zero
@@ -337,7 +338,7 @@ except ValueError as error:
 # ConductorDistanceSpacing 'spc_line_spacing:10': conductors [1, 2] have no height (a ConductorDistance to a position of kind earth)
 ```
 
-`get_stored_distances` is called by `cimhub_gridlabd`; `get_spacing_xy` by `cimhub_opendss`. No spoke calls
+`get_stored_distances` is called by `cimhub_gridlabd`, which writes any spacing (XY or distances) as a `line_spacing` through it; `get_spacing_xy` by `cimhub_opendss`. No spoke calls
 `get_spacing_distances`.
 
 ## Wires

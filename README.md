@@ -21,9 +21,9 @@ Importing and exporting use different paths:
 |---|---|---|---|
 | `cimhub-core` | shared layer: `.cimtbl` contract, getters, shapes, test harness | | |
 | `cimhub-opendss` | OpenDSS (`.dss`) | yes | yes |
-| `cimhub-raw` | PSS/E RAW v34 | yes (multi-terminal DC, GNE and induction machine raise) | not yet |
+| `cimhub-raw` | PSS/E RAW v34 | yes (multi-terminal DC, GNE and induction machine raise) | yes (AC equipment; a class with no export module raises) |
 | `cimhub-gdm` | grid-data-models `DistributionSystem` | yes | yes (see the package README for limits) |
-| `cimhub-gridlabd` | GridLAB-D (`.glm`) | yes | not yet |
+| `cimhub-gridlabd` | GridLAB-D (`.glm`) | yes | yes |
 
 MATPOWER and DistOPF are planned and are not in this repository yet. Each package README lists what
 that package maps and what raises.

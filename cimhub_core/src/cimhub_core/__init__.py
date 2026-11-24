@@ -8,9 +8,7 @@ Public API:
     FormatImporter, CimtblImporter native GraphModel -> .cimtbl documents -> CIM (cimhub_core.cimtbl)
     FormatExporter                 CIM -> native GraphModel
     GraphModel                     indexed store for native LinkML dataclasses
-    ConverterRegistry              decorator-based class -> function dispatch
-    AnnotationSerializer & co.     LinkML-annotation-driven native text formatting
-    clean_cim_name                 export-side naming only (never for mRIDs)
+    get_schema_annotations         a native class's LinkML slot annotations (order, native names, defaults)
     get_mermaid, download_mermaid  diagrams of native dataclasses
     scaffold_package               generate a new spoke package
 """
@@ -22,16 +20,8 @@ __version__ = importlib.metadata.version("cimhub_core")
 from cimhub_core.base import CimtblImporter, FormatExporter, FormatImporter, FormatReader, FormatWriter
 from cimhub_core.graph_model import GraphModel
 from cimhub_core.mermaid import download_mermaid, get_mermaid
-from cimhub_core.names import clean_cim_name
-from cimhub_core.registry import ConverterRegistry
 from cimhub_core.scaffold import scaffold_package
-from cimhub_core.serialization import (
-    AnnotationSerializer,
-    format_by_spec,
-    get_field_order,
-    get_native_name,
-    get_schema_annotations,
-)
+from cimhub_core.serialization import get_schema_annotations
 
 __all__ = [
     "FormatReader",
@@ -40,13 +30,7 @@ __all__ = [
     "CimtblImporter",
     "FormatExporter",
     "GraphModel",
-    "ConverterRegistry",
-    "AnnotationSerializer",
-    "format_by_spec",
-    "get_field_order",
-    "get_native_name",
     "get_schema_annotations",
-    "clean_cim_name",
     "get_mermaid",
     "download_mermaid",
     "scaffold_package",

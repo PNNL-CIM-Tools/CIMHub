@@ -347,7 +347,7 @@ How points pair with terminals:
 
 Returns `None` when the equipment has no `Location` or the location has no points. Raises `ValueError` for a point
 without a `sequenceNumber`, `xPosition` or `yPosition`, two points with one `sequenceNumber`, any other count of
-points than the table's, and for equipment that has no `ConnectivityNode` on a terminal. That check counts terminals through `get_terminal_nodes` with its default, so a bus-branch model (terminals on `TopologicalNode`s only) raises even for a valid `Location`.
+points than the table's. The equipment's Terminals are counted directly, so a bus-branch model (terminals on `TopologicalNode`s only) works like a node-breaker one.
 
 ```python
 with cim_scope():

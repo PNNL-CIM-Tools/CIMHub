@@ -114,6 +114,12 @@ def get_line_sequence_impedance(
         raise ValueError(f"unit must be one of {sorted(ADMITTANCE_UNIT)}, not {unit!r}")
 
     lumped = _lumped(line, unit, base_power)
+    if lumped is not None:
+        # the per-length source only checks the lumped values here, so one that cannot be read whole (no length to
+        # multiply by; geometry, whose step 4 is not built) leaves them standing instead of raising
+        derive = min(derive, ImpedanceSource.MATRIX_REDUCED)
+        if get_qty(line, "length", "m") is None:
+            derive = ImpedanceSource.LUMPED
     per_length = None
     if derive > ImpedanceSource.LUMPED:
         per_metre = _per_length_sequence(line, "ohm/m", "S/m", derive)

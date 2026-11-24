@@ -18,7 +18,6 @@ Usage::
 
 from __future__ import annotations
 
-import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -26,7 +25,6 @@ from typing import Iterable, Iterator, TypeVar, cast
 
 __all__ = ["GraphModel"]
 
-_log = logging.getLogger(__name__)
 T = TypeVar("T")
 
 # Fallback priority order when the schema has no ``identifier: true`` annotation.
@@ -55,7 +53,8 @@ def _get_identifier(obj: object) -> str:
     """Extract the identifier from a LinkML dataclass instance.
 
     First checks the LinkML schema for an ``identifier: true`` field.
-    Falls back to common field names in priority order, then ``id(obj)``.
+    Falls back to common field names in priority order; an object with none of them raises, since an identifier
+    made up per run would change the model's order and every mRID derived from it.
     """
     # Schema-aware lookup (cached per class)
     id_field = _get_identifier_field(type(obj))
@@ -69,14 +68,8 @@ def _get_identifier(obj: object) -> str:
         value = getattr(obj, attr, None)
         if value is not None:
             return str(value)
-    # id(obj) is non-deterministic and not stable across runs or serialization.
-    # Log a warning so the missing ``identifier: true`` annotation is visible.
-    _log.warning(
-        "%s has no identifier field; falling back to id(obj) — "
-        "add ``identifier: true`` to the LinkML schema",
-        type(obj).__name__,
-    )
-    return str(id(obj))
+    raise ValueError(f"{type(obj).__name__}: no identifier (an ``identifier: true`` slot in its LinkML schema, or a "
+                     f"set {' / '.join(_IDENTIFIER_FIELDS)} field)")
 
 
 # ---------------------------------------------------------------------------
@@ -134,9 +127,9 @@ class GraphModel:
     # -- Retrieve -----------------------------------------------------------
 
     def list_by_class(self, cls: type[T]) -> list[T]:
-        """Return all instances of *cls*, sorted by identifier."""
-        values = list(self.graph.get(cls, {}).values())
-        return [cast(T, v) for v in sorted(values, key=_get_identifier)]
+        """Return all instances of *cls*, sorted by the identifier each was stored under."""
+        objects = self.graph.get(cls, {})
+        return [cast(T, objects[identifier]) for identifier in sorted(objects)]
 
     def iter_by_class(self, cls: type[T]) -> Iterator[T]:
         """Iterate over all instances of *cls* (insertion order)."""

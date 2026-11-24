@@ -9,7 +9,7 @@ description: How to write the LinkML schema for a native format (DSS, GLM, RAW, 
 
 ```
 schema YAML (classes + annotations) ─gen-python─▶ dataclasses (never hand-edit)
-                                     └─ read at runtime by cimhub_core.serialization (AnnotationSerializer)
+                                     └─ read at runtime by cimhub_core.serialization (get_schema_annotations)
 ```
 
 The schema describes the native format only. It holds no CIM objects and no unit conversion. CIM mapping is
@@ -32,12 +32,11 @@ module's own directory), so keep the generated `.py` beside its YAML.
 
 ## Rules
 
-1. **Exactly one `identifier: true` field per class.** Without it the native `GraphModel` falls back to `ID`,
-   `name`, `identifier`, then `id(obj)`, which is non-deterministic.
+1. **Exactly one `identifier: true` field per class.** Without it the native `GraphModel` falls back to the first
+   set of `ID`, `name`, `identifier`; an object with none of these raises `ValueError`.
 2. **Class names are unique within a schema.** The annotation loader takes the first YAML file that defines the
    class name.
-3. **Every serialized field has `order`, `value_type` and `separator`.** `order` is 1-based, in output order.
-   The last field of a record has `separator: ""`.
+3. **Every serialized field has `order` and `value_type`.** `order` is 1-based, in output order.
 4. **Physical quantities declare their unit** with LinkML's structured slot: `unit: {ucum_code: "kV"}`. The mapper's
    `Field` target writes the same unit in the `.cimtbl` header (spelled for pint: schema `Ohm/mile`, header
    `ohm/mile`). Never convert in the schema or reader.
@@ -57,23 +56,27 @@ module's own directory), so keep the generated `.py` beside its YAML.
    fix them when you touch the class.
 9. **Regenerate after every YAML change** (`gen-python`), and commit YAML and generated module together.
 
-## Annotation vocabulary (implemented in `cimhub_core/src/cimhub_core/serialization.py`)
+## Annotation vocabulary
 
-| Key | Meaning |
-|---|---|
-| `order` | position in the record, 1-based |
-| `value_type` | `int`, `float`, `string`, `bool` |
-| `separator` | text written after the field; `""` on the last field |
-| `precision` | decimal places for floats |
-| `width`, `align` | pad to a width; `left` (default), `right`, `center` |
-| `quote`, `quote_char` | wrap in quotes; default char `'` |
-| `bool_as_int` | write booleans as `1`/`0` (default true) |
-| `line_number` | which line of a multi-line record (RAW transformers) |
-| `serialize_if` | `always`, `not_null`, `not_default`, or `custom:<expression over fields>` |
-| `native_name` | the field's name in the native format |
+`cimhub_core.serialization.get_schema_annotations(cls)` only loads a class's annotations (and the top-level `unit`,
+`range`, `required`, `ifabsent`, `identifier`, ... of each slot). It formats nothing: each spoke reads the keys it
+needs and writes its own text.
 
-Multivalued fields (`multivalued: true`) are joined with the field's separator. Don't add annotation keys the
-serializer doesn't read: an unread key is silently ignored. Full patterns are in [reference.md](reference.md).
+| Key | Meaning | Read by |
+|---|---|---|
+| `order` | position in the record, 1-based | every spoke's writer |
+| `value_type` | `int`, `float`, `string` | RAW (`record_layout`, `raw34_writer`) |
+| `line_number` | which line of a multi-line record (default 1) | RAW |
+| `count` | list length of a fixed-size `multivalued` slot (the 12 RATEs) | RAW |
+| `structural` | filled by the reader, not a field of the record text | RAW |
+| `precision`, `width`, `quote`, `quote_char` | float decimals; pad to a width; wrap in quotes (default `'`) | RAW |
+| `dss_name`, `dss_format` (`matrix`) | the property name in a `.dss` command; matrix formatting | OpenDSS (`dss_writer`) |
+| `dss_default`, `glm_default` | the native default of an unset keyword property | the mapper |
+| `native_name` | the field's name in the native format | GridLAB-D (`glm_schema`, indexed by GLM type name, walking `is_a`) |
+
+Other keys in a seeded schema (`separator`, `serialize_if`, `align`, `bool_as_int`) are carried but read by nothing.
+Don't add a key a spoke doesn't read: an unread key is silently ignored. Full patterns are in
+[reference.md](reference.md).
 
 ```yaml
 active_power:
@@ -86,7 +89,6 @@ active_power:
     order: 3
     value_type: float
     precision: 3
-    separator: ","
 ```
 
 ## CIM mapping slots
@@ -127,7 +129,7 @@ kvar:
 
 - [ ] One class file per record type, imported from `main.yaml`.
 - [ ] Each class has one `identifier: true` field and a class-level CIM mapping or comment.
-- [ ] Every serialized field has `order`, `value_type`, `separator`; the last has `separator: ""`.
+- [ ] Every serialized field has `order` and `value_type`.
 - [ ] Physical quantities have `unit: {ucum_code: ...}`; optional fields carry their native default (rule 5).
 - [ ] Mapping slots name cim18v17 classes and attributes; every mapped field has a `comment`.
 - [ ] `gen-python` regenerated; reader/writer round trip and the mapper's `check_fields` test pass.

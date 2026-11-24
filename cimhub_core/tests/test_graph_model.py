@@ -97,3 +97,14 @@ def test_find_by_attribute():
 def test_iter_all_yields_every_object():
     model = GraphModel.from_objects([Bus("b1"), Branch("l1"), Bus("b2")])
     assert sorted(o.name for o in model.iter_all()) == ["b1", "b2", "l1"]
+
+
+def test_an_object_without_an_identifier_raises():
+    """An identifier made up per run (id(obj)) would change the order and every mRID derived from it."""
+
+    @dataclass
+    class Anonymous:
+        kv: float = 0.0
+
+    with pytest.raises(ValueError, match="Anonymous: no identifier"):
+        GraphModel().add_to_graph(Anonymous())

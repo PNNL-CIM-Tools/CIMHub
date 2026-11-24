@@ -259,7 +259,7 @@ def download_mermaid(mermaid: str, filename: str, timeout: int = 30) -> bool:
     Returns:
         True on success, False on a network/HTTP error.
     """
-    graphbytes = mermaid.encode("ascii")
+    graphbytes = mermaid.encode("utf-8")  # a docstring may hold Ω or µ
     base64_string = base64.b64encode(graphbytes).decode("ascii")
     url = "https://mermaid.ink/img/" + base64_string
     try:

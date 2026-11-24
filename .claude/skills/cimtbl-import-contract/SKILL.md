@@ -150,7 +150,7 @@ file name goes in the master only, so an atom and a full model produce the same 
 - `cim.ACLineSegment(...)`, `get_or_create_*`, terminal wiring or `z_base` in a spoke importer (I5).
 - `float(value) * 1000`, `.to('W')`, or `Qty(...)` in a mapper: write the source unit in the header (I2).
 - Building CIM from the mapper's objects, or a "fast path" that skips writing text (I1).
-- `clean_cim_name(...)` or any sanitizing of mRIDs (I8). Quoting is the formatter's job.
+- Any sanitizing of mRIDs (I8). Quoting is the formatter's job.
 - A `.get(value, default)` on a code table instead of `lookup` (I8).
 - Hand-computed derived values pasted into code or goldens; Carson's equations producing a `PerLengthPhaseImpedance`
   for a line that has geometry (skill `conductor-geometry`).

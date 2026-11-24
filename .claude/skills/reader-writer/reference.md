@@ -25,7 +25,7 @@ from pathlib import Path
 
 from cimhub_core import FormatReader, GraphModel
 
-from cimhub_raw.schema import raw as schema
+import cimhub_raw.schema.raw_v34.raw34_schema as schema
 
 
 class RawParseError(ValueError):
@@ -110,19 +110,20 @@ keyed off the slot's `range`, and raise on a value it doesn't recognise.
 from pathlib import Path
 
 from cimhub_core import FormatWriter, GraphModel
-from cimhub_core.serialization import AnnotationSerializer
 
-from cimhub_raw.schema import raw as schema
+from cimhub_raw.raw34_writer import format_field
+from cimhub_raw.record_layout import record_lines
+import cimhub_raw.schema.raw_v34.raw34_schema as schema
 
 
 class RawWriter(FormatWriter):
     SECTION_ORDER = [schema.Bus, schema.Load, schema.Generator, schema.Branch]
 
-    def __init__(self) -> None:
-        self.serializer = AnnotationSerializer(separator=",", skip_none=False)
-
     def serialize(self, obj) -> str:
-        return self.serializer.serialize(obj)          # multi-line records via line_number annotations
+        # record_lines reads the schema annotations (line_number, order) through get_schema_annotations;
+        # format_field applies value_type, precision, width and quote. Each spoke owns this pair.
+        lines = record_lines(type(obj))
+        return "\n".join(",".join(format_field(slot, getattr(obj, slot.name)) for slot in line) for line in lines)
 
     def write(self, model: GraphModel, destination: str) -> None:
         path = Path(destination)
@@ -133,6 +134,10 @@ class RawWriter(FormatWriter):
             lines.append(f"0 / END OF {section_class.__name__.upper()} DATA")
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 ```
+
+`get_schema_annotations` only loads the annotations. The layout and the text are the spoke's: DSS writes
+`key=value` from `order` and `dss_name` (`dss_writer`), and GridLAB-D indexes the schema by GLM type name and walks
+`is_a` for inherited slots (`glm_schema`, `glm_writer`).
 
 Variants:
 

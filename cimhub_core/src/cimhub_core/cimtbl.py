@@ -34,6 +34,8 @@ __all__ = [
     "Field",
     "cell",
     "mrid",
+    "phases_cell",
+    "BALANCED_PHASES",
     "lookup",
     "copied_columns",
     "untranscribed_values",

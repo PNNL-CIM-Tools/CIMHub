@@ -545,12 +545,17 @@ def _mesh(unit, coils: list[_Coil], impedance) -> dict[tuple[int, int], MeshImpe
     if star and mesh:
         raise ValueError(f"{describe(unit)}: both a star impedance (PowerTransformerEnd.x) and a mesh impedance")
     if star:
-        return _star_mesh(star, len(coils))
+        return _star_mesh(unit, star, len(coils))
     return dict(sorted(mesh.items()))
 
 
-def _star_mesh(star: dict[int, float], windings: int) -> dict[tuple[int, int], MeshImpedance]:
-    """(i, j) x = xᵢ + xⱼ for every pair of windings, an unset end x 0; r is per winding, so the mesh has none."""
+def _star_mesh(unit, star: dict[int, float], windings: int) -> dict[tuple[int, int], MeshImpedance]:
+    """(i, j) x = xᵢ + xⱼ for every pair of windings; r is per winding, so the mesh has none. Two windings may hold
+    the whole x on one end (CIM's two-winding rule: the other end is zero); with more, every end needs its own x."""
+    if windings > 2 and len(star) < windings:
+        unset = sorted(set(range(1, windings + 1)) - set(star))
+        raise ValueError(f"{describe(unit)}: the star x of winding(s) {unset} is unset; with {windings} windings "
+                         f"every end needs its own")
     return {(i, j): MeshImpedance(None, star.get(i, 0.0) + star.get(j, 0.0))
             for i in range(1, windings + 1) for j in range(i + 1, windings + 1)}
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
-from cimtables import load_model
+from cimtables import BusBranchModel, load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.location import LocationCoordinates, get_location_coordinates
@@ -76,3 +76,15 @@ def test_point_without_position_raises():
     load.Location.PositionPoints[0].yPosition = None
     with pytest.raises(ValueError, match="without sequenceNumber, xPosition or yPosition"):
         get_location_coordinates(load)
+
+
+def test_a_bus_branch_line_pairs_its_terminals(tmp_path):
+    """A bus-branch Terminal has a TopologicalNode and no ConnectivityNode; the Terminals are counted, not walked."""
+    path = tmp_path / "bus_branch_location.cimtbl"
+    path.write_text(f"Profile = cim18v17\nImport {SHAPES / 'line_bus_branch.cimtbl'}\n"
+                    "Object CoordinateSystem: mRID=crs_bus, name=BusCoords, crsUrn=OpenDSSLocalBusCoordinates\n"
+                    "Update Table PowerSystemResource: mRID, wkt\n"
+                    '    ln_1_2_1, "LINESTRING (0.0 0.0, 5.0 5.0, 10.0 0.0)"\n')
+    network = load_model(path, model_cls=BusBranchModel)
+    [line] = [obj for obj in network.graph[cim.ACLineSegment].values() if obj.mRID == "ln_1_2_1"]
+    assert get_location_coordinates(line).terminals == ((0.0, 0.0), (10.0, 0.0))

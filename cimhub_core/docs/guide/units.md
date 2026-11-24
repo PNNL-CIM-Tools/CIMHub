@@ -45,7 +45,8 @@ getters narrow this to a few words: a line's `unit` is `'ohm'` or `'pu'`, a tran
 `'percent'` or `'pu'`.
 
 Active power (W) and reactive power (VAr) share a dimension in pint, so a power unit of the wrong kind is not caught:
-`get_qty(load, 'p', 'VAr')` returns the active power's number.
+`get_qty(load, 'p', 'VAr')` returns the active power's number. This is a known gap in the unit registry, filed
+upstream; check the units you pass.
 
 ## Per-unit and percent
 

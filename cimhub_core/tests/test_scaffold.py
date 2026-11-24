@@ -1,13 +1,16 @@
-"""The scaffold emits the .cimtbl importer contract and cim18v17 exporter stubs."""
+"""The scaffold emits the spoke layout of cimhub_raw / cimhub_opendss, and never overwrites."""
 
 from __future__ import annotations
 
 import ast
 import dataclasses
+import importlib
+import sys
 from typing import Optional
 
 import pytest
 
+from cimhub_core import CimtblImporter, FormatExporter, FormatReader, FormatWriter, GraphModel
 from cimhub_core.scaffold import scaffold_mapper, scaffold_package
 
 
@@ -17,19 +20,74 @@ class Branch:
     r: Optional[float] = None
 
 
-def _python_files(root):
-    return sorted(root.rglob("*.py"))
+EXPECTED_FILES = {
+    "__init__.py",
+    "toy_reader.py",
+    "toy_writer.py",
+    "schema/main.yaml",
+    "schema/types/common_types.yaml",
+    "schema/toy.py",
+    "importer/__init__.py",
+    "importer/toy_to_cimtbl.py",
+    "importer/cimtbl/__init__.py",
+    "exporter/__init__.py",
+    "exporter/cim_to_toy.py",
+}
 
 
-def test_package_follows_the_cimtbl_contract(tmp_path):
-    root = scaffold_package("toy", direction="both", parent_dir=tmp_path) / "src" / "cimhub_toy"
-    importer = root / "importer"
-    assert (importer / "toy_to_cimtbl.py").exists() and (importer / "cimtbl" / "__init__.py").exists()
-    assert not (importer / "registry.py").exists()
-    for path in _python_files(root):
-        ast.parse(path.read_text(), filename=str(path))
-        assert "cim17v40" not in path.read_text() and "cimhub_2026" not in path.read_text(), path
-    assert "class ToyImporter(CimtblImporter)" in (importer / "toy_to_cimtbl.py").read_text()
+@pytest.fixture
+def toy_modules(tmp_path, monkeypatch):
+    """Scaffold ``cimhub_toy`` into ``tmp_path`` and import its reader, writer, importer and exporter."""
+    scaffold_package("toy", direction="both", parent_dir=tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path / "cimhub_toy" / "src"))
+    names = ["cimhub_toy.toy_reader", "cimhub_toy.toy_writer", "cimhub_toy.importer.toy_to_cimtbl",
+             "cimhub_toy.exporter.cim_to_toy"]
+    yield [importlib.import_module(name) for name in names]
+    for name in [name for name in sys.modules if name.split(".")[0] == "cimhub_toy"]:
+        del sys.modules[name]
+
+
+def test_package_has_the_spoke_layout(tmp_path):
+    package = scaffold_package("toy", direction="both", parent_dir=tmp_path)
+    root = package / "src" / "cimhub_toy"
+    files = {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
+    assert files == EXPECTED_FILES
+    assert (root / "schema" / "classes").is_dir()
+    assert not (package / "service.py").exists() and not (root / "service.py").exists()
+
+
+def test_generated_package_imports(toy_modules):
+    reader, writer, importer, exporter = toy_modules
+    assert issubclass(reader.ToyReader, FormatReader)
+    assert issubclass(writer.ToyWriter, FormatWriter)
+    assert issubclass(importer.ToyImporter, CimtblImporter) and importer.MAPPING_ORDER == ()
+    assert issubclass(exporter.ToyExporter, FormatExporter) and exporter.EXPORT_ORDER == ()
+    documents = importer.ToyImporter("case").to_cimtbl(GraphModel())
+    assert documents.master.name == "case" and documents.parts == []
+    assert len(exporter.export_tables(object(), exporter.EXPORT_ORDER)) == 0
+
+
+@pytest.mark.parametrize("direction, present, absent", [
+    ("importer", ["toy_reader.py", "importer/toy_to_cimtbl.py"], ["toy_writer.py", "exporter"]),
+    ("exporter", ["toy_writer.py", "exporter/cim_to_toy.py"], ["toy_reader.py", "importer"]),
+])
+def test_direction_picks_the_side(tmp_path, direction, present, absent):
+    root = scaffold_package("toy", direction=direction, parent_dir=tmp_path) / "src" / "cimhub_toy"
+    assert all((root / path).exists() for path in present)
+    assert not any((root / path).exists() for path in absent)
+
+
+def test_bad_direction_raises_and_writes_nothing(tmp_path):
+    with pytest.raises(ValueError, match="'export'"):
+        scaffold_package("toy", direction="export", parent_dir=tmp_path)
+    assert not (tmp_path / "cimhub_toy").exists()
+
+
+def test_existing_package_raises_and_writes_nothing(tmp_path):
+    (tmp_path / "cimhub_toy").mkdir()
+    with pytest.raises(FileExistsError, match="never overwrites"):
+        scaffold_package("toy", parent_dir=tmp_path)
+    assert list((tmp_path / "cimhub_toy").iterdir()) == []
 
 
 def test_mapper_stub_lists_every_slot_and_never_overwrites(tmp_path):
