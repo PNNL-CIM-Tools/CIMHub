@@ -7,11 +7,22 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   battery:
     is_a: glm_object
+    exact_mappings:
+      - cim:BatteryUnit
+    close_mappings:
+      - cim:BatteryInfo
+    comments:
+      - >-
+        Import: BatteryUnit, mRID <connection>_unit (inverter.cimtbl), with a
+        BatteryInfo datasheet; its parent must be an inverter; name is
+        BatteryUnit.name. Export: each BatteryUnit as the battery child of its
+        inverter.
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
       @file battery.cpp
@@ -27,9 +38,6 @@ classes:
 
 
       Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD
 
 
       Note: Inherits from gld_object (not in generators module)'
@@ -449,6 +457,10 @@ classes:
           precision: 6
           native_name: power_transferred
       use_internal_battery_model:
+        comments:
+          - >-
+            Import: structural; TRUE only, false (the legacy model) raises.
+            Export: TRUE.
         range: boolean
         required: false
         description: Enables the INTERNAL BATTERY MODEL.
@@ -457,6 +469,12 @@ classes:
           value_type: bool
           native_name: use_internal_battery_model
       battery_type:
+        close_mappings:
+          - cim:BatteryInfo.batteryType
+        comments:
+          - >-
+            Import: LI_ION is lithiumIon, LEAD_ACID leadAcid, others blank.
+            Export: the BatteryInfo's, unset without one.
         range: string
         required: false
         description: 'INTERNAL BATTERY MODEL: the type of the battery. Used to determine
@@ -466,6 +484,12 @@ classes:
           value_type: string
           native_name: battery_type
       nominal_voltage:
+        close_mappings:
+          - cim:BatteryInfo.numberOfCells
+        comments:
+          - >-
+            Import: numberOfCells = floor(nominal_voltage / 4.1 V) on LI_ION;
+            default 115 V. Export: unset (the DC voltage has no CIM home yet).
         range: float
         required: false
         description: 'INTERNAL BATTERY MODEL: the rated DC voltage at the terminals
@@ -478,6 +502,13 @@ classes:
           precision: 6
           native_name: nominal_voltage[V]
       rated_power:
+        close_mappings:
+          - cim:PowerElectronicsUnit.maxP
+          - cim:PowerElectronicsUnit.minP
+        comments:
+          - >-
+            Import: BatteryUnit.maxP = rated_power and minP = -rated_power (W).
+            Export: maxP.
         range: float
         required: false
         description: 'INTERNAL BATTERY MODEL: the rated power output of the battery.'
@@ -489,6 +520,13 @@ classes:
           precision: 6
           native_name: rated_power[W]
       battery_capacity:
+        close_mappings:
+          - cim:BatteryUnit.ratedE
+          - cim:BatteryInfo.ratedCapacity
+        comments:
+          - >-
+            Import: BatteryUnit.ratedE and BatteryInfo.ratedCapacity (Wh); unset
+            raises. Export: ratedE.
         range: float
         required: false
         description: 'INTERNAL BATTERY MODEL: the rated battery capacity of the battery.'
@@ -500,6 +538,13 @@ classes:
           precision: 6
           native_name: battery_capacity[Wh]
       round_trip_efficiency:
+        close_mappings:
+          - cim:BatteryUnit.chargingEfficiency
+          - cim:BatteryUnit.dischargingEfficiency
+        comments:
+          - >-
+            Import: both efficiencies are the square root of it, in percent;
+            default 0.8. Export: chargingEfficiency x dischargingEfficiency.
         range: float
         required: false
         description: 'INTERNAL BATTERY MODEL: the round trip efficiency of the battery
@@ -512,6 +557,12 @@ classes:
           precision: 6
           native_name: round_trip_efficiency[pu]
       state_of_charge:
+        close_mappings:
+          - cim:BatteryUnit.storedE
+        comments:
+          - >-
+            Import: storedE (Wh) = state_of_charge x battery_capacity; unset
+            raises. Export: storedE / ratedE.
         range: float
         required: false
         description: 'INTERNAL BATTERY MODEL: the current state of charge of the battery.'

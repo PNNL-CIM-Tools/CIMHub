@@ -41,6 +41,10 @@ dependencies = [
 time-points = [
   "cimhub-core[time-points]>=2.1.0a2,<2.2",
 ]
+# the GridLAB-D 6.0 engine, to solve a .glm from Python (wheels: Linux x86_64, macOS, Windows x64)
+solve = [
+  "gridlabd~=6.0.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/PNNL-CIM-Tools/CIMHub"

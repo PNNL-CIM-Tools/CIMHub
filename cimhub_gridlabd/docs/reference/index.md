@@ -32,7 +32,7 @@ Import is the importer's `MAPPING_ORDER` plus the buses and sources it writes fi
 | `switch` | `LoadBreakSwitch` | yes | yes (also every `Switch` class but the three below) | [lines](lines.md) |
 | `fuse` | `Fuse` | yes | yes | [lines](lines.md) |
 | `recloser` | `Recloser` | yes | yes | [lines](lines.md) |
-| `sectionalizer` | `Sectionaliser` | no | yes | [lines](lines.md) |
+| `sectionalizer` | `Sectionaliser` | yes | yes | [lines](lines.md) |
 | `series_reactor` | `SeriesCompensator` | yes | yes | [lines](lines.md) |
 | `transformer_configuration` | `TransformerTankConfiguration`, `TransformerBankConfiguration`, `TransformerTankEnd`, `TransformerLug`, `TransformerWinding` | yes | yes | [transformers](transformers.md) |
 | `transformer` | `PowerTransformer`, `TransformerTank`, `PowerTransformerEnd`, `TransformerPhaseEnd` | yes | yes (from a `PowerTransformer`, or an `AutoTransformer` that is not a `VoltageRegulator`) | [transformers](transformers.md) |

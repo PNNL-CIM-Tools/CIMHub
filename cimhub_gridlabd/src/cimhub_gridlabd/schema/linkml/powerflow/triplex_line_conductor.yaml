@@ -7,10 +7,18 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   triplex_line_conductor:
+    close_mappings:
+      - cim:OverheadWireInfo
+    comments:
+      - >-
+        Import: OverheadWireInfo, mRID tpc_ + name (triplex_line_conductor.cimtbl); CIM has no
+        triplex wire class, the insulation is on the configuration. Export: each WireInfo of a
+        split-phase line's geometry.
     is_a: glm_object
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
@@ -29,12 +37,15 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       resistance:
+        close_mappings:
+          - cim:ConductorInfo.rAC50
+        comments:
+          - >-
+            Import: copied to rAC50 (Kersting's 50 C value), in its written unit; unset raises.
+            Export: rAC50, else rAC25; neither raises.
         range: float
         required: false
         description: resistance of cable in ohm/mile
@@ -46,6 +57,11 @@ classes:
           precision: 6
           native_name: resistance[Ohm/mile]
       geometric_mean_radius:
+        exact_mappings:
+          - cim:WireInfo.gmr
+        comments:
+          - >-
+            Import: copied to gmr; unset raises. Export: gmr; unset raises.
         range: float
         required: false
         description: geometric mean radius of the cable
@@ -57,6 +73,14 @@ classes:
           precision: 6
           native_name: geometric_mean_radius[ft]
       rating_summer_continuous:
+        close_mappings:
+          - cim:ConductingAssetInfo.ratedCurrent
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: copied to ratedCurrent (A) and the normal CurrentLimit of the wire's limit
+            set <mRID>_limits; unset: not filled. Export: the wire's normal limit, else
+            ratedCurrent.
         range: float
         required: false
         description: amp ratings for the cable during continuous operation in summer
@@ -68,6 +92,12 @@ classes:
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
+        related_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; the emergency CurrentLimit of that set; unset: not filled.
+            Export: the wire's emergency limit.
         range: float
         required: false
         description: amp ratings for the cable during short term operation in summer

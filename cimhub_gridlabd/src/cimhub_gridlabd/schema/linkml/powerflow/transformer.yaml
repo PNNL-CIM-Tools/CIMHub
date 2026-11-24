@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -39,13 +40,20 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
     is_a: link
+    exact_mappings:
+    - cim:PowerTransformer
+    close_mappings:
+    - cim:AutoTransformer
+    comments:
+    - "Import: PowerTransformer, mRID xf_ + name (transformer.cimtbl), with a TransformerTank per tank of its configuration, a PowerTransformerEnd per side and a TransformerPhaseEnd per lugged conductor. Export: PowerTransformer, and an AutoTransformer that is not a VoltageRegulator, are written as it."
     attributes:
       configuration:
+        related_mappings:
+        - cim:TransformerTank.TankConfiguration
+        comments:
+        - "Import: TransformerTank.TankConfiguration = xc_ + configuration (a bank: one tank per can, xc_ + configuration + _<phase>). Export: the unit's tank configuration, written as its transformer_configuration."
         range: string
         required: false
         description: Configuration library used for transformer setup
@@ -54,6 +62,8 @@ classes:
           value_type: string
           native_name: configuration
       climate:
+        comments:
+        - "Thermal aging model: not converted. Import lists any value in the row comment."
         range: string
         required: false
         description: climate object used to describe thermal model ambient temperature

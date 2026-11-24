@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -25,13 +26,27 @@ classes:
       Inherits from: line_configuration
 
 
-      Type: Configuration (physical asset template)
-
-
-      CIM Mapping: TBD'
+      Type: Configuration (physical asset template)'
+    close_mappings:
+      - cim:WireConfiguration
+      - cim:WireSequenceConfiguration
+      - cim:ConductorDistanceSpacing
+    comments:
+      - >-
+        Import: a WireConfiguration, mRID wc_ + name, with WireSequenceConfigurations 1, 2, 3
+        and a derived ConductorDistanceSpacing wc_<name>_spc on s1, s2, N
+        (triplex_line_configuration.cimtbl). spacing, conductor_A..C and every z_ij and c_ij
+        raise when set. Export: the WireConfiguration (or matrix) of a split-phase line is
+        written as it.
     is_a: line_configuration
     attributes:
       conductor_1:
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; WireSequenceConfiguration 1, WireInfo = the conductor's mRID
+            (spacing phase s1); required. Export: the wire at the line's s1 sequence number.
         range: string
         required: false
         description: conductor type for phase 1
@@ -40,6 +55,12 @@ classes:
           value_type: string
           native_name: conductor_1
       conductor_2:
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; WireSequenceConfiguration 2, WireInfo = the conductor's mRID
+            (spacing phase s2); required. Export: the wire at the line's s2 sequence number.
         range: string
         required: false
         description: conductor type for phase 2
@@ -48,6 +69,12 @@ classes:
           value_type: string
           native_name: conductor_2
       conductor_N:
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; WireSequenceConfiguration 3, WireInfo = the conductor's mRID
+            (spacing phase N); required. Export: the wire at the line's N sequence number.
         range: string
         required: false
         description: conductor type for phase N
@@ -56,6 +83,12 @@ classes:
           value_type: string
           native_name: conductor_N
       insulation_thickness:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: derived, with diameter (see there). Export: insulation_thickness = D12 -
+            D1N; D1N and D2N must agree.
         range: float
         required: false
         description: thickness of insulation around cabling
@@ -67,6 +100,13 @@ classes:
           precision: 6
           native_name: insulation_thickness[in]
       diameter:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: derived; the distances of the spacing wc_<name>_spc (in): D12 = diameter + 2
+            insulation_thickness, D1N = D2N = diameter + insulation_thickness. Export: diameter
+            = 2 D1N - D12.
         range: float
         required: false
         description: total diameter of cable
@@ -78,6 +118,10 @@ classes:
           precision: 6
           native_name: diameter[in]
       spacing:
+        comments:
+          - >-
+            Import: set raises; a triplex spacing is derived from diameter and
+            insulation_thickness. Export: not written.
         range: string
         required: false
         description: defines the line spacing configuration
@@ -86,6 +130,13 @@ classes:
           value_type: string
           native_name: spacing
       z11:
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: set raises. Export: matrix line: r + jx (ohm/mile) of the PerLengthImpedance
+            on s1, s2, N with the neutral Kron-reduced.
         range: Complex
         required: false
         description: phase 1 self-impedance, used for direct entry of impedance values
@@ -96,6 +147,13 @@ classes:
           value_type: complex
           native_name: z11[Ohm/mile]
       z12:
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: set raises. Export: matrix line: r + jx (ohm/mile) of the PerLengthImpedance
+            on s1, s2, N with the neutral Kron-reduced.
         range: Complex
         required: false
         description: phase 1-2 induced impedance, used for direct entry of impedance
@@ -107,6 +165,13 @@ classes:
           value_type: complex
           native_name: z12[Ohm/mile]
       z21:
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: set raises. Export: matrix line: r + jx (ohm/mile) of the PerLengthImpedance
+            on s1, s2, N with the neutral Kron-reduced.
         range: Complex
         required: false
         description: phase 2-1 induced impedance, used for direct entry of impedance
@@ -118,6 +183,13 @@ classes:
           value_type: complex
           native_name: z21[Ohm/mile]
       z22:
+        close_mappings:
+          - cim:PhaseImpedanceData.r
+          - cim:PhaseImpedanceData.x
+        comments:
+          - >-
+            Import: set raises. Export: matrix line: r + jx (ohm/mile) of the PerLengthImpedance
+            on s1, s2, N with the neutral Kron-reduced.
         range: Complex
         required: false
         description: phase 2 self-impedance, used for direct entry of impedance values
@@ -128,6 +200,12 @@ classes:
           value_type: complex
           native_name: z22[Ohm/mile]
       rating_summer_continuous:
+        related_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; not on the template: the line's own OperationalLimitSet takes it
+            when the line sets none. Export: not written; the ratings are each line's own.
         range: float
         required: false
         description: amp rating in summer, continuous
@@ -139,6 +217,12 @@ classes:
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
+        related_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; not on the template: the line's own OperationalLimitSet takes it
+            when the line sets none. Export: not written; the ratings are each line's own.
         range: float
         required: false
         description: amp rating in summer, short term

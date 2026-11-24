@@ -127,7 +127,7 @@ before what uses it:
 | `line_configuration.cimtbl`, `triplex_line_configuration.cimtbl` | line configurations: a template impedance or a geometry |
 | `transformer_configuration.cimtbl` | transformer ratings and connections |
 | `overhead_line.cimtbl`, `underground_line.cimtbl`, `triplex_line.cimtbl` | lines |
-| `switch.cimtbl`, `fuse.cimtbl`, `recloser.cimtbl` | switching devices (a `sectionalizer` is walked as a branch but not mapped) |
+| `switch.cimtbl`, `fuse.cimtbl`, `recloser.cimtbl`, `sectionalizer.cimtbl` | switching devices |
 | `series_reactor.cimtbl` | `series_reactor` |
 | `transformer.cimtbl`, `regulator.cimtbl` | transformers and regulators (a regulator's configuration is read with it) |
 | `player.cimtbl`, `schedule.cimtbl` | players and schedules, as load groups |

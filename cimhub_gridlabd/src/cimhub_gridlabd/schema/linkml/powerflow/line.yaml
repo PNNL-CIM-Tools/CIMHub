@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -85,13 +86,25 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    close_mappings:
+      - cim:ACLineSegment
+    comments:
+      - >-
+        Import: not written as such; overhead_line, underground_line and triplex_line each
+        become an ACLineSegment (mRID ln_ + name). Export: an ACLineSegment is written as one of
+        those three classes.
     is_a: link
     attributes:
       configuration:
+        related_mappings:
+          - cim:ACLineSegment.WireConfiguration
+        comments:
+          - >-
+            Import: structural; ACLineSegment.WireConfiguration = wc_ + configuration (geometry,
+            triplex) or lc_<configuration>_wc (matrix, the WireConfiguration that holds the
+            template PerLengthPhaseImpedance). Export: the configuration written for the line's
+            geometry or matrix.
         range: string
         required: false
         annotations:
@@ -99,6 +112,12 @@ classes:
           value_type: string
           native_name: configuration
       length:
+        exact_mappings:
+          - cim:Conductor.length
+        comments:
+          - >-
+            Import: copied to ACLineSegment.length in its written unit (ft); unset raises.
+            Export: ACLineSegment.length (ft); unset raises.
         range: float
         required: false
         unit:

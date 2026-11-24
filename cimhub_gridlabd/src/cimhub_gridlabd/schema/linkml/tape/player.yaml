@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -25,8 +26,23 @@ classes:
 
       CIM Mapping: ConformLoadGroup + ConformLoadSchedule (GLM_REWRITE_PLAN.md 8.9)'
     is_a: glm_object
+    exact_mappings:
+      - cim:ConformLoadSchedule
+    close_mappings:
+      - cim:ConformLoadGroup
+    comments:
+      - >-
+        Import: a ConformLoadGroup lg_ + name and its ConformLoadSchedule ls_ +
+        name, both named as the player (player.cimtbl); the points go to the
+        Parquet sidecar. Export: each regular ConformLoadSchedule of a
+        ConformLoadGroup, as a player named after the group.
     attributes:
       property:
+        comments:
+          - >-
+            Import: structural; a player read as <name>.value has no parent,
+            property, filetype or mode, and set raises; loop must be unset or 0.
+            Export: unset.
         range: string
         required: false
         description: The parent's property the rows set (unset with no parent; the player's own value)
@@ -35,6 +51,16 @@ classes:
           value_type: string
           native_name: property
       file:
+        related_mappings:
+          - cim:BasicIntervalSchedule.startTime
+          - cim:RegularIntervalSchedule.timeStep
+          - cim:RegularTimePoint.value1
+        comments:
+          - >-
+            Import: its rows are ConformLoadSchedule.startTime (the first row's
+            time, as an offset), timeStep (s) and the points (value1, in the
+            sidecar); unset raises. Export: <name>.player beside the deck, the
+            first row at startTime in GMT, each later one +<step>s.
         range: string
         required: false
         description: The tape file of time,value rows, relative to the deck

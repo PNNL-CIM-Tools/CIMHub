@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -25,13 +26,20 @@ classes:
       Inherits from: node
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
     is_a: node
+    exact_mappings:
+    - cim:LinearShuntCompensator
+    close_mappings:
+    - cim:RegulatingControl
+    comments:
+    - "Import: LinearShuntCompensator, mRID cap_ + name (capacitor.cimtbl), one unit per set of phases that switch together (INDIVIDUAL VOLT: name + _<phase>); VOLT adds a RegulatingControl (cc_). Export: LinearShuntCompensator is written as it, a delta unit raises."
     attributes:
       pt_phase:
+        related_mappings:
+        - cim:RegulatingControl.monitoredPhase
+        comments:
+        - "Import: VOLT: the units that get a control (INDIVIDUAL) or the gang unit's monitored phase (BANK); D raises. Export: VOLT: the monitored phases."
         range: string
         required: false
         description: Phase(s) that the PT is on, used as measurement points for control
@@ -40,6 +48,11 @@ classes:
           value_type: string
           native_name: pt_phase
       phases_connected:
+        related_mappings:
+        - cim:ShuntCompensator.phaseConnection
+        - cim:ShuntCompensator.grounded
+        comments:
+        - "Import: the unit's phases (else phases): wye, grounded; D raises. Export: written as phases."
         range: string
         required: false
         description: phases capacitors connected to
@@ -48,6 +61,11 @@ classes:
           value_type: string
           native_name: phases_connected
       switchA:
+        close_mappings:
+        - cim:ShuntCompensator.sections
+        - cim:ShuntCompensator.normalSections
+        comments:
+        - "Import: sections = normalSections, 1 if CLOSED else 0; default OPEN; a gang unit's must agree. Export: CLOSED when the unit's actual sections are in, phase A."
         range: string
         required: false
         description: capacitor A switch open or close
@@ -56,6 +74,11 @@ classes:
           value_type: string
           native_name: switchA
       switchB:
+        close_mappings:
+        - cim:ShuntCompensator.sections
+        - cim:ShuntCompensator.normalSections
+        comments:
+        - "Import: sections = normalSections, 1 if CLOSED else 0; default OPEN; a gang unit's must agree. Export: CLOSED when the unit's actual sections are in, phase B."
         range: string
         required: false
         description: capacitor B switch open or close
@@ -64,6 +87,11 @@ classes:
           value_type: string
           native_name: switchB
       switchC:
+        close_mappings:
+        - cim:ShuntCompensator.sections
+        - cim:ShuntCompensator.normalSections
+        comments:
+        - "Import: sections = normalSections, 1 if CLOSED else 0; default OPEN; a gang unit's must agree. Export: CLOSED when the unit's actual sections are in, phase C."
         range: string
         required: false
         description: capacitor C switch open or close
@@ -72,6 +100,10 @@ classes:
           value_type: string
           native_name: switchC
       control:
+        related_mappings:
+        - cim:RegulatingCondEq.RegulatingControl
+        comments:
+        - "Import: VOLT adds a RegulatingControl; MANUAL (default) none; VAR, VARVOLT and CURRENT raise. Export: VOLT for an enabled voltage RegulatingControl, else MANUAL."
         range: Control
         required: false
         description: control operation strategy
@@ -107,6 +139,11 @@ classes:
           precision: 6
           native_name: cap_C_switch_count
       voltage_set_high:
+        close_mappings:
+        - cim:RegulatingControl.targetValue
+        - cim:RegulatingControl.targetDeadband
+        comments:
+        - "Import: targetValue (V) = the midpoint of low and high, targetDeadband = high - low. Export: VOLT: target + deadband / 2."
         range: float
         required: false
         description: Turn off if voltage is above this set point
@@ -118,6 +155,11 @@ classes:
           precision: 6
           native_name: voltage_set_high[V]
       voltage_set_low:
+        close_mappings:
+        - cim:RegulatingControl.targetValue
+        - cim:RegulatingControl.targetDeadband
+        comments:
+        - "Import: with voltage_set_high. Export: VOLT: target - deadband / 2."
         range: float
         required: false
         description: Turns on if voltage is below this set point
@@ -239,6 +281,11 @@ classes:
           precision: 6
           native_name: current_deadband[A]
       capacitor_A:
+        close_mappings:
+        - cim:ShuntCompensator.nomQ
+        - cim:LinearShuntCompensator.bPerSection
+        comments:
+        - "Import: nomQ (VAr) = the unit's phase sum, bPerSection (S) = nomQ / nomU^2; a phase not connected is dropped. Export: phase A's Q at nominal voltage, every section in."
         range: float
         required: false
         description: Capacitance value for phase A or phase AB
@@ -250,6 +297,11 @@ classes:
           precision: 6
           native_name: capacitor_A[VAr]
       capacitor_B:
+        close_mappings:
+        - cim:ShuntCompensator.nomQ
+        - cim:LinearShuntCompensator.bPerSection
+        comments:
+        - "Import: nomQ (VAr) = the unit's phase sum, bPerSection (S) = nomQ / nomU^2; a phase not connected is dropped. Export: phase B's Q at nominal voltage, every section in."
         range: float
         required: false
         description: Capacitance value for phase B or phase BC
@@ -261,6 +313,11 @@ classes:
           precision: 6
           native_name: capacitor_B[VAr]
       capacitor_C:
+        close_mappings:
+        - cim:ShuntCompensator.nomQ
+        - cim:LinearShuntCompensator.bPerSection
+        comments:
+        - "Import: nomQ (VAr) = the unit's phase sum, bPerSection (S) = nomQ / nomU^2; a phase not connected is dropped. Export: phase C's Q at nominal voltage, every section in."
         range: float
         required: false
         description: Capacitance value for phase C or phase CA
@@ -272,6 +329,10 @@ classes:
           precision: 6
           native_name: capacitor_C[VAr]
       cap_nominal_voltage:
+        close_mappings:
+        - cim:ShuntCompensator.nomU
+        comments:
+        - "Import: nomU (V) is the phase-to-neutral rating (else nominal_voltage) x sqrt 3 on 2-3 phases. Export: nomU line to neutral."
         range: float
         required: false
         description: Nominal voltage for the capacitor. Used for calculation of capacitance
@@ -284,6 +345,10 @@ classes:
           precision: 6
           native_name: cap_nominal_voltage[V]
       time_delay:
+        close_mappings:
+        - cim:ShuntCompensator.aVRDelay
+        comments:
+        - "Import: aVRDelay (s) = dwell_time + time_delay. Export: see dwell_time."
         range: float
         required: false
         description: control time delay
@@ -295,6 +360,10 @@ classes:
           precision: 6
           native_name: time_delay[s]
       dwell_time:
+        close_mappings:
+        - cim:ShuntCompensator.aVRDelay
+        comments:
+        - "Import: with time_delay. Export: VOLT: aVRDelay."
         range: float
         required: false
         description: Time for system to remain constant before a state change will
@@ -336,6 +405,8 @@ classes:
           value_type: string
           native_name: remote_sense_B
       control_level:
+        comments:
+        - "Import: INDIVIDUAL (default) VOLT is a unit per phase; BANK one gang unit. Export: VOLT: INDIVIDUAL on one phase, BANK on more."
         range: ControlLevel
         required: false
         description: define bank or individual control

@@ -7,11 +7,18 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   transformer_configuration:
     is_a: glm_object
+    exact_mappings:
+    - cim:TransformerTankConfiguration
+    close_mappings:
+    - cim:TransformerBankConfiguration
+    comments:
+    - "Import: TransformerTankConfiguration, mRID xc_ + name (transformer_configuration.cimtbl); a bank of lugged cans is a TransformerBankConfiguration, mRID xb_ + name, with a tank per can. Export: the TransformerTankConfiguration of each unit, written as one configuration; a bank's cans become one."
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
       @file transformer_configuration.cpp
@@ -51,12 +58,13 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       connect_type:
+        close_mappings:
+        - cim:TransformerTankEnd.connectionKind
+        comments:
+        - "Import: sets the form and each end's connectionKind (WYE_WYE and SINGLE_PHASE Y/Y, DELTA_GWYE D/Y, DELTA_DELTA D/D, SINGLE_PHASE_CENTER_TAPPED lugs); unset raises. Export: chosen from the connectionKinds and phases (WYE_WYE, SINGLE_PHASE, DELTA_DELTA, DELTA_GWYE, SINGLE_PHASE_CENTER_TAPPED)."
         range: string
         required: false
         description: 'connect type enum: Wye-Wye, single-phase, etc.'
@@ -89,6 +97,11 @@ classes:
           value_type: string
           native_name: cooling_type
       primary_voltage:
+        close_mappings:
+        - cim:TransformerWinding.ratedU
+        - cim:TransformerWinding.baseU
+        comments:
+        - "Import: TransformerWinding.ratedU (V) line to line and baseU (V) the coil, from winding 1. Export: winding 1 ratedU, a coil's baseU; an LTC's actual ratio folded in."
         range: float
         required: false
         description: primary voltage level in L-L value kV
@@ -100,6 +113,11 @@ classes:
           precision: 6
           native_name: primary_voltage[V]
       secondary_voltage:
+        close_mappings:
+        - cim:TransformerWinding.ratedU
+        - cim:TransformerWinding.baseU
+        comments:
+        - "Import: TransformerWinding.ratedU and baseU (V) of winding 2; a center tap's half is ratedU x 2. Export: winding 2's, likewise."
         range: float
         required: false
         description: secondary voltage level kV
@@ -111,6 +129,11 @@ classes:
           precision: 6
           native_name: secondary_voltage[V]
       power_rating:
+        close_mappings:
+        - cim:TransformerWinding.ratedS
+        - cim:TransformerWinding.baseS
+        comments:
+        - "Import: TransformerWinding.ratedS (kVA) of the whole unit, else the phase sum; baseS the tank's share. Export: winding 1 ratedS (kVA)."
         range: float
         required: false
         description: kVA rating of transformer, total
@@ -122,6 +145,10 @@ classes:
           precision: 6
           native_name: power_rating[kVA]
       powerA_rating:
+        close_mappings:
+        - cim:TransformerWinding.ratedS
+        comments:
+        - "Import: a can's TransformerWinding.ratedS (kVA) when the phases are rated unequally; a center tap's on its phase. Export: a coil's or center tap's kVA on phase A."
         range: float
         required: false
         description: kVA rating of transformer, phase A
@@ -133,6 +160,10 @@ classes:
           precision: 6
           native_name: powerA_rating[kVA]
       powerB_rating:
+        close_mappings:
+        - cim:TransformerWinding.ratedS
+        comments:
+        - "Import: a can's TransformerWinding.ratedS (kVA) when the phases are rated unequally; a center tap's on its phase. Export: a coil's or center tap's kVA on phase B."
         range: float
         required: false
         description: kVA rating of transformer, phase B
@@ -144,6 +175,10 @@ classes:
           precision: 6
           native_name: powerB_rating[kVA]
       powerC_rating:
+        close_mappings:
+        - cim:TransformerWinding.ratedS
+        comments:
+        - "Import: a can's TransformerWinding.ratedS (kVA) when the phases are rated unequally; a center tap's on its phase. Export: a coil's or center tap's kVA on phase C."
         range: float
         required: false
         description: kVA rating of transformer, phase C
@@ -155,6 +190,11 @@ classes:
           precision: 6
           native_name: powerC_rating[kVA]
       resistance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentImpedance
+        - cim:TransformerTankConfiguration.loadLoss
+        comments:
+        - "Import: percentImpedance (percent) = |R + jX| x k x 100 and loadLoss (kW) = R x k x S, k moving GridLAB-D's base to the tank's. Export: the (1, 2) R in pu on winding 1 ratedS; not positive is written 1e-6."
         range: float
         required: false
         description: Series impedance, pu, real
@@ -166,6 +206,10 @@ classes:
           precision: 6
           native_name: resistance[pu]
       reactance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentImpedance
+        comments:
+        - "Import: with resistance, percentImpedance (percent). Export: the (1, 2) X in pu; not positive is written 1e-6."
         range: float
         required: false
         description: Series impedance, pu, imag
@@ -177,6 +221,11 @@ classes:
           precision: 6
           native_name: reactance[pu]
       impedance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentImpedance
+        - cim:TransformerTankConfiguration.loadLoss
+        comments:
+        - "Import: R + jX as resistance and reactance; a center tap's is the full winding's. Export: the (1, 2) R + jX in pu; a center tap's or star leg's star branch."
         range: Complex
         required: false
         description: Series impedance, pu
@@ -211,6 +260,10 @@ classes:
           precision: 6
           native_name: reactance1[pu]
       impedance1:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentImpedance
+        comments:
+        - "Import: a center tap's half, checked against GridLAB-D's split of one R + jX; any other split raises. Export: a center tap's s1 half of the star."
         range: Complex
         required: false
         description: Secondary series impedance (only used when you want to define
@@ -246,6 +299,10 @@ classes:
           precision: 6
           native_name: reactance2[pu]
       impedance2:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentImpedance
+        comments:
+        - "Import: as impedance1, the s2 half. Export: a center tap's s2 half of the star."
         range: Complex
         required: false
         description: Secondary series impedance (only used when you want to define
@@ -257,6 +314,10 @@ classes:
           value_type: complex
           native_name: impedance2[pu]
       shunt_resistance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.noLoadLoss
+        comments:
+        - "Import: noLoadLoss (kW) = S / (Rsh x k); unset is lossless and not filled. Export: 1 / the core g in pu; unset when there is no core."
         range: float
         required: false
         description: Shunt impedance on primary side, pu, real
@@ -268,6 +329,10 @@ classes:
           precision: 6
           native_name: shunt_resistance[pu]
       shunt_reactance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.percentMagnetizingCurrent
+        comments:
+        - "Import: percentMagnetizingCurrent (percent) = 100 / (Xsh x k). Export: 1 / the core b in pu."
         range: float
         required: false
         description: Shunt impedance on primary side, pu, imag
@@ -279,6 +344,11 @@ classes:
           precision: 6
           native_name: shunt_reactance[pu]
       shunt_impedance:
+        close_mappings:
+        - cim:TransformerTankConfiguration.noLoadLoss
+        - cim:TransformerTankConfiguration.percentMagnetizingCurrent
+        comments:
+        - "Import: Rsh + jXsh as shunt_resistance and shunt_reactance; on a delta connection raises."
         range: Complex
         required: false
         description: Shunt impedance on primary side, pu
@@ -357,6 +427,8 @@ classes:
           precision: 6
           native_name: rated_top_oil_rise[degC]
       no_load_loss:
+        comments:
+        - "Import: raises when set (it replaces the impedances on a center tap and no deck sets it). Export: not written."
         range: float
         required: false
         description: Another method of specifying transformer impedances, defined
@@ -369,6 +441,8 @@ classes:
           precision: 6
           native_name: no_load_loss[pu]
       full_load_loss:
+        comments:
+        - "Import: raises when set, as no_load_loss. Export: not written."
         range: float
         required: false
         description: Another method of specifying transformer impedances, defined

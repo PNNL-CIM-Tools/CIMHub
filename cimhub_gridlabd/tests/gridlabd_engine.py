@@ -1,4 +1,4 @@
-"""GridLAB-D 6.0 (the ``gridlabd`` wheel, a dev dependency) as a test oracle: solve a deck and read its bus voltages.
+"""GridLAB-D 6.0 (the ``gridlabd`` wheel, the ``solve`` extra) as a test oracle: solve a deck and read its bus voltages.
 
 Notes on the wheel (GLM_REWRITE_PLAN.md section 8.5 Q3):
 

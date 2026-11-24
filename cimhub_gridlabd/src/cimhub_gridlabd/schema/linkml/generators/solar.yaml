@@ -7,11 +7,24 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   solar:
     is_a: glm_object
+    exact_mappings:
+      - cim:PhotoVoltaicUnit
+    close_mappings:
+      - cim:SolarArrayInfo
+      - cim:SolarPanelInfo
+    comments:
+      - >-
+        Import: PhotoVoltaicUnit, mRID <connection>_unit (inverter.cimtbl), its
+        inverter's connection being the PowerElectronicsConnection, with
+        SolarArrayInfo and SolarPanelInfo datasheets; name is
+        PhotoVoltaicUnit.name. Export: each PhotoVoltaicUnit as the solar child
+        of its inverter.
     description: '// Assumptions:
 
       1. All solar panels are tilted as per the site latitude to perform at their
@@ -45,9 +58,6 @@ classes:
 
 
       Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD
 
 
       Note: Inherits from gld_object (not in generators module)'
@@ -174,6 +184,12 @@ classes:
           precision: 6
           native_name: DOA_NR_ITERATIONS
       panel_type:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: sets the defaults of efficiency and Pmax_temp_coeff, so the
+            output p; default SINGLE_CRYSTAL_SILICON. Export: unset.
         range: string
         required: false
         annotations:
@@ -240,6 +256,13 @@ classes:
           precision: 6
           native_name: T_coeff[%/degC]
       NOCT:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: a factor of GridLAB-D's static-weather DC output, which
+            becomes PowerElectronicsConnection.p (W, load sign); it sets the
+            module temperature; default 118.4 degF. Export: unset.
         range: float
         required: false
         unit:
@@ -311,6 +334,14 @@ classes:
           precision: 6
           native_name: Rinternal[Ohm]
       Rated_Insolation:
+        close_mappings:
+          - cim:SolarPanelInfo.referenceIrradiation
+          - cim:PhotoVoltaicUnit.irradiance
+        comments:
+          - >-
+            Import: SolarPanelInfo.referenceIrradiation (W/m^2, from W/ft^2);
+            irradiance = Rated_Insolation x shading_factor; default 92.902 W/sf
+            (1000 W/m^2). Export: referenceIrradiation.
         range: float
         required: false
         unit:
@@ -321,6 +352,13 @@ classes:
           precision: 6
           native_name: Rated_Insolation[W/sf]
       Pmax_temp_coeff:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: a factor of GridLAB-D's static-weather DC output, which
+            becomes PowerElectronicsConnection.p (W, load sign); per degF,
+            default by panel_type. Export: unset.
         range: float
         required: false
         annotations:
@@ -367,6 +405,12 @@ classes:
           precision: 6
           native_name: Voc[V]
       efficiency:
+        close_mappings:
+          - cim:SolarPanelInfo.efficiency
+        comments:
+          - >-
+            Import: SolarPanelInfo.efficiency (percent); default by panel_type.
+            Export: efficiency as a fraction.
         range: float
         required: false
         unit:
@@ -387,6 +431,13 @@ classes:
           precision: 6
           native_name: area[sf]
       soiling:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: a factor of GridLAB-D's static-weather DC output, which
+            becomes PowerElectronicsConnection.p (W, load sign); default 0.95;
+            outside 0..1 raises. Export: 1.
         range: float
         required: false
         description: Soiling of array factor - representing dirt on array
@@ -398,6 +449,14 @@ classes:
           precision: 6
           native_name: soiling[pu]
       derating:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: a factor of GridLAB-D's static-weather DC output, which
+            becomes PowerElectronicsConnection.p (W, load sign); default 0.95;
+            outside 0..1 raises. Export: p over GridLAB-D's lossless output, the
+            whole loss.
         range: float
         required: false
         description: Panel derating to account for manufacturing variances
@@ -419,6 +478,12 @@ classes:
           precision: 6
           native_name: Tcell[degC]
       rated_power:
+        close_mappings:
+          - cim:PowerElectronicsUnit.maxP
+        comments:
+          - >-
+            Import: PhotoVoltaicUnit.maxP (W), minP 0, and the DC output; unset
+            raises. Export: maxP.
         range: float
         required: false
         description: Used to define the size of the solar panel in power rather than
@@ -468,6 +533,12 @@ classes:
           value_type: string
           native_name: weather
       shading_factor:
+        close_mappings:
+          - cim:SolarArrayInfo.shadingFactor
+        comments:
+          - >-
+            Import: SolarArrayInfo.shadingFactor (percent) and a factor of the
+            irradiance; default 1. Export: shadingFactor as a fraction.
         range: float
         required: false
         description: Shading factor for scaling solar power to the array
@@ -479,6 +550,12 @@ classes:
           precision: 6
           native_name: shading_factor[pu]
       tilt_angle:
+        exact_mappings:
+          - cim:SolarArrayInfo.tiltAngle
+        comments:
+          - >-
+            Import: SolarArrayInfo.tiltAngle (deg); default 45. Export:
+            tiltAngle.
         range: float
         required: false
         description: Tilt angle of PV array
@@ -490,6 +567,12 @@ classes:
           precision: 6
           native_name: tilt_angle[deg]
       orientation_azimuth:
+        exact_mappings:
+          - cim:SolarArrayInfo.orientationAzimuth
+        comments:
+          - >-
+            Import: SolarArrayInfo.orientationAzimuth (deg); default 180.
+            Export: orientationAzimuth.
         range: float
         required: false
         description: Facing direction of the PV array

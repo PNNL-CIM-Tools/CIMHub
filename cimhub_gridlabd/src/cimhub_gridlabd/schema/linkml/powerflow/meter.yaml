@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -41,10 +42,11 @@ classes:
       Inherits from: node
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:ConnectivityNode
+    comments:
+    - "Import: ConnectivityNode, mRID = name (bus.cimtbl), as a node; metering and billing slots are not converted. Export: not written; a ConnectivityNode is a node."
     is_a: node
     attributes:
       measured_real_energy:

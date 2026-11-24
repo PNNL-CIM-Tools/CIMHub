@@ -52,8 +52,8 @@ Three classes are classified with another class's part and have no file of their
 | `battery` | the `BatteryInfo` and `BatteryUnit` of its inverter | in `inverter.cimtbl` | `inverter` | [DER](../reference/der.md) |
 
 The exporter's modules, in `EXPORT_ORDER`: `buses`, `line`, `switch`, `series_reactor`, `transformer`, `regulator`,
-`player`, `schedule`, `load`, `capacitor`, `inverter`. It also writes a `sectionalizer` for a CIM `Sectionaliser`
-(module `switch`), which the importer does not read back (see below).
+`player`, `schedule`, `load`, `capacitor`, `inverter`. The `switch` module also writes a `sectionalizer` for a CIM
+`Sectionaliser`.
 
 And the deck's settings:
 
@@ -79,8 +79,7 @@ Notes:
 ## Classes that do not convert
 
 The reader parses every class in the schema. The classes below have no mapper, so the importer skips them. None has an
-exporter module either, except `sectionalizer`, which the `switch` module writes for a CIM `Sectionaliser`.
-The groups follow the schema's modules.
+exporter module either. The groups follow the schema's modules.
 
 Residential (house and appliances):
 
@@ -105,7 +104,7 @@ Powergrid objects:
 | Dumps and meters | `billdump`, `currdump`, `voltdump`, `impedance_dump`, `jsondump`, `power_metrics`, `emissions` |
 | Checks and control | `fault_check`, `sync_check`, `restoration`, `volt_var_control`, `load_tracker` |
 | Motors and loads | `motor`, `performance_motor`, `vfd`, `pqload` |
-| Links | `sectionalizer`, `series_compensator` |
+| Links | `series_compensator` |
 
 A type the schema does not have is not parsed at all. The recorders and collectors of the `tape` module are the usual
 case: the schema has only `player` from that module. The reader counts the type and reads none of its properties.
@@ -123,10 +122,6 @@ The count includes the types the schema lacks (`recorder`), and a `schedule` tha
 What the class would have configured is absent from the CIM network: a `house` and its appliances are not loads,
 and a `recorder` has no CIM form. The importer reads none of their properties, so an expression such as `LIGHTS*1.2` on one of them does not raise: it
 raises only on a class that converts.
-
-A `sectionalizer` is the exception that changes the network. The topology walk treats it as a branch between its two
-buses, but nothing is written for it, so the buses beyond it have no equipment joining them to the source in CIM. One
-that touches a swing bus raises (`the feeder head, but no mapper writes a sectionalizer`).
 
 ## Properties that raise
 

@@ -55,13 +55,13 @@ guide are in the repository under
 
 ## The engine (optional)
 
-The package does not run GridLAB-D. The [round-trip checks](roundtrip.md) solve the original and the written model
-in the engine and compare the bus voltages. The tests do this with the `gridlabd` wheel from PyPI
-(`import gridlabd`, in `tests/gridlabd_engine.py`), which you install yourself:
+The converter does not need GridLAB-D, but the `solve` extra installs it, as the
+[`gridlabd` wheel](https://pypi.org/project/gridlabd/) (`gridlabd~=6.0.0`), so you can solve a `.glm` from Python:
 
 ```bash
-pip install "gridlabd~=6.0.0"
+pip install --pre "cimhub-gridlabd[solve]"
 ```
 
-The repository's workspace declares it in the `dev` dependency group of the root `pyproject.toml` as
-`gridlabd~=6.0.0`; it is only a test oracle there. Any GridLAB-D 6.0 install that runs the `.glm` works as well.
+The wheel is built for Linux x86_64, macOS and Windows x64. The [quick start](quickstart.ipynb) solves a written model
+with it, and the [round trip](roundtrip.md) compares the original's bus voltages with the export's. The package's
+tests use the same wheel as their oracle. Any GridLAB-D 6.0 install that runs the `.glm` works as well.

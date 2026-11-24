@@ -1,5 +1,4 @@
 # Auto generated from main.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-21T16:44:34
 # Schema: gridlabd_glm
 #
 # id: https://gridlabd.org/schema/glm
@@ -73,10 +72,11 @@ from rdflib import (
 from linkml_runtime.linkml_model.types import Boolean, Float, Integer, String
 from linkml_runtime.utils.metamodelcore import Bool
 
-metamodel_version = "1.7.0"
+metamodel_version = "1.12.0"
 version = "1.0.0"
 
 # Namespaces
+CIM = CurieNamespace('cim', 'http://cim.ucaiug.io/cim101/draft#')
 GLM = CurieNamespace('glm', 'https://gridlabd.org/schema/glm/')
 LINKML = CurieNamespace('linkml', 'https://w3id.org/linkml/')
 SCHEMA = CurieNamespace('schema', 'http://schema.org/')
@@ -494,8 +494,6 @@ class Billdump(GlmObject):
 
     Inherits from: gld_object
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -544,8 +542,6 @@ class Currdump(GlmObject):
     @{
 
     Inherits from: gld_object
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in powerflow module)
     """
@@ -596,8 +592,6 @@ class ImpedanceDump(GlmObject):
 
     Inherits from: gld_object
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -640,8 +634,6 @@ class Jsondump(GlmObject):
     Copyright (C) 2017 Battelle Memorial Institute
 
     Inherits from: gld_object
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in powerflow module)
     """
@@ -719,8 +711,6 @@ class LineConfiguration(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -863,8 +853,6 @@ class LineSpacing(GlmObject):
 
     Type: Configuration (physical asset template)
 
-    CIM Mapping: TBD
-
     Note: Inherits from powerflow_library (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -931,8 +919,6 @@ class LoadTracker(GlmObject):
     GridLAB-D load_tracker class
 
     Inherits from: gld_object
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in powerflow module)
     """
@@ -1002,8 +988,6 @@ class OverheadLineConductor(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -1085,8 +1069,6 @@ class PowerMetrics(GlmObject):
     distribution system reliability indices.
 
     Inherits from: powerflow_library
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -1234,8 +1216,6 @@ class PowerflowObject(GlmObject):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -1288,8 +1268,6 @@ class Emissions(PowerflowObject):
     @{
 
     Inherits from: powerflow_object
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -1699,8 +1677,6 @@ class FaultCheck(PowerflowObject):
     Copyright (C) 2009 Battelle Memorial Institute
 
     Inherits from: powerflow_object
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -1836,8 +1812,6 @@ class Link(PowerflowObject):
     Inherits from: powerflow_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -2063,8 +2037,6 @@ class Fuse(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -2153,8 +2125,6 @@ class Line(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -2227,8 +2197,6 @@ class Node(PowerflowObject):
     Inherits from: powerflow_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -2628,8 +2596,6 @@ class Capacitor(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -2787,8 +2753,6 @@ class Load(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -3296,8 +3260,6 @@ class Meter(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -3731,8 +3693,6 @@ class Motor(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -4092,8 +4052,6 @@ class OverheadLine(Line):
     Inherits from: line
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -4124,8 +4082,6 @@ class PerformanceMotor(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -4291,8 +4247,6 @@ class Pqload(Load):
     Inherits from: load
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -4532,8 +4486,6 @@ class Regulator(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -4617,8 +4569,6 @@ class RegulatorConfiguration(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -4747,8 +4697,6 @@ class Restoration(GlmObject):
 
     Inherits from: Chain
 
-    CIM Mapping: TBD
-
     Note: Inherits from Chain (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -4833,8 +4781,6 @@ class SeriesCompensator(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5069,8 +5015,6 @@ class SeriesReactor(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5146,8 +5090,6 @@ class Substation(Node):
     Inherits from: node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5272,8 +5214,6 @@ class Switch(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5334,8 +5274,6 @@ class Recloser(Switch):
     Inherits from: switch
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5379,8 +5317,6 @@ class Sectionalizer(Switch):
     Inherits from: switch
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5408,8 +5344,6 @@ class SyncCheck(PowerflowObject):
     Copyright (C) 2020 Battelle Memorial Institute
 
     Inherits from: powerflow_object
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5572,8 +5506,6 @@ class Transformer(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5680,8 +5612,6 @@ class TransformerConfiguration(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -5871,8 +5801,6 @@ class TriplexLine(Line):
     Inherits from: line
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -5904,8 +5832,6 @@ class TriplexLineConductor(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -5963,8 +5889,6 @@ class TriplexLineConfiguration(LineConfiguration):
     Inherits from: line_configuration
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6052,8 +5976,6 @@ class TriplexNode(PowerflowObject):
     Inherits from: powerflow_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6363,8 +6285,6 @@ class TriplexLoad(TriplexNode):
     Inherits from: triplex_node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6634,8 +6554,6 @@ class TriplexMeter(TriplexNode):
     Inherits from: triplex_node
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6927,8 +6845,6 @@ class UndergroundLine(Line):
     Inherits from: line
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -6960,8 +6876,6 @@ class UndergroundLineConductor(GlmObject):
     Inherits from: powerflow_library
 
     Type: Configuration (physical asset template)
-
-    CIM Mapping: TBD
 
     Note: Inherits from powerflow_library (not in powerflow module)
     """
@@ -7060,8 +6974,6 @@ class Vfd(Link):
     Inherits from: link
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -7140,8 +7052,6 @@ class VoltVarControl(PowerflowObject):
     Inherits from: powerflow_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -7242,8 +7152,6 @@ class Voltdump(GlmObject):
 
     Inherits from: gld_object
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in powerflow module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -7300,8 +7208,6 @@ class Battery(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -7609,8 +7515,6 @@ class CentralDgControl(GlmObject):
     @{
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -7674,8 +7578,6 @@ class ControllerDg(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -7805,8 +7707,6 @@ class DieselDg(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -8862,8 +8762,6 @@ class EnergyStorage(GlmObject):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in generators module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -8968,8 +8866,6 @@ class Inverter(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -9988,8 +9884,6 @@ class InverterDyn(GlmObject):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in generators module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -10763,8 +10657,6 @@ class Rectifier(GlmObject):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in generators module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -10870,8 +10762,6 @@ class Solar(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -11123,8 +11013,6 @@ class SyncCtrl(GlmObject):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from gld_object (not in generators module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -11248,8 +11136,6 @@ class WindturbDg(GlmObject):
     Inherits from: gld_object
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from gld_object (not in generators module)
     """
@@ -11763,8 +11649,6 @@ class ZIPload(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -11914,8 +11798,6 @@ class Appliance(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -11985,8 +11867,6 @@ class Clotheswasher(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -12248,8 +12128,6 @@ class Dishwasher(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -12645,8 +12523,6 @@ class Dryer(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -12947,8 +12823,6 @@ class Evcharger(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -13033,8 +12907,6 @@ class EvchargerDet(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -13282,8 +13154,6 @@ class Freezer(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -13438,8 +13308,6 @@ class House(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -14290,8 +14158,6 @@ class HouseA(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -14438,8 +14304,6 @@ class Lights(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -14502,8 +14366,6 @@ class Microwave(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -14572,8 +14434,6 @@ class Occupantload(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -14620,8 +14480,6 @@ class Plugload(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -14673,8 +14531,6 @@ class Range(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """
@@ -14986,8 +14842,6 @@ class Refrigerator(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -15248,8 +15102,6 @@ class ThermalStorage(ResidentialEnduse):
 
     Type: Instance (network topology element)
 
-    CIM Mapping: TBD
-
     Note: Inherits from residential_enduse (not in residential module)
     """
     _inherited_slots: ClassVar[list[str]] = []
@@ -15357,8 +15209,6 @@ class Waterheater(ResidentialEnduse):
     Inherits from: residential_enduse
 
     Type: Instance (network topology element)
-
-    CIM Mapping: TBD
 
     Note: Inherits from residential_enduse (not in residential module)
     """

@@ -62,7 +62,7 @@ The exporter writes what CIM holds. Most of a deck comes back as it was. These d
 | a slot CIM cannot hold (a rating, for example) | GridLAB-D's default | |
 
 The decks keep their own settings only where CIM holds them. An object the importer does not convert (a house, a
-recorder, a sectionalizer) is not in CIM, so it is not in the exported deck. [What converts](coverage.md) lists them.
+recorder) is not in CIM, so it is not in the exported deck. [What converts](coverage.md) lists them.
 The [export mapping](../EXPORT_MAPPING.md) has the same table with the size of each difference measured.
 
 An exporter raises on conducting equipment of a CIM class that no module handles, naming the class and the count
@@ -70,9 +70,8 @@ An exporter raises on conducting equipment of a CIM class that no module handles
 
 ## Compare voltages in GridLAB-D
 
-The [`gridlabd` wheel](https://pypi.org/project/gridlabd/) runs the engine from Python. It is a test dependency of
-the repository (`gridlabd~=6.0.0`), not a dependency of the package: install it with `pip install gridlabd` to run
-this. Solve each deck and compare the bus voltages. Three things make the comparison fair:
+The [`gridlabd` wheel](https://pypi.org/project/gridlabd/) runs the engine from Python. The package's `solve` extra
+installs it: `pip install --pre "cimhub-gridlabd[solve]"`. Solve each deck and compare the bus voltages. Three things make the comparison fair:
 
 - **The run file.** The IEEE 13 deck's loads read `ieeezipload.value`, so the original needs GridAPPS-D's player. The
   exporter writes those loads static, which is the same as a player that holds 1.0. The run file below declares one

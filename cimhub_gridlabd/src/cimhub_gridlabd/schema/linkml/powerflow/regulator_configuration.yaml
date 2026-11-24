@@ -7,11 +7,18 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   regulator_configuration:
     is_a: glm_object
+    close_mappings:
+    - cim:RatioTapChanger
+    - cim:TapChangerControl
+    - cim:VoltageRegulator
+    comments:
+    - "Import: no CIM template, so no class of its own; its values go on the VoltageRegulator, RatioTapChanger and TapChangerControl of every regulator that names it. Export: written from the VoltageRegulator's tap changer and its control as <regulator>_config."
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
       @file regulator_configuration.cpp
@@ -29,12 +36,13 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       connect_type:
+        related_mappings:
+        - cim:TransformerEnd.grounded
+        comments:
+        - "Import: WYE_WYE only (every AutoTransformerEnd wye, grounded); any other raises. Export: always WYE_WYE."
         range: ConnectType
         required: false
         description: Designation of connection style
@@ -43,6 +51,10 @@ classes:
           value_type: string
           native_name: connect_type
       band_center:
+        close_mappings:
+        - cim:RegulatingControl.targetValue
+        comments:
+        - "Import: TapChangerControl.targetValue (V), primary volts; on LINE_DROP_COMP x power_transducer_ratio. Export: the target (V), over ptRatio on LINE_DROP_COMP; unset when the control is disabled."
         range: float
         required: false
         description: band center setting of regulator control
@@ -54,6 +66,10 @@ classes:
           precision: 6
           native_name: band_center[V]
       band_width:
+        close_mappings:
+        - cim:RegulatingControl.targetDeadband
+        comments:
+        - "Import: TapChangerControl.targetDeadband (V), the full band, as band_center. Export: the deadband (V), likewise."
         range: float
         required: false
         description: band width setting of regulator control
@@ -65,6 +81,11 @@ classes:
           precision: 6
           native_name: band_width[V]
       time_delay:
+        close_mappings:
+        - cim:TapChanger.initialDelay
+        - cim:TapChanger.subsequentDelay
+        comments:
+        - "Import: RatioTapChanger.initialDelay and subsequentDelay (s) = dwell_time + time_delay. Export: see dwell_time."
         range: float
         required: false
         description: mechanical time delay between tap changes
@@ -76,6 +97,11 @@ classes:
           precision: 6
           native_name: time_delay[s]
       dwell_time:
+        close_mappings:
+        - cim:TapChanger.initialDelay
+        - cim:TapChanger.subsequentDelay
+        comments:
+        - "Import: with time_delay. Export: the initialDelay (s)."
         range: float
         required: false
         description: time delay before a control action of regulator control
@@ -87,6 +113,10 @@ classes:
           precision: 6
           native_name: dwell_time[s]
       raise_taps:
+        exact_mappings:
+        - cim:TapChanger.highStep
+        comments:
+        - "Import: RatioTapChanger.highStep, also the stepVoltageIncrement divisor; 0 raises. Export: highStep - neutralStep."
         range: integer
         required: false
         description: number of regulator raise taps, or the maximum raise voltage
@@ -96,6 +126,10 @@ classes:
           value_type: string
           native_name: raise_taps
       lower_taps:
+        close_mappings:
+        - cim:TapChanger.lowStep
+        comments:
+        - "Import: RatioTapChanger.lowStep = -lower_taps; 0 raises. Export: neutralStep - lowStep."
         range: integer
         required: false
         description: number of regulator lower taps, or the minimum lower voltage
@@ -105,6 +139,10 @@ classes:
           value_type: string
           native_name: lower_taps
       current_transducer_ratio:
+        exact_mappings:
+        - cim:TapChanger.ctRatio
+        comments:
+        - "Import: RatioTapChanger.ctRatio, and the line drop's CT ratio. Export: ctRatio."
         range: float
         required: false
         description: primary rating of current transformer
@@ -116,6 +154,11 @@ classes:
           precision: 6
           native_name: current_transducer_ratio[pu]
       power_transducer_ratio:
+        exact_mappings:
+        - cim:RegulatingControl.ptRatio
+        - cim:TapChanger.ptRatio
+        comments:
+        - "Import: TapChangerControl.ptRatio and RatioTapChanger.ptRatio. Export: ptRatio."
         range: float
         required: false
         description: potential transformer rating
@@ -127,6 +170,10 @@ classes:
           precision: 6
           native_name: power_transducer_ratio[pu]
       compensator_r_setting_A:
+        close_mappings:
+        - cim:TapChangerControl.lineDropR
+        comments:
+        - "Import: TapChangerControl.lineDropR (ohm) = the setting x power_transducer_ratio / current_transducer_ratio; needs both ratios. Export: lineDropR x ctRatio / ptRatio on phase A."
         range: float
         required: false
         description: Line Drop Compensation R setting of regulator control (in volts)
@@ -139,6 +186,10 @@ classes:
           precision: 6
           native_name: compensator_r_setting_A[V]
       compensator_r_setting_B:
+        close_mappings:
+        - cim:TapChangerControl.lineDropR
+        comments:
+        - "Import: TapChangerControl.lineDropR (ohm) = the setting x power_transducer_ratio / current_transducer_ratio; needs both ratios. Export: lineDropR x ctRatio / ptRatio on phase B."
         range: float
         required: false
         description: Line Drop Compensation R setting of regulator control (in volts)
@@ -151,6 +202,10 @@ classes:
           precision: 6
           native_name: compensator_r_setting_B[V]
       compensator_r_setting_C:
+        close_mappings:
+        - cim:TapChangerControl.lineDropR
+        comments:
+        - "Import: TapChangerControl.lineDropR (ohm) = the setting x power_transducer_ratio / current_transducer_ratio; needs both ratios. Export: lineDropR x ctRatio / ptRatio on phase C."
         range: float
         required: false
         description: Line Drop Compensation R setting of regulator control (in volts)
@@ -163,6 +218,10 @@ classes:
           precision: 6
           native_name: compensator_r_setting_C[V]
       compensator_x_setting_A:
+        close_mappings:
+        - cim:TapChangerControl.lineDropX
+        comments:
+        - "Import: TapChangerControl.lineDropX (ohm), as the r setting. Export: lineDropX x ctRatio / ptRatio on phase A."
         range: float
         required: false
         description: Line Drop Compensation X setting of regulator control (in volts)
@@ -175,6 +234,10 @@ classes:
           precision: 6
           native_name: compensator_x_setting_A[V]
       compensator_x_setting_B:
+        close_mappings:
+        - cim:TapChangerControl.lineDropX
+        comments:
+        - "Import: TapChangerControl.lineDropX (ohm), as the r setting. Export: lineDropX x ctRatio / ptRatio on phase B."
         range: float
         required: false
         description: Line Drop Compensation X setting of regulator control (in volts)
@@ -187,6 +250,10 @@ classes:
           precision: 6
           native_name: compensator_x_setting_B[V]
       compensator_x_setting_C:
+        close_mappings:
+        - cim:TapChangerControl.lineDropX
+        comments:
+        - "Import: TapChangerControl.lineDropX (ohm), as the r setting. Export: lineDropX x ctRatio / ptRatio on phase C."
         range: float
         required: false
         description: Line Drop Compensation X setting of regulator control (in volts)
@@ -199,6 +266,10 @@ classes:
           precision: 6
           native_name: compensator_x_setting_C[V]
       CT_phase:
+        related_mappings:
+        - cim:RegulatingControl.monitoredPhase
+        comments:
+        - "Import: BANK: the phase whose compensator setting is read, which must be PT_phase; INDIVIDUAL: ignored. Export: BANK: the monitored phase, else its first."
         range: string
         required: false
         description: phase(s) monitored by CT
@@ -207,6 +278,10 @@ classes:
           value_type: string
           native_name: CT_phase
       PT_phase:
+        related_mappings:
+        - cim:RegulatingControl.monitoredPhase
+        comments:
+        - "Import: BANK: TapChangerControl.monitoredPhase; INDIVIDUAL: ignored. Export: BANK: the monitored phase, else its first."
         range: string
         required: false
         description: phase(s) monitored by PT
@@ -215,6 +290,10 @@ classes:
           value_type: string
           native_name: PT_phase
       regulation:
+        close_mappings:
+        - cim:RatioTapChanger.stepVoltageIncrement
+        comments:
+        - "Import: stepVoltageIncrement (percent) = regulation / raise_taps; 0 raises unless MANUAL. Export: stepVoltageIncrement x raise_taps (per unit)."
         range: float
         required: false
         description: regulation of voltage regulator in %
@@ -224,6 +303,8 @@ classes:
           precision: 6
           native_name: regulation
       control_level:
+        comments:
+        - "Import: INDIVIDUAL (default) is a unit per wired phase, BANK one gang unit. Export: BANK for one VoltageRegulator alone, else INDIVIDUAL."
         range: string
         required: false
         description: Designates whether control is on per-phase or banked level
@@ -232,6 +313,12 @@ classes:
           value_type: string
           native_name: control_level
       Control:
+        close_mappings:
+        - cim:AutomationFunction.enabled
+        - cim:TapChangerControl.lineDropCompensation
+        - cim:TapChanger.controlEnabled
+        comments:
+        - "Import: MANUAL (default) is enabled = controlEnabled = false; OUTPUT_VOLTAGE and LINE_DROP_COMP true, lineDropCompensation on LINE_DROP_COMP only; REMOTE_NODE on the regulator's own output as OUTPUT_VOLTAGE. Export: MANUAL when the control is disabled or absent, LINE_DROP_COMP with line drop compensation, else OUTPUT_VOLTAGE."
         range: string
         required: false
         description: Type of control used for regulating voltage
@@ -249,6 +336,10 @@ classes:
           value_type: string
           native_name: reverse_flow_control
       Type:
+        exact_mappings:
+        - cim:VoltageRegulator.construction
+        comments:
+        - "Import: A is typeA, B is typeB (default B). Export: B for typeB, else A."
         range: string
         required: false
         description: Defines regulator type
@@ -257,6 +348,10 @@ classes:
           value_type: string
           native_name: Type
       tap_pos_A:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase A's unit unless the regulator sets tap_A; default 0. Export: step - neutralStep on phase A."
         range: integer
         required: false
         description: initial tap position of phase A
@@ -265,6 +360,10 @@ classes:
           value_type: string
           native_name: tap_pos_A
       tap_pos_B:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase B's unit unless the regulator sets tap_B; default 0. Export: step - neutralStep on phase B."
         range: integer
         required: false
         description: initial tap position of phase B
@@ -273,6 +372,10 @@ classes:
           value_type: string
           native_name: tap_pos_B
       tap_pos_C:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase C's unit unless the regulator sets tap_C; default 0. Export: step - neutralStep on phase C."
         range: integer
         required: false
         description: initial tap position of phase C

@@ -18,10 +18,10 @@ classes:
       Copyright (C) 2020 Battelle Memorial Institute
 
 
-      Inherits from: powerflow_object
-
-
-      CIM Mapping: TBD'
+      Inherits from: powerflow_object'
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: powerflow_object
     attributes:
       armed:

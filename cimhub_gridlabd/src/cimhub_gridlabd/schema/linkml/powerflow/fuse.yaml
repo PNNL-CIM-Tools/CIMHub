@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -29,13 +30,16 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:Fuse
+    comments:
+    - "Import: Fuse, mRID sw_ + name (fuse.cimtbl). Export: every Fuse."
     is_a: link
     attributes:
       phase_A_status:
+        comments:
+        - "Import: structural; unset or GOOD, BLOWN raises on a phase the fuse has. Export: not written."
         range: string
         required: false
         annotations:
@@ -43,6 +47,8 @@ classes:
           value_type: string
           native_name: phase_A_status
       phase_B_status:
+        comments:
+        - "Import: structural; unset or GOOD, BLOWN raises on a phase the fuse has. Export: not written."
         range: string
         required: false
         annotations:
@@ -50,6 +56,8 @@ classes:
           value_type: string
           native_name: phase_B_status
       phase_C_status:
+        comments:
+        - "Import: structural; unset or GOOD, BLOWN raises on a phase the fuse has. Export: not written."
         range: string
         required: false
         annotations:
@@ -64,6 +72,10 @@ classes:
           value_type: string
           native_name: repair_dist_type
       current_limit:
+        exact_mappings:
+        - cim:Switch.ratedCurrent
+        comments:
+        - "Import: Fuse.ratedCurrent in the unit written; unset is not filled and the row says so. Export: Fuse.ratedCurrent (A)."
         range: float
         required: false
         unit:

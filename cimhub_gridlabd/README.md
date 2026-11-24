@@ -7,6 +7,7 @@ Plan: `.development/GLM_REWRITE_PLAN.md`; specs: `docs/CIMTBL_MAPPING.md` (impor
 
 ```bash
 pip install --pre cimhub-gridlabd      # also installs cimhub-core
+pip install --pre "cimhub-gridlabd[solve]"   # also the GridLAB-D engine (the gridlabd wheel)
 ```
 
 Python 3.11 or later. Version 2.1 is in alpha.

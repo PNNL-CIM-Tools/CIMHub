@@ -7,11 +7,24 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   inverter:
     is_a: glm_object
+    exact_mappings:
+      - cim:PowerElectronicsConnection
+    close_mappings:
+      - cim:GenerationInverterInfo
+      - cim:StorageInverterInfo
+    comments:
+      - >-
+        Import: PowerElectronicsConnection, mRID pv_ or storage_ + name by its
+        solar or battery child (inverter.cimtbl), with a GenerationInverterInfo
+        or StorageInverterInfo datasheet; one child is mapped, GridLAB-D has no
+        delta inverter. Export: each PowerElectronicsConnection, one inverter
+        per unit (name_<n> when several), parented to its bus.
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
       @file inverter.cpp
@@ -29,12 +42,13 @@ classes:
       Type: Instance (network topology element)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from gld_object (not in generators module)'
     attributes:
       inverter_type:
+        comments:
+          - >-
+            Import: structural; FOUR_QUADRANT only, any other raises (unset is
+            GridLAB-D's PWM). Export: FOUR_QUADRANT.
         range: string
         required: false
         description: 'LEGACY MODEL: Sets efficiencies and other parameters; if using
@@ -44,6 +58,12 @@ classes:
           value_type: string
           native_name: inverter_type
       four_quadrant_control_mode:
+        comments:
+          - >-
+            Import: structural; CONSTANT_PF on a solar, CONSTANT_PQ on a battery
+            (which also reads CONSTANT_PF), others raise; the mode's capability
+            flag goes in the row comment, InverterCapabilities is not written
+            yet. Export: CONSTANT_PQ on a battery, CONSTANT_PF on a PV.
         range: string
         required: false
         description: 'FOUR QUADRANT MODEL: Activates various control modes'
@@ -60,6 +80,13 @@ classes:
           value_type: string
           native_name: pf_reg
       generator_status:
+        close_mappings:
+          - cim:Equipment.normallyInService
+        comments:
+          - >-
+            Import: ONLINE (default) is normallyInService true, OFFLINE false
+            and the output 0. Export: OFFLINE when normallyInService is false,
+            else ONLINE.
         range: string
         required: false
         description: describes whether the generator is online or offline
@@ -430,6 +457,16 @@ classes:
           precision: 6
           native_name: pCircuit_V_Avg
       P_Out:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+          - cim:BatteryUnit.batteryState
+        comments:
+          - >-
+            Import: a battery's CONSTANT_PQ set point, limited by ratedS, a full
+            battery or the reserve, is p (W, load sign) and gives batteryState;
+            a PV's is an output GridLAB-D overwrites, so only in the row
+            comment. Export: a battery's p from get_inverter_units, generation
+            sign.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: Scheduled real power out in CONSTANT_PQ
@@ -442,6 +479,12 @@ classes:
           precision: 6
           native_name: P_Out[VA]
       Q_Out:
+        close_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import: q (VAr) is 0 when unset or 0; any other value raises.
+            Export: a battery's q, generation sign.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: Schedule reactive power out in CONSTANT_PQ
@@ -465,6 +508,16 @@ classes:
           precision: 6
           native_name: power_in[W]
       rated_power:
+        close_mappings:
+          - cim:PowerElectronicsConnection.ratedS
+          - cim:PowerElectronicsConnection.maxQ
+          - cim:PowerElectronicsConnection.minQ
+          - cim:GridEdgeDeviceInfo.apparentPowerMaximum
+        comments:
+          - >-
+            Import: ratedS (VA) = rated_power x the phases out (3, 2, 1; S is
+            1); maxQ = -minQ = ratedS, and the datasheet's apparentPowerMaximum;
+            unset or 0 raises. Export: ratedS x the unit's share / phases.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: The rated power of the inverter'
@@ -488,6 +541,13 @@ classes:
           precision: 6
           native_name: rated_battery_power[W]
       inverter_efficiency:
+        close_mappings:
+          - cim:PowerElectronicsConnection.p
+        comments:
+          - >-
+            Import: PV AC = DC x inverter_efficiency (default 0.9) is folded
+            into p; CIM has no inverter efficiency. Export: 1 on a PV; the
+            losses are in p.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: The efficiency of the inverter'
@@ -508,6 +568,12 @@ classes:
           precision: 6
           native_name: battery_soc[pu]
       soc_reserve:
+        close_mappings:
+          - cim:BatteryUnit.minimumE
+        comments:
+          - >-
+            Import: BatteryUnit.minimumE (Wh) = soc_reserve x battery_capacity;
+            default 0. Export: minimumE / ratedE.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: The reserve state of charge of an attached
@@ -520,6 +586,12 @@ classes:
           precision: 6
           native_name: soc_reserve[pu]
       power_factor:
+        close_mappings:
+          - cim:PowerElectronicsConnection.q
+        comments:
+          - >-
+            Import: CONSTANT_PF q is 0 when |pf| is 1; |pf| < 1 raises. Export:
+            a PV's p / |p + jq|, negative when q is.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: The power factor used for CONSTANT_PF control
@@ -1411,6 +1483,14 @@ classes:
           value_type: string
           native_name: IEEE_1547_trip_method
       phases:
+        related_mappings:
+          - cim:Terminal.phases
+          - cim:PowerElectronicsConnection.phaseConnection
+        comments:
+          - >-
+            Import: A, B, C is wye to neutral (phases blank on three); S is s1s2
+            D across the legs at 240 V. Export: the letters then N; a
+            split-phase bus's letter then S.
         range: string
         required: false
         description: The phases the inverter is attached to
@@ -1516,6 +1596,13 @@ classes:
           value_type: string
           native_name: sense_object
       max_charge_rate:
+        exact_mappings:
+          - cim:StorageInverterInfo.chargeRateActiveMax
+        comments:
+          - >-
+            Import: StorageInverterInfo.chargeRateActiveMax (W), a nameplate
+            GridLAB-D reads only in load following. Export: chargeRateActiveMax
+            x the unit's share.
         range: float
         required: false
         description: 'FOUR QUADRANT MODEL: maximum rate the battery can be charged

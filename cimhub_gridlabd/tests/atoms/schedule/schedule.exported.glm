@@ -163,6 +163,11 @@ object node {
   nominal_voltage 2401.77711982884;
 }
 object node {
+  name "n11";
+  phases "ABCN";
+  nominal_voltage 2401.77711982884;
+}
+object node {
   name "n2";
   phases "ABCN";
   nominal_voltage 2401.77711982884;
@@ -309,6 +314,13 @@ object recloser {
   status "CLOSED";
   from "n1";
   to "n10";
+}
+object sectionalizer {
+  name "sec_1";
+  phases "ABC";
+  status "CLOSED";
+  from "n2";
+  to "n11";
 }
 object transformer {
   name "xf_ct";

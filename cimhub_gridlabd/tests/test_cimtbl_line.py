@@ -16,7 +16,7 @@ from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOM = Path(__file__).parent / "atoms" / "line"
-PARTS = ("overhead_line", "underground_line", "triplex_line", "switch", "fuse", "recloser")
+PARTS = ("overhead_line", "underground_line", "triplex_line", "switch", "fuse", "recloser", "sectionalizer")
 FIELDS = {**line.FIELDS, **switch.FIELDS}
 
 
@@ -81,11 +81,11 @@ def test_atom_binds(scope):
     assert limits(segments["ln_tl_2"]) == [1200.0, 1200.0]  # from its configuration (S3a-4)
     assert limits(segments["ln_l1"]) == []  # conductor ratings stay on the WireInfo
 
-    devices = {str(d.mRID): d for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser)
+    devices = {str(d.mRID): d for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser, cim.Sectionaliser)
                for d in network.list_by_class(cls)}
     assert {name: type(d).__name__ for name, d in devices.items()} == {
         "sw_swt_s1": "LoadBreakSwitch", "sw_swt_s2": "LoadBreakSwitch", "sw_fuse_1": "Fuse", "sw_fuse_2": "Fuse",
-        "sw_recloser_1": "Recloser"}
+        "sw_recloser_1": "Recloser", "sw_sec_1": "Sectionaliser"}
     assert devices["sw_swt_s2"].open and devices["sw_swt_s2"].normalOpen
     assert not devices["sw_swt_s1"].open and limits(devices["sw_swt_s1"]) == [400.0, 600.0]
     assert float(devices["sw_fuse_1"].ratedCurrent.to("A")) == 50000.0 and devices["sw_fuse_2"].ratedCurrent is None
@@ -225,7 +225,8 @@ def assert_lines_and_switches(model, network) -> None:
     assert len(network.list_by_class(cim.LoadBreakSwitch)) == model.count(schema.Switch)
     assert len(network.list_by_class(cim.Fuse)) == model.count(schema.Fuse)
     assert len(network.list_by_class(cim.Recloser)) == model.count(schema.Recloser)
-    switches = {str(sw.mRID): sw for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser)
+    assert len(network.list_by_class(cim.Sectionaliser)) == model.count(schema.Sectionalizer)
+    switches = {str(sw.mRID): sw for cls in (cim.LoadBreakSwitch, cim.Fuse, cim.Recloser, cim.Sectionaliser)
                 for sw in network.list_by_class(cls)}
     for native_class, _, _ in switch.SWITCHES:  # each side's phases on its GLM end (an open tie across phases, S6-9)
         for device in model.list_by_class(native_class):

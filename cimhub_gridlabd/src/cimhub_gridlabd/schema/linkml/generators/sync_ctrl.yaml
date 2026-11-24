@@ -11,6 +11,9 @@ default_prefix: glm
 default_range: string
 classes:
   sync_ctrl:
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: glm_object
     description: 'Implements sychronization control functionality for the sychronization
       check
@@ -22,9 +25,6 @@ classes:
 
 
       Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD
 
 
       Note: Inherits from gld_object (not in generators module)'

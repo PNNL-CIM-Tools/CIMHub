@@ -17,10 +17,10 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: link
     attributes:
       vset_A:

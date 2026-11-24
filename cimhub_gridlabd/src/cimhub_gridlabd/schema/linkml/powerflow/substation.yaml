@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -41,10 +42,14 @@ classes:
       Inherits from: node
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:EnergySource
+    close_mappings:
+    - cim:ConnectivityNode
+    - cim:BasePower
+    comments:
+    - "Import: EnergySource, mRID src_ + name (source.cimtbl), on a ConnectivityNode named name (bus.cimtbl); base_power gives BasePower, mRID sbase_ + name. Export: the EnergySource, with the graph's one BasePower."
     is_a: node
     attributes:
       zero_sequence_voltage:
@@ -59,6 +64,11 @@ classes:
           value_type: complex
           native_name: zero_sequence_voltage[V]
       positive_sequence_voltage:
+        close_mappings:
+        - cim:EnergySource.voltageMagnitude
+        - cim:EnergySource.voltageAngle
+        comments:
+        - "Import: EnergySource.voltageMagnitude (line to line) and voltageAngle (deg) from |V| and arg(V); else voltage_A, else nominal_voltage at 0 deg. Export: get_source voltageMagnitude / sqrt 3 at voltageAngle."
         range: Complex
         required: false
         description: The positive sequence representation of the voltage for the substation
@@ -81,6 +91,10 @@ classes:
           value_type: complex
           native_name: negative_sequence_voltage[V]
       base_power:
+        exact_mappings:
+        - cim:BasePower.basePower
+        comments:
+        - "Import: BasePower.basePower, in the unit written. Export: the graph's BasePower, when it has one."
         range: float
         required: false
         description: The 3 phase VA power rating of the substation.
@@ -104,6 +118,8 @@ classes:
           precision: 6
           native_name: power_convergence_value[VA]
       reference_phase:
+        comments:
+        - "Import: structural; unset or PHASE_A, any other raises. Export: not written."
         range: string
         required: false
         description: The reference phase for the positive sequence voltage.

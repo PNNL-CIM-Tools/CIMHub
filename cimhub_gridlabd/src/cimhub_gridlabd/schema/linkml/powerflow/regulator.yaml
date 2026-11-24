@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -25,13 +26,19 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
     is_a: link
+    exact_mappings:
+    - cim:VoltageRegulator
+    close_mappings:
+    - cim:RatioTapChanger
+    - cim:TapChangerControl
+    comments:
+    - "Import: VoltageRegulator, mRID xf_ + name (INDIVIDUAL: name + _<phase>) (regulator.cimtbl), with two AutoTransformerEnds, a TapChangerControl (rc_) and a RatioTapChanger per unit; a regulator_configuration's values go on every unit. Export: VoltageRegulator is written as it."
     attributes:
       configuration:
+        comments:
+        - "Import: a regulator_configuration; its values land on every unit, CIM has no regulator template. Export: written as its own <regulator>_config."
         range: string
         required: false
         description: reference to the regulator_configuration object used to determine
@@ -41,6 +48,10 @@ classes:
           value_type: string
           native_name: configuration
       tap_A:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase A's unit, over tap_pos_A. Export: tap_pos_A of the configuration, step - neutralStep."
         range: integer
         required: false
         description: current tap position of tap A
@@ -49,6 +60,10 @@ classes:
           value_type: string
           native_name: tap_A
       tap_B:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase B's unit, over tap_pos_B. Export: tap_pos_B of the configuration, step - neutralStep."
         range: integer
         required: false
         description: current tap position of tap B
@@ -57,6 +72,10 @@ classes:
           value_type: string
           native_name: tap_B
       tap_C:
+        close_mappings:
+        - cim:TapChanger.step
+        comments:
+        - "Import: RatioTapChanger.step of phase C's unit, over tap_pos_C. Export: tap_pos_C of the configuration, step - neutralStep."
         range: integer
         required: false
         description: current tap position of tap C
@@ -135,6 +154,10 @@ classes:
           precision: 6
           native_name: tap_C_change_count
       sense_node:
+        related_mappings:
+        - cim:RegulatingControl.Terminal
+        comments:
+        - "Import: REMOTE_NODE must name the regulator's own to bus, as OUTPUT_VOLTAGE (the control's Terminal is end 2); elsewhere raises. Export: not written."
         range: string
         required: false
         description: Node to be monitored for voltage control in remote sense mode

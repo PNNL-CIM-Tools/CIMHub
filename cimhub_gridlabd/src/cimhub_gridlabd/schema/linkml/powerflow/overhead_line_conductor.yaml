@@ -7,10 +7,17 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   overhead_line_conductor:
+    exact_mappings:
+      - cim:OverheadWireInfo
+    comments:
+      - >-
+        Import: OverheadWireInfo, mRID ohc_ + name (overhead_line_conductor.cimtbl). Export:
+        OverheadWireInfo, the wires of a geometry line that has no cable.
     is_a: glm_object
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
@@ -29,12 +36,14 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       geometric_mean_radius:
+        exact_mappings:
+          - cim:WireInfo.gmr
+        comments:
+          - >-
+            Import: copied to gmr in its written unit; unset raises. Export: gmr; unset raises.
         range: float
         required: false
         description: radius of the conductor
@@ -46,6 +55,12 @@ classes:
           precision: 6
           native_name: geometric_mean_radius[ft]
       resistance:
+        close_mappings:
+          - cim:ConductorInfo.rAC50
+        comments:
+          - >-
+            Import: copied to rAC50 (Kersting's 50 C value), in its written unit; unset raises.
+            Export: rAC50, else rAC25; neither raises.
         range: float
         required: false
         description: resistance in Ohms/mile of the conductor
@@ -57,6 +72,12 @@ classes:
           precision: 6
           native_name: resistance[Ohm/mile]
       diameter:
+        close_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: derived; radius = diameter / 2, in the diameter's unit. Export: diameter = 2
+            x radius; unset when the radius is.
         range: float
         required: false
         description: Diameter of line for capacitance calculations
@@ -68,6 +89,14 @@ classes:
           precision: 6
           native_name: diameter[in]
       rating_summer_continuous:
+        close_mappings:
+          - cim:ConductingAssetInfo.ratedCurrent
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: copied to ratedCurrent (A) and the normal CurrentLimit of the wire's limit
+            set <mRID>_limits; unset: not filled. Export: the wire's normal limit, else
+            ratedCurrent.
         range: float
         required: false
         description: Continuous summer amp rating
@@ -79,6 +108,12 @@ classes:
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
+        related_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; the emergency CurrentLimit of that set; unset: not filled.
+            Export: the wire's emergency limit.
         range: float
         required: false
         description: Emergency summer amp rating

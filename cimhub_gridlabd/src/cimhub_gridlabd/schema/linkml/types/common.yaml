@@ -6,6 +6,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 classes:
   Complex:
@@ -27,6 +28,10 @@ classes:
       unique across the whole model; an unnamed object is called <class>:<id>.
     attributes:
       name:
+        exact_mappings:
+        - cim:IdentifiedObject.name
+        comments:
+        - "Import: <CIM class>.name, copied as written; mRID = the class's prefix + name (none on a bus). Export: Names, sanitized for GridLAB-D; a name two objects share raises."
         range: string
         identifier: true
         required: true
@@ -36,6 +41,8 @@ classes:
           value_type: string
           native_name: name
       parent:
+        comments:
+        - "Import: a bus whose parent is a bus is its root bus's ConnectivityNode, named on the root's row; no object of its own. On a link it is not mapped."
         range: string
         description: The parent object's name. A child node is solved as its parent's bus; a nested object block sets it to the enclosing object.
         annotations:
@@ -50,6 +57,8 @@ classes:
           value_type: string
           native_name: groupid
       latitude:
+        comments:
+        - "Not converted. Home is the EquipmentLocation shape."
         range: string
         description: Latitude, as written (decimal degrees or GridLAB-D's 37N26:12 form).
         annotations:
@@ -57,6 +66,8 @@ classes:
           value_type: string
           native_name: latitude
       longitude:
+        comments:
+        - "Not converted. Home is the EquipmentLocation shape."
         range: string
         description: Longitude, as written.
         annotations:

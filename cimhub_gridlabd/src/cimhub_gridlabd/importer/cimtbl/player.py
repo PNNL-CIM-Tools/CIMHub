@@ -133,7 +133,7 @@ def map_players(model: GlmModel, references: dict[str, list[str]]) -> Document:
     defined = tapes(model)
     undefined = sorted(set(references) - set(defined))
     if undefined:
-        _log.warning("%d player(s) named by loads are not in the deck: %s; their groups have no schedule (S8-5)",
+        _log.warning("%d player(s) named by loads are not in the deck: %s; their groups have no schedule",
                      len(undefined), undefined)
     players = {str(player.name): player for player in model.list_by_class(NATIVE_CLASS)}
     groups = [Row([mrid(GROUP_PREFIX, name), name],

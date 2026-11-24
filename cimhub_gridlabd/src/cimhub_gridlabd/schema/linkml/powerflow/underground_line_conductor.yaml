@@ -7,10 +7,21 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   underground_line_conductor:
+    close_mappings:
+      - cim:ConcentricNeutralCableInfo
+      - cim:TapeShieldCableInfo
+      - cim:OverheadWireInfo
+    comments:
+      - >-
+        Import: mRID ugc_ + name (underground_line_conductor.cimtbl): ConcentricNeutralCableInfo
+        when neutral_strands > 0, TapeShieldCableInfo when shield_thickness > 0, else a bare
+        OverheadWireInfo; both set raises. Export: each of those WireInfo classes in a geometry
+        that has a cable.
     is_a: glm_object
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
@@ -29,12 +40,16 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       outer_diameter:
+        exact_mappings:
+          - cim:CableInfo.diameterOverJacket
+        comments:
+          - >-
+            Import: copied to diameterOverJacket on a cable; untranscribed on a bare wire.
+            Export: diameterOverJacket; a bare buried wire gets 1.2 x its diameter (CIM has no
+            jacket).
         range: float
         required: false
         description: Outer diameter of conductor and sheath
@@ -46,6 +61,11 @@ classes:
           precision: 6
           native_name: outer_diameter[in]
       conductor_gmr:
+        exact_mappings:
+          - cim:WireInfo.gmr
+        comments:
+          - >-
+            Import: copied to gmr; unset raises. Export: gmr; unset raises.
         range: float
         required: false
         description: Geometric mean radius of the conductor
@@ -57,6 +77,12 @@ classes:
           precision: 6
           native_name: conductor_gmr[ft]
       conductor_diameter:
+        close_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: derived; radius = conductor_diameter / 2. Export: 2 x radius; unset when the
+            radius is.
         range: float
         required: false
         description: Diameter of conductor
@@ -68,6 +94,12 @@ classes:
           precision: 6
           native_name: conductor_diameter[in]
       conductor_resistance:
+        close_mappings:
+          - cim:ConductorInfo.rAC50
+        comments:
+          - >-
+            Import: copied to rAC50 (Kersting's 50 C value), in its written unit; unset raises.
+            Export: rAC50, else rAC25; neither raises.
         range: float
         required: false
         description: Resistance of conductor in ohm/mile
@@ -79,6 +111,12 @@ classes:
           precision: 6
           native_name: conductor_resistance[Ohm/mile]
       neutral_gmr:
+        exact_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandGmr
+        comments:
+          - >-
+            Import: copied to neutralStrandGmr. Export: neutralStrandGmr (a
+            ConcentricNeutralCableInfo).
         range: float
         required: false
         description: Geometric mean radius of an individual neutral conductor/strand
@@ -90,6 +128,12 @@ classes:
           precision: 6
           native_name: neutral_gmr[ft]
       neutral_diameter:
+        close_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandRadius
+        comments:
+          - >-
+            Import: derived; neutralStrandRadius = neutral_diameter / 2. Export: 2 x
+            neutralStrandRadius.
         range: float
         required: false
         description: Diameter of individual neutral conductor/strand of concentric
@@ -102,6 +146,12 @@ classes:
           precision: 6
           native_name: neutral_diameter[in]
       neutral_resistance:
+        exact_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandRDC20
+        comments:
+          - >-
+            Import: copied to neutralStrandRDC20 (the strand's DC value). Export:
+            neutralStrandRDC20.
         range: float
         required: false
         description: Resistance of an individual neutral conductor/strand in ohm/mile
@@ -113,6 +163,12 @@ classes:
           precision: 6
           native_name: neutral_resistance[Ohm/mile]
       neutral_strands:
+        exact_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandCount
+        comments:
+          - >-
+            Import: copied to neutralStrandCount; > 0 selects ConcentricNeutralCableInfo.
+            Export: neutralStrandCount.
         range: integer
         required: false
         description: Number of cable strands in neutral conductor
@@ -121,6 +177,12 @@ classes:
           value_type: string
           native_name: neutral_strands
       shield_thickness:
+        exact_mappings:
+          - cim:TapeShieldCableInfo.tapeThickness
+        comments:
+          - >-
+            Import: copied to tapeThickness; > 0 selects TapeShieldCableInfo. Export:
+            tapeThickness.
         range: float
         required: false
         description: The thickness of Tape shield in inches
@@ -132,6 +194,12 @@ classes:
           precision: 6
           native_name: shield_thickness[in]
       shield_diameter:
+        exact_mappings:
+          - cim:CableInfo.diameterOverScreen
+        comments:
+          - >-
+            Import: copied to diameterOverScreen on a TapeShieldCableInfo. Export:
+            diameterOverScreen.
         range: float
         required: false
         description: The outside diameter of Tape shield in inches
@@ -154,6 +222,10 @@ classes:
           precision: 6
           native_name: insulation_relative_permitivitty[unit]
       shield_gmr:
+        comments:
+          - >-
+            Import: untranscribed; CIM has no home. Export: derived from diameterOverScreen / 2
+            on a TapeShieldCableInfo (GridLAB-D tells a tape shield by shield_gmr > 0).
         range: float
         required: false
         description: Geometric mean radius of shielding sheath
@@ -165,6 +237,10 @@ classes:
           precision: 6
           native_name: shield_gmr[ft]
       shield_resistance:
+        comments:
+          - >-
+            Import: untranscribed; CIM has no home. Export: derived from diameterOverScreen and
+            tapeThickness (Kersting eq. 4.89).
         range: float
         required: false
         description: Resistance of shielding sheath in ohms/mile
@@ -176,6 +252,14 @@ classes:
           precision: 6
           native_name: shield_resistance[Ohm/mile]
       rating_summer_continuous:
+        close_mappings:
+          - cim:ConductingAssetInfo.ratedCurrent
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: copied to ratedCurrent (A) and the normal CurrentLimit of the wire's limit
+            set <mRID>_limits; unset: not filled. Export: the wire's normal limit, else
+            ratedCurrent.
         range: float
         required: false
         description: amp rating in summer, continuous
@@ -187,6 +271,12 @@ classes:
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
+        related_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; the emergency CurrentLimit of that set; unset: not filled.
+            Export: the wire's emergency limit.
         range: float
         required: false
         description: amp rating in summer, short term

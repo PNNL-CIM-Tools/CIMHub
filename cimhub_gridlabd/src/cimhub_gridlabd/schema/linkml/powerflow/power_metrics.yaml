@@ -11,6 +11,9 @@ default_prefix: glm
 default_range: string
 classes:
   power_metrics:
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: glm_object
     description: 'Copyright (C) 2009 Battelle Memorial Institute
 
@@ -69,9 +72,6 @@ classes:
 
 
       Inherits from: powerflow_library
-
-
-      CIM Mapping: TBD
 
 
       Note: Inherits from powerflow_library (not in powerflow module)'

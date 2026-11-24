@@ -84,8 +84,7 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
 
 Excerpt from the master of `IEEE13_cdpsm.glm`, printed by the example above (`documents.master`). The master is named after the model, so a model name that equals the name of a non-empty part (`transformer`, `load`, `switch`, `bus`, `source`, ...) fails with `document names repeat`.
 
-**Fail fast.** A value the reader kept as an expression in a property a mapper reads. A head on a link no mapper writes
-(a `sectionalizer` touching a swing bus): its Terminal would not exist. The walk raises on a coil that cannot sit on its
+**Fail fast.** A value the reader kept as an expression in a property a mapper reads. The walk raises on a coil that cannot sit on its
 island, on a parent that is not a bus object, on a parent loop, and on a link whose phases are not on both of its ends.
 
 ## node, meter, triplex_node, triplex_meter

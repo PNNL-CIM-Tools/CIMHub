@@ -7,10 +7,20 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
   line_spacing:
+    close_mappings:
+      - cim:ConductorDistanceSpacing
+      - cim:XYSpacing
+    comments:
+      - >-
+        Import: ConductorDistanceSpacing + ConductorDistance, mRID spc_ + name, isTemplate true
+        (line_spacing.cimtbl); GLM gives distances, not coordinates. Export: the WireSpacing of
+        a geometry line (ConductorDistanceSpacing or XYSpacing), one per way the lines use it
+        (<spacing>_<letters>).
     is_a: glm_object
     description: 'Copyright (C) 2008 Battelle Memorial Institute
 
@@ -29,12 +39,16 @@ classes:
       Type: Configuration (physical asset template)
 
 
-      CIM Mapping: TBD
-
-
       Note: Inherits from powerflow_library (not in powerflow module)'
     attributes:
       distance_AB:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase A, toPhase B;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -45,6 +59,13 @@ classes:
           precision: 6
           native_name: distance_AB[ft]
       distance_BC:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase B, toPhase C;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -55,6 +76,13 @@ classes:
           precision: 6
           native_name: distance_BC[ft]
       distance_AC:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase A, toPhase C;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -65,6 +93,13 @@ classes:
           precision: 6
           native_name: distance_AC[ft]
       distance_AN:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase A, toPhase N;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -75,6 +110,13 @@ classes:
           precision: 6
           native_name: distance_AN[ft]
       distance_BN:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase B, toPhase N;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -85,6 +127,13 @@ classes:
           precision: 6
           native_name: distance_BN[ft]
       distance_CN:
+        exact_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: ConductorDistance.distance, in its written unit, fromPhase C, toPhase N;
+            ends numbered 1..n over the spacing's phases; unset or 0: no row. Export:
+            get_stored_distances between the two phases' sequence numbers; absent: unset.
         range: float
         required: false
         unit:
@@ -95,6 +144,13 @@ classes:
           precision: 6
           native_name: distance_CN[ft]
       distance_AE:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: a ConductorDistance from phase A to a position of kind earth; unset or 0: no
+            row. Export: the stored height of that position (an XYSpacing's y; a line with a
+            ySpacingOffset raises).
         range: float
         required: false
         description: distance between phase A wire and earth
@@ -106,6 +162,13 @@ classes:
           precision: 6
           native_name: distance_AE[ft]
       distance_BE:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: a ConductorDistance from phase B to a position of kind earth; unset or 0: no
+            row. Export: the stored height of that position (an XYSpacing's y; a line with a
+            ySpacingOffset raises).
         range: float
         required: false
         description: distance between phase B wire and earth
@@ -117,6 +180,13 @@ classes:
           precision: 6
           native_name: distance_BE[ft]
       distance_CE:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: a ConductorDistance from phase C to a position of kind earth; unset or 0: no
+            row. Export: the stored height of that position (an XYSpacing's y; a line with a
+            ySpacingOffset raises).
         range: float
         required: false
         description: distance between phase C wire and earth
@@ -128,6 +198,13 @@ classes:
           precision: 6
           native_name: distance_CE[ft]
       distance_NE:
+        close_mappings:
+          - cim:ConductorDistance.distance
+        comments:
+          - >-
+            Import: a ConductorDistance from phase N to a position of kind earth; unset or 0: no
+            row. Export: the stored height of that position (an XYSpacing's y; a line with a
+            ySpacingOffset raises).
         range: float
         required: false
         description: distance between neutral wire and earth

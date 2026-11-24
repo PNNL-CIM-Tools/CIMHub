@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -29,11 +30,19 @@ classes:
       Inherits from: node
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
     is_a: node
+    exact_mappings:
+      - cim:EnergyConsumer
+    close_mappings:
+      - cim:ConformLoad
+    comments:
+      - >-
+        Import: EnergyConsumer, mRID ld_ + name (load.cimtbl), or a ConformLoad
+        of the player's or schedule's group when the base reads one. Export:
+        EnergyConsumer, ConformLoad and NonConformLoad on a bus that is not
+        split phase, wye as phases then N, delta as phases then D; a delta's A,
+        B, C are the branches AB, BC, CA.
     attributes:
       load_class:
         range: string
@@ -53,6 +62,16 @@ classes:
           value_type: string
           native_name: load_priority
       constant_power_A:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p,
+            q when the phases differ; with base_power it raises. Export: not
+            written; the base_power form is.
         range: Complex
         required: false
         description: constant power load on phase A, specified as VA
@@ -63,6 +82,16 @@ classes:
           value_type: complex
           native_name: constant_power_A[VA]
       constant_power_B:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p,
+            q when the phases differ; with base_power it raises. Export: not
+            written; the base_power form is.
         range: Complex
         required: false
         description: constant power load on phase B, specified as VA
@@ -73,6 +102,16 @@ classes:
           value_type: complex
           native_name: constant_power_B[VA]
       constant_power_C:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p,
+            q when the phases differ; with base_power it raises. Export: not
+            written; the base_power form is.
         range: Complex
         required: false
         description: constant power load on phase C, specified as VA
@@ -152,6 +191,11 @@ classes:
           precision: 6
           native_name: constant_power_C_reac[VAr]
       constant_current_A:
+        comments:
+          - >-
+            Import: raises when set, as every explicit constant_current,
+            constant_impedance and connection form (AN, AB, _real, _reac).
+            Export: not written; the base_power form is.
         range: Complex
         required: false
         description: constant current load on phase A, specified as Amps
@@ -251,6 +295,10 @@ classes:
           precision: 6
           native_name: constant_current_C_reac[A]
       constant_impedance_A:
+        comments:
+          - >-
+            Import: raises when set (see constant_current_A). Export: not
+            written; the base_power form is.
         range: Complex
         required: false
         description: constant impedance load on phase A, specified as Ohms
@@ -350,6 +398,10 @@ classes:
           precision: 6
           native_name: constant_impedance_C_reac[Ohm]
       constant_power_AN:
+        comments:
+          - >-
+            Import: raises when set (see constant_current_A). Export: not
+            written; the base_power form is.
         range: Complex
         required: false
         description: constant power wye-connected load on phase A, specified as VA
@@ -1085,6 +1137,19 @@ classes:
           value_type: complex
           native_name: measured_power[VA]
       base_power_A:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: split by the fractions and power factors at nominal voltage
+            into EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p, q
+            when the phases differ; <player>.value*K or <schedule>*K is K and
+            makes a ConformLoad of the group. Export: the sum of |S| of the ZIP
+            parts of the phase's p and q, <player>.value*base on a scheduled
+            ConformLoad.
         range: float
         required: false
         description: in similar format as ZIPload, this represents the nominal power
@@ -1097,6 +1162,19 @@ classes:
           precision: 6
           native_name: base_power_A[VA]
       base_power_B:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: split by the fractions and power factors at nominal voltage
+            into EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p, q
+            when the phases differ; <player>.value*K or <schedule>*K is K and
+            makes a ConformLoad of the group. Export: the sum of |S| of the ZIP
+            parts of the phase's p and q, <player>.value*base on a scheduled
+            ConformLoad.
         range: float
         required: false
         description: in similar format as ZIPload, this represents the nominal power
@@ -1109,6 +1187,19 @@ classes:
           precision: 6
           native_name: base_power_B[VA]
       base_power_C:
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.p
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: split by the fractions and power factors at nominal voltage
+            into EnergyConsumer.p (W) and q (VAr), and EnergyConsumerPhase.p, q
+            when the phases differ; <player>.value*K or <schedule>*K is K and
+            makes a ConformLoad of the group. Export: the sum of |S| of the ZIP
+            parts of the phase's p and q, <player>.value*base on a scheduled
+            ConformLoad.
         range: float
         required: false
         description: in similar format as ZIPload, this represents the nominal power
@@ -1121,6 +1212,14 @@ classes:
           precision: 6
           native_name: base_power_C[VA]
       power_pf_A:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the power part's q from its p (default
+            1; pf 0 is all Q). Export: P/|S| of the power part, negative when
+            its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1133,6 +1232,14 @@ classes:
           precision: 6
           native_name: power_pf_A[pu]
       current_pf_A:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the current part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the current part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1145,6 +1252,14 @@ classes:
           precision: 6
           native_name: current_pf_A[pu]
       impedance_pf_A:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the impedance part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the impedance part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1157,6 +1272,14 @@ classes:
           precision: 6
           native_name: impedance_pf_A[pu]
       power_pf_B:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the power part's q from its p (default
+            1; pf 0 is all Q). Export: P/|S| of the power part, negative when
+            its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1169,6 +1292,14 @@ classes:
           precision: 6
           native_name: power_pf_B[pu]
       current_pf_B:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the current part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the current part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1181,6 +1312,14 @@ classes:
           precision: 6
           native_name: current_pf_B[pu]
       impedance_pf_B:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the impedance part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the impedance part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1193,6 +1332,14 @@ classes:
           precision: 6
           native_name: impedance_pf_B[pu]
       power_pf_C:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the power part's q from its p (default
+            1; pf 0 is all Q). Export: P/|S| of the power part, negative when
+            its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1205,6 +1352,14 @@ classes:
           precision: 6
           native_name: power_pf_C[pu]
       current_pf_C:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the current part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the current part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1217,6 +1372,14 @@ classes:
           precision: 6
           native_name: current_pf_C[pu]
       impedance_pf_C:
+        close_mappings:
+          - cim:EnergyConsumer.q
+          - cim:EnergyConsumerPhase.q
+        comments:
+          - >-
+            Import: with base_power, sets the impedance part's q from its p
+            (default 1; pf 0 is all Q). Export: P/|S| of the impedance part,
+            negative when its Q is.
         range: float
         required: false
         description: in similar format as ZIPload, this is the power factor of the
@@ -1229,6 +1392,16 @@ classes:
           precision: 6
           native_name: impedance_pf_C[pu]
       power_fraction_A:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantPower
+          - cim:LoadResponseCharacteristic.qConstantPower
+        comments:
+          - >-
+            Import: with base_power, the power part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant power row or a zip_
+            LoadResponseCharacteristic row (p/qConstantPower); default 0, and
+            the power fraction is 1 - I - Z when they do not sum to 1. Export:
+            |S| of the power part over base_power, from get_load_response.
         range: float
         required: false
         description: this is the constant power fraction of base power on phase A
@@ -1240,6 +1413,17 @@ classes:
           precision: 6
           native_name: power_fraction_A[pu]
       current_fraction_A:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantCurrent
+          - cim:LoadResponseCharacteristic.qConstantCurrent
+        comments:
+          - >-
+            Import: with base_power, the current part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant current row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantCurrent); default 0,
+            and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the current part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant current fraction of base power on phase
@@ -1252,6 +1436,17 @@ classes:
           precision: 6
           native_name: current_fraction_A[pu]
       impedance_fraction_A:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantImpedance
+          - cim:LoadResponseCharacteristic.qConstantImpedance
+        comments:
+          - >-
+            Import: with base_power, the impedance part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant impedance row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantImpedance); default
+            0, and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the impedance part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant impedance fraction of base power on phase
@@ -1264,6 +1459,16 @@ classes:
           precision: 6
           native_name: impedance_fraction_A[pu]
       power_fraction_B:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantPower
+          - cim:LoadResponseCharacteristic.qConstantPower
+        comments:
+          - >-
+            Import: with base_power, the power part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant power row or a zip_
+            LoadResponseCharacteristic row (p/qConstantPower); default 0, and
+            the power fraction is 1 - I - Z when they do not sum to 1. Export:
+            |S| of the power part over base_power, from get_load_response.
         range: float
         required: false
         description: this is the constant power fraction of base power on phase B
@@ -1275,6 +1480,17 @@ classes:
           precision: 6
           native_name: power_fraction_B[pu]
       current_fraction_B:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantCurrent
+          - cim:LoadResponseCharacteristic.qConstantCurrent
+        comments:
+          - >-
+            Import: with base_power, the current part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant current row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantCurrent); default 0,
+            and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the current part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant current fraction of base power on phase
@@ -1287,6 +1503,17 @@ classes:
           precision: 6
           native_name: current_fraction_B[pu]
       impedance_fraction_B:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantImpedance
+          - cim:LoadResponseCharacteristic.qConstantImpedance
+        comments:
+          - >-
+            Import: with base_power, the impedance part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant impedance row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantImpedance); default
+            0, and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the impedance part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant impedance fraction of base power on phase
@@ -1299,6 +1526,16 @@ classes:
           precision: 6
           native_name: impedance_fraction_B[pu]
       power_fraction_C:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantPower
+          - cim:LoadResponseCharacteristic.qConstantPower
+        comments:
+          - >-
+            Import: with base_power, the power part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant power row or a zip_
+            LoadResponseCharacteristic row (p/qConstantPower); default 0, and
+            the power fraction is 1 - I - Z when they do not sum to 1. Export:
+            |S| of the power part over base_power, from get_load_response.
         range: float
         required: false
         description: this is the constant power fraction of base power on phase C
@@ -1310,6 +1547,17 @@ classes:
           precision: 6
           native_name: power_fraction_C[pu]
       current_fraction_C:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantCurrent
+          - cim:LoadResponseCharacteristic.qConstantCurrent
+        comments:
+          - >-
+            Import: with base_power, the current part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant current row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantCurrent); default 0,
+            and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the current part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant current fraction of base power on phase
@@ -1322,6 +1570,17 @@ classes:
           precision: 6
           native_name: current_fraction_C[pu]
       impedance_fraction_C:
+        close_mappings:
+          - cim:LoadResponseCharacteristic.pConstantImpedance
+          - cim:LoadResponseCharacteristic.qConstantImpedance
+        comments:
+          - >-
+            Import: with base_power, the impedance part's share of p and q makes
+            EnergyConsumer.LoadResponse, the shared constant impedance row or a
+            zip_ LoadResponseCharacteristic row (p/qConstantImpedance); default
+            0, and the power fraction is 1 - I - Z when they do not sum to 1.
+            Export: |S| of the impedance part over base_power, from
+            get_load_response.
         range: float
         required: false
         description: this is the constant impedance fraction of base power on phase

@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -31,13 +32,21 @@ classes:
       Inherits from: link
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:SeriesCompensator
+    comments:
+    - "Import: SeriesCompensator, mRID rx_ + name (series_reactor.cimtbl); fewer than three phases also sets its Terminals' phases. Export: every SeriesCompensator; a varistor raises."
     is_a: link
     attributes:
       phase_A_impedance:
+        close_mappings:
+        - cim:SeriesCompensator.r
+        - cim:SeriesCompensator.x
+        - cim:SeriesCompensator.r0
+        - cim:SeriesCompensator.x0
+        comments:
+        - "Import: r = real, x = imaginary (ohm as written); r0 = r, x0 = x. Every phase must be equal and set, else raises. Export: r + jx on each phase; r0 or x0 other than r or x raises."
         range: Complex
         required: false
         description: Series impedance of reactor on phase A
@@ -48,6 +57,8 @@ classes:
           value_type: complex
           native_name: phase_A_impedance[Ohm]
       phase_A_resistance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Resistive portion of phase A's impedance
@@ -59,6 +70,8 @@ classes:
           precision: 6
           native_name: phase_A_resistance[Ohm]
       phase_A_reactance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Reactive portion of phase A's impedance
@@ -70,6 +83,13 @@ classes:
           precision: 6
           native_name: phase_A_reactance[Ohm]
       phase_B_impedance:
+        close_mappings:
+        - cim:SeriesCompensator.r
+        - cim:SeriesCompensator.x
+        - cim:SeriesCompensator.r0
+        - cim:SeriesCompensator.x0
+        comments:
+        - "Import: r = real, x = imaginary (ohm as written); r0 = r, x0 = x. Every phase must be equal and set, else raises. Export: r + jx on each phase; r0 or x0 other than r or x raises."
         range: Complex
         required: false
         description: Series impedance of reactor on phase B
@@ -80,6 +100,8 @@ classes:
           value_type: complex
           native_name: phase_B_impedance[Ohm]
       phase_B_resistance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Resistive portion of phase B's impedance
@@ -91,6 +113,8 @@ classes:
           precision: 6
           native_name: phase_B_resistance[Ohm]
       phase_B_reactance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Reactive portion of phase B's impedance
@@ -102,6 +126,13 @@ classes:
           precision: 6
           native_name: phase_B_reactance[Ohm]
       phase_C_impedance:
+        close_mappings:
+        - cim:SeriesCompensator.r
+        - cim:SeriesCompensator.x
+        - cim:SeriesCompensator.r0
+        - cim:SeriesCompensator.x0
+        comments:
+        - "Import: r = real, x = imaginary (ohm as written); r0 = r, x0 = x. Every phase must be equal and set, else raises. Export: r + jx on each phase; r0 or x0 other than r or x raises."
         range: Complex
         required: false
         description: Series impedance of reactor on phase C
@@ -112,6 +143,8 @@ classes:
           value_type: complex
           native_name: phase_C_impedance[Ohm]
       phase_C_resistance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Resistive portion of phase C's impedance
@@ -123,6 +156,8 @@ classes:
           precision: 6
           native_name: phase_C_resistance[Ohm]
       phase_C_reactance:
+        comments:
+        - "Import: structural; set raises, phase_X_impedance is the one mapped. Export: not written."
         range: float
         required: false
         description: Reactive portion of phase C's impedance

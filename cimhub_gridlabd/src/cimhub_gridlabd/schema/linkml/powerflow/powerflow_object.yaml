@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -63,10 +64,14 @@ classes:
       \ It is highly recommended that\nstate changes to OC_NORMAL have a non-zero\
       \ delay built in (i.e., allow the\nclock to advanced).\tFailure to do so may\
       \ result in non-convergence\nof the solver.\n@{\n\nInherits from: gld_object\n\
-      \nType: Instance (network topology element)\n\nCIM Mapping: TBD\n\nNote: Inherits\
+      \nType: Instance (network topology element)\n\nNote: Inherits\
       \ from gld_object (not in powerflow module)"
     attributes:
       phases:
+        related_mappings:
+        - cim:Terminal.phases
+        comments:
+        - "Import: structural. Bus: a child's conductors must be a subset of its root's. Switch: Terminal phases, A B C with N dropped, blank when ABC. Series_reactor: Terminal.phases when fewer than three. Swing bus: EnergySource.phases, blank when ABC. Export: the A, B, C of the terminals on the bus, then N (S on a split-phase bus); a switch or reactor side 1's A, B, C."
         range: string
         required: false
         annotations:
@@ -74,6 +79,11 @@ classes:
           value_type: string
           native_name: phases
       nominal_voltage:
+        close_mappings:
+        - cim:BaseVoltage.nominalVoltage
+        - cim:EnergySource.nominalVoltage
+        comments:
+        - "Import: not copied; the topology walk gives the BaseVoltage, and a bus value over 10 percent off it is listed in bus.cimtbl. On a swing bus: EnergySource.nominalVoltage (V as written), line to line. Export: BaseVoltage LL / sqrt 3 (three phase), LL (single phase), LL / 2 (split phase leg); a substation: EnergySource.nominalVoltage / sqrt 3."
         range: float
         required: false
         unit:

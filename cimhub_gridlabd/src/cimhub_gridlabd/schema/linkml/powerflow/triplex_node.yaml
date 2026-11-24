@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -25,13 +26,20 @@ classes:
       Inherits from: powerflow_object
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:ConnectivityNode
+    close_mappings:
+    - cim:EnergyConsumer
+    comments:
+    - "Import: ConnectivityNode, mRID = name (bus.cimtbl); a plain triplex_node's power_1, power_2, power_12 also give EnergyConsumer rows, mRID ld_ + name (triplex_node.cimtbl). Export: a ConnectivityNode on a split-phase zone."
     is_a: powerflow_object
     attributes:
       bustype:
+        related_mappings:
+        - cim:EnergySource
+        comments:
+        - "Import: SWING makes an EnergySource; the rest are a plain bus. Export: not written."
         range: Bustype
         required: false
         description: defines whether the node is a PQ, PV, or SWING node
@@ -68,6 +76,11 @@ classes:
           precision: 6
           native_name: maximum_voltage_error[V]
       voltage_1:
+        close_mappings:
+        - cim:EnergySource.voltageMagnitude
+        - cim:EnergySource.voltageAngle
+        comments:
+        - "Import: on a SWING bus only: EnergySource.voltageMagnitude (line to line) and voltageAngle (deg); elsewhere the solver guess, not converted. Export: not written."
         range: Complex
         required: false
         description: bus voltage, phase 1 to ground
@@ -359,6 +372,13 @@ classes:
           value_type: complex
           native_name: current_12[A]
       power_1:
+        close_mappings:
+        - cim:EnergyConsumer.p
+        - cim:EnergyConsumer.q
+        - cim:EnergyConsumerPhase.p
+        - cim:EnergyConsumerPhase.q
+        comments:
+        - "Import: EnergyConsumer.p, q (W, VAr as written) of the ld_ + name consumer on s1, s2, and EnergyConsumerPhase.p, q (s1) when the legs differ. Export: not written."
         range: Complex
         required: false
         description: accumulator - used for debugging/interfacing only - power on
@@ -370,6 +390,13 @@ classes:
           value_type: complex
           native_name: power_1[VA]
       power_2:
+        close_mappings:
+        - cim:EnergyConsumer.p
+        - cim:EnergyConsumer.q
+        - cim:EnergyConsumerPhase.p
+        - cim:EnergyConsumerPhase.q
+        comments:
+        - "Import: EnergyConsumer.p, q (W, VAr as written) of the ld_ + name consumer on s1, s2, and EnergyConsumerPhase.p, q (s2) when the legs differ. Export: not written."
         range: Complex
         required: false
         description: accumulator - used for debugging/interfacing only - power on
@@ -381,6 +408,11 @@ classes:
           value_type: complex
           native_name: power_2[VA]
       power_12:
+        close_mappings:
+        - cim:EnergyConsumer.p
+        - cim:EnergyConsumer.q
+        comments:
+        - "Import: EnergyConsumer.p, q (W, VAr as written) of the delta consumer on s1s2, mRID ld_ + name + _12. Export: not written."
         range: Complex
         required: false
         description: accumulator - used for debugging/interfacing only - power on

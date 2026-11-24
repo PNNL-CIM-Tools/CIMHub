@@ -11,6 +11,7 @@ object node { name n7; phases AN; nominal_voltage 2401.78; }
 object node { name n8; phases CN; nominal_voltage 2401.78; }
 object node { name n9; phases AN; nominal_voltage 2401.78; }
 object node { name n10; phases CN; nominal_voltage 2401.78; }
+object node { name n11; phases ABCN; nominal_voltage 2401.78; }
 
 // a switch with N (dropped) and its own ratings, the Java export's 400/600 A
 object switch {
@@ -69,6 +70,7 @@ object recloser {
   max_number_of_tries 3;
   number_of_tries 0;
 }
+object sectionalizer { name sec_1; phases ABCN; from n2; to n11; status CLOSED; }
 
 // a center tap (mapped in S3b; the walk needs it) and two triplex lines, one on a rated configuration
 object transformer_configuration {

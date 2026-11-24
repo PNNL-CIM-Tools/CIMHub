@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -93,13 +94,20 @@ classes:
       Inherits from: powerflow_object
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    exact_mappings:
+    - cim:ConnectivityNode
+    close_mappings:
+    - cim:EnergySource
+    comments:
+    - "Import: ConnectivityNode, mRID = name (bus.cimtbl), one per root bus; a node, meter or substation with its own power_X, current_X or shunt_X set raises; a bustype SWING node also gives EnergySource, mRID src_ + name (source.cimtbl). Export: every ConnectivityNode without an EnergySource on a three- or single-phase zone."
     is_a: powerflow_object
     attributes:
       bustype:
+        related_mappings:
+        - cim:EnergySource
+        comments:
+        - "Import: SWING makes an EnergySource; PQ, PV and SWING_PQ are a plain bus (SWING_PQ is a swing only when islanded). Export: SWING on the substation only."
         range: string
         required: false
         description: defines whether the node is a PQ, PV, or SWING node
@@ -136,6 +144,11 @@ classes:
           precision: 6
           native_name: maximum_voltage_error[V]
       voltage_A:
+        close_mappings:
+        - cim:EnergySource.voltageMagnitude
+        - cim:EnergySource.voltageAngle
+        comments:
+        - "Import: on a SWING bus only: EnergySource.voltageMagnitude (line to line) and voltageAngle (deg) from |V| and arg(V); elsewhere the solver guess, not converted. Export: not written."
         range: Complex
         required: false
         description: bus voltage, Phase A to ground

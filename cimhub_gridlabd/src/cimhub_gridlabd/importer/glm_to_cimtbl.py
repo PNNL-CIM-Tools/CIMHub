@@ -140,13 +140,13 @@ def check_expressions(model: GlmModel, classified: dict[type, dict[str, Field]],
         if fields is not None and fields[slot].kind != "untranscribed":
             origin = model.origins[name]
             raise ValueError(f"{record.class_name} {name} ({origin[0]}:{origin[1]}): {slot} is the expression "
-                             f"{text!r}, which no mapper reads yet (GLM-8)")
+                             f"{text!r}, which no mapper reads yet")
 
 
 def feeder_heads(model: GlmModel, roots: dict[str, str]) -> list[str]:
     """``Feeder.NormalHeadTerminal``: the Terminal on a swing bus of every link that touches one, ``<mRID>_T1`` for
-    its ``from`` and ``_T2`` for its ``to`` (the loader's Terminal names). A head on a link no mapper writes (a
-    sectionalizer) raises: its Terminal would not exist."""
+    its ``from`` and ``_T2`` for its ``to`` (the loader's Terminal names). A head on a link no mapper writes raises:
+    its Terminal would not exist."""
     swings = {str(record.name) for record in swing_buses(model)}
     heads = []
     for native_class in (*BRANCH_CLASSES, schema.Transformer):

@@ -3,8 +3,8 @@
 The GridLAB-D records are LinkML classes. The YAML is the single source of truth for what a GLM object holds and how
 it is written; `gridlabd.py` is generated from it and never edited by hand. Unlike a hand-written schema, the YAML
 here is scraped from the GridLAB-D C++ source, class by class, so it follows what GridLAB-D publishes. The schema
-describes the native format only: it holds no CIM objects and no unit conversion, and it has no CIM mapping slots
-yet. How each class reaches CIM is the mapper's job (see [The importer](importer.md)). The rules for writing a
+describes the native format only: it holds no CIM objects and no unit conversion. How each class reaches CIM is the
+mapper's job (see [The importer](importer.md)). The rules for writing a
 native schema are in the
 [`linkml-native-schema` skill](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/linkml-native-schema/SKILL.md).
 
@@ -115,10 +115,20 @@ all back. An unset GLM property stays unset.
 
 ## The CIM mapping slots
 
-The schema carries none: no `exact_mappings`, `close_mappings` or `related_mappings`, and each class description ends
-`CIM Mapping: TBD`. The mapping is the mapper's `FIELDS` and the exporter's `SLOTS`, and the design record is the
-[import](../CIMTBL_MAPPING.md) and [export](../EXPORT_MAPPING.md) specs. The `player` class names its CIM counterpart in its
-description only.
+Each class the package converts, and each property it copies, maps, derives or reads structurally, names its cim18v17
+counterpart, as the OpenDSS schema does:
+
+| slot | meaning | example |
+|---|---|---|
+| `exact_mappings` | the same concept, copied or mapped | `line.length` → `cim:Conductor.length` |
+| `close_mappings` | a derived value, or one of several targets | `capacitor.capacitor_A` → `cim:ShuntCompensator.nomQ`; `load` → `cim:ConformLoad` when a player drives it |
+| `related_mappings` | a structural reference | `link.from_node` → `cim:Terminal.ConnectivityNode` |
+
+A short `comments` entry says where the value lands on import (the `.cimtbl` column and its unit) and how the export
+writes it back. A class the package does not convert says so in its comment instead. The slots are documentation:
+no code reads them, and the schema reference shows them. The mapping itself is the mapper's `FIELDS` and the
+exporter's `SLOTS`, and the design record is the [import](../CIMTBL_MAPPING.md) and [export](../EXPORT_MAPPING.md)
+specs. An inherited property is mapped once, on the class that declares it.
 
 ## The schema reference
 

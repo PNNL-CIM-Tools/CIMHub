@@ -7,6 +7,7 @@ imports:
 prefixes:
   linkml: https://w3id.org/linkml/
   glm: https://gridlabd.org/schema/glm/
+  cim: http://cim.ucaiug.io/cim101/draft#
 default_prefix: glm
 default_range: string
 classes:
@@ -178,13 +179,19 @@ classes:
       Inherits from: powerflow_object
 
 
-      Type: Instance (network topology element)
-
-
-      CIM Mapping: TBD'
+      Type: Instance (network topology element)'
+    broad_mappings:
+    - cim:ConductingEquipment
+    comments:
+    - "Abstract here: each subclass maps to its own CIM class. Import: a link gets two Terminals on the root buses of from and to, and its ratings go on the equipment's own OperationalLimitSet, mRID <equipment>_limits. Export: terminal 1 is from, terminal 2 is to."
     is_a: powerflow_object
     attributes:
       status:
+        related_mappings:
+        - cim:Switch.open
+        - cim:Switch.normalOpen
+        comments:
+        - "Import: a switch family device: Switch.open and Switch.normalOpen both true when OPEN; unset is CLOSED, noted on the row. A line or series_reactor must be unset or CLOSED; OPEN raises. Export: OPEN or CLOSED from the chosen switch state."
         range: string
         required: false
         annotations:
@@ -192,6 +199,10 @@ classes:
           value_type: string
           native_name: status
       from_node:
+        related_mappings:
+        - cim:Terminal.ConnectivityNode
+        comments:
+        - "Import: node1, the root bus of the object named. Export: terminal 1's bus."
         range: string
         required: false
         description: from_node - source node
@@ -200,6 +211,10 @@ classes:
           value_type: string
           native_name: from
       to:
+        related_mappings:
+        - cim:Terminal.ConnectivityNode
+        comments:
+        - "Import: node2, the root bus of the object named. Export: terminal 2's bus."
         range: string
         required: false
         description: to_node - load node
@@ -546,6 +561,10 @@ classes:
           precision: 6
           native_name: mean_repair_time[s]
       continuous_rating_A:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the normal limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits normal, written on each phase of the equipment."
         range: float
         required: false
         description: Continuous rating for phase A of this link object (set individual
@@ -558,6 +577,10 @@ classes:
           precision: 6
           native_name: continuous_rating_A[A]
       continuous_rating_B:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the normal limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits normal, written on each phase of the equipment."
         range: float
         required: false
         description: Continuous rating for phase B of this link object (set individual
@@ -570,6 +593,10 @@ classes:
           precision: 6
           native_name: continuous_rating_B[A]
       continuous_rating_C:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the normal limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits normal, written on each phase of the equipment."
         range: float
         required: false
         description: Continuous rating for phase C of this link object (set individual
@@ -582,6 +609,10 @@ classes:
           precision: 6
           native_name: continuous_rating_C[A]
       emergency_rating_A:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the emergency limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits emergency, written on each phase of the equipment."
         range: float
         required: false
         description: Emergency rating for phase A of this link object (set individual
@@ -594,6 +625,10 @@ classes:
           precision: 6
           native_name: emergency_rating_A[A]
       emergency_rating_B:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the emergency limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits emergency, written on each phase of the equipment."
         range: float
         required: false
         description: Emergency rating for phase B of this link object (set individual
@@ -606,6 +641,10 @@ classes:
           precision: 6
           native_name: emergency_rating_B[A]
       emergency_rating_C:
+        close_mappings:
+        - cim:CurrentLimit.normalValue
+        comments:
+        - "Import: CurrentLimit.normalValue (A) of the emergency limit on the equipment's own OperationalLimitSet; the set phases must agree or it raises. Export: get_current_limits emergency, written on each phase of the equipment."
         range: float
         required: false
         description: Emergency rating for phase C of this link object (set individual

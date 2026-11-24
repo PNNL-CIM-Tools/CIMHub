@@ -1,4 +1,5 @@
-"""GLM ``switch``, ``fuse``, ``recloser`` -> one ``.cimtbl`` each: ``LoadBreakSwitch``, ``Fuse``, ``Recloser`` (S3a).
+"""GLM ``switch``, ``fuse``, ``recloser``, ``sectionalizer`` -> one ``.cimtbl`` each: ``LoadBreakSwitch``, ``Fuse``,
+``Recloser``, ``Sectionaliser`` (S3a).
 
 GLM gives a device one state, ``status``: it is ``open`` and ``normalOpen`` (S3a-6). A per-phase state that differs
 from it on one of the device's phases raises: no deck has one, and CIM would need ``SwitchPhase`` rows. The
@@ -6,8 +7,8 @@ from it on one of the device's phases raises: no deck has one, and CIM would nee
 different phases takes ``phaseSide1`` (its switched conductors) and ``phaseSide2`` (its to end's) instead
 (``topology.crossed_phases``, S6-9). A fuse's ``current_limit`` is its
 ``ratedCurrent`` (S3a-8); the device's own ratings go on its own ``OperationalLimitSet`` (S3a-5). Impedance
-stand-ins, reliability data and reclosing settings are untranscribed (S3a-9). ``sectionalizer`` is not mapped:
-cim18v17 has no class for it (S3a-10).
+stand-ins, reliability data and reclosing settings are untranscribed (S3a-9). A ``sectionalizer`` adds no slots to
+``switch`` and maps as one (S3a-10).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches``.
 """
@@ -58,6 +59,7 @@ RECLOSER_FIELDS = classify(schema.Recloser, {
     "max_number_of_tries": Field("untranscribed", note="protection setting; see retry_time"),
     "number_of_tries": Field("untranscribed", note="state"),
 })
+SECTIONALIZER_FIELDS = classify(schema.Sectionalizer, {**_own("Sectionaliser"), **_SWITCH_OWN})
 FUSE_FIELDS = classify(schema.Fuse, {
     **_own("Fuse"),
     **{f"phase_{letter}_status": Field("structural", note="unset or GOOD; BLOWN raises on a phase the fuse has "
@@ -74,6 +76,7 @@ SWITCHES = (
     (schema.Switch, "LoadBreakSwitch", SWITCH_FIELDS),
     (schema.Fuse, "Fuse", FUSE_FIELDS),
     (schema.Recloser, "Recloser", RECLOSER_FIELDS),
+    (schema.Sectionalizer, "Sectionaliser", SECTIONALIZER_FIELDS),
 )
 FIELDS = {native_class: fields for native_class, _, fields in SWITCHES}
 _CIM_CLASS = {native_class: cim_class for native_class, cim_class, _ in SWITCHES}

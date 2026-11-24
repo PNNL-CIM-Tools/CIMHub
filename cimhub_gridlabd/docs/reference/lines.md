@@ -17,7 +17,7 @@ configurations, lines, switching devices, and series reactors. How to read the t
 | `switch` | `LoadBreakSwitch` | `switch.cimtbl` (`switch`) | `switch`, for every `Switch` class but the next three |
 | `fuse` | `Fuse` | `fuse.cimtbl` (`switch`) | `fuse` |
 | `recloser` | `Recloser` | `recloser.cimtbl` (`switch`) | `recloser` |
-| `sectionalizer` | `Sectionaliser` | not mapped | `sectionalizer` |
+| `sectionalizer` | `Sectionaliser` | `sectionalizer.cimtbl` (`switch`) | `sectionalizer` |
 | `series_reactor` | `SeriesCompensator` | `series_reactor.cimtbl` (`series_compensator`) | `series_reactor` |
 
 The shapes are on the core site's [shapes page](https://pnnl-cim-tools.github.io/CIMHub/core/developer/shapes/), and the
@@ -303,7 +303,8 @@ print(sorted(record.name for record in exported.graph[cls].values()))
 
 ## switch, fuse, recloser, sectionalizer
 
-A switching device is a `LoadBreakSwitch`, `Fuse` or `Recloser` `sw_<name>`, in one artifact per GLM class. GLM gives a
+A switching device is a `LoadBreakSwitch`, `Fuse`, `Recloser` or `Sectionaliser` `sw_<name>`, in one artifact per GLM
+class. A `sectionalizer` adds no properties to `switch`, so it maps the same way. GLM gives a
 device one state, `status`, so it becomes both `open` and `normalOpen`. The `phases` cell is the switched conductors with
 `N` dropped, and blank when they are A, B and C. A switching device `OPEN` between laterals on different phases (a tie from
 an A lateral to a B one) takes `phaseSide1`, the switched conductors, and `phaseSide2`, its `to` end's, instead of
@@ -327,9 +328,7 @@ an A lateral to a B one) takes `phaseSide1`, the switched conductors, and `phase
 **Fail fast.** A phase state that differs from `status` on a phase the device has; a `BLOWN` fuse phase; phases other
 than A, B, C and N; an end that is no bus object; phases that are not on both end objects (only an `OPEN` device between laterals on different phases may differ).
 
-**Expected differences.** A `sectionalizer` is not imported: the master lists it among the classes no mapper reads, the
-walk still treats it as a switching branch, so the bus voltages are computed as if it were connected, but no Terminal is written and the buses beyond it are disconnected from the source in the CIM. One that touches a swing bus raises at the feeder head. On export a CIM
-`Sectionaliser` is a `sectionalizer`, a `Fuse` a `fuse`, a `Recloser` a `recloser`, and every other switch class a
+**Expected differences.** On export a CIM `Sectionaliser` is a `sectionalizer`, a `Fuse` a `fuse`, a `Recloser` a `recloser`, and every other switch class a
 `switch`: GridLAB-D has no breaker. A recloser's retry settings, a fuse's resistance and all per-phase states are lost.
 A tie across phases is written on side 1's phases.
 

@@ -11,6 +11,9 @@ default_prefix: glm
 default_range: string
 classes:
   evcharger:
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: residential_enduse
     description: "Copyright (C) 2008 Battelle Memorial Institute\n@file evcharger.cpp\n\
       @addtogroup evcharger\n@ingroup residential\nThere are only two types of electric\
@@ -46,7 +49,7 @@ classes:
       \ daytype blocks as are supported simultaneously (2 max at this time).\n@todo\
       \ the 24.rows() are not check for compliance with the 24 hour rule, the 0-1\
       \ rule, or the normalized rule.\n@{\n\nInherits from: residential_enduse\n\n\
-      Type: Instance (network topology element)\n\nCIM Mapping: TBD\n\nNote: Inherits\
+      Type: Instance (network topology element)\n\nNote: Inherits\
       \ from residential_enduse (not in residential module)"
     attributes:
       charger_type:

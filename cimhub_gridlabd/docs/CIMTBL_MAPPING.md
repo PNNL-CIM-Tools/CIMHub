@@ -24,7 +24,7 @@ Mapper: `importer/glm_to_cimtbl.py` `map_master`. Test: `tests/test_glm_to_cimtb
 | row | from | rule |
 |---|---|---|
 | `Substation`, `Feeder` | `substation=` and `feeder=`, each the `name` the caller passes unless given (D7; the model's `Model` and file stem stay `name`) | mRIDs `sub_<substation>`, `fdr_<feeder>`, source case |
-| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes (a sectionalizer) raises |
+| `Update Table Terminal` (last, after the Imports) | every mapped link touching a swing bus | `NormalHeadFeeder` = the feeder on that link's Terminal there: `<mRID>_T1` for its `from`, `_T2` for its `to` (a regulator: each unit's); a head on a link no mapper writes raises |
 | `BaseFrequency` | `module powerflow { nominal_frequency ...; }`, else `#set powerflow::nominal_frequency=...` | else GridLAB-D's 60 Hz, listed as `# defaulted` |
 | `BaseVoltage` | the topology walk's distinct bus voltages (`cimtopology.core`), highest first | `nominal_kv` rounding; mRIDs `bv_12p47kv`, `bv_240v` |
 | comment | every GLM type no mapper reads, with its count, including types the schema lacks (`recorder`) | GLM-14 |
@@ -1243,6 +1243,7 @@ source (`powerflow/`).
 | 9 | `switch.cimtbl` | switch (580) | `LoadBreakSwitch` | `sw_<name>` |
 | 9 | `fuse.cimtbl` | fuse (1,599) | `Fuse` | `sw_<name>` |
 | 9 | `recloser.cimtbl` | recloser (35) | `Recloser` | `sw_<name>` |
+| 9 | `sectionalizer.cimtbl` | sectionalizer (0) | `Sectionaliser` | `sw_<name>` |
 
 Shapes: `line_by_wire_configuration`, `line_by_impedance` (ratings on the instance), `switch`. No shape change.
 
@@ -1291,7 +1292,7 @@ Table ACLineSegment: mRID, name, node1, node2, phases, length (ft), WireConfigur
 | `inrush_*` | untranscribed | inrush solver settings |
 | object header (`parent`, `groupid`, `latitude`, `longitude`, `in_svc`, `out_svc`, `rank`, `flags`) | untranscribed | no deck sets them on a link; listed per row when set |
 
-### Switches, fuses, reclosers
+### Switches, fuses, reclosers, sectionalizers
 
 ```
 # IEEE123: a balanced 3-phase device leaves phases blank (shape switch); GLM has one state, so normalOpen = open
@@ -1344,7 +1345,7 @@ Table Fuse: mRID, name, node1, node2, phases, ratedCurrent (A), open, normalOpen
 | S3a-7 | Switch phases | **approved:** The phase conductors, N dropped: GridLAB-D's switch, fuse and recloser have no neutral element, and CIM's `SwitchPhase` is a switched conductor (the DSS import writes none). 568 of 580 switches and 1,598 of 1,599 fuses write N |
 | S3a-8 | Fuse rating | **approved:** `current_limit` copied to `ratedCurrent` as written: 1,598 taxonomy fuses write 50000 A (`// 10000` in a trailing comment), a fuse that never blows; IEEE13_cdpsm's is 100 A, as the DSS import |
 | S3a-9 | Recloser | **approved:** `Recloser`; its reclosing settings untranscribed until the protection model lands (DSS-11, U15) |
-| S3a-10 | Sectionalizer (GLM-10, amended) | **approved:** **Not mapped:** cim18v17 has no `Sectionalizer` class and no deck has one, so it stays on the master's not-mapped list (GLM-14) |
+| S3a-10 | Sectionalizer (GLM-10, amended 2026-11-24) | **approved:** `Sectionaliser`, which cim18v17 has as a `Switch`. A GLM `sectionalizer` adds no slots to `switch`, so it maps as one: the switch table's fields, the same rules (S3a-5 to S3a-7). No deck has one; the line atom does. (Before 2026-11-24 it was not mapped, which split the network at it: the walk crosses it as a branch.) |
 | S3a-11 | Field tables | **approved:** Generated from the mappers' `FIELDS` with `fields_table` once built, as S2-10 |
 
 **Expected differences from the DSS import of IEEE13 (GLM-16):** mRIDs and names carry the Java prefixes
@@ -1367,7 +1368,7 @@ fill. With S3a-5, the switches carry 400/600 A limits that the DSS import drops.
 - Atom `tests/atoms/line/line.glm` (on the S2 catalog atom by `#include`: a matrix line written `CA`, a taxonomy
   geometry line in metres, an underground line from a child node, two triplex lines, one on a rated
   configuration, a switch with N and ratings, an open switch, a fuse with and without `current_limit`, a 1-phase
-  recloser with three phase states) with one golden per part; goldens `tests/goldens/IEEE13_cdpsm/overhead_line`,
+  recloser with three phase states, a sectionalizer) with one golden per part; goldens `tests/goldens/IEEE13_cdpsm/overhead_line`,
   `switch`, `fuse`, `recloser`; `tests/test_cimtbl_line.py` (classification, the atom bound and read back, 11
   fail-fast cases, and a sweep that counts every line and switching device and checks, on every geometry line,
   that ACLineSegmentPhase k is its spacing's position k).
@@ -1541,6 +1542,11 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `retry_time` | `Optional[float]` | `1.0` | untranscribed | protection setting; home RecloseSequence, which waits for the protection model (DSS-11, U15) |
 | `max_number_of_tries` | `Optional[float]` | `3.0` | untranscribed | protection setting; see retry_time |
 | `number_of_tries` | `Optional[float]` | `0.0` | untranscribed | state |
+
+#### sectionalizer
+
+A `sectionalizer` is a `switch` with no slots of its own: every field is the switch table's, classified the same
+(`switch.SECTIONALIZER_FIELDS`), and the row is `Sectionaliser`'s, mRID `sw_<name>`.
 
 ## S3b: transformers (approved 2026-11-09 with the user's S3b-1, -4, -5, -9; built 2026-11-09)
 

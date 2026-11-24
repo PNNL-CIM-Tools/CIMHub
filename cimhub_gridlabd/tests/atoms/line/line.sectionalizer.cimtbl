@@ -1,0 +1,8 @@
+# GridLAB-D sectionalizer -> Sectionaliser.
+# Source table: sectionalizer (records: 1)
+# Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s3a-lines-and-switches
+
+Profile = cim18v17
+
+Table Sectionaliser: mRID, name, node1, node2, phases, open, normalOpen, BaseVoltage, EquipmentContainer=fdr_line
+    sw_sec_1, sec_1, n2, n11, , false, false, bv_4p16kv

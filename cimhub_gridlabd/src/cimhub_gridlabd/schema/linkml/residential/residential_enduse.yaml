@@ -12,6 +12,9 @@ default_prefix: glm
 default_range: string
 classes:
   residential_enduse:
+    comments:
+    - CIMHub does not convert this class. The importer reads no property of it and lists it, with
+      its count, on the master's not-mapped comment; the exporter writes none.
     is_a: glm_object
     abstract: true
     description: 'The base of every residential enduse (ZIPload, waterheater, lights,

@@ -3,7 +3,7 @@
 How this package is tested, and how to add a test. The shared helpers (`cim_scope`, `atom_documents`,
 `assert_matches_golden`, `assert_text_matches_golden`, `record_diff`) and the general test types are on the core site's
 [Testing](https://pnnl-cim-tools.github.io/CIMHub/core/developer/testing/) page; this page is what is specific to
-GridLAB-D. The engine is GridLAB-D 6.0 itself, run in process through the `gridlabd` wheel (a test dependency only),
+GridLAB-D. The engine is GridLAB-D 6.0 itself, run in process through the `gridlabd` wheel (the package's `solve` extra),
 and it is the oracle wherever a quantity can be computed by both sides.
 
 ## Running the tests

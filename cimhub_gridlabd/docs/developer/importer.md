@@ -95,7 +95,7 @@ object type the schema lacks is in that list too, from `GlmModel.not_read`.
 | `BaseVoltage` | The walk's distinct bus voltages, highest first. |
 | `OperationalLimitType` | `limit_types()`: the normal and emergency types every `CurrentLimit` names. |
 | `Import` | One per non-empty part. |
-| `Update Table Terminal` | Last, after the imports: `NormalHeadFeeder` on the Terminal of every link that touches a swing bus (`feeder_heads`: `<mRID>_T1` for its `from`, `_T2` for its `to`). A head on a link no mapper writes (a sectionalizer) raises. |
+| `Update Table Terminal` | Last, after the imports: `NormalHeadFeeder` on the Terminal of every link that touches a swing bus (`feeder_heads`: `<mRID>_T1` for its `from`, `_T2` for its `to`). A head on a link no mapper writes raises. |
 
 ### The topology walk
 

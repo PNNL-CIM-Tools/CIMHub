@@ -279,9 +279,6 @@ class LinkMLGenerator:
         elif class_name in self.instances:
             lines.append("\nType: Instance (network topology element)")
 
-        # Placeholder for CIM mapping
-        lines.append("\nCIM Mapping: TBD")
-
         return '\n'.join(lines)
 
     def _generate_attribute(self, prop: dict, order: int, safe_name: str) -> dict:
