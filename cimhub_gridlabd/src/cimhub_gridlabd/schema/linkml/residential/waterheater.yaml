@@ -67,7 +67,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_volume[gal]
       tank_UA:
@@ -79,7 +78,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_UA[Btu*h/degF]
       tank_diameter:
@@ -91,7 +89,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_diameter[ft]
       tank_height:
@@ -103,7 +100,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_height[ft]
       water_demand:
@@ -115,7 +111,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: water_demand[gpm]
       heating_element_capacity:
@@ -127,7 +122,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_element_capacity[kW]
       inlet_water_temperature:
@@ -139,7 +133,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: inlet_water_temperature[degF]
       waterheater_model:
@@ -149,7 +142,6 @@ classes:
         annotations:
           order: 8
           value_type: string
-          separator: ','
           native_name: waterheater_model
       heat_mode:
         range: HeatMode
@@ -158,7 +150,6 @@ classes:
         annotations:
           order: 9
           value_type: string
-          separator: ','
           native_name: heat_mode
       location:
         range: Location
@@ -167,7 +158,6 @@ classes:
         annotations:
           order: 10
           value_type: string
-          separator: ','
           native_name: location
       heatpump_predicted_energy:
         range: float
@@ -179,7 +169,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: heatpump_predicted_energy[Wh]
       tank_setpoint:
@@ -191,7 +180,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_setpoint[degF]
       thermostat_deadband:
@@ -203,7 +191,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: thermostat_deadband[degF]
       temperature:
@@ -215,7 +202,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: temperature[degF]
       height:
@@ -227,7 +213,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: height[ft]
       demand:
@@ -239,7 +224,6 @@ classes:
         annotations:
           order: 16
           value_type: complex
-          separator: ','
           native_name: demand[kVA]
       actual_load:
         range: float
@@ -250,7 +234,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_load[kW]
       previous_load:
@@ -263,7 +246,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: previous_load[kW]
       actual_power:
@@ -275,7 +257,6 @@ classes:
         annotations:
           order: 19
           value_type: complex
-          separator: ','
           native_name: actual_power[kVA]
       time_to_transition:
         range: float
@@ -284,7 +265,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_to_transition
       Tlower:
@@ -294,7 +274,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tlower
       heating_element_on:
@@ -304,7 +283,6 @@ classes:
         annotations:
           order: 22
           value_type: bool
-          separator: ','
           native_name: heating_element_on
       turn_fan_on:
         range: boolean
@@ -313,7 +291,6 @@ classes:
         annotations:
           order: 23
           value_type: bool
-          separator: ','
           native_name: turn_fan_on
       heat_needed:
         range: boolean
@@ -322,7 +299,6 @@ classes:
         annotations:
           order: 24
           value_type: bool
-          separator: ','
           native_name: heat_needed
       water_demand_old:
         range: float
@@ -331,7 +307,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: water_demand_old
       init_tank_temp:
@@ -341,7 +316,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: init_tank_temp
       is_waterheater_on:
@@ -352,7 +326,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_waterheater_on
       gas_fan_power:
@@ -364,7 +337,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: gas_fan_power[kW]
       gas_standby_power:
@@ -376,7 +348,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: gas_standby_power[kW]
       heat_pump_coefficient_of_performance:
@@ -389,7 +360,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: heat_pump_coefficient_of_performance[Btu/kWh]
       Tcontrol:
@@ -402,7 +372,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tcontrol[degF]
       current_tank_status:
@@ -411,7 +380,6 @@ classes:
         annotations:
           order: 32
           value_type: string
-          separator: ','
           native_name: current_tank_status
       dr_signal:
         range: float
@@ -420,7 +388,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: dr_signal
       COP:
@@ -430,7 +397,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: COP
       operating_mode:
@@ -440,7 +406,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: operating_mode
       fortran_sim_time:
@@ -452,7 +417,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: fortran_sim_time[s]
       waterheater_power:
@@ -464,7 +428,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: waterheater_power[kW]
       load_state:
@@ -473,7 +436,6 @@ classes:
         annotations:
           order: 38
           value_type: string
-          separator: ','
           native_name: load_state
       actual_voltage:
         range: float
@@ -481,7 +443,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_voltage
       nominal_voltage:
@@ -490,7 +451,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: nominal_voltage
       re_override:
@@ -500,7 +460,6 @@ classes:
         annotations:
           order: 41
           value_type: string
-          separator: ','
           native_name: re_override
       lower_tank_setpoint:
         range: float
@@ -512,7 +471,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: lower_tank_setpoint[degF]
       upper_tank_setpoint:
@@ -525,7 +483,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: upper_tank_setpoint[degF]
       lower_tank_deadband:
@@ -538,7 +495,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: lower_tank_deadband[degF]
       upper_tank_deadband:
@@ -551,7 +507,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: upper_tank_deadband[degF]
       lower_tank_temperature:
@@ -564,7 +519,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: lower_tank_temperature[degF]
       upper_tank_temperature:
@@ -577,7 +531,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: upper_tank_temperature[degF]
       discrete_step_size:
@@ -590,7 +543,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: discrete_step_size[s]
       circular_flow_rate:
@@ -603,7 +555,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: circular_flow_rate[gpm]
       T_mixing_valve:
@@ -616,7 +567,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: T_mixing_valve[degF]
       lower_heating_element_state:
@@ -627,7 +577,6 @@ classes:
         annotations:
           order: 51
           value_type: string
-          separator: ','
           native_name: lower_heating_element_state
       upper_heating_element_state:
         range: string
@@ -637,5 +586,4 @@ classes:
         annotations:
           order: 52
           value_type: string
-          separator: ','
           native_name: upper_heating_element_state

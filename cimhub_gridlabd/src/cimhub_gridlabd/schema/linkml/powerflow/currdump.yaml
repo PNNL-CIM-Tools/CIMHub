@@ -34,7 +34,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: group
       runtime:
         range: string
@@ -43,7 +42,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: runtime
       filename:
         range: string
@@ -52,7 +50,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: filename
       runcount:
         range: integer
@@ -61,7 +58,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ','
           native_name: runcount
       mode:
         range: string
@@ -69,5 +65,4 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: mode

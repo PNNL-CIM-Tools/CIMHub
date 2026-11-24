@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       shunt_id:
         description: ID - Shunt identifier (1 or 2 characters)
@@ -36,7 +35,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       status:
@@ -46,7 +44,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
           raw_default: 1
 
       gl:
@@ -59,7 +56,6 @@ classes:
           order: 4
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       bl:
@@ -72,5 +68,4 @@ classes:
           order: 5
           value_type: float
           precision: 3
-          separator: ""  # No separator after last field
           raw_default: 0.0

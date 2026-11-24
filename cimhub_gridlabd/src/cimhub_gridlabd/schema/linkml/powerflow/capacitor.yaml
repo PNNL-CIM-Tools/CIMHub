@@ -38,7 +38,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: pt_phase
       phases_connected:
         range: string
@@ -47,7 +46,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: phases_connected
       switchA:
         range: string
@@ -56,7 +54,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: switchA
       switchB:
         range: string
@@ -65,7 +62,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: switchB
       switchC:
         range: string
@@ -74,7 +70,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: switchC
       control:
         range: Control
@@ -83,7 +78,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: control
       cap_A_switch_count:
         range: float
@@ -92,7 +86,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: cap_A_switch_count
       cap_B_switch_count:
@@ -102,7 +95,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: cap_B_switch_count
       cap_C_switch_count:
@@ -112,7 +104,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: cap_C_switch_count
       voltage_set_high:
@@ -124,7 +115,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_set_high[V]
       voltage_set_low:
@@ -136,7 +126,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_set_low[V]
       voltage_deadband_center:
@@ -148,7 +137,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_deadband_center[V]
       voltage_deadband:
@@ -160,7 +148,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_deadband[V]
       VAr_set_high:
@@ -172,7 +159,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: VAr_set_high[VAr]
       VAr_set_low:
@@ -184,7 +170,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: VAr_set_low[VAr]
       VAr_deadband_center:
@@ -196,7 +181,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: VAr_deadband_center[VAr]
       VAr_deadband:
@@ -208,7 +192,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: VAr_deadband[VAr]
       current_set_low:
@@ -220,7 +203,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_set_low[A]
       current_set_high:
@@ -232,7 +214,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_set_high[A]
       current_deadband_center:
@@ -244,7 +225,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_deadband_center[A]
       current_deadband:
@@ -256,7 +236,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_deadband[A]
       capacitor_A:
@@ -268,7 +247,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacitor_A[VAr]
       capacitor_B:
@@ -280,7 +258,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacitor_B[VAr]
       capacitor_C:
@@ -292,7 +269,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacitor_C[VAr]
       cap_nominal_voltage:
@@ -305,7 +281,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: cap_nominal_voltage[V]
       time_delay:
@@ -317,7 +292,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_delay[s]
       dwell_time:
@@ -330,7 +304,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: dwell_time[s]
       lockout_time:
@@ -343,7 +316,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: lockout_time[s]
       remote_sense:
@@ -353,7 +325,6 @@ classes:
         annotations:
           order: 29
           value_type: string
-          separator: ','
           native_name: remote_sense
       remote_sense_B:
         range: string
@@ -363,7 +334,6 @@ classes:
         annotations:
           order: 30
           value_type: string
-          separator: ','
           native_name: remote_sense_B
       control_level:
         range: ControlLevel
@@ -372,5 +342,4 @@ classes:
         annotations:
           order: 31
           value_type: string
-          separator: ','
           native_name: control_level

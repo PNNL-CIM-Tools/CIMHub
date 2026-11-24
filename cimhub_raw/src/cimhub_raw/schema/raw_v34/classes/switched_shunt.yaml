@@ -27,7 +27,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
       modsw:
         description: MODSW - Control mode (0 locked, 1 discrete local or remote voltage, 2 continuous voltage, 3-6 reactive power or admittance control)
         range: integer
@@ -35,7 +34,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
           raw_default: 1
       adjm:
         description: ADJM - Adjustment method (0 switch in input order, 1 next highest or lowest total admittance)
@@ -44,7 +42,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
           raw_default: 0
       status:
         description: STAT - Switched shunt status (0=out of service, 1=in service)
@@ -53,7 +50,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
       vswhi:
         description: VSWHI - Voltage upper limit for switching in per-unit
@@ -63,7 +59,6 @@ classes:
           order: 5
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 1.0
       vswlo:
         description: VSWLO - Voltage lower limit for switching in per-unit
@@ -73,7 +68,6 @@ classes:
           order: 6
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 1.0
       swreg:
         description: SWREG - Bus number or extended bus name of the regulated bus (0 or own bus for local control)
@@ -82,7 +76,6 @@ classes:
         annotations:
           order: 7
           value_type: int
-          separator: ","
           raw_default: 0
       rmpct:
         description: RMPCT - Percent of required Mvar contribution (must be positive)
@@ -92,7 +85,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 100.0
       rmidnt:
         description: RMIDNT - Name of the VSC dc line (MODSW 4) or FACTS device (MODSW 6)
@@ -104,7 +96,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
       binit:
         description: BINIT - Initial switched shunt admittance in Mvar at unity voltage
@@ -116,7 +107,6 @@ classes:
           order: 10
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
       # ==== VARIABLE BLOCKS (N/B pairs) ====
       n1:
@@ -126,7 +116,6 @@ classes:
         annotations:
           order: 11
           value_type: int
-          separator: ","
           serialize_if: "custom:n1 != 0"
           raw_default: 0
       b1:
@@ -139,7 +128,6 @@ classes:
           order: 12
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n1 != 0"
           raw_default: 0.0
       n2:
@@ -149,7 +137,6 @@ classes:
         annotations:
           order: 13
           value_type: int
-          separator: ","
           serialize_if: "custom:n2 != 0"
           raw_default: 0
       b2:
@@ -162,7 +149,6 @@ classes:
           order: 14
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n2 != 0"
           raw_default: 0.0
       n3:
@@ -172,7 +158,6 @@ classes:
         annotations:
           order: 15
           value_type: int
-          separator: ","
           serialize_if: "custom:n3 != 0"
           raw_default: 0
       b3:
@@ -185,7 +170,6 @@ classes:
           order: 16
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n3 != 0"
           raw_default: 0.0
       n4:
@@ -195,7 +179,6 @@ classes:
         annotations:
           order: 17
           value_type: int
-          separator: ","
           serialize_if: "custom:n4 != 0"
           raw_default: 0
       b4:
@@ -208,7 +191,6 @@ classes:
           order: 18
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n4 != 0"
           raw_default: 0.0
       n5:
@@ -218,7 +200,6 @@ classes:
         annotations:
           order: 19
           value_type: int
-          separator: ","
           serialize_if: "custom:n5 != 0"
           raw_default: 0
       b5:
@@ -231,7 +212,6 @@ classes:
           order: 20
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n5 != 0"
           raw_default: 0.0
       n6:
@@ -241,7 +221,6 @@ classes:
         annotations:
           order: 21
           value_type: int
-          separator: ","
           serialize_if: "custom:n6 != 0"
           raw_default: 0
       b6:
@@ -254,7 +233,6 @@ classes:
           order: 22
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n6 != 0"
           raw_default: 0.0
       n7:
@@ -264,7 +242,6 @@ classes:
         annotations:
           order: 23
           value_type: int
-          separator: ","
           serialize_if: "custom:n7 != 0"
           raw_default: 0
       b7:
@@ -277,7 +254,6 @@ classes:
           order: 24
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n7 != 0"
           raw_default: 0.0
       n8:
@@ -287,7 +263,6 @@ classes:
         annotations:
           order: 25
           value_type: int
-          separator: ","
           serialize_if: "custom:n8 != 0"
           raw_default: 0
       b8:
@@ -300,7 +275,6 @@ classes:
           order: 26
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:n8 != 0"
           raw_default: 0.0
       # ==== TRAILING FIELD ====
@@ -311,5 +285,4 @@ classes:
         annotations:
           order: 27
           value_type: int
-          separator: ""  # No separator after last field
           raw_default: 0

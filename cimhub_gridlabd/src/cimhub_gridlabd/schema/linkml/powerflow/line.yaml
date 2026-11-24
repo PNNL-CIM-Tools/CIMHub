@@ -97,7 +97,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: configuration
       length:
         range: float
@@ -107,6 +106,5 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: length[ft]

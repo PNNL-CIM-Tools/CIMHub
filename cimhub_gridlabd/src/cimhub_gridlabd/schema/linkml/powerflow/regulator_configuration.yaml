@@ -41,7 +41,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: connect_type
       band_center:
         range: float
@@ -52,7 +51,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: band_center[V]
       band_width:
@@ -64,7 +62,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: band_width[V]
       time_delay:
@@ -76,7 +73,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_delay[s]
       dwell_time:
@@ -88,7 +84,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: dwell_time[s]
       raise_taps:
@@ -99,7 +94,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: raise_taps
       lower_taps:
         range: integer
@@ -109,7 +103,6 @@ classes:
         annotations:
           order: 7
           value_type: string
-          separator: ','
           native_name: lower_taps
       current_transducer_ratio:
         range: float
@@ -120,7 +113,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_transducer_ratio[pu]
       power_transducer_ratio:
@@ -132,7 +124,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_transducer_ratio[pu]
       compensator_r_setting_A:
@@ -145,7 +136,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_r_setting_A[V]
       compensator_r_setting_B:
@@ -158,7 +148,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_r_setting_B[V]
       compensator_r_setting_C:
@@ -171,7 +160,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_r_setting_C[V]
       compensator_x_setting_A:
@@ -184,7 +172,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_x_setting_A[V]
       compensator_x_setting_B:
@@ -197,7 +184,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_x_setting_B[V]
       compensator_x_setting_C:
@@ -210,7 +196,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: compensator_x_setting_C[V]
       CT_phase:
@@ -220,7 +205,6 @@ classes:
         annotations:
           order: 16
           value_type: string
-          separator: ','
           native_name: CT_phase
       PT_phase:
         range: string
@@ -229,7 +213,6 @@ classes:
         annotations:
           order: 17
           value_type: string
-          separator: ','
           native_name: PT_phase
       regulation:
         range: float
@@ -238,7 +221,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: regulation
       control_level:
@@ -248,7 +230,6 @@ classes:
         annotations:
           order: 19
           value_type: string
-          separator: ','
           native_name: control_level
       Control:
         range: string
@@ -257,7 +238,6 @@ classes:
         annotations:
           order: 20
           value_type: string
-          separator: ','
           native_name: Control
       reverse_flow_control:
         range: string
@@ -267,7 +247,6 @@ classes:
         annotations:
           order: 21
           value_type: string
-          separator: ','
           native_name: reverse_flow_control
       Type:
         range: string
@@ -276,7 +255,6 @@ classes:
         annotations:
           order: 22
           value_type: string
-          separator: ','
           native_name: Type
       tap_pos_A:
         range: integer
@@ -285,7 +263,6 @@ classes:
         annotations:
           order: 23
           value_type: string
-          separator: ','
           native_name: tap_pos_A
       tap_pos_B:
         range: integer
@@ -294,7 +271,6 @@ classes:
         annotations:
           order: 24
           value_type: string
-          separator: ','
           native_name: tap_pos_B
       tap_pos_C:
         range: integer
@@ -303,5 +279,4 @@ classes:
         annotations:
           order: 25
           value_type: string
-          separator: ','
           native_name: tap_pos_C

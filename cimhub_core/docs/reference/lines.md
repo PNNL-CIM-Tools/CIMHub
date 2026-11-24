@@ -295,11 +295,10 @@ for conductor in get_line_conductor_xy(geometry_line, "ft"):
 
 Called by `cimhub_gdm` and `cimhub_opendss`.
 
-### get_spacing_xy, get_spacing_distances, get_stored_distances
+### get_spacing_xy, get_stored_distances
 
 ```python
 get_spacing_xy(spacing, unit="m") -> tuple[ConductorXY, ...]
-get_spacing_distances(spacing, unit="m") -> dict[tuple[int, int], float]
 get_stored_distances(spacing, unit="m") -> StoredDistances
 ```
 
@@ -307,9 +306,6 @@ get_stored_distances(spacing, unit="m") -> StoredDistances
   `ConductorDistanceSpacing` needs a height for every conductor and distances that determine one geometry; a distance
   shorter than the height difference, or a stored distance that disagrees with the solved positions by more than a
   relative 1e-4 (`DISTANCE_REL_TOL`), raises.
-- `get_spacing_distances`: `{(i, j): d}` for every pair i < j. An `XYSpacing` takes them from
-  `get_stored_distances`, which holds every pair. A `ConductorDistanceSpacing` must hold a distance for
-  every pair; its heights are not needed.
 - `get_stored_distances`: what the spacing holds, as it holds it: an `XYSpacing`'s every pair and its y, a
   `ConductorDistanceSpacing`'s stored rows only. A spacing with no `ConductorDistance` rows at all (GLM's all-zero
   spacing, "no coupling") returns empty dictionaries rather than raising.
@@ -318,13 +314,13 @@ Any other `WireSpacing` class raises `ValueError: ... has no conductor positions
 ConductorDistanceSpacing are read`.
 
 ```python
-from cimhub_core.getters.spacing import get_spacing_distances, get_spacing_xy, get_stored_distances
+from cimhub_core.getters.spacing import get_spacing_xy, get_stored_distances
 
 distance_spacing = load_model("cimhub_gridlabd/tests/atoms/catalog/catalog.line_spacing.cimtbl")
 spacing = by_mrid(distance_spacing, cim.ConductorDistanceSpacing, "spc_spc_601_ABCN")
 print([(c.sequence_number, round(c.x, 2), round(c.y, 2)) for c in get_spacing_xy(spacing, "ft")])
 # [(1, 0.0, 28.0), (2, 2.5, 28.0), (3, 7.0, 28.0), (4, 4.0, 24.0)]
-print(round(get_spacing_distances(spacing, "ft")[1, 4], 4))
+print(round(get_stored_distances(spacing, "ft").distances[1, 4], 4))
 # 5.6569
 
 # a spacing with a pair and no heights: GLM's "AN only" form
@@ -338,8 +334,8 @@ except ValueError as error:
 # ConductorDistanceSpacing 'spc_line_spacing:10': conductors [1, 2] have no height (a ConductorDistance to a position of kind earth)
 ```
 
-`get_stored_distances` is called by `cimhub_gridlabd`, which writes any spacing (XY or distances) as a `line_spacing` through it; `get_spacing_xy` by `cimhub_opendss`. No spoke calls
-`get_spacing_distances`.
+`get_stored_distances` is called by `cimhub_gridlabd`, which writes any spacing (XY or distances) as a
+`line_spacing` through it; `get_spacing_xy` by `cimhub_opendss`.
 
 ## Wires
 

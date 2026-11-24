@@ -37,7 +37,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_voltage[V]
       output_current:
@@ -49,7 +48,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_current[A]
       output_power:
@@ -61,7 +59,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_power[W]
       Vbase_ES:
@@ -73,7 +70,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vbase_ES[V]
       Sbase_ES:
@@ -85,7 +81,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: Sbase_ES[VA]
       Qbase_ES:
@@ -97,7 +92,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qbase_ES[Wh]
       SOC_0_ES:
@@ -109,7 +103,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: SOC_0_ES[pu]
       SOC_ES:
@@ -121,7 +114,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: SOC_ES[pu]
       Q_ES:
@@ -133,7 +125,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: Q_ES[Wh]
       E_ES_pu:
@@ -145,7 +136,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_ES_pu[pu]
       E0_ES_pu:
@@ -157,7 +147,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: E0_ES_pu[pu]
       K_ES_pu:
@@ -169,7 +158,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: K_ES_pu[pu]
       A_ES_pu:
@@ -181,7 +169,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: A_ES_pu[pu]
       B_ES_pu:
@@ -193,7 +180,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: B_ES_pu[pu]
       V_ES_pu:
@@ -205,7 +191,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_ES_pu[pu]
       I_ES_pu:
@@ -217,7 +202,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: I_ES_pu[pu]
       R_ES_pu:
@@ -229,7 +213,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: R_ES_pu[pu]
       P_ES_pu:
@@ -241,6 +224,5 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_ES_pu[pu]

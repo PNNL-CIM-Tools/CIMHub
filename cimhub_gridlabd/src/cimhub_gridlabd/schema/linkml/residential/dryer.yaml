@@ -67,7 +67,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_power[W]
       dryer_coil_power:
@@ -78,7 +77,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: dryer_coil_power[W]
       controls_power:
@@ -89,7 +87,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: controls_power[W]
       circuit_split:
@@ -98,7 +95,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: circuit_split
       queue:
@@ -110,7 +106,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue[unit]
       queue_min:
@@ -121,7 +116,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_min[unit]
       queue_max:
@@ -132,7 +126,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_max[unit]
       stall_voltage:
@@ -143,7 +136,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_voltage[V]
       start_voltage:
@@ -154,7 +146,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: start_voltage[V]
       stall_impedance:
@@ -165,7 +156,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: stall_impedance[Ohm]
       trip_delay:
         range: float
@@ -175,7 +165,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip_delay[s]
       reset_delay:
@@ -186,7 +175,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: reset_delay[s]
       total_power:
@@ -197,7 +185,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_power[W]
       state:
@@ -206,7 +193,6 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: state
       energy_baseline:
         range: float
@@ -216,7 +202,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_baseline[kWh]
       energy_used:
@@ -227,7 +212,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_used[kWh]
       next_t:
@@ -236,7 +220,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: next_t
       control_check:
@@ -245,7 +228,6 @@ classes:
         annotations:
           order: 18
           value_type: bool
-          separator: ','
           native_name: control_check
       motor_only_check1:
         range: boolean
@@ -253,7 +235,6 @@ classes:
         annotations:
           order: 19
           value_type: bool
-          separator: ','
           native_name: motor_only_check1
       motor_only_check2:
         range: boolean
@@ -261,7 +242,6 @@ classes:
         annotations:
           order: 20
           value_type: bool
-          separator: ','
           native_name: motor_only_check2
       motor_only_check3:
         range: boolean
@@ -269,7 +249,6 @@ classes:
         annotations:
           order: 21
           value_type: bool
-          separator: ','
           native_name: motor_only_check3
       motor_only_check4:
         range: boolean
@@ -277,7 +256,6 @@ classes:
         annotations:
           order: 22
           value_type: bool
-          separator: ','
           native_name: motor_only_check4
       motor_only_check5:
         range: boolean
@@ -285,7 +263,6 @@ classes:
         annotations:
           order: 23
           value_type: bool
-          separator: ','
           native_name: motor_only_check5
       motor_only_check6:
         range: boolean
@@ -293,7 +270,6 @@ classes:
         annotations:
           order: 24
           value_type: bool
-          separator: ','
           native_name: motor_only_check6
       dryer_on:
         range: boolean
@@ -301,7 +277,6 @@ classes:
         annotations:
           order: 25
           value_type: bool
-          separator: ','
           native_name: dryer_on
       dryer_ready:
         range: boolean
@@ -309,7 +284,6 @@ classes:
         annotations:
           order: 26
           value_type: bool
-          separator: ','
           native_name: dryer_ready
       dryer_check:
         range: boolean
@@ -317,7 +291,6 @@ classes:
         annotations:
           order: 27
           value_type: bool
-          separator: ','
           native_name: dryer_check
       motor_coil_only_check1:
         range: boolean
@@ -325,7 +298,6 @@ classes:
         annotations:
           order: 28
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check1
       motor_coil_only_check2:
         range: boolean
@@ -333,7 +305,6 @@ classes:
         annotations:
           order: 29
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check2
       motor_coil_only_check3:
         range: boolean
@@ -341,7 +312,6 @@ classes:
         annotations:
           order: 30
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check3
       motor_coil_only_check4:
         range: boolean
@@ -349,7 +319,6 @@ classes:
         annotations:
           order: 31
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check4
       motor_coil_only_check5:
         range: boolean
@@ -357,7 +326,6 @@ classes:
         annotations:
           order: 32
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check5
       motor_coil_only_check6:
         range: boolean
@@ -365,7 +333,6 @@ classes:
         annotations:
           order: 33
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check6
       dryer_run_prob:
         range: float
@@ -373,7 +340,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: dryer_run_prob
       dryer_turn_on:
@@ -382,7 +348,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: dryer_turn_on
       pulse_interval_1:
@@ -393,7 +358,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_1[s]
       pulse_interval_2:
@@ -404,7 +368,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_2[s]
       pulse_interval_3:
@@ -415,7 +378,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_3[s]
       pulse_interval_4:
@@ -426,7 +388,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_4[s]
       pulse_interval_5:
@@ -437,7 +398,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_5[s]
       pulse_interval_6:
@@ -448,7 +408,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_6[s]
       pulse_interval_7:
@@ -459,7 +418,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_7[s]
       pulse_interval_8:
@@ -471,7 +429,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_8[s]
       pulse_interval_9:
@@ -483,7 +440,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_9[s]
       pulse_interval_10:
@@ -495,7 +451,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_10[s]
       energy_needed:
@@ -506,7 +461,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_needed[kWh]
       daily_dryer_demand:
@@ -517,7 +471,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: daily_dryer_demand[kWh]
       actual_dryer_demand:
@@ -528,7 +481,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_dryer_demand[kWh]
       motor_on_off:
@@ -537,7 +489,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_on_off
       motor_coil_on_off:
@@ -546,7 +497,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_coil_on_off
       new_running_state:
@@ -556,7 +506,6 @@ classes:
         annotations:
           order: 51
           value_type: bool
-          separator: ','
           native_name: new_running_state
       cycle_time:
         range: float
@@ -567,7 +516,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_time[s]
       state_time:
@@ -579,7 +527,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: state_time[s]
       start_time:
@@ -589,7 +536,6 @@ classes:
         annotations:
           order: 54
           value_type: string
-          separator: ','
           native_name: start_time
       is_240:
         range: boolean
@@ -598,5 +544,4 @@ classes:
         annotations:
           order: 55
           value_type: bool
-          separator: ','
           native_name: is_240

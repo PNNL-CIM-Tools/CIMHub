@@ -72,7 +72,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: phases
       nominal_voltage:
         range: float
@@ -82,7 +81,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: nominal_voltage[V]
       inrush_integration_method:
@@ -92,7 +90,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: inrush_integration_method
       condition:
         range: string
@@ -100,7 +97,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: condition
       solution:
         range: string
@@ -108,5 +104,4 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: solution

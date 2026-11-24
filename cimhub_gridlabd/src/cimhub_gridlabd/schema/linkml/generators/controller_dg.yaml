@@ -33,7 +33,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: groupid_dg
       ki:
         range: float
@@ -42,7 +41,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: ki
       kp:
@@ -52,7 +50,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: kp
       gain:
@@ -62,7 +59,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: gain
       ki_QV:
@@ -72,7 +68,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: ki_QV
       kp_QV:
@@ -82,7 +77,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: kp_QV
       gain_QV:
@@ -92,7 +86,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: gain_QV
       first_run:
@@ -102,7 +95,6 @@ classes:
         annotations:
           order: 8
           value_type: bool
-          separator: ','
           native_name: first_run
       flag_switchOn:
         range: boolean
@@ -111,7 +103,6 @@ classes:
         annotations:
           order: 9
           value_type: bool
-          separator: ','
           native_name: flag_switchOn
       controlTime:
         range: integer
@@ -120,7 +111,6 @@ classes:
         annotations:
           order: 10
           value_type: int
-          separator: ','
           native_name: controlTime
       predictor_vals_w_measured:
         range: float
@@ -129,7 +119,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.w_measured
       predictor_vals_x:
@@ -139,7 +128,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.x
       predictor_vals_Pref_ctrl:
@@ -149,7 +137,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.Pref_ctrl
       predictor_vals_wref_ctrl:
@@ -159,7 +146,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.wref_ctrl
       predictor_vals_Vset_ref:
@@ -169,7 +155,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.Vset_ref
       predictor_vals_x_QV:
@@ -179,7 +164,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.x_QV
       predictor_vals_Vset_ctrl:
@@ -189,7 +173,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: predictor_vals.Vset_ctrl
       corrector_vals_w_measured:
@@ -199,7 +182,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.w_measured
       corrector_vals_x:
@@ -209,7 +191,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.x
       corrector_vals_Pref_ctrl:
@@ -219,7 +200,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.Pref_ctrl
       corrector_vals_wref_ctrl:
@@ -229,7 +209,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.wref_ctrl
       corrector_vals_Vset_ref:
@@ -239,7 +218,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.Vset_ref
       corrector_vals_x_QV:
@@ -249,7 +227,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.x_QV
       corrector_vals_Vset_ctrl:
@@ -259,6 +236,5 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: corrector_vals.Vset_ctrl

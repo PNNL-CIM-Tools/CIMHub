@@ -40,7 +40,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: rectifier_type
       generator_mode:
         range: string
@@ -48,7 +47,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: generator_mode
       V_Out:
         range: Complex
@@ -58,7 +56,6 @@ classes:
         annotations:
           order: 3
           value_type: complex
-          separator: ','
           native_name: V_Out[V]
       V_Rated:
         range: float
@@ -68,7 +65,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_Rated[V]
       I_Out:
@@ -79,7 +75,6 @@ classes:
         annotations:
           order: 5
           value_type: complex
-          separator: ','
           native_name: I_Out[A]
       VA_Out:
         range: Complex
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: VA_Out[VA]
       voltage_A:
         range: Complex
@@ -99,7 +93,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: voltage_A[V]
       voltage_B:
         range: Complex
@@ -109,7 +102,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: voltage_B[V]
       voltage_C:
         range: Complex
@@ -119,7 +111,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: voltage_C[V]
       current_A:
         range: Complex
@@ -129,7 +120,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: current_A[V]
       current_B:
         range: Complex
@@ -139,7 +129,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: current_B[V]
       current_C:
         range: Complex
@@ -149,7 +138,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: current_C[V]
       power_out_A:
         range: Complex
@@ -159,7 +147,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: power_out_A[VA]
       power_out_B:
         range: Complex
@@ -169,7 +156,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: power_out_B[VA]
       power_out_C:
         range: Complex
@@ -179,7 +165,6 @@ classes:
         annotations:
           order: 15
           value_type: complex
-          separator: ','
           native_name: power_out_C[VA]
       phases:
         range: string
@@ -187,5 +172,4 @@ classes:
         annotations:
           order: 16
           value_type: string
-          separator: ','
           native_name: phases

@@ -39,7 +39,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: configuration
       tap_A:
         range: integer
@@ -48,7 +47,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: tap_A
       tap_B:
         range: integer
@@ -57,7 +55,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: tap_B
       tap_C:
         range: integer
@@ -66,7 +63,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: tap_C
       msg_mode:
         range: string
@@ -77,7 +73,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: msg_mode
       remote_voltage_A:
         range: Complex
@@ -88,7 +83,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: remote_voltage_A[V]
       remote_voltage_B:
         range: Complex
@@ -99,7 +93,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: remote_voltage_B[V]
       remote_voltage_C:
         range: Complex
@@ -110,7 +103,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: remote_voltage_C[V]
       tap_A_change_count:
         range: float
@@ -120,7 +112,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: tap_A_change_count
       tap_B_change_count:
@@ -131,7 +122,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: tap_B_change_count
       tap_C_change_count:
@@ -142,7 +132,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: tap_C_change_count
       sense_node:
@@ -152,7 +141,6 @@ classes:
         annotations:
           order: 12
           value_type: string
-          separator: ','
           native_name: sense_node
       regulator_resistance:
         range: float
@@ -163,6 +151,5 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: regulator_resistance[Ohm]

@@ -41,7 +41,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: Gen_type
       Rated_V:
         range: float
@@ -52,7 +51,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rated_V[V]
       Rated_VA:
@@ -64,7 +62,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rated_VA[VA]
       overload_limit:
@@ -76,7 +73,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: overload_limit[pu]
       deltamode_only_changes:
@@ -87,7 +83,6 @@ classes:
         annotations:
           order: 5
           value_type: bool
-          separator: ','
           native_name: deltamode_only_changes
       current_out_A:
         range: Complex
@@ -98,7 +93,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: current_out_A[A]
       current_out_B:
         range: Complex
@@ -109,7 +103,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: current_out_B[A]
       current_out_C:
         range: Complex
@@ -120,7 +113,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: current_out_C[A]
       power_out_A:
         range: Complex
@@ -131,7 +123,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: power_out_A[VA]
       power_out_B:
         range: Complex
@@ -142,7 +133,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: power_out_B[VA]
       power_out_C:
         range: Complex
@@ -153,7 +143,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: power_out_C[VA]
       real_power_out_A:
         range: float
@@ -164,7 +153,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: real_power_out_A[W]
       real_power_out_B:
@@ -176,7 +164,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: real_power_out_B[W]
       real_power_out_C:
@@ -188,7 +175,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: real_power_out_C[W]
       reactive_power_out_A:
@@ -200,7 +186,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactive_power_out_A[VAr]
       reactive_power_out_B:
@@ -212,7 +197,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactive_power_out_B[VAr]
       reactive_power_out_C:
@@ -224,7 +208,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactive_power_out_C[VAr]
       omega_ref:
@@ -236,7 +219,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: omega_ref[rad/s]
       inertia:
@@ -246,7 +228,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: inertia
       damping:
@@ -256,7 +237,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: damping
       number_poles:
@@ -266,7 +246,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_poles
       Ra:
@@ -278,7 +257,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ra[pu]
       Xd:
@@ -290,7 +268,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xd[pu]
       Xq:
@@ -302,7 +279,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xq[pu]
       Xdp:
@@ -314,7 +290,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xdp[pu]
       Xqp:
@@ -326,7 +301,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xqp[pu]
       Xdpp:
@@ -338,7 +312,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xdpp[pu]
       Xqpp:
@@ -350,7 +323,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xqpp[pu]
       Xl:
@@ -362,7 +334,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xl[pu]
       Tdp:
@@ -374,7 +345,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tdp[s]
       Tdop:
@@ -386,7 +356,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tdop[s]
       Tqop:
@@ -398,7 +367,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tqop[s]
       Tdopp:
@@ -410,7 +378,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tdopp[s]
       Tqopp:
@@ -422,7 +389,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tqopp[s]
       Ta:
@@ -434,7 +400,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ta[s]
       X0:
@@ -446,7 +411,6 @@ classes:
         annotations:
           order: 36
           value_type: complex
-          separator: ','
           native_name: X0[pu]
       X2:
         range: Complex
@@ -457,7 +421,6 @@ classes:
         annotations:
           order: 37
           value_type: complex
-          separator: ','
           native_name: X2[pu]
       rotor_speed_convergence:
         range: float
@@ -469,7 +432,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: rotor_speed_convergence[rad/s]
       voltage_convergence:
@@ -482,7 +444,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_convergence[V]
       current_convergence:
@@ -495,7 +456,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_convergence[A]
       rotor_speed_convergence_enabled:
@@ -506,7 +466,6 @@ classes:
         annotations:
           order: 41
           value_type: bool
-          separator: ','
           native_name: rotor_speed_convergence_enabled
       voltage_magnitude_convergence_enabled:
         range: boolean
@@ -516,7 +475,6 @@ classes:
         annotations:
           order: 42
           value_type: bool
-          separator: ','
           native_name: voltage_magnitude_convergence_enabled
       rotor_angle:
         range: float
@@ -527,7 +485,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: rotor_angle[rad]
       rotor_speed:
@@ -539,7 +496,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: rotor_speed[rad/s]
       field_voltage:
@@ -551,7 +507,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: field_voltage[pu]
       flux1d:
@@ -563,7 +518,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: flux1d[pu]
       flux2q:
@@ -575,7 +529,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: flux2q[pu]
       EpRotated:
@@ -587,7 +540,6 @@ classes:
         annotations:
           order: 48
           value_type: complex
-          separator: ','
           native_name: EpRotated[pu]
       VintRotated:
         range: Complex
@@ -598,7 +550,6 @@ classes:
         annotations:
           order: 49
           value_type: complex
-          separator: ','
           native_name: VintRotated[pu]
       Eint_A:
         range: Complex
@@ -609,7 +560,6 @@ classes:
         annotations:
           order: 50
           value_type: complex
-          separator: ','
           native_name: Eint_A[V]
       Eint_B:
         range: Complex
@@ -620,7 +570,6 @@ classes:
         annotations:
           order: 51
           value_type: complex
-          separator: ','
           native_name: Eint_B[V]
       Eint_C:
         range: Complex
@@ -631,7 +580,6 @@ classes:
         annotations:
           order: 52
           value_type: complex
-          separator: ','
           native_name: Eint_C[V]
       Irotated:
         range: Complex
@@ -642,7 +590,6 @@ classes:
         annotations:
           order: 53
           value_type: complex
-          separator: ','
           native_name: Irotated[pu]
       pwr_electric:
         range: Complex
@@ -653,7 +600,6 @@ classes:
         annotations:
           order: 54
           value_type: complex
-          separator: ','
           native_name: pwr_electric[VA]
       pwr_mech:
         range: float
@@ -664,7 +610,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: pwr_mech[W]
       torque_mech:
@@ -676,7 +621,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: torque_mech[N*m]
       torque_elec:
@@ -688,7 +632,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: torque_elec[N*m]
       wref:
@@ -700,7 +643,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: wref[pu]
       w_ref:
@@ -713,7 +655,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: w_ref[rad/s]
       vset:
@@ -725,7 +666,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset[pu]
       Vset:
@@ -737,7 +677,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vset[pu]
       Pref:
@@ -749,7 +688,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pref[pu]
       Pset:
@@ -761,7 +699,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pset[pu]
       fset:
@@ -773,7 +710,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: fset[Hz]
       Qref:
@@ -785,7 +721,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qref[pu]
       pdispatch:
@@ -797,7 +732,6 @@ classes:
         annotations:
           order: 66
           value_type: float
-          separator: ','
           precision: 6
           native_name: pdispatch[pu]
       pdispatch_offset:
@@ -809,7 +743,6 @@ classes:
         annotations:
           order: 67
           value_type: float
-          separator: ','
           precision: 6
           native_name: pdispatch_offset[pu]
       Exciter_type:
@@ -819,7 +752,6 @@ classes:
         annotations:
           order: 68
           value_type: string
-          separator: ','
           native_name: Exciter_type
       SEXS_mode:
         range: string
@@ -828,7 +760,6 @@ classes:
         annotations:
           order: 69
           value_type: string
-          separator: ','
           native_name: SEXS_mode
       KA:
         range: float
@@ -839,7 +770,6 @@ classes:
         annotations:
           order: 70
           value_type: float
-          separator: ','
           precision: 6
           native_name: KA[pu]
       TA:
@@ -851,7 +781,6 @@ classes:
         annotations:
           order: 71
           value_type: float
-          separator: ','
           precision: 6
           native_name: TA[s]
       TB:
@@ -863,7 +792,6 @@ classes:
         annotations:
           order: 72
           value_type: float
-          separator: ','
           precision: 6
           native_name: TB[s]
       TC:
@@ -875,7 +803,6 @@ classes:
         annotations:
           order: 73
           value_type: float
-          separator: ','
           precision: 6
           native_name: TC[s]
       EMAX:
@@ -887,7 +814,6 @@ classes:
         annotations:
           order: 74
           value_type: float
-          separator: ','
           precision: 6
           native_name: EMAX[pu]
       EMIN:
@@ -899,7 +825,6 @@ classes:
         annotations:
           order: 75
           value_type: float
-          separator: ','
           precision: 6
           native_name: EMIN[pu]
       Vterm_max:
@@ -911,7 +836,6 @@ classes:
         annotations:
           order: 76
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vterm_max[pu]
       Vterm_min:
@@ -923,7 +847,6 @@ classes:
         annotations:
           order: 77
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vterm_min[pu]
       mq_QV_Droop:
@@ -935,7 +858,6 @@ classes:
         annotations:
           order: 78
           value_type: float
-          separator: ','
           precision: 6
           native_name: mq_QV_Droop[pu]
       SEXS_Q_V_droop:
@@ -947,7 +869,6 @@ classes:
         annotations:
           order: 79
           value_type: float
-          separator: ','
           precision: 6
           native_name: SEXS_Q_V_droop[pu]
       Vset_QV_droop:
@@ -959,7 +880,6 @@ classes:
         annotations:
           order: 80
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vset_QV_droop[pu]
       SEXS_Vset:
@@ -971,7 +891,6 @@ classes:
         annotations:
           order: 81
           value_type: float
-          separator: ','
           precision: 6
           native_name: SEXS_Vset[pu]
       Vref_SEXS:
@@ -983,7 +902,6 @@ classes:
         annotations:
           order: 82
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vref_SEXS[pu]
       bias:
@@ -995,7 +913,6 @@ classes:
         annotations:
           order: 83
           value_type: float
-          separator: ','
           precision: 6
           native_name: bias[pu]
       xe:
@@ -1007,7 +924,6 @@ classes:
         annotations:
           order: 84
           value_type: float
-          separator: ','
           precision: 6
           native_name: xe[pu]
       xb:
@@ -1019,7 +935,6 @@ classes:
         annotations:
           order: 85
           value_type: float
-          separator: ','
           precision: 6
           native_name: xb[pu]
       x_cvr1:
@@ -1031,7 +946,6 @@ classes:
         annotations:
           order: 86
           value_type: float
-          separator: ','
           precision: 6
           native_name: x_cvr1[pu]
       x_cvr2:
@@ -1043,7 +957,6 @@ classes:
         annotations:
           order: 87
           value_type: float
-          separator: ','
           precision: 6
           native_name: x_cvr2[pu]
       Vref:
@@ -1055,7 +968,6 @@ classes:
         annotations:
           order: 88
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vref[pu]
       CVR_mode:
@@ -1065,7 +977,6 @@ classes:
         annotations:
           order: 89
           value_type: string
-          separator: ','
           native_name: CVR_mode
       P_CONSTANT_ki:
         range: float
@@ -1074,7 +985,6 @@ classes:
         annotations:
           order: 90
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_ki
       P_CONSTANT_kp:
@@ -1084,7 +994,6 @@ classes:
         annotations:
           order: 91
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_kp
       Exciter_Q_constant_ki:
@@ -1096,7 +1005,6 @@ classes:
         annotations:
           order: 92
           value_type: float
-          separator: ','
           precision: 6
           native_name: Exciter_Q_constant_ki[pu]
       Exciter_Q_constant_kp:
@@ -1108,7 +1016,6 @@ classes:
         annotations:
           order: 93
           value_type: float
-          separator: ','
           precision: 6
           native_name: Exciter_Q_constant_kp[pu]
       P_CONSTANT_Pref:
@@ -1120,7 +1027,6 @@ classes:
         annotations:
           order: 94
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Pref[pu]
       Exciter_Q_constant_Qref:
@@ -1132,7 +1038,6 @@ classes:
         annotations:
           order: 95
           value_type: float
-          separator: ','
           precision: 6
           native_name: Exciter_Q_constant_Qref[pu]
       CVR_enabled:
@@ -1142,7 +1047,6 @@ classes:
         annotations:
           order: 96
           value_type: bool
-          separator: ','
           native_name: CVR_enabled
       CVR_ki_cvr:
         range: float
@@ -1153,7 +1057,6 @@ classes:
         annotations:
           order: 97
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_ki_cvr[pu]
       CVR_kp_cvr:
@@ -1165,7 +1068,6 @@ classes:
         annotations:
           order: 98
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_kp_cvr[pu]
       CVR_kd_cvr:
@@ -1177,7 +1079,6 @@ classes:
         annotations:
           order: 99
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_kd_cvr[pu]
       CVR_kt_cvr:
@@ -1189,7 +1090,6 @@ classes:
         annotations:
           order: 100
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_kt_cvr[pu]
       CVR_kw_cvr:
@@ -1201,7 +1101,6 @@ classes:
         annotations:
           order: 101
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_kw_cvr[pu]
       CVR_PI:
@@ -1211,7 +1110,6 @@ classes:
         annotations:
           order: 102
           value_type: bool
-          separator: ','
           native_name: CVR_PI
       CVR_PID:
         range: boolean
@@ -1220,7 +1118,6 @@ classes:
         annotations:
           order: 103
           value_type: bool
-          separator: ','
           native_name: CVR_PID
       CVR_Kd1:
         range: float
@@ -1229,7 +1126,6 @@ classes:
         annotations:
           order: 104
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_Kd1
       CVR_Kd2:
@@ -1239,7 +1135,6 @@ classes:
         annotations:
           order: 105
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_Kd2
       CVR_Kd3:
@@ -1249,7 +1144,6 @@ classes:
         annotations:
           order: 106
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_Kd3
       CVR_Kn1:
@@ -1259,7 +1153,6 @@ classes:
         annotations:
           order: 107
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_Kn1
       CVR_Kn2:
@@ -1269,7 +1162,6 @@ classes:
         annotations:
           order: 108
           value_type: float
-          separator: ','
           precision: 6
           native_name: CVR_Kn2
       vset_delta_MAX:
@@ -1281,7 +1173,6 @@ classes:
         annotations:
           order: 109
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_delta_MAX[pu]
       vset_delta_MIN:
@@ -1293,7 +1184,6 @@ classes:
         annotations:
           order: 110
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_delta_MIN[pu]
       vadd:
@@ -1305,7 +1195,6 @@ classes:
         annotations:
           order: 111
           value_type: float
-          separator: ','
           precision: 6
           native_name: vadd[pu]
       vadd_a:
@@ -1317,7 +1206,6 @@ classes:
         annotations:
           order: 112
           value_type: float
-          separator: ','
           precision: 6
           native_name: vadd_a[pu]
       Governor_type:
@@ -1327,7 +1215,6 @@ classes:
         annotations:
           order: 113
           value_type: string
-          separator: ','
           native_name: Governor_type
       P_f_droop_setting_mode:
         range: PFDroopSettingMode
@@ -1336,7 +1223,6 @@ classes:
         annotations:
           order: 114
           value_type: string
-          separator: ','
           native_name: P_f_droop_setting_mode
       DEGOV1_R:
         range: float
@@ -1347,7 +1233,6 @@ classes:
         annotations:
           order: 115
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_R[pu]
       DEGOV1_T1:
@@ -1359,7 +1244,6 @@ classes:
         annotations:
           order: 116
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T1[s]
       DEGOV1_T2:
@@ -1371,7 +1255,6 @@ classes:
         annotations:
           order: 117
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T2[s]
       DEGOV1_T3:
@@ -1383,7 +1266,6 @@ classes:
         annotations:
           order: 118
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T3[s]
       DEGOV1_T4:
@@ -1395,7 +1277,6 @@ classes:
         annotations:
           order: 119
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T4[s]
       DEGOV1_T5:
@@ -1407,7 +1288,6 @@ classes:
         annotations:
           order: 120
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T5[s]
       DEGOV1_T6:
@@ -1419,7 +1299,6 @@ classes:
         annotations:
           order: 121
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_T6[s]
       DEGOV1_K:
@@ -1431,7 +1310,6 @@ classes:
         annotations:
           order: 122
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_K[pu]
       DEGOV1_TMAX:
@@ -1443,7 +1321,6 @@ classes:
         annotations:
           order: 123
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_TMAX[pu]
       DEGOV1_TMIN:
@@ -1455,7 +1332,6 @@ classes:
         annotations:
           order: 124
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_TMIN[pu]
       DEGOV1_TD:
@@ -1467,7 +1343,6 @@ classes:
         annotations:
           order: 125
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_TD[s]
       DEGOV1_x1:
@@ -1479,7 +1354,6 @@ classes:
         annotations:
           order: 126
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_x1[pu]
       DEGOV1_x2:
@@ -1491,7 +1365,6 @@ classes:
         annotations:
           order: 127
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_x2[pu]
       DEGOV1_x4:
@@ -1503,7 +1376,6 @@ classes:
         annotations:
           order: 128
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_x4[pu]
       DEGOV1_x5:
@@ -1515,7 +1387,6 @@ classes:
         annotations:
           order: 129
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_x5[pu]
       DEGOV1_x6:
@@ -1527,7 +1398,6 @@ classes:
         annotations:
           order: 130
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_x6[pu]
       DEGOV1_throttle:
@@ -1539,7 +1409,6 @@ classes:
         annotations:
           order: 131
           value_type: float
-          separator: ','
           precision: 6
           native_name: DEGOV1_throttle[pu]
       GAST_R:
@@ -1551,7 +1420,6 @@ classes:
         annotations:
           order: 132
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_R[pu]
       GAST_T1:
@@ -1563,7 +1431,6 @@ classes:
         annotations:
           order: 133
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_T1[s]
       GAST_T2:
@@ -1575,7 +1442,6 @@ classes:
         annotations:
           order: 134
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_T2[s]
       GAST_T3:
@@ -1587,7 +1453,6 @@ classes:
         annotations:
           order: 135
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_T3[s]
       GAST_AT:
@@ -1599,7 +1464,6 @@ classes:
         annotations:
           order: 136
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_AT[s]
       GAST_KT:
@@ -1611,7 +1475,6 @@ classes:
         annotations:
           order: 137
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_KT[pu]
       GAST_VMAX:
@@ -1623,7 +1486,6 @@ classes:
         annotations:
           order: 138
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_VMAX[pu]
       GAST_VMIN:
@@ -1635,7 +1497,6 @@ classes:
         annotations:
           order: 139
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_VMIN[pu]
       GAST_x1:
@@ -1645,7 +1506,6 @@ classes:
         annotations:
           order: 140
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_x1
       GAST_x2:
@@ -1655,7 +1515,6 @@ classes:
         annotations:
           order: 141
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_x2
       GAST_x3:
@@ -1665,7 +1524,6 @@ classes:
         annotations:
           order: 142
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_x3
       GAST_throttle:
@@ -1675,7 +1533,6 @@ classes:
         annotations:
           order: 143
           value_type: float
-          separator: ','
           precision: 6
           native_name: GAST_throttle
       GGOV1_R:
@@ -1687,7 +1544,6 @@ classes:
         annotations:
           order: 144
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_R[pu]
       GGOV1_Rselect:
@@ -1699,7 +1555,6 @@ classes:
         annotations:
           order: 145
           value_type: int
-          separator: ','
           native_name: GGOV1_Rselect
       GGOV1_Tpelec:
         range: float
@@ -1710,7 +1565,6 @@ classes:
         annotations:
           order: 146
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tpelec[s]
       GGOV1_maxerr:
@@ -1722,7 +1576,6 @@ classes:
         annotations:
           order: 147
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_maxerr[pu]
       GGOV1_minerr:
@@ -1734,7 +1587,6 @@ classes:
         annotations:
           order: 148
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_minerr[pu]
       GGOV1_Kpgov:
@@ -1744,7 +1596,6 @@ classes:
         annotations:
           order: 149
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kpgov
       GGOV1_Kigov:
@@ -1754,7 +1605,6 @@ classes:
         annotations:
           order: 150
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kigov
       GGOV1_Kdgov:
@@ -1764,7 +1614,6 @@ classes:
         annotations:
           order: 151
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kdgov
       GGOV1_Tdgov:
@@ -1776,7 +1625,6 @@ classes:
         annotations:
           order: 152
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tdgov[s]
       GGOV1_vmax:
@@ -1788,7 +1636,6 @@ classes:
         annotations:
           order: 153
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_vmax[pu]
       GGOV1_vmin:
@@ -1800,7 +1647,6 @@ classes:
         annotations:
           order: 154
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_vmin[pu]
       GGOV1_Tact:
@@ -1812,7 +1658,6 @@ classes:
         annotations:
           order: 155
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tact[s]
       GGOV1_Kturb:
@@ -1822,7 +1667,6 @@ classes:
         annotations:
           order: 156
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kturb
       GGOV1_wfnl:
@@ -1834,7 +1678,6 @@ classes:
         annotations:
           order: 157
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_wfnl[pu]
       GGOV1_Tb:
@@ -1846,7 +1689,6 @@ classes:
         annotations:
           order: 158
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tb[s]
       GGOV1_Tc:
@@ -1858,7 +1700,6 @@ classes:
         annotations:
           order: 159
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tc[s]
       GGOV1_Fuel_lag:
@@ -1869,7 +1710,6 @@ classes:
         annotations:
           order: 160
           value_type: int
-          separator: ','
           native_name: GGOV1_Fuel_lag
       GGOV1_Teng:
         range: float
@@ -1880,7 +1720,6 @@ classes:
         annotations:
           order: 161
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Teng[s]
       GGOV1_Tfload:
@@ -1892,7 +1731,6 @@ classes:
         annotations:
           order: 162
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tfload[s]
       GGOV1_Kpload:
@@ -1902,7 +1740,6 @@ classes:
         annotations:
           order: 163
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kpload
       GGOV1_Kiload:
@@ -1912,7 +1749,6 @@ classes:
         annotations:
           order: 164
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kiload
       GGOV1_Ldref:
@@ -1924,7 +1760,6 @@ classes:
         annotations:
           order: 165
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Ldref[pu]
       GGOV1_Dm:
@@ -1936,7 +1771,6 @@ classes:
         annotations:
           order: 166
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Dm[pu]
       GGOV1_ropen:
@@ -1948,7 +1782,6 @@ classes:
         annotations:
           order: 167
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_ropen[pu/s]
       GGOV1_rclose:
@@ -1960,7 +1793,6 @@ classes:
         annotations:
           order: 168
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_rclose[pu/s]
       GGOV1_Kimw:
@@ -1970,7 +1802,6 @@ classes:
         annotations:
           order: 169
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Kimw
       GGOV1_Pmwset:
@@ -1982,7 +1813,6 @@ classes:
         annotations:
           order: 170
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Pmwset[MW]
       GGOV1_aset:
@@ -1994,7 +1824,6 @@ classes:
         annotations:
           order: 171
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_aset[pu/s]
       GGOV1_Ka:
@@ -2004,7 +1833,6 @@ classes:
         annotations:
           order: 172
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Ka
       GGOV1_Ta:
@@ -2016,7 +1844,6 @@ classes:
         annotations:
           order: 173
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Ta[s]
       GGOV1_db:
@@ -2026,7 +1853,6 @@ classes:
         annotations:
           order: 174
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_db
       GGOV1_Tsa:
@@ -2038,7 +1864,6 @@ classes:
         annotations:
           order: 175
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tsa[s]
       GGOV1_Tsb:
@@ -2050,7 +1875,6 @@ classes:
         annotations:
           order: 176
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Tsb[s]
       GGOV1_Pset:
@@ -2062,7 +1886,6 @@ classes:
         annotations:
           order: 177
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_Pset[pu]
       GGOV1_fset:
@@ -2074,7 +1897,6 @@ classes:
         annotations:
           order: 178
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_fset[Hz]
       GGOV1_Load_Limit_enable:
@@ -2084,7 +1906,6 @@ classes:
         annotations:
           order: 179
           value_type: bool
-          separator: ','
           native_name: GGOV1_Load_Limit_enable
       GGOV1_Acceleration_Limit_enable:
         range: boolean
@@ -2093,7 +1914,6 @@ classes:
         annotations:
           order: 180
           value_type: bool
-          separator: ','
           native_name: GGOV1_Acceleration_Limit_enable
       GGOV1_PID_enable:
         range: boolean
@@ -2102,7 +1922,6 @@ classes:
         annotations:
           order: 181
           value_type: bool
-          separator: ','
           native_name: GGOV1_PID_enable
       GGOV1_fsrt:
         range: float
@@ -2111,7 +1930,6 @@ classes:
         annotations:
           order: 182
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_fsrt
       GGOV1_fsra:
@@ -2121,7 +1939,6 @@ classes:
         annotations:
           order: 183
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_fsra
       GGOV1_fsrn:
@@ -2131,7 +1948,6 @@ classes:
         annotations:
           order: 184
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_fsrn
       GGOV1_speed_error:
@@ -2143,7 +1959,6 @@ classes:
         annotations:
           order: 185
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_speed_error[pu]
       GGOV1_x1:
@@ -2152,7 +1967,6 @@ classes:
         annotations:
           order: 186
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x1
       GGOV1_x2:
@@ -2161,7 +1975,6 @@ classes:
         annotations:
           order: 187
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x2
       GGOV1_x2a:
@@ -2170,7 +1983,6 @@ classes:
         annotations:
           order: 188
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x2a
       GGOV1_x3:
@@ -2179,7 +1991,6 @@ classes:
         annotations:
           order: 189
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x3
       GGOV1_x3a:
@@ -2188,7 +1999,6 @@ classes:
         annotations:
           order: 190
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x3a
       GGOV1_x4:
@@ -2197,7 +2007,6 @@ classes:
         annotations:
           order: 191
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x4
       GGOV1_x4a:
@@ -2206,7 +2015,6 @@ classes:
         annotations:
           order: 192
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x4a
       GGOV1_x4b:
@@ -2215,7 +2023,6 @@ classes:
         annotations:
           order: 193
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x4b
       GGOV1_x5:
@@ -2224,7 +2031,6 @@ classes:
         annotations:
           order: 194
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x5
       GGOV1_x5a:
@@ -2233,7 +2039,6 @@ classes:
         annotations:
           order: 195
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x5a
       GGOV1_x5b:
@@ -2242,7 +2047,6 @@ classes:
         annotations:
           order: 196
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x5b
       GGOV1_x6:
@@ -2251,7 +2055,6 @@ classes:
         annotations:
           order: 197
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x6
       GGOV1_x7:
@@ -2260,7 +2063,6 @@ classes:
         annotations:
           order: 198
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x7
       GGOV1_x7a:
@@ -2269,7 +2071,6 @@ classes:
         annotations:
           order: 199
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x7a
       GGOV1_x8:
@@ -2278,7 +2079,6 @@ classes:
         annotations:
           order: 200
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x8
       GGOV1_x8a:
@@ -2287,7 +2087,6 @@ classes:
         annotations:
           order: 201
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x8a
       GGOV1_x9:
@@ -2296,7 +2095,6 @@ classes:
         annotations:
           order: 202
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x9
       GGOV1_x9a:
@@ -2305,7 +2103,6 @@ classes:
         annotations:
           order: 203
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x9a
       GGOV1_x10:
@@ -2314,7 +2111,6 @@ classes:
         annotations:
           order: 204
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x10
       GGOV1_x10a:
@@ -2323,7 +2119,6 @@ classes:
         annotations:
           order: 205
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x10a
       GGOV1_x10b:
@@ -2332,7 +2127,6 @@ classes:
         annotations:
           order: 206
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_x10b
       GGOV1_ValveStroke:
@@ -2341,7 +2135,6 @@ classes:
         annotations:
           order: 207
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_ValveStroke
       GGOV1_FuelFlow:
@@ -2350,7 +2143,6 @@ classes:
         annotations:
           order: 208
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_FuelFlow
       GGOV1_GovOutPut:
@@ -2359,7 +2151,6 @@ classes:
         annotations:
           order: 209
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_GovOutPut
       GGOV1_RselectValue:
@@ -2368,7 +2159,6 @@ classes:
         annotations:
           order: 210
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_RselectValue
       GGOV1_fsrtNoLim:
@@ -2377,7 +2167,6 @@ classes:
         annotations:
           order: 211
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_fsrtNoLim
       GGOV1_err2:
@@ -2386,7 +2175,6 @@ classes:
         annotations:
           order: 212
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_err2
       GGOV1_err2a:
@@ -2395,7 +2183,6 @@ classes:
         annotations:
           order: 213
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_err2a
       GGOV1_err3:
@@ -2404,7 +2191,6 @@ classes:
         annotations:
           order: 214
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_err3
       GGOV1_err4:
@@ -2413,7 +2199,6 @@ classes:
         annotations:
           order: 215
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_err4
       GGOV1_err7:
@@ -2422,7 +2207,6 @@ classes:
         annotations:
           order: 216
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_err7
       GGOV1_LowValSelect1:
@@ -2431,7 +2215,6 @@ classes:
         annotations:
           order: 217
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_LowValSelect1
       GGOV1_LowValSelect:
@@ -2440,7 +2223,6 @@ classes:
         annotations:
           order: 218
           value_type: float
-          separator: ','
           precision: 6
           native_name: GGOV1_LowValSelect
       P_CONSTANT_Tpelec:
@@ -2452,7 +2234,6 @@ classes:
         annotations:
           order: 219
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Tpelec[s]
       P_CONSTANT_Tact:
@@ -2464,7 +2245,6 @@ classes:
         annotations:
           order: 220
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Tact[s]
       P_CONSTANT_Kturb:
@@ -2476,7 +2256,6 @@ classes:
         annotations:
           order: 221
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Kturb[pu]
       P_CONSTANT_wfnl:
@@ -2488,7 +2267,6 @@ classes:
         annotations:
           order: 222
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_wfnl[pu]
       P_CONSTANT_Tb:
@@ -2500,7 +2278,6 @@ classes:
         annotations:
           order: 223
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Tb[s]
       P_CONSTANT_Tc:
@@ -2512,7 +2289,6 @@ classes:
         annotations:
           order: 224
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Tc[s]
       P_CONSTANT_Teng:
@@ -2524,7 +2300,6 @@ classes:
         annotations:
           order: 225
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_Teng[s]
       P_CONSTANT_ropen:
@@ -2536,7 +2311,6 @@ classes:
         annotations:
           order: 226
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_ropen[pu/s]
       P_CONSTANT_rclose:
@@ -2548,7 +2322,6 @@ classes:
         annotations:
           order: 227
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_rclose[pu/s]
       P_CONSTANT_x1:
@@ -2559,7 +2332,6 @@ classes:
         annotations:
           order: 228
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x1[pu]
       P_CONSTANT_x4:
@@ -2570,7 +2342,6 @@ classes:
         annotations:
           order: 229
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x4[pu]
       P_CONSTANT_x4a:
@@ -2581,7 +2352,6 @@ classes:
         annotations:
           order: 230
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x4a[pu]
       P_CONSTANT_x4b:
@@ -2592,7 +2362,6 @@ classes:
         annotations:
           order: 231
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x4b[pu]
       P_CONSTANT_x5:
@@ -2603,7 +2372,6 @@ classes:
         annotations:
           order: 232
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x5[pu]
       P_CONSTANT_x5a:
@@ -2614,7 +2382,6 @@ classes:
         annotations:
           order: 233
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x5a[pu]
       P_CONSTANT_x5b:
@@ -2625,7 +2392,6 @@ classes:
         annotations:
           order: 234
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x5b[pu]
       P_CONSTANT_x_Pconstant:
@@ -2636,7 +2402,6 @@ classes:
         annotations:
           order: 235
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_x_Pconstant[pu]
       P_CONSTANT_err4:
@@ -2647,7 +2412,6 @@ classes:
         annotations:
           order: 236
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_err4[pu]
       P_CONSTANT_ValveStroke:
@@ -2658,7 +2422,6 @@ classes:
         annotations:
           order: 237
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_ValveStroke[pu]
       P_CONSTANT_FuelFlow:
@@ -2669,7 +2432,6 @@ classes:
         annotations:
           order: 238
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_FuelFlow[pu]
       P_CONSTANT_GovOutPut:
@@ -2680,7 +2442,6 @@ classes:
         annotations:
           order: 239
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_CONSTANT_GovOutPut[pu]
       fuelEmissionCal:
@@ -2691,7 +2452,6 @@ classes:
         annotations:
           order: 240
           value_type: bool
-          separator: ','
           native_name: fuelEmissionCal
       outputEnergy:
         range: float
@@ -2702,7 +2462,6 @@ classes:
         annotations:
           order: 241
           value_type: float
-          separator: ','
           precision: 6
           native_name: outputEnergy[kWh]
       FuelUse:
@@ -2714,7 +2473,6 @@ classes:
         annotations:
           order: 242
           value_type: float
-          separator: ','
           precision: 6
           native_name: FuelUse[gal]
       efficiency:
@@ -2726,7 +2484,6 @@ classes:
         annotations:
           order: 243
           value_type: float
-          separator: ','
           precision: 6
           native_name: efficiency[kWh/gal]
       CO2_emission:
@@ -2738,7 +2495,6 @@ classes:
         annotations:
           order: 244
           value_type: float
-          separator: ','
           precision: 6
           native_name: CO2_emission[lb]
       SOx_emission:
@@ -2750,7 +2506,6 @@ classes:
         annotations:
           order: 245
           value_type: float
-          separator: ','
           precision: 6
           native_name: SOx_emission[lb]
       NOx_emission:
@@ -2762,7 +2517,6 @@ classes:
         annotations:
           order: 246
           value_type: float
-          separator: ','
           precision: 6
           native_name: NOx_emission[lb]
       PM10_emission:
@@ -2774,7 +2528,6 @@ classes:
         annotations:
           order: 247
           value_type: float
-          separator: ','
           precision: 6
           native_name: PM10_emission[lb]
       frequency_deviation:
@@ -2786,7 +2539,6 @@ classes:
         annotations:
           order: 248
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_deviation[pu]
       frequency_deviation_energy:
@@ -2798,7 +2550,6 @@ classes:
         annotations:
           order: 249
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_deviation_energy[pu]
       frequency_deviation_max:
@@ -2810,7 +2561,6 @@ classes:
         annotations:
           order: 250
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_deviation_max[pu]
       realPowerChange:
@@ -2822,7 +2572,6 @@ classes:
         annotations:
           order: 251
           value_type: float
-          separator: ','
           precision: 6
           native_name: realPowerChange[W]
       ratio_f_p:
@@ -2834,7 +2583,6 @@ classes:
         annotations:
           order: 252
           value_type: float
-          separator: ','
           precision: 6
           native_name: ratio_f_p[pu]
       real_power_generation:
@@ -2846,7 +2594,6 @@ classes:
         annotations:
           order: 253
           value_type: float
-          separator: ','
           precision: 6
           native_name: real_power_generation[W]
       reactive_power_generation:
@@ -2858,7 +2605,6 @@ classes:
         annotations:
           order: 254
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactive_power_generation[VAr]
       last_time:
@@ -2868,7 +2614,6 @@ classes:
         annotations:
           order: 255
           value_type: string
-          separator: ','
           native_name: last_time
       pwr_electric_init:
         range: float
@@ -2877,6 +2622,5 @@ classes:
         annotations:
           order: 256
           value_type: float
-          separator: ','
           precision: 6
           native_name: pwr_electric_init

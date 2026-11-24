@@ -68,7 +68,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_power[kW]
       circuit_split:
@@ -77,7 +76,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: circuit_split
       queue:
@@ -89,7 +87,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue[unit]
       demand:
@@ -101,7 +98,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: demand[unit/day]
       cycle_duration:
@@ -113,7 +109,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_duration[s]
       energy_meter:
@@ -124,7 +119,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: energy_meter[kWh]
       stall_voltage:
         range: float
@@ -134,7 +128,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_voltage[V]
       start_voltage:
@@ -145,7 +138,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: start_voltage[V]
       clothesWasherPower:
@@ -154,7 +146,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: clothesWasherPower
       stall_impedance:
@@ -165,7 +156,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: stall_impedance[Ohm]
       trip_delay:
         range: float
@@ -175,7 +165,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip_delay[s]
       reset_delay:
@@ -186,7 +175,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: reset_delay[s]
       Is_on:
@@ -195,7 +183,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: Is_on
       normal_perc:
@@ -204,7 +191,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: normal_perc
       perm_press_perc:
@@ -213,7 +199,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: perm_press_perc
       NORMAL_PREWASH_POWER:
@@ -222,7 +207,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_PREWASH_POWER
       NORMAL_WASH_POWER:
@@ -231,7 +215,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_WASH_POWER
       NORMAL_SPIN_LOW_POWER:
@@ -240,7 +223,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_LOW_POWER
       NORMAL_SPIN_MEDIUM_POWER:
@@ -249,7 +231,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_MEDIUM_POWER
       NORMAL_SPIN_HIGH_POWER:
@@ -258,7 +239,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_HIGH_POWER
       NORMAL_SMALLWASH_POWER:
@@ -267,7 +247,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SMALLWASH_POWER
       NORMAL_PREWASH_ENERGY:
@@ -276,7 +255,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_PREWASH_ENERGY
       NORMAL_WASH_ENERGY:
@@ -285,7 +263,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_WASH_ENERGY
       NORMAL_SPIN_LOW_ENERGY:
@@ -294,7 +271,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_LOW_ENERGY
       NORMAL_SPIN_MEDIUM_ENERGY:
@@ -303,7 +279,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_MEDIUM_ENERGY
       NORMAL_SPIN_HIGH_ENERGY:
@@ -312,7 +287,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SPIN_HIGH_ENERGY
       NORMAL_SMALLWASH_ENERGY:
@@ -321,7 +295,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: NORMAL_SMALLWASH_ENERGY
       PERMPRESS_PREWASH_POWER:
@@ -330,7 +303,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_PREWASH_POWER
       PERMPRESS_WASH_POWER:
@@ -339,7 +311,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_WASH_POWER
       PERMPRESS_SPIN_LOW_POWER:
@@ -348,7 +319,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_LOW_POWER
       PERMPRESS_SPIN_MEDIUM_POWER:
@@ -357,7 +327,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_MEDIUM_POWER
       PERMPRESS_SPIN_HIGH_POWER:
@@ -366,7 +335,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_HIGH_POWER
       PERMPRESS_SMALLWASH_POWER:
@@ -375,7 +343,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SMALLWASH_POWER
       PERMPRESS_PREWASH_ENERGY:
@@ -384,7 +351,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_PREWASH_ENERGY
       PERMPRESS_WASH_ENERGY:
@@ -393,7 +359,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_WASH_ENERGY
       PERMPRESS_SPIN_LOW_ENERGY:
@@ -402,7 +367,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_LOW_ENERGY
       PERMPRESS_SPIN_MEDIUM_ENERGY:
@@ -411,7 +375,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_MEDIUM_ENERGY
       PERMPRESS_SPIN_HIGH_ENERGY:
@@ -420,7 +383,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SPIN_HIGH_ENERGY
       PERMPRESS_SMALLWASH_ENERGY:
@@ -429,7 +391,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: PERMPRESS_SMALLWASH_ENERGY
       GENTLE_PREWASH_POWER:
@@ -438,7 +399,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_PREWASH_POWER
       GENTLE_WASH_POWER:
@@ -447,7 +407,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_WASH_POWER
       GENTLE_SPIN_LOW_POWER:
@@ -456,7 +415,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_LOW_POWER
       GENTLE_SPIN_MEDIUM_POWER:
@@ -465,7 +423,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_MEDIUM_POWER
       GENTLE_SPIN_HIGH_POWER:
@@ -474,7 +431,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_HIGH_POWER
       GENTLE_SMALLWASH_POWER:
@@ -483,7 +439,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SMALLWASH_POWER
       GENTLE_PREWASH_ENERGY:
@@ -492,7 +447,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_PREWASH_ENERGY
       GENTLE_WASH_ENERGY:
@@ -501,7 +455,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_WASH_ENERGY
       GENTLE_SPIN_LOW_ENERGY:
@@ -510,7 +463,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_LOW_ENERGY
       GENTLE_SPIN_MEDIUM_ENERGY:
@@ -519,7 +471,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_MEDIUM_ENERGY
       GENTLE_SPIN_HIGH_ENERGY:
@@ -528,7 +479,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SPIN_HIGH_ENERGY
       GENTLE_SMALLWASH_ENERGY:
@@ -537,7 +487,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: GENTLE_SMALLWASH_ENERGY
       queue_min:
@@ -548,7 +497,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_min[unit]
       queue_max:
@@ -559,7 +507,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_max[unit]
       clotheswasher_run_prob:
@@ -568,7 +515,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: clotheswasher_run_prob
       state:
@@ -577,7 +523,6 @@ classes:
         annotations:
           order: 55
           value_type: string
-          separator: ','
           native_name: state
       spin_mode:
         range: string
@@ -585,7 +530,6 @@ classes:
         annotations:
           order: 56
           value_type: string
-          separator: ','
           native_name: spin_mode
       wash_mode:
         range: string
@@ -593,5 +537,4 @@ classes:
         annotations:
           order: 57
           value_type: string
-          separator: ','
           native_name: wash_mode

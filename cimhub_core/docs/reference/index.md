@@ -54,7 +54,6 @@ Function and module are under `cimhub_core.getters`. The last column is the page
 | `get_line_geometry` | `line_impedance` | `WireConfiguration \| None` | The line's WireConfiguration when it names a `WireSpacing`. | [lines](lines.md) |
 | `get_line_conductor_xy` | `spacing` | `tuple[ConductorXY, ...]` | A line's conductor positions, y above ground. | [lines](lines.md) |
 | `get_spacing_xy` | `spacing` | `tuple[ConductorXY, ...]` | A spacing's conductor positions in its own frame. | [lines](lines.md) |
-| `get_spacing_distances` | `spacing` | `dict[(i, j), float]` | The distance between every pair of conductors of a spacing. | [lines](lines.md) |
 | `get_stored_distances` | `spacing` | `StoredDistances` | A spacing's distances and heights as it stores them. | [lines](lines.md) |
 | `get_wire_info` | `wire` | `WireValues` | A conductor catalog entry: resistances, gmr, radius, ratings, cable construction. | [lines](lines.md) |
 | `get_configuration_wires` | `wire` | `tuple[(int, WireInfo), ...]` | A WireConfiguration's conductors by sequence number. | [lines](lines.md) |

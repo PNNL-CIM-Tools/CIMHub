@@ -41,7 +41,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: weather
       T_nominal:
         range: float
@@ -51,7 +50,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: T_nominal[degF]
       Zp_T:
@@ -62,7 +60,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp_T[ohm/degF]
       Zp_H:
@@ -73,7 +70,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp_H[ohm/%]
       Zp_S:
@@ -84,7 +80,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp_S[ohm*h/Btu]
       Zp_W:
@@ -95,7 +90,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp_W[ohm/mph]
       Zp_R:
@@ -106,7 +100,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp_R[ohm*h/in]
       Zp:
@@ -117,7 +110,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zp[ohm]
       Zq_T:
@@ -128,7 +120,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq_T[F/degF]
       Zq_H:
@@ -139,7 +130,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq_H[F/%]
       Zq_S:
@@ -150,7 +140,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq_S[F*h/Btu]
       Zq_W:
@@ -161,7 +150,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq_W[F/mph]
       Zq_R:
@@ -172,7 +160,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq_R[F*h/in]
       Zq:
@@ -183,7 +170,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: Zq[F]
       Im_T:
@@ -194,7 +180,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im_T[A/degF]
       Im_H:
@@ -205,7 +190,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im_H[A/%]
       Im_S:
@@ -216,7 +200,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im_S[A*h/Btu]
       Im_W:
@@ -227,7 +210,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im_W[A/mph]
       Im_R:
@@ -238,7 +220,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im_R[A*h/in]
       Im:
@@ -249,7 +230,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: Im[A]
       Ia_T:
@@ -260,7 +240,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia_T[deg/degF]
       Ia_H:
@@ -271,7 +250,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia_H[deg/%]
       Ia_S:
@@ -282,7 +260,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia_S[deg*h/Btu]
       Ia_W:
@@ -293,7 +270,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia_W[deg/mph]
       Ia_R:
@@ -304,7 +280,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia_R[deg*h/in]
       Ia:
@@ -315,7 +290,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ia[deg]
       Pp_T:
@@ -326,7 +300,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp_T[W/degF]
       Pp_H:
@@ -337,7 +310,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp_H[W/%]
       Pp_S:
@@ -348,7 +320,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp_S[W*h/Btu]
       Pp_W:
@@ -359,7 +330,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp_W[W/mph]
       Pp_R:
@@ -370,7 +340,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp_R[W*h/in]
       Pp:
@@ -381,7 +350,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pp[W]
       Pq_T:
@@ -392,7 +360,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq_T[VAr/degF]
       Pq_H:
@@ -403,7 +370,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq_H[VAr/%]
       Pq_S:
@@ -414,7 +380,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq_S[VAr*h/Btu]
       Pq_W:
@@ -425,7 +390,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq_W[VAr/mph]
       Pq_R:
@@ -436,7 +400,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq_R[VAr*h/in]
       Pq:
@@ -447,7 +410,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pq[VAr]
       input_temp:
@@ -458,7 +420,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: input_temp[degF]
       input_humid:
@@ -469,7 +430,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: input_humid[%]
       input_solar:
@@ -480,7 +440,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: input_solar[Btu/h]
       input_wind:
@@ -491,7 +450,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: input_wind[mph]
       input_rain:
@@ -502,7 +460,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: input_rain[in/h]
       output_imped_p:
@@ -513,7 +470,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_imped_p[Ohm]
       output_imped_q:
@@ -524,7 +480,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_imped_q[Ohm]
       output_current_m:
@@ -535,7 +490,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_current_m[A]
       output_current_a:
@@ -546,7 +500,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_current_a[deg]
       output_power_p:
@@ -557,7 +510,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_power_p[W]
       output_power_q:
@@ -568,7 +520,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: output_power_q[VAr]
       output_impedance:
@@ -579,7 +530,6 @@ classes:
         annotations:
           order: 50
           value_type: complex
-          separator: ','
           native_name: output_impedance[ohm]
       output_current:
         range: Complex
@@ -589,7 +539,6 @@ classes:
         annotations:
           order: 51
           value_type: complex
-          separator: ','
           native_name: output_current[A]
       output_power:
         range: Complex
@@ -599,5 +548,4 @@ classes:
         annotations:
           order: 52
           value_type: complex
-          separator: ','
           native_name: output_power[VA]

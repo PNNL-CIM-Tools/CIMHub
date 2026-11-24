@@ -37,7 +37,6 @@ classes:
           line_number: 1
           order: 1
           value_type: int
-          separator: ","
 
       j:
         description: J - Winding 2 bus number
@@ -47,7 +46,6 @@ classes:
           line_number: 1
           order: 2
           value_type: int
-          separator: ","
 
       k:
         description: K - Winding 3 bus number (0 for 2-winding)
@@ -57,7 +55,6 @@ classes:
           line_number: 1
           order: 3
           value_type: int
-          separator: ","
           raw_default: 0
 
       circuit:
@@ -71,7 +68,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       cw:
@@ -82,7 +78,6 @@ classes:
           line_number: 1
           order: 5
           value_type: int
-          separator: ","
           raw_default: 1
 
       cz:
@@ -93,7 +88,6 @@ classes:
           line_number: 1
           order: 6
           value_type: int
-          separator: ","
           raw_default: 1
 
       cm:
@@ -104,7 +98,6 @@ classes:
           line_number: 1
           order: 7
           value_type: int
-          separator: ","
           raw_default: 1
 
       mag1:
@@ -116,7 +109,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       mag2:
@@ -128,7 +120,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       nmetr:
@@ -139,7 +130,6 @@ classes:
           line_number: 1
           order: 10
           value_type: int
-          separator: ","
           raw_default: 2
 
       name:
@@ -153,7 +143,6 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       status:
@@ -164,7 +153,6 @@ classes:
           line_number: 1
           order: 12
           value_type: int
-          separator: ","
           raw_default: 1
 
       o1:
@@ -175,7 +163,6 @@ classes:
           line_number: 1
           order: 13
           value_type: int
-          separator: ","
           raw_default_rule: "owner assigned to bus I"
 
       f1:
@@ -187,7 +174,6 @@ classes:
           order: 14
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o2:
@@ -198,7 +184,6 @@ classes:
           line_number: 1
           order: 15
           value_type: int
-          separator: ","
           raw_default: 0
 
       f2:
@@ -210,7 +195,6 @@ classes:
           order: 16
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o3:
@@ -221,7 +205,6 @@ classes:
           line_number: 1
           order: 17
           value_type: int
-          separator: ","
           raw_default: 0
 
       f3:
@@ -233,7 +216,6 @@ classes:
           order: 18
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o4:
@@ -244,7 +226,6 @@ classes:
           line_number: 1
           order: 19
           value_type: int
-          separator: ","
           raw_default: 0
 
       f4:
@@ -256,7 +237,6 @@ classes:
           order: 20
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       vecgrp:
@@ -270,7 +250,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       zcod:
@@ -281,7 +260,6 @@ classes:
           line_number: 1
           order: 22
           value_type: int
-          separator: ""
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -295,7 +273,6 @@ classes:
           order: 1
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       x1_2:
@@ -307,7 +284,6 @@ classes:
           order: 2
           value_type: float
           precision: 5
-          separator: ","
 
       sbase1_2:
         description: SBASE1-2 - Winding 1-2 base MVA
@@ -320,7 +296,6 @@ classes:
           order: 3
           value_type: float
           precision: 2
-          separator: ","
           raw_default_rule: "SBASE (system base MVA)"
 
       r2_3:
@@ -332,7 +307,6 @@ classes:
           order: 4
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -345,7 +319,6 @@ classes:
           order: 5
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
 
       sbase2_3:
@@ -359,7 +332,6 @@ classes:
           order: 6
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "SBASE (system base MVA)"
 
@@ -372,7 +344,6 @@ classes:
           order: 7
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -385,7 +356,6 @@ classes:
           order: 8
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
 
       sbase3_1:
@@ -399,7 +369,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "SBASE (system base MVA)"
 
@@ -412,7 +381,6 @@ classes:
           order: 10
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 1.0
 
@@ -427,7 +395,6 @@ classes:
           order: 11
           value_type: float
           precision: 5
-          separator: ""
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -441,7 +408,6 @@ classes:
           order: 1
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "1.0 if CW is 1 or 3; bus I base voltage if CW is 2"
 
       nomv1:
@@ -455,7 +421,6 @@ classes:
           order: 2
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       ang1:
@@ -469,7 +434,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       rate1_1:
@@ -483,7 +447,6 @@ classes:
           order: 4
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_2:
@@ -497,7 +460,6 @@ classes:
           order: 5
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_3:
@@ -511,7 +473,6 @@ classes:
           order: 6
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_4:
@@ -525,7 +486,6 @@ classes:
           order: 7
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_5:
@@ -539,7 +499,6 @@ classes:
           order: 8
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_6:
@@ -553,7 +512,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_7:
@@ -567,7 +525,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_8:
@@ -581,7 +538,6 @@ classes:
           order: 11
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_9:
@@ -595,7 +551,6 @@ classes:
           order: 12
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_10:
@@ -609,7 +564,6 @@ classes:
           order: 13
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_11:
@@ -623,7 +577,6 @@ classes:
           order: 14
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       rate1_12:
@@ -637,7 +590,6 @@ classes:
           order: 15
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       cod1:
@@ -648,7 +600,6 @@ classes:
           line_number: 3
           order: 16
           value_type: int
-          separator: ","
           raw_default: 0
 
       cont1:
@@ -659,7 +610,6 @@ classes:
           line_number: 3
           order: 17
           value_type: int
-          separator: ","
           raw_default: 0
 
       rma1:
@@ -671,7 +621,6 @@ classes:
           order: 18
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       rmi1:
@@ -683,7 +632,6 @@ classes:
           order: 19
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
       vma1:
@@ -695,7 +643,6 @@ classes:
           order: 20
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       vmi1:
@@ -707,7 +654,6 @@ classes:
           order: 21
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
       ntp1:
@@ -718,7 +664,6 @@ classes:
           line_number: 3
           order: 22
           value_type: int
-          separator: ","
           raw_default: 33
 
       tab1:
@@ -729,7 +674,6 @@ classes:
           line_number: 3
           order: 23
           value_type: int
-          separator: ","
           raw_default: 0
 
       cr1:
@@ -741,7 +685,6 @@ classes:
           order: 24
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       cx1:
@@ -753,7 +696,6 @@ classes:
           order: 25
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       cnxa1:
@@ -767,7 +709,6 @@ classes:
           order: 26
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       nod1:
@@ -778,7 +719,6 @@ classes:
           line_number: 3
           order: 27
           value_type: int
-          separator: ""
           raw_default: 0
 
       # ==== LINE 4: Winding 2 Data ====
@@ -791,7 +731,6 @@ classes:
           order: 1
           value_type: float
           precision: 5
-          separator: ","
           raw_default_rule: "1.0 if CW is 1 or 3; bus J base voltage if CW is 2"
 
       nomv2:
@@ -805,7 +744,6 @@ classes:
           order: 2
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       ang2:
@@ -819,7 +757,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -834,7 +771,6 @@ classes:
           order: 4
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -849,7 +785,6 @@ classes:
           order: 5
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -864,7 +799,6 @@ classes:
           order: 6
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -879,7 +813,6 @@ classes:
           order: 7
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -894,7 +827,6 @@ classes:
           order: 8
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -909,7 +841,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -924,7 +855,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -939,7 +869,6 @@ classes:
           order: 11
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -954,7 +883,6 @@ classes:
           order: 12
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -969,7 +897,6 @@ classes:
           order: 13
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -984,7 +911,6 @@ classes:
           order: 14
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -999,7 +925,6 @@ classes:
           order: 15
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1011,7 +936,6 @@ classes:
           line_number: 4
           order: 16
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1023,7 +947,6 @@ classes:
           line_number: 4
           order: 17
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1036,7 +959,6 @@ classes:
           order: 18
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
@@ -1049,7 +971,6 @@ classes:
           order: 19
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
@@ -1062,7 +983,6 @@ classes:
           order: 20
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
@@ -1075,7 +995,6 @@ classes:
           order: 21
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
@@ -1087,7 +1006,6 @@ classes:
           line_number: 4
           order: 22
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 33
 
@@ -1099,7 +1017,6 @@ classes:
           line_number: 4
           order: 23
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1112,7 +1029,6 @@ classes:
           order: 24
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1125,7 +1041,6 @@ classes:
           order: 25
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1140,7 +1055,6 @@ classes:
           order: 26
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1152,7 +1066,6 @@ classes:
           line_number: 4
           order: 27
           value_type: int
-          separator: ""
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1166,7 +1079,6 @@ classes:
           order: 1
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "1.0 if CW is 1 or 3; bus K base voltage if CW is 2"
 
@@ -1181,7 +1093,6 @@ classes:
           order: 2
           value_type: float
           precision: 4
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1196,7 +1107,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1211,7 +1121,6 @@ classes:
           order: 4
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1226,7 +1135,6 @@ classes:
           order: 5
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1241,7 +1149,6 @@ classes:
           order: 6
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1256,7 +1163,6 @@ classes:
           order: 7
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1271,7 +1177,6 @@ classes:
           order: 8
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1286,7 +1191,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1301,7 +1205,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1316,7 +1219,6 @@ classes:
           order: 11
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1331,7 +1233,6 @@ classes:
           order: 12
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1346,7 +1247,6 @@ classes:
           order: 13
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1361,7 +1261,6 @@ classes:
           order: 14
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1376,7 +1275,6 @@ classes:
           order: 15
           value_type: float
           precision: 2
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1388,7 +1286,6 @@ classes:
           line_number: 5
           order: 16
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1400,7 +1297,6 @@ classes:
           line_number: 5
           order: 17
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1413,7 +1309,6 @@ classes:
           order: 18
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "1.1 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
@@ -1426,7 +1321,6 @@ classes:
           order: 19
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "0.9 if CW is 1 or 3 and |COD| is not 3 or 5; no default otherwise"
 
@@ -1439,7 +1333,6 @@ classes:
           order: 20
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "1.1 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
@@ -1452,7 +1345,6 @@ classes:
           order: 21
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default_rule: "0.9 if |COD| is 1; no default for |COD| 2, 3 or 5"
 
@@ -1464,7 +1356,6 @@ classes:
           line_number: 5
           order: 22
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 33
 
@@ -1476,7 +1367,6 @@ classes:
           line_number: 5
           order: 23
           value_type: int
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0
 
@@ -1489,7 +1379,6 @@ classes:
           order: 24
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1502,7 +1391,6 @@ classes:
           order: 25
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1517,7 +1405,6 @@ classes:
           order: 26
           value_type: float
           precision: 5
-          separator: ","
           serialize_if: "custom:k != 0"
           raw_default: 0.0
 
@@ -1529,6 +1416,5 @@ classes:
           line_number: 5
           order: 27
           value_type: int
-          separator: ""
           serialize_if: "custom:k != 0"
           raw_default: 0

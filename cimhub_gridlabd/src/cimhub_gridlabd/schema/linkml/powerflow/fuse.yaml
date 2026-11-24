@@ -41,7 +41,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: phase_A_status
       phase_B_status:
         range: string
@@ -49,7 +48,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: phase_B_status
       phase_C_status:
         range: string
@@ -57,7 +55,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: phase_C_status
       repair_dist_type:
         range: string
@@ -65,7 +62,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: repair_dist_type
       current_limit:
         range: float
@@ -75,7 +71,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_limit[A]
       mean_replacement_time:
@@ -86,7 +81,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: mean_replacement_time[s]
       fuse_resistance:
@@ -98,6 +92,5 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: fuse_resistance[Ohm]

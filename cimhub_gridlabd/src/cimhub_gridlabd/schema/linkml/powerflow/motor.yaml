@@ -36,7 +36,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_power[W]
       n:
@@ -46,7 +45,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: n
       Rds:
@@ -58,7 +56,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rds[ohm]
       Rqs:
@@ -70,7 +67,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rqs[ohm]
       Rs:
@@ -82,7 +78,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rs[ohm]
       Rr:
@@ -94,7 +89,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rr[ohm]
       Xm:
@@ -106,7 +100,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xm[ohm]
       Xr:
@@ -118,7 +111,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xr[ohm]
       Xs:
@@ -130,7 +122,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xs[ohm]
       Xc_run:
@@ -142,7 +133,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xc_run[ohm]
       Xc_start:
@@ -154,7 +144,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xc_start[ohm]
       Xd_prime:
@@ -166,7 +155,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xd_prime[ohm]
       Xq_prime:
@@ -178,7 +166,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xq_prime[ohm]
       A_sat:
@@ -188,7 +175,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: A_sat
       b_sat:
@@ -198,7 +184,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: b_sat
       H:
@@ -210,7 +195,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: H[s]
       J:
@@ -222,7 +206,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: J[kg*m^2]
       number_of_poles:
@@ -232,7 +215,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_of_poles
       To_prime:
@@ -244,7 +226,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: To_prime[s]
       capacitor_speed:
@@ -256,7 +237,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacitor_speed[%]
       trip_time:
@@ -268,7 +248,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip_time[s]
       uv_relay_install:
@@ -278,7 +257,6 @@ classes:
         annotations:
           order: 22
           value_type: string
-          separator: ','
           native_name: uv_relay_install
       uv_relay_trip_time:
         range: float
@@ -290,7 +268,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: uv_relay_trip_time[s]
       uv_relay_trip_V:
@@ -302,7 +279,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: uv_relay_trip_V[pu]
       contactor_state:
@@ -312,7 +288,6 @@ classes:
         annotations:
           order: 25
           value_type: string
-          separator: ','
           native_name: contactor_state
       contactor_open_Vmin:
         range: float
@@ -323,7 +298,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: contactor_open_Vmin[pu]
       contactor_close_Vmax:
@@ -335,7 +309,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: contactor_close_Vmax[pu]
       reconnect_time:
@@ -347,7 +320,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: reconnect_time[s]
       time_step_divider:
@@ -357,7 +329,6 @@ classes:
         annotations:
           order: 29
           value_type: int
-          separator: ','
           native_name: time_step_divider
       mechanical_torque:
         range: float
@@ -368,7 +339,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: mechanical_torque[pu]
       mechanical_torque_state_var:
@@ -380,7 +350,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: mechanical_torque_state_var[pu]
       torque_usage_method:
@@ -390,7 +359,6 @@ classes:
         annotations:
           order: 32
           value_type: string
-          separator: ','
           native_name: torque_usage_method
       iteration_count:
         range: integer
@@ -399,7 +367,6 @@ classes:
         annotations:
           order: 33
           value_type: int
-          separator: ','
           native_name: iteration_count
       delta_mode_voltage_trigger:
         range: float
@@ -410,7 +377,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_mode_voltage_trigger[%]
       delta_mode_rotor_speed_trigger:
@@ -422,7 +388,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_mode_rotor_speed_trigger[%]
       delta_mode_voltage_exit:
@@ -434,7 +399,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_mode_voltage_exit[%]
       delta_mode_rotor_speed_exit:
@@ -446,7 +410,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_mode_rotor_speed_exit[%]
       maximum_speed_error:
@@ -456,7 +419,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: maximum_speed_error
       rotor_speed:
@@ -468,7 +430,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: rotor_speed[rad/s]
       motor_status:
@@ -478,7 +439,6 @@ classes:
         annotations:
           order: 40
           value_type: string
-          separator: ','
           native_name: motor_status
       motor_status_number:
         range: integer
@@ -487,7 +447,6 @@ classes:
         annotations:
           order: 41
           value_type: int
-          separator: ','
           native_name: motor_status_number
       desired_motor_state:
         range: string
@@ -496,7 +455,6 @@ classes:
         annotations:
           order: 42
           value_type: string
-          separator: ','
           native_name: desired_motor_state
       connected_house:
         range: string
@@ -506,7 +464,6 @@ classes:
         annotations:
           order: 43
           value_type: string
-          separator: ','
           native_name: connected_house
       connected_house_assumed_mode:
         range: string
@@ -515,7 +472,6 @@ classes:
         annotations:
           order: 44
           value_type: string
-          separator: ','
           native_name: connected_house_assumed_mode
       motor_operation_type:
         range: string
@@ -524,7 +480,6 @@ classes:
         annotations:
           order: 45
           value_type: string
-          separator: ','
           native_name: motor_operation_type
       triplex_connection_type:
         range: string
@@ -533,7 +488,6 @@ classes:
         annotations:
           order: 46
           value_type: string
-          separator: ','
           native_name: triplex_connection_type
       wb:
         range: float
@@ -544,7 +498,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: wb[rad/s]
       ws:
@@ -556,7 +509,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: ws[rad/s]
       psi_b:
@@ -566,7 +518,6 @@ classes:
         annotations:
           order: 49
           value_type: complex
-          separator: ','
           native_name: psi_b
       psi_f:
         range: Complex
@@ -575,7 +526,6 @@ classes:
         annotations:
           order: 50
           value_type: complex
-          separator: ','
           native_name: psi_f
       psi_dr:
         range: Complex
@@ -584,7 +534,6 @@ classes:
         annotations:
           order: 51
           value_type: complex
-          separator: ','
           native_name: psi_dr
       psi_qr:
         range: Complex
@@ -593,7 +542,6 @@ classes:
         annotations:
           order: 52
           value_type: complex
-          separator: ','
           native_name: psi_qr
       Ids:
         range: Complex
@@ -602,7 +550,6 @@ classes:
         annotations:
           order: 53
           value_type: complex
-          separator: ','
           native_name: Ids
       Iqs:
         range: Complex
@@ -611,7 +558,6 @@ classes:
         annotations:
           order: 54
           value_type: complex
-          separator: ','
           native_name: Iqs
       If:
         range: Complex
@@ -620,7 +566,6 @@ classes:
         annotations:
           order: 55
           value_type: complex
-          separator: ','
           native_name: If
       Ib:
         range: Complex
@@ -629,7 +574,6 @@ classes:
         annotations:
           order: 56
           value_type: complex
-          separator: ','
           native_name: Ib
       Is:
         range: Complex
@@ -638,7 +582,6 @@ classes:
         annotations:
           order: 57
           value_type: complex
-          separator: ','
           native_name: Is
       electrical_power:
         range: Complex
@@ -649,7 +592,6 @@ classes:
         annotations:
           order: 58
           value_type: complex
-          separator: ','
           native_name: electrical_power[VA]
       electrical_torque:
         range: float
@@ -660,7 +602,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: electrical_torque[pu]
       Vs:
@@ -670,7 +611,6 @@ classes:
         annotations:
           order: 60
           value_type: complex
-          separator: ','
           native_name: Vs
       motor_trip:
         range: boolean
@@ -679,7 +619,6 @@ classes:
         annotations:
           order: 61
           value_type: bool
-          separator: ','
           native_name: motor_trip
       trip:
         range: float
@@ -688,7 +627,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip
       reconnect:
@@ -698,7 +636,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: reconnect
       phips:
@@ -708,7 +645,6 @@ classes:
         annotations:
           order: 64
           value_type: complex
-          separator: ','
           native_name: phips
       phins_cj:
         range: Complex
@@ -717,7 +653,6 @@ classes:
         annotations:
           order: 65
           value_type: complex
-          separator: ','
           native_name: phins_cj
       phipr:
         range: Complex
@@ -726,7 +661,6 @@ classes:
         annotations:
           order: 66
           value_type: complex
-          separator: ','
           native_name: phipr
       phinr_cj:
         range: Complex
@@ -735,7 +669,6 @@ classes:
         annotations:
           order: 67
           value_type: complex
-          separator: ','
           native_name: phinr_cj
       per_unit_rotor_speed:
         range: float
@@ -746,7 +679,6 @@ classes:
         annotations:
           order: 68
           value_type: float
-          separator: ','
           precision: 6
           native_name: per_unit_rotor_speed[pu]
       Ias:
@@ -758,7 +690,6 @@ classes:
         annotations:
           order: 69
           value_type: complex
-          separator: ','
           native_name: Ias[pu]
       Ibs:
         range: Complex
@@ -769,7 +700,6 @@ classes:
         annotations:
           order: 70
           value_type: complex
-          separator: ','
           native_name: Ibs[pu]
       Ics:
         range: Complex
@@ -780,7 +710,6 @@ classes:
         annotations:
           order: 71
           value_type: complex
-          separator: ','
           native_name: Ics[pu]
       Vas:
         range: Complex
@@ -791,7 +720,6 @@ classes:
         annotations:
           order: 72
           value_type: complex
-          separator: ','
           native_name: Vas[pu]
       Vbs:
         range: Complex
@@ -802,7 +730,6 @@ classes:
         annotations:
           order: 73
           value_type: complex
-          separator: ','
           native_name: Vbs[pu]
       Vcs:
         range: Complex
@@ -813,7 +740,6 @@ classes:
         annotations:
           order: 74
           value_type: complex
-          separator: ','
           native_name: Vcs[pu]
       Ips:
         range: Complex
@@ -822,7 +748,6 @@ classes:
         annotations:
           order: 75
           value_type: complex
-          separator: ','
           native_name: Ips
       Ipr:
         range: Complex
@@ -831,7 +756,6 @@ classes:
         annotations:
           order: 76
           value_type: complex
-          separator: ','
           native_name: Ipr
       Ins_cj:
         range: Complex
@@ -840,7 +764,6 @@ classes:
         annotations:
           order: 77
           value_type: complex
-          separator: ','
           native_name: Ins_cj
       Inr_cj:
         range: Complex
@@ -849,7 +772,6 @@ classes:
         annotations:
           order: 78
           value_type: complex
-          separator: ','
           native_name: Inr_cj
       Ls:
         range: float
@@ -858,7 +780,6 @@ classes:
         annotations:
           order: 79
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ls
       Lr:
@@ -868,7 +789,6 @@ classes:
         annotations:
           order: 80
           value_type: float
-          separator: ','
           precision: 6
           native_name: Lr
       sigma1:
@@ -878,7 +798,6 @@ classes:
         annotations:
           order: 81
           value_type: float
-          separator: ','
           precision: 6
           native_name: sigma1
       sigma2:
@@ -888,6 +807,5 @@ classes:
         annotations:
           order: 82
           value_type: float
-          separator: ','
           precision: 6
           native_name: sigma2

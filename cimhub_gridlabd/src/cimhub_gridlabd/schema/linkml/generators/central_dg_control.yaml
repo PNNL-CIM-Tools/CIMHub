@@ -35,7 +35,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: controlled_dgs
       feederhead_meter:
         range: string
@@ -44,7 +43,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: feederhead_meter
       control_mode_0:
         range: string
@@ -52,7 +50,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: control_mode_0
       control_mode_1:
         range: string
@@ -60,7 +57,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: control_mode_1
       control_mode_2:
         range: string
@@ -68,7 +64,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: control_mode_2
       control_mode_3:
         range: string
@@ -76,7 +71,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: control_mode_3
       peak_S:
         range: float
@@ -86,7 +80,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: peak_S[W]
       pf_low:
@@ -97,7 +90,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: pf_low[unit]
       pf_high:
@@ -108,6 +100,5 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: pf_high[unit]

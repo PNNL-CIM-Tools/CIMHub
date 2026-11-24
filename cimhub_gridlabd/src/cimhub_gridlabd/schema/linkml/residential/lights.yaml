@@ -51,7 +51,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: type
       placement:
         range: string
@@ -60,7 +59,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: placement
       installed_power:
         range: float
@@ -71,7 +69,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: installed_power[kW]
       power_density:
@@ -83,7 +80,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_density[W/sf]
       curtailment:
@@ -95,7 +91,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: curtailment[pu]
       demand:
@@ -107,7 +102,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: demand[pu]
       actual_power:
@@ -119,5 +113,4 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: actual_power[kVA]

@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       to_area:
         description: ARTO - To area number
@@ -33,7 +32,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       transfer_id:
         description: TRID - Single-character interarea transfer identifier (0-9 or A-Z)
@@ -45,7 +43,6 @@ classes:
           width: 1
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       power_transfer:
@@ -58,5 +55,4 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ""  # No separator after last field
           raw_default: 0.0

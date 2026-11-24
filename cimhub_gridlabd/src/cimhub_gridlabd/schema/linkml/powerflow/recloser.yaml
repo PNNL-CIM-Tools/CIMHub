@@ -43,7 +43,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: retry_time[s]
       max_number_of_tries:
@@ -54,7 +53,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: max_number_of_tries
       number_of_tries:
@@ -64,6 +62,5 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_of_tries

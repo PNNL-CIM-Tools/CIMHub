@@ -34,7 +34,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_motor_speed[1/min]
       desired_motor_speed:
@@ -46,7 +45,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: desired_motor_speed[1/min]
       motor_poles:
@@ -56,7 +54,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_poles
       rated_output_voltage:
@@ -69,7 +66,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_output_voltage[V]
       rated_horse_power:
@@ -81,7 +77,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_horse_power[hp]
       nominal_output_frequency:
@@ -93,7 +88,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: nominal_output_frequency[Hz]
       desired_output_frequency:
@@ -105,7 +99,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: desired_output_frequency[Hz]
       current_output_frequency:
@@ -117,7 +110,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_output_frequency[Hz]
       efficiency:
@@ -129,7 +121,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: efficiency[%]
       stable_time:
@@ -142,7 +133,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: stable_time[s]
       vfd_state:
@@ -152,5 +142,4 @@ classes:
         annotations:
           order: 11
           value_type: string
-          separator: ','
           native_name: vfd_state

@@ -32,7 +32,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_A[pu]
       vset_B:
@@ -44,7 +43,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_B[pu]
       vset_C:
@@ -56,7 +54,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_C[pu]
       vset_A_0:
@@ -68,7 +65,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_A_0[pu]
       vset_B_0:
@@ -80,7 +76,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_B_0[pu]
       vset_C_0:
@@ -92,7 +87,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_C_0[pu]
       vset_1:
@@ -104,7 +98,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_1[pu]
       vset_2:
@@ -116,7 +109,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_2[pu]
       vset_1_0:
@@ -128,7 +120,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_1_0[pu]
       vset_2_0:
@@ -140,7 +131,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: vset_2_0[pu]
       frequency_regulation:
@@ -151,7 +141,6 @@ classes:
         annotations:
           order: 11
           value_type: bool
-          separator: ','
           native_name: frequency_regulation
       frequency_open_loop_control:
         range: boolean
@@ -161,7 +150,6 @@ classes:
         annotations:
           order: 12
           value_type: bool
-          separator: ','
           native_name: frequency_open_loop_control
       t_delay:
         range: float
@@ -170,7 +158,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: t_delay
       t_hold:
@@ -181,7 +168,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: t_hold
       recover_rate:
@@ -191,7 +177,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: recover_rate
       frequency_low:
@@ -201,7 +186,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_low
       frequency_high:
@@ -211,7 +195,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_high
       V_error:
@@ -221,7 +204,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_error
       voltage_update_tolerance:
@@ -234,7 +216,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_update_tolerance[pu]
       turns_ratio_A:
@@ -244,7 +225,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: turns_ratio_A
       turns_ratio_B:
@@ -254,7 +234,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: turns_ratio_B
       turns_ratio_C:
@@ -264,7 +243,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: turns_ratio_C
       turns_ratio_1:
@@ -275,7 +253,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: turns_ratio_1
       turns_ratio_2:
@@ -286,7 +263,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: turns_ratio_2
       n_max_ext_A:
@@ -296,7 +272,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_max_ext_A
       n_max_ext_B:
@@ -306,7 +281,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_max_ext_B
       n_max_ext_C:
@@ -316,7 +290,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_max_ext_C
       n_min_ext_A:
@@ -326,7 +299,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_min_ext_A
       n_min_ext_B:
@@ -336,7 +308,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_min_ext_B
       n_min_ext_C:
@@ -346,7 +317,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_min_ext_C
       n_max_ext_1:
@@ -356,7 +326,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_max_ext_1
       n_max_ext_2:
@@ -366,7 +335,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_max_ext_2
       n_min_ext_1:
@@ -376,7 +344,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_min_ext_1
       n_min_ext_2:
@@ -386,7 +353,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: n_min_ext_2
       kp:
@@ -396,7 +362,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: kp
       ki:
@@ -406,7 +371,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: ki
       kpf:
@@ -416,7 +380,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpf
       f_db_max:
@@ -426,7 +389,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: f_db_max
       f_db_min:
@@ -436,7 +398,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: f_db_min
       delta_Vmax:
@@ -446,7 +407,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_Vmax
       delta_Vmin:
@@ -456,7 +416,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_Vmin
       delta_V:
@@ -466,7 +425,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_V
       V_bypass_max_pu:
@@ -476,7 +434,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_bypass_max_pu
       V_bypass_min_pu:
@@ -486,7 +443,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_bypass_min_pu
       phase_A_state:
@@ -496,7 +452,6 @@ classes:
         annotations:
           order: 45
           value_type: string
-          separator: ','
           native_name: phase_A_state
       phase_B_state:
         range: PhaseBState
@@ -505,7 +460,6 @@ classes:
         annotations:
           order: 46
           value_type: string
-          separator: ','
           native_name: phase_B_state
       phase_C_state:
         range: PhaseCState
@@ -514,7 +468,6 @@ classes:
         annotations:
           order: 47
           value_type: string
-          separator: ','
           native_name: phase_C_state
       phase_1_state:
         range: string
@@ -523,7 +476,6 @@ classes:
         annotations:
           order: 48
           value_type: string
-          separator: ','
           native_name: phase_1_state
       phase_2_state:
         range: string
@@ -532,7 +484,6 @@ classes:
         annotations:
           order: 49
           value_type: string
-          separator: ','
           native_name: phase_2_state
       series_compensator_resistance:
         range: float
@@ -544,6 +495,5 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: series_compensator_resistance[Ohm]

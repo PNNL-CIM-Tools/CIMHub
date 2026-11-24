@@ -38,7 +38,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       j:
         description: J - To bus number (line endpoint 2)
@@ -47,7 +46,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       line_id:
         description: ID - Multi-section line grouping identifier (2 characters, first must be '&')
@@ -59,7 +57,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       met:
@@ -69,7 +66,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
 
       # ==== VARIABLE SECTION IDENTIFIERS ====
       dum1:
@@ -79,7 +75,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
           serialize_if: "custom:dum1 != 0"
 
       dum2:
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 6
           value_type: int
-          separator: ","
           serialize_if: "custom:dum2 != 0"
 
       dum3:
@@ -99,7 +93,6 @@ classes:
         annotations:
           order: 7
           value_type: int
-          separator: ","
           serialize_if: "custom:dum3 != 0"
 
       dum4:
@@ -109,7 +102,6 @@ classes:
         annotations:
           order: 8
           value_type: int
-          separator: ","
           serialize_if: "custom:dum4 != 0"
 
       dum5:
@@ -119,7 +111,6 @@ classes:
         annotations:
           order: 9
           value_type: int
-          separator: ","
           serialize_if: "custom:dum5 != 0"
 
       dum6:
@@ -129,7 +120,6 @@ classes:
         annotations:
           order: 10
           value_type: int
-          separator: ","
           serialize_if: "custom:dum6 != 0"
 
       dum7:
@@ -139,7 +129,6 @@ classes:
         annotations:
           order: 11
           value_type: int
-          separator: ","
           serialize_if: "custom:dum7 != 0"
 
       dum8:
@@ -149,7 +138,6 @@ classes:
         annotations:
           order: 12
           value_type: int
-          separator: ","
           serialize_if: "custom:dum8 != 0"
 
       dum9:
@@ -159,5 +147,4 @@ classes:
         annotations:
           order: 13
           value_type: int
-          separator: ""
           serialize_if: "custom:dum9 != 0"

@@ -1024,9 +1024,9 @@ Table WireSequenceConfiguration: ...  sequenceNumber 1 (conductor_1), 2 (conduct
 capacitance), and their names are per phasing (`lcon_mtx604_AC`, `lcon_mtx603_CB`). IEEE13_assets: `rAC50` vs
 `rAC25`; the spacings are distances, not XY (the same distances); the CN cable has no insulation diameters.
 
-**Owed by core (exporter wave):** `getters.spacing.get_spacing_distances` raises when a conductor has no height,
-and 224 GLM spacings and every triplex spacing have none. Distances do not need heights, so a GLM round trip needs
-that check moved to `get_spacing_xy`. Plan section 7.
+**Done in core (exporter wave):** 224 GLM spacings and every triplex spacing have no heights. The exporter reads
+them with `getters.spacing.get_stored_distances`, which does not need heights; only `get_spacing_xy` requires them.
+Plan section 7.
 
 ### Built (2026-11-09)
 

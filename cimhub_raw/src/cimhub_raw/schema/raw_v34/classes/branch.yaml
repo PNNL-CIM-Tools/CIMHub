@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       to_bus_number:
         description: J - To bus number
@@ -33,7 +32,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       circuit:
         description: CKT - Circuit identifier
@@ -45,7 +43,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       r:
@@ -56,7 +53,6 @@ classes:
           order: 4
           value_type: float
           precision: 5
-          separator: ","
 
       x:
         description: X - Branch reactance in pu
@@ -66,7 +62,6 @@ classes:
           order: 5
           value_type: float
           precision: 5
-          separator: ","
 
       b:
         description: B - Total branch charging susceptance in pu
@@ -76,7 +71,6 @@ classes:
           order: 6
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       name:
@@ -89,7 +83,6 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
         comments:
           - Branch name field, typically blank/spaces in most files
@@ -103,7 +96,6 @@ classes:
           order: 8
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
           multivalued: true
           count: 12
@@ -118,7 +110,6 @@ classes:
           order: 20
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       b_from:
@@ -129,7 +120,6 @@ classes:
           order: 21
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       g_to:
@@ -140,7 +130,6 @@ classes:
           order: 22
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       b_to:
@@ -151,7 +140,6 @@ classes:
           order: 23
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       status:
@@ -161,7 +149,6 @@ classes:
         annotations:
           order: 24
           value_type: int
-          separator: ","
           raw_default: 1
 
       metered_end:
@@ -171,7 +158,6 @@ classes:
         annotations:
           order: 25
           value_type: int
-          separator: ","
           raw_default: 1
 
       length:
@@ -182,7 +168,6 @@ classes:
           order: 26
           value_type: float
           precision: 1
-          separator: ","
           raw_default: 0.0
 
       o1:
@@ -192,7 +177,6 @@ classes:
         annotations:
           order: 27
           value_type: int
-          separator: ","
 
       f1:
         description: F1 - Fraction of ownership for owner 1
@@ -202,7 +186,6 @@ classes:
           order: 28
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o2:
@@ -212,7 +195,6 @@ classes:
         annotations:
           order: 29
           value_type: int
-          separator: ","
           raw_default: 0
 
       f2:
@@ -223,7 +205,6 @@ classes:
           order: 30
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o3:
@@ -233,7 +214,6 @@ classes:
         annotations:
           order: 31
           value_type: int
-          separator: ","
           raw_default: 0
 
       f3:
@@ -244,7 +224,6 @@ classes:
           order: 32
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o4:
@@ -254,7 +233,6 @@ classes:
         annotations:
           order: 33
           value_type: int
-          separator: ","
           raw_default: 0
 
       f4:
@@ -265,5 +243,4 @@ classes:
           order: 34
           value_type: float
           precision: 4
-          separator: ""  # No separator after last field
           raw_default: 1.0

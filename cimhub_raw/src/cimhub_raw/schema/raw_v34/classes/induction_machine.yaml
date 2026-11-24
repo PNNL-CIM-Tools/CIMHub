@@ -20,7 +20,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
       name:
         description: ID - Machine identifier (one or two characters)
         range: string
@@ -31,7 +30,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
       status:
         description: ST - Machine status (1 in-service, 0 out-of-service)
@@ -40,7 +38,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
           raw_default: 1
       scode:
         description: SC - Machine standard code (1 NEMA, 2 IEC)
@@ -49,7 +46,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
       dcode:
         description: DC - Machine design code (0 custom, 1-5 NEMA or IEC design)
@@ -58,7 +54,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
           raw_default: 2
       area:
         description: AREA - Area number (1 through 9999)
@@ -67,7 +62,6 @@ classes:
         annotations:
           order: 6
           value_type: int
-          separator: ","
           raw_default_rule: "area of bus I"
       zone:
         description: ZONE - Zone number (1 through 9999)
@@ -76,7 +70,6 @@ classes:
         annotations:
           order: 7
           value_type: int
-          separator: ","
           raw_default_rule: "zone of bus I"
       owner:
         description: OWNER - Owner number (1 through 9999)
@@ -85,7 +78,6 @@ classes:
         annotations:
           order: 8
           value_type: int
-          separator: ","
           raw_default_rule: "owner of bus I"
       tcode:
         description: TC - Mechanical load torque model (1 power law, 2 WECC)
@@ -94,7 +86,6 @@ classes:
         annotations:
           order: 9
           value_type: int
-          separator: ","
           raw_default: 1
       bcode:
         description: BC - Machine base power code (1 mechanical MW, 2 electrical MVA)
@@ -103,7 +94,6 @@ classes:
         annotations:
           order: 10
           value_type: int
-          separator: ","
           raw_default: 1
       mbase:
         description: MBASE - Machine base power in MW or MVA (unit per BCODE)
@@ -113,7 +103,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default_rule: "system base MVA"
       ratekv:
         description: RATEKV - Machine rated voltage in kV line-to-line (0 uses the base voltage of bus I)
@@ -125,7 +114,6 @@ classes:
           order: 12
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       pcode:
         description: PC - Scheduled power code (1 mechanical MW output, 2 electrical MW drawn)
@@ -134,7 +122,6 @@ classes:
         annotations:
           order: 13
           value_type: int
-          separator: ","
           raw_default: 1
       pset:
         description: PSET - Scheduled active power in MW at 1.0 pu terminal voltage (positive means motoring)
@@ -146,7 +133,6 @@ classes:
           order: 14
           value_type: float
           precision: 4
-          separator: ","
       h:
         description: H - Machine inertia in pu on MBASE
         range: float
@@ -155,7 +141,6 @@ classes:
           order: 15
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       a:
         description: A - Load torque coefficient A (WECC model only)
@@ -165,7 +150,6 @@ classes:
           order: 16
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       b:
         description: B - Load torque coefficient B (WECC model only)
@@ -175,7 +159,6 @@ classes:
           order: 17
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       d:
         description: D - Load torque coefficient D (power law exponent term, or WECC)
@@ -185,7 +168,6 @@ classes:
           order: 18
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       e:
         description: E - Load torque coefficient E (WECC model only)
@@ -195,7 +177,6 @@ classes:
           order: 19
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       ra:
         description: RA - Armature resistance in pu on MBASE and RATEKV
@@ -205,7 +186,6 @@ classes:
           order: 20
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       xa:
         description: XA - Armature leakage reactance in pu on MBASE and RATEKV
@@ -215,7 +195,6 @@ classes:
           order: 21
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       xm:
         description: XM - Unsaturated magnetizing reactance in pu on MBASE and RATEKV
@@ -225,7 +204,6 @@ classes:
           order: 22
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 2.5
       r1:
         description: R1 - First rotor cage resistance in pu on MBASE and RATEKV
@@ -235,7 +213,6 @@ classes:
           order: 23
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 999.0
       x1:
         description: X1 - First rotor cage reactance in pu on MBASE and RATEKV
@@ -245,7 +222,6 @@ classes:
           order: 24
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 999.0
       r2:
         description: R2 - Second rotor cage resistance in pu on MBASE and RATEKV
@@ -255,7 +231,6 @@ classes:
           order: 25
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 999.0
       x2:
         description: X2 - Second rotor cage reactance in pu on MBASE and RATEKV
@@ -265,7 +240,6 @@ classes:
           order: 26
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 999.0
       x3:
         description: X3 - Third rotor reactance in pu on MBASE and RATEKV
@@ -275,7 +249,6 @@ classes:
           order: 27
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       e1:
         description: E1 - First terminal voltage point on the saturation curve in pu on RATEKV
@@ -285,7 +258,6 @@ classes:
           order: 28
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
       se1:
         description: SE1 - Saturation factor at terminal voltage E1
@@ -295,7 +267,6 @@ classes:
           order: 29
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       e2:
         description: E2 - Second terminal voltage point on the saturation curve in pu on RATEKV
@@ -305,7 +276,6 @@ classes:
           order: 30
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.2
       se2:
         description: SE2 - Saturation factor at terminal voltage E2
@@ -315,7 +285,6 @@ classes:
           order: 31
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       ia1:
         description: IA1 - First stator current in pu for stator leakage saturation
@@ -325,7 +294,6 @@ classes:
           order: 32
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       ia2:
         description: IA2 - Second stator current in pu for stator leakage saturation
@@ -335,7 +303,6 @@ classes:
           order: 33
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
       xamult:
         description: XAMULT - Multiplier for the saturated XA (0 to 1.0)
@@ -345,5 +312,4 @@ classes:
           order: 34
           value_type: float
           precision: 4
-          separator: ""  # No separator after last field
           raw_default: 1.0

@@ -44,7 +44,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: control_method
       capacitor_delay:
         range: float
@@ -55,7 +54,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacitor_delay[s]
       regulator_delay:
@@ -67,7 +65,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: regulator_delay[s]
       desired_pf:
@@ -78,7 +75,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: desired_pf
       d_max:
@@ -89,7 +85,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: d_max
       d_min:
@@ -100,7 +95,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: d_min
       substation_link:
@@ -110,7 +104,6 @@ classes:
         annotations:
           order: 7
           value_type: string
-          separator: ','
           native_name: substation_link
       pf_phase:
         range: string
@@ -119,7 +112,6 @@ classes:
         annotations:
           order: 8
           value_type: string
-          separator: ','
           native_name: pf_phase
       regulator_list:
         range: string
@@ -128,7 +120,6 @@ classes:
         annotations:
           order: 9
           value_type: string
-          separator: ','
           native_name: regulator_list
       capacitor_list:
         range: string
@@ -137,7 +128,6 @@ classes:
         annotations:
           order: 10
           value_type: string
-          separator: ','
           native_name: capacitor_list
       voltage_measurements:
         range: string
@@ -146,7 +136,6 @@ classes:
         annotations:
           order: 11
           value_type: string
-          separator: ','
           native_name: voltage_measurements
       minimum_voltages:
         range: string
@@ -155,7 +144,6 @@ classes:
         annotations:
           order: 12
           value_type: string
-          separator: ','
           native_name: minimum_voltages
       maximum_voltages:
         range: string
@@ -164,7 +152,6 @@ classes:
         annotations:
           order: 13
           value_type: string
-          separator: ','
           native_name: maximum_voltages
       desired_voltages:
         range: string
@@ -173,7 +160,6 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: desired_voltages
       max_vdrop:
         range: string
@@ -183,7 +169,6 @@ classes:
         annotations:
           order: 15
           value_type: string
-          separator: ','
           native_name: max_vdrop
       high_load_deadband:
         range: string
@@ -193,7 +178,6 @@ classes:
         annotations:
           order: 16
           value_type: string
-          separator: ','
           native_name: high_load_deadband
       low_load_deadband:
         range: string
@@ -203,7 +187,6 @@ classes:
         annotations:
           order: 17
           value_type: string
-          separator: ','
           native_name: low_load_deadband
       pf_signed:
         range: boolean
@@ -213,5 +196,4 @@ classes:
         annotations:
           order: 18
           value_type: bool
-          separator: ','
           native_name: pf_signed

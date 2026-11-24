@@ -42,7 +42,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: control_power[W]
       dishwasher_coil_power_1:
@@ -53,7 +52,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: dishwasher_coil_power_1[W]
       dishwasher_coil_power_2:
@@ -64,7 +62,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: dishwasher_coil_power_2[W]
       dishwasher_coil_power_3:
@@ -75,7 +72,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: dishwasher_coil_power_3[W]
       motor_power:
@@ -86,7 +82,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_power[W]
       circuit_split:
@@ -95,7 +90,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: circuit_split
       queue:
@@ -107,7 +101,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue[unit]
       stall_voltage:
@@ -118,7 +111,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_voltage[V]
       start_voltage:
@@ -129,7 +121,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: start_voltage[V]
       stall_impedance:
@@ -140,7 +131,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: stall_impedance[Ohm]
       trip_delay:
         range: float
@@ -150,7 +140,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip_delay[s]
       reset_delay:
@@ -161,7 +150,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: reset_delay[s]
       total_power:
@@ -172,7 +160,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_power[W]
       state:
@@ -181,7 +168,6 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: state
       energy_baseline:
         range: float
@@ -191,7 +177,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_baseline[kWh]
       energy_used:
@@ -202,7 +187,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_used[kWh]
       control_check1:
@@ -211,7 +195,6 @@ classes:
         annotations:
           order: 17
           value_type: bool
-          separator: ','
           native_name: control_check1
       control_check2:
         range: boolean
@@ -219,7 +202,6 @@ classes:
         annotations:
           order: 18
           value_type: bool
-          separator: ','
           native_name: control_check2
       control_check3:
         range: boolean
@@ -227,7 +209,6 @@ classes:
         annotations:
           order: 19
           value_type: bool
-          separator: ','
           native_name: control_check3
       control_check4:
         range: boolean
@@ -235,7 +216,6 @@ classes:
         annotations:
           order: 20
           value_type: bool
-          separator: ','
           native_name: control_check4
       control_check5:
         range: boolean
@@ -243,7 +223,6 @@ classes:
         annotations:
           order: 21
           value_type: bool
-          separator: ','
           native_name: control_check5
       control_check6:
         range: boolean
@@ -251,7 +230,6 @@ classes:
         annotations:
           order: 22
           value_type: bool
-          separator: ','
           native_name: control_check6
       control_check7:
         range: boolean
@@ -259,7 +237,6 @@ classes:
         annotations:
           order: 23
           value_type: bool
-          separator: ','
           native_name: control_check7
       control_check8:
         range: boolean
@@ -267,7 +244,6 @@ classes:
         annotations:
           order: 24
           value_type: bool
-          separator: ','
           native_name: control_check8
       control_check9:
         range: boolean
@@ -275,7 +251,6 @@ classes:
         annotations:
           order: 25
           value_type: bool
-          separator: ','
           native_name: control_check9
       control_check10:
         range: boolean
@@ -283,7 +258,6 @@ classes:
         annotations:
           order: 26
           value_type: bool
-          separator: ','
           native_name: control_check10
       control_check11:
         range: boolean
@@ -291,7 +265,6 @@ classes:
         annotations:
           order: 27
           value_type: bool
-          separator: ','
           native_name: control_check11
       control_check12:
         range: boolean
@@ -299,7 +272,6 @@ classes:
         annotations:
           order: 28
           value_type: bool
-          separator: ','
           native_name: control_check12
       control_check_temp:
         range: boolean
@@ -307,7 +279,6 @@ classes:
         annotations:
           order: 29
           value_type: bool
-          separator: ','
           native_name: control_check_temp
       motor_only_check1:
         range: boolean
@@ -315,7 +286,6 @@ classes:
         annotations:
           order: 30
           value_type: bool
-          separator: ','
           native_name: motor_only_check1
       motor_only_check2:
         range: boolean
@@ -323,7 +293,6 @@ classes:
         annotations:
           order: 31
           value_type: bool
-          separator: ','
           native_name: motor_only_check2
       motor_only_check3:
         range: boolean
@@ -331,7 +300,6 @@ classes:
         annotations:
           order: 32
           value_type: bool
-          separator: ','
           native_name: motor_only_check3
       motor_only_check4:
         range: boolean
@@ -339,7 +307,6 @@ classes:
         annotations:
           order: 33
           value_type: bool
-          separator: ','
           native_name: motor_only_check4
       motor_only_check5:
         range: boolean
@@ -347,7 +314,6 @@ classes:
         annotations:
           order: 34
           value_type: bool
-          separator: ','
           native_name: motor_only_check5
       motor_only_check6:
         range: boolean
@@ -355,7 +321,6 @@ classes:
         annotations:
           order: 35
           value_type: bool
-          separator: ','
           native_name: motor_only_check6
       motor_only_check7:
         range: boolean
@@ -363,7 +328,6 @@ classes:
         annotations:
           order: 36
           value_type: bool
-          separator: ','
           native_name: motor_only_check7
       motor_only_check8:
         range: boolean
@@ -371,7 +335,6 @@ classes:
         annotations:
           order: 37
           value_type: bool
-          separator: ','
           native_name: motor_only_check8
       motor_only_check9:
         range: boolean
@@ -379,7 +342,6 @@ classes:
         annotations:
           order: 38
           value_type: bool
-          separator: ','
           native_name: motor_only_check9
       motor_only_temp1:
         range: boolean
@@ -387,7 +349,6 @@ classes:
         annotations:
           order: 39
           value_type: bool
-          separator: ','
           native_name: motor_only_temp1
       motor_only_temp2:
         range: boolean
@@ -395,7 +356,6 @@ classes:
         annotations:
           order: 40
           value_type: bool
-          separator: ','
           native_name: motor_only_temp2
       motor_coil_only_check1:
         range: boolean
@@ -403,7 +363,6 @@ classes:
         annotations:
           order: 41
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check1
       motor_coil_only_check2:
         range: boolean
@@ -411,7 +370,6 @@ classes:
         annotations:
           order: 42
           value_type: bool
-          separator: ','
           native_name: motor_coil_only_check2
       heateddry_check1:
         range: boolean
@@ -419,7 +377,6 @@ classes:
         annotations:
           order: 43
           value_type: bool
-          separator: ','
           native_name: heateddry_check1
       heateddry_check2:
         range: boolean
@@ -427,7 +384,6 @@ classes:
         annotations:
           order: 44
           value_type: bool
-          separator: ','
           native_name: heateddry_check2
       coil_only_check1:
         range: boolean
@@ -435,7 +391,6 @@ classes:
         annotations:
           order: 45
           value_type: bool
-          separator: ','
           native_name: coil_only_check1
       coil_only_check2:
         range: boolean
@@ -443,7 +398,6 @@ classes:
         annotations:
           order: 46
           value_type: bool
-          separator: ','
           native_name: coil_only_check2
       coil_only_check3:
         range: boolean
@@ -451,7 +405,6 @@ classes:
         annotations:
           order: 47
           value_type: bool
-          separator: ','
           native_name: coil_only_check3
       Heateddry_option_check:
         range: boolean
@@ -459,7 +412,6 @@ classes:
         annotations:
           order: 48
           value_type: bool
-          separator: ','
           native_name: Heateddry_option_check
       queue_min:
         range: float
@@ -469,7 +421,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_min[unit]
       queue_max:
@@ -480,7 +431,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_max[unit]
       pulse_interval_1:
@@ -491,7 +441,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_1[s]
       pulse_interval_2:
@@ -502,7 +451,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_2[s]
       pulse_interval_3:
@@ -513,7 +461,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_3[s]
       pulse_interval_4:
@@ -524,7 +471,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_4[s]
       pulse_interval_5:
@@ -535,7 +481,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_5[s]
       pulse_interval_6:
@@ -546,7 +491,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_6[s]
       pulse_interval_7:
@@ -557,7 +501,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_7[s]
       pulse_interval_8:
@@ -568,7 +511,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_8[s]
       pulse_interval_9:
@@ -579,7 +521,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_9[s]
       pulse_interval_10:
@@ -590,7 +531,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_10[s]
       pulse_interval_11:
@@ -601,7 +541,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_11[s]
       pulse_interval_12:
@@ -612,7 +551,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_12[s]
       pulse_interval_13:
@@ -623,7 +561,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_13[s]
       pulse_interval_14:
@@ -634,7 +571,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_14[s]
       pulse_interval_15:
@@ -645,7 +581,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_15[s]
       pulse_interval_16:
@@ -656,7 +591,6 @@ classes:
         annotations:
           order: 66
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_16[s]
       pulse_interval_17:
@@ -667,7 +601,6 @@ classes:
         annotations:
           order: 67
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_17[s]
       pulse_interval_18:
@@ -678,7 +611,6 @@ classes:
         annotations:
           order: 68
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_18[s]
       pulse_interval_19:
@@ -689,7 +621,6 @@ classes:
         annotations:
           order: 69
           value_type: float
-          separator: ','
           precision: 6
           native_name: pulse_interval_19[s]
       dishwasher_run_prob:
@@ -698,7 +629,6 @@ classes:
         annotations:
           order: 70
           value_type: float
-          separator: ','
           precision: 6
           native_name: dishwasher_run_prob
       energy_needed:
@@ -709,7 +639,6 @@ classes:
         annotations:
           order: 71
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_needed[kWh]
       dishwasher_demand:
@@ -720,7 +649,6 @@ classes:
         annotations:
           order: 72
           value_type: float
-          separator: ','
           precision: 6
           native_name: dishwasher_demand[kWh]
       daily_dishwasher_demand:
@@ -731,7 +659,6 @@ classes:
         annotations:
           order: 73
           value_type: float
-          separator: ','
           precision: 6
           native_name: daily_dishwasher_demand[kWh]
       actual_dishwasher_demand:
@@ -742,7 +669,6 @@ classes:
         annotations:
           order: 74
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_dishwasher_demand[kWh]
       motor_on_off:
@@ -751,7 +677,6 @@ classes:
         annotations:
           order: 75
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_on_off
       motor_coil_on_off:
@@ -760,7 +685,6 @@ classes:
         annotations:
           order: 76
           value_type: float
-          separator: ','
           precision: 6
           native_name: motor_coil_on_off
       motor_only_25_repeat_one:
@@ -770,7 +694,6 @@ classes:
         annotations:
           order: 77
           value_type: bool
-          separator: ','
           native_name: motor_only_25_repeat_one
       controls_power:
         range: float
@@ -779,7 +702,6 @@ classes:
         annotations:
           order: 78
           value_type: float
-          separator: ','
           precision: 6
           native_name: controls_power
       cycle_duration:
@@ -789,7 +711,6 @@ classes:
         annotations:
           order: 79
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_duration
       count_motor_only:
@@ -799,7 +720,6 @@ classes:
         annotations:
           order: 80
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_motor_only
       count_motor_only1:
@@ -809,7 +729,6 @@ classes:
         annotations:
           order: 81
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_motor_only1
       count_motor_only_25:
@@ -819,7 +738,6 @@ classes:
         annotations:
           order: 82
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_motor_only_25
       count_coil_only:
@@ -829,7 +747,6 @@ classes:
         annotations:
           order: 83
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_coil_only
       count_motor_only_68:
@@ -839,7 +756,6 @@ classes:
         annotations:
           order: 84
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_motor_only_68
       count_control_only:
@@ -849,7 +765,6 @@ classes:
         annotations:
           order: 85
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_control_only
       count_control_only1:
@@ -859,7 +774,6 @@ classes:
         annotations:
           order: 86
           value_type: float
-          separator: ','
           precision: 6
           native_name: count_control_only1
       heat_fraction:
@@ -869,7 +783,6 @@ classes:
         annotations:
           order: 87
           value_type: float
-          separator: ','
           precision: 6
           native_name: heat_fraction
       is_240:
@@ -879,5 +792,4 @@ classes:
         annotations:
           order: 88
           value_type: bool
-          separator: ','
           native_name: is_240

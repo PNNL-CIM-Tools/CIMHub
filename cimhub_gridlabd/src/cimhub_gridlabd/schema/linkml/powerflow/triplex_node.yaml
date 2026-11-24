@@ -38,7 +38,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: bustype
       busflags:
         range: string
@@ -48,7 +47,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: busflags
       reference_bus:
         range: string
@@ -57,7 +55,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: reference_bus
       maximum_voltage_error:
         range: float
@@ -68,7 +65,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: maximum_voltage_error[V]
       voltage_1:
@@ -80,7 +76,6 @@ classes:
         annotations:
           order: 5
           value_type: complex
-          separator: ','
           native_name: voltage_1[V]
       voltage_2:
         range: Complex
@@ -91,7 +86,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: voltage_2[V]
       voltage_N:
         range: Complex
@@ -102,7 +96,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: voltage_N[V]
       voltage_12:
         range: Complex
@@ -113,7 +106,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: voltage_12[V]
       voltage_1N:
         range: Complex
@@ -124,7 +116,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: voltage_1N[V]
       voltage_2N:
         range: Complex
@@ -135,7 +126,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: voltage_2N[V]
       prerotated_current_1:
         range: Complex
@@ -148,7 +138,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: prerotated_current_1[A]
       prerotated_current_2:
         range: Complex
@@ -161,7 +150,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: prerotated_current_2[A]
       prerotated_current_12:
         range: Complex
@@ -174,7 +162,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: prerotated_current_12[A]
       deltamode_generator_current_12:
         range: Complex
@@ -187,7 +174,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: deltamode_generator_current_12[A]
       deltamode_PGenTotal:
         range: Complex
@@ -197,7 +183,6 @@ classes:
         annotations:
           order: 15
           value_type: complex
-          separator: ','
           native_name: deltamode_PGenTotal
       deltamode_full_Y_matrix:
         range: string
@@ -207,7 +192,6 @@ classes:
         annotations:
           order: 16
           value_type: string
-          separator: ','
           native_name: deltamode_full_Y_matrix
       deltamode_full_Y_all_matrix:
         range: string
@@ -217,7 +201,6 @@ classes:
         annotations:
           order: 17
           value_type: string
-          separator: ','
           native_name: deltamode_full_Y_all_matrix
       NR_powerflow_parent:
         range: string
@@ -227,7 +210,6 @@ classes:
         annotations:
           order: 18
           value_type: string
-          separator: ','
           native_name: NR_powerflow_parent
       residential_nominal_current_1:
         range: Complex
@@ -238,7 +220,6 @@ classes:
         annotations:
           order: 19
           value_type: complex
-          separator: ','
           native_name: residential_nominal_current_1[A]
       residential_nominal_current_2:
         range: Complex
@@ -249,7 +230,6 @@ classes:
         annotations:
           order: 20
           value_type: complex
-          separator: ','
           native_name: residential_nominal_current_2[A]
       residential_nominal_current_12:
         range: Complex
@@ -261,7 +241,6 @@ classes:
         annotations:
           order: 21
           value_type: complex
-          separator: ','
           native_name: residential_nominal_current_12[A]
       residential_nominal_current_1_real:
         range: float
@@ -273,7 +252,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_1_real[A]
       residential_nominal_current_1_imag:
@@ -286,7 +264,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_1_imag[A]
       residential_nominal_current_2_real:
@@ -299,7 +276,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_2_real[A]
       residential_nominal_current_2_imag:
@@ -312,7 +288,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_2_imag[A]
       residential_nominal_current_12_real:
@@ -325,7 +300,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_12_real[A]
       residential_nominal_current_12_imag:
@@ -338,7 +312,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: residential_nominal_current_12_imag[A]
       current_1:
@@ -351,7 +324,6 @@ classes:
         annotations:
           order: 28
           value_type: complex
-          separator: ','
           native_name: current_1[A]
       current_2:
         range: Complex
@@ -363,7 +335,6 @@ classes:
         annotations:
           order: 29
           value_type: complex
-          separator: ','
           native_name: current_2[A]
       current_N:
         range: Complex
@@ -375,7 +346,6 @@ classes:
         annotations:
           order: 30
           value_type: complex
-          separator: ','
           native_name: current_N[A]
       current_12:
         range: Complex
@@ -387,7 +357,6 @@ classes:
         annotations:
           order: 31
           value_type: complex
-          separator: ','
           native_name: current_12[A]
       power_1:
         range: Complex
@@ -399,7 +368,6 @@ classes:
         annotations:
           order: 32
           value_type: complex
-          separator: ','
           native_name: power_1[VA]
       power_2:
         range: Complex
@@ -411,7 +379,6 @@ classes:
         annotations:
           order: 33
           value_type: complex
-          separator: ','
           native_name: power_2[VA]
       power_12:
         range: Complex
@@ -423,7 +390,6 @@ classes:
         annotations:
           order: 34
           value_type: complex
-          separator: ','
           native_name: power_12[VA]
       shunt_1:
         range: Complex
@@ -435,7 +401,6 @@ classes:
         annotations:
           order: 35
           value_type: complex
-          separator: ','
           native_name: shunt_1[S]
       shunt_2:
         range: Complex
@@ -447,7 +412,6 @@ classes:
         annotations:
           order: 36
           value_type: complex
-          separator: ','
           native_name: shunt_2[S]
       shunt_12:
         range: Complex
@@ -459,7 +423,6 @@ classes:
         annotations:
           order: 37
           value_type: complex
-          separator: ','
           native_name: shunt_12[S]
       house_present:
         range: boolean
@@ -468,7 +431,6 @@ classes:
         annotations:
           order: 38
           value_type: bool
-          separator: ','
           native_name: house_present
       Norton_dynamic:
         range: boolean
@@ -478,7 +440,6 @@ classes:
         annotations:
           order: 39
           value_type: bool
-          separator: ','
           native_name: Norton_dynamic
       Norton_dynamic_child:
         range: boolean
@@ -488,7 +449,6 @@ classes:
         annotations:
           order: 40
           value_type: bool
-          separator: ','
           native_name: Norton_dynamic_child
       generator_dynamic:
         range: boolean
@@ -498,7 +458,6 @@ classes:
         annotations:
           order: 41
           value_type: bool
-          separator: ','
           native_name: generator_dynamic
       reset_disabled_island_state:
         range: boolean
@@ -508,7 +467,6 @@ classes:
         annotations:
           order: 42
           value_type: bool
-          separator: ','
           native_name: reset_disabled_island_state
       GFA_enable:
         range: boolean
@@ -517,7 +475,6 @@ classes:
         annotations:
           order: 43
           value_type: bool
-          separator: ','
           native_name: GFA_enable
       GFA_freq_low_trip:
         range: float
@@ -529,7 +486,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_freq_low_trip[Hz]
       GFA_freq_high_trip:
@@ -542,7 +498,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_freq_high_trip[Hz]
       GFA_volt_low_trip:
@@ -554,7 +509,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_volt_low_trip[pu]
       GFA_volt_high_trip:
@@ -567,7 +521,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_volt_high_trip[pu]
       GFA_reconnect_time:
@@ -579,7 +532,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_reconnect_time[s]
       GFA_freq_disconnect_time:
@@ -592,7 +544,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_freq_disconnect_time[s]
       GFA_volt_disconnect_time:
@@ -605,7 +556,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: GFA_volt_disconnect_time[s]
       GFA_status:
@@ -616,7 +566,6 @@ classes:
         annotations:
           order: 51
           value_type: bool
-          separator: ','
           native_name: GFA_status
       GFA_trip_method:
         range: GfaTripMethod
@@ -625,7 +574,6 @@ classes:
         annotations:
           order: 52
           value_type: string
-          separator: ','
           native_name: GFA_trip_method
       service_status:
         range: ServiceStatus
@@ -634,7 +582,6 @@ classes:
         annotations:
           order: 53
           value_type: string
-          separator: ','
           native_name: service_status
       service_status_double:
         range: float
@@ -644,7 +591,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: service_status_double
       previous_uptime:
@@ -656,7 +602,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: previous_uptime[min]
       current_uptime:
@@ -668,7 +613,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_uptime[min]
       topological_parent:
@@ -678,7 +622,6 @@ classes:
         annotations:
           order: 57
           value_type: string
-          separator: ','
           native_name: topological_parent
       behaving_as_swing:
         range: boolean
@@ -688,7 +631,6 @@ classes:
         annotations:
           order: 58
           value_type: bool
-          separator: ','
           native_name: behaving_as_swing
       frequency_measure_type:
         range: FrequencyMeasureType
@@ -697,7 +639,6 @@ classes:
         annotations:
           order: 59
           value_type: string
-          separator: ','
           native_name: frequency_measure_type
       sfm_Tf:
         range: float
@@ -709,7 +650,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: sfm_Tf[s]
       pll_Kp:
@@ -721,7 +661,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: pll_Kp[pu]
       pll_Ki:
@@ -733,7 +672,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: pll_Ki[pu]
       measured_angle_1:
@@ -745,7 +683,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_angle_1[rad]
       measured_frequency_1:
@@ -757,7 +694,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_frequency_1[Hz]
       measured_angle_2:
@@ -769,7 +705,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_angle_2[rad]
       measured_frequency_2:
@@ -781,7 +716,6 @@ classes:
         annotations:
           order: 66
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_frequency_2[Hz]
       measured_angle_12:
@@ -793,7 +727,6 @@ classes:
         annotations:
           order: 67
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_angle_12[rad]
       measured_frequency_12:
@@ -805,7 +738,6 @@ classes:
         annotations:
           order: 68
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_frequency_12[Hz]
       measured_frequency:
@@ -817,6 +749,5 @@ classes:
         annotations:
           order: 69
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_frequency[Hz]

@@ -43,7 +43,7 @@ def _header_slot(name: str, description: str) -> dict:
     if name == "name":
         slot.update(identifier=True, required=True)
     slot["description"] = description
-    slot["annotations"] = {"order": 0, "value_type": "string", "separator": ",", "native_name": name}
+    slot["annotations"] = {"order": 0, "value_type": "string", "native_name": name}
     return slot
 
 
@@ -319,7 +319,6 @@ class LinkMLGenerator:
         annotations = {
             'order': order,
             'value_type': self._get_serialization_type(prop['cpp_type']),
-            'separator': ',',  # GLM-JSON uses commas
         }
 
         # Add precision for floats

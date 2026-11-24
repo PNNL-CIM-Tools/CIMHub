@@ -52,7 +52,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: configuration
       climate:
         range: string
@@ -61,7 +60,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: climate
       ambient_temperature:
         range: float
@@ -72,7 +70,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: ambient_temperature[degC]
       top_oil_hot_spot_temperature:
@@ -84,7 +81,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: top_oil_hot_spot_temperature[degC]
       winding_hot_spot_temperature:
@@ -96,7 +92,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: winding_hot_spot_temperature[degC]
       percent_loss_of_life:
@@ -106,7 +101,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: percent_loss_of_life
       aging_constant:
@@ -116,7 +110,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: aging_constant
       use_thermal_model:
@@ -126,7 +119,6 @@ classes:
         annotations:
           order: 8
           value_type: bool
-          separator: ','
           native_name: use_thermal_model
       transformer_replacement_count:
         range: float
@@ -136,7 +128,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: transformer_replacement_count
       aging_granularity:
@@ -148,7 +139,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: aging_granularity[s]
       phase_A_primary_flux_value:
@@ -161,7 +151,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_A_primary_flux_value[Wb]
       phase_B_primary_flux_value:
@@ -174,7 +163,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_B_primary_flux_value[Wb]
       phase_C_primary_flux_value:
@@ -187,7 +175,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_C_primary_flux_value[Wb]
       phase_A_secondary_flux_value:
@@ -200,7 +187,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_A_secondary_flux_value[Wb]
       phase_B_secondary_flux_value:
@@ -213,7 +199,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_B_secondary_flux_value[Wb]
       phase_C_secondary_flux_value:
@@ -226,6 +211,5 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_C_secondary_flux_value[Wb]

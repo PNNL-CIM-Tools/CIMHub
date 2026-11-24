@@ -27,7 +27,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: check_mode
       output_filename:
         range: string
@@ -36,7 +35,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: output_filename
       reliability_mode:
         range: boolean
@@ -46,7 +44,6 @@ classes:
         annotations:
           order: 3
           value_type: bool
-          separator: ','
           native_name: reliability_mode
       strictly_radial:
         range: boolean
@@ -56,7 +53,6 @@ classes:
         annotations:
           order: 4
           value_type: bool
-          separator: ','
           native_name: strictly_radial
       full_output_file:
         range: boolean
@@ -66,7 +62,6 @@ classes:
         annotations:
           order: 5
           value_type: bool
-          separator: ','
           native_name: full_output_file
       grid_association:
         range: boolean
@@ -76,7 +71,6 @@ classes:
         annotations:
           order: 6
           value_type: bool
-          separator: ','
           native_name: grid_association
       eventgen_object:
         range: string
@@ -85,5 +79,4 @@ classes:
         annotations:
           order: 7
           value_type: string
-          separator: ','
           native_name: eventgen_object

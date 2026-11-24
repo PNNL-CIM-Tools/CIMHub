@@ -32,7 +32,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: powers
       impedances:
         range: string
@@ -40,7 +39,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: impedances
       currents:
         range: string
@@ -48,7 +46,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: currents
       durations:
         range: string
@@ -56,7 +53,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: durations
       transitions:
         range: string
@@ -64,7 +60,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: transitions
       heatgains:
         range: string
@@ -72,7 +67,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: heatgains
       defaults:
         range: string
@@ -81,5 +75,4 @@ classes:
         annotations:
           order: 7
           value_type: string
-          separator: ','
           native_name: defaults

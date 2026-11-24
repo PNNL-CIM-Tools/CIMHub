@@ -60,7 +60,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_energy[Wh]
       measured_real_energy_delta:
@@ -73,7 +72,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_energy_delta[Wh]
       measured_reactive_energy:
@@ -85,7 +83,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_reactive_energy[VAh]
       measured_reactive_energy_delta:
@@ -98,7 +95,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_reactive_energy_delta[VAh]
       measured_energy_delta_timestep:
@@ -110,7 +106,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_energy_delta_timestep[s]
       measured_power:
@@ -122,7 +117,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: measured_power[VA]
       indiv_measured_power_1:
         range: Complex
@@ -133,7 +127,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_1[VA]
       indiv_measured_power_2:
         range: Complex
@@ -144,7 +137,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_2[VA]
       indiv_measured_power_N:
         range: Complex
@@ -155,7 +147,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_N[VA]
       measured_demand:
         range: float
@@ -166,7 +157,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_demand[W]
       measured_real_power:
@@ -178,7 +168,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_power[W]
       measured_reactive_power:
@@ -190,7 +179,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_reactive_power[VAr]
       meter_power_consumption:
@@ -202,7 +190,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: meter_power_consumption[VA]
       measured_voltage_1:
         range: Complex
@@ -213,7 +200,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: measured_voltage_1[V]
       measured_voltage_2:
         range: Complex
@@ -224,7 +210,6 @@ classes:
         annotations:
           order: 15
           value_type: complex
-          separator: ','
           native_name: measured_voltage_2[V]
       measured_voltage_N:
         range: Complex
@@ -235,7 +220,6 @@ classes:
         annotations:
           order: 16
           value_type: complex
-          separator: ','
           native_name: measured_voltage_N[V]
       measured_real_max_voltage_1_in_interval:
         range: float
@@ -247,7 +231,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_max_voltage_1_in_interval[V]
       measured_real_max_voltage_2_in_interval:
@@ -260,7 +243,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_max_voltage_2_in_interval[V]
       measured_real_max_voltage_12_in_interval:
@@ -273,7 +255,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_max_voltage_12_in_interval[V]
       measured_imag_max_voltage_1_in_interval:
@@ -286,7 +267,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_max_voltage_1_in_interval[V]
       measured_imag_max_voltage_2_in_interval:
@@ -299,7 +279,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_max_voltage_2_in_interval[V]
       measured_imag_max_voltage_12_in_interval:
@@ -312,7 +291,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_max_voltage_12_in_interval[V]
       measured_real_min_voltage_1_in_interval:
@@ -325,7 +303,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_min_voltage_1_in_interval[V]
       measured_real_min_voltage_2_in_interval:
@@ -338,7 +315,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_min_voltage_2_in_interval[V]
       measured_real_min_voltage_12_in_interval:
@@ -351,7 +327,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_min_voltage_12_in_interval[V]
       measured_imag_min_voltage_1_in_interval:
@@ -364,7 +339,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_min_voltage_1_in_interval[V]
       measured_imag_min_voltage_2_in_interval:
@@ -377,7 +351,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_min_voltage_2_in_interval[V]
       measured_imag_min_voltage_12_in_interval:
@@ -390,7 +363,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_imag_min_voltage_12_in_interval[V]
       measured_avg_voltage_1_mag_in_interval:
@@ -403,7 +375,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_avg_voltage_1_mag_in_interval[V]
       measured_avg_voltage_2_mag_in_interval:
@@ -416,7 +387,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_avg_voltage_2_mag_in_interval[V]
       measured_avg_voltage_12_mag_in_interval:
@@ -429,7 +399,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_avg_voltage_12_mag_in_interval[V]
       measured_real_max_power_in_interval:
@@ -441,7 +410,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_max_power_in_interval[W]
       measured_reactive_max_power_in_interval:
@@ -453,7 +421,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_reactive_max_power_in_interval[VAr]
       measured_real_min_power_in_interval:
@@ -465,7 +432,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_real_min_power_in_interval[W]
       measured_reactive_min_power_in_interval:
@@ -477,7 +443,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_reactive_min_power_in_interval[VAr]
       measured_avg_real_power_in_interval:
@@ -489,7 +454,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_avg_real_power_in_interval[W]
       measured_avg_reactive_power_in_interval:
@@ -501,7 +465,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_avg_reactive_power_in_interval[VAr]
       measured_stats_interval:
@@ -513,7 +476,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: measured_stats_interval[s]
       measured_current_1:
@@ -525,7 +487,6 @@ classes:
         annotations:
           order: 39
           value_type: complex
-          separator: ','
           native_name: measured_current_1[A]
       measured_current_2:
         range: Complex
@@ -536,7 +497,6 @@ classes:
         annotations:
           order: 40
           value_type: complex
-          separator: ','
           native_name: measured_current_2[A]
       measured_current_N:
         range: Complex
@@ -547,7 +507,6 @@ classes:
         annotations:
           order: 41
           value_type: complex
-          separator: ','
           native_name: measured_current_N[A]
       customer_interrupted:
         range: boolean
@@ -557,7 +516,6 @@ classes:
         annotations:
           order: 42
           value_type: bool
-          separator: ','
           native_name: customer_interrupted
       customer_interrupted_secondary:
         range: boolean
@@ -567,7 +525,6 @@ classes:
         annotations:
           order: 43
           value_type: bool
-          separator: ','
           native_name: customer_interrupted_secondary
       sustained_count:
         range: integer
@@ -576,7 +533,6 @@ classes:
         annotations:
           order: 44
           value_type: string
-          separator: ','
           native_name: sustained_count
       momentary_count:
         range: integer
@@ -585,7 +541,6 @@ classes:
         annotations:
           order: 45
           value_type: string
-          separator: ','
           native_name: momentary_count
       total_count:
         range: integer
@@ -594,7 +549,6 @@ classes:
         annotations:
           order: 46
           value_type: string
-          separator: ','
           native_name: total_count
       s_flag:
         range: integer
@@ -604,7 +558,6 @@ classes:
         annotations:
           order: 47
           value_type: string
-          separator: ','
           native_name: s_flag
       t_flag:
         range: integer
@@ -614,7 +567,6 @@ classes:
         annotations:
           order: 48
           value_type: string
-          separator: ','
           native_name: t_flag
       pre_load:
         range: Complex
@@ -623,7 +575,6 @@ classes:
         annotations:
           order: 49
           value_type: complex
-          separator: ','
           native_name: pre_load
       monthly_bill:
         range: float
@@ -634,7 +585,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: monthly_bill[$]
       previous_monthly_bill:
@@ -646,7 +596,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: previous_monthly_bill[$]
       previous_monthly_energy:
@@ -657,7 +606,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: previous_monthly_energy[kWh]
       monthly_fee:
@@ -669,7 +617,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: monthly_fee[$]
       monthly_energy:
@@ -681,7 +628,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: monthly_energy[kWh]
       bill_mode:
@@ -691,7 +637,6 @@ classes:
         annotations:
           order: 55
           value_type: string
-          separator: ','
           native_name: bill_mode
       power_market:
         range: string
@@ -701,7 +646,6 @@ classes:
         annotations:
           order: 56
           value_type: string
-          separator: ','
           native_name: power_market
       bill_day:
         range: integer
@@ -711,7 +655,6 @@ classes:
         annotations:
           order: 57
           value_type: int
-          separator: ','
           native_name: bill_day
       price:
         range: float
@@ -722,7 +665,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: price[$/kWh]
       price_base:
@@ -735,7 +677,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: price_base[$/kWh]
       first_tier_price:
@@ -747,7 +688,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: first_tier_price[$/kWh]
       first_tier_energy:
@@ -759,7 +699,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: first_tier_energy[kWh]
       second_tier_price:
@@ -771,7 +710,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: second_tier_price[$/kWh]
       second_tier_energy:
@@ -783,7 +721,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: second_tier_energy[kWh]
       third_tier_price:
@@ -795,7 +732,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: third_tier_price[$/kWh]
       third_tier_energy:
@@ -807,6 +743,5 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: third_tier_energy[kWh]

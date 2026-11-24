@@ -27,7 +27,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
 
       ibus:
         description: I - Sending end bus number or extended bus name
@@ -36,7 +35,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       jbus:
         description: J - Terminal end bus number or extended bus name (0 for a STATCON)
@@ -45,7 +43,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
           raw_default: 0
 
       mode:
@@ -55,7 +52,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
 
       pdes:
@@ -68,7 +64,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       qdes:
@@ -81,7 +76,6 @@ classes:
           order: 6
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       vset:
@@ -92,7 +86,6 @@ classes:
           order: 7
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       shmx:
@@ -105,7 +98,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 9999.0
 
       trmx:
@@ -118,7 +110,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 9999.0
 
       vtmn:
@@ -129,7 +120,6 @@ classes:
           order: 10
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.9
 
       vtmx:
@@ -140,7 +130,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.1
 
       vsmx:
@@ -151,7 +140,6 @@ classes:
           order: 12
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       imx:
@@ -164,7 +152,6 @@ classes:
           order: 13
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       linx:
@@ -175,7 +162,6 @@ classes:
           order: 14
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.05
 
       rmpct:
@@ -186,7 +172,6 @@ classes:
           order: 15
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 100.0
 
       owner:
@@ -196,7 +181,6 @@ classes:
         annotations:
           order: 16
           value_type: int
-          separator: ","
           raw_default: 1
 
       set1:
@@ -207,7 +191,6 @@ classes:
           order: 17
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       set2:
@@ -218,7 +201,6 @@ classes:
           order: 18
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       vsref:
@@ -228,7 +210,6 @@ classes:
         annotations:
           order: 19
           value_type: int
-          separator: ","
           raw_default: 0
 
       remot:
@@ -238,7 +219,6 @@ classes:
         annotations:
           order: 20
           value_type: int
-          separator: ","
           raw_default: 0
 
       mname:
@@ -251,7 +231,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       nreg:
@@ -261,5 +240,4 @@ classes:
         annotations:
           order: 22
           value_type: int
-          separator: ""  # No separator after last field
           raw_default: 0

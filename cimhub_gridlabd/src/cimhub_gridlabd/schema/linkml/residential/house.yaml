@@ -214,7 +214,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: weather
       floor_area:
         range: float
@@ -225,7 +224,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: floor_area[sf]
       gross_wall_area:
@@ -237,7 +235,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: gross_wall_area[sf]
       ceiling_height:
@@ -249,7 +246,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: ceiling_height[ft]
       aspect_ratio:
@@ -259,7 +255,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: aspect_ratio
       envelope_UA:
@@ -271,7 +266,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: envelope_UA[Btu/degF*h]
       window_wall_ratio:
@@ -281,7 +275,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_wall_ratio
       number_of_doors:
@@ -291,7 +284,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_of_doors
       area_per_door:
@@ -304,7 +296,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: area_per_door[sf]
       exterior_wall_fraction:
@@ -314,7 +305,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: exterior_wall_fraction
       interior_exterior_wall_ratio:
@@ -324,7 +314,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: interior_exterior_wall_ratio
       exterior_ceiling_fraction:
@@ -334,7 +323,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: exterior_ceiling_fraction
       exterior_floor_fraction:
@@ -344,7 +332,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: exterior_floor_fraction
       window_shading:
@@ -354,7 +341,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_shading
       window_exterior_transmission_coefficient:
@@ -364,7 +350,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_exterior_transmission_coefficient
       solar_heatgain_factor:
@@ -375,7 +360,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: solar_heatgain_factor
       airchange_per_hour:
@@ -387,7 +371,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: airchange_per_hour[unit/h]
       airchange_UA:
@@ -399,7 +382,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: airchange_UA[Btu/degF*h]
       UA:
@@ -411,7 +393,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: UA[Btu/degF*h]
       internal_gain:
@@ -423,7 +404,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: internal_gain[Btu/h]
       solar_gain:
@@ -435,7 +415,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: solar_gain[Btu/h]
       incident_solar_radiation:
@@ -447,7 +426,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: incident_solar_radiation[Btu/h*sf]
       heat_cool_gain:
@@ -459,7 +437,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: heat_cool_gain[Btu/h]
       include_solar_quadrant:
@@ -470,7 +447,6 @@ classes:
         annotations:
           order: 24
           value_type: string
-          separator: ','
           native_name: include_solar_quadrant
       horizontal_diffuse_solar_radiation:
         range: float
@@ -481,7 +457,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: horizontal_diffuse_solar_radiation[Btu/h*sf]
       north_incident_solar_radiation:
@@ -493,7 +468,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: north_incident_solar_radiation[Btu/h*sf]
       northwest_incident_solar_radiation:
@@ -505,7 +479,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: northwest_incident_solar_radiation[Btu/h*sf]
       west_incident_solar_radiation:
@@ -517,7 +490,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: west_incident_solar_radiation[Btu/h*sf]
       southwest_incident_solar_radiation:
@@ -529,7 +501,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: southwest_incident_solar_radiation[Btu/h*sf]
       south_incident_solar_radiation:
@@ -541,7 +512,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: south_incident_solar_radiation[Btu/h*sf]
       southeast_incident_solar_radiation:
@@ -553,7 +523,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: southeast_incident_solar_radiation[Btu/h*sf]
       east_incident_solar_radiation:
@@ -565,7 +534,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: east_incident_solar_radiation[Btu/h*sf]
       northeast_incident_solar_radiation:
@@ -577,7 +545,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: northeast_incident_solar_radiation[Btu/h*sf]
       heating_cop_curve:
@@ -588,7 +555,6 @@ classes:
         annotations:
           order: 34
           value_type: string
-          separator: ','
           native_name: heating_cop_curve
       heating_cap_curve:
         range: string
@@ -598,7 +564,6 @@ classes:
         annotations:
           order: 35
           value_type: string
-          separator: ','
           native_name: heating_cap_curve
       cooling_cop_curve:
         range: string
@@ -608,7 +573,6 @@ classes:
         annotations:
           order: 36
           value_type: string
-          separator: ','
           native_name: cooling_cop_curve
       cooling_cap_curve:
         range: string
@@ -618,7 +582,6 @@ classes:
         annotations:
           order: 37
           value_type: string
-          separator: ','
           native_name: cooling_cap_curve
       use_latent_heat:
         range: boolean
@@ -628,7 +591,6 @@ classes:
         annotations:
           order: 38
           value_type: bool
-          separator: ','
           native_name: use_latent_heat
       include_fan_heatgain:
         range: boolean
@@ -638,7 +600,6 @@ classes:
         annotations:
           order: 39
           value_type: bool
-          separator: ','
           native_name: include_fan_heatgain
       thermostat_deadband:
         range: float
@@ -649,7 +610,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: thermostat_deadband[degF]
       dlc_offset:
@@ -662,7 +622,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: dlc_offset[degF]
       thermostat_cycle_time:
@@ -672,7 +631,6 @@ classes:
         annotations:
           order: 42
           value_type: string
-          separator: ','
           native_name: thermostat_cycle_time
       thermostat_off_cycle_time:
         range: integer
@@ -682,7 +640,6 @@ classes:
         annotations:
           order: 43
           value_type: string
-          separator: ','
           native_name: thermostat_off_cycle_time
       thermostat_on_cycle_time:
         range: integer
@@ -692,7 +649,6 @@ classes:
         annotations:
           order: 44
           value_type: string
-          separator: ','
           native_name: thermostat_on_cycle_time
       thermostat_last_cycle_time:
         range: string
@@ -701,7 +657,6 @@ classes:
         annotations:
           order: 45
           value_type: string
-          separator: ','
           native_name: thermostat_last_cycle_time
       heating_setpoint:
         range: float
@@ -712,7 +667,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_setpoint[degF]
       cooling_setpoint:
@@ -724,7 +678,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_setpoint[degF]
       TcoolOn:
@@ -736,7 +689,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: TcoolOn[degF]
       design_heating_setpoint:
@@ -748,7 +700,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_heating_setpoint[degF]
       design_cooling_setpoint:
@@ -760,7 +711,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_cooling_setpoint[degF]
       over_sizing_factor:
@@ -771,7 +721,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_sizing_factor
       simulate_window_openings:
@@ -782,7 +731,6 @@ classes:
         annotations:
           order: 52
           value_type: bool
-          separator: ','
           native_name: simulate_window_openings
       is_window_open:
         range: float
@@ -791,7 +739,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_window_open
       window_low_temperature_cutoff:
@@ -803,7 +750,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_low_temperature_cutoff[degF]
       window_high_temperature_cutoff:
@@ -815,7 +761,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_high_temperature_cutoff[degF]
       window_quadratic_coefficient:
@@ -826,7 +771,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_quadratic_coefficient
       window_linear_coefficient:
@@ -837,7 +781,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_linear_coefficient
       window_constant_coefficient:
@@ -848,7 +791,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_constant_coefficient
       window_temperature_delta:
@@ -859,7 +801,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_temperature_delta
       last_temperature:
@@ -871,7 +812,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: last_temperature[degF]
       window_first_time_through:
@@ -881,7 +821,6 @@ classes:
         annotations:
           order: 61
           value_type: string
-          separator: ','
           native_name: window_first_time_through
       design_heating_capacity:
         range: float
@@ -892,7 +831,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_heating_capacity[Btu/h]
       design_cooling_capacity:
@@ -904,7 +842,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_cooling_capacity[Btu/h]
       cooling_design_temperature:
@@ -916,7 +853,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_design_temperature[degF]
       heating_design_temperature:
@@ -928,7 +864,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_design_temperature[degF]
       design_peak_solar:
@@ -940,7 +875,6 @@ classes:
         annotations:
           order: 66
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_peak_solar[Btu/h*sf]
       design_internal_gains:
@@ -952,7 +886,6 @@ classes:
         annotations:
           order: 67
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_internal_gains[Btu/h]
       air_heat_fraction:
@@ -964,7 +897,6 @@ classes:
         annotations:
           order: 68
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_heat_fraction[pu]
       mass_solar_gain_fraction:
@@ -977,7 +909,6 @@ classes:
         annotations:
           order: 69
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_solar_gain_fraction[pu]
       mass_internal_gain_fraction:
@@ -990,7 +921,6 @@ classes:
         annotations:
           order: 70
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_internal_gain_fraction[pu]
       auxiliary_heat_capacity:
@@ -1002,7 +932,6 @@ classes:
         annotations:
           order: 71
           value_type: float
-          separator: ','
           precision: 6
           native_name: auxiliary_heat_capacity[Btu/h]
       aux_heat_deadband:
@@ -1015,7 +944,6 @@ classes:
         annotations:
           order: 72
           value_type: float
-          separator: ','
           precision: 6
           native_name: aux_heat_deadband[degF]
       aux_heat_temperature_lockout:
@@ -1027,7 +955,6 @@ classes:
         annotations:
           order: 73
           value_type: float
-          separator: ','
           precision: 6
           native_name: aux_heat_temperature_lockout[degF]
       aux_heat_time_delay:
@@ -1039,7 +966,6 @@ classes:
         annotations:
           order: 74
           value_type: float
-          separator: ','
           precision: 6
           native_name: aux_heat_time_delay[s]
       cooling_supply_air_temp:
@@ -1051,7 +977,6 @@ classes:
         annotations:
           order: 75
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_supply_air_temp[degF]
       heating_supply_air_temp:
@@ -1063,7 +988,6 @@ classes:
         annotations:
           order: 76
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_supply_air_temp[degF]
       duct_pressure_drop:
@@ -1076,7 +1000,6 @@ classes:
         annotations:
           order: 77
           value_type: float
-          separator: ','
           precision: 6
           native_name: duct_pressure_drop[inH2O]
       fan_design_power:
@@ -1088,7 +1011,6 @@ classes:
         annotations:
           order: 78
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_design_power[W]
       fan_low_power_fraction:
@@ -1101,7 +1023,6 @@ classes:
         annotations:
           order: 79
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_low_power_fraction[pu]
       fan_power:
@@ -1113,7 +1034,6 @@ classes:
         annotations:
           order: 80
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_power[kW]
       fan_design_airflow:
@@ -1125,7 +1045,6 @@ classes:
         annotations:
           order: 81
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_design_airflow[cfm]
       fan_impedance_fraction:
@@ -1137,7 +1056,6 @@ classes:
         annotations:
           order: 82
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_impedance_fraction[pu]
       fan_power_fraction:
@@ -1149,7 +1067,6 @@ classes:
         annotations:
           order: 83
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_power_fraction[pu]
       fan_current_fraction:
@@ -1161,7 +1078,6 @@ classes:
         annotations:
           order: 84
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_current_fraction[pu]
       fan_power_factor:
@@ -1173,7 +1089,6 @@ classes:
         annotations:
           order: 85
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_power_factor[pu]
       fan_heatgain_fraction:
@@ -1186,7 +1101,6 @@ classes:
         annotations:
           order: 86
           value_type: float
-          separator: ','
           precision: 6
           native_name: fan_heatgain_fraction[pu]
       heating_demand:
@@ -1198,7 +1112,6 @@ classes:
         annotations:
           order: 87
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_demand[kW]
       cooling_demand:
@@ -1210,7 +1123,6 @@ classes:
         annotations:
           order: 88
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_demand[kW]
       heating_COP:
@@ -1222,7 +1134,6 @@ classes:
         annotations:
           order: 89
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_COP[pu]
       cooling_COP:
@@ -1234,7 +1145,6 @@ classes:
         annotations:
           order: 90
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_COP[pu]
       air_temperature:
@@ -1246,7 +1156,6 @@ classes:
         annotations:
           order: 91
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_temperature[degF]
       outdoor_temperature:
@@ -1258,7 +1167,6 @@ classes:
         annotations:
           order: 92
           value_type: float
-          separator: ','
           precision: 6
           native_name: outdoor_temperature[degF]
       outdoor_rh:
@@ -1270,7 +1178,6 @@ classes:
         annotations:
           order: 93
           value_type: float
-          separator: ','
           precision: 6
           native_name: outdoor_rh[%]
       mass_heat_capacity:
@@ -1282,7 +1189,6 @@ classes:
         annotations:
           order: 94
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_heat_capacity[Btu/degF]
       mass_heat_coeff:
@@ -1294,7 +1200,6 @@ classes:
         annotations:
           order: 95
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_heat_coeff[Btu/degF*h]
       mass_temperature:
@@ -1306,7 +1211,6 @@ classes:
         annotations:
           order: 96
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_temperature[degF]
       air_volume:
@@ -1318,7 +1222,6 @@ classes:
         annotations:
           order: 97
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_volume[cf]
       air_mass:
@@ -1330,7 +1233,6 @@ classes:
         annotations:
           order: 98
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_mass[lb]
       air_heat_capacity:
@@ -1342,7 +1244,6 @@ classes:
         annotations:
           order: 99
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_heat_capacity[Btu/degF]
       latent_load_fraction:
@@ -1354,7 +1255,6 @@ classes:
         annotations:
           order: 100
           value_type: float
-          separator: ','
           precision: 6
           native_name: latent_load_fraction[pu]
       total_thermal_mass_per_floor_area:
@@ -1365,7 +1265,6 @@ classes:
         annotations:
           order: 101
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_thermal_mass_per_floor_area[Btu/degF*sf]
       interior_surface_heat_transfer_coeff:
@@ -1376,7 +1275,6 @@ classes:
         annotations:
           order: 102
           value_type: float
-          separator: ','
           precision: 6
           native_name: interior_surface_heat_transfer_coeff[Btu/h*degF*sf]
       number_of_stories:
@@ -1386,7 +1284,6 @@ classes:
         annotations:
           order: 103
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_of_stories
       is_AUX_on:
@@ -1397,7 +1294,6 @@ classes:
         annotations:
           order: 104
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_AUX_on
       is_HEAT_on:
@@ -1408,7 +1304,6 @@ classes:
         annotations:
           order: 105
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_HEAT_on
       is_COOL_on:
@@ -1419,7 +1314,6 @@ classes:
         annotations:
           order: 106
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_COOL_on
       thermal_storage_present:
@@ -1429,7 +1323,6 @@ classes:
         annotations:
           order: 107
           value_type: bool
-          separator: ','
           native_name: thermal_storage_present
       thermal_storage_in_use:
         range: boolean
@@ -1438,7 +1331,6 @@ classes:
         annotations:
           order: 108
           value_type: bool
-          separator: ','
           native_name: thermal_storage_in_use
       thermostat_mode:
         range: string
@@ -1448,7 +1340,6 @@ classes:
         annotations:
           order: 109
           value_type: string
-          separator: ','
           native_name: thermostat_mode
       system_type:
         range: string
@@ -1457,7 +1348,6 @@ classes:
         annotations:
           order: 110
           value_type: string
-          separator: ','
           native_name: system_type
       auxiliary_strategy:
         range: string
@@ -1466,7 +1356,6 @@ classes:
         annotations:
           order: 111
           value_type: string
-          separator: ','
           native_name: auxiliary_strategy
       system_mode:
         range: string
@@ -1475,7 +1364,6 @@ classes:
         annotations:
           order: 112
           value_type: string
-          separator: ','
           native_name: system_mode
       last_system_mode:
         range: string
@@ -1484,7 +1372,6 @@ classes:
         annotations:
           order: 113
           value_type: string
-          separator: ','
           native_name: last_system_mode
       heating_system_type:
         range: string
@@ -1492,7 +1379,6 @@ classes:
         annotations:
           order: 114
           value_type: string
-          separator: ','
           native_name: heating_system_type
       cooling_system_type:
         range: string
@@ -1500,7 +1386,6 @@ classes:
         annotations:
           order: 115
           value_type: string
-          separator: ','
           native_name: cooling_system_type
       auxiliary_system_type:
         range: string
@@ -1508,7 +1393,6 @@ classes:
         annotations:
           order: 116
           value_type: string
-          separator: ','
           native_name: auxiliary_system_type
       fan_type:
         range: string
@@ -1516,7 +1400,6 @@ classes:
         annotations:
           order: 117
           value_type: string
-          separator: ','
           native_name: fan_type
       thermal_integrity_level:
         range: string
@@ -1525,7 +1408,6 @@ classes:
         annotations:
           order: 118
           value_type: string
-          separator: ','
           native_name: thermal_integrity_level
       glass_type:
         range: string
@@ -1534,7 +1416,6 @@ classes:
         annotations:
           order: 119
           value_type: string
-          separator: ','
           native_name: glass_type
       window_frame:
         range: string
@@ -1543,7 +1424,6 @@ classes:
         annotations:
           order: 120
           value_type: string
-          separator: ','
           native_name: window_frame
       glazing_treatment:
         range: string
@@ -1552,7 +1432,6 @@ classes:
         annotations:
           order: 121
           value_type: string
-          separator: ','
           native_name: glazing_treatment
       glazing_layers:
         range: string
@@ -1561,7 +1440,6 @@ classes:
         annotations:
           order: 122
           value_type: string
-          separator: ','
           native_name: glazing_layers
       motor_model:
         range: string
@@ -1571,7 +1449,6 @@ classes:
         annotations:
           order: 123
           value_type: string
-          separator: ','
           native_name: motor_model
       motor_efficiency:
         range: string
@@ -1580,7 +1457,6 @@ classes:
         annotations:
           order: 124
           value_type: string
-          separator: ','
           native_name: motor_efficiency
       last_mode_timer:
         range: integer
@@ -1588,7 +1464,6 @@ classes:
         annotations:
           order: 125
           value_type: int
-          separator: ','
           native_name: last_mode_timer
       hvac_motor_efficiency:
         range: float
@@ -1599,7 +1474,6 @@ classes:
         annotations:
           order: 126
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_motor_efficiency[unit]
       hvac_motor_loss_power_factor:
@@ -1611,7 +1485,6 @@ classes:
         annotations:
           order: 127
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_motor_loss_power_factor[unit]
       Rroof:
@@ -1623,7 +1496,6 @@ classes:
         annotations:
           order: 128
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rroof[degF*sf*h/Btu]
       Rwall:
@@ -1635,7 +1507,6 @@ classes:
         annotations:
           order: 129
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rwall[degF*sf*h/Btu]
       Rfloor:
@@ -1647,7 +1518,6 @@ classes:
         annotations:
           order: 130
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rfloor[degF*sf*h/Btu]
       Rwindows:
@@ -1659,7 +1529,6 @@ classes:
         annotations:
           order: 131
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rwindows[degF*sf*h/Btu]
       Rdoors:
@@ -1671,7 +1540,6 @@ classes:
         annotations:
           order: 132
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rdoors[degF*sf*h/Btu]
       hvac_breaker_rating:
@@ -1684,7 +1552,6 @@ classes:
         annotations:
           order: 133
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_breaker_rating[A]
       hvac_power_factor:
@@ -1696,7 +1563,6 @@ classes:
         annotations:
           order: 134
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_power_factor[unit]
       external_motor_attached:
@@ -1706,7 +1572,6 @@ classes:
         annotations:
           order: 135
           value_type: bool
-          separator: ','
           native_name: external_motor_attached
       hvac_load:
         range: float
@@ -1717,7 +1582,6 @@ classes:
         annotations:
           order: 136
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_load[kW]
       last_heating_load:
@@ -1729,7 +1593,6 @@ classes:
         annotations:
           order: 137
           value_type: float
-          separator: ','
           precision: 6
           native_name: last_heating_load[kW]
       last_cooling_load:
@@ -1741,7 +1604,6 @@ classes:
         annotations:
           order: 138
           value_type: float
-          separator: ','
           precision: 6
           native_name: last_cooling_load[kW]
       hvac_power:
@@ -1753,7 +1615,6 @@ classes:
         annotations:
           order: 139
           value_type: complex
-          separator: ','
           native_name: hvac_power[kVA]
       total_load:
         range: float
@@ -1763,7 +1624,6 @@ classes:
         annotations:
           order: 140
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_load[kVA]
       panel:
@@ -1773,7 +1633,6 @@ classes:
         annotations:
           order: 141
           value_type: string
-          separator: ','
           native_name: panel
       design_internal_gain_density:
         range: float
@@ -1784,7 +1643,6 @@ classes:
         annotations:
           order: 142
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_internal_gain_density[W/sf]
       compressor_on:
@@ -1793,7 +1651,6 @@ classes:
         annotations:
           order: 143
           value_type: bool
-          separator: ','
           native_name: compressor_on
       compressor_count:
         range: integer
@@ -1801,7 +1658,6 @@ classes:
         annotations:
           order: 144
           value_type: int
-          separator: ','
           native_name: compressor_count
       hvac_last_on:
         range: string
@@ -1809,7 +1665,6 @@ classes:
         annotations:
           order: 145
           value_type: string
-          separator: ','
           native_name: hvac_last_on
       hvac_last_off:
         range: string
@@ -1817,7 +1672,6 @@ classes:
         annotations:
           order: 146
           value_type: string
-          separator: ','
           native_name: hvac_last_off
       hvac_period_on:
         range: float
@@ -1828,7 +1682,6 @@ classes:
         annotations:
           order: 147
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_period_on[min]
       hvac_period_off:
@@ -1840,7 +1693,6 @@ classes:
         annotations:
           order: 148
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_period_off[min]
       hvac_period_length:
@@ -1851,7 +1703,6 @@ classes:
         annotations:
           order: 149
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_period_length[s]
       hvac_duty_cycle:
@@ -1860,7 +1711,6 @@ classes:
         annotations:
           order: 150
           value_type: float
-          separator: ','
           precision: 6
           native_name: hvac_duty_cycle
       a:
@@ -1869,7 +1719,6 @@ classes:
         annotations:
           order: 151
           value_type: float
-          separator: ','
           precision: 6
           native_name: a
       b:
@@ -1878,7 +1727,6 @@ classes:
         annotations:
           order: 152
           value_type: float
-          separator: ','
           precision: 6
           native_name: b
       c:
@@ -1887,7 +1735,6 @@ classes:
         annotations:
           order: 153
           value_type: float
-          separator: ','
           precision: 6
           native_name: c
       d:
@@ -1896,7 +1743,6 @@ classes:
         annotations:
           order: 154
           value_type: float
-          separator: ','
           precision: 6
           native_name: d
       c1:
@@ -1905,7 +1751,6 @@ classes:
         annotations:
           order: 155
           value_type: float
-          separator: ','
           precision: 6
           native_name: c1
       c2:
@@ -1914,7 +1759,6 @@ classes:
         annotations:
           order: 156
           value_type: float
-          separator: ','
           precision: 6
           native_name: c2
       A3:
@@ -1923,7 +1767,6 @@ classes:
         annotations:
           order: 157
           value_type: float
-          separator: ','
           precision: 6
           native_name: A3
       A4:
@@ -1932,7 +1775,6 @@ classes:
         annotations:
           order: 158
           value_type: float
-          separator: ','
           precision: 6
           native_name: A4
       k1:
@@ -1941,7 +1783,6 @@ classes:
         annotations:
           order: 159
           value_type: float
-          separator: ','
           precision: 6
           native_name: k1
       k2:
@@ -1950,7 +1791,6 @@ classes:
         annotations:
           order: 160
           value_type: float
-          separator: ','
           precision: 6
           native_name: k2
       r1:
@@ -1959,7 +1799,6 @@ classes:
         annotations:
           order: 161
           value_type: float
-          separator: ','
           precision: 6
           native_name: r1
       r2:
@@ -1968,7 +1807,6 @@ classes:
         annotations:
           order: 162
           value_type: float
-          separator: ','
           precision: 6
           native_name: r2
       Teq:
@@ -1977,7 +1815,6 @@ classes:
         annotations:
           order: 163
           value_type: float
-          separator: ','
           precision: 6
           native_name: Teq
       Tevent:
@@ -1986,7 +1823,6 @@ classes:
         annotations:
           order: 164
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tevent
       Qi:
@@ -1995,7 +1831,6 @@ classes:
         annotations:
           order: 165
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qi
       Qa:
@@ -2004,7 +1839,6 @@ classes:
         annotations:
           order: 166
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qa
       Qm:
@@ -2013,7 +1847,6 @@ classes:
         annotations:
           order: 167
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qm
       Qh:
@@ -2022,7 +1855,6 @@ classes:
         annotations:
           order: 168
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qh
       Qlatent:
@@ -2032,7 +1864,6 @@ classes:
         annotations:
           order: 169
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qlatent
       dTair:
@@ -2041,7 +1872,6 @@ classes:
         annotations:
           order: 170
           value_type: float
-          separator: ','
           precision: 6
           native_name: dTair
       adj_cooling_cap:
@@ -2050,7 +1880,6 @@ classes:
         annotations:
           order: 171
           value_type: float
-          separator: ','
           precision: 6
           native_name: adj_cooling_cap
       adj_heating_cap:
@@ -2059,7 +1888,6 @@ classes:
         annotations:
           order: 172
           value_type: float
-          separator: ','
           precision: 6
           native_name: adj_heating_cap
       adj_cooling_cop:
@@ -2068,7 +1896,6 @@ classes:
         annotations:
           order: 173
           value_type: float
-          separator: ','
           precision: 6
           native_name: adj_cooling_cop
       adj_heating_cop:
@@ -2077,7 +1904,6 @@ classes:
         annotations:
           order: 174
           value_type: float
-          separator: ','
           precision: 6
           native_name: adj_heating_cop
       voltage_12:
@@ -2086,7 +1912,6 @@ classes:
         annotations:
           order: 175
           value_type: complex
-          separator: ','
           native_name: voltage_12
       voltage_1N:
         range: Complex
@@ -2094,7 +1919,6 @@ classes:
         annotations:
           order: 176
           value_type: complex
-          separator: ','
           native_name: voltage_1N
       voltage_2N:
         range: Complex
@@ -2102,7 +1926,6 @@ classes:
         annotations:
           order: 177
           value_type: complex
-          separator: ','
           native_name: voltage_2N
       external_pf_mode:
         range: string
@@ -2112,7 +1935,6 @@ classes:
         annotations:
           order: 178
           value_type: string
-          separator: ','
           native_name: external_pf_mode
       external_v1N:
         range: Complex
@@ -2121,7 +1943,6 @@ classes:
         annotations:
           order: 179
           value_type: complex
-          separator: ','
           native_name: external_v1N
       external_v2N:
         range: Complex
@@ -2130,7 +1951,6 @@ classes:
         annotations:
           order: 180
           value_type: complex
-          separator: ','
           native_name: external_v2N
       grid_frequency:
         range: float
@@ -2139,7 +1959,6 @@ classes:
         annotations:
           order: 181
           value_type: float
-          separator: ','
           precision: 6
           native_name: grid_frequency
       value_MeterStatus:
@@ -2149,7 +1968,6 @@ classes:
         annotations:
           order: 182
           value_type: string
-          separator: ','
           native_name: value_MeterStatus
       thermostat_control:
         range: string
@@ -2158,7 +1976,6 @@ classes:
         annotations:
           order: 183
           value_type: string
-          separator: ','
           native_name: thermostat_control
       dump_house_initialization_parameters:
         range: boolean
@@ -2168,5 +1985,4 @@ classes:
         annotations:
           order: 184
           value_type: bool
-          separator: ','
           native_name: dump_house_initialization_parameters

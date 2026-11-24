@@ -36,7 +36,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: motor_status
       motor_status_number:
         range: integer
@@ -45,7 +44,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ','
           native_name: motor_status_number
       Pbase:
         range: float
@@ -56,7 +54,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pbase[W]
       power_value:
@@ -68,7 +65,6 @@ classes:
         annotations:
           order: 4
           value_type: complex
-          separator: ','
           native_name: power_value[VA]
       power_factor:
         range: float
@@ -79,7 +75,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_factor[pu]
       delta_f_val:
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_f_val
       Vbrk:
@@ -101,7 +95,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vbrk[pu]
       Vstallbrk:
@@ -111,7 +104,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vstallbrk
       Vstall:
@@ -123,7 +115,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vstall[pu]
       Vrst:
@@ -135,7 +126,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vrst[pu]
       P_val:
@@ -147,7 +137,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_val[pu]
       Q_val:
@@ -159,7 +148,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: Q_val[pu]
       P_0:
@@ -171,7 +159,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_0[pu]
       Q_0:
@@ -183,7 +170,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: Q_0[pu]
       K_p1:
@@ -195,7 +181,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: K_p1[pu]
       K_q1:
@@ -207,7 +192,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: K_q1[pu]
       K_p2:
@@ -219,7 +203,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: K_p2[pu]
       K_q2:
@@ -231,7 +214,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: K_q2[pu]
       N_p1:
@@ -241,7 +223,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: N_p1
       N_q1:
@@ -251,7 +232,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: N_q1
       N_p2:
@@ -261,7 +241,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: N_p2
       N_q2:
@@ -271,7 +250,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: N_q2
       CmpKpf:
@@ -283,7 +261,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: CmpKpf[pu]
       CmpKqf:
@@ -295,7 +272,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: CmpKqf[pu]
       stall_impedance:
@@ -307,7 +283,6 @@ classes:
         annotations:
           order: 25
           value_type: complex
-          separator: ','
           native_name: stall_impedance[pu]
       stall_resistance:
         range: float
@@ -318,7 +293,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_resistance[pu]
       stall_reactance:
@@ -330,7 +304,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_reactance[pu]
       Tstall:
@@ -342,7 +315,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tstall[s]
       reconnect_time:
@@ -354,7 +326,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: reconnect_time[s]
       Pinit:
@@ -366,7 +337,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pinit[pu]
       Vinit:
@@ -378,7 +348,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vinit[pu]
       stall_time_tracker:
@@ -390,7 +359,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_time_tracker[s]
       reconnect_time_tracker:
@@ -402,6 +370,5 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: reconnect_time_tracker[s]

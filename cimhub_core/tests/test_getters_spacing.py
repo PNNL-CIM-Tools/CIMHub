@@ -10,8 +10,7 @@ from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.derived.spacing import positions_from_distances
-from cimhub_core.getters.spacing import (get_line_conductor_xy, get_spacing_distances, get_spacing_xy,
-                                         get_stored_distances)
+from cimhub_core.getters.spacing import get_line_conductor_xy, get_spacing_xy, get_stored_distances
 
 PHASE, NEUTRAL = cim.ConductorPositionKind.phase, cim.ConductorPositionKind.neutral
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
@@ -94,12 +93,6 @@ def test_xy_in_metres():
     assert get_spacing_xy(_spacing_500())[0].y == pytest.approx(28 * 0.3048)
 
 
-def test_xy_distances():
-    distances = get_spacing_distances(_spacing_500(), "ft")
-    assert distances == pytest.approx(SPACING_500_DISTANCES, rel=1e-6)
-    assert list(distances) == [(1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)]
-
-
 def test_unset_coordinate_raises():
     spacing = _spacing_500()
     spacing.XYConductorPosition[3].yCoord = None
@@ -112,7 +105,7 @@ def test_duplicate_sequence_number_raises():
     spacing = _spacing_500()
     spacing.XYConductorPosition[3].sequenceNumber = 1
     with pytest.raises(ValueError, match="two conductors have sequenceNumber 1; parallel conductors are not read"):
-        get_spacing_distances(spacing)
+        get_stored_distances(spacing)
 
 
 def test_empty_spacing_raises():
@@ -135,16 +128,13 @@ def test_distances_give_the_xy_positions(tmp_path):
 
 
 def test_stored_distances(tmp_path):
-    distances = get_spacing_distances(_distance_atom(tmp_path, _spacing_500_rows()), "ft")
+    distances = get_stored_distances(_distance_atom(tmp_path, _spacing_500_rows()), "ft").distances
     assert distances == pytest.approx(SPACING_500_DISTANCES)
 
 
-def test_a_missing_pair_raises_for_distances_but_not_positions(tmp_path):
+def test_a_missing_pair_still_gives_the_positions(tmp_path):
     rows = _spacing_500_rows({pair: d for pair, d in SPACING_500_DISTANCES.items() if pair != (1, 3)})
-    spacing = _distance_atom(tmp_path, rows)
-    assert get_spacing_xy(spacing, "ft")[2].x == pytest.approx(7.0, abs=1e-5)
-    with pytest.raises(ValueError, match=r"has no distance between conductors \[\(1, 3\)\]"):
-        get_spacing_distances(spacing)
+    assert get_spacing_xy(_distance_atom(tmp_path, rows), "ft")[2].x == pytest.approx(7.0, abs=1e-5)
 
 
 def test_missing_height_raises_for_positions_but_not_distances(tmp_path):
@@ -152,7 +142,7 @@ def test_missing_height_raises_for_positions_but_not_distances(tmp_path):
     spacing = _distance_atom(tmp_path, rows)
     with pytest.raises(ValueError, match=r"conductors \[4\] have no height"):
         get_spacing_xy(spacing)
-    assert get_spacing_distances(spacing, "ft") == pytest.approx(SPACING_500_DISTANCES)
+    assert get_stored_distances(spacing, "ft").distances == pytest.approx(SPACING_500_DISTANCES)
 
 
 def test_stored_distances_keep_what_a_distance_spacing_holds(tmp_path):
@@ -172,6 +162,7 @@ def test_stored_distances_of_an_empty_distance_spacing():
 def test_stored_distances_of_an_xy_spacing():
     stored = get_stored_distances(_spacing_500(), "ft")
     assert stored.distances == pytest.approx(SPACING_500_DISTANCES, rel=1e-6)
+    assert list(stored.distances) == [(1, 2), (1, 3), (1, 4), (2, 3), (2, 4), (3, 4)]
     assert stored.heights == pytest.approx({1: 28.0, 2: 28.0, 3: 28.0, 4: 24.0})
 
 
@@ -203,7 +194,7 @@ def test_offset_lifts_a_crossarm_to_the_pole_height(tmp_path):
     assert _flat(get_line_conductor_xy(line, "ft")) == pytest.approx(_flat_xy(SPACING_500_XY))
     # the spacing itself stays in its own frame, and its distances do not depend on the offset
     assert get_spacing_xy(line.WireSpacing, "ft")[3].y == pytest.approx(-4.0)
-    assert get_spacing_distances(line.WireSpacing, "ft") == pytest.approx(SPACING_500_DISTANCES, rel=1e-6)
+    assert get_stored_distances(line.WireSpacing, "ft").distances == pytest.approx(SPACING_500_DISTANCES, rel=1e-6)
 
 
 def test_offset_through_a_wire_configuration(tmp_path):

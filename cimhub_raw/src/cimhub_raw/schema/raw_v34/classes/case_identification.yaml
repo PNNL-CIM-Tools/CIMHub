@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
           raw_default: 0
 
       system_base_mva:
@@ -37,7 +36,6 @@ classes:
           order: 2
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 100.0
 
       revision:
@@ -48,7 +46,6 @@ classes:
           order: 3
           value_type: float
           precision: 0
-          separator: ","
 
       transformer_ratings_units:
         description: XFRRAT - Transformer ratings units flag
@@ -57,7 +54,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
 
       branch_ratings_units:
         description: NXFRAT - Non-transformer branch ratings units flag (<=0 MVA, >0 current as MVA)
@@ -66,7 +62,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
 
       system_base_frequency:
         description: BASFRQ - System base frequency in Hz
@@ -78,7 +73,6 @@ classes:
           order: 6
           value_type: float
           precision: 2
-          separator: ""
 
       titles:
         description: Title lines (up to 2 lines)
@@ -154,7 +148,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       rating_name:
         description: RATING set name (6 characters, used as a report column heading)
@@ -166,7 +159,6 @@ classes:
           width: 6
           quote: true
           quote_char: '"'
-          separator: ","
 
       rating_description:
         description: RATING set description (32 characters)
@@ -178,4 +170,3 @@ classes:
           width: 32
           quote: true
           quote_char: '"'
-          separator: ""  # No separator after last field

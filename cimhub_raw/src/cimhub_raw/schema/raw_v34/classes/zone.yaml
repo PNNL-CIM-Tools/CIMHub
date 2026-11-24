@@ -25,7 +25,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       zone_name:
         description: ZONAME - Zone name (12 characters)
@@ -37,5 +36,4 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ""  # No separator after last field
           raw_default: ""

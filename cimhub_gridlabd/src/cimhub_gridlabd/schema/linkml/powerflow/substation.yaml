@@ -57,7 +57,6 @@ classes:
         annotations:
           order: 1
           value_type: complex
-          separator: ','
           native_name: zero_sequence_voltage[V]
       positive_sequence_voltage:
         range: Complex
@@ -69,7 +68,6 @@ classes:
         annotations:
           order: 2
           value_type: complex
-          separator: ','
           native_name: positive_sequence_voltage[V]
       negative_sequence_voltage:
         range: Complex
@@ -81,7 +79,6 @@ classes:
         annotations:
           order: 3
           value_type: complex
-          separator: ','
           native_name: negative_sequence_voltage[V]
       base_power:
         range: float
@@ -92,7 +89,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_power[VA]
       power_convergence_value:
@@ -105,7 +101,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_convergence_value[VA]
       reference_phase:
@@ -115,7 +110,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: reference_phase
       transmission_level_constant_power_load:
         range: Complex
@@ -127,7 +121,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: transmission_level_constant_power_load[VA]
       transmission_level_constant_current_load:
         range: Complex
@@ -139,7 +132,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: transmission_level_constant_current_load[A]
       transmission_level_constant_impedance_load:
         range: Complex
@@ -151,7 +143,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: transmission_level_constant_impedance_load[Ohm]
       distribution_load:
         range: Complex
@@ -162,7 +153,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: distribution_load[VA]
       distribution_power_A:
         range: Complex
@@ -172,7 +162,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: distribution_power_A[VA]
       distribution_power_B:
         range: Complex
@@ -182,7 +171,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: distribution_power_B[VA]
       distribution_power_C:
         range: Complex
@@ -192,7 +180,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: distribution_power_C[VA]
       distribution_voltage_A:
         range: Complex
@@ -202,7 +189,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_A[V]
       distribution_voltage_B:
         range: Complex
@@ -212,7 +198,6 @@ classes:
         annotations:
           order: 15
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_B[V]
       distribution_voltage_C:
         range: Complex
@@ -222,7 +207,6 @@ classes:
         annotations:
           order: 16
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_C[V]
       distribution_voltage_AB:
         range: Complex
@@ -232,7 +216,6 @@ classes:
         annotations:
           order: 17
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_AB[V]
       distribution_voltage_BC:
         range: Complex
@@ -242,7 +225,6 @@ classes:
         annotations:
           order: 18
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_BC[V]
       distribution_voltage_CA:
         range: Complex
@@ -252,7 +234,6 @@ classes:
         annotations:
           order: 19
           value_type: complex
-          separator: ','
           native_name: distribution_voltage_CA[V]
       distribution_current_A:
         range: Complex
@@ -262,7 +243,6 @@ classes:
         annotations:
           order: 20
           value_type: complex
-          separator: ','
           native_name: distribution_current_A[A]
       distribution_current_B:
         range: Complex
@@ -272,7 +252,6 @@ classes:
         annotations:
           order: 21
           value_type: complex
-          separator: ','
           native_name: distribution_current_B[A]
       distribution_current_C:
         range: Complex
@@ -282,7 +261,6 @@ classes:
         annotations:
           order: 22
           value_type: complex
-          separator: ','
           native_name: distribution_current_C[A]
       distribution_real_energy:
         range: float
@@ -292,6 +270,5 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: distribution_real_energy[Wh]

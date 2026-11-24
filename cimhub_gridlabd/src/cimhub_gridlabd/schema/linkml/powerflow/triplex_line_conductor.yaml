@@ -43,7 +43,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: resistance[Ohm/mile]
       geometric_mean_radius:
@@ -55,7 +54,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: geometric_mean_radius[ft]
       rating_summer_continuous:
@@ -67,7 +65,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
@@ -79,7 +76,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.emergency[A]
       rating_winter_continuous:
@@ -91,7 +87,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.continuous[A]
       rating_winter_emergency:
@@ -103,6 +98,5 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.emergency[A]

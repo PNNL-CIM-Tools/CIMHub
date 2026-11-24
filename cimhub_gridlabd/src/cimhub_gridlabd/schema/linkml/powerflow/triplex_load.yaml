@@ -43,7 +43,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: load_class
       load_priority:
         range: LoadPriority
@@ -52,7 +51,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: load_priority
       constant_power_1:
         range: Complex
@@ -63,7 +61,6 @@ classes:
         annotations:
           order: 3
           value_type: complex
-          separator: ','
           native_name: constant_power_1[VA]
       constant_power_2:
         range: Complex
@@ -74,7 +71,6 @@ classes:
         annotations:
           order: 4
           value_type: complex
-          separator: ','
           native_name: constant_power_2[VA]
       constant_power_12:
         range: Complex
@@ -85,7 +81,6 @@ classes:
         annotations:
           order: 5
           value_type: complex
-          separator: ','
           native_name: constant_power_12[VA]
       constant_power_1_real:
         range: float
@@ -97,7 +92,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_1_real[W]
       constant_power_2_real:
@@ -109,7 +103,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_2_real[W]
       constant_power_12_real:
@@ -121,7 +114,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_12_real[W]
       constant_power_1_reac:
@@ -134,7 +126,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_1_reac[VAr]
       constant_power_2_reac:
@@ -147,7 +138,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_2_reac[VAr]
       constant_power_12_reac:
@@ -160,7 +150,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_power_12_reac[VAr]
       constant_current_1:
@@ -172,7 +161,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: constant_current_1[A]
       constant_current_2:
         range: Complex
@@ -183,7 +171,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: constant_current_2[A]
       constant_current_12:
         range: Complex
@@ -194,7 +181,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: constant_current_12[A]
       constant_current_1_real:
         range: float
@@ -205,7 +191,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_1_real[A]
       constant_current_2_real:
@@ -217,7 +202,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_2_real[A]
       constant_current_12_real:
@@ -229,7 +213,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_12_real[A]
       constant_current_1_reac:
@@ -242,7 +225,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_1_reac[A]
       constant_current_2_reac:
@@ -255,7 +237,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_2_reac[A]
       constant_current_12_reac:
@@ -268,7 +249,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_current_12_reac[A]
       constant_impedance_1:
@@ -280,7 +260,6 @@ classes:
         annotations:
           order: 21
           value_type: complex
-          separator: ','
           native_name: constant_impedance_1[Ohm]
       constant_impedance_2:
         range: Complex
@@ -291,7 +270,6 @@ classes:
         annotations:
           order: 22
           value_type: complex
-          separator: ','
           native_name: constant_impedance_2[Ohm]
       constant_impedance_12:
         range: Complex
@@ -302,7 +280,6 @@ classes:
         annotations:
           order: 23
           value_type: complex
-          separator: ','
           native_name: constant_impedance_12[Ohm]
       constant_impedance_1_real:
         range: float
@@ -313,7 +290,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_1_real[Ohm]
       constant_impedance_2_real:
@@ -325,7 +301,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_2_real[Ohm]
       constant_impedance_12_real:
@@ -338,7 +313,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_12_real[Ohm]
       constant_impedance_1_reac:
@@ -351,7 +325,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_1_reac[Ohm]
       constant_impedance_2_reac:
@@ -364,7 +337,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_2_reac[Ohm]
       constant_impedance_12_reac:
@@ -377,7 +349,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: constant_impedance_12_reac[Ohm]
       measured_voltage_1:
@@ -389,7 +360,6 @@ classes:
         annotations:
           order: 30
           value_type: complex
-          separator: ','
           native_name: measured_voltage_1[V]
       measured_voltage_2:
         range: Complex
@@ -400,7 +370,6 @@ classes:
         annotations:
           order: 31
           value_type: complex
-          separator: ','
           native_name: measured_voltage_2[V]
       measured_voltage_12:
         range: Complex
@@ -411,7 +380,6 @@ classes:
         annotations:
           order: 32
           value_type: complex
-          separator: ','
           native_name: measured_voltage_12[V]
       indiv_measured_power_1:
         range: Complex
@@ -422,7 +390,6 @@ classes:
         annotations:
           order: 33
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_1[VA]
       indiv_measured_power_2:
         range: Complex
@@ -433,7 +400,6 @@ classes:
         annotations:
           order: 34
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_2[VA]
       indiv_measured_power_12:
         range: Complex
@@ -444,7 +410,6 @@ classes:
         annotations:
           order: 35
           value_type: complex
-          separator: ','
           native_name: indiv_measured_power_12[VA]
       measured_power:
         range: Complex
@@ -455,7 +420,6 @@ classes:
         annotations:
           order: 36
           value_type: complex
-          separator: ','
           native_name: measured_power[VA]
       base_power_1:
         range: float
@@ -467,7 +431,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_power_1[VA]
       base_power_2:
@@ -480,7 +443,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_power_2[VA]
       base_power_12:
@@ -493,7 +455,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_power_12[VA]
       power_pf_1:
@@ -506,7 +467,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_pf_1[pu]
       current_pf_1:
@@ -519,7 +479,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_pf_1[pu]
       impedance_pf_1:
@@ -532,7 +491,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_pf_1[pu]
       power_pf_2:
@@ -545,7 +503,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_pf_2[pu]
       current_pf_2:
@@ -558,7 +515,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_pf_2[pu]
       impedance_pf_2:
@@ -571,7 +527,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_pf_2[pu]
       power_pf_12:
@@ -584,7 +539,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_pf_12[pu]
       current_pf_12:
@@ -597,7 +551,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_pf_12[pu]
       impedance_pf_12:
@@ -610,7 +563,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_pf_12[pu]
       power_fraction_1:
@@ -622,7 +574,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_fraction_1[pu]
       current_fraction_1:
@@ -635,7 +586,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_fraction_1[pu]
       impedance_fraction_1:
@@ -648,7 +598,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_fraction_1[pu]
       power_fraction_2:
@@ -660,7 +609,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_fraction_2[pu]
       current_fraction_2:
@@ -673,7 +621,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_fraction_2[pu]
       impedance_fraction_2:
@@ -686,7 +633,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_fraction_2[pu]
       power_fraction_12:
@@ -698,7 +644,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_fraction_12[pu]
       current_fraction_12:
@@ -711,7 +656,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_fraction_12[pu]
       impedance_fraction_12:
@@ -724,6 +668,5 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: impedance_fraction_12[pu]

@@ -42,7 +42,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: generator_mode
       additional_controls:
         range: string
@@ -53,7 +52,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: additional_controls
       generator_status:
         range: GeneratorStatus
@@ -62,7 +60,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: generator_status
       rfb_size:
         range: string
@@ -71,7 +68,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: rfb_size
       power_type:
         range: string
@@ -80,7 +76,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: power_type
       battery_state:
         range: string
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: battery_state
       number_battery_state_changes:
         range: float
@@ -99,7 +93,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: number_battery_state_changes
       monitored_power:
@@ -112,7 +105,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: monitored_power[W]
       power_set_high:
@@ -125,7 +117,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_set_high[W]
       power_set_low:
@@ -138,7 +129,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_set_low[W]
       power_set_high_highT:
@@ -151,7 +141,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_set_high_highT[W]
       power_set_low_highT:
@@ -164,7 +153,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_set_low_highT[W]
       check_power_low:
@@ -177,7 +165,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: check_power_low[W]
       check_power_high:
@@ -190,7 +177,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: check_power_high[W]
       voltage_set_high:
@@ -202,7 +188,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_set_high[V]
       voltage_set_low:
@@ -214,7 +199,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_set_low[V]
       deadband:
@@ -226,7 +210,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: deadband[V]
       sensitivity:
@@ -237,7 +220,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: sensitivity
       high_temperature:
@@ -247,7 +229,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: high_temperature
       midpoint_temperature:
@@ -258,7 +239,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: midpoint_temperature
       low_temperature:
@@ -268,7 +248,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: low_temperature
       scheduled_power:
@@ -280,7 +259,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: scheduled_power[W]
       Rinternal:
@@ -292,7 +270,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rinternal[Ohm]
       V_Max:
@@ -304,7 +281,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_Max[V]
       I_Max:
@@ -316,7 +292,6 @@ classes:
         annotations:
           order: 25
           value_type: complex
-          separator: ','
           native_name: I_Max[A]
       E_Max:
         range: float
@@ -327,7 +302,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_Max[Wh]
       P_Max:
@@ -339,7 +313,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_Max[W]
       power_factor:
@@ -349,7 +322,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_factor
       Energy:
@@ -361,7 +333,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: Energy[Wh]
       efficiency:
@@ -373,7 +344,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: efficiency[unit]
       base_efficiency:
@@ -386,7 +356,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_efficiency[unit]
       parasitic_power_draw:
@@ -398,7 +367,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: parasitic_power_draw[W]
       V_Out:
@@ -410,7 +378,6 @@ classes:
         annotations:
           order: 33
           value_type: complex
-          separator: ','
           native_name: V_Out[V]
       I_Out:
         range: Complex
@@ -421,7 +388,6 @@ classes:
         annotations:
           order: 34
           value_type: complex
-          separator: ','
           native_name: I_Out[A]
       VA_Out:
         range: Complex
@@ -432,7 +398,6 @@ classes:
         annotations:
           order: 35
           value_type: complex
-          separator: ','
           native_name: VA_Out[VA]
       I_In:
         range: Complex
@@ -443,7 +408,6 @@ classes:
         annotations:
           order: 36
           value_type: complex
-          separator: ','
           native_name: I_In[A]
       V_Internal:
         range: Complex
@@ -454,7 +418,6 @@ classes:
         annotations:
           order: 37
           value_type: complex
-          separator: ','
           native_name: V_Internal[V]
       I_Internal:
         range: Complex
@@ -465,7 +428,6 @@ classes:
         annotations:
           order: 38
           value_type: complex
-          separator: ','
           native_name: I_Internal[A]
       I_Prev:
         range: Complex
@@ -476,7 +438,6 @@ classes:
         annotations:
           order: 39
           value_type: complex
-          separator: ','
           native_name: I_Prev[A]
       power_transferred:
         range: float
@@ -485,7 +446,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_transferred
       use_internal_battery_model:
@@ -495,7 +455,6 @@ classes:
         annotations:
           order: 41
           value_type: bool
-          separator: ','
           native_name: use_internal_battery_model
       battery_type:
         range: string
@@ -505,7 +464,6 @@ classes:
         annotations:
           order: 42
           value_type: string
-          separator: ','
           native_name: battery_type
       nominal_voltage:
         range: float
@@ -517,7 +475,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: nominal_voltage[V]
       rated_power:
@@ -529,7 +486,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_power[W]
       battery_capacity:
@@ -541,7 +497,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: battery_capacity[Wh]
       round_trip_efficiency:
@@ -554,7 +509,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: round_trip_efficiency[pu]
       state_of_charge:
@@ -566,7 +520,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: state_of_charge[pu]
       battery_load:
@@ -578,7 +531,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: battery_load[W]
       reserve_state_of_charge:
@@ -591,7 +543,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: reserve_state_of_charge[pu]
       state_change_time_delta:
@@ -601,7 +552,6 @@ classes:
         annotations:
           order: 50
           value_type: int
-          separator: ','
           native_name: state_change_time_delta
       margin:
         range: float
@@ -610,7 +560,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: margin
       E_Next:
@@ -620,7 +569,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_Next
       recalculate:
@@ -630,7 +578,6 @@ classes:
         annotations:
           order: 53
           value_type: bool
-          separator: ','
           native_name: recalculate
       prev_time:
         range: string
@@ -639,7 +586,6 @@ classes:
         annotations:
           order: 54
           value_type: string
-          separator: ','
           native_name: prev_time
       first_time_step:
         range: integer
@@ -648,7 +594,6 @@ classes:
         annotations:
           order: 55
           value_type: int
-          separator: ','
           native_name: first_time_step
       prev_state:
         range: integer
@@ -657,7 +602,6 @@ classes:
         annotations:
           order: 56
           value_type: int
-          separator: ','
           native_name: prev_state
       internal_battery_load:
         range: float
@@ -667,7 +611,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: internal_battery_load
       value_Circuit_V_A:
@@ -677,7 +620,6 @@ classes:
         annotations:
           order: 58
           value_type: complex
-          separator: ','
           native_name: value_Circuit_V_A
       value_Circuit_V_B:
         range: Complex
@@ -686,7 +628,6 @@ classes:
         annotations:
           order: 59
           value_type: complex
-          separator: ','
           native_name: value_Circuit_V_B
       value_Circuit_V_C:
         range: Complex
@@ -695,7 +636,6 @@ classes:
         annotations:
           order: 60
           value_type: complex
-          separator: ','
           native_name: value_Circuit_V_C
       value_Line_I_A:
         range: Complex
@@ -704,7 +644,6 @@ classes:
         annotations:
           order: 61
           value_type: complex
-          separator: ','
           native_name: value_Line_I_A
       value_Line_I_B:
         range: Complex
@@ -713,7 +652,6 @@ classes:
         annotations:
           order: 62
           value_type: complex
-          separator: ','
           native_name: value_Line_I_B
       value_Line_I_C:
         range: Complex
@@ -722,7 +660,6 @@ classes:
         annotations:
           order: 63
           value_type: complex
-          separator: ','
           native_name: value_Line_I_C
       value_Line12:
         range: Complex
@@ -731,7 +668,6 @@ classes:
         annotations:
           order: 64
           value_type: complex
-          separator: ','
           native_name: value_Line12
       value_Tout:
         range: float
@@ -740,7 +676,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: value_Tout
       parent_is_meter:
@@ -750,7 +685,6 @@ classes:
         annotations:
           order: 66
           value_type: bool
-          separator: ','
           native_name: parent_is_meter
       parent_is_triplex:
         range: boolean
@@ -759,7 +693,6 @@ classes:
         annotations:
           order: 67
           value_type: bool
-          separator: ','
           native_name: parent_is_triplex
       parent_is_inverter:
         range: boolean
@@ -768,7 +701,6 @@ classes:
         annotations:
           order: 68
           value_type: bool
-          separator: ','
           native_name: parent_is_inverter
       climate_object_found:
         range: boolean
@@ -777,5 +709,4 @@ classes:
         annotations:
           order: 69
           value_type: bool
-          separator: ','
           native_name: climate_object_found

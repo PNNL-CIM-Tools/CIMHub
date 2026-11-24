@@ -9,7 +9,7 @@ import pytest
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
-from cimhub_core.getters.spacing import get_spacing_distances, get_spacing_xy
+from cimhub_core.getters.spacing import get_spacing_xy, get_stored_distances
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import conductor, configuration, spacing
 from cimhub_gridlabd.importer.cimtbl.configuration import triplex_spacing
@@ -66,7 +66,7 @@ def test_atom_binds(scope):
 
     spacings = {str(s.mRID): s for s in network.list_by_class(cim.ConductorDistanceSpacing)}
     # the core getters read the spacing as written: distances, and positions from the heights
-    distances = get_spacing_distances(spacings["spc_spc_601_ABCN"], "ft")
+    distances = get_stored_distances(spacings["spc_spc_601_ABCN"], "ft").distances
     assert distances[(1, 2)] == pytest.approx(2.5) and distances[(3, 4)] == pytest.approx(5.0)
     heights = [position.y for position in get_spacing_xy(spacings["spc_spc_601_ABCN"], "ft")]
     assert heights == pytest.approx([28.0, 28.0, 28.0, 24.0])

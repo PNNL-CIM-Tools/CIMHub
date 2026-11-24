@@ -40,7 +40,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: phase_A_state
       phase_B_state:
         range: string
@@ -49,7 +48,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: phase_B_state
       phase_C_state:
         range: string
@@ -58,7 +56,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: phase_C_state
       operating_mode:
         range: string
@@ -68,7 +65,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: operating_mode
       switch_impedance:
         range: Complex
@@ -79,7 +75,6 @@ classes:
         annotations:
           order: 5
           value_type: complex
-          separator: ','
           native_name: switch_impedance[Ohm]
       switch_resistance:
         range: float
@@ -91,7 +86,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: switch_resistance[Ohm]
       switch_reactance:
@@ -104,6 +98,5 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: switch_reactance[Ohm]

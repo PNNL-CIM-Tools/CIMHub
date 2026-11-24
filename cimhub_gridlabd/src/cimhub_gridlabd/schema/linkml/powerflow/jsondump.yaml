@@ -30,7 +30,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: group
       filename_dump_system:
         range: string
@@ -39,7 +38,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: filename_dump_system
       filename_dump_reliability:
         range: string
@@ -48,7 +46,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: filename_dump_reliability
       runtime:
         range: string
@@ -57,7 +54,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: runtime
       runcount:
         range: integer
@@ -66,7 +62,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ','
           native_name: runcount
       write_system_info:
         range: boolean
@@ -76,7 +71,6 @@ classes:
         annotations:
           order: 6
           value_type: bool
-          separator: ','
           native_name: write_system_info
       write_reliability:
         range: boolean
@@ -86,7 +80,6 @@ classes:
         annotations:
           order: 7
           value_type: bool
-          separator: ','
           native_name: write_reliability
       write_per_unit:
         range: boolean
@@ -95,7 +88,6 @@ classes:
         annotations:
           order: 8
           value_type: bool
-          separator: ','
           native_name: write_per_unit
       system_base:
         range: float
@@ -106,7 +98,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: system_base[VA]
       min_node_voltage:
@@ -118,7 +109,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: min_node_voltage[pu]
       max_node_voltage:
@@ -130,6 +120,5 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: max_node_voltage[pu]

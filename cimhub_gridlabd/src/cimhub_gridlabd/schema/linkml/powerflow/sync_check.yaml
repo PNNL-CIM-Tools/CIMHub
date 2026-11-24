@@ -31,7 +31,6 @@ classes:
         annotations:
           order: 1
           value_type: bool
-          separator: ','
           native_name: armed
       frequency_tolerance:
         range: float
@@ -42,7 +41,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_tolerance[Hz]
       voltage_tolerance_pu:
@@ -54,7 +52,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_tolerance_pu[pu]
       voltage_tolerance:
@@ -67,7 +64,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_tolerance[V]
       metrics_period:
@@ -79,7 +75,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: metrics_period[s]
       volt_compare_mode:
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: volt_compare_mode
       voltage_magnitude_tolerance_pu:
         range: float
@@ -101,7 +95,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_magnitude_tolerance_pu[pu]
       voltage_magnitude_tolerance:
@@ -114,7 +107,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_magnitude_tolerance[V]
       voltage_angle_tolerance:
@@ -127,7 +119,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_angle_tolerance[deg]
       delta_trigger_mult:
@@ -138,7 +129,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_trigger_mult
       freq_diff_noabs_hz:
@@ -148,7 +138,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: freq_diff_noabs_hz
       volt_A_mag_diff_noabs_pu:
@@ -159,7 +148,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_mag_diff_noabs_pu
       volt_B_mag_diff_noabs_pu:
@@ -170,7 +158,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_mag_diff_noabs_pu
       volt_C_mag_diff_noabs_pu:
@@ -181,7 +168,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_mag_diff_noabs_pu
       freq_diff_hz:
@@ -191,7 +177,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: freq_diff_hz
       volt_A_diff:
@@ -202,7 +187,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_diff
       volt_B_diff:
@@ -213,7 +197,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_diff
       volt_C_diff:
@@ -224,7 +207,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_diff
       volt_A_diff_pu:
@@ -235,7 +217,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_diff_pu
       volt_B_diff_pu:
@@ -246,7 +227,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_diff_pu
       volt_C_diff_pu:
@@ -257,7 +237,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_diff_pu
       volt_A_mag_diff:
@@ -268,7 +247,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_mag_diff
       volt_B_mag_diff:
@@ -279,7 +257,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_mag_diff
       volt_C_mag_diff:
@@ -290,7 +267,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_mag_diff
       volt_A_mag_diff_pu:
@@ -301,7 +277,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_mag_diff_pu
       volt_B_mag_diff_pu:
@@ -312,7 +287,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_mag_diff_pu
       volt_C_mag_diff_pu:
@@ -323,7 +297,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_mag_diff_pu
       volt_A_ang_deg_diff:
@@ -334,7 +307,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_A_ang_deg_diff
       volt_B_ang_deg_diff:
@@ -345,7 +317,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_B_ang_deg_diff
       volt_C_ang_deg_diff:
@@ -356,7 +327,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_C_ang_deg_diff
       nominal_volt_v:
@@ -367,6 +337,5 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: nominal_volt_v

@@ -25,7 +25,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       name:
         description: NAME - Bus name (12 characters max)
@@ -37,7 +36,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       base_voltage:
@@ -50,7 +48,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       bus_type:
@@ -60,7 +57,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
 
       area:
@@ -70,7 +66,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
           raw_default: 1
 
       zone:
@@ -80,7 +75,6 @@ classes:
         annotations:
           order: 6
           value_type: int
-          separator: ","
           raw_default: 1
 
       owner:
@@ -90,7 +84,6 @@ classes:
         annotations:
           order: 7
           value_type: int
-          separator: ","
           raw_default: 1
 
       voltage_magnitude:
@@ -101,7 +94,6 @@ classes:
           order: 8
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 1.0
 
       voltage_angle:
@@ -114,7 +106,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       normal_voltage_magnitude_high_limit:
@@ -125,7 +116,6 @@ classes:
           order: 10
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 1.1
 
       normal_voltage_magnitude_low_limit:
@@ -136,7 +126,6 @@ classes:
           order: 11
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.9
 
       emergency_voltage_magnitude_high_limit:
@@ -147,7 +136,6 @@ classes:
           order: 12
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 1.1
 
       emergency_voltage_magnitude_low_limit:
@@ -158,5 +146,4 @@ classes:
           order: 13
           value_type: float
           precision: 5
-          separator: ""  # No separator after last field
           raw_default: 0.9

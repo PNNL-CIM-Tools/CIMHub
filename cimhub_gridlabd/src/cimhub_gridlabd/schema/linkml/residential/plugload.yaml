@@ -44,7 +44,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: circuit_split
       demand:
@@ -55,7 +54,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: demand[unit]
       installed_power:
@@ -67,7 +65,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: installed_power[kW]
       actual_power:
@@ -79,5 +76,4 @@ classes:
         annotations:
           order: 4
           value_type: complex
-          separator: ','
           native_name: actual_power[kVA]

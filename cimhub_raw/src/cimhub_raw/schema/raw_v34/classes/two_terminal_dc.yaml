@@ -39,7 +39,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
 
       mdc:
         description: MDC - Control mode (0=blocked, 1=power, 2=current)
@@ -49,7 +48,6 @@ classes:
           line_number: 1
           order: 2
           value_type: int
-          separator: ","
           raw_default: 0
 
       rdc:
@@ -63,7 +61,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
 
       setvl:
         description: SETVL - Current (A) or power (MW) demand
@@ -74,7 +71,6 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ","
 
       vschd:
         description: VSCHD - Scheduled compounded DC voltage in kV
@@ -87,7 +83,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
 
       vcmod:
         description: VCMOD - Mode switch DC voltage in kV
@@ -100,7 +95,6 @@ classes:
           order: 6
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       rcomp:
@@ -114,7 +108,6 @@ classes:
           order: 7
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       delti:
@@ -126,7 +119,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       meter:
@@ -140,7 +132,6 @@ classes:
           width: 1
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "I"
 
       dcvmin:
@@ -154,7 +145,6 @@ classes:
           order: 10
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       cccitmx:
@@ -165,7 +155,6 @@ classes:
           line_number: 1
           order: 11
           value_type: int
-          separator: ","
           raw_default: 20
 
       cccacc:
@@ -177,7 +166,6 @@ classes:
           order: 12
           value_type: float
           precision: 4
-          separator: ""
           raw_default: 1.0
 
       # ==== LINE 2: Rectifier (Converter) Data ====
@@ -189,7 +177,6 @@ classes:
           line_number: 2
           order: 1
           value_type: int
-          separator: ","
 
       nbr:
         description: NBR - Number of bridges in series (rectifier)
@@ -199,7 +186,6 @@ classes:
           line_number: 2
           order: 2
           value_type: int
-          separator: ","
 
       anmxr:
         description: ANMXR - Rectifier nominal maximum firing angle in degrees
@@ -212,7 +198,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
 
       anmnr:
         description: ANMNR - Rectifier minimum steady-state firing angle in degrees
@@ -225,7 +210,6 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ","
 
       rcr:
         description: RCR - Rectifier commutating transformer resistance per bridge in ohms
@@ -238,7 +222,6 @@ classes:
           order: 5
           value_type: float
           precision: 5
-          separator: ","
 
       xcr:
         description: XCR - Rectifier commutating transformer reactance per bridge in ohms
@@ -251,7 +234,6 @@ classes:
           order: 6
           value_type: float
           precision: 5
-          separator: ","
 
       ebasr:
         description: EBASR - Rectifier primary base AC voltage in kV
@@ -264,7 +246,6 @@ classes:
           order: 7
           value_type: float
           precision: 4
-          separator: ","
 
       trr:
         description: TRR - Rectifier transformer ratio (pu)
@@ -275,7 +256,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       tapr:
@@ -287,7 +267,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       tmxr:
@@ -299,7 +278,6 @@ classes:
           order: 10
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.5
 
       tmnr:
@@ -311,7 +289,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.51
 
       stpr:
@@ -323,7 +300,6 @@ classes:
           order: 12
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.00625
 
       icr:
@@ -334,7 +310,6 @@ classes:
           line_number: 2
           order: 13
           value_type: int
-          separator: ","
           raw_default: 0
 
       ifr:
@@ -345,7 +320,6 @@ classes:
           line_number: 2
           order: 14
           value_type: int
-          separator: ","
           raw_default: 0
 
       itr:
@@ -356,7 +330,6 @@ classes:
           line_number: 2
           order: 15
           value_type: int
-          separator: ","
           raw_default: 0
 
       idr:
@@ -370,7 +343,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       xcapr:
@@ -384,7 +356,6 @@ classes:
           order: 17
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       ndr:
@@ -395,7 +366,6 @@ classes:
           line_number: 2
           order: 18
           value_type: int
-          separator: ""
           raw_default: 0
 
       # ==== LINE 3: Inverter (Converter) Data ====
@@ -407,7 +377,6 @@ classes:
           line_number: 3
           order: 1
           value_type: int
-          separator: ","
 
       nbi:
         description: NBI - Number of bridges in series (inverter)
@@ -417,7 +386,6 @@ classes:
           line_number: 3
           order: 2
           value_type: int
-          separator: ","
 
       anmxi:
         description: ANMXI - Inverter nominal maximum gamma angle in degrees
@@ -430,7 +398,6 @@ classes:
           order: 3
           value_type: float
           precision: 4
-          separator: ","
 
       anmni:
         description: ANMNI - Inverter minimum steady-state gamma angle in degrees
@@ -443,7 +410,6 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ","
 
       rci:
         description: RCI - Inverter commutating transformer resistance per bridge in ohms
@@ -456,7 +422,6 @@ classes:
           order: 5
           value_type: float
           precision: 5
-          separator: ","
 
       xci:
         description: XCI - Inverter commutating transformer reactance per bridge in ohms
@@ -469,7 +434,6 @@ classes:
           order: 6
           value_type: float
           precision: 5
-          separator: ","
 
       ebasi:
         description: EBASI - Inverter primary base AC voltage in kV
@@ -482,7 +446,6 @@ classes:
           order: 7
           value_type: float
           precision: 4
-          separator: ","
 
       tri:
         description: TRI - Inverter transformer ratio (pu)
@@ -493,7 +456,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       tapi:
@@ -505,7 +467,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       tmxi:
@@ -517,7 +478,6 @@ classes:
           order: 10
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.5
 
       tmni:
@@ -529,7 +489,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.51
 
       stpi:
@@ -541,7 +500,6 @@ classes:
           order: 12
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.00625
 
       ici:
@@ -552,7 +510,6 @@ classes:
           line_number: 3
           order: 13
           value_type: int
-          separator: ","
           raw_default: 0
 
       ifi:
@@ -563,7 +520,6 @@ classes:
           line_number: 3
           order: 14
           value_type: int
-          separator: ","
           raw_default: 0
 
       iti:
@@ -574,7 +530,6 @@ classes:
           line_number: 3
           order: 15
           value_type: int
-          separator: ","
           raw_default: 0
 
       idi:
@@ -588,7 +543,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       xcapi:
@@ -602,7 +556,6 @@ classes:
           order: 17
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       ndi:
@@ -613,5 +566,4 @@ classes:
           line_number: 3
           order: 18
           value_type: int
-          separator: ""
           raw_default: 0

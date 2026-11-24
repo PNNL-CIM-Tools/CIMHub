@@ -38,7 +38,6 @@ classes:
           width: 12
           quote: true
           quote_char: "'"
-          separator: ","
 
       mdc:
         description: MDC - Control mode (0=out of service, 1=in service)
@@ -48,7 +47,6 @@ classes:
           line_number: 1
           order: 2
           value_type: int
-          separator: ","
           raw_default: 1
 
       rdc:
@@ -62,7 +60,6 @@ classes:
           order: 3
           value_type: float
           precision: 5
-          separator: ","
 
       o1:
         description: O1 - Owner 1 number
@@ -72,7 +69,6 @@ classes:
           line_number: 1
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
 
       f1:
@@ -84,7 +80,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o2:
@@ -95,7 +90,6 @@ classes:
           line_number: 1
           order: 6
           value_type: int
-          separator: ","
           raw_default: 0
 
       f2:
@@ -107,7 +101,6 @@ classes:
           order: 7
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o3:
@@ -118,7 +111,6 @@ classes:
           line_number: 1
           order: 8
           value_type: int
-          separator: ","
           raw_default: 0
 
       f3:
@@ -130,7 +122,6 @@ classes:
           order: 9
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       o4:
@@ -141,7 +132,6 @@ classes:
           line_number: 1
           order: 10
           value_type: int
-          separator: ","
           raw_default: 0
 
       f4:
@@ -153,7 +143,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ""
           raw_default: 1.0
 
       # ==== LINE 2: Converter 1 Data ====
@@ -165,7 +154,6 @@ classes:
           line_number: 2
           order: 1
           value_type: int
-          separator: ","
 
       converter_type_1:
         description: TYPE - (converter 1) Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
@@ -175,7 +163,6 @@ classes:
           line_number: 2
           order: 2
           value_type: int
-          separator: ","
 
       mode_1:
         description: MODE - (converter 1) Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
@@ -185,7 +172,6 @@ classes:
           line_number: 2
           order: 3
           value_type: int
-          separator: ","
           raw_default: 1
 
       dcset_1:
@@ -197,7 +183,6 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ","
           note: "Unit depends on TYPE - kV for TYPE 1 (DC voltage), MW for TYPE 2 (power)"
 
       acset_1:
@@ -209,7 +194,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
           comments: "Unit depends on MODE - pu for MODE 1 (AC voltage), power factor for MODE 2"
           raw_default: 1.0
 
@@ -224,7 +208,6 @@ classes:
           order: 6
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       bloss_1:
@@ -238,7 +221,6 @@ classes:
           order: 7
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       minloss_1:
@@ -252,7 +234,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       smax_1:
@@ -266,7 +247,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       imax_1:
@@ -280,7 +260,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       pwf_1:
@@ -292,7 +271,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       maxq_1:
@@ -306,7 +284,6 @@ classes:
           order: 12
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 9999.0
 
       minq_1:
@@ -320,7 +297,6 @@ classes:
           order: 13
           value_type: float
           precision: 2
-          separator: ","
           raw_default: -9999.0
 
       vsreg_1:
@@ -331,7 +307,6 @@ classes:
           line_number: 2
           order: 14
           value_type: int
-          separator: ","
           raw_default: 0
 
       rmpct_1:
@@ -343,7 +318,6 @@ classes:
           order: 15
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 100.0
 
       nreg_1:
@@ -354,7 +328,6 @@ classes:
           line_number: 2
           order: 16
           value_type: int
-          separator: ""
           raw_default: 0
       # ==== LINE 3: Converter 2 Data ====
       ibus_2:
@@ -365,7 +338,6 @@ classes:
           line_number: 3
           order: 1
           value_type: int
-          separator: ","
 
       converter_type_2:
         description: TYPE - (converter 2) Converter DC control code (0=out of service, 1=DC voltage control, 2=MW control)
@@ -375,7 +347,6 @@ classes:
           line_number: 3
           order: 2
           value_type: int
-          separator: ","
 
       mode_2:
         description: MODE - (converter 2) Converter AC control mode (1=AC voltage control, 2=fixed AC power factor)
@@ -385,7 +356,6 @@ classes:
           line_number: 3
           order: 3
           value_type: int
-          separator: ","
           raw_default: 1
 
       dcset_2:
@@ -397,7 +367,6 @@ classes:
           order: 4
           value_type: float
           precision: 4
-          separator: ","
           note: "Unit depends on TYPE - kV for TYPE 1 (DC voltage), MW for TYPE 2 (power)"
 
       acset_2:
@@ -409,7 +378,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
           comments: "Unit depends on MODE - pu for MODE 1 (AC voltage), power factor for MODE 2"
           raw_default: 1.0
 
@@ -424,7 +392,6 @@ classes:
           order: 6
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       bloss_2:
@@ -438,7 +405,6 @@ classes:
           order: 7
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0
 
       minloss_2:
@@ -452,7 +418,6 @@ classes:
           order: 8
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       smax_2:
@@ -466,7 +431,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       imax_2:
@@ -480,7 +444,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
 
       pwf_2:
@@ -492,7 +455,6 @@ classes:
           order: 11
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 1.0
 
       maxq_2:
@@ -506,7 +468,6 @@ classes:
           order: 12
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 9999.0
 
       minq_2:
@@ -520,7 +481,6 @@ classes:
           order: 13
           value_type: float
           precision: 2
-          separator: ","
           raw_default: -9999.0
 
       vsreg_2:
@@ -531,7 +491,6 @@ classes:
           line_number: 3
           order: 14
           value_type: int
-          separator: ","
           raw_default: 0
 
       rmpct_2:
@@ -543,7 +502,6 @@ classes:
           order: 15
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 100.0
 
       nreg_2:
@@ -554,5 +512,4 @@ classes:
           line_number: 3
           order: 16
           value_type: int
-          separator: ""
           raw_default: 0

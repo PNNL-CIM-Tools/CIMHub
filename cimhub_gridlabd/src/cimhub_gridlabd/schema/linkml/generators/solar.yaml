@@ -59,7 +59,6 @@ classes:
         annotations:
           order: 1
           value_type: bool
-          separator: ','
           native_name: pvc_Pmax_calc_simp_mode
       t_ref_cels:
         range: float
@@ -70,7 +69,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: t_ref_cels[degC]
       S_ref_wpm2:
@@ -82,7 +80,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: S_ref_wpm2[W/m^2]
       pvc_a1_inv_cels:
@@ -93,7 +90,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_a1_inv_cels
       pvc_b1_inv_cels:
@@ -104,7 +100,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_b1_inv_cels
       pvc_U_oc_V:
@@ -116,7 +111,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_U_oc_V[V]
       pvc_I_sc_A:
@@ -128,7 +122,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_I_sc_A[A]
       pvc_U_m_V:
@@ -140,7 +133,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_U_m_V[V]
       pvc_I_m_A:
@@ -152,7 +144,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_I_m_A[A]
       MAX_NR_ITERATIONS:
@@ -162,7 +153,6 @@ classes:
         annotations:
           order: 10
           value_type: string
-          separator: ','
           native_name: MAX_NR_ITERATIONS
       x0_root_rt:
         range: float
@@ -172,7 +162,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: x0_root_rt
       DOA_NR_ITERATIONS:
@@ -182,7 +171,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: DOA_NR_ITERATIONS
       panel_type:
@@ -191,7 +179,6 @@ classes:
         annotations:
           order: 13
           value_type: string
-          separator: ','
           native_name: panel_type
       SOLAR_TILT_MODEL:
         range: string
@@ -200,7 +187,6 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: SOLAR_TILT_MODEL
       SOLAR_POWER_MODEL:
         range: string
@@ -208,7 +194,6 @@ classes:
         annotations:
           order: 15
           value_type: string
-          separator: ','
           native_name: SOLAR_POWER_MODEL
       a_coeff:
         range: float
@@ -217,7 +202,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: a_coeff
       b_coeff:
@@ -229,7 +213,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: b_coeff[s/m]
       dT_coeff:
@@ -242,7 +225,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: dT_coeff[m*m*degC/kW]
       T_coeff:
@@ -255,7 +237,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: T_coeff[%/degC]
       NOCT:
@@ -266,7 +247,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: NOCT[degF]
       Tmodule:
@@ -277,7 +257,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tmodule[degF]
       Tambient:
@@ -288,7 +267,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tambient[degC]
       wind_speed:
@@ -299,7 +277,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: wind_speed[mph]
       ambient_temperature:
@@ -311,7 +288,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: ambient_temperature[degF]
       Insolation:
@@ -322,7 +298,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: Insolation[W/sf]
       Rinternal:
@@ -333,7 +308,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rinternal[Ohm]
       Rated_Insolation:
@@ -344,7 +318,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rated_Insolation[W/sf]
       Pmax_temp_coeff:
@@ -353,7 +326,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pmax_temp_coeff
       Voc_temp_coeff:
@@ -362,7 +334,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: Voc_temp_coeff
       V_Max:
@@ -373,7 +344,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_Max[V]
       Voc_Max:
@@ -384,7 +354,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: Voc_Max[V]
       Voc:
@@ -395,7 +364,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: Voc[V]
       efficiency:
@@ -406,7 +374,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: efficiency[unit]
       area:
@@ -417,7 +384,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: area[sf]
       soiling:
@@ -429,7 +395,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: soiling[pu]
       derating:
@@ -441,7 +406,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: derating[pu]
       Tcell:
@@ -452,7 +416,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tcell[degC]
       rated_power:
@@ -465,7 +428,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_power[W]
       P_Out:
@@ -476,7 +438,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_Out[kW]
       V_Out:
@@ -487,7 +448,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_Out[V]
       I_Out:
@@ -498,7 +458,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: I_Out[A]
       weather:
@@ -507,7 +466,6 @@ classes:
         annotations:
           order: 42
           value_type: string
-          separator: ','
           native_name: weather
       shading_factor:
         range: float
@@ -518,7 +476,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: shading_factor[pu]
       tilt_angle:
@@ -530,7 +487,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: tilt_angle[deg]
       orientation_azimuth:
@@ -542,7 +498,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: orientation_azimuth[deg]
       latitude_angle_fix:
@@ -552,7 +507,6 @@ classes:
         annotations:
           order: 46
           value_type: bool
-          separator: ','
           native_name: latitude_angle_fix
       default_voltage_variable:
         range: float
@@ -562,7 +516,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: default_voltage_variable
       default_current_variable:
@@ -573,7 +526,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: default_current_variable
       default_power_variable:
@@ -584,7 +536,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: default_power_variable
       prevTemp:
@@ -594,7 +545,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: prevTemp
       currTemp:
@@ -604,7 +554,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: currTemp
       prevTime:
@@ -614,7 +563,6 @@ classes:
         annotations:
           order: 52
           value_type: string
-          separator: ','
           native_name: prevTime
       last_DC_current:
         range: float
@@ -623,7 +571,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: last_DC_current
       last_DC_power:
@@ -633,7 +580,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: last_DC_power
       orientation:
@@ -642,5 +588,4 @@ classes:
         annotations:
           order: 55
           value_type: string
-          separator: ','
           native_name: orientation

@@ -40,7 +40,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: conductor_A
       conductor_B:
         range: string
@@ -48,7 +47,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: conductor_B
       conductor_C:
         range: string
@@ -56,7 +54,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: conductor_C
       conductor_N:
         range: string
@@ -64,7 +61,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: conductor_N
       spacing:
         range: string
@@ -72,7 +68,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: spacing
       z11:
         range: Complex
@@ -82,7 +77,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: z11[Ohm/mile]
       z12:
         range: Complex
@@ -92,7 +86,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: z12[Ohm/mile]
       z13:
         range: Complex
@@ -102,7 +95,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: z13[Ohm/mile]
       z21:
         range: Complex
@@ -112,7 +104,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: z21[Ohm/mile]
       z22:
         range: Complex
@@ -122,7 +113,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: z22[Ohm/mile]
       z23:
         range: Complex
@@ -132,7 +122,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: z23[Ohm/mile]
       z31:
         range: Complex
@@ -142,7 +131,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: z31[Ohm/mile]
       z32:
         range: Complex
@@ -152,7 +140,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: z32[Ohm/mile]
       z33:
         range: Complex
@@ -162,7 +149,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: z33[Ohm/mile]
       c11:
         range: float
@@ -172,7 +158,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: c11[nF/mile]
       c12:
@@ -183,7 +168,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: c12[nF/mile]
       c13:
@@ -194,7 +178,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: c13[nF/mile]
       c21:
@@ -205,7 +188,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: c21[nF/mile]
       c22:
@@ -216,7 +198,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: c22[nF/mile]
       c23:
@@ -227,7 +208,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: c23[nF/mile]
       c31:
@@ -238,7 +218,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: c31[nF/mile]
       c32:
@@ -249,7 +228,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: c32[nF/mile]
       c33:
@@ -260,7 +238,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: c33[nF/mile]
       rating_summer_continuous:
@@ -272,7 +249,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
@@ -284,7 +260,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.emergency[A]
       rating_winter_continuous:
@@ -296,7 +271,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.continuous[A]
       rating_winter_emergency:
@@ -308,6 +282,5 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.emergency[A]

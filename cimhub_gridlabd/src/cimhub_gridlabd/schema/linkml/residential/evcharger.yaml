@@ -55,7 +55,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: charger_type
       vehicle_type:
         range: string
@@ -63,7 +62,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: vehicle_type
       state:
         range: string
@@ -71,7 +69,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: state
       p_go_home:
         range: float
@@ -81,7 +78,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: p_go_home[unit/h]
       p_go_work:
@@ -92,7 +88,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: p_go_work[unit/h]
       work_dist:
@@ -103,7 +98,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: work_dist[mile]
       capacity:
@@ -114,7 +108,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: capacity[kWh]
       charge:
@@ -125,7 +118,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: charge[unit]
       charge_at_work:
@@ -134,7 +126,6 @@ classes:
         annotations:
           order: 9
           value_type: bool
-          separator: ','
           native_name: charge_at_work
       charge_throttle:
         range: float
@@ -144,7 +135,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: charge_throttle[unit]
       charger_efficiency:
@@ -156,7 +146,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: charger_efficiency[unit]
       power_train_efficiency:
@@ -168,7 +157,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_train_efficiency[mile/kWh]
       mileage_classification:
@@ -180,7 +168,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: mileage_classification[mile]
       demand_profile:
@@ -189,5 +176,4 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: demand_profile

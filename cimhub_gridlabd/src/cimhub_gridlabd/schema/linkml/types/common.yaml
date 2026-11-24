@@ -34,7 +34,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: name
       parent:
         range: string
@@ -42,7 +41,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: parent
       groupid:
         range: string
@@ -50,7 +48,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: groupid
       latitude:
         range: string
@@ -58,7 +55,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: latitude
       longitude:
         range: string
@@ -66,7 +62,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: longitude
       in_svc:
         range: string
@@ -74,7 +69,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: in_svc
       out_svc:
         range: string
@@ -82,7 +76,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: out_svc
       rank:
         range: string
@@ -90,7 +83,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: rank
       flags:
         range: string
@@ -98,7 +90,6 @@ classes:
         annotations:
           order: 0
           value_type: string
-          separator: ','
           native_name: flags
 enums:
   RectifierType:

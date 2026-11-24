@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       to_bus_number:
         description: J - To bus number
@@ -33,7 +32,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       circuit:
         description: CKT - Circuit identifier
@@ -45,7 +43,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       x:
@@ -56,7 +53,6 @@ classes:
           order: 4
           value_type: float
           precision: 5
-          separator: ","
 
       ratings:
         description: RATE1-RATE12 - Switch ratings (12 values)
@@ -67,7 +63,6 @@ classes:
           order: 5
           value_type: float
           precision: 2
-          separator: ","
           raw_default: 0.0
           multivalued: true
           count: 12
@@ -81,7 +76,6 @@ classes:
         annotations:
           order: 17
           value_type: int
-          separator: ","
           raw_default: 1
 
       nstat:
@@ -91,7 +85,6 @@ classes:
         annotations:
           order: 18
           value_type: int
-          separator: ","
           raw_default: 1
 
       metered_end:
@@ -101,7 +94,6 @@ classes:
         annotations:
           order: 19
           value_type: int
-          separator: ","
 
       stype:
         description: STYPE - Switch type
@@ -110,7 +102,6 @@ classes:
         annotations:
           order: 20
           value_type: int
-          separator: ","
 
       name:
         description: NAME - Switch name
@@ -122,4 +113,3 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ""  # No separator after last field

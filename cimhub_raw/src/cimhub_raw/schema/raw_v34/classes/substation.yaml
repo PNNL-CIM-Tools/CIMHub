@@ -25,7 +25,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       name:
         description: NAME - Substation name (up to 40 characters)
@@ -37,7 +36,6 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       latitude:
@@ -50,7 +48,6 @@ classes:
           order: 3
           value_type: float
           precision: 7
-          separator: ","
           raw_default: 0.0
 
       longitude:
@@ -63,7 +60,6 @@ classes:
           order: 4
           value_type: float
           precision: 7
-          separator: ","
           raw_default: 0.0
 
       grounding_resistance:
@@ -76,7 +72,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ""  # No separator after last field
           raw_default: 0.1
 
   SubstationNodeRecord:
@@ -89,7 +84,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       name:
         description: NAME - Node name (up to 40 characters)
@@ -101,7 +95,6 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       bus_number:
@@ -111,7 +104,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
 
       status:
         description: STATUS - Node status (1 in-service, 0 out-of-service)
@@ -120,7 +112,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
           raw_default: 1
 
       vm:
@@ -131,7 +122,6 @@ classes:
           order: 5
           value_type: float
           precision: 4
-          separator: ","
           raw_default: -1.0
 
       va:
@@ -144,7 +134,6 @@ classes:
           order: 6
           value_type: float
           precision: 4
-          separator: ","
           raw_default: 0.0
 
       substation_number:
@@ -166,7 +155,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       to_node:
         description: NJ - To node number (1 through 999), must be in the substation
@@ -175,7 +163,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       circuit:
         description: CKT - Two-character switching device identifier
@@ -187,7 +174,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       name:
@@ -200,7 +186,6 @@ classes:
           width: 40
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: ""
 
       device_type:
@@ -210,7 +195,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
 
       status:
         description: STATUS - Device status (1 closed, 0 open)
@@ -219,7 +203,6 @@ classes:
         annotations:
           order: 6
           value_type: int
-          separator: ","
           raw_default: 1
 
       normal_status:
@@ -229,7 +212,6 @@ classes:
         annotations:
           order: 7
           value_type: int
-          separator: ","
           raw_default: 1
 
       reactance:
@@ -240,7 +222,6 @@ classes:
           order: 8
           value_type: float
           precision: 5
-          separator: ","
           raw_default: 0.0001
 
       rate1:
@@ -253,7 +234,6 @@ classes:
           order: 9
           value_type: float
           precision: 2
-          separator: ","
 
       rate2:
         description: RATE2 - Second rating in MVA (or current expressed as MVA)
@@ -265,7 +245,6 @@ classes:
           order: 10
           value_type: float
           precision: 2
-          separator: ","
 
       rate3:
         description: RATE3 - Third rating in MVA (or current expressed as MVA)
@@ -277,7 +256,6 @@ classes:
           order: 11
           value_type: float
           precision: 2
-          separator: ","
 
       substation_number:
         description: IS - Substation number of the enclosing substation block (filled by the reader)
@@ -302,7 +280,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       node_number:
         description: NI - Node number (1 through 999) inside the substation
@@ -311,7 +288,6 @@ classes:
         annotations:
           order: 2
           value_type: int
-          separator: ","
 
       terminal_type:
         description: TYP - Equipment form code (L load, F fixed shunt, M machine, B or 2 branch or two-winding transformer, 3 three-winding transformer, S switched shunt, I induction machine, D two-terminal DC, V VSC DC, N multi-terminal DC, A FACTS)
@@ -322,7 +298,6 @@ classes:
           value_type: string
           quote: true
           quote_char: "'"
-          separator: ","
 
       j_bus:
         description: J - To bus number or extended bus name (branch and transformer forms only)
@@ -331,7 +306,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
 
       k_bus:
         description: K - Third bus number or extended bus name (three-winding transformer form only)
@@ -340,7 +314,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
 
       identifier:
         description: ID, CKT or NAME - Equipment identifier for L, F, M, I, B, 2 and 3 forms; equipment name for D, V, N and A forms; absent for S
@@ -351,7 +324,6 @@ classes:
           value_type: string
           quote: true
           quote_char: "'"
-          separator: ""  # No separator after last field
           raw_default_rule: "'1' for L, F, M, I, B, 2 and 3 forms; no default for D, V, N and A"
 
       substation_number:

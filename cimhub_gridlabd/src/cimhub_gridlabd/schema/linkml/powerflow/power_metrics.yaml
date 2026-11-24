@@ -83,7 +83,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: SAIFI
       SAIFI_int:
@@ -94,7 +93,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: SAIFI_int
       SAIDI:
@@ -104,7 +102,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: SAIDI
       SAIDI_int:
@@ -115,7 +112,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: SAIDI_int
       CAIDI:
@@ -125,7 +121,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: CAIDI
       CAIDI_int:
@@ -136,7 +131,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: CAIDI_int
       ASAI:
@@ -146,7 +140,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: ASAI
       ASAI_int:
@@ -157,7 +150,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: ASAI_int
       MAIFI:
@@ -167,7 +159,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: MAIFI
       MAIFI_int:
@@ -178,7 +169,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: MAIFI_int
       base_time_value:
@@ -190,6 +180,5 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: base_time_value[s]

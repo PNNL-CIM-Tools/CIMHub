@@ -73,8 +73,8 @@ needs and writes its own text.
 | `dss_name`, `dss_format` (`matrix`) | the property name in a `.dss` command; matrix formatting | OpenDSS (`dss_writer`) |
 | `dss_default`, `glm_default` | the native default of an unset keyword property | the mapper |
 | `native_name` | the field's name in the native format | GridLAB-D (`glm_schema`, indexed by GLM type name, walking `is_a`) |
+| `serialize_if` | the slot is written only when the condition holds (a 3-winding transformer's third winding) | RAW (`importer/cimtbl/transformer.py`) |
 
-Other keys in a seeded schema (`separator`, `serialize_if`, `align`, `bool_as_int`) are carried but read by nothing.
 Don't add a key a spoke doesn't read: an unread key is silently ignored. Full patterns are in
 [reference.md](reference.md).
 

@@ -204,7 +204,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: floor_area[sf]
       gross_wall_area:
@@ -216,7 +215,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: gross_wall_area[sf]
       ceiling_height:
@@ -228,7 +226,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: ceiling_height[ft]
       aspect_ratio:
@@ -238,7 +235,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: aspect_ratio
       envelope_UA:
@@ -251,7 +247,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: envelope_UA[Btu/degF*h]
       window_wall_ratio:
@@ -261,7 +256,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: window_wall_ratio
       glazing_shgc:
@@ -271,7 +265,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: glazing_shgc
       airchange_per_hour:
@@ -281,7 +274,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: airchange_per_hour
       solar_gain:
@@ -293,7 +285,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: solar_gain[Btu/h]
       heat_cool_gain:
@@ -305,7 +296,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: heat_cool_gain[Btu/h]
       thermostat_deadband:
@@ -316,7 +306,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: thermostat_deadband[degF]
       heating_setpoint:
@@ -327,7 +316,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_setpoint[degF]
       cooling_setpoint:
@@ -338,7 +326,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_setpoint[degF]
       design_heating_capacity:
@@ -349,7 +336,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_heating_capacity[Btu*h]
       design_cooling_capacity:
@@ -360,7 +346,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: design_cooling_capacity[Btu*h]
       heating_COP:
@@ -369,7 +354,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_COP
       cooling_COP:
@@ -378,7 +362,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooling_COP
       COP_coeff:
@@ -387,7 +370,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: COP_coeff
       air_temperature:
@@ -398,7 +380,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: air_temperature[degF]
       outside_temp:
@@ -409,7 +390,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: outside_temp[degF]
       mass_temperature:
@@ -420,7 +400,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_temperature[degF]
       mass_heat_coeff:
@@ -429,7 +408,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: mass_heat_coeff
       outdoor_temperature:
@@ -440,7 +418,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: outdoor_temperature[degF]
       house_thermal_mass:
@@ -452,7 +429,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: house_thermal_mass[Btu/degF]
       heat_mode:
@@ -461,7 +437,6 @@ classes:
         annotations:
           order: 25
           value_type: string
-          separator: ','
           native_name: heat_mode
       hc_mode:
         range: string
@@ -469,7 +444,6 @@ classes:
         annotations:
           order: 26
           value_type: string
-          separator: ','
           native_name: hc_mode
       houseload:
         range: string
@@ -477,5 +451,4 @@ classes:
         annotations:
           order: 27
           value_type: string
-          separator: ','
           native_name: houseload

@@ -35,7 +35,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: desired_charge_rate[W]
       actual_charge_rate:
@@ -47,7 +46,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_charge_rate[W]
       realized_charge_rate:
@@ -60,7 +58,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: realized_charge_rate[kW]
       variation_mean:
@@ -72,7 +69,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: variation_mean[s]
       variation_std_dev:
@@ -84,7 +80,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: variation_std_dev[s]
       variation_trip_mean:
@@ -96,7 +91,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: variation_trip_mean[mile]
       variation_trip_std_dev:
@@ -108,7 +102,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: variation_trip_std_dev[mile]
       mileage_classification:
@@ -120,7 +113,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: mileage_classification[mile]
       work_charging_available:
@@ -130,7 +122,6 @@ classes:
         annotations:
           order: 9
           value_type: bool
-          separator: ','
           native_name: work_charging_available
       data_file:
         range: string
@@ -139,7 +130,6 @@ classes:
         annotations:
           order: 10
           value_type: string
-          separator: ','
           native_name: data_file
       vehicle_index:
         range: integer
@@ -148,7 +138,6 @@ classes:
         annotations:
           order: 11
           value_type: int
-          separator: ','
           native_name: vehicle_index
       vehicle_location:
         range: string
@@ -156,7 +145,6 @@ classes:
         annotations:
           order: 12
           value_type: string
-          separator: ','
           native_name: vehicle_location
       travel_distance:
         range: float
@@ -167,7 +155,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: travel_distance[mile]
       arrival_at_work:
@@ -177,7 +164,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: arrival_at_work
       duration_at_work:
@@ -189,7 +175,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: duration_at_work[s]
       arrival_at_home:
@@ -199,7 +184,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: arrival_at_home
       duration_at_home:
@@ -211,7 +195,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: duration_at_home[s]
       battery_capacity:
@@ -223,7 +206,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: battery_capacity[kWh]
       battery_SOC:
@@ -235,7 +217,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: battery_SOC[%]
       battery_size:
@@ -247,7 +228,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: battery_size[kWh]
       mileage_efficiency:
@@ -259,7 +239,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: mileage_efficiency[mile/kWh]
       maximum_charge_rate:
@@ -271,7 +250,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: maximum_charge_rate[W]
       charging_efficiency:
@@ -283,7 +261,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: charging_efficiency[unit]
       maximum_overload_current:
@@ -295,7 +272,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: maximum_overload_current[unit]
       enable_J2894:
@@ -305,7 +281,6 @@ classes:
         annotations:
           order: 25
           value_type: bool
-          separator: ','
           native_name: enable_J2894
       charger_enabled:
         range: boolean
@@ -315,7 +290,6 @@ classes:
         annotations:
           order: 26
           value_type: bool
-          separator: ','
           native_name: charger_enabled
       J2894_trip_method:
         range: string
@@ -324,7 +298,6 @@ classes:
         annotations:
           order: 27
           value_type: string
-          separator: ','
           native_name: J2894_trip_method
       J2894_highest_voltage_surge_value:
         range: float
@@ -335,7 +308,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_highest_voltage_surge_value[pu]
       J2894_highest_voltage_surge_time:
@@ -347,7 +319,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_highest_voltage_surge_time[s]
       J2894_high_voltage_persistent_value:
@@ -359,7 +330,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_high_voltage_persistent_value[pu]
       J2894_high_voltage_persistent_time:
@@ -371,7 +341,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_high_voltage_persistent_time[s]
       J2894_lowest_voltage_surge_value:
@@ -383,7 +352,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_lowest_voltage_surge_value[pu]
       J2894_lowest_voltage_surge_time:
@@ -395,7 +363,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_lowest_voltage_surge_time[s]
       J2894_low_voltage_persistent_value:
@@ -407,7 +374,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_low_voltage_persistent_value[pu]
       J2894_low_voltage_persistent_time:
@@ -419,7 +385,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_low_voltage_persistent_time[s]
       J2894_ramp_rate_limit:
@@ -431,7 +396,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_ramp_rate_limit[A/s]
       J2894_outage_disconnect_interval:
@@ -443,7 +407,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_outage_disconnect_interval[s]
       glob_min_timestep:
@@ -453,7 +416,6 @@ classes:
         annotations:
           order: 38
           value_type: string
-          separator: ','
           native_name: glob_min_timestep
       glob_min_timestep_dbl:
         range: float
@@ -463,7 +425,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: glob_min_timestep_dbl
       off_nominal_time:
@@ -473,7 +434,6 @@ classes:
         annotations:
           order: 40
           value_type: bool
-          separator: ','
           native_name: off_nominal_time
       prev_time_dbl:
         range: float
@@ -483,7 +443,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: prev_time_dbl
       deltamode_registered:
@@ -494,7 +453,6 @@ classes:
         annotations:
           order: 42
           value_type: bool
-          separator: ','
           native_name: deltamode_registered
       J2894_voltage_high_state_0:
         range: boolean
@@ -504,7 +462,6 @@ classes:
         annotations:
           order: 43
           value_type: bool
-          separator: ','
           native_name: J2894_voltage_high_state_0
       J2894_voltage_high_state_1:
         range: boolean
@@ -514,7 +471,6 @@ classes:
         annotations:
           order: 44
           value_type: bool
-          separator: ','
           native_name: J2894_voltage_high_state_1
       J2894_voltage_low_state_0:
         range: boolean
@@ -524,7 +480,6 @@ classes:
         annotations:
           order: 45
           value_type: bool
-          separator: ','
           native_name: J2894_voltage_low_state_0
       J2894_voltage_low_state_1:
         range: boolean
@@ -534,7 +489,6 @@ classes:
         annotations:
           order: 46
           value_type: bool
-          separator: ','
           native_name: J2894_voltage_low_state_1
       J2894_off_accumulator:
         range: float
@@ -543,7 +497,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: J2894_off_accumulator
       J2894_is_ramp_constrained:
@@ -554,5 +507,4 @@ classes:
         annotations:
           order: 48
           value_type: bool
-          separator: ','
           native_name: J2894_is_ramp_constrained

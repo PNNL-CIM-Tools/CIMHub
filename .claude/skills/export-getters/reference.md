@@ -30,7 +30,7 @@ def get_line_phase_impedance_matrix(line, impedance_unit="ohm/m", admittance_uni
                                     expand_sequence=False) -> PhaseMatrix   # geometry-only line raises
 class ConductorXY(NamedTuple):   # sequence_number, kind (ConductorPositionKind), x, y
 def get_spacing_xy(spacing, unit="m") -> tuple[ConductorXY, ...]          # in the spacing's frame
-def get_spacing_distances(spacing, unit="m") -> dict[tuple[int, int], float]   # {(i, j): d}, i < j
+def get_stored_distances(spacing, unit="m") -> StoredDistances              # kinds, distances, heights as stored
 def get_line_conductor_xy(line, unit="m") -> tuple[ConductorXY, ...]      # y above ground (+ ySpacingOffset)
 def get_terminal_nodes(equipment, *, topological=False) -> tuple[Node, ...]   # Terminal.sequenceNumber order
 def get_conductor_phases(equipment) -> tuple[SinglePhaseKind, ...]         # e.g. (C, B); blank Terminal.phases = ABC
@@ -135,7 +135,7 @@ base-frequency, operational-limit, shunt and tap-changer reads.
 | `get_line_sequence_impedance(line, 'pu'/'ohm')` | RAW, MATPOWER, DistOPF (lumped), DSS (no linecode), GDM | per-unit math otherwise written per format |
 | `get_line_sequence_impedance_per_length` | GLM, DSS, DistOPF | Zs/Zm expansion |
 | `get_line_phase_impedance_matrix` | GLM, DSS, DistOPF, GDM | matrix order and susceptance units |
-| `get_spacing_xy` / `get_spacing_distances` | GLM, DSS, GDM (DistOPF needs the geometry engine) | GLM wants distances, DSS wants XY |
+| `get_spacing_xy` / `get_stored_distances` | GLM, DSS, GDM (DistOPF needs the geometry engine) | GLM wants distances, DSS wants XY |
 | `get_base_voltage(obj, unit, form='LL'/'LN')` | GLM, DistOPF, GDM, RAW, MATPOWER | one lookup path, not five fallback chains |
 | `get_phase_loads(ec, ...)` + `get_load_response(ec)` (done, G6b) | GLM, DSS, RAW, GDM, DistOPF | per-phase vs total ÷ n; ZIP zeros stay zeros |
 | `get_shunt_reactive_power(sh, unit, sections=, voltage=)` (done, G6b) | DSS, DistOPF, RAW, MATPOWER, GDM | voltage base and `sections` explicit |

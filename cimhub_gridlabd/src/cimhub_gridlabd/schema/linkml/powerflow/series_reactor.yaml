@@ -46,7 +46,6 @@ classes:
         annotations:
           order: 1
           value_type: complex
-          separator: ','
           native_name: phase_A_impedance[Ohm]
       phase_A_resistance:
         range: float
@@ -57,7 +56,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_A_resistance[Ohm]
       phase_A_reactance:
@@ -69,7 +67,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_A_reactance[Ohm]
       phase_B_impedance:
@@ -81,7 +78,6 @@ classes:
         annotations:
           order: 4
           value_type: complex
-          separator: ','
           native_name: phase_B_impedance[Ohm]
       phase_B_resistance:
         range: float
@@ -92,7 +88,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_B_resistance[Ohm]
       phase_B_reactance:
@@ -104,7 +99,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_B_reactance[Ohm]
       phase_C_impedance:
@@ -116,7 +110,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: phase_C_impedance[Ohm]
       phase_C_resistance:
         range: float
@@ -127,7 +120,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_C_resistance[Ohm]
       phase_C_reactance:
@@ -139,6 +131,5 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: phase_C_reactance[Ohm]

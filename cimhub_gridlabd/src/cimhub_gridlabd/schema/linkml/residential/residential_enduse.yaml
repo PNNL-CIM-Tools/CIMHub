@@ -26,7 +26,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: shape
       override:
         range: string
@@ -35,7 +34,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: override
       power_state:
         range: string
@@ -44,7 +42,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: power_state
       energy:
         range: Complex
@@ -55,7 +52,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: energy
       power:
         range: Complex
@@ -66,7 +62,6 @@ classes:
         annotations:
           order: 5
           value_type: string
-          separator: ','
           native_name: power
       peak_demand:
         range: Complex
@@ -77,7 +72,6 @@ classes:
         annotations:
           order: 6
           value_type: string
-          separator: ','
           native_name: peak_demand
       heatgain:
         range: float
@@ -88,7 +82,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           native_name: heatgain
       cumulative_heatgain:
         range: float
@@ -99,7 +92,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           native_name: cumulative_heatgain
       heatgain_fraction:
         range: float
@@ -108,7 +100,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           native_name: heatgain_fraction
       current_fraction:
         range: float
@@ -117,7 +108,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           native_name: current_fraction
       impedance_fraction:
         range: float
@@ -126,7 +116,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           native_name: impedance_fraction
       power_fraction:
         range: float
@@ -135,7 +124,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           native_name: power_fraction
       power_factor:
         range: float
@@ -144,7 +132,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           native_name: power_factor
       constant_power:
         range: Complex
@@ -155,7 +142,6 @@ classes:
         annotations:
           order: 14
           value_type: string
-          separator: ','
           native_name: constant_power
       constant_current:
         range: Complex
@@ -166,7 +152,6 @@ classes:
         annotations:
           order: 15
           value_type: string
-          separator: ','
           native_name: constant_current
       constant_admittance:
         range: Complex
@@ -177,7 +162,6 @@ classes:
         annotations:
           order: 16
           value_type: string
-          separator: ','
           native_name: constant_admittance
       voltage_factor:
         range: float
@@ -186,7 +170,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           native_name: voltage_factor
       breaker_amps:
         range: float
@@ -197,7 +180,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           native_name: breaker_amps
       configuration:
         range: string
@@ -206,5 +188,4 @@ classes:
         annotations:
           order: 19
           value_type: string
-          separator: ','
           native_name: configuration

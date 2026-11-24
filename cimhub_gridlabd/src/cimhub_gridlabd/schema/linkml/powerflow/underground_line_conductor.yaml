@@ -43,7 +43,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: outer_diameter[in]
       conductor_gmr:
@@ -55,7 +54,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: conductor_gmr[ft]
       conductor_diameter:
@@ -67,7 +65,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: conductor_diameter[in]
       conductor_resistance:
@@ -79,7 +76,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: conductor_resistance[Ohm/mile]
       neutral_gmr:
@@ -91,7 +87,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: neutral_gmr[ft]
       neutral_diameter:
@@ -104,7 +99,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: neutral_diameter[in]
       neutral_resistance:
@@ -116,7 +110,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: neutral_resistance[Ohm/mile]
       neutral_strands:
@@ -126,7 +119,6 @@ classes:
         annotations:
           order: 8
           value_type: string
-          separator: ','
           native_name: neutral_strands
       shield_thickness:
         range: float
@@ -137,7 +129,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: shield_thickness[in]
       shield_diameter:
@@ -149,7 +140,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: shield_diameter[in]
       insulation_relative_permitivitty:
@@ -161,7 +151,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: insulation_relative_permitivitty[unit]
       shield_gmr:
@@ -173,7 +162,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: shield_gmr[ft]
       shield_resistance:
@@ -185,7 +173,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: shield_resistance[Ohm/mile]
       rating_summer_continuous:
@@ -197,7 +184,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.continuous[A]
       rating_summer_emergency:
@@ -209,7 +195,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.summer.emergency[A]
       rating_winter_continuous:
@@ -221,7 +206,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.continuous[A]
       rating_winter_emergency:
@@ -233,6 +217,5 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: rating.winter.emergency[A]

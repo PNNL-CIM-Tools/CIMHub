@@ -33,7 +33,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: control_mode
       grid_following_mode:
         range: string
@@ -43,7 +42,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: grid_following_mode
       grid_forming_mode:
         range: string
@@ -52,7 +50,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: grid_forming_mode
       P_f_droop_setting_mode:
         range: string
@@ -61,7 +58,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: P_f_droop_setting_mode
       phaseA_I_Out:
         range: Complex
@@ -72,7 +68,6 @@ classes:
         annotations:
           order: 5
           value_type: complex
-          separator: ','
           native_name: phaseA_I_Out[A]
       phaseB_I_Out:
         range: Complex
@@ -83,7 +78,6 @@ classes:
         annotations:
           order: 6
           value_type: complex
-          separator: ','
           native_name: phaseB_I_Out[A]
       phaseC_I_Out:
         range: Complex
@@ -94,7 +88,6 @@ classes:
         annotations:
           order: 7
           value_type: complex
-          separator: ','
           native_name: phaseC_I_Out[A]
       phaseA_I_Out_PU:
         range: Complex
@@ -105,7 +98,6 @@ classes:
         annotations:
           order: 8
           value_type: complex
-          separator: ','
           native_name: phaseA_I_Out_PU[pu]
       phaseB_I_Out_PU:
         range: Complex
@@ -116,7 +108,6 @@ classes:
         annotations:
           order: 9
           value_type: complex
-          separator: ','
           native_name: phaseB_I_Out_PU[pu]
       phaseC_I_Out_PU:
         range: Complex
@@ -127,7 +118,6 @@ classes:
         annotations:
           order: 10
           value_type: complex
-          separator: ','
           native_name: phaseC_I_Out_PU[pu]
       IA_Out_PU_temp:
         range: Complex
@@ -139,7 +129,6 @@ classes:
         annotations:
           order: 11
           value_type: complex
-          separator: ','
           native_name: IA_Out_PU_temp[pu]
       IB_Out_PU_temp:
         range: Complex
@@ -151,7 +140,6 @@ classes:
         annotations:
           order: 12
           value_type: complex
-          separator: ','
           native_name: IB_Out_PU_temp[pu]
       IC_Out_PU_temp:
         range: Complex
@@ -163,7 +151,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: IC_Out_PU_temp[pu]
       power_A:
         range: Complex
@@ -174,7 +161,6 @@ classes:
         annotations:
           order: 14
           value_type: complex
-          separator: ','
           native_name: power_A[VA]
       power_B:
         range: Complex
@@ -185,7 +171,6 @@ classes:
         annotations:
           order: 15
           value_type: complex
-          separator: ','
           native_name: power_B[VA]
       power_C:
         range: Complex
@@ -196,7 +181,6 @@ classes:
         annotations:
           order: 16
           value_type: complex
-          separator: ','
           native_name: power_C[VA]
       VA_Out:
         range: Complex
@@ -207,7 +191,6 @@ classes:
         annotations:
           order: 17
           value_type: complex
-          separator: ','
           native_name: VA_Out[VA]
       e_source_A:
         range: Complex
@@ -217,7 +200,6 @@ classes:
         annotations:
           order: 18
           value_type: complex
-          separator: ','
           native_name: e_source_A
       e_source_B:
         range: Complex
@@ -227,7 +209,6 @@ classes:
         annotations:
           order: 19
           value_type: complex
-          separator: ','
           native_name: e_source_B
       e_source_C:
         range: Complex
@@ -237,7 +218,6 @@ classes:
         annotations:
           order: 20
           value_type: complex
-          separator: ','
           native_name: e_source_C
       e_source_A_PU:
         range: Complex
@@ -247,7 +227,6 @@ classes:
         annotations:
           order: 21
           value_type: complex
-          separator: ','
           native_name: e_source_A_PU
       e_source_B_PU:
         range: Complex
@@ -257,7 +236,6 @@ classes:
         annotations:
           order: 22
           value_type: complex
-          separator: ','
           native_name: e_source_B_PU
       e_source_C_PU:
         range: Complex
@@ -267,7 +245,6 @@ classes:
         annotations:
           order: 23
           value_type: complex
-          separator: ','
           native_name: e_source_C_PU
       e_droop_A:
         range: Complex
@@ -277,7 +254,6 @@ classes:
         annotations:
           order: 24
           value_type: complex
-          separator: ','
           native_name: e_droop_A
       e_droop_B:
         range: Complex
@@ -287,7 +263,6 @@ classes:
         annotations:
           order: 25
           value_type: complex
-          separator: ','
           native_name: e_droop_B
       e_droop_C:
         range: Complex
@@ -297,7 +272,6 @@ classes:
         annotations:
           order: 26
           value_type: complex
-          separator: ','
           native_name: e_droop_C
       e_droop_A_PU:
         range: Complex
@@ -307,7 +281,6 @@ classes:
         annotations:
           order: 27
           value_type: complex
-          separator: ','
           native_name: e_droop_A_PU
       e_droop_B_PU:
         range: Complex
@@ -317,7 +290,6 @@ classes:
         annotations:
           order: 28
           value_type: complex
-          separator: ','
           native_name: e_droop_B_PU
       e_droop_C_PU:
         range: Complex
@@ -327,7 +299,6 @@ classes:
         annotations:
           order: 29
           value_type: complex
-          separator: ','
           native_name: e_droop_C_PU
       e_droop_angle_A:
         range: float
@@ -337,7 +308,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: e_droop_angle_A
       e_droop_angle_B:
@@ -348,7 +318,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: e_droop_angle_B
       e_droop_angle_C:
@@ -359,7 +328,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: e_droop_angle_C
       pCircuit_V_Avg_pu:
@@ -370,7 +338,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: pCircuit_V_Avg_pu
       E_mag:
@@ -380,7 +347,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_mag
       rated_power:
@@ -392,7 +358,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_power[VA]
       rated_DC_Voltage:
@@ -404,7 +369,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_DC_Voltage[V]
       Xfilter:
@@ -416,7 +380,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: Xfilter[pu]
       Rfilter:
@@ -428,7 +391,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rfilter[pu]
       pdispatch:
@@ -440,7 +402,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: pdispatch[pu]
       pdispatch_offset:
@@ -452,7 +413,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: pdispatch_offset[pu]
       Pref:
@@ -464,7 +424,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pref[W]
       Qref:
@@ -476,7 +435,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qref[VAr]
       kpc:
@@ -486,7 +444,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpc
       kic:
@@ -496,7 +453,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: kic
       F_current:
@@ -506,7 +462,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: F_current
       Tif:
@@ -517,7 +472,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tif
       ugd_pu_A:
@@ -528,7 +482,6 @@ classes:
         annotations:
           order: 47
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugd_pu_A
       ugd_pu_B:
@@ -539,7 +492,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugd_pu_B
       ugd_pu_C:
@@ -550,7 +502,6 @@ classes:
         annotations:
           order: 49
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugd_pu_C
       ugq_pu_A:
@@ -561,7 +512,6 @@ classes:
         annotations:
           order: 50
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugq_pu_A
       ugq_pu_B:
@@ -572,7 +522,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugq_pu_B
       ugq_pu_C:
@@ -583,7 +532,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: ugq_pu_C
       ed_pu_A:
@@ -594,7 +542,6 @@ classes:
         annotations:
           order: 53
           value_type: float
-          separator: ','
           precision: 6
           native_name: ed_pu_A
       ed_pu_B:
@@ -605,7 +552,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: ed_pu_B
       ed_pu_C:
@@ -616,7 +562,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: ed_pu_C
       eq_pu_A:
@@ -627,7 +572,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: eq_pu_A
       eq_pu_B:
@@ -638,7 +582,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: eq_pu_B
       eq_pu_C:
@@ -649,7 +592,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: eq_pu_C
       igd_pu_A:
@@ -660,7 +602,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_A
       igd_pu_B:
@@ -671,7 +612,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_B
       igd_pu_C:
@@ -682,7 +622,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_C
       igq_pu_A:
@@ -693,7 +632,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_A
       igq_pu_B:
@@ -704,7 +642,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_B
       igq_pu_C:
@@ -715,7 +652,6 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_C
       igd_pu_A_filter:
@@ -726,7 +662,6 @@ classes:
         annotations:
           order: 65
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_A_filter
       igd_pu_B_filter:
@@ -737,7 +672,6 @@ classes:
         annotations:
           order: 66
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_B_filter
       igd_pu_C_filter:
@@ -748,7 +682,6 @@ classes:
         annotations:
           order: 67
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_pu_C_filter
       igq_pu_A_filter:
@@ -759,7 +692,6 @@ classes:
         annotations:
           order: 68
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_A_filter
       igq_pu_B_filter:
@@ -770,7 +702,6 @@ classes:
         annotations:
           order: 69
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_B_filter
       igq_pu_C_filter:
@@ -781,7 +712,6 @@ classes:
         annotations:
           order: 70
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_pu_C_filter
       igd_ref_A:
@@ -792,7 +722,6 @@ classes:
         annotations:
           order: 71
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_ref_A
       igd_ref_B:
@@ -803,7 +732,6 @@ classes:
         annotations:
           order: 72
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_ref_B
       igd_ref_C:
@@ -814,7 +742,6 @@ classes:
         annotations:
           order: 73
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_ref_C
       igq_ref_A:
@@ -825,7 +752,6 @@ classes:
         annotations:
           order: 74
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_ref_A
       igq_ref_B:
@@ -836,7 +762,6 @@ classes:
         annotations:
           order: 75
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_ref_B
       igq_ref_C:
@@ -847,7 +772,6 @@ classes:
         annotations:
           order: 76
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_ref_C
       igd_ref_max:
@@ -858,7 +782,6 @@ classes:
         annotations:
           order: 77
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_ref_max
       igd_ref_min:
@@ -869,7 +792,6 @@ classes:
         annotations:
           order: 78
           value_type: float
-          separator: ','
           precision: 6
           native_name: igd_ref_min
       igq_ref_max:
@@ -880,7 +802,6 @@ classes:
         annotations:
           order: 79
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_ref_max
       igq_ref_min:
@@ -891,7 +812,6 @@ classes:
         annotations:
           order: 80
           value_type: float
-          separator: ','
           precision: 6
           native_name: igq_ref_min
       Angle_PLL_A:
@@ -902,7 +822,6 @@ classes:
         annotations:
           order: 81
           value_type: float
-          separator: ','
           precision: 6
           native_name: Angle_PLL_A
       Angle_PLL_B:
@@ -913,7 +832,6 @@ classes:
         annotations:
           order: 82
           value_type: float
-          separator: ','
           precision: 6
           native_name: Angle_PLL_B
       Angle_PLL_C:
@@ -924,7 +842,6 @@ classes:
         annotations:
           order: 83
           value_type: float
-          separator: ','
           precision: 6
           native_name: Angle_PLL_C
       f_PLL_A:
@@ -935,7 +852,6 @@ classes:
         annotations:
           order: 84
           value_type: float
-          separator: ','
           precision: 6
           native_name: f_PLL_A
       f_PLL_B:
@@ -946,7 +862,6 @@ classes:
         annotations:
           order: 85
           value_type: float
-          separator: ','
           precision: 6
           native_name: f_PLL_B
       f_PLL_C:
@@ -957,7 +872,6 @@ classes:
         annotations:
           order: 86
           value_type: float
-          separator: ','
           precision: 6
           native_name: f_PLL_C
       frequency_watt:
@@ -968,7 +882,6 @@ classes:
         annotations:
           order: 87
           value_type: bool
-          separator: ','
           native_name: frequency_watt
       checkRampRate_real:
         range: boolean
@@ -977,7 +890,6 @@ classes:
         annotations:
           order: 88
           value_type: bool
-          separator: ','
           native_name: checkRampRate_real
       volt_var:
         range: boolean
@@ -987,7 +899,6 @@ classes:
         annotations:
           order: 89
           value_type: bool
-          separator: ','
           native_name: volt_var
       checkRampRate_reactive:
         range: boolean
@@ -996,7 +907,6 @@ classes:
         annotations:
           order: 90
           value_type: bool
-          separator: ','
           native_name: checkRampRate_reactive
       Tpf:
         range: float
@@ -1008,7 +918,6 @@ classes:
         annotations:
           order: 91
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tpf[s]
       Tff:
@@ -1021,7 +930,6 @@ classes:
         annotations:
           order: 92
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tff[s]
       Tqf:
@@ -1033,7 +941,6 @@ classes:
         annotations:
           order: 93
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tqf[s]
       Tvf:
@@ -1045,7 +952,6 @@ classes:
         annotations:
           order: 94
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tvf[s]
       Pref_max:
@@ -1058,7 +964,6 @@ classes:
         annotations:
           order: 95
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pref_max[pu]
       Pref_min:
@@ -1071,7 +976,6 @@ classes:
         annotations:
           order: 96
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pref_min[pu]
       Qref_max:
@@ -1084,7 +988,6 @@ classes:
         annotations:
           order: 97
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qref_max[pu]
       Qref_min:
@@ -1097,7 +1000,6 @@ classes:
         annotations:
           order: 98
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qref_min[pu]
       Rp:
@@ -1109,7 +1011,6 @@ classes:
         annotations:
           order: 99
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rp[pu]
       frequency_watt_droop:
@@ -1121,7 +1022,6 @@ classes:
         annotations:
           order: 100
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_watt_droop[pu]
       db_UF:
@@ -1134,7 +1034,6 @@ classes:
         annotations:
           order: 101
           value_type: float
-          separator: ','
           precision: 6
           native_name: db_UF[Hz]
       db_OF:
@@ -1147,7 +1046,6 @@ classes:
         annotations:
           order: 102
           value_type: float
-          separator: ','
           precision: 6
           native_name: db_OF[Hz]
       Rq:
@@ -1159,7 +1057,6 @@ classes:
         annotations:
           order: 103
           value_type: float
-          separator: ','
           precision: 6
           native_name: Rq[pu]
       volt_var_droop:
@@ -1171,7 +1068,6 @@ classes:
         annotations:
           order: 104
           value_type: float
-          separator: ','
           precision: 6
           native_name: volt_var_droop[pu]
       db_UV:
@@ -1183,7 +1079,6 @@ classes:
         annotations:
           order: 105
           value_type: float
-          separator: ','
           precision: 6
           native_name: db_UV[pu]
       db_OV:
@@ -1195,7 +1090,6 @@ classes:
         annotations:
           order: 106
           value_type: float
-          separator: ','
           precision: 6
           native_name: db_OV[pu]
       rampUpRate_real:
@@ -1205,7 +1099,6 @@ classes:
         annotations:
           order: 107
           value_type: float
-          separator: ','
           precision: 6
           native_name: rampUpRate_real
       rampDownRate_real:
@@ -1215,7 +1108,6 @@ classes:
         annotations:
           order: 108
           value_type: float
-          separator: ','
           precision: 6
           native_name: rampDownRate_real
       rampUpRate_reactive:
@@ -1225,7 +1117,6 @@ classes:
         annotations:
           order: 109
           value_type: float
-          separator: ','
           precision: 6
           native_name: rampUpRate_reactive
       rampDownRate_reactive:
@@ -1235,7 +1126,6 @@ classes:
         annotations:
           order: 110
           value_type: float
-          separator: ','
           precision: 6
           native_name: rampDownRate_reactive
       Pref_droop_pu:
@@ -1245,7 +1135,6 @@ classes:
         annotations:
           order: 111
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pref_droop_pu
       frequency_convergence_criterion:
@@ -1258,7 +1147,6 @@ classes:
         annotations:
           order: 112
           value_type: float
-          separator: ','
           precision: 6
           native_name: frequency_convergence_criterion[rad/s]
       voltage_convergence_criterion:
@@ -1270,7 +1158,6 @@ classes:
         annotations:
           order: 113
           value_type: float
-          separator: ','
           precision: 6
           native_name: voltage_convergence_criterion[V]
       current_convergence_criterion:
@@ -1283,7 +1170,6 @@ classes:
         annotations:
           order: 114
           value_type: float
-          separator: ','
           precision: 6
           native_name: current_convergence_criterion[A]
       kpPLL:
@@ -1293,7 +1179,6 @@ classes:
         annotations:
           order: 115
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpPLL
       kiPLL:
@@ -1303,7 +1188,6 @@ classes:
         annotations:
           order: 116
           value_type: float
-          separator: ','
           precision: 6
           native_name: kiPLL
       Tp:
@@ -1313,7 +1197,6 @@ classes:
         annotations:
           order: 117
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tp
       Tq:
@@ -1323,7 +1206,6 @@ classes:
         annotations:
           order: 118
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tq
       Tv:
@@ -1333,7 +1215,6 @@ classes:
         annotations:
           order: 119
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tv
       Vset:
@@ -1346,7 +1227,6 @@ classes:
         annotations:
           order: 120
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vset[pu]
       kpv:
@@ -1356,7 +1236,6 @@ classes:
         annotations:
           order: 121
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpv
       kiv:
@@ -1366,7 +1245,6 @@ classes:
         annotations:
           order: 122
           value_type: float
-          separator: ','
           precision: 6
           native_name: kiv
       mq:
@@ -1378,7 +1256,6 @@ classes:
         annotations:
           order: 123
           value_type: float
-          separator: ','
           precision: 6
           native_name: mq[pu]
       Q_V_droop:
@@ -1390,7 +1267,6 @@ classes:
         annotations:
           order: 124
           value_type: float
-          separator: ','
           precision: 6
           native_name: Q_V_droop[pu]
       E_max:
@@ -1401,7 +1277,6 @@ classes:
         annotations:
           order: 125
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_max
       E_min:
@@ -1412,7 +1287,6 @@ classes:
         annotations:
           order: 126
           value_type: float
-          separator: ','
           precision: 6
           native_name: E_min
       Emax:
@@ -1423,7 +1297,6 @@ classes:
         annotations:
           order: 127
           value_type: float
-          separator: ','
           precision: 6
           native_name: Emax
       Emin:
@@ -1434,7 +1307,6 @@ classes:
         annotations:
           order: 128
           value_type: float
-          separator: ','
           precision: 6
           native_name: Emin
       Pset:
@@ -1446,7 +1318,6 @@ classes:
         annotations:
           order: 129
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pset[pu]
       fset:
@@ -1458,7 +1329,6 @@ classes:
         annotations:
           order: 130
           value_type: float
-          separator: ','
           precision: 6
           native_name: fset[Hz]
       mp:
@@ -1470,7 +1340,6 @@ classes:
         annotations:
           order: 131
           value_type: float
-          separator: ','
           precision: 6
           native_name: mp[rad/s/pu]
       P_f_droop:
@@ -1482,7 +1351,6 @@ classes:
         annotations:
           order: 132
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_f_droop[pu]
       kppmax:
@@ -1492,7 +1360,6 @@ classes:
         annotations:
           order: 133
           value_type: float
-          separator: ','
           precision: 6
           native_name: kppmax
       kipmax:
@@ -1502,7 +1369,6 @@ classes:
         annotations:
           order: 134
           value_type: float
-          separator: ','
           precision: 6
           native_name: kipmax
       w_lim:
@@ -1512,7 +1378,6 @@ classes:
         annotations:
           order: 135
           value_type: float
-          separator: ','
           precision: 6
           native_name: w_lim
       Pmax:
@@ -1525,7 +1390,6 @@ classes:
         annotations:
           order: 136
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pmax[pu]
       Pmin:
@@ -1538,7 +1402,6 @@ classes:
         annotations:
           order: 137
           value_type: float
-          separator: ','
           precision: 6
           native_name: Pmin[pu]
       w_ref:
@@ -1550,7 +1413,6 @@ classes:
         annotations:
           order: 138
           value_type: float
-          separator: ','
           precision: 6
           native_name: w_ref[rad/s]
       freq:
@@ -1562,7 +1424,6 @@ classes:
         annotations:
           order: 139
           value_type: float
-          separator: ','
           precision: 6
           native_name: freq[Hz]
       Imax:
@@ -1574,7 +1435,6 @@ classes:
         annotations:
           order: 140
           value_type: float
-          separator: ','
           precision: 6
           native_name: Imax[pu]
       kpqmax:
@@ -1584,7 +1444,6 @@ classes:
         annotations:
           order: 141
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpqmax
       kiqmax:
@@ -1594,7 +1453,6 @@ classes:
         annotations:
           order: 142
           value_type: float
-          separator: ','
           precision: 6
           native_name: kiqmax
       Qmax:
@@ -1607,7 +1465,6 @@ classes:
         annotations:
           order: 143
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qmax[pu]
       Qmin:
@@ -1620,7 +1477,6 @@ classes:
         annotations:
           order: 144
           value_type: float
-          separator: ','
           precision: 6
           native_name: Qmin[pu]
       delta_w_droop:
@@ -1632,7 +1488,6 @@ classes:
         annotations:
           order: 145
           value_type: float
-          separator: ','
           precision: 6
           native_name: delta_w_droop[pu]
       VFlag:
@@ -1643,7 +1498,6 @@ classes:
         annotations:
           order: 146
           value_type: bool
-          separator: ','
           native_name: VFlag
       Vdc_pu:
         range: float
@@ -1655,7 +1509,6 @@ classes:
         annotations:
           order: 147
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vdc_pu[pu]
       Vdc_min_pu:
@@ -1667,7 +1520,6 @@ classes:
         annotations:
           order: 148
           value_type: float
-          separator: ','
           precision: 6
           native_name: Vdc_min_pu[pu]
       C_pu:
@@ -1679,7 +1531,6 @@ classes:
         annotations:
           order: 149
           value_type: float
-          separator: ','
           precision: 6
           native_name: C_pu[pu]
       mdc:
@@ -1689,7 +1540,6 @@ classes:
         annotations:
           order: 150
           value_type: float
-          separator: ','
           precision: 6
           native_name: mdc
       kpVdc:
@@ -1699,7 +1549,6 @@ classes:
         annotations:
           order: 151
           value_type: float
-          separator: ','
           precision: 6
           native_name: kpVdc
       kiVdc:
@@ -1709,7 +1558,6 @@ classes:
         annotations:
           order: 152
           value_type: float
-          separator: ','
           precision: 6
           native_name: kiVdc
       kdVdc:
@@ -1719,7 +1567,6 @@ classes:
         annotations:
           order: 153
           value_type: float
-          separator: ','
           precision: 6
           native_name: kdVdc
       p_measure:
@@ -1729,7 +1576,6 @@ classes:
         annotations:
           order: 154
           value_type: float
-          separator: ','
           precision: 6
           native_name: p_measure
       q_measure:
@@ -1739,7 +1585,6 @@ classes:
         annotations:
           order: 155
           value_type: float
-          separator: ','
           precision: 6
           native_name: q_measure
       v_measure:
@@ -1749,7 +1594,6 @@ classes:
         annotations:
           order: 156
           value_type: float
-          separator: ','
           precision: 6
           native_name: v_measure
       V_In:
@@ -1761,7 +1605,6 @@ classes:
         annotations:
           order: 157
           value_type: float
-          separator: ','
           precision: 6
           native_name: V_In[V]
       I_In:
@@ -1773,7 +1616,6 @@ classes:
         annotations:
           order: 158
           value_type: float
-          separator: ','
           precision: 6
           native_name: I_In[A]
       P_In:
@@ -1785,7 +1627,6 @@ classes:
         annotations:
           order: 159
           value_type: float
-          separator: ','
           precision: 6
           native_name: P_In[W]
       pvc_Pmax:
@@ -1797,7 +1638,6 @@ classes:
         annotations:
           order: 160
           value_type: float
-          separator: ','
           precision: 6
           native_name: pvc_Pmax[W]
       enable_1547_checks:
@@ -1807,7 +1647,6 @@ classes:
         annotations:
           order: 161
           value_type: bool
-          separator: ','
           native_name: enable_1547_checks
       reconnect_time:
         range: float
@@ -1819,7 +1658,6 @@ classes:
         annotations:
           order: 162
           value_type: float
-          separator: ','
           precision: 6
           native_name: reconnect_time[s]
       inverter_1547_status:
@@ -1830,7 +1668,6 @@ classes:
         annotations:
           order: 163
           value_type: bool
-          separator: ','
           native_name: inverter_1547_status
       IEEE_1547_version:
         range: string
@@ -1839,7 +1676,6 @@ classes:
         annotations:
           order: 164
           value_type: string
-          separator: ','
           native_name: IEEE_1547_version
       over_freq_high_cutout:
         range: float
@@ -1850,7 +1686,6 @@ classes:
         annotations:
           order: 165
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_freq_high_cutout[Hz]
       over_freq_high_disconnect_time:
@@ -1862,7 +1697,6 @@ classes:
         annotations:
           order: 166
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_freq_high_disconnect_time[s]
       over_freq_low_cutout:
@@ -1874,7 +1708,6 @@ classes:
         annotations:
           order: 167
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_freq_low_cutout[Hz]
       over_freq_low_disconnect_time:
@@ -1886,7 +1719,6 @@ classes:
         annotations:
           order: 168
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_freq_low_disconnect_time[s]
       under_freq_high_cutout:
@@ -1898,7 +1730,6 @@ classes:
         annotations:
           order: 169
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_freq_high_cutout[Hz]
       under_freq_high_disconnect_time:
@@ -1910,7 +1741,6 @@ classes:
         annotations:
           order: 170
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_freq_high_disconnect_time[s]
       under_freq_low_cutout:
@@ -1922,7 +1752,6 @@ classes:
         annotations:
           order: 171
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_freq_low_cutout[Hz]
       under_freq_low_disconnect_time:
@@ -1934,7 +1763,6 @@ classes:
         annotations:
           order: 172
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_freq_low_disconnect_time[s]
       under_voltage_low_cutout:
@@ -1946,7 +1774,6 @@ classes:
         annotations:
           order: 173
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_low_cutout[pu]
       under_voltage_middle_cutout:
@@ -1958,7 +1785,6 @@ classes:
         annotations:
           order: 174
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_middle_cutout[pu]
       under_voltage_high_cutout:
@@ -1970,7 +1796,6 @@ classes:
         annotations:
           order: 175
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_high_cutout[pu]
       over_voltage_low_cutout:
@@ -1982,7 +1807,6 @@ classes:
         annotations:
           order: 176
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_voltage_low_cutout[pu]
       over_voltage_high_cutout:
@@ -1994,7 +1818,6 @@ classes:
         annotations:
           order: 177
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_voltage_high_cutout[pu]
       under_voltage_low_disconnect_time:
@@ -2006,7 +1829,6 @@ classes:
         annotations:
           order: 178
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_low_disconnect_time[s]
       under_voltage_middle_disconnect_time:
@@ -2018,7 +1840,6 @@ classes:
         annotations:
           order: 179
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_middle_disconnect_time[s]
       under_voltage_high_disconnect_time:
@@ -2030,7 +1851,6 @@ classes:
         annotations:
           order: 180
           value_type: float
-          separator: ','
           precision: 6
           native_name: under_voltage_high_disconnect_time[s]
       over_voltage_low_disconnect_time:
@@ -2042,7 +1862,6 @@ classes:
         annotations:
           order: 181
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_voltage_low_disconnect_time[s]
       over_voltage_high_disconnect_time:
@@ -2054,7 +1873,6 @@ classes:
         annotations:
           order: 182
           value_type: float
-          separator: ','
           precision: 6
           native_name: over_voltage_high_disconnect_time[s]
       IEEE_1547_trip_method:
@@ -2064,7 +1882,6 @@ classes:
         annotations:
           order: 183
           value_type: string
-          separator: ','
           native_name: IEEE_1547_trip_method
       phase_angle_correction:
         range: boolean
@@ -2074,7 +1891,6 @@ classes:
         annotations:
           order: 184
           value_type: bool
-          separator: ','
           native_name: phase_angle_correction
       virtual_resistance_correction:
         range: boolean
@@ -2084,5 +1900,4 @@ classes:
         annotations:
           order: 185
           value_type: bool
-          separator: ','
           native_name: virtual_resistance_correction

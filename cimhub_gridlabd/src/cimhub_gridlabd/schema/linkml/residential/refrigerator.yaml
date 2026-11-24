@@ -87,7 +87,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: size[cf]
       rated_capacity:
@@ -98,7 +97,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_capacity[Btu/h]
       temperature:
@@ -109,7 +107,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: temperature[degF]
       setpoint:
@@ -120,7 +117,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: setpoint[degF]
       deadband:
@@ -131,7 +127,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: deadband[degF]
       cycle_time:
@@ -142,7 +137,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_time[s]
       output:
@@ -151,7 +145,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: output
       event_temp:
@@ -160,7 +153,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: event_temp
       UA:
@@ -171,7 +163,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: UA[Btu/degF*h]
       compressor_off_normal_energy:
@@ -180,7 +171,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: compressor_off_normal_energy
       compressor_off_normal_power:
@@ -191,7 +181,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: compressor_off_normal_power[W]
       compressor_on_normal_energy:
@@ -200,7 +189,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: compressor_on_normal_energy
       compressor_on_normal_power:
@@ -211,7 +199,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: compressor_on_normal_power[W]
       defrost_energy:
@@ -220,7 +207,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: defrost_energy
       defrost_power:
@@ -231,7 +217,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: defrost_power[W]
       icemaking_energy:
@@ -240,7 +225,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: icemaking_energy
       icemaking_power:
@@ -251,7 +235,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: icemaking_power[W]
       ice_making_probability:
@@ -260,7 +243,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: ice_making_probability
       FF_Door_Openings:
@@ -269,7 +251,6 @@ classes:
         annotations:
           order: 19
           value_type: int
-          separator: ','
           native_name: FF_Door_Openings
       door_opening_energy:
         range: integer
@@ -277,7 +258,6 @@ classes:
         annotations:
           order: 20
           value_type: int
-          separator: ','
           native_name: door_opening_energy
       door_opening_power:
         range: integer
@@ -285,7 +265,6 @@ classes:
         annotations:
           order: 21
           value_type: int
-          separator: ','
           native_name: door_opening_power
       DO_Thershold:
         range: float
@@ -293,7 +272,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: DO_Thershold
       dr_mode_double:
@@ -302,7 +280,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: dr_mode_double
       energy_needed:
@@ -311,7 +288,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_needed
       energy_used:
@@ -320,7 +296,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: energy_used
       refrigerator_power:
@@ -329,7 +304,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: refrigerator_power
       icemaker_running:
@@ -338,7 +312,6 @@ classes:
         annotations:
           order: 27
           value_type: bool
-          separator: ','
           native_name: icemaker_running
       check_DO:
         range: integer
@@ -346,7 +319,6 @@ classes:
         annotations:
           order: 28
           value_type: int
-          separator: ','
           native_name: check_DO
       is_240:
         range: boolean
@@ -354,7 +326,6 @@ classes:
         annotations:
           order: 29
           value_type: bool
-          separator: ','
           native_name: is_240
       defrostDelayed:
         range: float
@@ -362,7 +333,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: defrostDelayed
       long_compressor_cycle_due:
@@ -371,7 +341,6 @@ classes:
         annotations:
           order: 31
           value_type: bool
-          separator: ','
           native_name: long_compressor_cycle_due
       long_compressor_cycle_time:
         range: float
@@ -379,7 +348,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: long_compressor_cycle_time
       long_compressor_cycle_power:
@@ -388,7 +356,6 @@ classes:
         annotations:
           order: 33
           value_type: float
-          separator: ','
           precision: 6
           native_name: long_compressor_cycle_power
       long_compressor_cycle_energy:
@@ -397,7 +364,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: long_compressor_cycle_energy
       long_compressor_cycle_threshold:
@@ -406,7 +372,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: long_compressor_cycle_threshold
       defrost_criterion:
@@ -415,7 +380,6 @@ classes:
         annotations:
           order: 36
           value_type: string
-          separator: ','
           native_name: defrost_criterion
       run_defrost:
         range: boolean
@@ -423,7 +387,6 @@ classes:
         annotations:
           order: 37
           value_type: bool
-          separator: ','
           native_name: run_defrost
       door_opening_criterion:
         range: float
@@ -431,7 +394,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: door_opening_criterion
       compressor_defrost_time:
@@ -440,7 +402,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: compressor_defrost_time
       delay_defrost_time:
@@ -449,7 +410,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: delay_defrost_time
       daily_door_opening:
@@ -458,7 +418,6 @@ classes:
         annotations:
           order: 41
           value_type: int
-          separator: ','
           native_name: daily_door_opening
       state:
         range: State
@@ -466,7 +425,6 @@ classes:
         annotations:
           order: 42
           value_type: string
-          separator: ','
           native_name: state
       check_icemaking:
         range: boolean
@@ -475,7 +433,6 @@ classes:
         annotations:
           order: 43
           value_type: bool
-          separator: ','
           native_name: check_icemaking
       return_time:
         range: float
@@ -484,7 +441,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: return_time
       door_return_time:
@@ -494,7 +450,6 @@ classes:
         annotations:
           order: 45
           value_type: int
-          separator: ','
           native_name: door_return_time
       start_time:
         range: string
@@ -503,7 +458,6 @@ classes:
         annotations:
           order: 46
           value_type: string
-          separator: ','
           native_name: start_time
       check_defrost:
         range: boolean
@@ -512,7 +466,6 @@ classes:
         annotations:
           order: 47
           value_type: bool
-          separator: ','
           native_name: check_defrost
       no_of_defrost:
         range: float
@@ -521,7 +474,6 @@ classes:
         annotations:
           order: 48
           value_type: float
-          separator: ','
           precision: 6
           native_name: no_of_defrost
       hourly_door_opening:
@@ -531,7 +483,6 @@ classes:
         annotations:
           order: 49
           value_type: int
-          separator: ','
           native_name: hourly_door_opening
       door_next_open_time:
         range: integer
@@ -540,7 +491,6 @@ classes:
         annotations:
           order: 50
           value_type: int
-          separator: ','
           native_name: door_next_open_time
       door_time:
         range: integer
@@ -549,7 +499,6 @@ classes:
         annotations:
           order: 51
           value_type: int
-          separator: ','
           native_name: door_time
       door_open:
         range: boolean
@@ -558,7 +507,6 @@ classes:
         annotations:
           order: 52
           value_type: bool
-          separator: ','
           native_name: door_open
       door_to_open:
         range: boolean
@@ -567,7 +515,6 @@ classes:
         annotations:
           order: 53
           value_type: bool
-          separator: ','
           native_name: door_to_open
       door_energy_calc:
         range: boolean
@@ -576,7 +523,6 @@ classes:
         annotations:
           order: 54
           value_type: bool
-          separator: ','
           native_name: door_energy_calc
       total_compressor_time:
         range: float
@@ -585,7 +531,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_compressor_time
       new_running_state:
@@ -595,5 +540,4 @@ classes:
         annotations:
           order: 56
           value_type: bool
-          separator: ','
           native_name: new_running_state

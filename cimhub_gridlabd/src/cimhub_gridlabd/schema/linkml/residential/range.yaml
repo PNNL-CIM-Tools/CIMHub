@@ -47,7 +47,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_volume[gal]
       oven_UA:
@@ -59,7 +58,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_UA[Btu/degF*h]
       oven_diameter:
@@ -71,7 +69,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_diameter[ft]
       oven_demand:
@@ -83,7 +80,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_demand[gpm]
       heating_element_capacity:
@@ -95,7 +91,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: heating_element_capacity[kW]
       inlet_food_temperature:
@@ -107,7 +102,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: inlet_food_temperature[degF]
       heat_mode:
@@ -117,7 +111,6 @@ classes:
         annotations:
           order: 7
           value_type: string
-          separator: ','
           native_name: heat_mode
       location:
         range: string
@@ -126,7 +119,6 @@ classes:
         annotations:
           order: 8
           value_type: string
-          separator: ','
           native_name: location
       oven_setpoint:
         range: float
@@ -137,7 +129,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_setpoint[degF]
       thermostat_deadband:
@@ -149,7 +140,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: thermostat_deadband[degF]
       temperature:
@@ -161,7 +151,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: temperature[degF]
       height:
@@ -173,7 +162,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: height[ft]
       food_density:
@@ -183,7 +171,6 @@ classes:
         annotations:
           order: 13
           value_type: float
-          separator: ','
           precision: 6
           native_name: food_density
       specificheat_food:
@@ -192,7 +179,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: specificheat_food
       queue_cooktop:
@@ -204,7 +190,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_cooktop[unit]
       queue_oven:
@@ -216,7 +201,6 @@ classes:
         annotations:
           order: 16
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_oven[unit]
       queue_min:
@@ -227,7 +211,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_min[unit]
       queue_max:
@@ -238,7 +221,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: queue_max[unit]
       time_cooktop_operation:
@@ -247,7 +229,6 @@ classes:
         annotations:
           order: 19
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_cooktop_operation
       time_cooktop_setting:
@@ -256,7 +237,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_cooktop_setting
       cooktop_run_prob:
@@ -265,7 +245,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_run_prob
       oven_run_prob:
@@ -274,7 +253,6 @@ classes:
         annotations:
           order: 22
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_run_prob
       cooktop_coil_setting_1:
@@ -285,7 +263,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_coil_setting_1[kW]
       cooktop_coil_setting_2:
@@ -296,7 +273,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_coil_setting_2[kW]
       cooktop_coil_setting_3:
@@ -307,7 +283,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_coil_setting_3[kW]
       total_power_oven:
@@ -318,7 +293,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_power_oven[kW]
       total_power_cooktop:
@@ -329,7 +303,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_power_cooktop[kW]
       total_power_range:
@@ -340,7 +313,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: total_power_range[kW]
       demand_cooktop:
@@ -352,7 +324,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: demand_cooktop[unit/day]
       demand_oven:
@@ -364,7 +335,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: demand_oven[unit/day]
       stall_voltage:
@@ -375,7 +345,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: stall_voltage[V]
       start_voltage:
@@ -386,7 +355,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: start_voltage[V]
       stall_impedance:
@@ -397,7 +365,6 @@ classes:
         annotations:
           order: 33
           value_type: complex
-          separator: ','
           native_name: stall_impedance[Ohm]
       trip_delay:
         range: float
@@ -407,7 +374,6 @@ classes:
         annotations:
           order: 34
           value_type: float
-          separator: ','
           precision: 6
           native_name: trip_delay[s]
       reset_delay:
@@ -418,7 +384,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: reset_delay[s]
       time_oven_operation:
@@ -429,7 +394,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_oven_operation[s]
       time_oven_setting:
@@ -440,7 +404,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_oven_setting[s]
       state_cooktop:
@@ -449,7 +412,6 @@ classes:
         annotations:
           order: 38
           value_type: string
-          separator: ','
           native_name: state_cooktop
       cooktop_energy_baseline:
         range: float
@@ -459,7 +421,6 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_energy_baseline[kWh]
       cooktop_energy_used:
@@ -468,7 +429,6 @@ classes:
         annotations:
           order: 40
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_energy_used
       Toff:
@@ -477,7 +437,6 @@ classes:
         annotations:
           order: 41
           value_type: float
-          separator: ','
           precision: 6
           native_name: Toff
       Ton:
@@ -486,7 +445,6 @@ classes:
         annotations:
           order: 42
           value_type: float
-          separator: ','
           precision: 6
           native_name: Ton
       cooktop_interval_setting_1:
@@ -497,7 +455,6 @@ classes:
         annotations:
           order: 43
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_interval_setting_1[s]
       cooktop_interval_setting_2:
@@ -508,7 +465,6 @@ classes:
         annotations:
           order: 44
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_interval_setting_2[s]
       cooktop_interval_setting_3:
@@ -519,7 +475,6 @@ classes:
         annotations:
           order: 45
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_interval_setting_3[s]
       cooktop_energy_needed:
@@ -530,7 +485,6 @@ classes:
         annotations:
           order: 46
           value_type: float
-          separator: ','
           precision: 6
           native_name: cooktop_energy_needed[kWh]
       heat_needed:
@@ -539,7 +493,6 @@ classes:
         annotations:
           order: 47
           value_type: bool
-          separator: ','
           native_name: heat_needed
       oven_check:
         range: boolean
@@ -547,7 +500,6 @@ classes:
         annotations:
           order: 48
           value_type: bool
-          separator: ','
           native_name: oven_check
       remainon:
         range: boolean
@@ -555,7 +507,6 @@ classes:
         annotations:
           order: 49
           value_type: bool
-          separator: ','
           native_name: remainon
       cooktop_check:
         range: boolean
@@ -563,7 +514,6 @@ classes:
         annotations:
           order: 50
           value_type: bool
-          separator: ','
           native_name: cooktop_check
       actual_load:
         range: float
@@ -574,7 +524,6 @@ classes:
         annotations:
           order: 51
           value_type: float
-          separator: ','
           precision: 6
           native_name: actual_load[kW]
       previous_load:
@@ -586,7 +535,6 @@ classes:
         annotations:
           order: 52
           value_type: float
-          separator: ','
           precision: 6
           native_name: previous_load[kW]
       actual_power:
@@ -598,7 +546,6 @@ classes:
         annotations:
           order: 53
           value_type: complex
-          separator: ','
           native_name: actual_power[kVA]
       is_range_on:
         range: float
@@ -607,7 +554,6 @@ classes:
         annotations:
           order: 54
           value_type: float
-          separator: ','
           precision: 6
           native_name: is_range_on
       time_to_transition:
@@ -617,7 +563,6 @@ classes:
         annotations:
           order: 55
           value_type: float
-          separator: ','
           precision: 6
           native_name: time_to_transition
       cycle_duration_cooktop:
@@ -627,7 +572,6 @@ classes:
         annotations:
           order: 56
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_duration_cooktop
       cycle_time_cooktop:
@@ -637,7 +581,6 @@ classes:
         annotations:
           order: 57
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_time_cooktop
       state_time:
@@ -647,7 +590,6 @@ classes:
         annotations:
           order: 58
           value_type: float
-          separator: ','
           precision: 6
           native_name: state_time
       Tlower:
@@ -657,7 +599,6 @@ classes:
         annotations:
           order: 59
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tlower
       Tlower_old:
@@ -667,7 +608,6 @@ classes:
         annotations:
           order: 60
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tlower_old
       Tupper:
@@ -677,7 +617,6 @@ classes:
         annotations:
           order: 61
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tupper
       Tupper_old:
@@ -687,7 +626,6 @@ classes:
         annotations:
           order: 62
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tupper_old
       Tw_old:
@@ -697,7 +635,6 @@ classes:
         annotations:
           order: 63
           value_type: float
-          separator: ','
           precision: 6
           native_name: Tw_old
       oven_demand_old:
@@ -707,6 +644,5 @@ classes:
         annotations:
           order: 64
           value_type: float
-          separator: ','
           precision: 6
           native_name: oven_demand_old

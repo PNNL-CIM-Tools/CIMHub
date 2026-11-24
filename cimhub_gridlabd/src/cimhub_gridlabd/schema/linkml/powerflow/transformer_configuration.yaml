@@ -63,7 +63,6 @@ classes:
         annotations:
           order: 1
           value_type: string
-          separator: ','
           native_name: connect_type
       install_type:
         range: string
@@ -72,7 +71,6 @@ classes:
         annotations:
           order: 2
           value_type: string
-          separator: ','
           native_name: install_type
       coolant_type:
         range: string
@@ -81,7 +79,6 @@ classes:
         annotations:
           order: 3
           value_type: string
-          separator: ','
           native_name: coolant_type
       cooling_type:
         range: string
@@ -90,7 +87,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: cooling_type
       primary_voltage:
         range: float
@@ -101,7 +97,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: primary_voltage[V]
       secondary_voltage:
@@ -113,7 +108,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: secondary_voltage[V]
       power_rating:
@@ -125,7 +119,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: power_rating[kVA]
       powerA_rating:
@@ -137,7 +130,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: powerA_rating[kVA]
       powerB_rating:
@@ -149,7 +141,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: powerB_rating[kVA]
       powerC_rating:
@@ -161,7 +152,6 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: powerC_rating[kVA]
       resistance:
@@ -173,7 +163,6 @@ classes:
         annotations:
           order: 11
           value_type: float
-          separator: ','
           precision: 6
           native_name: resistance[pu]
       reactance:
@@ -185,7 +174,6 @@ classes:
         annotations:
           order: 12
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactance[pu]
       impedance:
@@ -197,7 +185,6 @@ classes:
         annotations:
           order: 13
           value_type: complex
-          separator: ','
           native_name: impedance[pu]
       resistance1:
         range: float
@@ -209,7 +196,6 @@ classes:
         annotations:
           order: 14
           value_type: float
-          separator: ','
           precision: 6
           native_name: resistance1[pu]
       reactance1:
@@ -222,7 +208,6 @@ classes:
         annotations:
           order: 15
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactance1[pu]
       impedance1:
@@ -235,7 +220,6 @@ classes:
         annotations:
           order: 16
           value_type: complex
-          separator: ','
           native_name: impedance1[pu]
       resistance2:
         range: float
@@ -247,7 +231,6 @@ classes:
         annotations:
           order: 17
           value_type: float
-          separator: ','
           precision: 6
           native_name: resistance2[pu]
       reactance2:
@@ -260,7 +243,6 @@ classes:
         annotations:
           order: 18
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactance2[pu]
       impedance2:
@@ -273,7 +255,6 @@ classes:
         annotations:
           order: 19
           value_type: complex
-          separator: ','
           native_name: impedance2[pu]
       shunt_resistance:
         range: float
@@ -284,7 +265,6 @@ classes:
         annotations:
           order: 20
           value_type: float
-          separator: ','
           precision: 6
           native_name: shunt_resistance[pu]
       shunt_reactance:
@@ -296,7 +276,6 @@ classes:
         annotations:
           order: 21
           value_type: float
-          separator: ','
           precision: 6
           native_name: shunt_reactance[pu]
       shunt_impedance:
@@ -308,7 +287,6 @@ classes:
         annotations:
           order: 22
           value_type: complex
-          separator: ','
           native_name: shunt_impedance[pu]
       core_coil_weight:
         range: float
@@ -319,7 +297,6 @@ classes:
         annotations:
           order: 23
           value_type: float
-          separator: ','
           precision: 6
           native_name: core_coil_weight[lb]
       tank_fittings_weight:
@@ -331,7 +308,6 @@ classes:
         annotations:
           order: 24
           value_type: float
-          separator: ','
           precision: 6
           native_name: tank_fittings_weight[lb]
       oil_volume:
@@ -343,7 +319,6 @@ classes:
         annotations:
           order: 25
           value_type: float
-          separator: ','
           precision: 6
           native_name: oil_volume[gal]
       rated_winding_time_constant:
@@ -355,7 +330,6 @@ classes:
         annotations:
           order: 26
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_winding_time_constant[h]
       rated_winding_hot_spot_rise:
@@ -368,7 +342,6 @@ classes:
         annotations:
           order: 27
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_winding_hot_spot_rise[degC]
       rated_top_oil_rise:
@@ -381,7 +354,6 @@ classes:
         annotations:
           order: 28
           value_type: float
-          separator: ','
           precision: 6
           native_name: rated_top_oil_rise[degC]
       no_load_loss:
@@ -394,7 +366,6 @@ classes:
         annotations:
           order: 29
           value_type: float
-          separator: ','
           precision: 6
           native_name: no_load_loss[pu]
       full_load_loss:
@@ -407,7 +378,6 @@ classes:
         annotations:
           order: 30
           value_type: float
-          separator: ','
           precision: 6
           native_name: full_load_loss[pu]
       reactance_resistance_ratio:
@@ -417,7 +387,6 @@ classes:
         annotations:
           order: 31
           value_type: float
-          separator: ','
           precision: 6
           native_name: reactance_resistance_ratio
       installed_insulation_life:
@@ -430,7 +399,6 @@ classes:
         annotations:
           order: 32
           value_type: float
-          separator: ','
           precision: 6
           native_name: installed_insulation_life[h]
       magnetization_location:
@@ -440,7 +408,6 @@ classes:
         annotations:
           order: 33
           value_type: string
-          separator: ','
           native_name: magnetization_location
       inrush_saturation_enabled:
         range: boolean
@@ -449,7 +416,6 @@ classes:
         annotations:
           order: 34
           value_type: bool
-          separator: ','
           native_name: inrush_saturation_enabled
       L_A:
         range: float
@@ -460,7 +426,6 @@ classes:
         annotations:
           order: 35
           value_type: float
-          separator: ','
           precision: 6
           native_name: L_A[pu]
       phi_K:
@@ -473,7 +438,6 @@ classes:
         annotations:
           order: 36
           value_type: float
-          separator: ','
           precision: 6
           native_name: phi_K[pu]
       phi_M:
@@ -485,7 +449,6 @@ classes:
         annotations:
           order: 37
           value_type: float
-          separator: ','
           precision: 6
           native_name: phi_M[pu]
       I_M:
@@ -498,7 +461,6 @@ classes:
         annotations:
           order: 38
           value_type: float
-          separator: ','
           precision: 6
           native_name: I_M[pu]
       T_D:
@@ -508,6 +470,5 @@ classes:
         annotations:
           order: 39
           value_type: float
-          separator: ','
           precision: 6
           native_name: T_D

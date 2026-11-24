@@ -42,7 +42,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_AB[ft]
       distance_BC:
@@ -53,7 +52,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_BC[ft]
       distance_AC:
@@ -64,7 +62,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_AC[ft]
       distance_AN:
@@ -75,7 +72,6 @@ classes:
         annotations:
           order: 4
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_AN[ft]
       distance_BN:
@@ -86,7 +82,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_BN[ft]
       distance_CN:
@@ -97,7 +92,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_CN[ft]
       distance_AE:
@@ -109,7 +103,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_AE[ft]
       distance_BE:
@@ -121,7 +114,6 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_BE[ft]
       distance_CE:
@@ -133,7 +125,6 @@ classes:
         annotations:
           order: 9
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_CE[ft]
       distance_NE:
@@ -145,6 +136,5 @@ classes:
         annotations:
           order: 10
           value_type: float
-          separator: ','
           precision: 6
           native_name: distance_NE[ft]

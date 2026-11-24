@@ -48,7 +48,6 @@ classes:
         annotations:
           order: 1
           value_type: float
-          separator: ','
           precision: 6
           native_name: installed_power[kW]
       standby_power:
@@ -60,7 +59,6 @@ classes:
         annotations:
           order: 2
           value_type: float
-          separator: ','
           precision: 6
           native_name: standby_power[kW]
       circuit_split:
@@ -69,7 +67,6 @@ classes:
         annotations:
           order: 3
           value_type: float
-          separator: ','
           precision: 6
           native_name: circuit_split
       state:
@@ -79,7 +76,6 @@ classes:
         annotations:
           order: 4
           value_type: string
-          separator: ','
           native_name: state
       cycle_length:
         range: float
@@ -90,7 +86,6 @@ classes:
         annotations:
           order: 5
           value_type: float
-          separator: ','
           precision: 6
           native_name: cycle_length[s]
       runtime:
@@ -101,7 +96,6 @@ classes:
         annotations:
           order: 6
           value_type: float
-          separator: ','
           precision: 6
           native_name: runtime[s]
       state_time:
@@ -112,7 +106,6 @@ classes:
         annotations:
           order: 7
           value_type: float
-          separator: ','
           precision: 6
           native_name: state_time[s]
       prev_demand:
@@ -122,6 +115,5 @@ classes:
         annotations:
           order: 8
           value_type: float
-          separator: ','
           precision: 6
           native_name: prev_demand

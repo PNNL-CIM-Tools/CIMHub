@@ -89,21 +89,6 @@ def get_spacing_xy(spacing: cim.WireSpacing, unit: str = "m") -> tuple[Conductor
     raise _no_positions(spacing)
 
 
-def get_spacing_distances(spacing: cim.WireSpacing, unit: str = "m") -> dict[tuple[int, int], float]:
-    """``{(i, j): d}`` for every pair of sequence numbers i < j, in ``unit`` (the same at any offset). A
-    ``ConductorDistanceSpacing`` gives its stored values and must hold a distance for every pair; its heights are not
-    needed."""
-    if isinstance(spacing, cim.XYSpacing):
-        return get_stored_distances(spacing, unit).distances  # an XYSpacing holds every pair
-    if isinstance(spacing, cim.ConductorDistanceSpacing):
-        kinds, _, distances = _stored_distances(spacing, unit, heights_required=False)
-        missing = [pair for pair in combinations(sorted(kinds), 2) if pair not in distances]
-        if missing:
-            raise ValueError(f"{describe(spacing)}: has no distance between conductors {missing}")
-        return dict(sorted(distances.items()))
-    raise _no_positions(spacing)
-
-
 def get_stored_distances(spacing: cim.WireSpacing, unit: str = "m") -> StoredDistances:
     """The spacing's distances and heights in ``unit``, as it holds them: an XYSpacing's every pair and its y; a
     ConductorDistanceSpacing's stored rows only, a pair or a height it leaves out absent (none at all: empty)."""

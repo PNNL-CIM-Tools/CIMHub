@@ -24,7 +24,6 @@ classes:
         annotations:
           order: 1
           value_type: int
-          separator: ","
 
       load_id:
         description: ID - Load identifier (1 or 2 characters)
@@ -36,7 +35,6 @@ classes:
           width: 2
           quote: true
           quote_char: "'"
-          separator: ","
           raw_default: "1"
 
       status:
@@ -46,7 +44,6 @@ classes:
         annotations:
           order: 3
           value_type: int
-          separator: ","
           raw_default: 1
 
       area:
@@ -56,7 +53,6 @@ classes:
         annotations:
           order: 4
           value_type: int
-          separator: ","
 
       zone:
         description: ZONE - Zone number
@@ -65,7 +61,6 @@ classes:
         annotations:
           order: 5
           value_type: int
-          separator: ","
 
       constant_real_power:
         description: PL - Active power component of constant MVA load in MW
@@ -77,7 +72,6 @@ classes:
           order: 6
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       constant_imag_power:
@@ -90,7 +84,6 @@ classes:
           order: 7
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       constant_current_real_power:
@@ -103,7 +96,6 @@ classes:
           order: 8
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       constant_current_imag_power:
@@ -116,7 +108,6 @@ classes:
           order: 9
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       constant_admittance_real_power:
@@ -129,7 +120,6 @@ classes:
           order: 10
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       constant_admittance_imag_power:
@@ -142,7 +132,6 @@ classes:
           order: 11
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       owner:
@@ -152,7 +141,6 @@ classes:
         annotations:
           order: 12
           value_type: int
-          separator: ","
 
       scale:
         description: SCALE - Load scaling flag
@@ -161,7 +149,6 @@ classes:
         annotations:
           order: 13
           value_type: int
-          separator: ","
           raw_default: 1
 
       interruptible:
@@ -171,7 +158,6 @@ classes:
         annotations:
           order: 14
           value_type: int
-          separator: ","
           raw_default: 0
 
       dgenp:
@@ -184,7 +170,6 @@ classes:
           order: 15
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       dgenq:
@@ -197,7 +182,6 @@ classes:
           order: 16
           value_type: float
           precision: 3
-          separator: ","
           raw_default: 0.0
 
       dgenf:
@@ -207,5 +191,4 @@ classes:
         annotations:
           order: 17
           value_type: int
-          separator: ""  # No separator after last field
           raw_default: 0
