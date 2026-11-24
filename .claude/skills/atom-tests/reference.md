@@ -2,7 +2,7 @@
 
 Companion to [SKILL.md](SKILL.md).
 
-## 1. A complete tier 1 / 1b / spec test (DSS LineCode)
+## 1. Complete import, bind and classification tests (DSS LineCode)
 
 ```python
 """Atom tests: OpenDSS LineCode -> linecode.cimtbl -> cim18v17."""
@@ -36,7 +36,7 @@ def _native(*codes):
     return type("Native", (), {"list_by_class": staticmethod(lambda cls: list(codes))})()
 
 
-def test_classification_is_complete():                       # spec tier
+def test_classification_is_complete():                       # classification test
     check_fields(FIELDS, NATIVE_CLASS)
 
 
@@ -46,11 +46,11 @@ def test_lower_triangle_and_full_matrix_agree():              # structural helpe
     assert triangle == full == {(1, 1): 1, (2, 1): 2, (2, 2): 3, (3, 1): 4, (3, 2): 5, (3, 3): 6}
 
 
-def test_matches_golden(mtx601):                              # tier 1
+def test_matches_golden(mtx601):                              # import test
     assert_matches_golden(mtx601, ATOMS / "mtx601.cimtbl")
 
 
-def test_binds_under_cim18v17(mtx601):                        # tier 1b
+def test_binds_under_cim18v17(mtx601):                        # bind test
     network = cimtbl_to_cim(atom_documents(mtx601))
     [impedance] = network.graph[network.cim.PerLengthPhaseImpedance].values()
     assert impedance.mRID == "lc_mtx601" and impedance.conductorCount == 3
@@ -99,7 +99,13 @@ def _bind(case):
 - Mapper inputs that come from another step (the topology walk's `BusSystem`s) are passed explicitly in the test
   (a `BUSES` dict), so the atom tests one mapper.
 
-## 3. Tier 2: exporter from a golden
+## 3. Export tests
+
+Each spoke names its check on its testing page or spec. RAW compares records field by field
+(`cimhub_raw/tests/test_cim_to_raw.py`); GridLAB-D and GDM import the export again and compare CIM with
+`cimtables.diff_models` (`cimhub_gridlabd/tests/test_export_atoms.py`, `cimhub_gdm/tests/test_export_round_trip.py`);
+OpenDSS compares a deck golden and the engine state (`cimhub_opendss/tests/test_export_line.py`). The field-by-field
+form:
 
 ```python
 def test_export_matches_native_atom():
@@ -111,19 +117,19 @@ def test_export_matches_native_atom():
     # compare each NATIVE_CLASS record slot by slot, except `skipped`
 ```
 
-- The exporter reads CIM through the core getters (skill `export-getters`), so a tier 2 failure points at the getter
+- The exporter reads CIM through the core getters (skill `export-getters`), so an export failure points at the getter
   or the spoke mapping, not at a file layout.
 - Floats compare with `pytest.approx`; text compares exactly.
 - A field the export cannot reproduce (a structural default) is listed in the spec's expected differences and
   skipped by name, never by a broad tolerance.
 
-## 4. Tier 3: round trip of a reference model
+## 4. Round trip of a reference model
 
 - `<fmt>_to_cim(<Fmt>Reader(path).read_all(), artifact_dir=tmp_path)` → `cim_to_<fmt>` → re-read with the native reader → compare.
 - The reference model's artifact directory is committed as a golden (D6), so an importer change shows as a text diff.
 - Expected differences from hand translations are listed in the spec; the test names them.
 
-## 5. Tier 4: cross-format
+## 5. Cross-format
 
 - Lives at the repo root, `tests/cross_format/`, never in a spoke. Uses only public model pairs.
 - Loads two spokes' goldens for the same equipment and compares in SI within a tolerance.
@@ -155,4 +161,4 @@ comments or layout differ, it prints the first lines of a unified diff instead.
 - [ ] bind test per atom, with SI value checks on copied, derived and structural values
 - [ ] unit tests for each derived and structural helper
 - [ ] one fail-fast test per rule in the spec
-- [ ] tier 2 once the exporter half of the wave lands
+- [ ] export test once the exporter half of the wave lands

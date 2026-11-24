@@ -42,7 +42,7 @@ def test_triplex_spacing():
     assert (d12 - d1n, 2 * d1n - d12) == pytest.approx((0.08, 0.522))  # the exporter's inverse
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_goldens():
     documents = parts(read(ATOM / "catalog.glm"), "catalog")

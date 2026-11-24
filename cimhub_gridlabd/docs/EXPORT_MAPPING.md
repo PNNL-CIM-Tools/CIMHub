@@ -183,7 +183,7 @@ season and day type (`get_load_schedule`'s `days`), with their points, is a GLM 
 - `test_glm_writer.py`: value formats, one object's text, the deck order, a read-back round trip.
 - `test_export_framework.py`: SLOTS cover the schema and are these tables; names; the transformer forms, the bank
   model, the star; regulator bank letters; the tape-shield formulas.
-- `test_export_atoms.py` (tier 2): each importer atom deck (but the bare catalog, which `line.glm` includes) through
+- `test_export_atoms.py` (the export test): each importer atom deck (but the bare catalog, which `line.glm` includes) through
   the exporter and the importer again; the two CIM models equal (`cimtables.diff_models`, SI) under the X1 names,
   except the differences listed below by name; each exported deck is the golden `<atom>.exported.glm` beside it.
 - `test_export_decks.py` (GridLAB-D 6.0): the Java exports (IEEE 13 cdpsm and assets, IEEE 123) solve to the
@@ -214,13 +214,13 @@ season and day type (`get_load_schedule`'s `days`), with their points, is a GLM 
 | a delta regulator bank as wye | GridLAB-D 6.0 has no delta regulator under NR | IEEE37 1.75 % |
 | geometry lines' impedances | each engine computes its own line constants | IEEE13_Assets 2 % |
 | an LTC's control, a capacitor's non-voltage control | GLM has no form for them | — |
-| a battery's DC voltage | no CIM home yet (TODO, DCConductingAssetInfo) | tier 2: numberOfCells 11 → 28 (GridLAB-D's 115 V) |
+| a battery's DC voltage | no CIM home yet (TODO, DCConductingAssetInfo) | export test: numberOfCells 11 → 28 (GridLAB-D's 115 V) |
 | IEEE 8500 at 0.9 load | not isolated (candidates: 1,177 centre-tap services, ideal regulators, X27) | 5.3e-3 |
 | a triplex matrix's b | GridLAB-D's `triplex_line` has no shunt admittance (X27) | IEEE 8500: about 0.1 VAr per kft |
-| a template no equipment uses | GLM's configurations are written per use | tier 2: the atoms' `cn_250`, `xc_unused` |
-| a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | tier 2: a regulator end's baseU, neutralU, and its ratedS and mesh x, which follow baseU (S3c-2), 1.2e-6 |
-| a load group with no schedule | written static (X29): a reference to no player would not load | tier 2: the load atoms' `zipsched` loads come back EnergyConsumers |
-| a player's start zone | its rows are written in GMT (X29) | tier 2: `startTime` the same instant at +00:00 |
+| a template no equipment uses | GLM's configurations are written per use | export test: the atoms' `cn_250`, `xc_unused` |
+| a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | export test: a regulator end's baseU, neutralU, and its ratedS and mesh x, which follow baseU (S3c-2), 1.2e-6 |
+| a load group with no schedule | written static (X29): a reference to no player would not load | export test: the load atoms' `zipsched` loads come back EnergyConsumers |
+| a player's start zone | its rows are written in GMT (X29) | export test: `startTime` the same instant at +00:00 |
 | `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
 
 ## Slot tables

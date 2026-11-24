@@ -129,3 +129,12 @@ def test_master_named_as_a_class_file_raises(tmp_path):
     model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
     with pytest.raises(ValueError, match="master Line.dss would be overwritten"):
         DssWriter().write(model, tmp_path / "Line.dss", per_class=True)
+
+
+def test_rdcohms_is_written_per_winding_last():
+    """DSS has no RdcOhms array: one wdg= block per winding, after every other slot, so no slot follows a wdg=."""
+    transformer = schema.Transformer(name="t", phases=1, windings=2, buses=["a.1", "b.1"], kVs=[7.2, 0.24],
+                                     kVAs=[25, 25], RdcOhms=[2.1, 0.004], Seasons=2, Ratings=[30, 35])
+    assert DssWriter().serialize(transformer) == (
+        "new Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[7.2 0.24] kVAs=[25 25] Seasons=2 Ratings=[30 35] "
+        "wdg=1 RdcOhms=2.1 wdg=2 RdcOhms=0.004")

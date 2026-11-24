@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run every package's tests, one pytest process per package, then the root tier-4 cross-format
+# Run every package's tests, one pytest process per package, then the root cross-format
 # tests (tests/cross_format, named cross_format), which read several spokes' committed goldens.
 #
 # One process each because cimtables sets the CIM profile and the model scope
@@ -8,7 +8,7 @@
 # Usage:
 #   scripts/test-all.sh              # every package
 #   scripts/test-all.sh core opendss # only the named packages
-#   scripts/test-all.sh cross_format # only the root tier-4 tests
+#   scripts/test-all.sh cross_format # only the root cross-format tests
 #   scripts/test-all.sh -- -x -q     # extra args go to pytest
 #   PYTEST=venv/bin/pytest scripts/test-all.sh  # another runner
 #

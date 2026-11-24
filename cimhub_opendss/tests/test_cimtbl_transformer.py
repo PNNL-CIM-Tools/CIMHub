@@ -8,16 +8,19 @@ from pathlib import Path
 import cimtables
 import pytest
 
-from cimhub_core.cimtbl import check_fields, cimtbl_to_cim
+from cimtables.document import Document
+
+from cimhub_core.cimtbl import CIM_PROFILE, check_fields, cimtbl_to_cim
 from cimhub_core.cimtbl_testing import assert_matches_golden, atom_documents, cim_scope
 from cimtopology.core import BusSystem, System
 from cimhub_opendss.importer.cimtbl.transformer import (FIELDS, NATIVE_CLASS, map_transformer, parse_bus,
-                                                       winding_nodes)
+                                                       season_count, seasonal_ratings, winding_nodes)
+from cimhub_opendss.importer.dss_to_cimtbl import limit_types
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.schema import opendss_schema as schema
 
 ATOMS = Path(__file__).parent / "atoms" / "transformer"
-CASES = ["xfm1", "sub3", "reg1", "service", "center_tap"]
+CASES = ["xfm1", "sub3", "reg1", "service", "center_tap", "rated"]
 
 #: What the topology walk would give for every atom bus.
 THREE, SINGLE, SPLIT = System.THREE_PHASE, System.SINGLE_PHASE, System.SPLIT_PHASE
@@ -40,8 +43,8 @@ def _map(case: str):
     return map_transformer(DssReader(ATOMS / f"{case}.dss").read_all(), BUSES, "fdr_atom")
 
 
-def _bind(case: str):
-    return cimtbl_to_cim(atom_documents(_map(case)), network=cimtables.load_model(ATOMS / "prereq.cimtbl"))
+def _bind(case: str, *parts):
+    return cimtbl_to_cim(atom_documents(*parts, _map(case)), network=cimtables.load_model(ATOMS / "prereq.cimtbl"))
 
 
 def _native(*records):
@@ -146,7 +149,33 @@ def _xf(**slots):
     (dict(windings=3, buses=["a.1", "b.1", "b.1"], kVs=[7.2, 0.12, 0.12], kVAs=[25, 25, 25]),
      r"t: windings \[2, 3\] share bus b but are not a split-phase secondary"),
     (dict(phases=3, buses=["a.2.3.1", "b"], kVs=[12.47, 0.48]), r"t: bus a phase nodes \(2, 3, 1\)"),
+    (dict(phases=3, buses=["a", "b"], kVs=[12.47, 0.48], RdcOhms=[1.0, 0.01]),
+     "t: RdcOhms on a 3-phase transformer by balanced ends"),
+    (dict(RdcOhms=[1.0]), r"t: RdcOhms=\[1.0\] needs 2 values"),
+    (dict(Seasons=2), "t: Seasons=2 without Ratings"),
+    (dict(Ratings=[44, 52]), r"t: Ratings=\[44.0, 52.0\] with Seasons=1"),
+    (dict(Seasons=3, Ratings=[44, 52]), r"t: Ratings=\[44.0, 52.0\] with Seasons=3"),
 ])
 def test_unmapped_transformers_fail_fast(slots, message):
     with pytest.raises(ValueError, match=message):
         map_transformer(_native(_xf(**slots)), {"a": BUSES["b13552"], "b": BUSES["x_b13552-a"]}, "fdr_atom")
+
+
+def test_rated_service_binds():
+    """RdcOhms on the coils (verbatim, ohm) and one ApparentPowerLimit per season on the PowerTransformer."""
+    network = _bind("rated", Document(name="limits", statements=[limit_types(2)], profile=CIM_PROFILE))
+    coils = _by_mrid(network, "TransformerWinding")
+    assert float(coils["xf_b13552-1a_wdg_1"].rDC.to("ohm")) == pytest.approx(3.9773268)
+    assert float(coils["xf_b13552-1a_wdg_2"].rDC.to("ohm")) == pytest.approx(0.004419252)
+    [limit_set] = _by_mrid(network, "OperationalLimitSet").values()
+    assert limit_set.Equipment.mRID == "xf_b13552-1a"
+    assert sorted((limit.OperationalLimitType.mRID, float(limit.normalValue.to("kVA")))
+                  for limit in limit_set.OperationalLimitValue) == [("olt_season1", 44.0), ("olt_season2", 52.0)]
+
+
+def test_seasons_are_the_most_any_record_rates():
+    native = _native(_xf(Seasons=2, Ratings=[44, 52]), _xf(name="u", Ratings=[30]),
+                     schema.Xfmrcode(name="c", Seasons=3, Ratings=[1, 2, 3]))
+    assert season_count(native) == 3
+    assert seasonal_ratings(_xf(Ratings=[30]), "t") == ["30.0"]  # one season by default
+    assert seasonal_ratings(_xf(), "t") == []

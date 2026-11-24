@@ -122,7 +122,7 @@ def assert_gridlabd_der(model, network) -> int:
     return checked
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_golden():
     assert_matches_golden(inverter_part(read(ATOM / "inverter.glm"), MODEL), ATOM / "inverter.inverter.cimtbl")

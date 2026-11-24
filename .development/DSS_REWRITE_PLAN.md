@@ -211,7 +211,7 @@ Each slice delivers its mapper(s), atoms with goldens (`tests/atoms/<class>/`), 
 | S4a | Load, Capacitor + CapControl (shapes `load`, `shunt`; core `zip_fractions.cimtbl`) | **done 2026-11-08:** 25 of 31 sweep decks bind (S3's stops only); every load's p, q and model and every capacitor and CapControl setting equal the engine's on the atoms and the 8 engine decks. Own-terminal controls by `Update` (U3 closed) |
 | S4b | PVSystem, Storage, Generator, Reactor; the two new shapes (`synchronous_machine`, `series_compensator`, shared with RAW C2) added to the catalog first; approved and done 2026-11-08 (CIMTBL_MAPPING.md S4b); the reader keeps each record's assignment history (`DssModel`, S4b-8) | done: 22 of 31 decks bind (S3 six + two `ieee9500` copies with an engine-invalid PV `Mode=7` + IEEE123_test_harness `Battery5`); full IEEE13_CDPSM artifact directory committed as the reference golden (D6) |
 | S5 | Buscoords (Location shape added to the catalog first); deck sweep to green or listed stops; G7 numbers on ieee9500 | **done 2026-11-08:** shape `location`; every equipment Location equals the engine's bus coordinates on the atoms and the engine decks (IEEE9500 by LatLongCoords); `tests/test_cimtbl_sweep.py`: 18 of 24 bind, 6 stop as listed (DSS-10 ×4, PNNL IEEE9500 bal's missing line code, `Battery5`); G7: IEEE9500 binds 65,282 rows in 8.2 s |
-| S6 | exporter `cim_to_dss` ported to cim18v17 on the core getters (master plan §4 Phase 5 step 3, exporter assessment E0-E6), tested from the `.cimtbl` atoms | tier 2 per class; roundtrip and power flow parity (§5) |
+| S6 | exporter `cim_to_dss` ported to cim18v17 on the core getters (master plan §4 Phase 5 step 3, exporter assessment E0-E6), tested from the `.cimtbl` atoms | export tests per class; roundtrip and power flow parity (§5) |
 | S7 | delete the old importer, the Python atoms and every cimhub_2026 import in the spoke; update conformance tests and `README` | the spoke imports cim18v17 only |
 
 S0-S5 are the importer and S6 the exporter. The importer and the exporter must flip together (master plan §4 Phase
@@ -220,7 +220,7 @@ in one change.
 
 ## 5. Tests
 
-- **Tier 1/1b per class:** a native atom gives the golden, and the golden plus prereqs binds (the `test_cimtbl_linecode.py`
+- **Import and bind tests per class:** a native atom gives the golden, and the golden plus prereqs binds (the `test_cimtbl_linecode.py`
   pattern).
 - **Completeness:** `check_fields(FIELDS, NATIVE_CLASS)` per mapper.
 - **Decks:** small public decks are vendored in `cimhub_opendss/tests/decks/` (origins in its README); the large ones
@@ -240,7 +240,7 @@ Each item has a recommendation. They are needed by the slice in the last column.
 
 | # | question | recommendation | slice |
 |---|---|---|---|
-| DSS-1 | Where bus voltages come from | **Decided 2026-11-06, amended 2026-11-07:** a format-agnostic topology processor (`cimtopology.core`, CIM-Graph-Topology-Processor) walks a `Network` from the source bus, before any artifact. It does **not** snap to `voltagebases`, because CalcVoltageBases squashes mismatched bases (a 240 V service onto 208 V). Per bus it returns a `BusSystem`: the BaseVoltage, plus whether the bus's island is 3-phase. `nominalVoltage` is rounded to 2 decimals in kV at 1 kV and above and to whole volts below, so 12.4708 and 12.47 share one BaseVoltage. In CIMHub_2_0 the walk and the DSS bus graph agree with the engine on every bus of 11 decks; F2 rewrites `bus_graph.py` on `Network` and keeps the engine as the test oracle | S0 |
+| DSS-1 | Where bus voltages come from | **Decided 2026-11-06, amended 2026-11-07:** a format-agnostic topology processor (`cimtopology.core`, CIM-Graph-Topology-Processor) walks a `Network` from the source bus, before any artifact. It does **not** snap to `voltagebases`, because CalcVoltageBases squashes mismatched bases (a 240 V service onto 208 V). **Amended 2026-11-24 (§11, S10-1):** each `voltagebases` value is a BaseVoltage too, even on no bus; buses still take the walk's. Per bus it returns a `BusSystem`: the BaseVoltage, plus whether the bus's island is 3-phase. `nominalVoltage` is rounded to 2 decimals in kV at 1 kV and above and to whole volts below, so 12.4708 and 12.47 share one BaseVoltage. In CIMHub_2_0 the walk and the DSS bus graph agree with the engine on every bus of 11 decks; F2 rewrites `bus_graph.py` on `Network` and keeps the engine as the test oracle | S0 |
 | DSS-2 | Transformers | **Decided 2026-11-06 (the user's model):** every DSS Transformer that is not a regulator (DSS-13) is its own PowerTransformer (`bank` untranscribed), with one PowerTransformerEnd per bus and the phases on its terminal. 3-phase: balanced ends. 1-phase: a TransformerPhaseEnd per conductor (global `sequenceNumber`) and windings between phase ends. No TankEnd. XfmrCode becomes a template (amended 2026-11-08): a TankEnd per winding for 3-phase and non-center-tap codes, linked to the instance by `endNumber`; a center-tap code is a 3-winding tank with lugs H1 H2 X1 X3 X2 and windings H1→H2, X1→X2, X2→X3 (additive polarity, IEEE C57.12.00), its instance's phase ends landing on the lugs by `sequenceNumber`. Ratings are nameplate values (`ratedU` LL, `baseU` the coil). **Inline done:** `importer/cimtbl/transformer.py`, 24 tests, 1,365 of 1,378 inline transformers in 11 decks map | S3 (started early) |
 | DSS-3 | A LineCode without `units` | **Decided 2026-11-07.** (a) Code used by lines that have units (J1: 1,382 lines, all `kft`): the code takes the line's unit, as DSS does. Lines that disagree give one template per unit, `lc_<name>_<unit>`. (b) Code and line both unitless (M1: 1,960 lines; IEEE123_deconfliction: 118), or a unitless code no line uses (IEEE13_original: 29): a deck-level magnitude gate on the median positive r1 (or rmatrix diagonal) of the deck's unitless codes. 0.006 to 10 per unit → `km`; 1e-5 to 0.006 → `m`; anything else raises. `length_unit=` overrides the gate. Real conductors run about 0.01 to 3.5 Ω/km, so the per-m/ft and per-km/kft/mile bands don't overlap. The inferred unit goes in the header and the file says `# units inferred: km (median r1 0.134 per unit; no units on code or line)`. Because code and line share the unit, z·length is exact for any label; a wrong label (kft read as km) only scales the physical length. Census 2026-11-07: M1 median r1 0.134 (0.044 to 0.76), IEEE123 0.245 (0.055 to 0.53), so both read `km` (they are per kft by origin) | **done in S2** |
 | DSS-3b | A LineCode with a nonzero C and no `baseFreq` | **Decided 2026-11-07:** the model's base frequency (`Set defaultbasefreq`, kept on the model by the §3.4 reader fix), else 60 Hz (the DSS default). Recorded as `# defaulted` (§3.3) | **done in S2** |
@@ -312,7 +312,7 @@ engine and the reader accept, it needs:
 
 ### 8.3 Tests
 
-- **Per atom (tier 2, every sub-slice):** atom deck → `DssImporter.to_cim` → `to_model` → writer → engine,
+- **Per atom (export test, every sub-slice):** atom deck → `DssImporter.to_cim` → `to_model` → writer → engine,
   compared with the original atom in the engine. Per element: the class, the buses, `YPrim` (rel 1e-6), and the
   properties the importer's engine checks already read (load p/q/model, regulator and capacitor settings, ...).
   Then the bus voltages after `Solve` (rel 1e-6 on an atom). An exported golden `.dss` per atom is committed beside
@@ -375,3 +375,26 @@ Decisions S9-1 to S9-8 are in `cimhub_opendss/docs/CIMTBL_MAPPING.md#s9-device-s
 | engine findings | the shape scales a PV's irradiance (%Pmpp, %Cutout and the kVA cut per sample) and a generator's kW and kvar together; a PV's cut-in/cut-out has hysteresis; an off PV keeps a set kvar unless `VarFollowInverter` (snapshot too: `pv_power` fixed, no golden changed); a follow-mode battery runs at mult x kWrated capped at kVA, idles at 0, and ignores %Charge, %Discharge, %kWrated |
 | not built | `daily` / `duty`; temperature shapes; a battery's trigger modes; a shape on a Vsource or a wind generator; a schedule on a connection written as several DSS objects; the GDM export of a device schedule (`_consumer` raises for a schedule on anything but an EnergyConsumer) |
 | tests | `test_cimtbl_device_shape.py` (21: goldens, the engine's p and q at every sample of every device, raises), `test_export_device_shape.py` (10: the export golden, yearly-mode engine parity every 30 minutes for 8 hours, shared shapes, raises); core `test_time_points.py` (+3) |
+
+## 11. S10: settings and transformer ratings (2026-11-24; built at the user's direction)
+
+The user's answers to the questions of the docs wave: "Set voltagebases should probably be enabled for opendss to
+compute its internal runtime, set EarthModel unused could be imported as a floating EarthResistivity not associated to
+any line. Transformer RdcOhms has a home in TransformerWinding.rDC, Seasons and Ratings could be mapped as
+OperationalLimitSet with an extension I am adding now between EquipmentConfiguration -> OperationalLimitSet". The
+extension, `EquipmentConfiguration.OperationalLimitSet` (GridAPPS-D namespace; the serialized end is the
+configuration's), was in the local CIM-Profiles checkout the same day, not yet committed there.
+
+| # | Decision | How it was built |
+|---|---|---|
+| S10-1 | `Set voltagebases` (amends DSS-1) | The master's BaseVoltage table is the walk's bus voltages plus every `voltagebases` value, highest first; a base on no bus is kept so the export writes it back for `CalcVoltageBases`. Buses still take the walk's voltage; the comment still reconciles the two lists |
+| S10-2 | `Set earthmodel` without geometry | A floating `EarthResistivity` `earth` (the setting's model, rho the default 100 ohm-m, listed `defaulted`) that no line names, in `linegeometry.cimtbl`. None when the deck sets no earthmodel. The export's `earth_model` reads the network's one EarthResistivity when there is no geometry, so the parity solves of the decks that set earthmodel without geometry no longer list it |
+| S10-3 | `RdcOhms` (Transformer, XfmrCode) | Per winding: the reader puts each value at the active `wdg=` (some windings without one raise, as the engine's 85 % default is not transcribed); the XfmrCode slot became multivalued like the Transformer's. Copied as `Update Table TransformerWinding: mRID, rDC (ohm)` on a 1-phase transformer's coils and a template's windings. A 3-phase transformer by balanced ends and a regulator raise (no TransformerWinding). The writer emits it last, one `wdg=n RdcOhms=v` block per winding; core `Winding.r_dc` |
+| S10-4 | `Seasons` / `Ratings` | One `ApparentPowerLimit` (kVA) per season n, type `olt_season<n>` (the master declares as many as any record rates), in the set `<owner>_ratings`: on the PowerTransformer (or VoltageRegulator) for an inline Transformer, on the template for an XfmrCode (the set written alone, then `Update Table TransformerTankConfiguration: mRID, OperationalLimitSet`). An instance by XfmrCode keeps only its own. The engine keeps only `Seasons` of the `Ratings` and pads `Seasons` alone with zeros, so `Seasons` without `Ratings`, or a count other than theirs, raises. Export through `get_limits_by_type` / core `get_configuration_limits_by_type` (new): the olt_season<n> limits in season order; seasons not 1..n raise |
+| S10-5 | Atoms | No public deck sets RdcOhms, Seasons or Ratings. `atoms/transformer/rated.dss` (EPRI J1's service) and `atoms/xfmrcode/rated.dss` (codes.dss's `sub`) add them, RdcOhms at the engine's own default for each winding; the header says so |
+
+| where | what |
+|---|---|
+| known limit | the engine zeroes the Ratings when `Seasons` comes after `Ratings` on a line; the reader does not record the order, so such a deck maps its Ratings as written |
+| not built | `normhkVA` / `emerghkVA` (still untranscribed); a seasonal rating on a Line, LineCode or wire (`Seasons`/`Ratings` there are untranscribed) |
+| tests | `test_cimtbl_transformer.py` (rated golden, bind, 5 fail-fast rows, `season_count`), `test_cimtbl_xfmrcode.py` (rated golden and bind), `test_export_transformer.py` (2 export goldens, engine parity, Seasons/Ratings/RdcOhms read back by the engine), `test_dss_reader_rules.py` (+2), `test_dss_writer.py` (+1), `test_dss_to_cimtbl.py` (voltagebases), `test_cimtbl_geometry.py` and `test_export_line.py` (floating earth); core `test_getters_limits_by_type.py` (3), `test_getters_transformer.py` (+1) |

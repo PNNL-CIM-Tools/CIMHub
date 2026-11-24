@@ -38,9 +38,8 @@ PREFIX = "xc_"
 _CONFIGURATION = "TransformerTankConfiguration"
 _SCALAR = "the active-winding form; the reader folds wdg= blocks and bare values into the arrays"
 _THERMAL = "thermal model; no home in the network profile parts"
-_RATING = "a tank rating; instance OperationalLimitSet or untranscribed (plan D9)"
+_RATING = "a tank rating; instance OperationalLimitSet or untranscribed"
 _TAP_CHANGER = "tap changer range; a regulated instance takes it (S3a); else untranscribed"
-_NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
 
 FIELDS = {
     "name": Field("copied", ((_CONFIGURATION, "name", None),), "mRID = xc_ + name, lowercased"),
@@ -86,9 +85,12 @@ FIELDS = {
     "MaxTap": Field("untranscribed", note=_TAP_CHANGER),
     "MinTap": Field("untranscribed", note=_TAP_CHANGER),
     "NumTaps": Field("untranscribed", note=_TAP_CHANGER),
-    "RdcOhms": Field("structural", note=_NOT_MAPPED + " (home TransformerWinding.rDC)"),
-    "Seasons": Field("structural", note=_NOT_MAPPED),
-    "Ratings": Field("structural", note=_NOT_MAPPED),
+    "RdcOhms": Field("copied", (("TransformerWinding", "rDC", "ohm"),), "per template winding"),
+    "Seasons": Field("structural", note="the number of Ratings; one by default, and a count other than the "
+                                        "Ratings' raises"),
+    "Ratings": Field("copied", (("ApparentPowerLimit", "normalValue", "kVA"),),
+                     "one per season n, of type olt_season<n>, in the OperationalLimitSet <xc>_ratings on the "
+                     "TransformerTankConfiguration names (EquipmentConfiguration.OperationalLimitSet)"),
     "like": Field("untranscribed", note="the reader resolves like= before mapping"),
 }
 
@@ -113,7 +115,7 @@ class Template(NamedTuple):
     lugs: bool
     configuration: tuple
     ends: tuple       # TankEnd: (endNumber, connectionKind, rground, xground); lug: (designation, sequenceNumber)
-    windings: tuple   # (number, ratedU, baseU, ratedS, baseS, r, from, to)
+    windings: tuple   # (number, ratedU, baseU, ratedS, baseS, r, rDC, from, to)
     mesh: tuple       # (i, j, x)
     notes: tuple
 
@@ -190,7 +192,7 @@ def instance_template(xf, buses: Mapping[str, BusSystem]) -> Template:
             template_ends.append((str(winding.number), "Y" if winding.wye else "D",
                                   *_neutral_impedance(xf, winding, len(windings))))
         rows.append((str(winding.number), cell(rated_u), cell(base_u), cell(rated_s), cell(base_s),
-                     cell(winding.r_percent), from_end, to_end))
+                     cell(winding.r_percent), cell(winding.r_dc), from_end, to_end))
     mesh = tuple((str(i), str(j), cell(transformer_mapper._x_percent(xf, (i, j), notes))) for i, j in pairs)
     return Template(lugs, configuration, tuple(template_ends), tuple(rows), mesh, tuple(notes))
 
@@ -203,6 +205,9 @@ class _Tables:
         self.end_windings: list[Row] = []
         self.lug_windings: list[Row] = []
         self.mesh: list[Row] = []
+        self.dc_resistances: list[Row] = []
+        self.rating_sets: list[Row] = []
+        self.ratings: list[Row] = []
 
 
 def _template_rows(code, template: Template, users: list[str], rows: _Tables) -> None:
@@ -218,13 +223,16 @@ def _template_rows(code, template: Template, users: list[str], rows: _Tables) ->
     else:
         rows.tank_ends += [Row([f"{xc}_end_{number}", xc, number, kind, rground, xground])
                            for number, kind, rground, xground in template.ends]
-    for number, rated_u, base_u, rated_s, base_s, r, from_end, to_end in template.windings:
+    for number, rated_u, base_u, rated_s, base_s, r, r_dc, from_end, to_end in template.windings:
         cells = [f"{xc}_wdg_{number}", xc, rated_u, base_u, rated_s, base_s, r]
+        if r_dc is not None:
+            rows.dc_resistances.append(Row([f"{xc}_wdg_{number}", r_dc]))
         if template.lugs:
             rows.lug_windings.append(Row(cells + [f"{xc}_lug_{from_end}", f"{xc}_lug_{to_end}"]))
         else:
             rows.end_windings.append(Row(cells + [f"{xc}_end_{from_end}"]))
     rows.mesh += [Row([f"{xc}_mesh_{i}{j}", f"{xc}_wdg_{i}", f"{xc}_wdg_{j}", x]) for i, j, x in template.mesh]
+    transformer_mapper.rating_rows(xc, transformer_mapper.seasonal_ratings(code, f"XfmrCode {code.name}"), rows)
 
 
 def map_xfmrcode(native, buses: Mapping[str, BusSystem]) -> Document:
@@ -282,5 +290,7 @@ def _statements(rows: _Tables) -> list[Table]:
         ("TransformerMeshImpedance", ["mRID", "FromWinding", "ToWinding", ("x", "percent")], rows.mesh,
          "x in percent on the From winding's baseU and baseS"),
     ]
-    return [Table(name, [Column(*c) if isinstance(c, tuple) else Column(c) for c in columns], table_rows,
-                  comment=comment) for name, columns, table_rows, comment in layout if table_rows]
+    tables = [Table(name, [Column(*c) if isinstance(c, tuple) else Column(c) for c in columns], table_rows,
+                    comment=comment) for name, columns, table_rows, comment in layout if table_rows]
+    return [*tables, *transformer_mapper.dc_resistance_table(rows.dc_resistances),
+            *transformer_mapper.rating_tables(rows, configuration=_CONFIGURATION)]

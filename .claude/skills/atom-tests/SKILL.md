@@ -1,6 +1,6 @@
 ---
 name: atom-tests
-description: How CIMHub tests converters - atoms as native-file + golden `.cimtbl` text pairs under `cimhub_<fmt>/tests/atoms/<native_table>/`, shared prerequisites, the test tiers (1, 1b, 2, 3, 4, spec, parity) and the `cimhub_core.cimtbl_testing` helpers. Use when adding or changing a mapper or exporter test, reviewing a golden diff, or regenerating goldens.
+description: How CIMHub tests converters - atoms as native-file + golden `.cimtbl` text pairs under `cimhub_<fmt>/tests/atoms/<native_table>/`, shared prerequisites, the test types (import, bind, export, round trip, cross-format, classification, parity) and the `cimhub_core.cimtbl_testing` helpers. Use when adding or changing a mapper or exporter test, reviewing a golden diff, or regenerating goldens.
 ---
 
 # Atom tests
@@ -12,23 +12,23 @@ loaded by cimtables.
 ```
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.<ext>     # native atom: the real reader parses it
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.cimtbl    # golden artifact, reviewed by a human
-cimhub_<fmt>/tests/test_cimtbl_<native_table>.py         # tiers 1, 1b, spec + mapper unit tests
+cimhub_<fmt>/tests/test_cimtbl_<native_table>.py         # import, bind, classification + mapper unit tests
 cimhub_<fmt>/tests/atoms/<native_table>/prereq.cimtbl    # context the atoms reference: container, BaseVoltages, nodes
 ```
 
 Example: `cimhub_opendss/tests/atoms/linecode/mtx601.dss` + `mtx601.cimtbl`, tested by
 `cimhub_opendss/tests/test_cimtbl_linecode.py`.
 
-## Tiers
+## Test types
 
-| tier | test | assertion |
+| test | what runs | assertion |
 |---|---|---|
-| 1 importer | native atom → reader → mapper → formatted text | `assert_matches_golden(document, golden)`: text equals the golden; failure shows a record diff |
-| 1b bind | golden (+ prereqs) → cimtables | `cimtbl_to_cim(atom_documents(document))` binds under cim18v17; key values checked in SI via `.to(unit)` |
-| 2 exporter | golden + prereqs → CIM → exporter → native | equals the native atom field by field via the native reader, minus the spec's untranscribed fields |
-| 3 roundtrip | reference model native → artifacts → CIM → native | per spoke; expected differences listed in the spec |
-| 4 cross-format | the same equipment from two spokes' goldens → CIM | equal in SI within tolerance; root `tests/cross_format/`, public pairs only, matched by topology not mRID |
-| spec | field classification | `check_fields(FIELDS, NATIVE_CLASS)` covers every LinkML slot (I3) |
+| import | native atom → reader → mapper → formatted text | `assert_matches_golden(document, golden)`: text equals the golden; failure shows a record diff |
+| bind | golden (+ prereqs) → cimtables | `cimtbl_to_cim(atom_documents(document))` binds under cim18v17; key values checked in SI via `.to(unit)` |
+| export | atom → import → CIM → exporter → native | the export reproduces the atom, by the check the spoke names on its testing page or spec: RAW field by field against the atom, minus untranscribed fields; GridLAB-D and GDM import the export again and compare CIM with `cimtables.diff_models`, minus listed differences; OpenDSS a reviewed deck golden (`atoms/<table>/export/`, `assert_matches_dss_golden`) and both decks solved in the engine (`assert_same_engine_state`) |
+| round trip | reference model native → artifacts → CIM → native | per spoke; expected differences listed in the spec |
+| cross-format | the same equipment from two spokes' goldens → CIM | equal in SI within tolerance; root `tests/cross_format/`, public pairs only, matched by topology not mRID |
+| classification | field classification | `check_fields(FIELDS, NATIVE_CLASS)` covers every LinkML slot (I3) |
 | parity | builder keyword methods vs `.cimtbl` rows | lives in CIM-Builder, not here |
 
 ## Rules
@@ -91,7 +91,7 @@ def test_binds_under_cim18v17(mtx601):
     assert float(data[(2, 1)].r.to("ohm/mi")) == pytest.approx(0.1535)   # verbatim from the deck
 ```
 
-`scaffold_mapper` writes the completeness test; add the rest. Full example, tier 2-4 recipes: [reference.md](reference.md).
+`scaffold_mapper` writes the completeness test; add the rest. Full example, export, round-trip and cross-format recipes: [reference.md](reference.md).
 
 ## Anti-patterns
 
@@ -100,5 +100,5 @@ def test_binds_under_cim18v17(mtx601):
 - Comparing whole files with `==` in an ad hoc test instead of `assert_matches_golden` (no record diff on failure).
 - `line.r == 0.1535` or `line.r.value` checks; skipping `cim_scope()`.
 - Expected values copied from mapper output; one test asserting many unrelated things.
-- A tier-4 test inside a spoke package, or matching cross-format objects by mRID.
+- A cross-format test inside a spoke package, or matching cross-format objects by mRID.
 - Vendor or private model data in an atom.

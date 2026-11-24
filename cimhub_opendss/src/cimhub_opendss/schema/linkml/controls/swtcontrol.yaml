@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,24 @@ classes:
     description: >-
       A Swtcontrol object in OpenDSS.
     class_uri: dss:Swtcontrol
+    related_mappings:
+      - cim:Switch
+    comments:
+      - >-
+        Import: no object is written; its Line (Switch=y) is a LoadBreakSwitch
+        unless a Fuse or Recloser names it, and the control only sets the switch
+        state. Export: an open switch that is neither a Fuse nor a Recloser
+        writes a SwtControl.
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        comments:
+          - >-
+            Import: untranscribed; the switch takes the Line's name and the
+            SwtControl names no CIM object. Export: Names, the switch's.
 
       # (1) SwitchedObj
       SwitchedObj:
@@ -37,6 +49,11 @@ classes:
         required: false
         annotations:
           order: 1
+        comments:
+          - >-
+            Import: structural; names the Switch=y Line this control switches (a
+            Line without Switch=y raises). Export: written as Line.<the switch's
+            Line name>.
 
       # (2) SwitchedTerm
       SwitchedTerm:
@@ -46,6 +63,10 @@ classes:
         required: false
         annotations:
           order: 2
+        comments:
+          - >-
+            Import: untranscribed; the switch opens both terminals in CIM, so
+            DSS's terminal choice has no home. Export: unset.
 
       # (3) Action
       Action:
@@ -55,6 +76,10 @@ classes:
         required: false
         annotations:
           order: 3
+        comments:
+          - >-
+            Import: raises when set (the deprecated form of State); no deck in
+            the sweep sets it. Export: unset.
 
       # (4) Lock
       Lock:
@@ -64,6 +89,10 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: untranscribed (control lock; no home on a Switch). Export:
+            unset.
 
       # (5) Delay
       Delay:
@@ -73,6 +102,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: untranscribed (control timing; no home on a Switch). Export:
+            unset.
 
       # (6) Normal
       Normal:
@@ -83,6 +116,13 @@ classes:
         annotations:
           order: 6
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.normalOpen
+        comments:
+          - >-
+            Import: Switch.normalOpen from Open/Closed; with an Open command on
+            the line they must agree. Export: get_switch_state(normal); written
+            only when open in either state.
 
       # (7) State
       State:
@@ -93,6 +133,13 @@ classes:
         annotations:
           order: 7
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.open
+        comments:
+          - >-
+            Import: Switch.open from Open/Closed; with an Open command on the
+            line they must agree. Export: get_switch_state(actual or the
+            caller's choice); written only when open in either state.
 
       # (8) Reset
       Reset:
@@ -102,6 +149,9 @@ classes:
         required: false
         annotations:
           order: 8
+        comments:
+          - >-
+            Import: untranscribed (a command, not a setting). Export: unset.
 
       # (9) basefreq
       basefreq:
@@ -111,6 +161,9 @@ classes:
         required: false
         annotations:
           order: 9
+        comments:
+          - >-
+            Import: untranscribed (no home on a switch). Export: unset.
 
       # (10) enabled
       enabled:
@@ -120,6 +173,10 @@ classes:
         required: false
         annotations:
           order: 10
+        comments:
+          - >-
+            Import: untranscribed (a disabled control leaves its switch in
+            place). Export: unset.
 
       # (11) like
       like:
@@ -129,3 +186,7 @@ classes:
         required: false
         annotations:
           order: 11
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

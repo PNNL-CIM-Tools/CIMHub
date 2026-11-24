@@ -111,7 +111,7 @@ def assert_gridlabd_ohms(model, network) -> None:
                 assert b / per_phase == pytest.approx(1 / (shunt.imag * zt_base), rel=1e-9), tank.mRID
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_goldens():
     documents = parts(read(ATOM / "transformer.glm"), MODEL)

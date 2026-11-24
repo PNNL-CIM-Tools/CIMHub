@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -27,9 +27,10 @@ classes:
       - cim:RegulatingControl
     comments:
       - >-
-        OpenDSS Capcontrol maps to CIM RegulatingControl. The monitored element
-        Terminal is set as RegulatingControl.Terminal, and the controlled
-        LinearShuntCompensator is set as RegulatingControl.RegulatingCondEq.
+        Import: one RegulatingControl cc_ + name on the monitored Terminal
+        (capcontrol.cimtbl); its capacitor gets RegulatingControl, aVRDelay and
+        controlEnabled by an Update. Export: one CapControl per
+        RegulatingControl that regulates one LinearShuntCompensator.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -39,7 +40,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: RegulatingControl.name, mRID = cc_ + name, lowercased.
+            Export: Names, the CapControl namespace.
 
       # (1) element
       element:
@@ -50,10 +53,13 @@ classes:
         required: false
         annotations:
           order: 1
-        related_mappings:
+        close_mappings:
           - cim:RegulatingControl.Terminal
         comments:
-          - "Import: resolved to a Terminal on the named element; RegulatingControl.Terminal = that terminal. Export: element = Terminal.ConductingEquipment.name."
+          - >-
+            Import: the Terminal of the Line (ln_ or sw_) or Capacitor (cap_) it
+            names; another element class raises. Export: Line.<name> or
+            Capacitor.<name> of the monitored Terminal's equipment.
 
       # (2) terminal
       terminal:
@@ -65,10 +71,12 @@ classes:
         annotations:
           order: 2
           dss_default: int(1)
-        related_mappings:
+        close_mappings:
           - cim:RegulatingControl.Terminal
         comments:
-          - "Import: selects terminal index (1-based) on the monitored element for RegulatingControl.Terminal. Export: terminal = index of RegulatingControl.Terminal."
+          - >-
+            Import: the element's terminal, default 1. Export: the monitored
+            Terminal's sequenceNumber.
 
       # (3) capacitor
       capacitor:
@@ -78,10 +86,13 @@ classes:
         required: false
         annotations:
           order: 3
-        related_mappings:
-          - cim:RegulatingControl.RegulatingCondEq
+        close_mappings:
+          - cim:RegulatingCondEq.RegulatingControl
         comments:
-          - "Import: resolved to a LinearShuntCompensator by name; RegulatingControl.RegulatingCondEq = that object. Export: capacitor = RegulatingCondEq.name."
+          - >-
+            Import: the Update row on cap_<capacitor>; a capacitor no New
+            defines raises. Export: the one LinearShuntCompensator the control
+            regulates.
 
       # (4) type
       type:
@@ -93,13 +104,13 @@ classes:
         annotations:
           order: 4
           dss_default: string(current)
-        exact_mappings:
+        close_mappings:
           - cim:RegulatingControl.mode
         comments:
           - >-
-            Import: 'voltage' → RegulatingControlModeKind.voltage; 'current' → currentFlow;
-            'kvar' → reactivePower; 'PF' → powerFactor; 'time' → timeScheduled.
-            Export: reverse enum lookup.
+            Import: voltage -> voltage, current -> currentFlow, kvar ->
+            reactivePower, time -> timeScheduled; PF and Follow raise; default
+            current. Export: the reverse; other modes raise.
 
       # (5) PTratio
       PTratio:
@@ -115,7 +126,9 @@ classes:
         exact_mappings:
           - cim:RegulatingControl.ptRatio
         comments:
-          - "Import: RegulatingControl.ptRatio = PTratio. Export: PTratio = ptRatio."
+          - >-
+            Import: ptRatio; default 60. Export: ptRatio; unset raises for a
+            voltage control.
 
       # (6) CTratio
       CTratio:
@@ -131,7 +144,9 @@ classes:
         exact_mappings:
           - cim:RegulatingControl.ctRatio
         comments:
-          - "Import: RegulatingControl.ctRatio = CTratio. Export: CTratio = ctRatio."
+          - >-
+            Import: ctRatio; default 60. Export: ctRatio; unset raises for a
+            current control.
 
       # (7) ONsetting
       ONsetting:
@@ -144,10 +159,14 @@ classes:
           order: 7
           dss_default: float(300.0)
           dss_name: "on"
-        exact_mappings:
+        close_mappings:
           - cim:RegulatingControl.targetValue
         comments:
-          - "Import: targetValue = (ONsetting + OFFsetting) / 2 in primary units by type (CIMTBL_MAPPING.md#capcontrol). Export: ON and OFF = targetValue -/+ targetDeadband / 2, ON on the side the type fixes."
+          - >-
+            Import: derived; targetValue = (ON + OFF) / 2, voltage x PTratio
+            (V), current x CTratio (A), kvar in var, time in hours; ON on the
+            wrong side of OFF raises; default 300. Export: targetValue -+
+            targetDeadband / 2, divided by the ratio.
 
       # (8) OFFsetting
       OFFsetting:
@@ -164,8 +183,9 @@ classes:
           - cim:RegulatingControl.targetDeadband
         comments:
           - >-
-            Import: targetDeadband = abs(OFFsetting - ONsetting) in primary units by type (the full
-            width of the band). Export: see ONsetting.
+            Import: derived; targetDeadband = abs(OFF - ON), scaled as
+            ONsetting; default 200. Export: targetValue +- targetDeadband / 2;
+            an unset deadband raises.
 
       # (9) Delay
       Delay:
@@ -180,7 +200,9 @@ classes:
         exact_mappings:
           - cim:ShuntCompensator.aVRDelay
         comments:
-          - "Import: LinearShuntCompensator.aVRDelay = Delay (seconds). Export: Delay = aVRDelay."
+          - >-
+            Import: aVRDelay (s) on the compensator's Update row; default 15.
+            Export: aVRDelay (s); unset -> not written.
 
       # (10) VoltOverride
       VoltOverride:
@@ -192,7 +214,10 @@ classes:
         annotations:
           order: 10
         comments:
-          - "OpenDSS-only (N/A): flag enabling the voltage override feature; no clean CIM mapping. Vmax/Vmin carry the actual limit values."
+          - >-
+            Import: untranscribed (a voltage override band of a kvar or current
+            control; maxAllowedTargetValue limits the target, not the voltage).
+            Export: unset.
 
       # (11) Vmax
       Vmax:
@@ -203,10 +228,10 @@ classes:
         required: false
         annotations:
           order: 11
-        exact_mappings:
-          - cim:RegulatingControl.maxAllowedTargetValue
         comments:
-          - "Import: RegulatingControl.maxAllowedTargetValue = Vmax. Export: Vmax = maxAllowedTargetValue."
+          - >-
+            Import: untranscribed (the VoltOverride band, volts on the PT
+            secondary). Export: unset.
 
       # (12) Vmin
       Vmin:
@@ -217,10 +242,10 @@ classes:
         required: false
         annotations:
           order: 12
-        exact_mappings:
-          - cim:RegulatingControl.minAllowedTargetValue
         comments:
-          - "Import: RegulatingControl.minAllowedTargetValue = Vmin. Export: Vmin = minAllowedTargetValue."
+          - >-
+            Import: untranscribed (the VoltOverride band, volts on the PT
+            secondary). Export: unset.
 
       # (13) DelayOFF
       DelayOFF:
@@ -233,7 +258,9 @@ classes:
           order: 13
           dss_default: float(15.0)
         comments:
-          - "OpenDSS-only (N/A): asymmetric OFF delay; no CIM equivalent distinguishing ON vs OFF delay in RegulatingControl."
+          - >-
+            Import: untranscribed (CIM has one aVRDelay (Delay); DSS solution
+            control). Export: unset.
 
       # (14) DeadTime
       DeadTime:
@@ -245,7 +272,9 @@ classes:
         annotations:
           order: 14
         comments:
-          - "OpenDSS-only (N/A): re-close inhibit timer; no direct CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed (DSS solution control; no home in the network
+            profile parts). Export: unset.
 
       # (15) CTPhase
       CTPhase:
@@ -257,7 +286,9 @@ classes:
         annotations:
           order: 15
         comments:
-          - "OpenDSS-only (N/A): CT monitoring phase selector; no direct CIM equivalent on RegulatingControl."
+          - >-
+            Import: raises when set (a CT phase); no deck in the sweep sets it,
+            so a mapping waits for one. Export: unset.
 
       # (16) PTPhase
       PTPhase:
@@ -269,10 +300,14 @@ classes:
         annotations:
           order: 16
           dss_default: int(1)
-        exact_mappings:
+        close_mappings:
           - cim:RegulatingControl.monitoredPhase
         comments:
-          - "Import: RegulatingControl.monitoredPhase set from PTPhase. Export: PTPhase from monitoredPhase."
+          - >-
+            Import: monitoredPhase = the phase of the monitored terminal's
+            conductor PTPhase (default 1); AVG, MAX and MIN raise. Export: the
+            1-based place of monitoredPhase among the monitored equipment's
+            conductors.
 
       # (17) VBus
       VBus:
@@ -284,7 +319,9 @@ classes:
         annotations:
           order: 17
         comments:
-          - "OpenDSS-only (N/A): alternate monitoring bus for voltage override; no direct CIM equivalent."
+          - >-
+            Import: raises when set (remote voltage sensing); no deck in the
+            sweep sets it, so a mapping waits for one. Export: unset.
 
       # (18) EventLog
       EventLog:
@@ -296,7 +333,8 @@ classes:
         annotations:
           order: 18
         comments:
-          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+          - >-
+            Import: untranscribed (DSS report flag). Export: unset.
 
       # (19) UserModel
       UserModel:
@@ -307,7 +345,9 @@ classes:
         annotations:
           order: 19
         comments:
-          - "OpenDSS-only (N/A): user model DLL hook; no CIM equivalent."
+          - >-
+            Import: raises when set (a user model); no deck in the sweep sets
+            it, so a mapping waits for one. Export: unset.
 
       # (20) UserData
       UserData:
@@ -318,7 +358,9 @@ classes:
         annotations:
           order: 20
         comments:
-          - "OpenDSS-only (N/A): user model data; no CIM equivalent."
+          - >-
+            Import: raises when set (user data); no deck in the sweep sets it,
+            so a mapping waits for one. Export: unset.
 
       # (21) pctMinkvar
       pctMinkvar:
@@ -330,7 +372,9 @@ classes:
         annotations:
           order: 21
         comments:
-          - "OpenDSS-only (N/A): PF control deadband parameter; no direct CIM equivalent."
+          - >-
+            Import: untranscribed (used only by PF control, which raises).
+            Export: unset.
 
       # (22) Reset
       Reset:
@@ -341,7 +385,8 @@ classes:
         annotations:
           order: 22
         comments:
-          - "OpenDSS-only (N/A): operational reset flag; no CIM equivalent."
+          - >-
+            Import: untranscribed (a command, not a setting). Export: unset.
 
       # (23) ControlSignal
       ControlSignal:
@@ -352,10 +397,12 @@ classes:
         required: false
         annotations:
           order: 23
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
         todos:
           - "Loadshape converter not yet implemented. ControlSignal LoadShape reference should map to a CIM SeasonDayTypeSchedule."
+        comments:
+          - >-
+            Import: raises when set (a control signal); no deck in the sweep
+            sets it, so a mapping waits for one. Export: unset.
 
       # (24) basefreq
       basefreq:
@@ -366,7 +413,8 @@ classes:
         annotations:
           order: 24
         comments:
-          - "Not stored on CIM RegulatingControl; base frequency is a circuit-level property in CIM."
+          - >-
+            Import: untranscribed (no home on a control). Export: unset.
 
       # (25) enabled
       enabled:
@@ -379,8 +427,12 @@ classes:
           dss_default: "true"
         exact_mappings:
           - cim:RegulatingControl.enabled
+          - cim:RegulatingCondEq.controlEnabled
         comments:
-          - "Import: RegulatingControl.enabled = enabled. Export: enabled from RegulatingControl.enabled."
+          - >-
+            Import: the control's enabled and the compensator's controlEnabled;
+            default true. Export: the control's enabled; the compensator's must
+            agree.
 
       # (26) like
       like:
@@ -391,4 +443,6 @@ classes:
         annotations:
           order: 26
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

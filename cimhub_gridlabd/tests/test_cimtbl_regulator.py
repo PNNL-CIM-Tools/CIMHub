@@ -77,7 +77,7 @@ def assert_gridlabd_regulation(model, network) -> None:
                 assert control.targetDeadband == pytest.approx(float(config.band_width))
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_golden():
     assert_matches_golden(regulator_part(read(ATOM / "regulator.glm"), MODEL), ATOM / "regulator.regulator.cimtbl")

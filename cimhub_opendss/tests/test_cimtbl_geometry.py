@@ -151,8 +151,20 @@ def test_earth_fails_fast(tmp_path, options, rho_b, message):
         _earth(tmp_path, options, "rho=30", rho_b)
 
 
-def test_no_geometry_has_no_earth(tmp_path):
+def _no_geometry(tmp_path, options):
     path = tmp_path / "deck.dss"
-    path.write_text("Clear\nNew Circuit.atom basekv=4.16 bus1=sourcebus\nSet earthmodel=carson\n"
+    path.write_text(f"Clear\nNew Circuit.atom basekv=4.16 bus1=sourcebus\n{options}\n"
                     "New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2\n")
-    assert earth_statement(DssReader(path).read_all()) is None
+    return earth_statement(DssReader(path).read_all())
+
+
+def test_no_geometry_keeps_a_set_earthmodel(tmp_path):
+    earth = _no_geometry(tmp_path, "Set earthmodel=carson")  # a floating EarthResistivity, so the export writes it
+    assert dict((column.name, value) for column, value in earth.cells) == {
+        "mRID": "earth", "name": "carson", "earthModelType": "carson", "rho": "100.0"}
+    assert earth.comment.startswith("the deck's earthmodel; no line names it")
+    assert "defaulted: rho=100.0" in earth.comment
+
+
+def test_no_geometry_and_no_earthmodel_has_no_earth(tmp_path):
+    assert _no_geometry(tmp_path, "") is None

@@ -2,8 +2,9 @@
 
 Bus-branch formats number their ratings by set (RAW's RATE1..RATE12), so they read a limit by its type rather than
 by duration. The sets are found as ``get_current_limits`` finds them: on the equipment and on its terminals, or on one
-of its terminals when ``terminal`` names it (a transformer's ratings are per winding). Each type has one value; two
-limits of one type that disagree raise.
+of its terminals when ``terminal`` names it (a transformer's ratings are per winding); a template's on the
+configuration (``get_configuration_limits_by_type``). Each type has one value; two limits of one type that disagree
+raise.
 """
 
 from __future__ import annotations
@@ -24,6 +25,18 @@ def get_limits_by_type(equipment: cim.ConductingEquipment, limit_class: type, un
         limit_sets = terminal.OperationalLimitSet
     else:
         raise ValueError(f"{describe(terminal)}: is not a terminal of {describe(equipment)}")
+    return _limits_by_type(equipment, limit_sets, limit_class, unit)
+
+
+def get_configuration_limits_by_type(configuration: cim.EquipmentConfiguration, limit_class: type,
+                                     unit: str) -> dict[cim.OperationalLimitType, float]:
+    """A template's limits, as ``get_limits_by_type`` reads an equipment's: those of its one
+    ``EquipmentConfiguration.OperationalLimitSet`` (GridAPPS-D extension). An equipment does not inherit them."""
+    limit_set = configuration.OperationalLimitSet
+    return _limits_by_type(configuration, [] if limit_set is None else [limit_set], limit_class, unit)
+
+
+def _limits_by_type(owner, limit_sets, limit_class: type, unit: str) -> dict[cim.OperationalLimitType, float]:
     found: dict[cim.OperationalLimitType, list] = {}
     for limit_set in limit_sets:
         for limit in limit_set.OperationalLimitValue:
@@ -33,5 +46,5 @@ def get_limits_by_type(equipment: cim.ConductingEquipment, limit_class: type, un
                 raise ValueError(f"{describe(limit)}: has no OperationalLimitType")
             found.setdefault(limit.OperationalLimitType, []).append(
                 (limit, required_qty(limit, "normalValue", unit)))
-    return {limit_type: agreed_limit(equipment, f"{limit_type.mRID} {limit_class.__name__}", values)
+    return {limit_type: agreed_limit(owner, f"{limit_type.mRID} {limit_class.__name__}", values)
             for limit_type, values in found.items()}

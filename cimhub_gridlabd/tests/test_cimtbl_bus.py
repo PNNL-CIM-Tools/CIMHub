@@ -45,7 +45,7 @@ def test_default_source_impedance():
     assert (DEFAULT_SHORT_CIRCUIT_MVA, DEFAULT_X_OVER_R) == (10_000.0, 10.0)
 
 
-# -- tier 1 / 1b: atoms ------------------------------------------------------------------------------------------
+# -- import and bind: atoms --------------------------------------------------------------------------------------
 
 def test_feeder_atom_goldens():
     documents = parts(read(ATOMS / "bus" / "feeder.glm"), "feeder")

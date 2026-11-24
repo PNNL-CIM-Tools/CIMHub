@@ -2791,11 +2791,11 @@ A cross-format check should list these as expected divergences, as for S4a-8's c
 - untranscribed, solver state or output: 29 slots (`V_Out` ... `climate_object_found`)
 - untranscribed, set from the inverter's soc_reserve (battery.cpp:727): 1 slots (`reserve_state_of_charge`)
 
-## S5: the deck sweep, tier 4 and G7 (proposed 2026-11-10; approved as recommended and built 2026-11-16)
+## S5: the deck sweep, the cross-format test and G7 (proposed 2026-11-10; approved as recommended and built 2026-11-16)
 
 S5 maps nothing new: no deck holds a `latitude` or `longitude`, so there is no coordinates part (the DSS S5's
 `buscoords.cimtbl` has no GLM source). It turns the eight per-slice deck sweeps into one, closes D6 with a complete
-IEEE13_cdpsm golden directory, adds the tier-4 IEEE 13 GLM vs DSS check, and records G7.
+IEEE13_cdpsm golden directory, adds the cross-format IEEE 13 GLM vs DSS check, and records G7.
 
 ### The deck sweep (S5-1)
 
@@ -2822,12 +2822,12 @@ directory: the written file set equals the golden set (no file missing or extra)
 the golden directory binds with `cimtables.load_model`. It replaces the nine per-slice IEEE13_cdpsm golden tests
 (DRY: one place to regenerate, `CIMHUB_UPDATE_GOLDENS=1`).
 
-### Tier 4: IEEE 13 GLM vs DSS (S5-3)
+### Cross-format: IEEE 13 GLM vs DSS (S5-3)
 
 IEEE13_cdpsm.glm is the Java CIMHub export of the model the DSS importer's `IEEE13_CDPSM` golden holds. The test binds
 **the two committed golden directories** with `cimhub_core` and `cimtables` only, matches equipment by its terminal
 buses (the bus names agree), and compares through the core getters in SI. It imports neither spoke and needs no
-engine, so it lives at the workspace root, `tests/cross_format/test_ieee13_glm_vs_dss.py`, as the tier-4 location
+engine, so it lives at the workspace root, `tests/cross_format/test_ieee13_glm_vs_dss.py`, as the cross-format location
 rule says (a test that touches two spokes' artifacts belongs to neither). The root needs a `tests/conftest.py`
 (the `cim_scope` fixture) and `scripts/test-all.sh` runs it as one more process.
 
@@ -2878,8 +2878,8 @@ sweep test records no timing (it would be flaky).
 |---|---|---|
 | S5-1 | Per-slice deck sweeps | One sweep test, one bind per deck, every slice's check on it; the eight `test_every_*` go |
 | S5-2 | The IEEE13_cdpsm golden (D6) | Add `zip_fractions.cimtbl`; one directory test (file set, each file, the directory binds) replaces the nine per-slice IEEE13 golden tests |
-| S5-3 | Where tier 4 lives | Root `tests/cross_format/`, comparing the two committed golden directories through the core getters (no spoke import, no engine); expected differences asserted, not skipped |
-| S5-4 | A disabled `TapChangerControl` with no target (GLM MANUAL) | The core `get_tap_changer_control` raises `targetValue is unset`, so neither tier 4 nor an exporter can read GLM's 3 IEEE 13 regulators (nor any MANUAL unit without a band). Recommended: core returns `target` None when the control is `enabled` false (a plan section 7 core row; tier 4 compares the taps until then). The alternative, the importer writing GridLAB-D's default `band_center` 0, would write a value GridLAB-D never reads |
+| S5-3 | Where the cross-format test lives | Root `tests/cross_format/`, comparing the two committed golden directories through the core getters (no spoke import, no engine); expected differences asserted, not skipped |
+| S5-4 | A disabled `TapChangerControl` with no target (GLM MANUAL) | The core `get_tap_changer_control` raises `targetValue is unset`, so neither the cross-format test nor an exporter can read GLM's 3 IEEE 13 regulators (nor any MANUAL unit without a band). Recommended: core returns `target` None when the control is `enabled` false (a plan section 7 core row; the cross-format test compares the taps until then). The alternative, the importer writing GridLAB-D's default `band_center` 0, would write a value GridLAB-D never reads |
 | S5-5 | The Java export's CT ratio | Keep GridLAB-D's reading (the engine's 1/5 compensation, as the deck would run), list it as an expected difference and a Java export defect, as S4b's battery. The alternative, reading it as DSS's CT primary (x 0.2), would follow the Java exporter's intent the way S4b's battery does; but here the mode is MANUAL, so nothing runs on it |
 | S5-6 | G7 | Recorded above; closed with no work |
 
@@ -2891,12 +2891,12 @@ On rc_1 `ddc6227` (the worktree fast-forwarded the same day; no incoming commit 
   per deck. The checks the slice sweeps made inline are now named helpers in their modules (`assert_buses`,
   `assert_catalogs`, `assert_lines_and_switches`, `assert_transformers`); the others were already
   (`assert_gridlabd_regulation`, `_loads`, `_capacitors`, `_der`). The eight `test_every_*` sweeps are gone, and so is
-  S4b's `test_ieee13_cdpsm_against_the_dss_golden`, whose values tier 4 now asserts against the DSS golden itself.
+  S4b's `test_ieee13_cdpsm_against_the_dss_golden`, whose values the cross-format test now asserts against the DSS golden itself.
 - **D6 (S5-2):** `zip_fractions.cimtbl` added, so `goldens/IEEE13_cdpsm/` has 16 files.
   `test_ieee13_cdpsm_golden_directory` writes the documents, matches every file to its golden, checks that the two
   file sets are the same, and binds the golden directory on its own (`cimtables.load_model`). It replaces the nine
   per-slice IEEE13_cdpsm golden tests, the master's included; `CIMHUB_UPDATE_GOLDENS=1` rewrites the whole directory.
-- **Tier 4 (S5-3):** `tests/cross_format/test_ieee13_glm_vs_dss.py` (13 tests) plus a root `tests/conftest.py`;
+- **Cross-format test (S5-3):** `tests/cross_format/test_ieee13_glm_vs_dss.py` (13 tests) plus a root `tests/conftest.py`;
   `scripts/test-all.sh` runs it as its own process (`scripts/test-all.sh cross_format`, and CI's no-argument run).
   It imports `cimhub_core` and the cim-graph stack only. Eight tests check what is equal (buses, base voltages,
   lines, switches, loads, capacitors, regulator taps, transformer ratings and core). Five assert the expected
@@ -2912,7 +2912,7 @@ On rc_1 `ddc6227` (the worktree fast-forwarded the same day; no incoming commit 
   and a Java export defect; the mapping keeps GridLAB-D's reading.
 - **Results:** the GLM suite with `--roundtrip` (29 decks): 249 passed in 51 s, down from 461 in 4 min 30 s.
   That is 461 - 232 sweep runs - 10 IEEE 13 tests + 29 sweep runs + 1 directory test. Core: 449 passed.
-  Tier 4: 13 passed. Leak gate and lint are clean.
+  Cross-format: 13 passed. Leak gate and lint are clean.
 
 ## S6: a utility's Milsoft WindMil decks (by the user's direction 2026-11-16; built, approved 2026-11-16)
 

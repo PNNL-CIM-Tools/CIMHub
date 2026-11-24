@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -24,18 +24,15 @@ classes:
       series and common windings share a magnetic core. Winding 1 is the series
       (high-side) winding; winding 2 is the common winding.
     class_uri: dss:Autotrans
-    exact_mappings:
-      - cim:PowerTransformer
+    close_mappings:
+      - cim:AutoTransformer
     comments:
       - >-
-        OpenDSS Autotrans maps to CIM PowerTransformer + PowerTransformerEnd (one per
-        winding), TransformerMeshImpedance (for short-circuit reactances XHX/XHT/XXT),
-        and TransformerCoreAdmittance (no-load losses, winding 1 only). Key difference
-        from regular Transformer: uses XHX/XHT/XXT naming instead of XHL/XHT/XLT; every
-        winding is imported as connectionKind Y, grounded, with zero ground impedance
-        (CIM has no explicit auto-transformer WindingConnection type). There is no
-        dedicated Autotrans exporter; export of a converted PowerTransformer is handled
-        by the same code path as a regular Transformer.
+        The spoke does not convert Autotrans: it is not in MAPPING_ORDER (the
+        master counts it as not mapped) and no exporter writes it. A CIM
+        AutoTransformer or VoltageRegulator exports as a DSS Transformer, and a
+        regulated Transformer imports as a VoltageRegulator with
+        AutoTransformerEnds.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -45,7 +42,8 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Not converted. Would be the AutoTransformer's name.
 
       # (1) phases
       phases:
@@ -56,7 +54,8 @@ classes:
         annotations:
           order: 1
         comments:
-          - "Import: inferred from bus connection specs. Not stored directly on CIM PowerTransformer (phase count is implicit in Terminal/End configuration)."
+          - >-
+            Not converted: the phase count is on the ends' Terminals.
 
       # (2) windings
       windings:
@@ -66,10 +65,9 @@ classes:
         required: false
         annotations:
           order: 2
-        related_mappings:
-          - cim:PowerTransformerEnd
         comments:
-          - "Import: creates one PowerTransformerEnd per winding. Export: len(PowerTransformer.PowerTransformerEnd)."
+          - >-
+            Not converted: one AutoTransformerEnd per winding.
 
       # (3) wdg
       wdg:
@@ -81,7 +79,8 @@ classes:
         annotations:
           order: 3
         comments:
-          - "OpenDSS-only (N/A): index selector consumed at parse time; no CIM equivalent."
+          - >-
+            Not converted: a DSS winding selector, resolved at parse time.
 
       # (4) bus
       bus:
@@ -91,10 +90,9 @@ classes:
         required: false
         annotations:
           order: 4
-        related_mappings:
-          - cim:Terminal.ConnectivityNode
         comments:
-          - "Each winding bus maps to a Terminal → ConnectivityNode. buses[] is the array form of the same property."
+          - >-
+            Not converted: buses is the array form.
 
       # (5) conn
       conn:
@@ -104,10 +102,9 @@ classes:
         required: false
         annotations:
           order: 5
-        exact_mappings:
-          - cim:PowerTransformerEnd.connectionKind
         comments:
-          - "Import: 'wye'/'wye-g' → WindingConnection.Y; 'delta' → WindingConnection.D. Export: reverse enum lookup. Auto-transformer windings are typically Y-connected in CIM."
+          - >-
+            Not converted: conns is the array form.
 
       # (6) kV
       kV:
@@ -118,10 +115,9 @@ classes:
         required: false
         annotations:
           order: 6
-        exact_mappings:
-          - cim:PowerTransformerEnd.ratedU
         comments:
-          - "Import: PowerTransformerEnd.ratedU = Voltage(kV, 'kV'). Export: kV = ratedU.to('kV'). CIM stores in V (SI base). kVs[] is the array form."
+          - >-
+            Not converted: kVs is the array form.
 
       # (7) kVA
       kVA:
@@ -131,10 +127,9 @@ classes:
         required: false
         annotations:
           order: 7
-        exact_mappings:
-          - cim:PowerTransformerEnd.ratedS
         comments:
-          - "Import: PowerTransformerEnd.ratedS = ApparentPower(kVA, 'kVA'). Export: kVA = ratedS.to('kVA'). CIM stores in VA (SI base). kVAs[] is the array form."
+          - >-
+            Not converted: kVAs is the array form.
 
       # (8) tap
       tap:
@@ -144,10 +139,11 @@ classes:
         required: false
         annotations:
           order: 8
-        comments:
-          - "OpenDSS-only (N/A) for now: the current converter reads tap into an internal per-winding parameter but never uses it to create a RatioTapChanger; no CIM field is set from this property. taps[] is the array form."
         todos:
           - "tap/taps[] is parsed but not converted. If implemented, it should create a RatioTapChanger on the winding's PowerTransformerEnd with step derived from the per-unit tap value."
+        comments:
+          - >-
+            Not converted: taps is the array form.
 
       # (9) %R
       pct_R:
@@ -158,20 +154,9 @@ classes:
         annotations:
           order: 9
           dss_name: "%R"
-        close_mappings:
-          - cim:PowerTransformerEnd.r
         comments:
           - >-
-            Import: for each winding, the percent resistance is taken from %Rs[winding]
-            if given, else from %R (applied to every winding), else a default of 0.5
-            percent; PowerTransformerEnd.r = Resistance(Zbase × pct_R / 100, 'ohm'),
-            where Zbase = kV² × 1000 / kVA using that winding's own kV and kVA. Export:
-            there is no dedicated Autotrans exporter, so the converted PowerTransformer
-            is written back out by the generic Transformer exporter, which emits
-            %r=<value> on every winding's continuation line using the same Zbase
-            formula in reverse. The exported DSS text always uses the Transformer
-            object type and XHL/XHT/XLT reactance naming, not Autotrans/XHX/XHT/XXT
-            (see class-level comments).
+            Not converted: pct_Rs is the array form.
 
       # (10) Rdcohms
       Rdcohms:
@@ -182,7 +167,9 @@ classes:
         annotations:
           order: 10
         comments:
-          - "OpenDSS-only (N/A): DC winding resistance for loss calculation; no separate CIM field on PowerTransformerEnd (CIM r is AC resistance)."
+          - >-
+            Not converted: DC winding resistance; no home on an
+            AutoTransformerEnd.
 
       # (11) Core
       Core:
@@ -193,7 +180,8 @@ classes:
         annotations:
           order: 11
         comments:
-          - "OpenDSS-only (N/A): core construction type; no CIM equivalent in the standard profile."
+          - >-
+            Not converted: no home in the network profile parts.
 
       # (12) buses
       buses:
@@ -205,10 +193,12 @@ classes:
         required: false
         annotations:
           order: 12
-        related_mappings:
+        close_mappings:
           - cim:Terminal.ConnectivityNode
+          - cim:Terminal.phases
         comments:
-          - "Array form of bus property; each element maps to a Terminal → ConnectivityNode for the corresponding winding."
+          - >-
+            Not converted: would be each AutoTransformerEnd's Terminal.
 
       # (13) conns
       conns:
@@ -219,10 +209,12 @@ classes:
         required: false
         annotations:
           order: 13
-        exact_mappings:
-          - cim:PowerTransformerEnd.connectionKind
+        close_mappings:
+          - cim:TransformerEnd.grounded
         comments:
-          - "Array form of conn property. Each element maps to PowerTransformerEnd.connectionKind via the same enum lookup."
+          - >-
+            Not converted: an AutoTransformerEnd has no connectionKind, only
+            grounded.
 
       # (14) kVs
       kVs:
@@ -233,10 +225,11 @@ classes:
         required: false
         annotations:
           order: 14
-        exact_mappings:
-          - cim:PowerTransformerEnd.ratedU
+        close_mappings:
+          - cim:AutoTransformerEnd.baseU
         comments:
-          - "Array form of kV property. Each element maps to the corresponding PowerTransformerEnd.ratedU."
+          - >-
+            Not converted: would be the AutoTransformerEnd nameplate baseU (kV).
 
       # (15) kVAs
       kVAs:
@@ -247,10 +240,11 @@ classes:
         required: false
         annotations:
           order: 15
-        exact_mappings:
-          - cim:PowerTransformerEnd.ratedS
+        close_mappings:
+          - cim:AutoTransformerEnd.ratedS
         comments:
-          - "Array form of kVA property. Each element maps to the corresponding PowerTransformerEnd.ratedS."
+          - >-
+            Not converted: would be the AutoTransformerEnd ratedS (kVA).
 
       # (16) taps
       taps:
@@ -260,10 +254,13 @@ classes:
         required: false
         annotations:
           order: 16
-        comments:
-          - "OpenDSS-only (N/A) for now: array form of tap; not converted by the current importer (see tap comments)."
         todos:
           - "Not implemented; see tap todos."
+        close_mappings:
+          - cim:TapChanger.step
+        comments:
+          - >-
+            Not converted: would be a RatioTapChanger step.
 
       # (17) XHX
       XHX:
@@ -278,15 +275,7 @@ classes:
           - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import: creates a TransformerMeshImpedance between windings 1 and 2, with
-            x = x0 = Zbase × XHX / 100, where Zbase uses winding 1's own kV together
-            with the primary winding's kVA. The paired TransformerMeshImpedance.r/r0
-            is set from the sum of the two windings' %R (see %R comments), not from
-            XHX itself. No separate zero-sequence reactance is derived; x0 always
-            equals x. Export: recovered as the generic Transformer exporter's XHL
-            field, using the same Zbase convention in reverse; the exported DSS text
-            uses Transformer/XHL naming, not Autotrans/XHX (see class-level comments).
-            Name equivalent to XHL in regular Transformer.
+            Not converted: would be the 1-2 mesh x.
 
       # (18) XHT
       XHT:
@@ -301,10 +290,7 @@ classes:
           - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import: same TransformerMeshImpedance formula as XHX (see XHX comments),
-            applied to the winding 1-to-3 pair; only used when 3 or more windings are
-            present. Export: recovered as the generic Transformer exporter's XHT
-            field (see XHX comments).
+            Not converted: would be the 1-3 mesh x.
 
       # (19) XXT
       XXT:
@@ -319,10 +305,7 @@ classes:
           - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import: same TransformerMeshImpedance formula as XHX (see XHX comments),
-            applied to the winding 2-to-3 pair; only used when 3 or more windings are
-            present. Export: recovered as the generic Transformer exporter's XLT
-            field (see XHX comments).
+            Not converted: would be the 2-3 mesh x.
 
       # (20) XSCarray
       XSCarray:
@@ -339,15 +322,7 @@ classes:
           - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import: array form giving one %Xsc entry per winding pair, in the order
-            produced by iterating pairs (i, k) with i < k over winding indices; each
-            entry uses the same TransformerMeshImpedance formula as XHX (see XHX
-            comments). Used in place of XHX/XHT/XXT for transformers with more than
-            3 windings. If fewer entries are given than there are winding pairs, the
-            remaining pairs default to 10.0 percent (higher than the default used for
-            a regular Transformer). Export: for more than 3 windings, the generic
-            Transformer exporter recovers the full pairwise list as Xscarray using
-            the same convention in reverse (see XHX comments).
+            Not converted: the array form of the mesh x.
 
       # (21) thermal
       thermal:
@@ -358,7 +333,8 @@ classes:
         annotations:
           order: 21
         comments:
-          - "OpenDSS-only (N/A): thermal model parameter; no CIM equivalent in the standard profile."
+          - >-
+            Not converted: thermal model; no home in the network profile parts.
 
       # (22) n
       n:
@@ -369,7 +345,8 @@ classes:
         annotations:
           order: 22
         comments:
-          - "OpenDSS-only (N/A): IEEE C57 thermal exponent; no CIM equivalent."
+          - >-
+            Not converted: thermal model; no home in the network profile parts.
 
       # (23) m
       m:
@@ -380,7 +357,8 @@ classes:
         annotations:
           order: 23
         comments:
-          - "OpenDSS-only (N/A): IEEE C57 thermal exponent; no CIM equivalent."
+          - >-
+            Not converted: thermal model; no home in the network profile parts.
 
       # (24) flrise
       flrise:
@@ -391,7 +369,8 @@ classes:
         annotations:
           order: 24
         comments:
-          - "OpenDSS-only (N/A): thermal rating parameter; no CIM equivalent in the standard profile."
+          - >-
+            Not converted: thermal model; no home in the network profile parts.
 
       # (25) hsrise
       hsrise:
@@ -402,7 +381,8 @@ classes:
         annotations:
           order: 25
         comments:
-          - "OpenDSS-only (N/A): hot spot thermal rating; no CIM equivalent."
+          - >-
+            Not converted: thermal model; no home in the network profile parts.
 
       # (26) %loadloss
       pct_loadloss:
@@ -413,13 +393,14 @@ classes:
         annotations:
           order: 26
           dss_name: "%loadloss"
-        comments:
-          - >-
-            OpenDSS-only (N/A) for now: the current converter never reads %loadloss;
-            no CIM field is set from this property. (%R/%Rs, not %loadloss, is what
-            drives PowerTransformerEnd.r for auto-transformers — see %R comments.)
         todos:
           - "%loadloss not read by the importer. If implemented, it should follow the same fallback used for regular Transformer: when neither %R nor %Rs is given, split %loadloss evenly across windings to derive each winding's %R."
+        close_mappings:
+          - cim:TransformerMeshImpedance.r
+        comments:
+          - >-
+            Not converted: an AutoTransformer's winding resistance is the mesh
+            r.
 
       # (27) %noloadloss
       pct_noloadloss:
@@ -430,16 +411,9 @@ classes:
         annotations:
           order: 27
           dss_name: "%noloadloss"
-        close_mappings:
-          - cim:TransformerCoreAdmittance.g
         comments:
           - >-
-            Import: a TransformerCoreAdmittance is created on winding 1 only when
-            %noloadloss or %imag is nonzero, with g = g0 = %noloadloss / 100 / Zbase,
-            where Zbase uses winding 1's own kV and kVA. Export: the generic
-            Transformer exporter recovers %noloadloss = g × Zbase × 100 using the same
-            Zbase convention; if no TransformerCoreAdmittance is present, it falls
-            back to a catalog-based (NoLoadTest) recovery path instead.
+            Not converted: an AutoTransformerEnd has no core admittance.
 
       # (28) normhkVA
       normhkVA:
@@ -449,10 +423,13 @@ classes:
         required: false
         annotations:
           order: 28
-        related_mappings:
-          - cim:OperationalLimit
         todos:
           - "Operational limit converter not yet implemented for transformers. Should map to a CurrentLimit or ApparentPowerLimit on the H winding terminal."
+        close_mappings:
+          - cim:ApparentPowerLimit.value
+        comments:
+          - >-
+            Not converted: ratings are untranscribed.
 
       # (29) emerghkVA
       emerghkVA:
@@ -462,10 +439,13 @@ classes:
         required: false
         annotations:
           order: 29
-        related_mappings:
-          - cim:OperationalLimit
         todos:
           - "Emergency operational limit converter not yet implemented."
+        close_mappings:
+          - cim:ApparentPowerLimit.value
+        comments:
+          - >-
+            Not converted: ratings are untranscribed.
 
       # (30) sub
       sub:
@@ -476,10 +456,11 @@ classes:
         required: false
         annotations:
           order: 30
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current importer; no CIM field is set from this property."
         todos:
           - "sub is not converted. If implemented, it should place the PowerTransformer in a Substation EquipmentContainer, using subname for the container's name."
+        comments:
+          - >-
+            Not converted: DSS report flag.
 
       # (31) MaxTap
       MaxTap:
@@ -489,10 +470,13 @@ classes:
         required: false
         annotations:
           order: 31
-        comments:
-          - "OpenDSS-only (N/A) for now: the current importer never creates a RatioTapChanger for an auto-transformer winding (see tap comments), so MaxTap is not read into any CIM field."
         todos:
           - "No RatioTapChanger is created by the importer. MaxTap/MinTap/NumTaps should together populate RatioTapChanger.highStep/lowStep/stepVoltageIncrement on the tapped winding's PowerTransformerEnd."
+        close_mappings:
+          - cim:TapChanger.highStep
+        comments:
+          - >-
+            Not converted: would be a RatioTapChanger range.
 
       # (32) MinTap
       MinTap:
@@ -502,10 +486,13 @@ classes:
         required: false
         annotations:
           order: 32
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current importer (see MaxTap comments)."
         todos:
           - "Not implemented; see MaxTap todos."
+        close_mappings:
+          - cim:TapChanger.lowStep
+        comments:
+          - >-
+            Not converted: would be a RatioTapChanger range.
 
       # (33) NumTaps
       NumTaps:
@@ -515,10 +502,13 @@ classes:
         required: false
         annotations:
           order: 33
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current importer; if implemented, would combine with MaxTap/MinTap to derive RatioTapChanger.stepVoltageIncrement = (MaxTap - MinTap) / NumTaps (see MaxTap comments)."
         todos:
           - "Not implemented; see MaxTap todos."
+        close_mappings:
+          - cim:RatioTapChanger.stepVoltageIncrement
+        comments:
+          - >-
+            Not converted: would be a RatioTapChanger range.
 
       # (34) subname
       subname:
@@ -528,10 +518,11 @@ classes:
         required: false
         annotations:
           order: 34
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current importer (see sub comments)."
         todos:
           - "Not implemented; see sub todos."
+        comments:
+          - >-
+            Not converted: DSS report label.
 
       # (35) %imag
       pct_imag:
@@ -542,15 +533,9 @@ classes:
         annotations:
           order: 35
           dss_name: "%imag"
-        close_mappings:
-          - cim:TransformerCoreAdmittance.b
         comments:
           - >-
-            Import: same TransformerCoreAdmittance created as for %noloadloss (see
-            %noloadloss comments), with b = b0 = %imag / 100 / Zbase. Export: the
-            generic Transformer exporter recovers %imag = b × Zbase × 100 using the
-            same Zbase convention (or the catalog-based fallback if no
-            TransformerCoreAdmittance is present).
+            Not converted: an AutoTransformerEnd has no core admittance.
 
       # (36) ppm_antifloat
       ppm_antifloat:
@@ -562,7 +547,8 @@ classes:
         annotations:
           order: 36
         comments:
-          - "OpenDSS-only (N/A): numerical stability parameter; no CIM equivalent."
+          - >-
+            Not converted: numerical aid of the DSS solver.
 
       # (37) %Rs
       pct_Rs:
@@ -575,9 +561,11 @@ classes:
           order: 37
           dss_name: "%Rs"
         close_mappings:
-          - cim:PowerTransformerEnd.r
+          - cim:TransformerMeshImpedance.r
         comments:
-          - "Array form of %R property. Each element maps to the corresponding PowerTransformerEnd.r via the same percent-to-ohm conversion."
+          - >-
+            Not converted: an AutoTransformer's winding resistance is the mesh
+            r.
 
       # (38) bank
       bank:
@@ -588,10 +576,11 @@ classes:
         required: false
         annotations:
           order: 38
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current importer; no TransformerTank grouping is created for an Autotrans."
         todos:
           - "bank is not converted. If implemented, it should group single-phase auto-transformer units sharing the same bank name into a TransformerTank."
+        comments:
+          - >-
+            Not converted: each transformer would be its own container.
 
       # (39) XfmrCode
       XfmrCode:
@@ -602,16 +591,11 @@ classes:
         required: false
         annotations:
           order: 39
-        related_mappings:
-          - cim:PowerTransformer.AssetDatasheet
-        comments:
-          - >-
-            Import: not read by the current importer; PowerTransformer.AssetDatasheet
-            is never set for an Autotrans. Export: if AssetDatasheet happens to be set
-            (e.g. by another tool), the generic Transformer exporter writes
-            XfmrCode=AssetDatasheet.name.
         todos:
           - "XfmrCode is not read on import. If implemented, it should resolve to a catalog object by name and set PowerTransformer.AssetDatasheet."
+        comments:
+          - >-
+            Not converted: the template classes name Transformer codes only.
 
       # (40) XRConst
       XRConst:
@@ -623,7 +607,8 @@ classes:
         annotations:
           order: 40
         comments:
-          - "OpenDSS-only (N/A): frequency dependence flag; no CIM equivalent."
+          - >-
+            Not converted: harmonics option.
 
       # (41) LeadLag
       LeadLag:
@@ -636,7 +621,9 @@ classes:
         annotations:
           order: 41
         comments:
-          - "OpenDSS-only (N/A): phase displacement designation; no standard CIM field on PowerTransformerEnd for this."
+          - >-
+            Not converted: phase displacement; no home in the network profile
+            parts.
 
       # (42) WdgCurrents
       WdgCurrents:
@@ -647,7 +634,8 @@ classes:
         annotations:
           order: 42
         comments:
-          - "OpenDSS-only (N/A): read-only operational output; no CIM equivalent."
+          - >-
+            Not converted: a read-only operational output.
 
       # (43) normamps
       normamps:
@@ -657,10 +645,13 @@ classes:
         required: false
         annotations:
           order: 43
-        related_mappings:
-          - cim:CurrentLimit
         todos:
           - "Operational limit converter not yet implemented for auto-transformers."
+        close_mappings:
+          - cim:CurrentLimit.value
+        comments:
+          - >-
+            Not converted: ratings are untranscribed.
 
       # (44) emergamps
       emergamps:
@@ -670,10 +661,13 @@ classes:
         required: false
         annotations:
           order: 44
-        related_mappings:
-          - cim:CurrentLimit
         todos:
           - "Emergency operational limit converter not yet implemented."
+        close_mappings:
+          - cim:CurrentLimit.value
+        comments:
+          - >-
+            Not converted: ratings are untranscribed.
 
       # (45) faultrate
       faultrate:
@@ -683,10 +677,11 @@ classes:
         required: false
         annotations:
           order: 45
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Not converted: reliability data.
 
       # (46) pctperm
       pctperm:
@@ -696,10 +691,11 @@ classes:
         required: false
         annotations:
           order: 46
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Not converted: reliability data.
 
       # (47) repair
       repair:
@@ -709,10 +705,11 @@ classes:
         required: false
         annotations:
           order: 47
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Not converted: reliability data.
 
       # (48) basefreq
       basefreq:
@@ -723,7 +720,8 @@ classes:
         annotations:
           order: 48
         comments:
-          - "Not stored on CIM PowerTransformer; base frequency is a circuit-level property in CIM."
+          - >-
+            Not converted: no home on a transformer.
 
       # (49) enabled
       enabled:
@@ -733,8 +731,11 @@ classes:
         required: false
         annotations:
           order: 49
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created."
+          - >-
+            Not converted: would be normallyInService.
 
       # (50) like
       like:
@@ -745,4 +746,5 @@ classes:
         annotations:
           order: 50
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Not converted: resolved by the reader before mapping.

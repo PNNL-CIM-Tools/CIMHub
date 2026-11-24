@@ -47,7 +47,7 @@ def segment_phases(segment) -> dict[int, str]:
     return {phase.sequenceNumber: phase.phase.value for phase in segment.ACLineSegmentPhases}
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_goldens():
     documents = parts(read(ATOM / "line.glm"), "line")

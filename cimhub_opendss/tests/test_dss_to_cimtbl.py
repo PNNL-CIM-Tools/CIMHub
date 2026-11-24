@@ -7,6 +7,7 @@ import pytest
 from cimhub_core.cimtbl_testing import assert_text_matches_golden, cim_scope
 from cimhub_opendss import DssImporter, DssReader, dss_to_cim
 from cimhub_opendss.dss_reader import dss_defaults
+from cimhub_opendss.exporter.cim_to_dss import DssExporter
 from cimhub_opendss.importer.dss_to_cimtbl import MAPPING_ORDER
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -62,7 +63,8 @@ def test_artifact_directory_matches_golden(ieee13, tmp_path):
 
 
 def test_parts_follow_the_mapping_order(documents):
-    assert [part.name for part in documents.parts] == ["bus", "zip_fractions", "linecode", "xfmrcode", "vsource",
+    assert [part.name for part in documents.parts] == ["bus", "zip_fractions", "linegeometry", "linecode",
+                                                       "xfmrcode", "vsource",
                                                        "line", "transformer", "regcontrol", "load", "capacitor",
                                                        "pvsystem", "storage"]
     assert len(MAPPING_ORDER) == len({native_class for native_class, _ in MAPPING_ORDER})
@@ -94,7 +96,7 @@ def test_ieee13_binds_under_cim18v17(ieee13, tmp_path):
     network = dss_to_cim(ieee13, name="IEEE13_CDPSM", artifact_dir=tmp_path)
     assert sorted(path.name for path in tmp_path.iterdir()) == [
         "IEEE13_CDPSM.cimtbl", "bus.cimtbl", "buscoords.cimtbl", "capacitor.cimtbl", "line.cimtbl",
-        "linecode.cimtbl", "load.cimtbl", "pvsystem.cimtbl", "regcontrol.cimtbl", "storage.cimtbl",
+        "linecode.cimtbl", "linegeometry.cimtbl", "load.cimtbl", "pvsystem.cimtbl", "regcontrol.cimtbl", "storage.cimtbl",
         "transformer.cimtbl", "vsource.cimtbl", "xfmrcode.cimtbl", "zip_fractions.cimtbl"]
     assert_base_voltages_agree(network)
     cim = network.cim
@@ -150,3 +152,16 @@ def test_ieee13_assets_catalogs_bind(tmp_path):
     cim = network.cim
     # 7 geometries and the synthesized configuration of 684652 (spacing 510 + wires)
     assert len(network.graph[cim.WireConfiguration]) == 8 and len(network.graph[cim.XYSpacing]) == 5
+
+
+def test_voltagebases_on_no_bus_are_kept_for_the_engine(tmp_path):
+    """Every voltagebases value is a BaseVoltage, even on no bus: the export writes them back for CalcVoltageBases."""
+    deck = tmp_path / "bare.dss"
+    deck.write_text("New Circuit.bare basekv=12.47\nSet voltagebases=[12.47 0.48]\n")
+    native = DssReader(deck).read_all()
+    master = DssImporter("bare").to_cimtbl(native).master
+    [bases] = [s for s in master.statements if getattr(s, "cim_class", None) == "BaseVoltage"]
+    assert [row.cells for row in bases.rows] == [["bv_12p47kv", "12.47"], ["bv_480v", "0.48"]]
+    assert bases.comment == "voltagebases: 12.47, 0.48; on no bus: 0.48"
+    [options] = DssExporter().to_model(dss_to_cim(native, name="bare")).list_by_class(schema.Options)
+    assert options.voltagebases == [0.48, 12.47]

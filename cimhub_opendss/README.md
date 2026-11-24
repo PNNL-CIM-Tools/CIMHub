@@ -49,7 +49,7 @@ does not export. Unknown fields, unmapped enumerations and unresolved references
 
 - [OpenDSS to `.cimtbl` mapping spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_opendss/docs/CIMTBL_MAPPING.md)
 - [CIM to OpenDSS export spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_opendss/docs/EXPORT_MAPPING.md)
-- [Documentation site source](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_opendss/docs/index.md)
+- [Documentation](https://pnnl-cim-tools.github.io/CIMHub/opendss/): user guide, conversion reference, developer docs and the LinkML schema reference
 - [CIMHub architecture](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/architecture.md) and [converter API](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/converter-api.md)
 
 BSD 3-Clause. Source and issues: <https://github.com/PNNL-CIM-Tools/CIMHub>.

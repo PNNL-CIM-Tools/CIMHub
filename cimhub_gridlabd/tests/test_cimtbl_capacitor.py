@@ -64,7 +64,7 @@ def assert_gridlabd_capacitors(model, network) -> int:
     return checked
 
 
-# -- tier 1 / 1b: the atom ----------------------------------------------------------------------------------------
+# -- import and bind: the atom ------------------------------------------------------------------------------------
 
 def test_atom_golden():
     assert_matches_golden(capacitor_part(read(ATOM / "capacitor.glm"), MODEL), ATOM / "capacitor.capacitor.cimtbl")

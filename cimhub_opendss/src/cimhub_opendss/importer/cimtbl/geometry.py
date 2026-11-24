@@ -231,13 +231,15 @@ def _text(value) -> str:
 
 def earth_statement(native) -> ObjectStatement | None:
     """The deck's ``EarthResistivity`` for its geometries: ``Set earthmodel`` and the geometry lines' ``rho``
-    (ohm-m; they must agree), the engine's Deri and 100 when unset (DSS-6). None for a deck without geometry, whose
-    earth model computes nothing."""
-    if not uses_geometry(native):
-        return None
-    defaulted = []
+    (ohm-m; they must agree), the engine's Deri and 100 when unset (DSS-6). A deck without geometry gets one only
+    when it sets ``earthmodel``: a floating EarthResistivity no line names, kept so the export writes the setting
+    back. Otherwise None: its earth model computes nothing."""
     options = native.list_by_class(schema.Options)  # none in a model of geometry alone: no Set earthmodel
     model = options[0].earthmodel if options else None
+    geometry = uses_geometry(native)
+    if not geometry and model is None:
+        return None
+    defaulted = []
     if model is None:
         model = dss_defaults(schema.Options)["earthmodel"]
         defaulted.append(f"earthmodel={_text(model)}")
@@ -253,7 +255,8 @@ def earth_statement(native) -> ObjectStatement | None:
     else:
         rho = float(dss_defaults(schema.Line)["rho"])
         defaulted.append(f"rho={cell(rho)}")
-    comment = "the deck's earthmodel and its geometry lines' rho (ohm-m: the profile types rho Resistance)"
+    source = "the deck's earthmodel and its geometry lines' rho" if geometry else "the deck's earthmodel; no line names it"
+    comment = f"{source} (ohm-m: the profile types rho Resistance)"
     if defaulted:
         comment += f"\ndefaulted: {', '.join(defaulted)}"
     return ObjectStatement("EarthResistivity", [(Column("mRID"), EARTH_MRID), (Column("name"), kind),

@@ -7,7 +7,13 @@ One DSS Transformer per unit (T4). A unit on a TankConfiguration names its XfmrC
 
 from __future__ import annotations
 
+import re
+
+import cimprofiles.cim18.cim18v17 as cim
+
+from cimhub_core.getters import describe
 from cimhub_core.getters.in_service import get_in_service
+from cimhub_core.getters.limits_by_type import get_limits_by_type
 from cimhub_opendss.exporter import windings
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
@@ -45,7 +51,11 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "MaxTap": Slot("written", "get_tap_ratio(high)"), "MinTap": Slot("written", "get_tap_ratio(low)"),
     "NumTaps": Slot("written", "highStep - lowStep"),
     "XfmrCode": Slot("written", "the unit's TankConfiguration (BY_TANK_ENDS, BY_LUGS)"),
-    "normhkVA": Slot("unset", "untranscribed on import (D9)"), "emerghkVA": Slot("unset", "untranscribed (D9)"),
+    "normhkVA": Slot("unset", "untranscribed on import"), "emerghkVA": Slot("unset", "untranscribed"),
+    "RdcOhms": Slot("rule", f"each winding's rDC (ohm), written per winding; an end has none -> not written; {_INLINE}"),
+    "Seasons": Slot("rule", "the number of season ratings (season_ratings); none -> not written"),
+    "Ratings": Slot("rule", "the PowerTransformer's ApparentPowerLimits of type olt_season<n> (kVA), in season "
+                            "order; other types are not written; none -> not written"),
     "bank": Slot("unset", "each DSS Transformer is its own PowerTransformer (DSS-2)"),
     "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
     "like": Slot("not mapped", "the writer never writes like="),
@@ -55,6 +65,26 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 def xfmrcode_name(configuration, names: Names) -> str:
     """The DSS name of a TransformerTankConfiguration, as its XfmrCode and every instance write it."""
     return names.name(configuration, XFMRCODE_NAMESPACE)
+
+
+#: the importer's season rating types, olt_season<n> (transformer.season_limit_type)
+SEASON_TYPE = re.compile(r"olt_season(\d+)")
+
+
+def season_ratings(limits: dict, owner) -> dict:
+    """``Seasons`` and ``Ratings`` (kVA) from ``limits`` by type (``get_limits_by_type``): the ``olt_season<n>``
+    ones, in season order; empty when there are none. Seasons that are not 1..n raise, since DSS numbers them."""
+    by_season = {}
+    for limit_type, value in limits.items():
+        match = SEASON_TYPE.fullmatch(limit_type.mRID)
+        if match is not None:
+            by_season[int(match.group(1))] = value
+    if not by_season:
+        return {}
+    if sorted(by_season) != list(range(1, len(by_season) + 1)):
+        raise ValueError(f"{describe(owner)}: season ratings for seasons {sorted(by_season)}; DSS's Ratings are "
+                         "seasons 1..n")
+    return dict(Seasons=len(by_season), Ratings=[by_season[number] for number in sorted(by_season)])
 
 
 def export(context) -> list[schema.Transformer]:
@@ -71,7 +101,11 @@ def _transformer(transformer, unit, shared: bool, names: Names) -> schema.Transf
     unit_model = windings.read_unit(unit)
     slots = dict(name=windings.unit_name(transformer, unit, names), buses=windings.winding_buses(unit_model, names),
                  **windings.tap_values(unit_model, shared=shared),
-                 enabled=get_in_service(transformer, which="normal"))
+                 enabled=get_in_service(transformer, which="normal"),
+                 **season_ratings(get_limits_by_type(transformer, cim.ApparentPowerLimit, "kVA"), transformer))
+    if shared and slots.get("Ratings"):
+        raise ValueError(f"{describe(transformer)}: seasonal ratings on a transformer of several units; DSS rates "
+                         "each unit's Transformer")
     if unit_model.model.form in windings.TEMPLATE_FORMS:
         slots["XfmrCode"] = xfmrcode_name(unit.TankConfiguration, names)
     else:

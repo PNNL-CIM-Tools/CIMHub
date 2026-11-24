@@ -11,7 +11,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -25,26 +25,17 @@ classes:
       The geographic or projected position of a single bus, as one row of a
       BusCoords / LatLongCoords CSV (``BusName, c1, c2``).
     class_uri: dss:Buscoords
-    exact_mappings:
+    close_mappings:
       - cim:PositionPoint
+    related_mappings:
+      - cim:Location
+      - cim:CoordinateSystem
     comments:
       - >-
-        OpenDSS Buscoords maps to CIM PositionPoint, which requires a parent
-        Location. A ConnectivityNode is not a PowerSystemResource, so the
-        importer gives each piece of equipment one Location with a
-        PositionPoint per Terminal at that Terminal's bus (sequenceNumber = the
-        Terminal's), as the engine's CIM export does (CIMTBL_MAPPING.md S5).
-      - >-
-        Coordinate ORDER differs by directive and is normalized on read, so x/y
-        here are always ``x=easting/longitude, y=northing/latitude``:
-        ``BusCoords`` files are ``name, x, y`` and used as-is;
-        ``LatLongCoords`` files are ``name, lat, long`` and are swapped.
-        The directive decides, not the filename — IEEE13_Assets uses a
-        ``BusCoords`` directive for a file named ``..._latlon.csv``.
-      - >-
-        There is no ``New Buscoords`` DSS command, so this class is never emitted
-        by the DSS writer as an object definition. The exporter writes a
-        ``BusCoords <file>`` directive plus the CSV instead.
+        Import: not a CIM class. Each bus coordinate sets the Location and PositionPoint of every
+        equipment Terminal on that bus (buscoords.cimtbl, a bound_parts document); LatLongCoords
+        picks the CoordinateSystem.
+      - "Export: one row per bus from the equipment Locations (exporter/buscoords.py)."
     attributes:
       name:
         description: >-
@@ -52,13 +43,12 @@ classes:
         range: string
         required: true
         identifier: true
-        exact_mappings:
-          - cim:IdentifiedObject.name
+        related_mappings:
+          - cim:Terminal.ConnectivityNode
         comments:
           - >-
-            Import: matched (lowercased) to a ConnectivityNode; each Location
-            is named ``<equipment name>_Loc``. DSS bus names are
-            case-insensitive, so the identifier is stored lowercased.
+            Import: structural; picks the bus: every Terminal on it takes its coordinates. Export:
+            the bus (Names.bus) of each Terminal of located equipment.
 
       # (1) x
       x:
@@ -69,13 +59,13 @@ classes:
         required: false
         annotations:
           order: 1
-        exact_mappings:
+        close_mappings:
           - cim:PositionPoint.xPosition
         comments:
           - >-
-            Import: PositionPoint.xPosition = str(x). Export: x = float(xPosition).
-            CIM stores position as a string, so the cast is explicit in both
-            directions.
+            Import: derived; geometry: a line's LINESTRING vertex at each Terminal bus, verbatim.
+            Export: the Terminal's PositionPoint xPosition (get_location_coordinates); a bus only a
+            device point touches is solved from it as the centroid of the device's buses.
 
       # (2) y
       y:
@@ -86,10 +76,10 @@ classes:
         required: false
         annotations:
           order: 2
-        exact_mappings:
+        close_mappings:
           - cim:PositionPoint.yPosition
         comments:
-          - "Import: PositionPoint.yPosition = str(y). Export: y = float(yPosition)."
+          - "Import: derived; as x. Export: as x, from yPosition."
 
       # (3) geographic
       geographic:
@@ -100,9 +90,10 @@ classes:
         required: false
         annotations:
           order: 3
+        close_mappings:
+          - cim:CoordinateSystem.crsUrn
         comments:
           - >-
-            OpenDSS-only (N/A): records which directive supplied the row so a
-            round trip can write it back to the right one. CIM PositionPoint has
-            no CRS field — Location.CoordinateSystem carries that, and this
-            schema does not model it.
+            Import: mapped; the directive (LatLongCoords -> true) picks the CoordinateSystem:
+            COORDINATE_SYSTEMS. Export: crsUrn CRS84 -> true (LatLongCoords),
+            OpenDSSLocalBusCoordinates -> false; others raise.

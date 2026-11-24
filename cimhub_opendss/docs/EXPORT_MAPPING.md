@@ -23,7 +23,7 @@ cimhub_opendss/src/cimhub_opendss/exporter/
   DssModel`.** It runs each
   module of `EXPORT_ORDER` over its CIM classes and adds the records. `history` stays empty: it is a reader
   artifact.
-- Each module has `export(obj, context) -> list[record]` and `SLOTS`, which names each slot of its DSS class as
+- Each module has `export(context) -> list[record]` and `SLOTS`, which names each slot of its DSS class as
   `written` (from which getter), `rule` (a CIM `None` DSS needs, E4), `unset` (CIM cannot hold it; engine default)
   or `not mapped`. A test checks that `SLOTS` covers every schema slot, as `check_fields` does on import, and the
   tables below are generated from it.
@@ -74,8 +74,12 @@ and an `N` before then raises.
 
 One `Options(name="options", circuit=..., defaultbasefreq=..., voltagebases=[...])` record:
 - `defaultbasefreq` = `network.base_frequency` in Hz;
-- `voltagebases` = the distinct `BaseVoltage.nominalVoltage` values in kV, sorted ascending;
-- `earthmodel` the WireConfigurations' one EarthResistivity model (`options.earth_model`, S6g); none -> not set;
+- `voltagebases` = the distinct `BaseVoltage.nominalVoltage` values in kV, sorted ascending. Since 2026-11-24 the
+  importer keeps a deck's `voltagebases` on no bus as BaseVoltages too, so these are the deck's bases back, which the
+  engine's `CalcVoltageBases` snaps bus bases to;
+- `earthmodel` the WireConfigurations' one EarthResistivity model (`options.earth_model`, S6g). With no geometry at
+  all, the network's one EarthResistivity, which no line names (the importer keeps a deck's `Set earthmodel` that
+  way, 2026-11-24). None -> not set;
 - `open_terminals` filled by S6b's switches.
 
 `network.base_frequency` follows the graph's `BaseFrequency` (U14, closed 2026-11-09 in CIM-Graph), so a 50 Hz
@@ -160,6 +164,9 @@ impedance_unit="ohm")`. **The impedance form depends on the phases (found in imp
   template set after `buses=` re-sizes the windings and resets their buses (IEEE13 `Tpoletop`'s third winding
   became `tpoletop_3`), and `Switch=y` sets r1=1, x1=1, .... `phases` goes before `Switch`, as the decks write it:
   the engine's recalculation of a switch line at `CalcVoltageBases` depends on that order (IEEE13 `Sect1`).
+- **Per-winding slots with no array form go last** (`_PER_WINDING_SLOTS`: `RdcOhms`, 2026-11-24): one
+  `wdg=n RdcOhms=v` block per winding, after every other slot, so no other per-winding slot follows a `wdg=` they
+  move.
 - **A LineGeometry with positions is written as `cond=` blocks**, each naming its conductor's kind (`wire`,
   `cncable`, `tscable`) from the catalog that defines the name. The reader folds the blocks into
   `wires`/`xs`/`hs` (mixed kinds into one cond-ordered `wires` list) and leaves the last block in the cursor slots.
@@ -855,10 +862,30 @@ it, so they follow the same rules as an inline Transformer:
 - `windings`, `conns`, `kVs`, `kVAs` and `%Rs`;
 - `Xhl`, `Xht` and `Xlt`;
 - `%imag` and `%noloadloss`;
-- `Rneut`/`Xneut` from the TankEnd's `rground`/`xground`.
+- `Rneut`/`Xneut` from the TankEnd's `rground`/`xground`;
+- `RdcOhms` from the template windings' `rDC`, and `Seasons`/`Ratings` from the template's own limit set (below).
 
 `MaxTap` and the other tap slots are the instance's. Every instance names it `XfmrCode=<code>` and writes its buses
 from its own model.
+
+### DC resistance and seasonal ratings (2026-11-24)
+
+The importer now maps `RdcOhms` to `TransformerWinding.rDC` and `Seasons`/`Ratings` to `ApparentPowerLimit`s of
+type `olt_season<n>` (CIMTBL_MAPPING.md, Transformer and XfmrCode), so the exporter writes them back:
+- **`RdcOhms`** is each winding's `rDC` (ohm), from the core `Winding.r_dc` of `get_transformer_model`, which is
+  None on an end (BY_ENDS, AUTO): then nothing is written. The writer emits it last, one `wdg=n RdcOhms=v` block
+  per winding, since DSS has no array form (`_PER_WINDING_SLOTS`). Some windings with and some without `rDC` raise:
+  DSS would take its default for those.
+- **`Seasons`** is the number of `olt_season<n>` limits and **`Ratings`** their values (kVA) in season order
+  (`transformer.season_ratings`), read with `get_limits_by_type(transformer, ApparentPowerLimit, "kVA")` on a
+  PowerTransformer and `get_configuration_limits_by_type(configuration, ...)` on a template (its
+  `EquipmentConfiguration.OperationalLimitSet`). Seasons that are not 1..n raise, since DSS numbers them.
+  ApparentPowerLimits of other types are not written. Ratings on a transformer of several units raise: DSS rates
+  each unit's Transformer.
+- Atoms: `transformer/rated_inline.dss` and `xfmrcode/rated.dss`, goldens `export/rated_inline.dss` and
+  `export/rated.dss`; `test_ratings_and_dc_resistance_match_the_engine` checks that the exported `Seasons`,
+  `Ratings` and each winding's `RdcOhms` are what the engine read from the original.
+- `normhkVA`/`emerghkVA` stay unwritten (untranscribed on import).
 
 ### Taps
 
@@ -1012,8 +1039,8 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | hsrise | unset | untranscribed on import; not in CIM |
 | pct_loadloss | not mapped | %Rs carries the winding r (AUTO: the mesh r halved, T7) |
 | pct_noloadloss | written | the core g (percent on winding 1's kVA); unset -> not written; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
-| normhkVA | unset | untranscribed on import (D9) |
-| emerghkVA | unset | untranscribed (D9) |
+| normhkVA | unset | untranscribed on import |
+| emerghkVA | unset | untranscribed |
 | sub | unset | untranscribed on import; not in CIM |
 | MaxTap | written | get_tap_ratio(high) |
 | MinTap | written | get_tap_ratio(low) |
@@ -1030,9 +1057,9 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | X23 | unset | untranscribed on import; not in CIM |
 | LeadLag | unset | untranscribed on import; not in CIM |
 | Core | unset | untranscribed on import; not in CIM |
-| RdcOhms | unset | untranscribed on import; not in CIM |
-| Seasons | unset | untranscribed on import; not in CIM |
-| Ratings | unset | untranscribed on import; not in CIM |
+| RdcOhms | rule | each winding's rDC (ohm), written per winding; an end has none -> not written; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
+| Seasons | rule | the number of season ratings (season_ratings); none -> not written |
+| Ratings | rule | the PowerTransformer's ApparentPowerLimits of type olt_season<n> (kVA), in season order; other types are not written; none -> not written |
 | normamps | unset | untranscribed on import; not in CIM |
 | emergamps | unset | untranscribed on import; not in CIM |
 | faultrate | unset | untranscribed on import; not in CIM |
@@ -1072,8 +1099,8 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | hsrise | unset | untranscribed on import; not in CIM |
 | pct_loadloss | not mapped | %Rs carries the winding r |
 | pct_noloadloss | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
-| normhkVA | unset | untranscribed on import (D9) |
-| emerghkVA | unset | untranscribed (D9) |
+| normhkVA | unset | untranscribed on import |
+| emerghkVA | unset | untranscribed |
 | MaxTap | not mapped | a tap is the instance's |
 | MinTap | not mapped | a tap is the instance's |
 | NumTaps | not mapped | a tap is the instance's |
@@ -1083,9 +1110,9 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | X12 | unset | untranscribed on import; not in CIM |
 | X13 | unset | untranscribed on import; not in CIM |
 | X23 | unset | untranscribed on import; not in CIM |
-| RdcOhms | unset | untranscribed on import; not in CIM |
-| Seasons | unset | untranscribed on import; not in CIM |
-| Ratings | unset | untranscribed on import; not in CIM |
+| RdcOhms | written | as the Transformer's (windings.py), read through the first unit; every unit must give the same |
+| Seasons | rule | the number of the template's season ratings; none -> not written |
+| Ratings | rule | the TransformerTankConfiguration's ApparentPowerLimits of type olt_season<n> (kVA, EquipmentConfiguration.OperationalLimitSet), in season order; none -> not written |
 | like | not mapped | the writer never writes like= |
 
 **Regcontrol** (`exporter/regcontrol.py`)
@@ -1841,7 +1868,7 @@ so the list stays true:
 | copied from the original | why | decks |
 |---|---|---|
 | `Transformer.taps`, `Capacitor.states` | an in-deck `Solve` moves them; the importer reads the deck's text (F2) | IEEE13_original, IEEE37, IEEE13_Assets (caps), IEEE123_PV, IEEE123_deconfliction, IEEE9500 |
-| `earthmodel` | not in CIM (E10); Carson against the engine's Deri moves a geometry line's YPrim by 0.6 % | IEEE13_CDPSM, IEEE13_Assets, IEEE4 Bal (DY, GrdYD, YD, YY), IEEE123_PV, IEEE9500, ACEP_PSIL |
+| `earthmodel` | not in CIM (E10); Carson against the engine's Deri moves a geometry line's YPrim by 0.6 % | none since 2026-11-24 (S6g gave geometry decks an EarthResistivity; decks without geometry keep a floating one). It was IEEE13_CDPSM, IEEE13_Assets, IEEE4 Bal (DY, GrdYD, YD, YY), IEEE123_PV, IEEE9500, ACEP_PSIL |
 | `Load.Vminpu`/`Vmaxpu` | not in CIM (L6); below Vminpu a load turns constant Z | IEEE13_CDPSM, every IEEE4 deck, IEEE8500 (all 1,177 loads `Vminpu=.88`), IEEE9500 |
 | `Transformer.ppm_antifloat` | not in CIM; `ppm=0` against the engine's 1 ppm moves a floating delta's voltage to ground | IEEE123, 4bus-OYOD-UnBal, IEEE123_PV, IEEE123_deconfliction, IEEE8500, IEEE9500 |
 
@@ -1968,13 +1995,17 @@ ones too.
 - `rho` is the geometry lines' `rho`, which must all agree.
 - Unset values take the engine's defaults, Deri and 100 ohm-m, listed as `# defaulted:` (DSS-6).
 - `rho` on a line without geometry raises: it computes nothing there.
-- A deck without geometry gets no EarthResistivity, since its earth model computes nothing. Its `Set earthmodel` is
-  then lost; the parity harness still lists it for IEEE13_CDPSM, IEEE123_PV, IEEE9500 and ACEP_PSIL.
+- A deck without geometry that sets `earthmodel` gets the same `EarthResistivity` `earth`, floating: no line names
+  it, and `rho` is the default 100 ohm-m (`defaulted: rho=100.0`; the comment says `no line names it`). It keeps the
+  setting for the export. A deck with neither geometry nor `earthmodel` gets none, since its earth model computes
+  nothing (amended 2026-11-24: before, a deck without geometry got none and lost its `Set earthmodel`, which the
+  parity harness listed for IEEE13_CDPSM, IEEE123_PV, IEEE9500 and ACEP_PSIL; it no longer does).
 
 **Export.**
 - `Set earthmodel` is the one model of every WireConfiguration (`options.earth_model`). DSS's earthmodel is the
   deck's, so configurations over different models raise. So does one without an EarthResistivity beside one with,
-  which would silently take the other's model.
+  which would silently take the other's model. With no geometry at all, it is the network's one EarthResistivity,
+  which no line names (`test_a_floating_earth_writes_the_earthmodel`).
 - Each geometry line writes `rho` from its configuration's EarthResistivity. DSS's LineGeometry has no rho.
 - `earthReturnGMR` is not written: DSS derives Carson's earth return from rho and the frequency.
 - The per-line `EarthModel` slot is not written; the deck's `Set earthmodel` carries it.
@@ -2016,7 +2047,8 @@ a breaker, and Relay is not mapped (DSS-11).
 
 - The parity harness compared the original's earth model with the engine's Deri, not with the written deck. It now
   compiles the written deck and reads its earthmodel. With S6g, `earthmodel` drops from the parity lists of every
-  deck with geometry: IEEE13_Assets and the IEEE4 Bal decks (DY, GrdYD, YD, YY).
+  deck with geometry: IEEE13_Assets and the IEEE4 Bal decks (DY, GrdYD, YD, YY). Since the floating
+  EarthResistivity (2026-11-24) it drops from the rest too: IEEE13_CDPSM, IEEE123_PV, IEEE9500 and ACEP_PSIL.
 
 ### Tests
 

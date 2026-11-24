@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,23 @@ classes:
     description: >-
       A Fuse object in OpenDSS.
     class_uri: dss:Fuse
+    close_mappings:
+      - cim:Fuse
+    comments:
+      - >-
+        Import: a Line with Switch=y that a Fuse switches is a cim:Fuse in
+        line.cimtbl; no Fuse object is written. Export: a Fuse writes its Line
+        (Switch=y) and this control, disabled.
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        comments:
+          - >-
+            Import: untranscribed; the switch takes the Line's name and the Fuse
+            names no CIM object. Export: Names, the switch's.
 
       # (1) MonitoredObj
       MonitoredObj:
@@ -37,6 +48,10 @@ classes:
         required: false
         annotations:
           order: 1
+        comments:
+          - >-
+            Import: structural; the Switch=y Line it switches when SwitchedObj
+            is unset. Export: written as Line.<the switch's Line name>.
 
       # (2) MonitoredTerm
       MonitoredTerm:
@@ -46,6 +61,10 @@ classes:
         required: false
         annotations:
           order: 2
+        comments:
+          - >-
+            Import: untranscribed; the switch opens both terminals in CIM, so
+            DSS's terminal choice has no home. Export: unset.
 
       # (3) SwitchedObj
       SwitchedObj:
@@ -55,6 +74,10 @@ classes:
         required: false
         annotations:
           order: 3
+        comments:
+          - >-
+            Import: structural; the Switch=y Line this control switches, ahead
+            of MonitoredObj. Export: not written; the engine takes MonitoredObj.
 
       # (4) SwitchedTerm
       SwitchedTerm:
@@ -64,6 +87,10 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: untranscribed; the switch opens both terminals in CIM, so
+            DSS's terminal choice has no home. Export: unset.
 
       # (5) FuseCurve
       FuseCurve:
@@ -73,6 +100,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset.
 
       # (6) RatedCurrent
       RatedCurrent:
@@ -83,6 +114,12 @@ classes:
         annotations:
           order: 6
           dss_default: float(1.0)
+        exact_mappings:
+          - cim:Switch.ratedCurrent
+        comments:
+          - >-
+            Import: Fuse.ratedCurrent (A) on the switch's row. Export:
+            Switch.ratedCurrent (A).
 
       # (7) Delay
       Delay:
@@ -92,6 +129,10 @@ classes:
         required: false
         annotations:
           order: 7
+        comments:
+          - >-
+            Import: untranscribed (control timing; no home on a Switch). Export:
+            unset.
 
       # (8) Action
       Action:
@@ -101,6 +142,10 @@ classes:
         required: false
         annotations:
           order: 8
+        comments:
+          - >-
+            Import: raises when set (the deprecated form of State); no deck in
+            the sweep sets it. Export: unset.
 
       # (9) Normal
       Normal:
@@ -112,6 +157,13 @@ classes:
         annotations:
           order: 9
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.normalOpen
+        comments:
+          - >-
+            Import: Switch.normalOpen from Open/Closed; with an Open command on
+            the line they must agree. Export: get_switch_state(normal); written
+            only when open in either state.
 
       # (10) State
       State:
@@ -123,6 +175,13 @@ classes:
         annotations:
           order: 10
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.open
+        comments:
+          - >-
+            Import: Switch.open from Open/Closed; with an Open command on the
+            line they must agree. Export: get_switch_state(actual or the
+            caller's choice); written only when open in either state.
 
       # (11) basefreq
       basefreq:
@@ -132,6 +191,9 @@ classes:
         required: false
         annotations:
           order: 11
+        comments:
+          - >-
+            Import: untranscribed (no home on a switch). Export: unset.
 
       # (12) enabled
       enabled:
@@ -141,6 +203,11 @@ classes:
         required: false
         annotations:
           order: 12
+        comments:
+          - >-
+            Import: untranscribed (a disabled control leaves its switch in
+            place). Export: a Fuse or Recloser is written disabled until its
+            trip settings have a CIM home.
 
       # (13) like
       like:
@@ -150,3 +217,7 @@ classes:
         required: false
         annotations:
           order: 13
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

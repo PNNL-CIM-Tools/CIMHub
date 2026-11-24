@@ -51,10 +51,11 @@ EARTH_MODELS = {cim.EarthModelKind.carson: "Carson", cim.EarthModelKind.deri: "D
 
 def earth_model(network) -> str | None:
     """The one earth model of every geometry WireConfiguration (one with a WireSpacing; ``get_earth_resistivity``)
-    and, when there are spacing lines,
-    of the network's one EarthResistivity (``get_network_earth``); DSS's earthmodel is the deck's. None when none
-    names one (the engine's Deri). Models that differ raise, and so does a configuration without an
-    EarthResistivity beside one with: it would take the other's model."""
+    and, when there are spacing lines, of the network's one EarthResistivity (``get_network_earth``); DSS's
+    earthmodel is the deck's. With no geometry at all, the network's one EarthResistivity, which no line names (the
+    importer keeps a deck's ``Set earthmodel`` that way). None when none names one (the engine's Deri). Models that
+    differ raise, and so does a configuration without an EarthResistivity beside one with: it would take the other's
+    model."""
     found = {}
     for configuration in network.graph.get(cim.WireConfiguration, {}).values():
         if configuration.WireSpacing is None:
@@ -63,6 +64,8 @@ def earth_model(network) -> str | None:
         found.setdefault(earth.model if earth is not None else None, describe(configuration))
     if any(is_spacing_line(line) for line in network.graph.get(cim.ACLineSegment, {}).values()):
         found.setdefault(get_network_earth(network).model, "the spacing lines' EarthResistivity")
+    if not found and network.graph.get(cim.EarthResistivity):
+        found[get_network_earth(network).model] = "the network's EarthResistivity"
     if len(found) > 1:
         shown = {model.value if model is not None else None: owner for model, owner in found.items()}
         raise ValueError(f"WireConfigurations over earth models {shown}; a DSS deck has one earthmodel")

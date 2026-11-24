@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,24 @@ classes:
     description: >-
       A Recloser object in OpenDSS.
     class_uri: dss:Recloser
+    close_mappings:
+      - cim:Recloser
+    comments:
+      - >-
+        Import: a Line with Switch=y that a Recloser switches is a cim:Recloser
+        in line.cimtbl, with one RecloseSequence per reclosure; no Recloser
+        object is written. Export: a Recloser writes its Line (Switch=y) and
+        this control, disabled.
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        comments:
+          - >-
+            Import: untranscribed; the switch takes the Line's name and the
+            Recloser names no CIM object. Export: Names, the switch's.
 
       # (1) MonitoredObj
       MonitoredObj:
@@ -37,6 +49,10 @@ classes:
         required: false
         annotations:
           order: 1
+        comments:
+          - >-
+            Import: structural; the Switch=y Line it switches when SwitchedObj
+            is unset. Export: written as Line.<the switch's Line name>.
 
       # (2) MonitoredTerm
       MonitoredTerm:
@@ -46,6 +62,10 @@ classes:
         required: false
         annotations:
           order: 2
+        comments:
+          - >-
+            Import: untranscribed; the switch opens both terminals in CIM, so
+            DSS's terminal choice has no home. Export: unset.
 
       # (3) SwitchedObj
       SwitchedObj:
@@ -55,6 +75,10 @@ classes:
         required: false
         annotations:
           order: 3
+        comments:
+          - >-
+            Import: structural; the Switch=y Line this control switches, ahead
+            of MonitoredObj. Export: not written; the engine takes MonitoredObj.
 
       # (4) SwitchedTerm
       SwitchedTerm:
@@ -64,6 +88,10 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: untranscribed; the switch opens both terminals in CIM, so
+            DSS's terminal choice has no home. Export: unset.
 
       # (5) NumFast
       NumFast:
@@ -73,6 +101,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (6) PhaseFast
       PhaseFast:
@@ -82,6 +114,10 @@ classes:
         required: false
         annotations:
           order: 6
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (7) PhaseDelayed
       PhaseDelayed:
@@ -91,6 +127,10 @@ classes:
         required: false
         annotations:
           order: 7
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (8) GroundFast
       GroundFast:
@@ -100,6 +140,10 @@ classes:
         required: false
         annotations:
           order: 8
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (9) GroundDelayed
       GroundDelayed:
@@ -109,6 +153,10 @@ classes:
         required: false
         annotations:
           order: 9
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (10) PhaseTrip
       PhaseTrip:
@@ -118,6 +166,10 @@ classes:
         required: false
         annotations:
           order: 10
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (11) GroundTrip
       GroundTrip:
@@ -127,6 +179,10 @@ classes:
         required: false
         annotations:
           order: 11
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (12) PhaseInst
       PhaseInst:
@@ -136,6 +192,10 @@ classes:
         required: false
         annotations:
           order: 12
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (13) GroundInst
       GroundInst:
@@ -145,6 +205,10 @@ classes:
         required: false
         annotations:
           order: 13
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (14) Reset
       Reset:
@@ -154,6 +218,10 @@ classes:
         required: false
         annotations:
           order: 14
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (15) Shots
       Shots:
@@ -164,6 +232,13 @@ classes:
         annotations:
           order: 15
           dss_default: int(4)
+        close_mappings:
+          - cim:RecloseSequence
+        comments:
+          - >-
+            Import: Shots - 1 RecloseSequences, <switch>_rs<n>; unset, the
+            engine's 4 (defaulted); above 4 without RecloseIntervals raises.
+            Export: the RecloseSequences + 1; none -> 1.
 
       # (16) RecloseIntervals
       RecloseIntervals:
@@ -175,6 +250,13 @@ classes:
         annotations:
           order: 16
           dss_default: "[0.5 2 2]"
+        exact_mappings:
+          - cim:RecloseSequence.recloseDelay
+        comments:
+          - >-
+            Import: recloseDelay (s) of reclosure n = RecloseIntervals[n];
+            unset, 0.5 2 2 (defaulted); both given and disagreeing raise.
+            Export: each recloseDelay (s) in recloseStep order.
 
       # (17) Delay
       Delay:
@@ -184,6 +266,10 @@ classes:
         required: false
         annotations:
           order: 17
+        comments:
+          - >-
+            Import: untranscribed (control timing; no home on a Switch). Export:
+            unset.
 
       # (18) Action
       Action:
@@ -193,6 +279,10 @@ classes:
         required: false
         annotations:
           order: 18
+        comments:
+          - >-
+            Import: raises when set (the deprecated form of State); no deck in
+            the sweep sets it. Export: unset.
 
       # (19) TDPhFast
       TDPhFast:
@@ -202,6 +292,10 @@ classes:
         required: false
         annotations:
           order: 19
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (20) TDGrFast
       TDGrFast:
@@ -211,6 +305,10 @@ classes:
         required: false
         annotations:
           order: 20
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (21) TDPhDelayed
       TDPhDelayed:
@@ -220,6 +318,10 @@ classes:
         required: false
         annotations:
           order: 21
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (22) TDGrDelayed
       TDGrDelayed:
@@ -229,6 +331,10 @@ classes:
         required: false
         annotations:
           order: 22
+        comments:
+          - >-
+            Import: untranscribed (protection setting; no home in cim18v17's
+            protection function blocks). Export: unset; the engine's default.
 
       # (23) Normal
       Normal:
@@ -239,6 +345,13 @@ classes:
         annotations:
           order: 23
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.normalOpen
+        comments:
+          - >-
+            Import: Switch.normalOpen from Open/Closed; with an Open command on
+            the line they must agree. Export: get_switch_state(normal); written
+            only when open in either state.
 
       # (24) State
       State:
@@ -249,6 +362,13 @@ classes:
         annotations:
           order: 24
           dss_default: string(closed)
+        exact_mappings:
+          - cim:Switch.open
+        comments:
+          - >-
+            Import: Switch.open from Open/Closed; with an Open command on the
+            line they must agree. Export: get_switch_state(actual or the
+            caller's choice); written only when open in either state.
 
       # (25) basefreq
       basefreq:
@@ -258,6 +378,9 @@ classes:
         required: false
         annotations:
           order: 25
+        comments:
+          - >-
+            Import: untranscribed (no home on a switch). Export: unset.
 
       # (26) enabled
       enabled:
@@ -267,6 +390,11 @@ classes:
         required: false
         annotations:
           order: 26
+        comments:
+          - >-
+            Import: untranscribed (a disabled control leaves its switch in
+            place). Export: a Fuse or Recloser is written disabled until its
+            trip settings have a CIM home.
 
       # (27) like
       like:
@@ -276,3 +404,7 @@ classes:
         required: false
         annotations:
           order: 27
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

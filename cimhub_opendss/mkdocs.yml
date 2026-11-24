@@ -1,95 +1,51 @@
-# Build the site (run from cimhub_opendss/; nothing here touches the workspace's uv.lock):
-#   1. generate the schema reference (never committed; docs/.gitignore lists it):
-#        uvx --with-requirements docs/requirements-mkdocs.txt --from linkml gen-doc \
-#            -d docs/schema_ref src/cimhub_opendss/schema/linkml/opendss.yaml
-#   2. build (or replace "build" with "serve" to preview):
-#        uvx --with-requirements docs/requirements-mkdocs.txt mkdocs build --strict -d /tmp/dss-site
+# cimhub-opendss's site, served at https://pnnl-cim-tools.github.io/CIMHub/opendss/. Build everything with
+# scripts/build-docs.sh, or this site alone: scripts/build-docs.sh opendss (add --serve to preview). The schema
+# reference (docs/schema/) is generated from the LinkML schema by that script and never committed.
+INHERIT: ../mkdocs.base.yml
 site_name: CIMHub OpenDSS
-site_description: OpenDSS to CIM (cim18v17) importer and exporter
-site_author: Pacific Northwest National Laboratory
-repo_url: https://github.com/PNNL-CIM-Tools/CIMHub
-repo_name: PNNL-CIM-Tools/CIMHub
-
-copyright: Copyright &copy; 2025 Battelle Memorial Institute, All rights reserved.
-
-theme:
-  name: material
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - scheme: slate
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-  features:
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - navigation.footer
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - toc.follow
-
-plugins:
-  - search
-
-markdown_extensions:
-  - admonition
-  - attr_list
-  - def_list
-  - footnotes
-  - md_in_html
-  - tables
-  - toc:
-      permalink: true
-      toc_depth: 3
-  - pymdownx.details
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
+site_url: https://pnnl-cim-tools.github.io/CIMHub/opendss/
+site_description: OpenDSS decks to and from CIM (cim18v17) - the reader, writer, importer and exporter
+edit_uri: edit/develop/cimhub_opendss/docs/
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/PNNL-CIM-Tools/CIMHub
+      link: https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_opendss
     - icon: fontawesome/brands/python
-      link: https://pypi.org/project/cimhub_opendss/
+      link: https://pypi.org/project/cimhub-opendss/
 
-extra_css:
-  - stylesheets/extra.css
-
-exclude_docs: |
-  requirements-mkdocs.txt
-
-# The mapping specs link to plan files in the repository (.development/), which are not part of the site, and the
-# generated schema pages are reached through schema_ref/index.md rather than the nav. Both are expected.
-validation:
-  nav:
-    omitted_files: ignore
-  links:
-    not_found: info
+not_in_nav: |
+  schema/*
+  guide/*.dss
 
 nav:
   - Home: index.md
-  - Usage:
-      - Quick start: usage/quickstart.md
-      - Import (DSS to CIM): usage/import.md
-      - Export (CIM to DSS): usage/export.md
-      - Round trip: usage/roundtrip.md
-  - Mapping:
-      - Import mapping (.cimtbl): CIMTBL_MAPPING.md
-      - Export mapping: EXPORT_MAPPING.md
-  - Coverage: coverage/overview.md
-  - Schema Reference: schema_ref/index.md
+  - User guide:
+      - guide/index.md
+      - Getting started:
+          - Installation: guide/installation.md
+          - Quick start: guide/quickstart.ipynb
+      - Converting:
+          - Import (DSS to CIM): guide/import.md
+          - Export (CIM to DSS): guide/export.md
+          - Round trip: guide/roundtrip.md
+          - What converts: guide/coverage.md
+  - Conversion reference:
+      - reference/index.md
+      - Sources, options and coordinates: reference/sources.md
+      - Lines, wires and switches: reference/lines.md
+      - Transformers and regulators: reference/transformers.md
+      - Loads, capacitors and shapes: reference/loads.md
+      - DER and machines: reference/der.md
+  - Developer docs:
+      - developer/index.md
+      - Architecture: developer/architecture.md
+      - Reader and writer: developer/reader-writer.md
+      - The importer: developer/importer.md
+      - The exporter: developer/exporter.md
+      - The LinkML schema: developer/schema.md
+      - Testing: developer/testing.md
+      - Mapping specs:
+          - Import mapping (.cimtbl): CIMTBL_MAPPING.md
+          - Export mapping: EXPORT_MAPPING.md
+  - Schema reference: schema/index.md

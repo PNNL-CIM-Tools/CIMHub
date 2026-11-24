@@ -759,3 +759,14 @@ def test_tank_end_phase_ends_other_than_the_terminal_raise(tmp_path):
     _get(network, cim.TransformerPhaseEnd, "xf_c_2_A").phase = B
     with pytest.raises(ValueError, match=r"its TransformerPhaseEnds \['C', 'B'\] are not its terminal's phases"):
         _model(network, "xf_c")
+
+
+def test_dc_resistance_is_a_windings_and_an_end_has_none():
+    """``r_dc`` is a TransformerWinding's rDC in ohm (a template's here), and None on a PowerTransformerEnd."""
+    network = _shape("transformer_by_template")
+    template = _get(network, cim.TransformerTankConfiguration, _get(network, cim.TransformerTank, "xf_t1_tank")
+                    .TankConfiguration.mRID)
+    for number, winding in enumerate(sorted(template.TransformerWinding, key=lambda w: w.mRID), start=1):
+        winding.rDC = cim.Resistance(0.5 * number, "ohm")
+    assert [w.r_dc for w in _model(network, "xf_t1").windings] == pytest.approx([0.5, 1.0])
+    assert {w.r_dc for w in _model(_shape("transformer_by_ends"), "xf_sub").windings} == {None}

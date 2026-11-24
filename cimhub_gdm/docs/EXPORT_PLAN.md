@@ -114,7 +114,7 @@ and GeometrySwitch (the same).
 
 ## 4. Tests
 
-- **Per atom, CIM fixed point (tier 2, every phase).** For every importer atom system and its committed golden, the
+- **Per atom, CIM fixed point (the export test, every phase).** For every importer atom system and its committed golden, the
   test runs `load_model(golden.cimtbl) → to_model(name_source="name") → gdm_to_cim`. It then calls the existing
   `assert_import_matches(..., golden)`: the importer's goldens are the exporter's expectations too, so no new golden
   files are needed. Exporting from the loaded golden rather than the built model proves the exporter reads only what

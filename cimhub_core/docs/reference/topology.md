@@ -18,6 +18,7 @@ Most exporters call several of them for every device. Calling conventions are on
 | [`get_in_service`](#get_in_service) | `inService` or `normallyInService` | `bool` or `None` |
 | [`get_location_coordinates`](#get_location_coordinates) | a `Location`'s `PositionPoint`s | `LocationCoordinates` or `None` |
 | [`get_limits_by_type`](#get_limits_by_type) | limits of one class, by `OperationalLimitType` | dict |
+| [`get_configuration_limits_by_type`](#get_configuration_limits_by_type) | a template's limits of one class, by `OperationalLimitType` | dict |
 
 The examples run public test atoms through the OpenDSS and PSS/E RAW importers and the shape files in core, inside
 `cim_scope()`, which restores the profile and model scope that loading a model sets process-wide.
@@ -31,7 +32,7 @@ from cimtables import load_model
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_core.getters.base_voltage import get_base_voltage
 from cimhub_core.getters.in_service import get_in_service
-from cimhub_core.getters.limits_by_type import get_limits_by_type
+from cimhub_core.getters.limits_by_type import get_configuration_limits_by_type, get_limits_by_type
 from cimhub_core.getters.location import get_location_coordinates
 from cimhub_core.getters.switch_state import get_reclose_delays, get_switch_state
 from cimhub_core.getters.terminals import (get_conductor_phases, get_switch_sides, get_terminal_nodes,
@@ -389,4 +390,32 @@ with cim_scope():
 # {}
 ```
 
-Called by cimhub_raw.
+Called by cimhub_opendss (a transformer's seasonal `Ratings`) and cimhub_raw.
+
+### get_configuration_limits_by_type { #get_configuration_limits_by_type }
+
+```python
+get_configuration_limits_by_type(configuration: EquipmentConfiguration, limit_class: type,
+                                 unit: str) -> dict[OperationalLimitType, float]
+```
+
+A template's limits, read as `get_limits_by_type` reads an equipment's: those of the configuration's one
+`EquipmentConfiguration.OperationalLimitSet` (a GridAPPS-D extension of cim18v17), for example the seasonal ratings of
+a `TransformerTankConfiguration`. An equipment on the template does not inherit them, so `get_limits_by_type` on the
+equipment does not return them. An empty dict means the configuration has no limit set, or no limit of that class.
+
+Raises `ValueError` for a limit with no `OperationalLimitType`, an unset `normalValue`, or two limits of one type
+that disagree.
+
+```python
+with cim_scope():
+    network = dss_network("xfmrcode/rated.dss")
+    code = find(network, cim.TransformerTankConfiguration, "xc_sub")
+    ratings = get_configuration_limits_by_type(code, cim.ApparentPowerLimit, "kVA")
+    print({limit_type.mRID: value for limit_type, value in ratings.items()})
+    print(get_limits_by_type(find(network, cim.PowerTransformer, "xf_sub"), cim.ApparentPowerLimit, "kVA"))
+# {'olt_season1': 22000.0, 'olt_season2': 25000.0}
+# {}
+```
+
+Called by cimhub_opendss (an XfmrCode's seasonal `Ratings`).

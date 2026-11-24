@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,24 @@ classes:
     description: >-
       A Tsdata object in OpenDSS.
     class_uri: dss:Tsdata
+    exact_mappings:
+      - cim:TapeShieldCableInfo
+    comments:
+      - >-
+        Import: TSData becomes a TapeShieldCableInfo in wire.cimtbl, with its normal and emergency
+        CurrentLimit in an OperationalLimitSet. Export: written as TSData (exporter/wire.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.name; mRID = prefix + name, lowercased. Export:
+            Names, one namespace for the three catalogs.
 
       # (1) DiaShield
       DiaShield:
@@ -37,6 +49,13 @@ classes:
         required: false
         annotations:
           order: 1
+        close_mappings:
+          - cim:CableInfo.diameterOverScreen
+        comments:
+          - >-
+            Import: derived; diameterOverScreen = DiaShield - 2 TapeLayer (screen_diameter): DSS
+            measures over the tape, CIM's screen diameter is the shield's inside (ExportCIMXML).
+            Export: cable.diameter_over_screen + 2 x tape_thickness (m): DSS measures over the tape.
 
       # (2) TapeLayer
       TapeLayer:
@@ -46,6 +65,12 @@ classes:
         required: false
         annotations:
           order: 2
+        exact_mappings:
+          - cim:TapeShieldCableInfo.tapeThickness
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.tapeThickness (<radunits>). Export:
+            cable.tape_thickness (m).
 
       # (3) TapeLap
       TapeLap:
@@ -55,6 +80,12 @@ classes:
         required: false
         annotations:
           order: 3
+        exact_mappings:
+          - cim:TapeShieldCableInfo.tapeLap
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.tapeLap (percent). Export: cable.tape_lap
+            (percent).
 
       # (4) EpsR
       EpsR:
@@ -64,6 +95,10 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: untranscribed; insulation relative permittivity. Export: not written, no
+            permittivity on CableInfo; the engine's 2.3.
 
       # (5) InsLayer
       InsLayer:
@@ -73,6 +108,12 @@ classes:
         required: false
         annotations:
           order: 5
+        exact_mappings:
+          - cim:WireInfo.insulationThickness
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.insulationThickness (<radunits>). Export:
+            cable.insulation_thickness (m).
 
       # (6) DiaIns
       DiaIns:
@@ -82,6 +123,12 @@ classes:
         required: false
         annotations:
           order: 6
+        exact_mappings:
+          - cim:CableInfo.diameterOverInsulation
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.diameterOverInsulation (<radunits>). Export:
+            cable.diameter_over_insulation (m).
 
       # (7) DiaCable
       DiaCable:
@@ -91,6 +138,12 @@ classes:
         required: false
         annotations:
           order: 7
+        exact_mappings:
+          - cim:CableInfo.diameterOverJacket
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.diameterOverJacket (<radunits>); the outer
+            diameter. Export: cable.diameter_over_jacket (m).
 
       # (8) Rdc
       Rdc:
@@ -100,6 +153,12 @@ classes:
         required: false
         annotations:
           order: 8
+        exact_mappings:
+          - cim:ConductorInfo.rDC20
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.rDC20 (ohm/<Runits>); DC resistance (DSS gives no
+            temperature). Export: get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises.
 
       # (9) Rac
       Rac:
@@ -110,6 +169,13 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 9
+        close_mappings:
+          - cim:ConductorInfo.rAC25
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.rAC25 (ohm/<Runits>); DSS: resistance at 60 Hz,
+            temperature unstated. Export: rule, get_wire_info.r_ac25 (ohm/m); unset -> not written,
+            the engine's 1.02 x Rdc.
 
       # (10) Runits
       Runits:
@@ -119,6 +185,10 @@ classes:
         required: false
         annotations:
           order: 10
+        comments:
+          - >-
+            Import: mapped; the unit of Rdc, Rac in the header (LENGTH_UNIT); unset raises (every
+            wire in the sweep sets it). Export: m (B1).
 
       # (11) GMRac
       GMRac:
@@ -129,6 +199,13 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 11
+        exact_mappings:
+          - cim:WireInfo.gmr
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.gmr (<GMRunits>); unset raises (the engine's
+            0.7788 x radius default; no deck in the sweep omits it). Export: rule, get_wire_info.gmr
+            (m); unset -> not written, the engine's 0.7788 x radius.
 
       # (12) GMRunits
       GMRunits:
@@ -138,6 +215,10 @@ classes:
         required: false
         annotations:
           order: 12
+        comments:
+          - >-
+            Import: mapped; the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire
+            in the sweep sets it). Export: m (B1).
 
       # (13) radius
       radius:
@@ -147,6 +228,12 @@ classes:
         required: false
         annotations:
           order: 13
+        exact_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.radius (<radunits>); one of radius and diam.
+            Export: get_wire_info.radius (m); unset raises.
 
       # (14) radunits
       radunits:
@@ -156,6 +243,10 @@ classes:
         required: false
         annotations:
           order: 14
+        comments:
+          - >-
+            Import: mapped; the unit of radius, diam and every cable dimension in the header
+            (LENGTH_UNIT); unset raises (every wire in the sweep sets it). Export: m (B1).
 
       # (15) normamps
       normamps:
@@ -165,6 +256,13 @@ classes:
         required: false
         annotations:
           order: 15
+        exact_mappings:
+          - cim:ConductingAssetInfo.ratedCurrent
+        comments:
+          - >-
+            Import: copied to TapeShieldCableInfo.ratedCurrent (A); also the normal CurrentLimit of
+            the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet). Export:
+            the wire's normal limit, else ratedCurrent (A).
 
       # (16) emergamps
       emergamps:
@@ -174,6 +272,13 @@ classes:
         required: false
         annotations:
           order: 16
+        close_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; the emergency CurrentLimit of the wire's OperationalLimitSet
+            <mRID>_limits (AssetInfo.OperationalLimitSet). Export: rule, the wire's emergency limit
+            (A); unset -> not written, the engine's 1.5 x normamps.
 
       # (17) diam
       diam:
@@ -183,6 +288,12 @@ classes:
         required: false
         annotations:
           order: 17
+        close_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: derived; radius = diam / 2 (radius_from_diameter). Export: not written, radius
+            is written instead.
 
       # (18) Seasons
       Seasons:
@@ -192,6 +303,12 @@ classes:
         required: false
         annotations:
           order: 18
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (an indexed rating array that names no calendar season; home
+            OperationalLimitType.season). Export: not written, not in CIM (untranscribed or raising
+            on import).
 
       # (19) Ratings
       Ratings:
@@ -202,6 +319,11 @@ classes:
         required: false
         annotations:
           order: 19
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (with Seasons). Export: not written, not in CIM (untranscribed or raising on
+            import).
 
       # (20) Capradius
       Capradius:
@@ -211,6 +333,11 @@ classes:
         required: false
         annotations:
           order: 20
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the radius for capacitance; not WireInfo.coreRadius). Export: not written, not
+            in CIM (untranscribed or raising on import).
 
       # (21) like
       like:
@@ -220,3 +347,7 @@ classes:
         required: false
         annotations:
           order: 21
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

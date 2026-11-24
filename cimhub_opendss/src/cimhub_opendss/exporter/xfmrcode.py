@@ -13,10 +13,11 @@ import logging
 import cimprofiles.cim18.cim18v17 as cim
 
 from cimhub_core.getters import describe
+from cimhub_core.getters.limits_by_type import get_configuration_limits_by_type
 from cimhub_opendss.exporter import windings
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
-from cimhub_opendss.exporter.transformer import xfmrcode_name
+from cimhub_opendss.exporter.transformer import season_ratings, xfmrcode_name
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.TransformerTankConfiguration,)
@@ -32,7 +33,10 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "name": Slot("written", "Names, the XfmrCode namespace"),
     **{slot: Slot("written", _TRANSFORMER) for slot in (
         "phases", "windings", "conns", "kVs", "kVAs", "Xhl", "Xht", "Xlt", "pct_noloadloss", "pct_imag", "wdg",
-        "Rneut", "Xneut")},
+        "Rneut", "Xneut", "RdcOhms")},
+    "Seasons": Slot("rule", "the number of the template's season ratings; none -> not written"),
+    "Ratings": Slot("rule", "the TransformerTankConfiguration's ApparentPowerLimits of type olt_season<n> (kVA, "
+                            "EquipmentConfiguration.OperationalLimitSet), in season order; none -> not written"),
     "pct_Rs": Slot("rule", f"{_TRANSFORMER}; unset r -> 0"),
     "conn": Slot("not mapped", _ACTIVE), "kV": Slot("not mapped", _ACTIVE), "kVA": Slot("not mapped", _ACTIVE),
     "tap": Slot("not mapped", _ACTIVE), "pct_R": Slot("not mapped", _ACTIVE),
@@ -40,7 +44,7 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "MinTap": Slot("not mapped", "a tap is the instance's"), "NumTaps": Slot("not mapped", "a tap is the instance's"),
     "Xscarray": Slot("not mapped", "more than 3 windings raise"),
     "pct_loadloss": Slot("not mapped", "%Rs carries the winding r"),
-    "normhkVA": Slot("unset", "untranscribed on import (D9)"), "emerghkVA": Slot("unset", "untranscribed (D9)"),
+    "normhkVA": Slot("unset", "untranscribed on import"), "emerghkVA": Slot("unset", "untranscribed"),
     "like": Slot("not mapped", "the writer never writes like="),
 }, Slot("unset", _NOT_IN_CIM))}
 
@@ -68,4 +72,6 @@ def export(context) -> list[schema.Xfmrcode]:
 def _code(configuration, unit_model: windings.UnitModel, names: Names) -> schema.Xfmrcode:
     values = windings.winding_values(unit_model)
     slots = {RENAMED.get(slot, slot): value for slot, value in values.items()}
-    return NATIVE_CLASS(name=xfmrcode_name(configuration, names), **slots)
+    ratings = season_ratings(get_configuration_limits_by_type(configuration, cim.ApparentPowerLimit, "kVA"),
+                             configuration)
+    return NATIVE_CLASS(name=xfmrcode_name(configuration, names), **slots, **ratings)

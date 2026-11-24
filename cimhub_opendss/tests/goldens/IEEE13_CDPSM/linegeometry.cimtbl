@@ -1,0 +1,9 @@
+# OpenDSS LineGeometry -> EarthResistivity, WireConfiguration + WireSequenceConfiguration (catalog). No impedance is computed: geometry stays geometry.
+# Source table: LineGeometry (records: 0)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry
+
+Profile = cim18v17
+
+# the deck's earthmodel; no line names it (ohm-m: the profile types rho Resistance)
+# defaulted: rho=100.0
+Object EarthResistivity: mRID=earth, name=carson, earthModelType=carson, rho (ohm)=100.0

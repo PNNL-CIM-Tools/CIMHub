@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,6 +22,12 @@ classes:
     description: >-
       A Invcontrol object in OpenDSS.
     class_uri: dss:Invcontrol
+    comments:
+      - >-
+        The spoke does not convert InvControl: it is not in MAPPING_ORDER or
+        EXPORT_ORDER, so the master counts it as not mapped and the exporter
+        writes none. cim18v17 has no smart-inverter function class it would map
+        to.
     attributes:
       name:
         description: Object name. Must be unique per object type.

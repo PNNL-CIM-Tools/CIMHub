@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -28,11 +28,12 @@ classes:
       - cim:EnergySource
     comments:
       - >-
-        OpenDSS Vsource maps to CIM EnergySource. Voltage magnitude and angle
-        are SSH-profile attributes; nominal voltage and sequence impedances
-        (r, x, r0, x0) are EQ-profile attributes. The impedance comes from one of
-        R1/X1/R0/X0, MVAsc3/MVAsc1 or Isc3/Isc1 (cimhub_opendss mapping spec
-        #vsource); Z1/Z0/Z2/puZ1/puZ0/puZ2 are not mapped yet.
+        Import: a Vsource becomes an EnergySource on its bus in vsource.cimtbl; the Thevenin
+        impedance is copied (R1, X1, R0, X0) or derived from MVAsc/Isc and x/r
+        (thevenin_from_short_circuit). Z1, Z0, Z2, puZ and bus2 raise.
+      - >-
+        Export: one Vsource per EnergySource through get_source (exporter/vsource.py); a 1-phase
+        source is written as the MVAsc group.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -42,7 +43,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: copied to EnergySource.name; mRID = src_ + name, lowercased. Export: Names; the
+            circuit's source is always `source`.
 
       # (1) bus1
       bus1:
@@ -56,7 +59,9 @@ classes:
         related_mappings:
           - cim:Terminal.ConnectivityNode
         comments:
-          - "Structural mapping: equipment.Terminals[0].ConnectivityNode.name."
+          - >-
+            Import: structural; node, and phases from its conductors; default sourcebus. Export:
+            bus_ref(get_terminal_nodes, get_source.phases).
 
       # (2) basekv
       basekv:
@@ -72,9 +77,7 @@ classes:
         exact_mappings:
           - cim:EnergySource.nominalVoltage
         comments:
-          - >-
-            Import: EnergySource.nominalVoltage = Voltage(basekv, 'kV').
-            Export: basekv = nominalVoltage.to('kV'). CIM stores in V (SI base).
+          - "Import: copied to EnergySource.nominalVoltage (kV). Export: get_source.nominal_u (kV)."
 
       # (3) pu
       pu:
@@ -90,9 +93,7 @@ classes:
         close_mappings:
           - cim:EnergySource.voltageMagnitude
         comments:
-          - >-
-            Import: EnergySource.voltageMagnitude = Voltage(basekv * pu, 'kV') (SSH attribute).
-            Export: pu = voltageMagnitude.to('kV') / basekv.
+          - "Import: derived; voltageMagnitude (kV) = basekv x pu. Export: get_source.magnitude_pu."
 
       # (4) angle
       angle:
@@ -107,8 +108,8 @@ classes:
           - cim:EnergySource.voltageAngle
         comments:
           - >-
-            Import: EnergySource.voltageAngle = AngleRadians(angle_deg * π/180) (SSH attribute).
-            Export: angle = voltageAngle.to('deg').
+            Import: copied to EnergySource.voltageAngle (deg). Export: rule, get_source.angle (deg);
+            unset -> 0, the reference angle.
 
       # (5) frequency
       frequency:
@@ -121,7 +122,9 @@ classes:
         annotations:
           order: 5
         comments:
-          - "Not stored on CIM EnergySource; base frequency is a circuit-level property in CIM."
+          - >-
+            Import: untranscribed; the master's BaseFrequency is the deck's. Export: not written,
+            Options.defaultbasefreq is the deck's.
 
       # (6) phases
       phases:
@@ -132,12 +135,12 @@ classes:
         annotations:
           order: 6
           dss_default: int(3)
+        related_mappings:
+          - cim:Terminal.phases
         comments:
           - >-
-            Import: inferred from the bus1 node suffix via parse_bus_phases();
-            not stored directly on CIM EnergySource. Export: inferred from the
-            PhaseCode of the connected Terminal (single-phase codes → 1,
-            two-phase codes → 2, otherwise 3).
+            Import: structural; 3 = ABC, 1 = the phase of bus1's conductor. Export: the phase
+            conductors: 3 or 1, any other count raises.
 
       # (7) MVAsc3
       MVAsc3:
@@ -154,8 +157,8 @@ classes:
           - cim:EnergySource.x
         comments:
           - >-
-            Import: with MVAsc1, x1r1 and x0r0, derives EnergySource r/x/r0/x0 as
-            VSource.pas RecalcElementData does (mapping spec #vsource).
+            Import: derived; r, x (thevenin_from_short_circuit). Export: 1-phase: kV^2 / abs(Z1)
+            (short_circuit_from_thevenin).
 
       # (8) MVAsc1
       MVAsc1:
@@ -170,7 +173,9 @@ classes:
           - cim:EnergySource.r0
           - cim:EnergySource.x0
         comments:
-          - "Import: see MVAsc3."
+          - >-
+            Import: derived; r0, x0 (thevenin_from_short_circuit). Export: 1-phase: 3 kV^2 / abs(2
+            Z1 + Z0).
 
       # (9) x1r1
       x1r1:
@@ -181,8 +186,13 @@ classes:
         annotations:
           order: 9
           dss_default: float(4.0)
+        close_mappings:
+          - cim:EnergySource.r
+          - cim:EnergySource.x
         comments:
-          - "Import: see MVAsc3. Not stored on CIM EnergySource."
+          - >-
+            Import: derived; r, x (thevenin_from_short_circuit). Export: 1-phase: x / r; r = 0
+            raises.
 
       # (10) x0r0
       x0r0:
@@ -193,8 +203,13 @@ classes:
         annotations:
           order: 10
           dss_default: float(3.0)
+        close_mappings:
+          - cim:EnergySource.r0
+          - cim:EnergySource.x0
         comments:
-          - "Import: see MVAsc3. Not stored on CIM EnergySource."
+          - >-
+            Import: derived; r0, x0 (thevenin_from_short_circuit). Export: 1-phase: x0 / r0; r0 = 0
+            raises.
 
       # (11) Isc3
       Isc3:
@@ -206,8 +221,13 @@ classes:
           ucum_code: A
         annotations:
           order: 11
+        close_mappings:
+          - cim:EnergySource.r
+          - cim:EnergySource.x
         comments:
-          - "Import: converted to MVAsc3, then as MVAsc3 (mapping spec #vsource)."
+          - >-
+            Import: derived; MVAsc3 (mvasc_from_isc), then as MVAsc3. Export: not written, the ohms
+            or the MVAsc group carries the same impedance.
 
       # (12) Isc1
       Isc1:
@@ -219,8 +239,13 @@ classes:
           ucum_code: A
         annotations:
           order: 12
+        close_mappings:
+          - cim:EnergySource.r0
+          - cim:EnergySource.x0
         comments:
-          - "Import: converted to MVAsc1, then as MVAsc3 (mapping spec #vsource)."
+          - >-
+            Import: derived; MVAsc1 (mvasc_from_isc), then as MVAsc1. Export: not written, the ohms
+            or the MVAsc group carries the same impedance.
 
       # (13) R1
       R1:
@@ -233,7 +258,9 @@ classes:
         exact_mappings:
           - cim:EnergySource.r
         comments:
-          - "Import: EnergySource.r = Resistance(R1, 'ohm'). Export: R1 = r.to('ohm'). CIM stores in ohm (SI base)."
+          - >-
+            Import: copied to EnergySource.r (ohm). Export: 3-phase: get_source.impedance.r (ohm);
+            r, x, r0, x0 unset raises (DSS takes one group).
 
       # (14) X1
       X1:
@@ -246,7 +273,7 @@ classes:
         exact_mappings:
           - cim:EnergySource.x
         comments:
-          - "Import: EnergySource.x = Reactance(X1, 'ohm'). Export: X1 = x.to('ohm')."
+          - "Import: copied to EnergySource.x (ohm). Export: 3-phase: get_source.impedance.x (ohm)."
 
       # (15) R0
       R0:
@@ -259,7 +286,7 @@ classes:
         exact_mappings:
           - cim:EnergySource.r0
         comments:
-          - "Import: EnergySource.r0 = Resistance(R0, 'ohm'). Export: R0 = r0.to('ohm')."
+          - "Import: copied to EnergySource.r0 (ohm). Export: 3-phase: get_source.impedance.r0 (ohm)."
 
       # (16) X0
       X0:
@@ -272,7 +299,7 @@ classes:
         exact_mappings:
           - cim:EnergySource.x0
         comments:
-          - "Import: EnergySource.x0 = Reactance(X0, 'ohm'). Export: X0 = x0.to('ohm')."
+          - "Import: copied to EnergySource.x0 (ohm). Export: 3-phase: get_source.impedance.x0 (ohm)."
 
       # (17) ScanType
       ScanType:
@@ -283,7 +310,9 @@ classes:
         annotations:
           order: 17
         comments:
-          - "OpenDSS-only (N/A): harmonic analysis sequence type; no CIM equivalent."
+          - >-
+            Import: untranscribed; harmonic solution setting; no home in the network profile parts.
+            Export: not written, not in CIM (untranscribed on import).
 
       # (18) Sequence
       Sequence:
@@ -295,7 +324,9 @@ classes:
         annotations:
           order: 18
         comments:
-          - "OpenDSS-only (N/A): sequence assignment for symmetrical component models; no CIM equivalent."
+          - >-
+            Import: untranscribed; harmonic solution setting; no home in the network profile parts.
+            Export: not written, not in CIM (untranscribed on import).
 
       # (19) bus2
       bus2:
@@ -307,7 +338,9 @@ classes:
         annotations:
           order: 19
         comments:
-          - "OpenDSS-only (N/A): second terminal bus; CIM EnergySource is single-terminal (grounded neutral implicit)."
+          - >-
+            Import: structural; raises when set: an ungrounded (series) source has no source-shape
+            home. Export: not written, an EnergySource has one terminal.
 
       # (20) Z1
       Z1:
@@ -320,7 +353,9 @@ classes:
         annotations:
           order: 20
         comments:
-          - "OpenDSS-only (N/A): alternate complex-array form for R1/X1; the current converter does not read Z1 (only scalar R1/X1 are consumed)."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, the ohms or the MVAsc group carries the same impedance.
         todos:
           - "Converter does not currently consume Z1 as an r/x source; would need to be added to the import fallback chain to roundtrip models that only set Z1."
 
@@ -335,7 +370,9 @@ classes:
         annotations:
           order: 21
         comments:
-          - "OpenDSS-only (N/A): alternate complex-array form for R0/X0; the current converter does not read Z0 (only scalar R0/X0 are consumed)."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, the ohms or the MVAsc group carries the same impedance.
         todos:
           - "Converter does not currently consume Z0 as an r0/x0 source; would need to be added to the import fallback chain to roundtrip models that only set Z0."
 
@@ -350,7 +387,10 @@ classes:
         annotations:
           order: 22
         comments:
-          - "OpenDSS-only (N/A): negative-sequence impedance; no CIM equivalent on EnergySource."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, r2/x2 set and different from r/x raises: the Z2 group is
+            not mapped (nor imported).
 
       # (23) puZ1
       puZ1:
@@ -363,7 +403,9 @@ classes:
         annotations:
           order: 23
         comments:
-          - "OpenDSS-only (N/A): alternate per-unit form for source impedance (z_base = basekv² / baseMVA); the current converter does not read puZ1."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, the ohms or the MVAsc group carries the same impedance.
         todos:
           - "Converter does not currently consume puZ1 as an r/x source; would need to be added to the import fallback chain to roundtrip models that only set puZ1."
 
@@ -377,7 +419,9 @@ classes:
         annotations:
           order: 24
         comments:
-          - "OpenDSS-only (N/A): alternate per-unit form for zero-sequence impedance; the current converter does not read puZ0."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, the ohms or the MVAsc group carries the same impedance.
         todos:
           - "Converter does not currently consume puZ0 as an r0/x0 source; would need to be added to the import fallback chain to roundtrip models that only set puZ0."
 
@@ -391,7 +435,9 @@ classes:
         annotations:
           order: 25
         comments:
-          - "OpenDSS-only (N/A): negative-sequence per-unit impedance; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one. Export: not written, the ohms or the MVAsc group carries the same impedance.
 
       # (26) baseMVA
       baseMVA:
@@ -403,10 +449,9 @@ classes:
           order: 26
         comments:
           - >-
-            OpenDSS-only (N/A): would be used as the per-unit base for
-            puZ1/puZ0/puZ2 conversion, but the converter does not currently
-            read those fields (see their comments); not stored on CIM
-            EnergySource.
+            Import: structural; raises when set: no deck in the sweep uses it, so a mapping waits
+            for one (the base of puZ1/puZ0/puZ2). Export: not written, the ohms or the MVAsc group
+            carries the same impedance.
 
       # (27) Yearly
       Yearly:
@@ -417,8 +462,10 @@ classes:
         required: false
         annotations:
           order: 27
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        comments:
+          - >-
+            Import: untranscribed; time series; no home in the network profile parts. Export: not
+            written, not in CIM (untranscribed on import).
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -431,8 +478,10 @@ classes:
         required: false
         annotations:
           order: 28
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        comments:
+          - >-
+            Import: untranscribed; time series; no home in the network profile parts. Export: not
+            written, not in CIM (untranscribed on import).
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -445,8 +494,10 @@ classes:
         required: false
         annotations:
           order: 29
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        comments:
+          - >-
+            Import: untranscribed; time series; no home in the network profile parts. Export: not
+            written, not in CIM (untranscribed on import).
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -460,7 +511,9 @@ classes:
         annotations:
           order: 30
         comments:
-          - "OpenDSS-only (N/A): source model type selector; no CIM equivalent on EnergySource."
+          - >-
+            Import: untranscribed; Thevenin or ideal source model; no home on EnergySource. Export:
+            not written, not in CIM (untranscribed on import).
 
       # (31) puZideal
       puZideal:
@@ -471,7 +524,9 @@ classes:
         annotations:
           order: 31
         comments:
-          - "OpenDSS-only (N/A): ideal source series impedance; no CIM equivalent."
+          - >-
+            Import: untranscribed; the ideal model's impedance; no home on EnergySource. Export: not
+            written, not in CIM (untranscribed on import).
 
       # (32) spectrum
       spectrum:
@@ -482,7 +537,9 @@ classes:
         annotations:
           order: 32
         comments:
-          - "OpenDSS-only (N/A): harmonic spectrum reference; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; harmonic solution setting; no home in the network profile parts.
+            Export: not written, not in CIM (untranscribed on import).
 
       # (33) basefreq
       basefreq:
@@ -493,7 +550,9 @@ classes:
         annotations:
           order: 33
         comments:
-          - "Not stored on CIM EnergySource; base frequency is a circuit-level property."
+          - >-
+            Import: untranscribed; the master's BaseFrequency is the deck's. Export: not written,
+            Options.defaultbasefreq is the deck's.
 
       # (34) enabled
       enabled:
@@ -503,8 +562,12 @@ classes:
         required: false
         annotations:
           order: 34
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created."
+          - >-
+            Import: copied to EnergySource.normallyInService. Export:
+            get_in_service(which='normal'); unset -> not written.
 
       # (35) like
       like:
@@ -515,4 +578,6 @@ classes:
         annotations:
           order: 35
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

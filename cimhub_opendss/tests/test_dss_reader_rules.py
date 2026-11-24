@@ -306,3 +306,17 @@ def test_a_winding_left_unset_takes_the_engine_default(tmp_path, text, caplog):
 def test_a_bus_left_unset_raises(tmp_path):
     with pytest.raises(DssParseError, match="buses: winding \\[1\\] unset .* bus has no default"):
         read(tmp_path, "New Circuit.c bus1=src\nNew Transformer.t phases=1 windings=2 wdg=2 bus=b\n")
+
+
+def test_rdcohms_goes_to_the_active_winding(tmp_path):
+    """RdcOhms has no array form in DSS: each value belongs to the winding the last wdg= names."""
+    model = read(tmp_path, "New Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[7.2 0.24] kVAs=[25 25]\n"
+                           "~ wdg=2 RdcOhms=0.004 wdg=1 RdcOhms=2.1\n")
+    [transformer] = model.list_by_class(schema.Transformer)
+    assert transformer.RdcOhms == [2.1, 0.004]
+
+
+def test_rdcohms_on_some_windings_only_raises(tmp_path):
+    with pytest.raises(DssParseError, match=r"RdcOhms: winding \[1\] unset while another winding's is set"):
+        read(tmp_path, "New Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[7.2 0.24] kVAs=[25 25] "
+                       "wdg=2 RdcOhms=0.004\n")

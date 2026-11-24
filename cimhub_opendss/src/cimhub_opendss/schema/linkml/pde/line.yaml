@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -25,18 +25,22 @@ classes:
       two buses in the distribution system. If Switch=True the element is
       treated as a switching device instead.
     class_uri: dss:Line
-    exact_mappings:
+    close_mappings:
       - cim:ACLineSegment
+    narrow_mappings:
+      - cim:LoadBreakSwitch
+      - cim:Fuse
+      - cim:Recloser
     comments:
       - >-
-        OpenDSS Line maps to CIM ACLineSegment for normal lines. When Switch=True
-        the converter routes to a LoadBreakSwitch (or Breaker/Fuse/Recloser when
-        an associated protection device is present) — the ACLineSegment mapping
-        does not apply in that case. Impedance may be given directly on the Line
-        (r1/x1/r0/x0/C1/C0), as a phase matrix (rmatrix/xmatrix/cmatrix), by
-        reference to a Linecode (PerLengthImpedance), or by a geometry/spacing +
-        conductor specification (WireSpacingInfo + WireInfo); only one of these
-        forms is used per line, in that priority order.
+        Import: a Line becomes an ACLineSegment in line.cimtbl, referencing a WireConfiguration (its
+        LineCode's template, its LineGeometry's, or a synthesized one for spacing=) or carrying its
+        own PerLengthImpedance ln_<name>_lc (isTemplate=false). No impedance is computed from
+        geometry.
+      - >-
+        Switch=y makes the Line a Switch (LoadBreakSwitch, or Fuse/Recloser when one names it as
+        SwitchedObj). Export: an ACLineSegment is written by exporter/line.py, a Switch by
+        exporter/switch.py. Details: CIMTBL_MAPPING.md#line-and-switches.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -46,7 +50,10 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: copied to ACLineSegment.name, Switch.name; mRID = ln_ + name (segment) or sw_ +
+            name (switch), lowercased. Export: Names; a coupled group's: the group's, <line>_jumper1
+            for each circuit, and <line>_jumper2 or a longer line's remainder <line>.
 
       # (1) bus1
       bus1:
@@ -60,9 +67,11 @@ classes:
           - cim:Terminal.ConnectivityNode
         comments:
           - >-
-            Terminal 1 structural mapping: equipment.Terminals[0].ConnectivityNode.name.
-            Phase suffix reconstructed from ACLineSegmentPhase objects ordered by
-            SinglePhaseKind (A=1, B=2, C=3).
+            Import: structural; node1, and the phases from its nodes: 1/2/3 = A/B/C, s1/s2 on a
+            split-phase island; no nodes = 1..phases. Export: bus_ref(get_terminal_nodes[0],
+            the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes
+            1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its
+            circuit's nodes.
 
       # (2) bus2
       bus2:
@@ -75,7 +84,9 @@ classes:
         related_mappings:
           - cim:Terminal.ConnectivityNode
         comments:
-          - "Terminal 2 structural mapping: equipment.Terminals[1].ConnectivityNode.name."
+          - >-
+            Import: structural; node2; its phase nodes must equal bus1's (a transposition raises).
+            Export: bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2.
 
       # (3) linecode
       linecode:
@@ -88,12 +99,12 @@ classes:
         annotations:
           order: 3
         related_mappings:
-          - cim:PerLengthImpedance
+          - cim:ACLineSegment.WireConfiguration
         comments:
           - >-
-            Import: resolved to a PerLengthSequenceImpedance or PerLengthPhaseImpedance
-            by name lookup; ACLineSegment.PerLengthImpedance = that object.
-            Export: ACLineSegment.PerLengthImpedance.name used to reconstruct linecode reference.
+            Import: structural; ACLineSegment.WireConfiguration = the WireConfiguration of the
+            code's template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc). Export: the template PerLengthImpedance's LineCode name (get_line_code); a
+            line's own (isTemplate=false) is written inline.
 
       # (4) length
       length:
@@ -110,9 +121,9 @@ classes:
           - cim:Conductor.length
         comments:
           - >-
-            Import: ACLineSegment.length = Length(length, units_str) — unit from 'units'
-            attribute. Export: length = ACLineSegment.length.to(units_str). CIM stores
-            length in m (SI base); DSS default unit is ft when no units given.
+            Import: copied to ACLineSegment.length (<units>); default 1 (defaulted); none on a
+            switch. Export: required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its
+            shortest line's, a remainder the rest of its line, a jumper 1 m.
 
       # (5) phases
       phases:
@@ -126,9 +137,12 @@ classes:
           order: 5
           dss_default: int(3)
         related_mappings:
-          - cim:ACLineSegmentPhase
+          - cim:ACLineSegmentPhase.phase
         comments:
-          - "Import: inferred from bus1 node suffix. Export: len(ACLineSegment.ACLineSegmentPhase)."
+          - >-
+            Import: structural; the phase count; unset = the code's or geometry's nphases, else 3;
+            one that differs from the code's nphases raises. Export: the phase conductors
+            (a neutral is reduced, B4); a coupled group's: every line's.
 
       # (6) r1
       r1:
@@ -142,14 +156,13 @@ classes:
           order: 6
           dss_default: float(0.058)
         close_mappings:
-          - cim:ACLineSegment.r
+          - cim:PerLengthSequenceImpedance.r
         comments:
           - >-
-            Only used when the line has no linecode/matrix/geometry/spacing
-            reference. Import: ACLineSegment.r = Resistance(r1, 'ohm'), taken
-            directly as ohms with no multiplication by length. Export:
-            r1 = ACLineSegment.r.to('ohm'). When a linecode is used instead,
-            r1 is stored per-unit-length on the Linecode (see general/linecode.yaml).
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
         todos:
           - "Converter bug: DSS r1 is documented as ohms per unit length, but the direct-impedance path (no linecode) stores it as total ohms without multiplying by length. Roundtrips correctly within this converter, but a line authored elsewhere with a true per-length r1 and length != 1 would import with the wrong total resistance."
 
@@ -165,9 +178,13 @@ classes:
           order: 7
           dss_default: float(0.1206)
         close_mappings:
-          - cim:ACLineSegment.x
+          - cim:PerLengthSequenceImpedance.x
         comments:
-          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling. Import: ACLineSegment.x = Reactance(x1, 'ohm'). Export: x1 = ACLineSegment.x.to('ohm')."
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (8) r0
       r0:
@@ -181,9 +198,13 @@ classes:
           order: 8
           dss_default: float(0.1784)
         close_mappings:
-          - cim:ACLineSegment.r0
+          - cim:PerLengthSequenceImpedance.r0
         comments:
-          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling, and only set when r1/x1 are also given. Import: ACLineSegment.r0 = Resistance(r0, 'ohm'). Export: r0 = ACLineSegment.r0.to('ohm')."
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (9) x0
       x0:
@@ -197,9 +218,13 @@ classes:
           order: 9
           dss_default: float(0.4047)
         close_mappings:
-          - cim:ACLineSegment.x0
+          - cim:PerLengthSequenceImpedance.x0
         comments:
-          - "Same direct-impedance path as r1 (see r1 comments): taken as total ohms with no length scaling, and only set when r1/x1 are also given. Import: ACLineSegment.x0 = Reactance(x0, 'ohm'). Export: x0 = ACLineSegment.x0.to('ohm')."
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (10) C1
       C1:
@@ -213,13 +238,13 @@ classes:
           order: 10
           dss_default: float(3.4)
         close_mappings:
-          - cim:ACLineSegment.bch
+          - cim:PerLengthSequenceImpedance.bch
         comments:
           - >-
-            Only used on the direct-impedance path (no linecode/matrix/geometry/spacing;
-            see r1 comments — same total-vs-per-length caveat applies to C1).
-            Import: bch = Susceptance(2π × 60 × C1_nF × 1e-9, 'S') (b = 2πfC, frequency
-            hardcoded to 60 Hz). Export: C1 = bch.to('S') / (2π × 60) × 1e9 (back to nF).
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (11) C0
       C0:
@@ -233,9 +258,13 @@ classes:
           order: 11
           dss_default: float(1.6)
         close_mappings:
-          - cim:ACLineSegment.b0ch
+          - cim:PerLengthSequenceImpedance.b0ch
         comments:
-          - "Same C→B conversion as C1 (see C1 comments), applied to the zero-sequence susceptance. Import: b0ch = Susceptance(2π × 60 × C0_nF × 1e-9, 'S'). Export: C0 = b0ch.to('S') / (2π × 60) × 1e9."
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (12) rmatrix
       rmatrix:
@@ -249,17 +278,14 @@ classes:
         annotations:
           order: 12
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.r
         comments:
           - >-
-            Import: when both rmatrix and xmatrix are given, the converter synthesizes
-            a temporary Linecode from the matrices and reuses the linecode importer,
-            producing a PerLengthPhaseImpedance with one PhaseImpedanceData entry per
-            (row, column) pair; ACLineSegment.PerLengthImpedance points to it.
-            Export: PerLengthPhaseImpedance.PhaseImpedanceData.r values are reassembled
-            into the pipe-delimited lower-triangle string DSS expects (see linecode
-            exporter for the exact format).
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (13) xmatrix
       xmatrix:
@@ -273,10 +299,14 @@ classes:
         annotations:
           order: 13
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.x
         comments:
-          - "Same synthesized-Linecode path as rmatrix (see rmatrix comments); xmatrix values become PhaseImpedanceData.x entries. Only used together with rmatrix — xmatrix alone is not read."
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (14) cmatrix
       cmatrix:
@@ -290,15 +320,14 @@ classes:
         annotations:
           order: 14
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.b
         comments:
           - >-
-            Same synthesized-Linecode path as rmatrix (see rmatrix comments); optional
-            alongside rmatrix/xmatrix. Diagonal cmatrix entries (nF/unit) become
-            PhaseImpedanceData.b via b = 2πfC; off-diagonal capacitive coupling
-            terms are preserved as separate PhaseImpedanceData entries, not lost,
-            since PerLengthPhaseImpedance stores a full matrix.
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
+            value / km.
 
       # (15) Switch
       Switch:
@@ -311,14 +340,11 @@ classes:
         annotations:
           order: 15
           dss_default: "false"
-        close_mappings:
-          - cim:LoadBreakSwitch
+        related_mappings:
+          - cim:Switch
         comments:
           - >-
-            When Switch=True the converter returns a LoadBreakSwitch (or
-            Breaker/Fuse/Recloser when an associated protection device is present)
-            instead of an ACLineSegment; the ACLineSegment class mapping is bypassed.
-            On export, a switch-class CIM object is written back as Line with Switch=True.
+            Import: structural; a Switch (sw_) instead of an ACLineSegment; class from its control. Export: not written, a Switch is exported by switch.py.
 
       # (16) Rg
       Rg:
@@ -330,8 +356,13 @@ classes:
         annotations:
           order: 16
           dss_default: float(0.01805)
+        close_mappings:
+          - cim:PerLengthImpedance.rg
         comments:
-          - "OpenDSS-only (N/A): Carson earth model parameter used at line-constants calculation time; not persisted on CIM ACLineSegment."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (Carson earth return; the consumer's choice for geometry). Export: not written,
+            not in CIM (untranscribed or raising on import).
 
       # (17) Xg
       Xg:
@@ -343,8 +374,13 @@ classes:
         annotations:
           order: 17
           dss_default: float(0.155081)
+        close_mappings:
+          - cim:PerLengthImpedance.xg
         comments:
-          - "OpenDSS-only (N/A): Carson earth model parameter; not persisted on CIM ACLineSegment."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (Carson earth return; the consumer's choice for geometry). Export: not written,
+            not in CIM (untranscribed or raising on import).
 
       # (18) rho
       rho:
@@ -356,10 +392,13 @@ classes:
         annotations:
           order: 18
           dss_default: float(100.0)
-        exact_mappings:
+        close_mappings:
           - cim:EarthResistivity.rho
         comments:
-          - "Import: EarthResistivity.rho stored as associated object if specified. Export: rho = EarthResistivity.rho. Units: ohm-m in both DSS and CIM."
+          - >-
+            Import: structural; the deck's EarthResistivity.rho (ohm-m), which every geometry line
+            must agree on (geometry.earth_statement). Export: a geometry line's WireConfiguration
+            EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth.
 
       # (19) geometry
       geometry:
@@ -371,16 +410,12 @@ classes:
         annotations:
           order: 19
         related_mappings:
-          - cim:WireSpacingInfo
+          - cim:ACLineSegment.WireConfiguration
         comments:
           - >-
-            Import: geometry name is resolved to a previously-converted LineGeometry
-            result (spacing + per-conductor WireInfo list); ACLineSegment.WireSpacingInfo
-            is set to the spacing object, and one ACLineSegmentPhase per conductor is
-            created linking to its WireInfo. Export: DSS geometry is not reconstructed
-            as a separate named object — the exporter instead emits the equivalent
-            spacing + wires (see spacing/wires comments), which OpenDSS accepts in
-            place of a geometry reference.
+            Import: structural; ACLineSegment.WireConfiguration = wc_<geometry>. Export: the
+            (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's:
+            spacing_geometry_name of its owner.
 
       # (20) units
       units:
@@ -392,7 +427,9 @@ classes:
         annotations:
           order: 20
         comments:
-          - "OpenDSS-only (N/A): consumed during import to scale 'length' to SI meters for CIM storage; not persisted as a CIM attribute."
+          - >-
+            Import: mapped; the length unit (LENGTH_UNIT); unset: the template's unit.
+            Export: m (B1); lumped: km (B6).
 
       # (21) spacing
       spacing:
@@ -404,14 +441,12 @@ classes:
         annotations:
           order: 21
         related_mappings:
-          - cim:WireSpacingInfo
+          - cim:WireConfiguration.WireSpacing
         comments:
           - >-
-            Import: spacing name is resolved to a previously-converted WireSpacingInfo
-            object; ACLineSegment.WireSpacingInfo is set to it, and the wires/cncables/tscables
-            references (see their comments) are resolved to WireInfo objects and attached
-            as ACLineSegmentPhase entries. Export: spacing = WireSpacingInfo.name
-            (or the newer ConductorDistanceSpacing.name when that asset model is used).
+            Import: structural; with spacing=: a synthesized WireConfiguration ln_<name>_wc on
+            spc_<spacing>, conductors in order. Export: not written, positions are written inline in
+            the LineGeometry (B2).
 
       # cncables written after spacing (21) and before wires (24) so OpenDSS
       # assigns cable positions before overhead wire positions
@@ -425,16 +460,12 @@ classes:
         annotations:
           order: 22
         related_mappings:
-          - cim:ConcentricNeutralCableInfo
+          - cim:WireSequenceConfiguration.WireInfo
         comments:
           - >-
-            Used together with spacing (see spacing comments). Import: each name is
-            resolved to a ConcentricNeutralCableInfo and attached as an ACLineSegmentPhase.WireInfo.
-            Export: only cables whose ConcentricNeutralCableInfo carries full neutral
-            strand geometry (neutralStrandRadius/neutralStrandGmr) are written as cncables;
-            cables imported without that geometry (e.g. from GLM, which only carries
-            Rac/GMR) are exported into wires instead, since DSS needs the full geometry
-            to compute CN impedance.
+            Import: structural; with spacing=: a synthesized WireConfiguration ln_<name>_wc on
+            spc_<spacing>, conductors in order. Export: not written, the LineGeometry carries the
+            conductors (B2).
 
       # tscables written after cncables (22) and before wires (24)
       tscables:
@@ -447,13 +478,12 @@ classes:
         annotations:
           order: 23
         related_mappings:
-          - cim:TapeShieldCableInfo
+          - cim:WireSequenceConfiguration.WireInfo
         comments:
           - >-
-            Used together with spacing (see spacing comments). Import: each name is
-            resolved to a TapeShieldCableInfo and attached as an ACLineSegmentPhase.WireInfo.
-            Export: tscables = names of ACLineSegmentPhase.WireInfo objects that are
-            TapeShieldCableInfo instances.
+            Import: structural; with spacing=: a synthesized WireConfiguration ln_<name>_wc on
+            spc_<spacing>, conductors in order. Export: not written, the LineGeometry carries the
+            conductors (B2).
 
       wires:
         description: >-
@@ -465,14 +495,12 @@ classes:
         annotations:
           order: 24
         related_mappings:
-          - cim:OverheadWireInfo
+          - cim:WireSequenceConfiguration.WireInfo
         comments:
           - >-
-            Used together with spacing (see spacing comments). Import: each name is
-            resolved to a WireInfo (typically OverheadWireInfo) and attached as an
-            ACLineSegmentPhase.WireInfo. Export: wires = names of ACLineSegmentPhase.WireInfo
-            objects that are not concentric-neutral or tape-shield cable types (those
-            go to cncables/tscables instead).
+            Import: structural; with spacing=: a synthesized WireConfiguration ln_<name>_wc on
+            spc_<spacing>, conductors in order. Export: not written, the LineGeometry carries the
+            conductors (B2).
 
       EarthModel:
         description: >-
@@ -483,10 +511,11 @@ classes:
         required: false
         annotations:
           order: 25
-        exact_mappings:
-          - cim:EarthResistivity.earthModelType
         comments:
-          - "Import: EarthResistivity.earthModelType set from EarthModel enum value. Export: earthModelType → EarthModel enum string."
+          - >-
+            Import: untranscribed; the earth model of the impedance calculation; the consumer's
+            choice. Export: not written, the deck's Set earthmodel carries it (options.py: one model
+            per deck).
 
       # (26) B1
       B1:
@@ -497,7 +526,12 @@ classes:
         annotations:
           order: 26
         close_mappings:
-          - cim:ACLineSegment.bch
+          - cim:PerLengthSequenceImpedance.bch
+        comments:
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            not written, C1/C0 carries the susceptance.
         todos:
           - "B1 input path not yet implemented. B1 (µS/unit) → bch via bch = B1 × 1e-6 × length. When present, should take precedence over C1 for bch calculation."
 
@@ -510,7 +544,12 @@ classes:
         annotations:
           order: 27
         close_mappings:
-          - cim:ACLineSegment.b0ch
+          - cim:PerLengthSequenceImpedance.b0ch
+        comments:
+          - >-
+            Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
+            line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
+            not written, C1/C0 carries the susceptance.
         todos:
           - "B0 input path not yet implemented. B0 (µS/unit) → b0ch via b0ch = B0 × 1e-6 × length."
 
@@ -524,7 +563,11 @@ classes:
         annotations:
           order: 28
         comments:
-          - "OpenDSS-only (N/A): seasonal ratings metadata; no direct CIM equivalent. Used alongside Ratings array."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (an indexed rating array that names no calendar season; home
+            OperationalLimitType.season). Export: not written, not in CIM (untranscribed or raising
+            on import).
 
       # (29) Ratings
       Ratings:
@@ -537,8 +580,11 @@ classes:
         required: false
         annotations:
           order: 29
-        related_mappings:
-          - cim:OperationalLimit
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (with Seasons). Export: not written, not in CIM (untranscribed or raising on
+            import).
         todos:
           - "Seasonal ratings converter not yet implemented. Ratings array should map to multiple CurrentLimit objects on an OperationalLimitSet, one per season."
 
@@ -551,8 +597,10 @@ classes:
         required: false
         annotations:
           order: 30
-        related_mappings:
-          - cim:PSRType
+        comments:
+          - >-
+            Import: untranscribed; no home in the network profile parts. Export: not written, not in
+            CIM (untranscribed or raising on import).
         todos:
           - "LineType → PSRType mapping not yet implemented. DSS LineTypeCode (OH, UG, etc.) could be mapped to a PSRType classification on the ACLineSegment."
 
@@ -567,7 +615,9 @@ classes:
           order: 31
           dss_default: float(1.0)
         comments:
-          - "OpenDSS-only (N/A): dielectric constant for line-constants calculation; no CIM equivalent in the standard profile."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, not in CIM (untranscribed or raising on import).
 
       # (32) HeightOffset
       HeightOffset:
@@ -581,7 +631,9 @@ classes:
           order: 32
           dss_default: float(0.0)
         comments:
-          - "OpenDSS-only (N/A): geometry adjustment parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, ySpacingOffset goes into the geometry's heights.
 
       # (33) HeightUnit
       HeightUnit:
@@ -592,7 +644,9 @@ classes:
         annotations:
           order: 33
         comments:
-          - "OpenDSS-only (N/A): unit for HeightOffset; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, ySpacingOffset goes into the geometry's heights.
 
       # (34) conductors
       conductors:
@@ -605,8 +659,10 @@ classes:
         required: false
         annotations:
           order: 34
-        related_mappings:
-          - cim:WireInfo
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, not in CIM (untranscribed or raising on import).
         todos:
           - "Conductor converter not yet implemented. Names should resolve to WireInfo (OverheadWireInfo or CableInfo) objects."
 
@@ -618,13 +674,13 @@ classes:
         required: false
         annotations:
           order: 35
-        related_mappings:
-          - cim:CurrentLimit
+        close_mappings:
+          - cim:CurrentLimit.normalValue
         comments:
           - >-
-            Import: CurrentLimit with limitType=normalOperating on an OperationalLimitSet
-            linked to the ACLineSegment terminal.
-            Export: normalOperating CurrentLimit value. DONE in converter.
+            Import: structural; instance OperationalLimitSet ln_<name>_limits (see Ratings); on a
+            switch untranscribed. Export: rule, get_current_limits normal (A); unset -> not written,
+            the engine copies the catalog's.
 
       # (36) emergamps
       emergamps:
@@ -634,12 +690,13 @@ classes:
         required: false
         annotations:
           order: 36
-        related_mappings:
-          - cim:CurrentLimit
+        close_mappings:
+          - cim:CurrentLimit.normalValue
         comments:
           - >-
-            Import: CurrentLimit with limitType=emergency on the OperationalLimitSet.
-            Export: emergency CurrentLimit value. DONE in converter.
+            Import: structural; instance OperationalLimitSet ln_<name>_limits (see Ratings); on a
+            switch untranscribed. Export: rule, get_current_limits emergency (A); unset -> not
+            written, as normamps.
 
       # (37) faultrate
       faultrate:
@@ -652,7 +709,9 @@ classes:
           order: 37
           dss_default: float(0.1)
         comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed or raising on import).
         todos:
           - "Requires CIM extension to roundtrip (e.g. on FailureStatistic or AssetFailureInfo)."
 
@@ -667,7 +726,9 @@ classes:
           dss_name: "pctperm"
           dss_default: float(20.0)
         comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed or raising on import).
         todos:
           - "Requires CIM extension to roundtrip."
 
@@ -681,7 +742,9 @@ classes:
           order: 39
           dss_default: float(3.0)
         comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed or raising on import).
         todos:
           - "Requires CIM extension to roundtrip."
 
@@ -693,11 +756,13 @@ classes:
         required: false
         annotations:
           order: 40
+        close_mappings:
+          - cim:PerLengthImpedance.calculatedFrequency
         comments:
           - >-
-            Not stored on CIM ACLineSegment; base frequency is circuit-level in CIM.
-            The C1/C0 → bch conversion in the converter uses 60 Hz hardcoded; a
-            non-60-Hz system would need this extracted from circuit context.
+            Import: structural; the line's own impedance's calculatedFrequency and the frequency of
+            its b; unset: the deck's. Export: not written, Options.defaultbasefreq is the
+            deck's.
         todos:
           - "Extract base frequency from circuit-level CIM attributes for non-60 Hz systems."
 
@@ -710,8 +775,12 @@ classes:
         annotations:
           order: 41
           dss_default: "true"
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): if False, converter returns None and no CIM object is created. CIM ACLineSegment has no enabled/disabled flag."
+          - >-
+            Import: copied to ACLineSegment.normallyInService, Switch.normallyInService. Export:
+            get_in_service(which='normal'); unset -> not written.
 
       # (42) like
       like:
@@ -722,6 +791,8 @@ classes:
         annotations:
           order: 42
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.
 
 # Enums are imported from common_enums.yaml

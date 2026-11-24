@@ -20,6 +20,7 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
     bv_4p16kv, 4.16
     bv_480v,   0.48
     bv_240v,   0.24
+    bv_208v,   0.208
 
 Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direction
     olt_normal,    normal,    normal,    true,  absoluteValue
@@ -28,6 +29,8 @@ Table OperationalLimitType: mRID, name, durationKind, isInfiniteDuration, direct
 Import bus.cimtbl
 
 Import zip_fractions.cimtbl
+
+Import linegeometry.cimtbl
 
 Import linecode.cimtbl
 

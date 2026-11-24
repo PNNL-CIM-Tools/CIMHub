@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -25,17 +25,15 @@ classes:
       (catalog) that can be referenced by Transformer objects via the XfmrCode
       property.
     class_uri: dss:Xfmrcode
-    exact_mappings:
-      - cim:TransformerTankInfo
+    close_mappings:
+      - cim:TransformerTankConfiguration
     comments:
       - >-
-        OpenDSS Xfmrcode maps to CIM TransformerTankInfo (catalog entry describing
-        transformer construction), with a PowerTransformerInfo created as its
-        parent container. Each winding is described by a TransformerEndInfo
-        object attached to the TransformerTankInfo. No-load losses and exciting
-        current for winding 1 are stored in a NoLoadTest; short-circuit
-        reactances and load losses between winding pairs are stored in
-        ShortCircuitTest objects, one per winding pair.
+        Import: a TransformerTankConfiguration xc_ + name (xfmrcode.cimtbl),
+        built from the instances that use it and written only for a code an
+        unregulated instance uses; a 3-phase code has a TransformerTankEnd per
+        winding, a 1-phase one TransformerLugs. Export: one XfmrCode per
+        configuration a unit uses; an unused one is skipped and logged.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -45,7 +43,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: TransformerTankConfiguration.name, mRID = xc_ + name,
+            lowercased. Export: Names, the XfmrCode namespace.
 
       # (1) phases
       phases:
@@ -59,7 +59,10 @@ classes:
           order: 1
           dss_default: int(3)
         comments:
-          - "Not stored directly on CIM TransformerTankInfo; phase count is implicit in TransformerEndInfo configuration."
+          - >-
+            Import: structural; 3 = TankEnd template, 1 = lug template, others
+            raise. Export: read through the first unit that uses the
+            configuration.
 
       # (2) windings
       windings:
@@ -71,10 +74,10 @@ classes:
         annotations:
           order: 2
           dss_default: int(2)
-        related_mappings:
-          - cim:TransformerEndInfo
         comments:
-          - "Import: creates one TransformerEndInfo per winding on the TransformerTankInfo. Export: len(TransformerTankInfo.TransformerEndInfo)."
+          - >-
+            Import: structural; one TransformerWinding each, 2 or 3. Export: the
+            unit's winding count.
 
       # (3) wdg
       wdg:
@@ -85,7 +88,9 @@ classes:
         annotations:
           order: 3
         comments:
-          - "OpenDSS-only (N/A): index selector consumed at parse time; no CIM equivalent."
+          - >-
+            Import: structural; the winding Rneut/Xneut belong to, none = the
+            last. Export: the grounded winding.
 
       # (4) conn
       conn:
@@ -96,10 +101,11 @@ classes:
         annotations:
           order: 4
           dss_default: string(wye)
-        exact_mappings:
-          - cim:TransformerEndInfo.connectionKind
         comments:
-          - "Import: 'wye' → WindingConnection.Y; 'delta' → WindingConnection.D. Export: reverse enum lookup."
+          - >-
+            Import: structural; the reader folds wdg= blocks and bare values
+            into the array form (conns). Export: not written; the arrays carry
+            every winding.
 
       # (5) kV
       kV:
@@ -111,18 +117,13 @@ classes:
         annotations:
           order: 5
           dss_default: float(12.47)
-        related_mappings:
-          - cim:TransformerEndInfo.ratedVoltage
-        comments:
-          - >-
-            Import: sets a TransformerEndInfo.ratedU attribute, which is not
-            a real TransformerEndInfo field (the correct field is
-            ratedVoltage), so the value does not roundtrip to CIM-spec-compliant
-            tools. Export: reads ratedVoltage.to('kV') if present, falling back
-            to a legacy ratedU attribute for backward compatibility with data
-            written by this importer. kVs[] is the array form.
         todos:
           - "Importer bug: writes TransformerEndInfo.ratedU instead of the real ratedVoltage field."
+        comments:
+          - >-
+            Import: structural; the reader folds wdg= blocks and bare values
+            into the array form (kVs). Export: not written; the arrays carry
+            every winding.
 
       # (6) kVA
       kVA:
@@ -133,10 +134,11 @@ classes:
         annotations:
           order: 6
           dss_default: float(1000.0)
-        exact_mappings:
-          - cim:TransformerEndInfo.ratedS
         comments:
-          - "Import: TransformerEndInfo.ratedS = ApparentPower(kVA, 'kVA'). Export: kVA = ratedS.to('kVA'). CIM stores in VA (SI base). kVAs[] is the array form."
+          - >-
+            Import: structural; the reader folds wdg= blocks and bare values
+            into the array form (kVAs). Export: not written; the arrays carry
+            every winding.
 
       # (7) tap
       tap:
@@ -147,10 +149,13 @@ classes:
         annotations:
           order: 7
           dss_default: float(1.0)
-        comments:
-          - "OpenDSS-only (N/A): the current converter never reads tap or taps[]; no CIM field is set from this property."
         todos:
           - "tap/taps[] not read by the importer. If implemented, it should scale TransformerEndInfo.ratedVoltage rather than being stored separately."
+        comments:
+          - >-
+            Import: structural; the reader folds wdg= blocks and bare values
+            into the array form (taps). Export: not written; the arrays carry
+            every winding.
 
       # (8) %R
       pct_R:
@@ -162,14 +167,11 @@ classes:
           order: 8
           dss_default: float(0.2)
           dss_name: "%R"
-        close_mappings:
-          - cim:TransformerEndInfo.r
         comments:
           - >-
-            Import: TransformerEndInfo.r converted from percent on winding
-            kVA base to ohms via Zbase = kV² × 1000 / kVA;
-            r = %R / 100 × Zbase. Export: %R = r / Zbase × 100, using the
-            same Zbase formula. %Rs[] is the array form.
+            Import: structural; the reader folds wdg= blocks and bare values
+            into the array form (pct_Rs). Export: not written; the arrays carry
+            every winding.
 
       # (9) Rneut
       Rneut:
@@ -179,8 +181,13 @@ classes:
         required: false
         annotations:
           order: 9
+        exact_mappings:
+          - cim:TransformerEnd.rground
         comments:
-          - "OpenDSS-only (N/A): neutral impedance parameter; no CIM equivalent on TransformerEndInfo in the standard profile."
+          - >-
+            Import: TransformerTankEnd.rground (ohm) of winding wdg, else the
+            last, when >= 0; on a 1-phase code it raises. Export: rground (ohm)
+            of the grounded winding.
 
       # (10) Xneut
       Xneut:
@@ -190,8 +197,12 @@ classes:
         required: false
         annotations:
           order: 10
+        exact_mappings:
+          - cim:TransformerEnd.xground
         comments:
-          - "OpenDSS-only (N/A): neutral reactance; no CIM equivalent on TransformerEndInfo."
+          - >-
+            Import: TransformerTankEnd.xground (ohm), with Rneut >= 0. Export:
+            xground (ohm) of the grounded winding.
 
       # (11) conns
       conns:
@@ -202,10 +213,13 @@ classes:
         required: false
         annotations:
           order: 11
-        exact_mappings:
-          - cim:TransformerEndInfo.connectionKind
+        close_mappings:
+          - cim:TransformerTankEnd.connectionKind
         comments:
-          - "Array form of conn property. Each element maps to the corresponding TransformerEndInfo.connectionKind."
+          - >-
+            Import: 3-phase: TransformerTankEnd.connectionKind (D, Y; grounding
+            is the instance's), a center tap's secondary halves I; default wye.
+            Export: D -> delta, Y/Yn/I -> wye.
 
       # (12) kVs
       kVs:
@@ -217,10 +231,15 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 12
-        related_mappings:
-          - cim:TransformerEndInfo.ratedVoltage
+        close_mappings:
+          - cim:TransformerWinding.baseU
+          - cim:TransformerWinding.ratedU
         comments:
-          - "Array form of kV property; each element goes through the same ratedU/ratedVoltage path (see kV comments)."
+          - >-
+            Import: TransformerWinding.baseU (kV, the coil); ratedU
+            phase-to-phase from the instances' bus system (x sqrt 3, x 2 for a
+            split-phase half), and instances that disagree raise. Export: baseU
+            of a coil, ratedU of a 3-phase winding.
 
       # (13) kVAs
       kVAs:
@@ -232,10 +251,14 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 13
-        exact_mappings:
-          - cim:TransformerEndInfo.ratedS
+        close_mappings:
+          - cim:TransformerWinding.ratedS
+          - cim:TransformerWinding.baseS
         comments:
-          - "Array form of kVA property. Each element maps to the corresponding TransformerEndInfo.ratedS."
+          - >-
+            Import: TransformerWinding.ratedS (kVA; a split-phase half is kVA /
+            2); baseS = winding 1's kVA on every coil. Export: a coil's baseS,
+            else ratedS, in kVA.
 
       # (14) taps
       taps:
@@ -246,10 +269,12 @@ classes:
         required: false
         annotations:
           order: 14
-        comments:
-          - "OpenDSS-only (N/A): not read by the current converter (see tap comments)."
         todos:
           - "taps[] not read by the importer; see tap todos."
+        comments:
+          - >-
+            Import: structural; a tap other than 1 raises (a fixed tap is not
+            mapped). Export: not written; a tap is the instance's.
 
       # (15) Xhl
       Xhl:
@@ -260,16 +285,12 @@ classes:
         required: false
         annotations:
           order: 15
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import: a ShortCircuitTest is created for each winding pair with
-            leakageImpedance = sqrt(r_pct² + Xhl²) × Zbase / 100, where r_pct
-            is the sum of the two windings' %R and Zbase uses winding 1's kVA
-            as the test base; ShortCircuitTest.loss = r_pct / 100 × kVA_winding1.
-            Export: the leakage impedance and %R are used to recover
-            Xhl = sqrt(z_pct² − r_pct²), where z_pct = leakageImpedance × 100 / Zbase.
+            Import: mesh 1-2 x (percent on the From winding's baseU and baseS);
+            default 7. Export: mesh (1,2) x.
 
       # (16) Xht
       Xht:
@@ -280,13 +301,11 @@ classes:
         required: false
         annotations:
           order: 16
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import/export: same leakageImpedance formula as Xhl (see Xhl
-            comments), applied to the H-T winding pair (windings 1 and 3);
-            only used when 3 or more windings are present.
+            Import: mesh 1-3 x; default 35. Export: mesh (1,3) x.
 
       # (17) Xlt
       Xlt:
@@ -297,13 +316,11 @@ classes:
         required: false
         annotations:
           order: 17
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import/export: same leakageImpedance formula as Xhl (see Xhl
-            comments), applied to the L-T winding pair (windings 2 and 3);
-            only used when 3 or more windings are present.
+            Import: mesh 2-3 x; default 30. Export: mesh (2,3) x.
 
       # (18) Xscarray
       Xscarray:
@@ -316,14 +333,11 @@ classes:
         annotations:
           order: 18
         close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+          - cim:TransformerMeshImpedance.x
         comments:
           - >-
-            Import/export: array form giving one %Xsc entry per winding pair,
-            in the order produced by iterating pairs (i, k) with i < k over
-            winding indices; each entry uses the same leakageImpedance formula
-            as Xhl (see Xhl comments). Used in place of Xhl/Xht/Xlt for
-            transformers with more than 3 windings.
+            Import: untranscribed; more than 3 windings raise. Export: not
+            written.
 
       # (19) thermal
       thermal:
@@ -334,7 +348,9 @@ classes:
         annotations:
           order: 19
         comments:
-          - "OpenDSS-only (N/A): thermal model parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed (thermal model; no home in the network profile
+            parts). Export: unset.
 
       # (20) n
       n:
@@ -345,7 +361,9 @@ classes:
         annotations:
           order: 20
         comments:
-          - "OpenDSS-only (N/A): IEEE C57 thermal exponent; no CIM equivalent."
+          - >-
+            Import: untranscribed (thermal model; no home in the network profile
+            parts). Export: unset.
 
       # (21) m
       m:
@@ -356,7 +374,9 @@ classes:
         annotations:
           order: 21
         comments:
-          - "OpenDSS-only (N/A): IEEE C57 thermal exponent; no CIM equivalent."
+          - >-
+            Import: untranscribed (thermal model; no home in the network profile
+            parts). Export: unset.
 
       # (22) flrise
       flrise:
@@ -367,7 +387,9 @@ classes:
         annotations:
           order: 22
         comments:
-          - "OpenDSS-only (N/A): thermal rating parameter; no CIM equivalent."
+          - >-
+            Import: untranscribed (thermal model; no home in the network profile
+            parts). Export: unset.
 
       # (23) hsrise
       hsrise:
@@ -378,7 +400,9 @@ classes:
         annotations:
           order: 23
         comments:
-          - "OpenDSS-only (N/A): hot spot thermal rating; no CIM equivalent."
+          - >-
+            Import: untranscribed (thermal model; no home in the network profile
+            parts). Export: unset.
 
       # (24) %loadloss
       pct_loadloss:
@@ -389,17 +413,15 @@ classes:
         annotations:
           order: 24
           dss_name: "%loadloss"
-        close_mappings:
-          - cim:TransformerEndInfo.r
-        comments:
-          - >-
-            Import fallback, used only when neither %R nor %Rs[] is given:
-            each winding's %R = %loadloss / num_windings (evenly split), then
-            converted to ohms via the same Zbase formula as %R (see %R
-            comments). No single CIM field stores a total load-loss
-            percentage, so %loadloss is not re-derived or exported.
         todos:
           - "%loadloss is not exported; the exporter always recomputes %R per winding from TransformerEndInfo.r, so a roundtrip that only set %loadloss will export as %Rs[] instead."
+        close_mappings:
+          - cim:TransformerWinding.r
+        comments:
+          - >-
+            Import: derived; with pct_Rs unset, r = loadloss / 2 on windings 1
+            and 2; set with pct_Rs, the two must agree. Export: not written; %Rs
+            carries each winding's r.
 
       # (25) %noloadloss
       pct_noloadloss:
@@ -411,9 +433,11 @@ classes:
           order: 25
           dss_name: "%noloadloss"
         close_mappings:
-          - cim:NoLoadTest.loss
+          - cim:TransformerTankConfiguration.noLoadLoss
         comments:
-          - "Import: NoLoadTest.loss = %noloadloss / 100 × kVA. Export: %noloadloss = NoLoadTest.loss / kVA × 100."
+          - >-
+            Import: derived; noLoadLoss (kW) = % x winding 1 kVA. Export: the
+            core g.
 
       # (26) normhkVA
       normhkVA:
@@ -423,8 +447,11 @@ classes:
         required: false
         annotations:
           order: 26
+        close_mappings:
+          - cim:ApparentPowerLimit.value
         comments:
-          - "OpenDSS-only (N/A): operational limit; no CIM equivalent on TransformerTankInfo catalog object."
+          - >-
+            Import: untranscribed (a tank rating). Export: unset.
 
       # (27) emerghkVA
       emerghkVA:
@@ -434,8 +461,11 @@ classes:
         required: false
         annotations:
           order: 27
+        close_mappings:
+          - cim:ApparentPowerLimit.value
         comments:
-          - "OpenDSS-only (N/A): emergency operational limit; no CIM equivalent on catalog object."
+          - >-
+            Import: untranscribed (a tank rating). Export: unset.
 
       # (28) MaxTap
       MaxTap:
@@ -445,12 +475,15 @@ classes:
         required: false
         annotations:
           order: 28
-        related_mappings:
-          - cim:TapChangerInfo.highStep
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current converter; no TapChangerInfo object is created for a Xfmrcode."
         todos:
           - "No TapChangerInfo is created by the importer/exporter. MaxTap/MinTap/NumTaps should together populate TapChangerInfo.highStep/lowStep/stepVoltageIncrement, attached to the tapped TransformerEndInfo."
+        close_mappings:
+          - cim:TapChanger.highStep
+        comments:
+          - >-
+            Import: untranscribed on a code; a regulated instance takes it
+            (regcontrol.cimtbl). Export: not written; the range stays on each
+            instance.
 
       # (29) MinTap
       MinTap:
@@ -460,12 +493,15 @@ classes:
         required: false
         annotations:
           order: 29
-        related_mappings:
-          - cim:TapChangerInfo.lowStep
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current converter (see MaxTap comments)."
         todos:
           - "Not implemented; see MaxTap todos."
+        close_mappings:
+          - cim:TapChanger.lowStep
+        comments:
+          - >-
+            Import: untranscribed on a code; a regulated instance takes it
+            (regcontrol.cimtbl). Export: not written; the range stays on each
+            instance.
 
       # (30) NumTaps
       NumTaps:
@@ -475,12 +511,15 @@ classes:
         required: false
         annotations:
           order: 30
-        related_mappings:
-          - cim:TapChangerInfo.stepVoltageIncrement
-        comments:
-          - "OpenDSS-only (N/A) for now: not read by the current converter (see MaxTap comments); if implemented, would combine with MaxTap/MinTap to derive TapChangerInfo.stepVoltageIncrement = (MaxTap - MinTap) / NumTaps."
         todos:
           - "Not implemented; see MaxTap todos."
+        close_mappings:
+          - cim:RatioTapChanger.stepVoltageIncrement
+        comments:
+          - >-
+            Import: untranscribed on a code; a regulated instance takes it
+            (regcontrol.cimtbl). Export: not written; the range stays on each
+            instance.
 
       # (31) %imag
       pct_imag:
@@ -491,14 +530,11 @@ classes:
         annotations:
           order: 31
           dss_name: "%imag"
-        close_mappings:
-          - cim:NoLoadTest.excitingCurrent
+        exact_mappings:
+          - cim:TransformerTankConfiguration.percentMagnetizingCurrent
         comments:
           - >-
-            Import: NoLoadTest.excitingCurrent = sqrt(%imag² + %noloadloss²)
-            (magnetizing and no-load-loss currents combined in quadrature).
-            Export: %imag = sqrt(excitingCurrent² − %noloadloss²), or 0.0 if
-            that value would be negative.
+            Import: percentMagnetizingCurrent (percent). Export: the core b.
 
       # (32) ppm_antifloat
       ppm_antifloat:
@@ -509,7 +545,9 @@ classes:
         annotations:
           order: 32
         comments:
-          - "OpenDSS-only (N/A): numerical stability parameter; no CIM equivalent."
+          - >-
+            Import: untranscribed (numerical aid of the DSS solver). Export:
+            unset.
 
       # (33) %Rs
       pct_Rs:
@@ -521,10 +559,12 @@ classes:
         annotations:
           order: 33
           dss_name: "%Rs"
-        close_mappings:
-          - cim:TransformerEndInfo.r
+        exact_mappings:
+          - cim:TransformerWinding.r
         comments:
-          - "Array form of %R property. Each element maps to the corresponding TransformerEndInfo.r via percent-to-ohm conversion."
+          - >-
+            Import: winding r (percent on its own baseS); default 0.2. Export:
+            winding r x kVA_n / kVA_1; an unset r is 0.
 
       # (34) X12
       X12:
@@ -535,10 +575,11 @@ classes:
         required: false
         annotations:
           order: 34
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
-          - "Alias for Xhl; maps to the same ShortCircuitTest for the H-L pair."
+          - >-
+            Import: alias of Xhl; with Xhl they must agree. Export: not written.
 
       # (35) X13
       X13:
@@ -549,10 +590,11 @@ classes:
         required: false
         annotations:
           order: 35
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
-          - "Alias for Xht; maps to the same ShortCircuitTest for the H-T pair."
+          - >-
+            Import: alias of Xht; with Xht they must agree. Export: not written.
 
       # (36) X23
       X23:
@@ -563,21 +605,29 @@ classes:
         required: false
         annotations:
           order: 36
-        close_mappings:
-          - cim:ShortCircuitTest.leakageImpedance
+        exact_mappings:
+          - cim:TransformerMeshImpedance.x
         comments:
-          - "Alias for Xlt; maps to the same ShortCircuitTest for the L-T pair."
+          - >-
+            Import: alias of Xlt; with Xlt they must agree. Export: not written.
 
       # (37) RdcOhms
       RdcOhms:
         description: >-
           Winding dc resistance in OHMS.
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 37
+        exact_mappings:
+          - cim:TransformerWinding.rDC
         comments:
-          - "OpenDSS-only (N/A): DC resistance for loss calculation; no separate CIM field on TransformerEndInfo (CIM r is AC resistance)."
+          - >-
+            Import: copied per winding to the template's TransformerWinding.rDC
+            (ohm); the reader takes each value for the active wdg=, and some
+            windings without one raise. Export: each template winding's rDC,
+            written one wdg= block per winding.
 
       # (38) Seasons
       Seasons:
@@ -589,7 +639,11 @@ classes:
         annotations:
           order: 38
         comments:
-          - "OpenDSS-only (N/A): seasonal ratings count; no direct CIM equivalent on catalog object."
+          - >-
+            Import: structural; the number of Ratings (one by default). Seasons
+            without Ratings, or a count other than the Ratings', raises: the
+            engine keeps Seasons of them and pads with zeros. Export: the number
+            of the template's season ratings.
 
       # (39) Ratings
       Ratings:
@@ -600,10 +654,15 @@ classes:
         required: false
         annotations:
           order: 39
-        related_mappings:
-          - cim:OperationalLimit
-        todos:
-          - "Seasonal ratings converter not yet implemented. Should map to multiple ApparentPowerLimit objects."
+        close_mappings:
+          - cim:ApparentPowerLimit.normalValue
+        comments:
+          - >-
+            Import: copied, kVA; one ApparentPowerLimit per season n, of type
+            olt_season<n>, in the OperationalLimitSet <xc>_ratings that the
+            TransformerTankConfiguration names (EquipmentConfiguration.OperationalLimitSet).
+            Export: the template's olt_season<n> ApparentPowerLimits, in season
+            order.
 
       # (40) like
       like:
@@ -614,4 +673,6 @@ classes:
         annotations:
           order: 40
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

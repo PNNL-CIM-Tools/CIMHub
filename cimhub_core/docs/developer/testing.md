@@ -12,7 +12,7 @@ helpers a mapper test calls are on [The .cimtbl import contract](cimtbl.md).
 uv sync
 scripts/test-all.sh                    # every package with tests, one pytest process each, then cross_format
 scripts/test-all.sh core opendss       # only the named packages (cimhub_ prefix optional)
-scripts/test-all.sh cross_format       # only the root tier-4 tests in tests/cross_format
+scripts/test-all.sh cross_format       # only the root cross-format tests in tests/cross_format
 scripts/test-all.sh opendss -- -x -q   # arguments after -- go to pytest
 uv run pytest cimhub_opendss/tests/test_cimtbl_linecode.py   # one file
 ```
@@ -53,41 +53,41 @@ CIMHUB_DSS_DECKS=/path/to/decks scripts/test-all.sh opendss -- --roundtrip
 `CIMHUB_UPDATE_GOLDENS` is read in one place, `cimtbl_testing`, and a golden is rewritten only when it is exactly
 `1`. The OpenDSS exporter's deck goldens (`cimhub_opendss/tests/export_atoms.py`) go through the same helper.
 
-## Test tiers
+## Test types
 
 Every test checks one hop of the pipeline. A failure then points at one place.
 
 ```text
 native file -> reader -> mapper -> .cimtbl text -> cimtables -> CIM -> getters -> exporter -> native file
-              |__________ tier 1 ___________|
-                                      |___ tier 1b ___|
-                                                      |____________ tier 2 ____________|
-              |______________________________ tier 3 ______________________________|
+              |__________ import ___________|
+                                      |____ bind _____|
+                                                      |____________ export ____________|
+              |____________________________ round trip ____________________________|
 ```
 
-| tier | what runs | what it asserts |
+| test | what runs | what it asserts |
 |---|---|---|
-| 1 importer | native atom, reader, mapper, formatted text | The text equals the reviewed golden `.cimtbl`. A failure shows a record diff. |
-| 1b bind | golden (plus prerequisites), cimtables | The golden binds under cim18v17, and key values are right in SI (`.to(unit)`). |
-| 2 exporter | golden (plus prerequisites), CIM, exporter | The exported native records equal the native atom, field by field, minus the fields the spec lists as untranscribed. Where a native atom would not round trip byte for byte (GridLAB-D), the exported deck is read back and imported again, and the two CIM models are equal under `cimtables.diff_models` except for the listed differences. |
-| 3 round trip | a whole reference model through import and export | Power flow or the re-imported artifacts agree. Expected differences are listed in the spoke's spec. |
-| 4 cross-format | the same equipment from two spokes' goldens | Equal in SI within a tolerance, matched by topology, never by mRID. Lives in the root `tests/cross_format/`. |
-| spec | `check_fields(FIELDS, NATIVE_CLASS)` | The field classification covers every slot of the native class (invariant I3). |
+| import | native atom, reader, mapper, formatted text | The text equals the reviewed golden `.cimtbl`. A failure shows a record diff. |
+| bind | golden (plus prerequisites), cimtables | The golden binds under cim18v17, and key values are right in SI (`.to(unit)`). |
+| export | an atom imported and exported again | The export reproduces the atom. Each spoke names its check on its own testing page or spec: RAW compares the exported records with the native atom field by field, minus the untranscribed fields. GridLAB-D reads the exported deck back and imports it again, and GDM imports the exported system again; both compare the two CIM models with `cimtables.diff_models`, minus the listed differences. OpenDSS compares the written deck with a reviewed deck golden (`atoms/<table>/export/`, `assert_matches_dss_golden`) and solves both decks in the engine (`assert_same_engine_state`). |
+| round trip | a whole reference model through import and export | Power flow or the re-imported artifacts agree. Expected differences are listed in the spoke's spec. |
+| cross-format | the same equipment from two spokes' goldens | Equal in SI within a tolerance, matched by topology, never by mRID. Lives in the root `tests/cross_format/`. |
+| classification | `check_fields(FIELDS, NATIVE_CLASS)` | The field classification covers every slot of the native class (invariant I3). |
 
-Tier 4 needs two formats. It lives at the repo root, never inside a spoke, and uses only public model pairs. It
+A cross-format test needs two formats. It lives at the repo root, never inside a spoke, and uses only public model pairs. It
 binds the committed golden directories of both spokes with cimtables alone (no reader, no engine) and compares
 through the core getters.
 
 ### What exists today
 
-| package | tier 1, 1b, spec | tier 2 | tier 3 | other |
+| package | import, bind, classification | export | round trip | other |
 |---|---|---|---|---|
 | `cimhub_core` | not applicable | not applicable | not applicable | Unit tests of `cimtbl`, `cimtbl_testing`, `getters/`, `derived/`, `shapes/` (every shape loads), names, time points and `GraphModel`. |
 | `cimhub_opendss` | `test_cimtbl_<native_table>.py`, one per table, with atoms | `test_export_*.py`, atoms in `atoms/*/export/` | `test_export_decks.py`: power-flow parity in the OpenDSS engine, bus coordinates, idempotence | Reader and writer tests, `test_topology_walk.py`, and `test_cimtbl_sweep.py`, which maps and binds every deck. |
 | `cimhub_gridlabd` | `test_cimtbl_<native_table>.py` with atoms in `tests/atoms/` | `test_export_atoms.py`, `test_export_players.py`, `test_export_schedules.py` | `test_export_decks.py` | Reader and writer tests, `test_topology_walk.py`, `test_cimtbl_sweep.py`. |
 | `cimhub_raw` | `test_raw_to_cimtbl.py` against `tests/goldens/` and `tests/atoms/` | `test_cim_to_raw.py` (atoms) | `test_cim_to_raw.py` (whole cases) | `test_raw34_reader.py`, `test_phase2_stubs.py`. |
 | `cimhub_gdm` | `test_<family>_import.py` against `.cimtbl` goldens (GDM has no native file, see below) | `test_export_*.py` | `test_export_round_trip.py` (golden, export, re-import, same golden) and `test_xml_round_trip.py` | `test_ditto_sweep.py`, `test_reference_import.py`. |
-| root `tests/cross_format/` | | | | Tier 4: `test_ieee13_glm_vs_dss.py`, `test_dss_to_glm.py`, `test_glm_to_dss.py`, `test_glm_player_to_dss.py`, `test_glm_schedule_elsewhere.py`. |
+| root `tests/cross_format/` | | | | Cross-format: `test_ieee13_glm_vs_dss.py`, `test_dss_to_glm.py`, `test_glm_to_dss.py`, `test_glm_player_to_dss.py`, `test_glm_schedule_elsewhere.py`. |
 
 GDM is builder-native: there is no native file and no artifact. Its atoms are small systems built in Python
 (`cimhub_gdm/tests/gdm_atoms.py`), and the comparison is at CIM level with `cimtables.diff_models`. The details are in
@@ -103,7 +103,7 @@ text that cimtables loads.
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.<ext>      # native atom (.dss, .glm, .raw, ...)
 cimhub_<fmt>/tests/atoms/<native_table>/<case>.cimtbl     # golden, reviewed by a human
 cimhub_<fmt>/tests/atoms/<native_table>/prereq.cimtbl     # context the atom references but does not declare
-cimhub_<fmt>/tests/test_cimtbl_<native_table>.py          # tiers 1, 1b, spec and mapper unit tests
+cimhub_<fmt>/tests/test_cimtbl_<native_table>.py          # import, bind and classification tests, mapper unit tests
 ```
 
 Example:
@@ -201,10 +201,10 @@ ATOMS = Path(__file__).parent / "atoms" / "linecode"
 def ohm1():
     return map_linecode(DssReader(ATOMS / "ohm1.dss").read_all(), base_frequency=60.0)
 
-def test_matches_golden(ohm1):                                    # tier 1
+def test_matches_golden(ohm1):                                    # import test
     assert_matches_golden(ohm1, ATOMS / "ohm1.cimtbl")
 
-def test_binds_under_cim18v17(ohm1):                              # tier 1b
+def test_binds_under_cim18v17(ohm1):                              # bind test
     network = cimtbl_to_cim(atom_documents(ohm1))
     [data] = network.graph[network.cim.PhaseImpedanceData].values()
     assert float(data.r.to("ohm/km")) == pytest.approx(0.5)       # verbatim from the deck
@@ -243,12 +243,13 @@ record built from the schema class (`schema.Linecode(name=..., ...)`). One unit 
 helper (`b_from_c`, `lower_triangle`). For a new native table, the checklist in the skill's
 [reference](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/atom-tests/reference.md) applies.
 
-For a tier 2 test, load the golden and its prerequisites with `cimtables.load_model` and `cimtables.load`, run the
-exporter, read the native atom with the reader, and compare each class slot by slot. Skip fields by name, from the
-spec's untranscribed list, never with a loose tolerance. The exporter's `SLOTS` dict
+An export test makes the check its spoke names (see [Test types](#test-types)). A field-by-field comparison skips
+fields by name, from the spec's untranscribed list, never with a loose tolerance. The exporter's `SLOTS` dict
 ([`export_slots`](cimtbl.md#export-slots)) lists every slot, and `check_slots` tests that it is complete.
+[`cimhub_raw/tests/test_cim_to_raw.py`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/cimhub_raw/tests/test_cim_to_raw.py)
+compares records field by field, and
 [`cimhub_opendss/tests/test_export_line.py`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/cimhub_opendss/tests/test_export_line.py)
-is a working example. The recipes for tiers 2 to 4 are in the skill's
+compares a deck golden and the engine state. The export, round-trip and cross-format recipes are in the skill's
 [reference](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/atom-tests/reference.md).
 
 ### Native engine tests

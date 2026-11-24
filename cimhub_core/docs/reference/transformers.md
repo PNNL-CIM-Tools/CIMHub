@@ -136,6 +136,7 @@ phase end `sequenceNumber`. Two windings in the same place raise.
 | `base_s` | per-phase power; a `PowerTransformerEnd` has none | `power_unit` |
 | `r` | the winding's resistance, on the model's base | percent or pu |
 | `phase_shift` | the instance `PowerTransformerEnd`'s fixed `phaseShift` | deg |
+| `r_dc` | a `TransformerWinding`'s `rDC` (a tank's or a template's winding), or `None`; an end has none | ohm |
 
 `MeshImpedance(r, x)` is the impedance between two windings on the model's base; `x` is always set, `r` may be
 `None`. `CoreAdmittance(g, b)` is the magnetizing branch on the model's base, `None` where unset.

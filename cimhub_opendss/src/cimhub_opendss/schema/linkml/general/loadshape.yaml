@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,31 @@ classes:
     description: >-
       A Loadshape object in OpenDSS.
     class_uri: dss:Loadshape
+    close_mappings:
+      - cim:ConformLoadGroup
+      - cim:ConformLoadSchedule
+      - cim:EnergyConnectionSchedule
+    comments:
+      - >-
+        Import: a LoadShape a Load names as yearly becomes a ConformLoadGroup lg_<name> with a
+        ConformLoadSchedule ls_<name> (points in the Parquet sidecar); one a PVSystem, Storage or
+        Generator names becomes that device's EnergyConnectionSchedule. A shape nothing names is not
+        mapped.
+      - >-
+        Export: each ConformLoadSchedule with points is written as a LoadShape; device shapes come
+        back from the device's EnergyConnectionSchedule (exporter/loadshape.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: copied to ConformLoadGroup.name, ConformLoadSchedule.name; mRID = lg_ / ls_ +
+            name, lowercased. Export: the group's name (Names).
 
       # (1) npts
       npts:
@@ -37,6 +56,13 @@ classes:
         required: false
         annotations:
           order: 1
+        related_mappings:
+          - cim:RegularIntervalSchedule.TimePoints
+        comments:
+          - >-
+            Import: structural; the number of points the engine reads: unset, none of mult (inline
+            or from a file; engine-checked), so the group has no schedule. Export: the number of
+            points.
 
       # (2) interval
       interval:
@@ -46,6 +72,13 @@ classes:
         required: false
         annotations:
           order: 2
+        exact_mappings:
+          - cim:RegularIntervalSchedule.timeStep
+        comments:
+          - >-
+            Import: copied to ConformLoadSchedule.timeStep (h); the interval slot the deck assigned
+            last (the engine's rule); 0 (an hour array) raises; none: 1 h. Export: not written,
+            timeStep is written as sinterval (s).
 
       # (3) mult
       mult:
@@ -56,6 +89,13 @@ classes:
         required: false
         annotations:
           order: 3
+        exact_mappings:
+          - cim:RegularTimePoint.value1
+        comments:
+          - >-
+            Import: copied to RegularTimePoint.value1; the points, in the Parquet sidecar;
+            action=normalize divides them by their peak. Export: value1 of each point, in sequence
+            order.
 
       # (4) hour
       hour:
@@ -66,6 +106,11 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (an irregular shape has no RegularIntervalSchedule). Export: not written, not in
+            CIM; the engine's default.
 
       # (5) mean
       mean:
@@ -75,6 +120,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: untranscribed; a Monte Carlo statistic; the engine computes it from mult.
+            Export: not written, not in CIM; the engine's default.
 
       # (6) stddev
       stddev:
@@ -84,6 +133,10 @@ classes:
         required: false
         annotations:
           order: 6
+        comments:
+          - >-
+            Import: untranscribed; a Monte Carlo statistic; the engine computes it from mult.
+            Export: not written, not in CIM; the engine's default.
 
       # (7) csvfile
       csvfile:
@@ -93,6 +146,11 @@ classes:
         required: false
         annotations:
           order: 7
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the reader reads mult=(file=...)). Export: not written, not in CIM; the
+            engine's default.
 
       # (8) sngfile
       sngfile:
@@ -102,6 +160,11 @@ classes:
         required: false
         annotations:
           order: 8
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the reader reads mult=(file=...)). Export: not written, not in CIM; the
+            engine's default.
 
       # (9) dblfile
       dblfile:
@@ -111,6 +174,11 @@ classes:
         required: false
         annotations:
           order: 9
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the reader reads mult=(file=...)). Export: not written, not in CIM; the
+            engine's default.
 
       # (10) action
       action:
@@ -120,6 +188,11 @@ classes:
         required: false
         annotations:
           order: 10
+        comments:
+          - >-
+            Import: derived; normalize: mult and qmult each divided by its largest magnitude, as the
+            engine does (one assigned after it raises). Export: not written, not in CIM; the
+            engine's default.
 
       # (11) qmult
       qmult:
@@ -130,6 +203,13 @@ classes:
         required: false
         annotations:
           order: 11
+        exact_mappings:
+          - cim:RegularTimePoint.value2
+        comments:
+          - >-
+            Import: copied to RegularTimePoint.value2; in the sidecar; unset: Q follows mult (the
+            engine's rule), value2 unset. Export: value2 of each point; unset when value2 is (Q
+            follows mult).
 
       # (12) UseActual
       UseActual:
@@ -139,6 +219,11 @@ classes:
         required: false
         annotations:
           order: 12
+        comments:
+          - >-
+            Import: structural; Yes raises: a Load naming it takes the shape's peak as its kW, or
+            keeps its own, by command order, which the record does not keep (engine-checked).
+            Export: not written, not in CIM; the engine's default.
 
       # (13) Pmax
       Pmax:
@@ -148,6 +233,10 @@ classes:
         required: false
         annotations:
           order: 13
+        comments:
+          - >-
+            Import: untranscribed; used only with UseActual. Export: not written, not in CIM; the
+            engine's default.
 
       # (14) Qmax
       Qmax:
@@ -157,6 +246,10 @@ classes:
         required: false
         annotations:
           order: 14
+        comments:
+          - >-
+            Import: untranscribed; used only with UseActual. Export: not written, not in CIM; the
+            engine's default.
 
       # (15) sinterval
       sinterval:
@@ -166,6 +259,12 @@ classes:
         required: false
         annotations:
           order: 15
+        exact_mappings:
+          - cim:RegularIntervalSchedule.timeStep
+        comments:
+          - >-
+            Import: copied to ConformLoadSchedule.timeStep (s); the interval slot the deck assigned
+            last (the engine's rule); 0 (an hour array) raises; none: 1 h. Export: timeStep (s).
 
       # (16) minterval
       minterval:
@@ -175,6 +274,13 @@ classes:
         required: false
         annotations:
           order: 16
+        exact_mappings:
+          - cim:RegularIntervalSchedule.timeStep
+        comments:
+          - >-
+            Import: copied to ConformLoadSchedule.timeStep (min); the interval slot the deck
+            assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h. Export: not
+            written, timeStep is written as sinterval (s).
 
       # (17) Pbase
       Pbase:
@@ -184,6 +290,10 @@ classes:
         required: false
         annotations:
           order: 17
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (a normalize base). Export: not written, not in CIM; the engine's default.
 
       # (18) Qbase
       Qbase:
@@ -193,6 +303,10 @@ classes:
         required: false
         annotations:
           order: 18
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (a normalize base). Export: not written, not in CIM; the engine's default.
 
       # (19) Pmult
       Pmult:
@@ -202,6 +316,10 @@ classes:
         required: false
         annotations:
           order: 19
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (a synonym of mult). Export: not written, not in CIM; the engine's default.
 
       # (20) PQCSVFile
       PQCSVFile:
@@ -211,6 +329,11 @@ classes:
         required: false
         annotations:
           order: 20
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the reader reads mult=(file=...)). Export: not written, not in CIM; the
+            engine's default.
 
       # (21) MemoryMapping
       MemoryMapping:
@@ -220,6 +343,10 @@ classes:
         required: false
         annotations:
           order: 21
+        comments:
+          - >-
+            Import: untranscribed; how the engine stores the points. Export: not written, not in
+            CIM; the engine's default.
 
       # (22) Mode
       Mode:
@@ -229,6 +356,10 @@ classes:
         required: false
         annotations:
           order: 22
+        comments:
+          - >-
+            Import: untranscribed; generator dispatch; no effect on a Load. Export: not written, not
+            in CIM; the engine's default.
 
       # (23) Interpolation
       Interpolation:
@@ -238,6 +369,11 @@ classes:
         required: false
         annotations:
           order: 23
+        comments:
+          - >-
+            Import: untranscribed; AVG and EDGE agree at the solution steps, which are on the
+            interval grid. Export: not written, not in CIM; the engine's
+            default.
 
       # (24) like
       like:
@@ -247,3 +383,7 @@ classes:
         required: false
         annotations:
           order: 24
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

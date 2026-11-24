@@ -109,6 +109,7 @@ Function and module are under `cimhub_core.getters`. The last column is the page
 | `get_in_service` | `in_service` | `bool \| None` | Whether an equipment is in service, actual or normal. | [topology](topology.md) |
 | `get_location_coordinates` | `location` | `LocationCoordinates \| None` | An equipment's and its terminals' location points. | [topology](topology.md) |
 | `get_limits_by_type` | `limits_by_type` | `dict[OperationalLimitType, float]` | An equipment's limits of one class, keyed by type. | [topology](topology.md) |
+| `get_configuration_limits_by_type` | `limits_by_type` | `dict[OperationalLimitType, float]` | A template's limits of one class, keyed by type. | [topology](topology.md) |
 
 Two helpers in `getters/__init__.py` are what the getters themselves are built from: `describe(obj)` gives
 `ClassName 'mRID'` for an error message, and `required_qty(obj, attribute, unit, **bases)` is `get_qty` that raises

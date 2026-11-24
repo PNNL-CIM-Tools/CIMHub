@@ -104,13 +104,16 @@ def site(native, length_unit: str | None = None) -> Site:
 
 
 def _base_voltages(native, buses: dict[str, BusSystem]) -> Table:
-    """The walk's distinct bus voltages, highest first; the comment reconciles them with ``voltagebases``."""
-    walked = sorted({nominal_kv(bus.kv) for bus in buses.values()}, reverse=True)
-    rows = [Row([base_voltage_mrid(kv), cell(kv)]) for kv in walked]
+    """One BaseVoltage per distinct bus voltage of the walk and per ``voltagebases`` value, highest first. The
+    deck's bases are kept even on no bus: they are what the engine's ``CalcVoltageBases`` snaps bus bases to, so the
+    export writes them back. The comment reconciles the two lists."""
+    walked = {nominal_kv(bus.kv) for bus in buses.values()}
     given = _options(native).voltagebases or []
+    listed = {nominal_kv(float(kv)) for kv in given}
+    rows = [Row([base_voltage_mrid(kv), cell(kv)]) for kv in sorted(walked | listed, reverse=True)]
     notes = [f"voltagebases: {', '.join(cell(float(kv)) for kv in given)}" if given else "no voltagebases"]
-    unused = [kv for kv in given if nominal_kv(kv) not in walked]
-    missing = [kv for kv in walked if kv not in {nominal_kv(base) for base in given}]
+    unused = [kv for kv in given if nominal_kv(float(kv)) not in walked]
+    missing = sorted(walked - listed, reverse=True)
     if unused:
         notes.append(f"on no bus: {', '.join(cell(float(kv)) for kv in unused)}")
     if missing:
@@ -126,9 +129,12 @@ def _base_frequency(native) -> ObjectStatement:
                                              (Column("frequency", "Hz"), cell(float(frequency)))], comment=comment)
 
 
-def limit_types() -> Table:
-    """The two ``OperationalLimitType``s every ``CurrentLimit`` names (R1, approved 2026-11-08)."""
+def limit_types(seasons: int = 0) -> Table:
+    """The two ``OperationalLimitType``s every ``CurrentLimit`` names (R1, approved 2026-11-08), then one normal
+    type ``olt_season<n>`` for each of ``seasons``, the most any transformer's ``Ratings`` rate."""
     rows = [Row([limit_mrid, kind, kind, infinite, "absoluteValue"]) for limit_mrid, kind, infinite in line.LIMIT_TYPES]
+    rows += [Row([transformer.season_limit_type(number), f"season {number}", "normal", "true", "absoluteValue"])
+             for number in range(1, seasons + 1)]
     return Table("OperationalLimitType", [Column("mRID"), Column("name"), Column("durationKind"),
                                           Column("isInfiniteDuration"), Column("direction")], rows)
 
@@ -151,7 +157,7 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
                                    (Column("NormalEnergizingSubstation"), site.substation)]),
         _base_frequency(native),
         _base_voltages(native, site.buses),
-        limit_types(),
+        limit_types(transformer.season_count(native)),
     ]
     return Document(name=name, statements=[*common, *(Import(part.name) for part in parts)], profile=CIM_PROFILE,
                     authority=authority, model=name, comment=comment)

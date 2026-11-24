@@ -1,4 +1,4 @@
-"""Tier 4: DSS import -> CIM -> GLM export, solved in GridLAB-D 6.0 against OpenDSS's own solution of the deck
+"""Cross-format: DSS import -> CIM -> GLM export, solved in GridLAB-D 6.0 against OpenDSS's own solution of the deck
 (GLM_REWRITE_PLAN.md section 8, X5). It exercises the exporter on CIM the GLM importer never writes: DSS line codes
 and geometry, the native transformer forms, the wye-wye replacement (X3), the three-winding star split (X4), single
 -phase banks, a delta regulator bank and IEEE 8500's series reactor (X28) and triplex codes (X27).

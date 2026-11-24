@@ -145,3 +145,21 @@ def test_templates_match_the_engine(relative):
         raise
     compile_deck(path)
     assert _engine_template_differences(network) == []
+
+
+def test_rated_code_matches_golden_and_binds():
+    """RdcOhms on the template windings and the seasonal Ratings on the template's own OperationalLimitSet
+    (EquipmentConfiguration.OperationalLimitSet); the instance gets no set of its own."""
+    native = DssReader(ATOMS / "rated.dss").read_all()
+    site = dss_to_cimtbl.site(native)
+    assert_matches_golden(xfmrcode.map_xfmrcode(native, site.buses), ATOMS / "rated.cimtbl")
+    network = dss_to_cim(native, name="atom")
+    cim = network.cim
+    [code] = network.graph[cim.TransformerTankConfiguration].values()
+    assert sorted((w.mRID, float(w.rDC.to("ohm"))) for w in code.TransformerWinding) == [
+        ("xc_sub_wdg_1", pytest.approx(2.8103125)), ("xc_sub_wdg_2", pytest.approx(0.011014647))]
+    limits = code.OperationalLimitSet.OperationalLimitValue
+    assert sorted((limit.OperationalLimitType.name, float(limit.normalValue.to("kVA"))) for limit in limits) == [
+        ("season 1", 22000.0), ("season 2", 25000.0)]
+    [transformer] = network.graph[cim.PowerTransformer].values()
+    assert not transformer.OperationalLimitSet

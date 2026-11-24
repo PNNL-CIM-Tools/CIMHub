@@ -1,0 +1,3 @@
+// EPRI J1 Transformers.dss line 1 (the service; normhkva, emerghkva left out), with what no public deck sets: each winding's RdcOhms (the engine's
+// default for this unit, 85 % of its %R in ohms) and two seasonal Ratings around its normhkva/emerghkva.
+New	Transformer.B13552-1A	phases=1	wdg=1	bus=B13552.1	kv=7.2	kVA=40	RdcOhms=3.9773268	wdg=2	bus=X_B13552-A.1	kv=0.24	kVA=40	RdcOhms=0.004419252	%loadloss=0.7221	%noloadloss=.2423	XHL=1.5158	Seasons=2	Ratings=[44 52]

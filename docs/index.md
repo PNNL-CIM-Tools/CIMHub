@@ -32,7 +32,7 @@ convert through it. Every package has its own documentation.</p>
 
     OpenDSS decks (`.dss`) to and from CIM, geometry kept as geometry.
 
-    [:octicons-arrow-right-24: Source and README](https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_opendss)
+    [:octicons-arrow-right-24: OpenDSS docs](https://pnnl-cim-tools.github.io/CIMHub/opendss/)
 
 -   :material-home-lightning-bolt:{ .lg .middle } __cimhub-gridlabd__
 

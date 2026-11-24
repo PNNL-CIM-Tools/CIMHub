@@ -1,5 +1,4 @@
 # Auto generated from opendss.yaml by pythongen.py version: 0.0.1
-# Generation date: 2026-11-08T17:27:30
 # Schema: opendss
 #
 # id: https://gridappsd.github.io/dss-graph/opendss
@@ -59,11 +58,11 @@ from rdflib import (
 from linkml_runtime.linkml_model.types import Boolean, Float, Integer, String
 from linkml_runtime.utils.metamodelcore import Bool
 
-metamodel_version = "1.7.0"
+metamodel_version = "1.12.0"
 version = "1.0.0"
 
 # Namespaces
-CIM = CurieNamespace('cim', 'http://iec.ch/TC57/CIM100#')
+CIM = CurieNamespace('cim', 'http://cim.ucaiug.io/cim101/draft#')
 DSS = CurieNamespace('dss', 'https://gridappsd.github.io/dss-graph/')
 LINKML = CurieNamespace('linkml', 'https://w3id.org/linkml/')
 DEFAULT_ = DSS
@@ -5950,7 +5949,7 @@ class Xfmrcode(YAMLRoot):
     X12: Optional[float] = None
     X13: Optional[float] = None
     X23: Optional[float] = None
-    RdcOhms: Optional[float] = None
+    RdcOhms: Optional[Union[float, list[float]]] = empty_list()
     Seasons: Optional[int] = None
     Ratings: Optional[Union[float, list[float]]] = empty_list()
     like: Optional[str] = None
@@ -6075,8 +6074,9 @@ class Xfmrcode(YAMLRoot):
         if self.X23 is not None and not isinstance(self.X23, float):
             self.X23 = float(self.X23)
 
-        if self.RdcOhms is not None and not isinstance(self.RdcOhms, float):
-            self.RdcOhms = float(self.RdcOhms)
+        if not isinstance(self.RdcOhms, list):
+            self.RdcOhms = [self.RdcOhms] if self.RdcOhms is not None else []
+        self.RdcOhms = [v if isinstance(v, float) else float(v) for v in self.RdcOhms]
 
         if self.Seasons is not None and not isinstance(self.Seasons, int):
             self.Seasons = int(self.Seasons)
@@ -11028,7 +11028,7 @@ slots.xfmrcode__X23 = Slot(uri=DSS.X23, name="xfmrcode__X23", curie=DSS.curie('X
                    model_uri=DSS.xfmrcode__X23, domain=None, range=Optional[float])
 
 slots.xfmrcode__RdcOhms = Slot(uri=DSS.RdcOhms, name="xfmrcode__RdcOhms", curie=DSS.curie('RdcOhms'),
-                   model_uri=DSS.xfmrcode__RdcOhms, domain=None, range=Optional[float])
+                   model_uri=DSS.xfmrcode__RdcOhms, domain=None, range=Optional[Union[float, list[float]]])
 
 slots.xfmrcode__Seasons = Slot(uri=DSS.Seasons, name="xfmrcode__Seasons", curie=DSS.curie('Seasons'),
                    model_uri=DSS.xfmrcode__Seasons, domain=None, range=Optional[int])

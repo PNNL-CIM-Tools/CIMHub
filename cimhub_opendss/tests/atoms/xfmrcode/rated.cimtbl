@@ -1,0 +1,41 @@
+# OpenDSS XfmrCode -> TransformerTankConfiguration (catalog). A 1-phase code is a tank with lugs and
+# windings lug to lug; a 3-phase one a TransformerTankEnd per winding. Built from the instances that use it.
+# Source table: XfmrCode (records: 1)
+# Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#xfmrcode
+
+Profile = cim18v17
+
+# derived: noLoadLoss = pct_noloadloss / 100 x winding 1 kVA
+Table TransformerTankConfiguration: mRID, name, percentMagnetizingCurrent (percent), noLoadLoss (kW)
+    # built from 1 instance (sub, ...)
+    xc_sub, sub, ,
+
+# a TankEnd per winding; no phases (the instance's PowerTransformerEnd n carries them)
+Table TransformerTankEnd: mRID, TankConfiguration, endNumber, connectionKind, rground (ohm), xground (ohm)
+    xc_sub_end_1, xc_sub, 1, D, ,
+    xc_sub_end_2, xc_sub, 2, Y, ,
+
+# baseU = the coil kV; ratedU phase-to-phase (derived from the instances' bus system); baseS = the winding's kVA (r is on it), per phase on a 3-phase code
+Table TransformerWinding: mRID, TankConfiguration, ratedU (kV), baseU (kV), ratedS (kVA), baseS (kVA), r (percent), FromTransformerEnd
+    xc_sub_wdg_1, xc_sub, 115.0, 115.0,             20000.0, 6666.666666666667, 0.5, xc_sub_end_1
+    xc_sub_wdg_2, xc_sub, 12.47, 7.199557856794634, 20000.0, 6666.666666666667, 0.5, xc_sub_end_2
+
+# x in percent on the From winding's baseU and baseS
+Table TransformerMeshImpedance: mRID, FromWinding, ToWinding, x (percent)
+    xc_sub_mesh_12, xc_sub_wdg_1, xc_sub_wdg_2, 8.0
+
+# RdcOhms: the winding's dc resistance, copied
+Update Table TransformerWinding: mRID, rDC (ohm)
+    xc_sub_wdg_1, 2.8103125
+    xc_sub_wdg_2, 0.011014647
+
+# the seasonal ratings: Ratings, one ApparentPowerLimit per season
+Table OperationalLimitSet: mRID
+    xc_sub_ratings
+
+Table ApparentPowerLimit: mRID, normalValue (kVA), OperationalLimitType, OperationalLimitSet
+    xc_sub_ratings_1, 22000.0, olt_season1, xc_sub_ratings
+    xc_sub_ratings_2, 25000.0, olt_season2, xc_sub_ratings
+
+Update Table TransformerTankConfiguration: mRID, OperationalLimitSet
+    xc_sub, xc_sub_ratings

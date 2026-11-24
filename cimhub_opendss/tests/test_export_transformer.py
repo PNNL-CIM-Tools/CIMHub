@@ -24,6 +24,8 @@ CASES = {
     "transformer/inline": {"transformer.ct_ab"},
     "xfmrcode/codes": {"transformer.t2"},
     "regcontrol/regulators": set(),
+    "transformer/rated_inline": set(),
+    "xfmrcode/rated": set(),
 }
 REGCONTROL_PROPERTIES = ("transformer", "winding", "vreg", "band", "ptratio", "CTprim", "R", "X", "delay",
                          "tapdelay", "reversible", "revvreg", "revband", "revR", "revX", "PTphase", "revThreshold",
@@ -74,6 +76,28 @@ def test_export_matches_golden(case, tmp_path):
     atom = ATOMS / f"{case}.dss"
     written = export_atom(atom, tmp_path, name_source="mrid")
     assert_matches_dss_golden(written, atom.parent / "export" / f"{atom.stem}.dss")
+
+
+@pytest.mark.parametrize(("case", "element"), [("transformer/rated_inline", "Transformer.b13552-1a"),
+                                               ("xfmrcode/rated", "XfmrCode.sub")])
+def test_ratings_and_dc_resistance_match_the_engine(case, element, tmp_path):
+    """The exported Seasons, Ratings and each winding's RdcOhms are what the engine read from the original."""
+    atom = ATOMS / f"{case}.dss"
+    written = export_atom(atom, tmp_path, name_source="name")
+    assert _rating_properties(written, element) == _rating_properties(atom, element)
+
+
+def _rating_properties(path, element: str) -> dict:
+    compile_deck(path)
+    values = {}
+    for prop in ("Seasons", "Ratings"):
+        dss.Text.Command(f"? {element}.{prop}")
+        values[prop] = dss.Text.Result()
+    for winding in (1, 2):
+        dss.Text.Command(f"{element}.wdg={winding}")
+        dss.Text.Command(f"? {element}.RdcOhms")
+        values[f"RdcOhms {winding}"] = float(dss.Text.Result())
+    return values
 
 
 # regulators ----------------------------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -24,14 +24,13 @@ classes:
       with inverter-based grid connection.
     class_uri: dss:Storage
     close_mappings:
+      - cim:PowerElectronicsConnection
       - cim:BatteryUnit
     comments:
       - >-
-        Each DSS Storage creates two CIM objects: BatteryUnit (the battery;
-        holds ratedE, storedE, batteryState, maxP, minP) and
-        PowerElectronicsConnection (the inverter; holds ratedS, ratedU, p, q,
-        maxQ, minQ). The converter returns the PowerElectronicsConnection;
-        the BatteryUnit is linked via PowerElectronicsConnection.PowerElectronicsUnit.
+        Import: one Storage becomes a PowerElectronicsConnection and a BatteryUnit in
+        storage.cimtbl; p is the engine's snapshot dispatch in the load sign. Export: the connection
+        is chopped into one Storage per unit (exporter/storage.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -41,7 +40,10 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Name applied to both BatteryUnit and PowerElectronicsConnection with suffix '_bat' / '_pec'."
+          - >-
+            Import: copied to PowerElectronicsConnection.name; mRID = storage_ + name, lowercased;
+            the unit is <mRID>_unit. Export: Names: the connection's for one unit, the unit's for
+            several, <name>_<phase> per phase.
 
       # (1) phases
       phases:
@@ -53,9 +55,11 @@ classes:
           order: 1
           dss_default: int(3)
         related_mappings:
-          - cim:PowerElectronicsConnectionPhase
+          - cim:Terminal.phases
         comments:
-          - "Import: inferred from bus1 node suffix. Export: len(PowerElectronicsConnection.PowerElectronicsConnectionPhase)."
+          - >-
+            Import: structural; the conductor count; default 3. Export: the phase conductors; a
+            delta across two is 1.
 
       # (2) bus1
       bus1:
@@ -68,7 +72,9 @@ classes:
         related_mappings:
           - cim:Terminal.ConnectivityNode
         comments:
-          - "Structural mapping via traversal: equipment.Terminals[0].ConnectivityNode.name. Phase suffix reconstructed from PowerElectronicsConnectionPhase objects."
+          - >-
+            Import: structural; node and phases, by the shared phase rule. Export: bus_ref of the
+            phase conductors; a wye inverter's neutral is node 0.
 
       # (3) kv
       kv:
@@ -82,13 +88,12 @@ classes:
         annotations:
           order: 3
           dss_default: float(12.47)
-        exact_mappings:
+        close_mappings:
           - cim:PowerElectronicsConnection.ratedU
         comments:
           - >-
-            Import: ratedU = Voltage(kv, 'kV') — always treated as L-L (Storage
-            converter does not apply sqrt(3) scaling unlike PVSystem).
-            Export: kv = ratedU.to('kV'). CIM stores in V (SI base).
+            Import: derived; ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye; default 12.47.
+            Export: ratedU (kV, LL), / sqrt 3 for 1-phase wye.
 
       # (4) conn
       conn:
@@ -99,17 +104,12 @@ classes:
         annotations:
           order: 4
           dss_default: string(wye)
-        related_mappings:
-          - cim:PowerElectronicsConnection.description
+        close_mappings:
+          - cim:PowerElectronicsConnection.phaseConnection
         comments:
           - >-
-            This CIM profile's PowerElectronicsConnection has no dedicated
-            connection-kind field, so the winding connection is carried as a
-            literal text workaround: import sets description = 'conn=delta'
-            when conn is 'delta' (wye, the default, leaves description
-            unset); export reads ess.conn = 'delta' when description equals
-            that literal string, and otherwise leaves conn at its default
-            (wye).
+            Import: mapped to PowerElectronicsConnection.phaseConnection; wye -> Y, delta -> D;
+            default wye. Export: phaseConnection Y/Yn -> wye, D -> delta; others raise.
 
       # (5) kW
       kW:
@@ -123,12 +123,10 @@ classes:
           - cim:PowerElectronicsConnection.p
         comments:
           - >-
-            Import: PEC.p = ActivePower(-kW, 'kW') — negated because DSS uses generator
-            convention (positive kW = power out), while CIM Terminal uses load convention
-            (positive p = power in). If kW is not given, PEC.p is instead derived from
-            State combined with %Discharge/%Charge and kWrated (see those attributes).
-            Export: kW = abs(PEC.p.to('kW')) — DSS Storage kW is always a positive
-            magnitude, with the State attribute carrying the charge/discharge direction.
+            Import: derived; replayed in deck order (battery_dispatch): > 0 sets the
+            discharge setpoint and discharging, < 0 the charge setpoint and charging, 0 waiting.
+            Export: not written, %Discharge/%Charge carry the output: the engine makes kW a percent
+            of the kWrated of the moment, and kWrated is written after kW.
 
       # (6) kvar
       kvar:
@@ -138,12 +136,10 @@ classes:
         required: false
         annotations:
           order: 6
-        close_mappings:
-          - cim:PowerElectronicsConnection.q
         comments:
           - >-
-            Import: PEC.q = ReactivePower(-kvar, 'kVAr') — negated for same CIM vs DSS
-            sign convention reason as kW. Export: kvar = -PEC.q.to('kVAr').
+            Import: structural; raises when nonzero; no deck in the sweep sets it (q = 0). Export:
+            not written, q must be 0 (it raises on import); another raises.
 
       # (7) pf
       pf:
@@ -156,16 +152,10 @@ classes:
         annotations:
           order: 7
           dss_default: float(1.0)
-        related_mappings:
-          - cim:PowerElectronicsConnection.q
         comments:
           - >-
-            Import-only fallback: used to derive PowerElectronicsConnection.q
-            only when kvar is not explicitly given and kW is available —
-            kvar = kW * tan(acos(|pf|)), sign-flipped when pf is negative,
-            then negated into CIM's sign convention like kvar. Export always
-            writes an explicit kvar from PEC.q and never reconstructs pf, so
-            a round trip does not recover the original pf value.
+            Import: structural; 1 only; another raises (the engine caps q by a kvarMax left from the
+            default kVA); default 1. Export: not written, q is 0.
 
       # (8) kVA
       kVA:
@@ -178,7 +168,9 @@ classes:
         exact_mappings:
           - cim:PowerElectronicsConnection.ratedS
         comments:
-          - "Import: PEC.ratedS = ApparentPower(kVA, 'kVA'). Export: kVA = ratedS.to('kVA'). CIM stores in VA (SI base)."
+          - >-
+            Import: copied to PowerElectronicsConnection.ratedS (kVA); also caps p; default kWrated.
+            Export: ratedS, the connection's, by the unit's share (inverter_pieces).
 
       # (9) %Cutin
       pct_Cutin:
@@ -190,7 +182,9 @@ classes:
           order: 9
           dss_name: "%Cutin"
         comments:
-          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; an inverter cut-in; 0 by default for storage. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (10) %Cutout
       pct_Cutout:
@@ -202,7 +196,9 @@ classes:
           order: 10
           dss_name: "%Cutout"
         comments:
-          - "OpenDSS-only (N/A): inverter dispatch threshold; no CIM equivalent."
+          - >-
+            Import: untranscribed; an inverter cut-out; 0 by default for storage. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (11) EffCurve
       EffCurve:
@@ -215,6 +211,10 @@ classes:
           order: 11
         todos:
           - "No CIM equivalent. Inverter efficiency curve; requires CIM extension or mapping to a custom XYCurve linked to the PEC."
+        comments:
+          - >-
+            Import: structural; raises: an efficiency curve changes the snapshot power. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (12) VarFollowInverter
       VarFollowInverter:
@@ -226,7 +226,9 @@ classes:
         annotations:
           order: 12
         comments:
-          - "OpenDSS-only (N/A): inverter control mode flag; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; acts only with an InvControl. Export: not written, untranscribed
+            or raising on import; not in CIM.
 
       # (13) kvarMax
       kvarMax:
@@ -240,7 +242,9 @@ classes:
         exact_mappings:
           - cim:PowerElectronicsConnection.maxQ
         comments:
-          - "Import: PEC.maxQ = ReactivePower(kvarMax, 'kVAr'). Export: kvarMax = maxQ.to('kVAr'). CIM stores in VAr (SI base)."
+          - >-
+            Import: copied to PowerElectronicsConnection.maxQ (kVAr); default kVA. Export: maxQ, the
+            connection's, by the unit's share (inverter_pieces); unset -> not written.
 
       # (14) kvarMaxAbs
       kvarMaxAbs:
@@ -255,9 +259,8 @@ classes:
           - cim:PowerElectronicsConnection.minQ
         comments:
           - >-
-            Import: PEC.minQ = ReactivePower(-kvarMaxAbs, 'kVAr') — negated because
-            absorption is negative Q in CIM convention.
-            Export: kvarMaxAbs = abs(minQ.to('kVAr')).
+            Import: derived; minQ (kVAr) = -kvarMaxAbs; default kVA. Export: -minQ, the
+            connection's, by the unit's share (inverter_pieces); unset -> not written.
 
       # (15) WattPriority
       WattPriority:
@@ -269,7 +272,9 @@ classes:
         annotations:
           order: 15
         comments:
-          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent."
+          - >-
+            Import: structural; raises when yes; no deck in the sweep sets it. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (16) PFPriority
       PFPriority:
@@ -281,7 +286,9 @@ classes:
         annotations:
           order: 16
         comments:
-          - "OpenDSS-only (N/A): inverter operating mode priority; no CIM equivalent."
+          - >-
+            Import: structural; raises when yes; no deck in the sweep sets it. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (17) %PminNoVars
       pct_PminNoVars:
@@ -294,7 +301,9 @@ classes:
           order: 17
           dss_name: "%PminNoVars"
         comments:
-          - "OpenDSS-only (N/A): inverter deadband parameter; no CIM equivalent."
+          - >-
+            Import: structural; raises when nonzero; no deck in the sweep sets it. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (18) %PminkvarMax
       pct_PminkvarMax:
@@ -308,7 +317,9 @@ classes:
           order: 18
           dss_name: "%PminkvarMax"
         comments:
-          - "OpenDSS-only (N/A): inverter reactive capability threshold; no CIM equivalent."
+          - >-
+            Import: structural; raises when nonzero; no deck in the sweep sets it. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (19) kWrated
       kWrated:
@@ -320,10 +331,13 @@ classes:
         annotations:
           order: 19
           dss_default: float(25.0)
-        exact_mappings:
+        close_mappings:
           - cim:PowerElectronicsUnit.maxP
         comments:
-          - "Import: BatteryUnit.maxP = ActivePower(kWrated, 'kW'). Export: kWrated = maxP.to('kW'). CIM stores in W (SI base)."
+          - >-
+            Import: copied to BatteryUnit.maxP (kW); minP = -kWrated; also p by State; default 25.
+            Export: the unit's maxP (kW), x 1/n for one of n phases; unset raises, a minP other than
+            -maxP raises.
 
       # (20) %kWrated
       pct_kWrated:
@@ -335,7 +349,9 @@ classes:
           order: 20
           dss_name: "%kWrated"
         comments:
-          - "OpenDSS-only (N/A): operational curtailment factor; no CIM equivalent."
+          - >-
+            Import: untranscribed; the kW limit of the dispatch modes, which raise. Export: not
+            written, untranscribed or raising on import; not in CIM.
 
       # (21) kWhrated
       kWhrated:
@@ -350,7 +366,9 @@ classes:
         exact_mappings:
           - cim:BatteryUnit.ratedE
         comments:
-          - "Import: BatteryUnit.ratedE = Energy(kWhrated, 'kWh'). Export: kWhrated = ratedE.to('kWh'). CIM stores in J (SI base)."
+          - >-
+            Import: copied to BatteryUnit.ratedE (kWh); default 50. Export: ratedE (kWh), x 1/n for
+            one of n phases; unset -> not written.
 
       # (22) kWhstored
       kWhstored:
@@ -363,7 +381,9 @@ classes:
         exact_mappings:
           - cim:BatteryUnit.storedE
         comments:
-          - "Import: BatteryUnit.storedE = Energy(kWhstored, 'kWh'). Export: kWhstored = storedE.to('kWh'). CIM stores in J (SI base)."
+          - >-
+            Import: copied to BatteryUnit.storedE (kWh); unless %stored was assigned after it (the
+            last wins). Export: storedE (kWh), x 1/n for one of n phases; unset -> not written.
 
       # (23) %stored
       pct_stored:
@@ -375,8 +395,12 @@ classes:
           order: 23
           dss_default: float(100.0)
           dss_name: "%stored"
+        close_mappings:
+          - cim:BatteryUnit.storedE
         comments:
-          - "OpenDSS-only (N/A): derived as kWhstored / kWhrated * 100; not stored on CIM separately."
+          - >-
+            Import: derived; storedE (kWh) = %stored x kWhrated / 100 unless kWhstored was assigned
+            after it; default 100. Export: not written, kWhstored carries the energy.
 
       # (24) %reserve
       pct_reserve:
@@ -389,8 +413,12 @@ classes:
           order: 24
           dss_default: float(20.0)
           dss_name: "%reserve"
+        close_mappings:
+          - cim:BatteryUnit.minimumE
         comments:
-          - "OpenDSS-only (N/A): operational reserve parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: derived; minimumE (kWh) = %reserve x kWhrated / 100; default 20. Export:
+            minimumE / ratedE x 100; either unset -> not written.
 
       # (25) State
       State:
@@ -401,13 +429,14 @@ classes:
         annotations:
           order: 25
           dss_default: string(idling)
-        exact_mappings:
+        close_mappings:
           - cim:BatteryUnit.batteryState
         comments:
           - >-
-            Import: 'discharging' → BatteryStateKind.discharging; 'charging' →
-            BatteryStateKind.charging; 'idling'/'waiting'/'idle' →
-            BatteryStateKind.waiting. Export: reverse enum lookup.
+            Import: mapped to BatteryUnit.batteryState; charging, discharging, idling -> waiting (by
+            the first letter, as the engine reads it: the decks' charge). Export: batteryState
+            charging, discharging, waiting -> charging, discharging, idling; others raise, and so
+            does an output of the wrong sign.
 
       # (26) %Discharge
       pct_Discharge:
@@ -419,15 +448,12 @@ classes:
           order: 26
           dss_default: float(100.0)
           dss_name: "%Discharge"
-        related_mappings:
+        close_mappings:
           - cim:PowerElectronicsConnection.p
         comments:
           - >-
-            Import-only fallback: used only when kW is not explicitly given
-            and State is 'discharging' — PEC.p = -(kWrated * pct_Discharge /
-            100), negated into CIM's generator sign convention. Ignored
-            whenever kW is present, and never reconstructed on export
-            (export always writes an explicit kW from PEC.p).
+            Import: derived; the discharge setpoint kWrated x %Discharge / 100 until a kW > 0 sets
+            it; default 100. Export: discharging: the unit's output / kWrated x 100.
 
       # (27) %Charge
       pct_Charge:
@@ -439,14 +465,12 @@ classes:
           order: 27
           dss_default: float(100.0)
           dss_name: "%Charge"
-        related_mappings:
+        close_mappings:
           - cim:PowerElectronicsConnection.p
         comments:
           - >-
-            Import-only fallback: used only when kW is not explicitly given
-            and State is 'charging' — PEC.p = kWrated * pct_Charge / 100.
-            Ignored whenever kW is present, and never reconstructed on
-            export (export always writes an explicit kW from PEC.p).
+            Import: derived; the charge setpoint kWrated x %Charge / 100 until a kW < 0 sets it;
+            default 100. Export: charging: -(the unit's output) / kWrated x 100.
 
       # (28) %EffCharge
       pct_EffCharge:
@@ -458,8 +482,12 @@ classes:
           order: 28
           dss_default: float(90.0)
           dss_name: "%EffCharge"
+        exact_mappings:
+          - cim:BatteryUnit.chargingEfficiency
         comments:
-          - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: copied to BatteryUnit.chargingEfficiency (percent); default 90. Export:
+            chargingEfficiency (percent); unset -> not written.
 
       # (29) %EffDischarge
       pct_EffDischarge:
@@ -471,8 +499,12 @@ classes:
           order: 29
           dss_default: float(90.0)
           dss_name: "%EffDischarge"
+        exact_mappings:
+          - cim:BatteryUnit.dischargingEfficiency
         comments:
-          - "OpenDSS-only (N/A): efficiency parameter; no CIM equivalent."
+          - >-
+            Import: copied to BatteryUnit.dischargingEfficiency (percent); default 90. Export:
+            dischargingEfficiency (percent); unset -> not written.
 
       # (30) %IdlingkW
       pct_IdlingkW:
@@ -484,8 +516,12 @@ classes:
           order: 30
           dss_default: float(1.0)
           dss_name: "%IdlingkW"
+        close_mappings:
+          - cim:BatteryUnit.idlingP
         comments:
-          - "OpenDSS-only (N/A): standby loss parameter; no CIM equivalent."
+          - >-
+            Import: derived; idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default
+            1. Export: idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be).
 
       # (31) %Idlingkvar
       pct_Idlingkvar:
@@ -497,7 +533,9 @@ classes:
           order: 31
           dss_name: "%Idlingkvar"
         comments:
-          - "Deprecated DSS attribute; not mapped."
+          - >-
+            Import: untranscribed; deprecated in the engine. Export: not written, untranscribed or
+            raising on import; not in CIM.
 
       # (32) %R
       pct_R:
@@ -509,7 +547,9 @@ classes:
           order: 32
           dss_name: "%R"
         comments:
-          - "OpenDSS-only (N/A): internal resistance used for short-circuit simulation; no standard CIM equivalent on PowerElectronicsConnection."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (33) %X
       pct_X:
@@ -521,7 +561,9 @@ classes:
           order: 33
           dss_name: "%X"
         comments:
-          - "OpenDSS-only (N/A): internal reactance used for short-circuit simulation; no standard CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (34) model
       model:
@@ -534,7 +576,9 @@ classes:
           order: 34
           dss_default: int(1)
         comments:
-          - "OpenDSS-only (N/A): DSS V/Q model selector; no direct CIM equivalent."
+          - >-
+            Import: structural; 1 (constant P, PF) only; any other raises; default 1. Export: not
+            written, model 1, the engine's default; others raise on import.
 
       # (35) Vminpu
       Vminpu:
@@ -549,9 +593,8 @@ classes:
           - cim:PowerElectronicsConnection.maxIFault
         comments:
           - >-
-            Import: PEC.maxIFault = 1.0 / Vminpu. Export: Vminpu = 1.0 / maxIFault.
-            Approximate mapping — maxIFault is the primary CIM field used by the
-            OpenDSS exporter for fault current limiting.
+            Import: derived; maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9. Export:
+            1 / maxIFault (the importer's rule inverted); unset -> not written.
 
       # (36) Vmaxpu
       Vmaxpu:
@@ -563,7 +606,9 @@ classes:
           order: 36
           dss_default: float(1.1)
         comments:
-          - "OpenDSS-only (N/A): overvoltage trip threshold; no direct CIM equivalent."
+          - >-
+            Import: untranscribed; above it the engine models the battery as constant Z; a
+            power-flow setting. Export: not written, untranscribed or raising on import; not in CIM.
 
       # (37) Balanced
       Balanced:
@@ -574,7 +619,9 @@ classes:
         annotations:
           order: 37
         comments:
-          - "OpenDSS-only (N/A): simulation option; no CIM equivalent."
+          - >-
+            Import: structural; raises when yes; no deck in the sweep sets it. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (38) LimitCurrent
       LimitCurrent:
@@ -586,7 +633,9 @@ classes:
         annotations:
           order: 38
         comments:
-          - "OpenDSS-only (N/A): current-limiting simulation flag; no CIM equivalent."
+          - >-
+            Import: structural; raises when yes; no deck in the sweep sets it. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (39) yearly
       yearly:
@@ -596,8 +645,13 @@ classes:
         required: false
         annotations:
           order: 39
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        close_mappings:
+          - cim:EnergyConnectionSchedule
+        comments:
+          - >-
+            Import: mapped to EnergyConnectionSchedule.name; DispMode=follow: the battery's
+            EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample. Export: the
+            connection's EnergyConnectionSchedule as a LoadShape, mult = output / kWrated.
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -609,8 +663,10 @@ classes:
         required: false
         annotations:
           order: 40
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        comments:
+          - >-
+            Import: untranscribed; a time-series curve; a snapshot does not use it. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -622,8 +678,10 @@ classes:
         required: false
         annotations:
           order: 41
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
+        comments:
+          - >-
+            Import: untranscribed; a time-series curve; a snapshot does not use it. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "Loadshape converter not yet implemented."
 
@@ -638,7 +696,9 @@ classes:
           order: 42
           dss_default: string(default)
         comments:
-          - "OpenDSS-only (N/A): dispatch control mode flag; no CIM equivalent in the standard profile."
+          - >-
+            Import: structural; default, or follow with a yearly shape. Export: rule, follow
+            with a yearly shape, else not written.
 
       # (43) DischargeTrigger
       DischargeTrigger:
@@ -649,7 +709,9 @@ classes:
         annotations:
           order: 43
         comments:
-          - "OpenDSS-only (N/A): dispatch trigger; no CIM equivalent."
+          - >-
+            Import: untranscribed; acts only in a dispatch mode, which raises. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (44) ChargeTrigger
       ChargeTrigger:
@@ -660,7 +722,9 @@ classes:
         annotations:
           order: 44
         comments:
-          - "OpenDSS-only (N/A): dispatch trigger; no CIM equivalent."
+          - >-
+            Import: untranscribed; acts only in a dispatch mode, which raises. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (45) TimeChargeTrig
       TimeChargeTrig:
@@ -672,7 +736,9 @@ classes:
         annotations:
           order: 45
         comments:
-          - "OpenDSS-only (N/A): time-based dispatch trigger; no CIM equivalent."
+          - >-
+            Import: untranscribed; acts only in a dispatch mode, which raises. Export: not written,
+            untranscribed or raising on import; not in CIM.
 
       # (46) class
       class_class:
@@ -684,7 +750,9 @@ classes:
           order: 46
           dss_name: "class"
         comments:
-          - "OpenDSS-only (N/A): internal classification integer; no CIM equivalent."
+          - >-
+            Import: untranscribed; a DSS report grouping. Export: not written, untranscribed or
+            raising on import; not in CIM.
 
       # (47) DynaDLL
       DynaDLL:
@@ -696,7 +764,9 @@ classes:
         annotations:
           order: 47
         comments:
-          - "OpenDSS-only (N/A): dynamics DLL hook; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
 
       # (48) DynaData
       DynaData:
@@ -707,7 +777,9 @@ classes:
         annotations:
           order: 48
         comments:
-          - "OpenDSS-only (N/A): dynamics DLL data; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
 
       # (49) UserModel
       UserModel:
@@ -719,7 +791,9 @@ classes:
         annotations:
           order: 49
         comments:
-          - "OpenDSS-only (N/A): user model DLL; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
 
       # (50) UserData
       UserData:
@@ -731,7 +805,9 @@ classes:
         annotations:
           order: 50
         comments:
-          - "OpenDSS-only (N/A): user model data; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
 
       # (51) debugtrace
       debugtrace:
@@ -742,7 +818,9 @@ classes:
         annotations:
           order: 51
         comments:
-          - "OpenDSS-only (N/A): simulation debug flag; no CIM equivalent."
+          - >-
+            Import: untranscribed; a DSS debugging switch. Export: not written, untranscribed or
+            raising on import; not in CIM.
 
       # (52) kVDC
       kVDC:
@@ -754,7 +832,9 @@ classes:
         annotations:
           order: 52
         comments:
-          - "OpenDSS-only (N/A): DC-side voltage rating; no CIM equivalent in the standard AC profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (53) Kp
       Kp:
@@ -765,7 +845,9 @@ classes:
         annotations:
           order: 53
         comments:
-          - "OpenDSS-only (N/A): inverter PI controller tuning parameter; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (54) PITol
       PITol:
@@ -776,7 +858,9 @@ classes:
         annotations:
           order: 54
         comments:
-          - "OpenDSS-only (N/A): inverter PI controller tolerance; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (55) SafeVoltage
       SafeVoltage:
@@ -788,7 +872,9 @@ classes:
         annotations:
           order: 55
         comments:
-          - "OpenDSS-only (N/A): grid-forming safe-voltage threshold; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (56) SafeMode
       SafeMode:
@@ -800,7 +886,9 @@ classes:
         annotations:
           order: 56
         comments:
-          - "OpenDSS-only (N/A): read-only operational state; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (57) DynamicEq
       DynamicEq:
@@ -812,7 +900,9 @@ classes:
         annotations:
           order: 57
         comments:
-          - "OpenDSS-only (N/A): dynamics model reference; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (58) DynOut
       DynOut:
@@ -824,7 +914,9 @@ classes:
         annotations:
           order: 58
         comments:
-          - "OpenDSS-only (N/A): dynamics output variable mapping; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (59) ControlMode
       ControlMode:
@@ -835,7 +927,10 @@ classes:
         annotations:
           order: 59
         comments:
-          - "OpenDSS-only (N/A): grid-forming vs. grid-following mode flag; no CIM equivalent."
+          - >-
+            Import: structural; GFL only; GFM raises (raises when set: no deck in the sweep sets it,
+            so a mapping waits for one). Export: not written, untranscribed or raising on import;
+            not in CIM.
 
       # (60) AmpLimit
       AmpLimit:
@@ -847,7 +942,9 @@ classes:
         annotations:
           order: 60
         comments:
-          - "OpenDSS-only (N/A): GFM current limiter; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (61) AmpLimitGain
       AmpLimitGain:
@@ -859,7 +956,9 @@ classes:
         annotations:
           order: 61
         comments:
-          - "OpenDSS-only (N/A): GFM limiter gain; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (62) spectrum
       spectrum:
@@ -870,7 +969,9 @@ classes:
         annotations:
           order: 62
         comments:
-          - "OpenDSS-only (N/A): harmonic spectrum reference; no CIM equivalent."
+          - >-
+            Import: untranscribed; harmonics model; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
 
       # (63) basefreq
       basefreq:
@@ -881,7 +982,9 @@ classes:
         annotations:
           order: 63
         comments:
-          - "Not stored on CIM PowerElectronicsConnection; base frequency is a circuit-level property in CIM."
+          - >-
+            Import: untranscribed; no home on an inverter. Export: not written, untranscribed or
+            raising on import; not in CIM.
 
       # (64) enabled
       enabled:
@@ -892,8 +995,12 @@ classes:
         annotations:
           order: 64
           dss_default: "true"
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): if False, converter returns None and no CIM objects are created."
+          - >-
+            Import: copied to PowerElectronicsConnection.normallyInService; default true. Export:
+            get_in_service(which='normal'); unset -> not written.
 
       # (65) like
       like:
@@ -904,4 +1011,6 @@ classes:
         annotations:
           order: 65
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

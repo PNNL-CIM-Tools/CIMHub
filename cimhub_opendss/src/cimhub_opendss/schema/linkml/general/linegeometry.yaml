@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,33 @@ classes:
     description: >-
       A Linegeometry object in OpenDSS.
     class_uri: dss:Linegeometry
+    exact_mappings:
+      - cim:WireConfiguration
+    related_mappings:
+      - cim:WireSequenceConfiguration
+      - cim:XYSpacing
+    comments:
+      - >-
+        Import: a LineGeometry becomes a WireConfiguration wc_<name> with one
+        WireSequenceConfiguration per conductor (its WireInfo), and either a WireSpacing reference
+        or a synthesized XYSpacing for inline positions, in linegeometry.cimtbl. No impedance is
+        computed.
+      - >-
+        Export: one LineGeometry per (WireConfiguration, y offset) over the lines, positions inline
+        (exporter/linegeometry.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: copied to WireConfiguration.name; mRID = wc_ + name, lowercased. Export: Names;
+            <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as
+            'p').
 
       # (1) nconds
       nconds:
@@ -38,6 +59,13 @@ classes:
         minimum_value: 1
         annotations:
           order: 1
+        related_mappings:
+          - cim:WireSequenceConfiguration.sequenceNumber
+        comments:
+          - >-
+            Import: structural; one WireSequenceConfiguration per conductor, sequenceNumber
+            1..nconds. Export: the spacing's positions; a spacing line's: its phases' positions; a
+            coupled group's: its lines' positions, a shared neutral once.
 
       # (2) nphases
       nphases:
@@ -48,6 +76,13 @@ classes:
         minimum_value: 1
         annotations:
           order: 2
+        exact_mappings:
+          - cim:WireConfiguration.numberOfPhases
+        comments:
+          - >-
+            Import: copied to WireConfiguration.numberOfPhases; also the kind of an inline position:
+            phase for 1..nphases, neutral after. Export: WireConfiguration.numberOfPhases, required;
+            a spacing line's: its phases other than N, a coupled group's: every line's.
 
       # (3) cond
       cond:
@@ -57,6 +92,10 @@ classes:
         required: false
         annotations:
           order: 3
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (4) wire
       wire:
@@ -66,6 +105,10 @@ classes:
         required: false
         annotations:
           order: 4
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (5) x
       x:
@@ -75,6 +118,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (6) h
       h:
@@ -84,6 +131,10 @@ classes:
         required: false
         annotations:
           order: 6
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (7) units
       units:
@@ -93,6 +144,10 @@ classes:
         required: false
         annotations:
           order: 7
+        comments:
+          - >-
+            Import: mapped; the length unit of the inline positions (LENGTH_UNIT); unset raises. The
+            reader raises when the cond= blocks give different units. Export: m (B1).
 
       # (8) normamps
       normamps:
@@ -102,6 +157,10 @@ classes:
         required: false
         annotations:
           order: 8
+        comments:
+          - >-
+            Import: untranscribed; no home on a WireConfiguration; instance limits or untranscribed. Export: not written, no rating on a WireConfiguration; the Line carries
+            its own.
 
       # (9) emergamps
       emergamps:
@@ -111,6 +170,10 @@ classes:
         required: false
         annotations:
           order: 9
+        comments:
+          - >-
+            Import: untranscribed; no home on a WireConfiguration; instance limits or untranscribed. Export: not written, no rating on a WireConfiguration; the Line carries
+            its own.
 
       # (10) reduce
       reduce:
@@ -120,6 +183,11 @@ classes:
         required: false
         annotations:
           order: 10
+        comments:
+          - >-
+            Import: untranscribed; Kron reduction of the neutrals; a solver choice the consumer
+            makes from the segment's phases. Export: y: the neutrals grounded at both ends, as the
+            impedance getters assume (B4).
 
       # (11) spacing
       spacing:
@@ -129,6 +197,12 @@ classes:
         required: false
         annotations:
           order: 11
+        related_mappings:
+          - cim:WireConfiguration.WireSpacing
+        comments:
+          - >-
+            Import: structural; WireConfiguration.WireSpacing = spc_ + spacing; with inline
+            positions it raises. Export: not written, positions are written inline (B2).
 
       # (12) wires
       wires:
@@ -139,6 +213,12 @@ classes:
         required: false
         annotations:
           order: 12
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; the conductor names in cond order. Export: get_configuration_wires,
+            or a spacing line's get_line_phase_wires, by sequence number; any of the three catalogs.
 
       # (13) cncable
       cncable:
@@ -148,6 +228,10 @@ classes:
         required: false
         annotations:
           order: 13
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (14) tscable
       tscable:
@@ -157,6 +241,10 @@ classes:
         required: false
         annotations:
           order: 14
+        comments:
+          - >-
+            Import: structural; the reader folds the cond= blocks into the arrays; set alone (no
+            cond=) it raises. Export: not written, the writer folds wires/xs/hs into cond= blocks.
 
       # (15) cncables
       cncables:
@@ -167,6 +255,12 @@ classes:
         required: false
         annotations:
           order: 15
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; as wires; only one of wires, cncables, tscables may be set. Export:
+            not written, wires carries every kind (the writer names each block's kind).
 
       # (16) tscables
       tscables:
@@ -177,6 +271,12 @@ classes:
         required: false
         annotations:
           order: 16
+        related_mappings:
+          - cim:WireSequenceConfiguration.WireInfo
+        comments:
+          - >-
+            Import: structural; as wires; only one of wires, cncables, tscables may be set. Export:
+            not written, wires carries every kind (the writer names each block's kind).
 
       # (internal) xs / hs — per-conductor position arrays built from inline
       # cond=N x=... h=... syntax; not part of the DSS spec but used internally.
@@ -186,6 +286,12 @@ classes:
         range: float
         multivalued: true
         required: false
+        close_mappings:
+          - cim:SpacingPosition.xCoord
+        comments:
+          - >-
+            Import: structural; inline positions: a synthesized XYSpacing wc_<name>_spc, xCoord
+            (<units>). Export: get_line_conductor_xy x (m); an unused configuration: get_spacing_xy.
 
       hs:
         description: >-
@@ -193,6 +299,12 @@ classes:
         range: float
         multivalued: true
         required: false
+        close_mappings:
+          - cim:SpacingPosition.yCoord
+        comments:
+          - >-
+            Import: structural; inline positions: the synthesized XYSpacing's yCoord (<units>).
+            Export: get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7).
 
       # (17) Seasons
       Seasons:
@@ -202,6 +314,9 @@ classes:
         required: false
         annotations:
           order: 17
+        comments:
+          - >-
+            Import: untranscribed; no home on a WireConfiguration; instance limits or untranscribed. Export: not written, not in CIM (untranscribed on import).
 
       # (18) Ratings
       Ratings:
@@ -212,6 +327,9 @@ classes:
         required: false
         annotations:
           order: 18
+        comments:
+          - >-
+            Import: untranscribed; no home on a WireConfiguration; instance limits or untranscribed. Export: not written, not in CIM (untranscribed on import).
 
       # (19) LineType
       LineType:
@@ -221,6 +339,10 @@ classes:
         required: false
         annotations:
           order: 19
+        comments:
+          - >-
+            Import: untranscribed; no home on a WireConfiguration. Export: not written, not in CIM
+            (untranscribed on import).
 
       # (20) conductors
       conductors:
@@ -231,6 +353,10 @@ classes:
         required: false
         annotations:
           order: 20
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, wires carries the names.
 
       # (21) like
       like:
@@ -240,3 +366,7 @@ classes:
         required: false
         annotations:
           order: 21
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

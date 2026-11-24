@@ -788,6 +788,8 @@ class DssReader(FormatReader):
             "%r": "pct_Rs",
         }
         _WDG_SCALAR_KEYS = {"rneut", "xneut"}
+        #: per-winding values with no array form in DSS: each goes to the active winding's place in its array
+        _WDG_VALUE_KEYS = {"rdcohms": "RdcOhms"}
 
         tokens = _tokenize_dss(param_text)
 
@@ -817,8 +819,8 @@ class DssReader(FormatReader):
                 merged.append(tok)
                 i += 1
 
-        # Walk the tokens in order, as DSS applies them. A per-winding scalar (bus, kV, kVA, conn, tap, %R)
-        # goes to the active winding: the last wdg=, else the last winding an array set (an array sets every
+        # Walk the tokens in order, as DSS applies them. A per-winding scalar (bus, kV, kVA, conn, tap, %R,
+        # RdcOhms) goes to the active winding: the last wdg=, else the last winding an array set (an array sets every
         # winding), else winding 1. On a 2-winding transformer kVA sets both windings (all engine-checked).
         count = next((int(_try_eval_rpn(tok.partition("=")[2])) for tok in merged
                       if tok.partition("=")[0].strip().lower() == "windings"), 2)
@@ -853,6 +855,8 @@ class DssReader(FormatReader):
                 target = _WDG_ARRAY_MAP[key_lower]
                 for number in (range(1, 3) if key_lower == "kva" and count == 2 else (active,)):
                     put(target, number, resolved)
+            elif key_lower in _WDG_VALUE_KEYS:
+                put(_WDG_VALUE_KEYS[key_lower], active, resolved)
             elif key_lower in _WDG_SCALAR_KEYS:
                 # Rneut/Xneut belong to the active winding; keep the first winding that sets either and emit
                 # "wdg=N" alongside so the binding survives.
@@ -1580,7 +1584,8 @@ def _strip_comment(line: str) -> str:
 
 
 #: The per-winding array of a transformer and the scalar slot whose ``dss_default`` fills an unset winding.
-_WINDING_SCALAR = {"buses": "bus", "kVs": "kV", "kVAs": "kVA", "conns": "conn", "taps": "tap", "pct_Rs": "pct_R"}
+_WINDING_SCALAR = {"buses": "bus", "kVs": "kV", "kVAs": "kVA", "conns": "conn", "taps": "tap", "pct_Rs": "pct_R",
+                   "RdcOhms": "RdcOhms"}
 #: Classes whose properties the reader rewrites by winding or conductor block, so a positional value raises.
 _BLOCK_CLASSES = ("transformer", "xfmrcode", "autotrans", "linegeometry")
 

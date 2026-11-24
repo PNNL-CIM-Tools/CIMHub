@@ -3,7 +3,7 @@
 **Status:** S2 done (2026-11-07): LineCode units, base frequency and short sequence codes; wire catalogs;
 LineSpacing/LineGeometry. **S3a and S3b done 2026-11-08** (lines, switches, transformers, regulators, RegControl, XfmrCode templates). **S4a done 2026-11-08** (Load, Capacitor, CapControl); **S4b done 2026-11-08** (PVSystem, Storage, Generator, Reactor); **S5 done 2026-11-08** (bus coordinates, the deck sweep test). `LineCode` (Phase 1) and the inline `Transformer` are seeded from CIMHub_2_0 with
 their atoms; the master, buses and Vsource are S0/S1's. The other DSS classes follow slice by slice
-([`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
+([`DSS_REWRITE_PLAN.md`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.development/DSS_REWRITE_PLAN.md)), each section approved before its code (DSS-12).
 Format: the `cimtbl-mapping-spec` skill. Contract: the `cimtbl-import-contract` skill.
 
 The classification tables are generated from each mapper's `FIELDS` with
@@ -23,8 +23,8 @@ IEEE8500 `LineCodes.dss`; the S2 tables' samples come from the 31 sweep decks. `
 | `LineGeometry` | `linegeometry.cimtbl` | `line_by_wire_configuration` (`WireConfiguration`; inline positions get a synthesized `XYSpacing`) | the wire catalogs, `linespacing.cimtbl` |
 | `LineCode` | `linecode.cimtbl` | matrix code: `PerLengthPhaseImpedance` + `PhaseImpedanceData` per lower-triangle element; sequence code: `PerLengthSequenceImpedance` | nothing |
 | `Line` (+ `Fuse`, `Recloser`, `SwtControl`) | `line.cimtbl` | `line_by_impedance`, `line_by_wire_configuration`, `switch`; the line's own impedance `ln_<name>_lc` (`isTemplate=false`), synthesized `ln_<name>_wc`; ratings as `OperationalLimitSet` + `CurrentLimit` | the master (Feeder, BaseVoltage, OperationalLimitType), `bus.cimtbl`, the catalogs |
-| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs) | the instances that use it (their bus systems) |
-| `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator` | the master (Feeder, BaseVoltage) and the topology walk's bus systems |
+| `XfmrCode` | `xfmrcode.cimtbl` | `transformer_template` (3-phase, TankEnd), `transformer_template_1ph` (1-phase, lugs); seasonal ratings as the template's own `OperationalLimitSet` + `ApparentPowerLimit` | the instances that use it (their bus systems); the master (OperationalLimitType) |
+| `Transformer` | `transformer.cimtbl` | 3-phase: `transformer_by_ends`; 1-phase: `transformer_by_phase_ends`; regulated with equal winding kV: `voltage_regulator`; seasonal ratings as `OperationalLimitSet` + `ApparentPowerLimit` | the master (Feeder, BaseVoltage, OperationalLimitType) and the topology walk's bus systems |
 | `RegControl` | `regcontrol.cimtbl` | `voltage_regulator` / `regulator` (`RatioTapChanger` + `TapChangerControl`) | `transformer.cimtbl` |
 | `LoadShape` (those a Load names as `yearly`) | `loadshape.cimtbl` | `load_schedule` (`ConformLoadGroup` + `ConformLoadSchedule`; the points in the Parquet sidecar, S8) | nothing |
 | | | a shape a PVSystem, Storage or Generator names as `yearly` is not here but that device's own `EnergyConnectionSchedule`, in its document (S9) | |
@@ -56,17 +56,26 @@ written); the `common` rows approved with S1.
   Object Substation: mRID=sub_<circuit>, name=<circuit>
   Object Feeder: mRID=fdr_<circuit>, name=<circuit>, NormalEnergizingSubstation=sub_<circuit>
   Object BaseFrequency: mRID=bf_60hz, frequency (Hz)=60          # defaulted: defaultbasefreq=60.0
-  # voltagebases: 115, 4.16, 13.2, 0.48, 0.208; on no bus: 0.208; not in voltagebases: 0.24
+  # voltagebases: 115.0, 4.16, 13.2, 0.48, 0.208; on no bus: 0.208; not in voltagebases: 0.24
   Table BaseVoltage: mRID, nominalVoltage (kV)
-      bv_115kv,  115
-      bv_4p16kv, 4.16
+      bv_115kv,  115.0
+      bv_13p2kv, 13.2
       ...
+      bv_240v,   0.24
+      bv_208v,   0.208
   ```
   - `mRID`s are lowercased, like every DSS mRID.
   - `BaseFrequency` is `Set defaultbasefreq`, else the DSS default of 60 Hz (DSS-3b).
-  - The BaseVoltages are the distinct bus voltages of the topology walk (DSS-1), highest first, never
-    `voltagebases`. The comment lists the deck's `voltagebases` and flags any that is on no bus. A walk voltage
-    missing from `voltagebases` (a bus the engine would snap, plan section 3.1) is flagged as `not in voltagebases`.
+  - The BaseVoltages are one per distinct bus voltage of the topology walk and one per `voltagebases` value, each
+    through `nominal_kv`, highest first. A base on no bus is kept (`bv_208v` above): it is what the engine's
+    `CalcVoltageBases` snaps bus bases to, so the export writes it back (`Set voltagebases` is every BaseVoltage).
+    Buses still take the walk's voltage (`bus.cimtbl`). The comment reconciles the two lists: the deck's
+    `voltagebases`, those `on no bus`, and walk voltages missing from `voltagebases` (a bus the engine would snap,
+    plan section 3.1) as `not in voltagebases`. This amends DSS-1 ("the walk's, never `voltagebases`"), on
+    2026-11-24 at the user's direction (`test_voltagebases_on_no_bus_are_kept_for_the_engine`).
+  - The `OperationalLimitType`s are `olt_normal` and `olt_emergency` (the line ratings, R1), then `olt_season1` ..
+    `olt_season<N>` for the most seasons any Transformer or XfmrCode `Ratings` rate (`limit_types(seasons)`; see
+    Transformer). IEEE13_CDPSM rates none, so it has only the first two.
   - The Substation holds the EnergySources. The Feeder holds every other piece of equipment and every
     ConnectivityNode, so it is the `container` that mappers receive.
 
@@ -224,7 +233,7 @@ whose length does not fit `nphases`.
 |---|---|---|
 | nonzero `cmatrix` without `baseFreq` | ieee9500 (both copies), IEEE8500 and K1 triplex | DSS takes the circuit's default base frequency. Take it from the deck's `Circuit`/`Set DefaultBaseFrequency`, else 60 Hz? |
 | `units` unset | IEEE13_original, IEEE123_deconfliction, EPRI M1 and J1 | DSS reads the values per unit of the *line's* length, so the per-length unit belongs to the instance. Defer the code to the `Line` mapper, or require `units`? |
-| 1-/2-phase sequence code | EPRI J1 (17 codes) | The engine (J1, 2026-11-06) builds a 1-phase line from Z1 alone (`oh_b13552`: R = R1, X = X1, C = C1 per length) and a 2-phase line from Zs = (2Z1 + Z0)/3, Zm = (Z0 − Z1)/3 (`oh_b41869`). The LineCode object itself reports (2Z1 + Z0)/3 for both, so the code alone does not fix the value. Proposal in [`DSS_REWRITE_PLAN.md`](DSS_REWRITE_PLAN.md) (DSS-4) |
+| 1-/2-phase sequence code | EPRI J1 (17 codes) | The engine (J1, 2026-11-06) builds a 1-phase line from Z1 alone (`oh_b13552`: R = R1, X = X1, C = C1 per length) and a 2-phase line from Zs = (2Z1 + Z0)/3, Zm = (Z0 − Z1)/3 (`oh_b41869`). The LineCode object itself reports (2Z1 + Z0)/3 for both, so the code alone does not fix the value. Proposal in [`DSS_REWRITE_PLAN.md`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.development/DSS_REWRITE_PLAN.md) (DSS-4) |
 | two mRIDs give one UUID | IEEE8500 (`lc_1p_#2acsr_#2n` vs `lc_1p_#2arv_#2n`) | CIM-Profiles bug: the mRID seed drops text up to the last `#` (CIMTABLES_REQUESTS R10) |
 | `nphases=4` read as 3 | IEEE13_OCHRE | reader bug: it limits nphases to [1, 3] and substitutes 3, so the 10-value `rmatrix` no longer fits |
 
@@ -236,7 +245,7 @@ off-diagonals; the import keeps the deck's values (`mtx601` r21 = 0.1535).
 
 ### LineCode: units, base frequency, short sequence codes (S2, approved 2026-11-07)
 
-S2 lifts three of the fail-fast stops above (the sweep tables below are the pre-S2 record), as decided in [`DSS_REWRITE_PLAN.md`](../../.development/DSS_REWRITE_PLAN.md)
+S2 lifts three of the fail-fast stops above (the sweep tables below are the pre-S2 record), as decided in [`DSS_REWRITE_PLAN.md`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.development/DSS_REWRITE_PLAN.md)
 §6. They are the stops for 16 of the 31 sweep decks.
 
 - **`units` unset (DSS-3).** DSS reads a unitless code per unit of the *line's* length, so:
@@ -440,6 +449,11 @@ Table WireSequenceConfiguration: mRID, WireConfiguration=wc_607, sequenceNumber,
     wc_607_2, 2, wire_cu_1/0
 ```
 
+**Earth.** `linegeometry.cimtbl` opens with the deck's one `EarthResistivity` `earth` (`Set earthmodel` and the
+geometry lines' `rho`), which every WireConfiguration names. A deck without geometry that sets `earthmodel` still
+gets it, floating (no line names it), so the export can write the setting back; a deck with neither gets none
+(S6g below).
+
 **Untranscribed:** `reduce` (Kron reduction is the consumer's choice from the segment's phases; 242 of 243 set
 it), ratings (D9), `LineType`.
 
@@ -591,8 +605,20 @@ takes its code's values, because CIM has no AutoTransformer template.
 
 **Fail fast:** a code of other than 1 or 3 phases; windings other than 2 or 3; `Rneut` on a 1-phase code; a mesh From winding rated other than winding 1; a tap other than 1 on an
 unregulated code; a center-tap code with an
-instance that is not a split-phase secondary; instances of one code on different bus systems; `RdcOhms`,
-`Seasons`, `Ratings` set.
+instance that is not a split-phase secondary; instances of one code on different bus systems; `Seasons` without
+`Ratings`, or a `Ratings` count other than `Seasons` (see the Transformer section).
+
+**DC resistance and seasonal ratings (2026-11-24).** Atom `tests/atoms/xfmrcode/rated.dss` (code `sub` with
+each winding's `RdcOhms` and `Seasons=2 Ratings=[22000 25000]`), golden `rated.cimtbl`,
+`test_rated_code_matches_golden_and_binds`:
+- `RdcOhms` is copied verbatim to each template winding, `Update Table TransformerWinding: mRID, rDC (ohm)`, only
+  when set.
+- `Ratings` are the template's own `OperationalLimitSet` `xc_<code>_ratings`, written alone (no `Equipment`), with
+  one `ApparentPowerLimit` `xc_<code>_ratings_<n>` (kVA) of type `olt_season<n>` per season. The template names it
+  with `Update Table TransformerTankConfiguration: mRID, OperationalLimitSet`
+  (`EquipmentConfiguration.OperationalLimitSet`, a GridAPPS-D extension of the profile). An instance does not
+  inherit the set: it gets only
+  its own ratings, and one that sets `Ratings` or `Seasons` its code also sets raises (the one-source rule above).
 
 **Engine checks:** each template's ratings, r and x against the engine's transformer of each instance.
 
@@ -633,8 +659,8 @@ instance that is not a split-phase secondary; instances of one code on different
 | `hsrise` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
 | `pct_loadloss` | `Optional[float]` | `0.01`, `1.1` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
 | `pct_noloadloss` | `Optional[float]` | `0.2`, `0.6` | derived | TransformerTankConfiguration.noLoadLoss (kW) = % x winding 1 kVA |
-| `normhkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed (plan D9) |
-| `emerghkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed (plan D9) |
+| `normhkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed |
+| `emerghkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed |
 | `MaxTap` | `Optional[str]` | `1.1` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
 | `MinTap` | `Optional[str]` | `0.9` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
 | `NumTaps` | `Optional[int]` |  | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
@@ -644,9 +670,9 @@ instance that is not a split-phase secondary; instances of one code on different
 | `X12` | `Optional[float]` |  | structural | alias of Xhl |
 | `X13` | `Optional[float]` |  | structural | alias of Xht |
 | `X23` | `Optional[float]` |  | structural | alias of Xlt |
-| `RdcOhms` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (home TransformerWinding.rDC) |
-| `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `Ratings` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `RdcOhms` | `Union[float, list[float], NoneType]` |  | copied | `TransformerWinding.rDC` (ohm); per template winding |
+| `Seasons` | `Optional[int]` |  | structural | the number of Ratings; one by default, and a count other than the Ratings' raises |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | copied | `ApparentPowerLimit.normalValue` (kVA); one per season n, of type olt_season<n>, in the OperationalLimitSet <xc>_ratings on the TransformerTankConfiguration names (EquipmentConfiguration.OperationalLimitSet) |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
 ## Transformer
@@ -694,7 +720,29 @@ the neutral on 0.
 - `pct_Rs` and `pct_loadloss` that disagree, or `XHL` and `X12` that disagree;
 - 3-phase nodes other than `1.2.3`;
 - two windings on one bus that are not a split-phase secondary;
-- a bus missing from the topology result.
+- a bus missing from the topology result;
+- `RdcOhms` on some windings only (the reader), on a 3-phase transformer by balanced ends, or on a regulator;
+- `Seasons` without `Ratings`, or a `Ratings` count other than `Seasons`.
+
+**DC resistance and seasonal ratings (2026-11-24).** Atom `tests/atoms/transformer/rated.dss` (the EPRI J1
+service with each winding's `RdcOhms` and `Seasons=2 Ratings=[44 52]`), golden `rated.cimtbl`,
+`test_rated_service_binds`; the export atom `rated_inline.dss` is the same record on a circuit of its own.
+- **`RdcOhms`** is per winding. DSS has no array form, so the reader puts each value at the active `wdg=`'s place in
+  the `RdcOhms` list. Some windings set and others not raises: the engine's default for those (85 % of %R in ohms)
+  is not transcribed. The values are copied verbatim, `Update Table TransformerWinding: mRID, rDC (ohm)`, only when
+  set, on a 1-phase transformer's coils (and on an XfmrCode template's windings). A 3-phase transformer by balanced
+  ends has no `TransformerWinding`, so it raises (`RdcOhms on a 3-phase transformer by balanced ends`), and so does
+  a regulator (`an AutoTransformerEnd has no rDC`).
+- **`Ratings`** (kVA) are one `ApparentPowerLimit` `<owner>_ratings_<n>` per season n, of type `olt_season<n>`, in
+  the `OperationalLimitSet` `<owner>_ratings`. An inline Transformer's set is on its PowerTransformer
+  (`OperationalLimitSet.Equipment`), a regulator's on its VoltageRegulator. The master declares `olt_season1` ..
+  `olt_season<N>` (`name` `season <n>`, `durationKind` normal, `isInfiniteDuration` true, `absoluteValue`) for the
+  most seasons any Transformer or XfmrCode rates (`limit_types(seasons)`).
+- **`Seasons`** is the number of ratings. The engine keeps only `Seasons` values of `Ratings` (one by default) and
+  pads a `Seasons` alone with zeros, so `Seasons` without `Ratings` raises, and so does `len(Ratings) != Seasons`.
+  Known limit: the engine also zeroes the Ratings when `Seasons` comes after `Ratings` on the line; the reader does
+  not record that order.
+- `normhkVA` and `emerghkVA` stay untranscribed.
 
 | Transformer field | type | samples | kind | target |
 |---|---|---|---|---|
@@ -726,8 +774,8 @@ the neutral on 0.
 | `hsrise` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
 | `pct_loadloss` | `Optional[float]` | `0.01`, `0.001`, `0.7639` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
 | `pct_noloadloss` | `Optional[float]` | `0.0851`, `0.34`, `0.1348` | derived | 3-phase: end 1 g (percent); 1-phase: tank noLoadLoss = % x kVA; a regulator has no home for it (row comment) |
-| `normhkVA` | `Optional[float]` | `25.0`, `15.0`, `75.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `emerghkVA` | `Optional[float]` | `35.0`, `21.0`, `105.0` | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
+| `normhkVA` | `Optional[float]` | `25.0`, `15.0`, `75.0` | untranscribed | instance OperationalLimitSet or untranscribed |
+| `emerghkVA` | `Optional[float]` | `35.0`, `21.0`, `105.0` | untranscribed | instance OperationalLimitSet or untranscribed |
 | `sub` | `Union[bool, Bool, NoneType]` | `True` | untranscribed | DSS report flag |
 | `MaxTap` | `Optional[float]` | `1.1`, `1.05` | structural | the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed; default 1.1 |
 | `MinTap` | `Optional[float]` | `0.9`, `0.95` | structural | the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed; default 0.9 |
@@ -744,11 +792,11 @@ the neutral on 0.
 | `X23` | `Optional[float]` |  | structural | alias of XLT |
 | `LeadLag` | `Union[str, ForwardRef('LeadLagType'), NoneType]` | `Lag` | untranscribed | PowerTransformer.vectorGroup clock; vectorGroup not mapped yet |
 | `Core` | `Union[str, ForwardRef('CoreType'), NoneType]` |  | untranscribed | core type; no home in the network profile parts |
-| `RdcOhms` | `Union[float, list[float], NoneType]` |  | untranscribed | home TransformerWinding.rDC; not mapped until a deck sets it |
-| `Seasons` | `Optional[int]` |  | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `normamps` | `Optional[float]` |  | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
-| `emergamps` | `Optional[float]` |  | untranscribed | instance OperationalLimitSet or untranscribed (plan D9) |
+| `RdcOhms` | `Union[float, list[float], NoneType]` |  | copied | `TransformerWinding.rDC` (ohm); per winding, on a 1-phase transformer's coils; by balanced ends (no TransformerWinding) it raises |
+| `Seasons` | `Optional[int]` |  | structural | the number of Ratings; one by default, and a count other than the Ratings' raises |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | copied | `ApparentPowerLimit.normalValue` (kVA); one per season n, of type olt_season<n>, in the OperationalLimitSet <xf>_ratings on the PowerTransformer (seasonal_ratings) |
+| `normamps` | `Optional[float]` |  | untranscribed | instance OperationalLimitSet or untranscribed |
+| `emergamps` | `Optional[float]` |  | untranscribed | instance OperationalLimitSet or untranscribed |
 | `faultrate` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `pct_perm` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
 | `repair` | `Optional[float]` |  | untranscribed | reliability data; no home in the network profile parts |
@@ -1576,7 +1624,7 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
 - **Terminal:** the S4 shared phase rule (`injection.device_terminal`) for PVSystem, Storage and Generator.
 - **`ratedU` is line to line** (S4b-4): the deck's kV, × √3 for a 1-phase wye device; the exporter inverts it. This
   matches the engine's CIM export, which is where GridAPPS-D's files come from. CIMHub_2_0 wrote kV unchanged; the
-  tier-3 comparison lists that difference. ratedU is not checked against the bus: a 240 V inverter on 120 V legs
+  round-trip comparison lists that difference. ratedU is not checked against the bus: a 240 V inverter on 120 V legs
   stays 240 V.
 - **Sign:** p and q are the load sign: generation and discharge are negative, q = −kvar (S4b-1).
 - **pf with kvar:** the deck's assignment order decides, as in the engine (S4b-8, which replaced S4b-2's raise).
@@ -2187,6 +2235,11 @@ Specified with the export in `EXPORT_MAPPING.md#s6g-earth-model-and-reclose-sequ
 - A deck with geometry gets one `EarthResistivity` (`earth`), first in `linegeometry.cimtbl`, from `Set earthmodel`
   and the geometry lines' `rho` (the engine's Deri and 100 ohm-m when unset, listed). Every WireConfiguration names
   it. FullCarson, disagreeing rho, and rho on a line without geometry raise.
+- A deck without geometry that sets `earthmodel` gets the same `EarthResistivity` `earth`, floating: no line names
+  it (`# the deck's earthmodel; no line names it`), `rho` the default 100 ohm-m (`defaulted: rho=100.0`). It keeps
+  the setting for the export's `Set earthmodel`, so `earthmodel` no longer differs in the power-flow parity of such
+  decks (IEEE13_CDPSM now has a `linegeometry.cimtbl`). A deck with neither geometry nor `earthmodel` gets none
+  (2026-11-24; `test_no_geometry_keeps_a_set_earthmodel`, `test_no_geometry_and_no_earthmodel_has_no_earth`).
 - A Recloser's `Shots` - 1 reclosures are `RecloseSequence` rows `<switch>_rs<n>` in `line.cimtbl`, at its
   `RecloseIntervals` (the engine's defaults filling either, listed). Both given and disagreeing raise, and so does
   Shots above 4 without intervals.

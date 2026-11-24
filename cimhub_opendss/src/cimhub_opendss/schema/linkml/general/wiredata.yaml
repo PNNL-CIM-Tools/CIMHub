@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -28,9 +28,9 @@ classes:
       - cim:OverheadWireInfo
     comments:
       - >-
-        OpenDSS Wiredata maps to CIM OverheadWireInfo (catalog entry for an overhead
-        conductor). All physical dimensions are stored in SI units (meters, ohm/m).
-        Reference: wiredata.py converter.
+        Import: WireData becomes an OverheadWireInfo in wire.cimtbl, with its normal and emergency
+        CurrentLimit in an OperationalLimitSet. Export: OverheadWireInfo is written as WireData
+        (exporter/wire.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -40,7 +40,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: copied to OverheadWireInfo.name; mRID = prefix + name, lowercased. Export:
+            Names, one namespace for the three catalogs.
 
       # (1) Rdc
       Rdc:
@@ -51,12 +53,11 @@ classes:
         annotations:
           order: 1
         exact_mappings:
-          - cim:OverheadWireInfo.rDC20
+          - cim:ConductorInfo.rDC20
         comments:
           - >-
-            Import: OverheadWireInfo.rDC20 = Rdc converted to ohm/m using Runits
-            (e.g. ohm/kft × 1/304.8 = ohm/m). Export: Rdc = rDC20 in selected units.
-            CIM stores in ohm/m (SI base).
+            Import: copied to OverheadWireInfo.rDC20 (ohm/<Runits>); DC resistance (DSS gives no
+            temperature). Export: get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises.
 
       # (2) Rac
       Rac:
@@ -67,12 +68,13 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 2
-        exact_mappings:
-          - cim:OverheadWireInfo.rAC25
+        close_mappings:
+          - cim:ConductorInfo.rAC25
         comments:
           - >-
-            Import: OverheadWireInfo.rAC25 = Rac converted to ohm/m using Runits.
-            Export: Rac = rAC25 in selected units.
+            Import: copied to OverheadWireInfo.rAC25 (ohm/<Runits>); DSS: resistance at 60 Hz,
+            temperature unstated. Export: rule, get_wire_info.r_ac25 (ohm/m); unset -> not written,
+            the engine's 1.02 x Rdc.
 
       # (3) Runits
       Runits:
@@ -84,7 +86,9 @@ classes:
         annotations:
           order: 3
         comments:
-          - "OpenDSS-only (N/A): unit selector consumed during import to convert Rdc/Rac to ohm/m; not stored on CIM."
+          - >-
+            Import: mapped; the unit of Rdc, Rac in the header (LENGTH_UNIT); unset raises (every
+            wire in the sweep sets it). Export: m (B1).
 
       # (4) GMRac
       GMRac:
@@ -96,11 +100,12 @@ classes:
         annotations:
           order: 4
         exact_mappings:
-          - cim:OverheadWireInfo.gmr
+          - cim:WireInfo.gmr
         comments:
           - >-
-            Import: OverheadWireInfo.gmr = GMRac converted to meters using GMRunits.
-            Export: GMRac = gmr in selected units. CIM stores in m (SI base).
+            Import: copied to OverheadWireInfo.gmr (<GMRunits>); unset raises (the engine's 0.7788 x
+            radius default; no deck in the sweep omits it). Export: rule, get_wire_info.gmr (m);
+            unset -> not written, the engine's 0.7788 x radius.
 
       # (5) GMRunits
       GMRunits:
@@ -111,7 +116,9 @@ classes:
         annotations:
           order: 5
         comments:
-          - "OpenDSS-only (N/A): unit selector consumed during import for GMRac conversion; not stored on CIM."
+          - >-
+            Import: mapped; the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire
+            in the sweep sets it). Export: m (B1).
 
       # (6) radius
       radius:
@@ -122,11 +129,11 @@ classes:
         annotations:
           order: 6
         exact_mappings:
-          - cim:OverheadWireInfo.radius
+          - cim:WireInfo.radius
         comments:
           - >-
-            Import: OverheadWireInfo.radius = radius converted to meters using radunits.
-            Export: radius = OverheadWireInfo.radius in selected units. CIM stores in m.
+            Import: copied to OverheadWireInfo.radius (<radunits>); one of radius and diam. Export:
+            get_wire_info.radius (m); unset raises.
 
       # (7) radunits
       radunits:
@@ -137,7 +144,9 @@ classes:
         annotations:
           order: 7
         comments:
-          - "OpenDSS-only (N/A): unit selector consumed during import for radius/diam conversion; not stored on CIM."
+          - >-
+            Import: mapped; the unit of radius, diam and every cable dimension in the header
+            (LENGTH_UNIT); unset raises (every wire in the sweep sets it). Export: m (B1).
 
       # (8) normamps
       normamps:
@@ -148,9 +157,12 @@ classes:
         annotations:
           order: 8
         exact_mappings:
-          - cim:WireInfo.ratedCurrent
+          - cim:ConductingAssetInfo.ratedCurrent
         comments:
-          - "Import: OverheadWireInfo.ratedCurrent = normamps. Export: normamps = ratedCurrent. Units: amperes in both DSS and CIM."
+          - >-
+            Import: copied to OverheadWireInfo.ratedCurrent (A); also the normal CurrentLimit of the
+            wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet). Export: the
+            wire's normal limit, else ratedCurrent (A).
 
       # (9) emergamps
       emergamps:
@@ -160,8 +172,13 @@ classes:
         required: false
         annotations:
           order: 9
+        close_mappings:
+          - cim:CurrentLimit.normalValue
         comments:
-          - "OpenDSS-only (N/A): emergency current rating; no separate CIM field on OverheadWireInfo (CIM ratedCurrent corresponds to normal rating)."
+          - >-
+            Import: structural; the emergency CurrentLimit of the wire's OperationalLimitSet
+            <mRID>_limits (AssetInfo.OperationalLimitSet). Export: rule, the wire's emergency limit
+            (A); unset -> not written, the engine's 1.5 x normamps.
         todos:
           - "No CIM equivalent for emergency rating on WireInfo; requires CIM extension."
 
@@ -174,10 +191,12 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 10
-        exact_mappings:
-          - cim:OverheadWireInfo.radius
+        close_mappings:
+          - cim:WireInfo.radius
         comments:
-          - "Import: OverheadWireInfo.radius = diam / 2 (converted via radunits). Alternate form for radius property."
+          - >-
+            Import: derived; radius = diam / 2 (radius_from_diameter). Export: not written, radius
+            is written instead.
 
       # (11) Seasons
       Seasons:
@@ -189,7 +208,11 @@ classes:
         annotations:
           order: 11
         comments:
-          - "OpenDSS-only (N/A): seasonal ratings count; no direct CIM equivalent on WireInfo catalog object."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (an indexed rating array that names no calendar season; home
+            OperationalLimitType.season). Export: not written, not in CIM (untranscribed or raising
+            on import).
 
       # (12) Ratings
       Ratings:
@@ -200,8 +223,11 @@ classes:
         required: false
         annotations:
           order: 12
-        related_mappings:
-          - cim:OperationalLimit
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (with Seasons). Export: not written, not in CIM (untranscribed or raising on
+            import).
         todos:
           - "Seasonal ratings converter not yet implemented on WireInfo."
 
@@ -213,12 +239,11 @@ classes:
         required: false
         annotations:
           order: 13
-        exact_mappings:
-          - cim:OverheadWireInfo.coreRadius
         comments:
           - >-
-            Import: OverheadWireInfo.coreRadius = Capradius converted to meters using radunits.
-            Export: Capradius = coreRadius in selected units.
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the radius for capacitance; not WireInfo.coreRadius). Export: not written, not
+            in CIM (untranscribed or raising on import).
 
       # (14) like
       like:
@@ -229,4 +254,6 @@ classes:
         annotations:
           order: 14
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

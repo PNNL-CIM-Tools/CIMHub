@@ -79,6 +79,9 @@ CIRCUIT_SOURCE = "source"
 #: buses); ``Switch=y`` sets r1=1, x1=1, ... So they go first and the record's own values after them. ``phases``
 #: sizes the arrays that follow, and goes before ``Switch`` as decks write it: the engine's later recalculation of
 #: a switch line depends on that order (IEEE13_CDPSM ``Sect1``, engine-checked).
+#: Per-winding slots DSS has no array form for: written last, one ``wdg=n <slot>=value`` block per winding, so no
+#: other per-winding slot follows a ``wdg=`` they move.
+_PER_WINDING_SLOTS = ("RdcOhms",)
 _LEADING_SLOTS = ("XfmrCode", "linecode", "geometry", "spacing", "phases", "Switch")
 
 #: A LineGeometry's active-conductor slots: the reader leaves the last cond= block in them and folds every block
@@ -181,16 +184,20 @@ class DssWriter(FormatWriter):
             key=lambda f: _LEADING_SLOTS.index(f.name) - len(_LEADING_SLOTS) if f.name in _LEADING_SLOTS
             else schema_annots.get(f.name, {}).get('order', 9999),
         )
-        parts = []
+        parts, per_winding = [], []
         for f in ordered:
             value = getattr(obj, f.name)
             if value is None:
                 continue
             field_annots = schema_annots.get(f.name, {})
+            if f.name in _PER_WINDING_SLOTS and value:
+                per_winding += [f"wdg={number} {f.name}={format_float(float(item))}"
+                                for number, item in enumerate(value, start=1)]
+                continue
             formatted = self._format_value(value, field_annots)
             if formatted is not None:
                 parts.append(f"{field_annots.get('dss_name', f.name)}={formatted}")
-        return parts
+        return parts + per_winding
 
     def _geometry(self, geometry, kinds: dict[str, str]) -> str:
         """A LineGeometry with positions: its other slots, then one ``cond=`` block per conductor naming its kind

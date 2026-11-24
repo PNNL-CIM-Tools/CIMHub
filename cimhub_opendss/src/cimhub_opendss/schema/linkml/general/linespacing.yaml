@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -25,12 +25,12 @@ classes:
       impedance calculation.
     class_uri: dss:Linespacing
     exact_mappings:
-      - cim:WireSpacingInfo
+      - cim:XYSpacing
     comments:
       - >-
-        OpenDSS LineSpacing maps to CIM WireSpacingInfo. Each conductor position
-        is a WirePosition child object (WireSpacingInfo.WirePosition). X and H
-        arrays are converted to meters from the specified units.
+        Import: a LineSpacing becomes a template XYSpacing spc_<name> with one XYConductorPosition
+        per conductor in linespacing.cimtbl (CIM 18 template, not a WireSpacingInfo catalog).
+        Export: not written as a LineSpacing; the LineGeometry carries the positions inline.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -40,7 +40,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: copied to XYSpacing.name; mRID = spc_ + name, lowercased; isTemplate = true.
+            Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (1) nconds
       nconds:
@@ -52,9 +54,12 @@ classes:
         annotations:
           order: 1
         related_mappings:
-          - cim:WirePosition
+          - cim:XYConductorPosition
         comments:
-          - "Import: total number of WirePosition children created on the WireSpacingInfo. Export: len(WireSpacingInfo.WirePosition)."
+          - >-
+            Import: structural; one XYConductorPosition per conductor, sequenceNumber 1..nconds; x
+            and h must have nconds values. Export: not written; the LineGeometry carries the
+            positions inline (B2).
 
       # (2) nphases
       nphases:
@@ -65,14 +70,12 @@ classes:
         minimum_value: 1
         annotations:
           order: 2
-        exact_mappings:
-          - cim:WireSpacingInfo.phaseWireCount
+        close_mappings:
+          - cim:ConductorPosition.kind
         comments:
           - >-
-            Import: WireSpacingInfo.phaseWireCount = nphases. Export: nphases is
-            recovered by counting labeled A/B/C phase conductors on an ACLineSegment
-            that references this WireSpacingInfo (falls back to nconds if no such
-            segment is found), since phaseWireCount is not read back directly.
+            Import: structural; kind: phase for conductors 1..nphases, neutral after. Export: not
+            written; the LineGeometry carries the positions inline (B2).
 
       # (3) x
       x:
@@ -84,9 +87,11 @@ classes:
         annotations:
           order: 3
         exact_mappings:
-          - cim:WirePosition.xCoord
+          - cim:SpacingPosition.xCoord
         comments:
-          - "Import: WirePosition.xCoord = x[i] converted to meters using units. Export: x[i] = xCoord in selected units."
+          - >-
+            Import: structural; XYConductorPosition.xCoord (<units>), one per conductor. Export: not
+            written; the LineGeometry carries the positions inline (B2).
 
       # (4) h
       h:
@@ -98,9 +103,11 @@ classes:
         annotations:
           order: 4
         exact_mappings:
-          - cim:WirePosition.yCoord
+          - cim:SpacingPosition.yCoord
         comments:
-          - "Import: WirePosition.yCoord = h[i] converted to meters using units. Export: h[i] = yCoord in selected units."
+          - >-
+            Import: structural; XYConductorPosition.yCoord (<units>), one per conductor. Export: not
+            written; the LineGeometry carries the positions inline (B2).
 
       # (5) units
       units:
@@ -111,7 +118,9 @@ classes:
         annotations:
           order: 5
         comments:
-          - "OpenDSS-only (N/A): unit selector consumed during import for x/h conversion to meters; not stored on CIM."
+          - >-
+            Import: mapped; the length unit of xCoord and yCoord (LENGTH_UNIT); unset raises.
+            Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (6) detailed
       detailed:
@@ -123,7 +132,10 @@ classes:
         annotations:
           order: 6
         comments:
-          - "OpenDSS-only (N/A): computation mode selector; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the equivalent-distance form has no positions). Export: not written; the
+            LineGeometry carries the positions inline (B2).
 
       # (7) EqDistPhPh
       EqDistPhPh:
@@ -134,7 +146,10 @@ classes:
         annotations:
           order: 7
         comments:
-          - "OpenDSS-only (N/A): derived equivalent spacing parameter; not stored on CIM WireSpacingInfo."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the equivalent-distance form has no positions). Export: not written; the
+            LineGeometry carries the positions inline (B2).
 
       # (8) EqDistPhN
       EqDistPhN:
@@ -145,7 +160,10 @@ classes:
         annotations:
           order: 8
         comments:
-          - "OpenDSS-only (N/A): derived equivalent spacing parameter; not stored on CIM."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the equivalent-distance form has no positions). Export: not written; the
+            LineGeometry carries the positions inline (B2).
 
       # (9) AvgPhaseHeight
       AvgPhaseHeight:
@@ -156,7 +174,10 @@ classes:
         annotations:
           order: 9
         comments:
-          - "OpenDSS-only (N/A): derived average height; not stored on CIM."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the equivalent-distance form has no positions). Export: not written; the
+            LineGeometry carries the positions inline (B2).
 
       # (10) AvgNeutralHeight
       AvgNeutralHeight:
@@ -167,7 +188,10 @@ classes:
         annotations:
           order: 10
         comments:
-          - "OpenDSS-only (N/A): derived average height; not stored on CIM."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the equivalent-distance form has no positions). Export: not written; the
+            LineGeometry carries the positions inline (B2).
 
       # (11) like
       like:
@@ -178,4 +202,6 @@ classes:
         annotations:
           order: 11
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written;
+            the LineGeometry carries the positions inline (B2).

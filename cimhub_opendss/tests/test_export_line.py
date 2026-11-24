@@ -822,3 +822,12 @@ def test_closed_tie_across_phases_raises():
                                        phaseSide2=cim.SinglePhaseKind.C)]
     with pytest.raises(ValueError, match=r"a tie from \['B'\] to \['C'\] that is closed \(normal or actual\)"):
         switch._line(tie, Names("mrid"), "actual")
+
+
+def test_a_floating_earth_writes_the_earthmodel(tmp_path):
+    """A deck without geometry keeps its Set earthmodel as an EarthResistivity no line names; the export writes it."""
+    path = tmp_path / "deck.dss"
+    path.write_text("Clear\nNew Circuit.atom basekv=4.16 bus1=sourcebus\nSet earthmodel=carson\n"
+                    "New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2\n")
+    network = DssImporter("atom").to_cim(DssReader(path).read_all())
+    assert earth_model(network) == "Carson"

@@ -1,9 +1,9 @@
-"""Tier 4: the IEEE 13 GLM import against the DSS import of the same model (GLM S5-3, GLM-16).
+"""Cross-format: the IEEE 13 GLM import against the DSS import of the same model (GLM S5-3, GLM-16).
 
 IEEE13_cdpsm.glm is the Java CIMHub export of the model the DSS importer's IEEE13_CDPSM golden holds. This binds the
 two committed golden directories with cimtables alone (no spoke, no engine), matches equipment by its terminal buses,
 and compares through the core getters in SI. Each expected difference is asserted as a difference, so a change on
-either side shows (``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s5-the-deck-sweep-tier-4-and-g7``).
+either side shows (``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s5-the-deck-sweep-the-cross-format-test-and-g7``).
 """
 from __future__ import annotations
 

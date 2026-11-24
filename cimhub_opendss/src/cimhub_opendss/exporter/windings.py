@@ -86,7 +86,20 @@ def winding_values(unit_model: UnitModel) -> dict:
         pct_imag=model.core.b,
         pct_noloadloss=model.core.g,
         **_neutral_impedance(unit_model),
+        RdcOhms=_dc_resistances(unit_model),
     )
+
+
+def _dc_resistances(unit_model: UnitModel) -> list[float] | None:
+    """Each winding's rDC (ohm), when the windings have them (a tank's or a template's; an end has none). Some
+    windings with and some without raise: DSS would take its default for those."""
+    values = [winding.r_dc for winding in unit_model.model.windings]
+    if all(value is None for value in values):
+        return None
+    if None in values:
+        raise ValueError(f"{describe(unit_model.unit)}: rDC on some windings only ({values}); DSS's RdcOhms needs "
+                         "every winding's, else the engine's default")
+    return values
 
 
 def winding_buses(unit_model: UnitModel, names: Names) -> list[str]:

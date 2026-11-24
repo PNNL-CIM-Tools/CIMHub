@@ -11,7 +11,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -58,7 +58,9 @@ classes:
       voltagebases:
         description: >-
           Line-to-line voltages the engine snaps bus bases to (CalcVoltageBases).
-          Not used to assign BaseVoltage (DSS-1); kept for the round trip.
+          Import: each value is a BaseVoltage, even on no bus, beside the
+          topology walk's bus voltages (which the buses take). Export: every
+          BaseVoltage, ascending, then CalcVoltageBases.
         range: float
         multivalued: true
         required: false
@@ -78,7 +80,10 @@ classes:
           dss_default: float(60.0)
 
       earthmodel:
-        description: Default earth model for line impedance calculations.
+        description: >-
+          Default earth model for line impedance calculations. Import: the
+          EarthResistivity every geometry names; a deck without geometry that
+          sets it gets one no line names. Export: that EarthResistivity's model.
         range: EarthModelType
         required: false
         annotations:

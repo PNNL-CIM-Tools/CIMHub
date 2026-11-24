@@ -112,7 +112,7 @@ def assert_gridlabd_loads(model, network) -> int:
     return checked
 
 
-# -- tier 1 / 1b: the atoms -----------------------------------------------------------------------------------------
+# -- import and bind: the atoms -------------------------------------------------------------------------------------
 
 def test_atom_goldens():
     model = read(ATOM / "triplex.glm")

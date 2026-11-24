@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -27,14 +27,18 @@ classes:
     class_uri: dss:Linecode
     close_mappings:
       - cim:PerLengthSequenceImpedance
+      - cim:PerLengthPhaseImpedance
+    related_mappings:
+      - cim:WireConfiguration
     comments:
       - >-
-        OpenDSS Linecode maps to CIM PerLengthSequenceImpedance when sequence
-        parameters (r1, x1, r0, x0, C1, C0) are used, or to
-        PerLengthPhaseImpedance + PhaseImpedanceData when matrix parameters are
-        used. All CIM impedance values are stored in SI units (ohm/m, S/m);
-        DSS per-unit-length values are scaled by the units property on import
-        and always exported in ohm/m (units=m).
+        Import: a LineCode becomes a template PerLengthSequenceImpedance (r1/x1/r0/x0 with C1, C0 or
+        B1, B0), or a PerLengthPhaseImpedance with PhaseImpedanceData rows
+        (rmatrix/xmatrix/cmatrix), plus its WireConfiguration lc_<name>_wc (isTemplate=true), in
+        linecode.cimtbl. Values are copied per length in the code's units.
+      - >-
+        Export: every template PerLengthImpedance is written as a LineCode per metre, C from b at
+        the network's base frequency (exporter/linecode.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -44,7 +48,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: copied to PerLengthPhaseImpedance.name, PerLengthSequenceImpedance.name,
+            WireConfiguration.name; mRID = lc_ + name, lowercased. Export: Names.
 
       # (1) nphases
       nphases:
@@ -57,14 +63,13 @@ classes:
         annotations:
           order: 1
           dss_default: int(3)
+        close_mappings:
+          - cim:PerLengthPhaseImpedance.conductorCount
         comments:
           - >-
-            Import: determines routing to PerLengthSequenceImpedance (3-phase
-            balanced, no matrix given) or PerLengthPhaseImpedance (matrix given,
-            or fewer than 3 phases). Export: for PerLengthPhaseImpedance,
-            nphases = conductorCount (or the highest row index in
-            PhaseImpedanceData if conductorCount is absent); for
-            PerLengthSequenceImpedance, nphases is always written as 3.
+            Import: copied to PerLengthPhaseImpedance.conductorCount (the matrix order); a 1- or
+            2-phase sequence code becomes a phase matrix as the engine builds the line.
+            Export: phase code: conductorCount; sequence code: 3.
 
       # (2) r1
       r1:
@@ -79,8 +84,8 @@ classes:
           - cim:PerLengthSequenceImpedance.r
         comments:
           - >-
-            Import: PerLengthSequenceImpedance.r = r1 converted to ohm/m via units.
-            Export: r1 = r in selected output units. CIM stores in ohm/m (SI base).
+            Import: copied to PerLengthSequenceImpedance.r (ohm/<units>). Export: sequence code: r
+            (ohm/m).
 
       # (3) x1
       x1:
@@ -94,7 +99,9 @@ classes:
         exact_mappings:
           - cim:PerLengthSequenceImpedance.x
         comments:
-          - "Import: PerLengthSequenceImpedance.x = x1 converted to ohm/m. Export: x1 = x."
+          - >-
+            Import: copied to PerLengthSequenceImpedance.x (ohm/<units>). Export: sequence code: x
+            (ohm/m).
 
       # (4) r0
       r0:
@@ -109,8 +116,8 @@ classes:
           - cim:PerLengthSequenceImpedance.r0
         comments:
           - >-
-            Import: PerLengthSequenceImpedance.r0 = r0 converted to ohm/m,
-            or 0.0 if r0 is not specified. Export: r0 = r0.
+            Import: copied to PerLengthSequenceImpedance.r0 (ohm/<units>). Export: sequence code: r0
+            (ohm/m); unset raises.
 
       # (5) x0
       x0:
@@ -125,8 +132,8 @@ classes:
           - cim:PerLengthSequenceImpedance.x0
         comments:
           - >-
-            Import: PerLengthSequenceImpedance.x0 = x0 converted to ohm/m,
-            or 0.0 if x0 is not specified. Export: x0 = x0.
+            Import: copied to PerLengthSequenceImpedance.x0 (ohm/<units>). Export: sequence code: x0
+            (ohm/m); unset raises.
 
       # (6) C1
       C1:
@@ -141,9 +148,8 @@ classes:
           - cim:PerLengthSequenceImpedance.bch
         comments:
           - >-
-            Import: bch = 2π × 60 × C1_nF × 1e-9 × units_scale (S/m), or 0.0
-            if C1 is not specified. Export: C1 = bch / (2π × 60) × 1e9 in
-            nF/m, or omitted (null) if bch is 0.
+            Import: derived; PerLengthSequenceImpedance bch = 2 pi baseFreq C1 (b_from_c): nF -> nS.
+            Export: rule, sequence code: c_from_b(bch) (nF/m); unset -> 0.
 
       # (7) C0
       C0:
@@ -158,9 +164,8 @@ classes:
           - cim:PerLengthSequenceImpedance.b0ch
         comments:
           - >-
-            Import: b0ch = 2π × 60 × C0_nF × 1e-9 × units_scale (S/m), or 0.0
-            if C0 is not specified. Export: C0 = b0ch / (2π × 60) × 1e9 in
-            nF/m, or omitted (null) if b0ch is 0.
+            Import: derived; PerLengthSequenceImpedance b0ch = 2 pi baseFreq C0 (b_from_c): nF ->
+            nS. Export: rule, sequence code: c_from_b(b0ch) (nF/m); unset -> 0.
 
       # (8) units
       units:
@@ -172,7 +177,9 @@ classes:
         annotations:
           order: 8
         comments:
-          - "OpenDSS-only (N/A): unit selector consumed during import for impedance per-length conversion; not stored on CIM."
+          - >-
+            Import: mapped; the length unit of every per-length header via LENGTH_UNIT. Export: m
+            (B1).
 
       # (9) rmatrix
       rmatrix:
@@ -184,10 +191,12 @@ classes:
         annotations:
           order: 9
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.r
         comments:
-          - "Import: triggers creation of PerLengthPhaseImpedance + PhaseImpedanceData elements instead of PerLengthSequenceImpedance."
+          - >-
+            Import: structural; PhaseImpedanceData r, one row per lower-triangle element. Export:
+            phase code: r, lower triangle (ohm/m).
 
       # (10) xmatrix
       xmatrix:
@@ -199,10 +208,12 @@ classes:
         annotations:
           order: 10
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.x
         comments:
-          - "Import: processed alongside rmatrix into PhaseImpedanceData.x values."
+          - >-
+            Import: structural; PhaseImpedanceData x, one row per lower-triangle element. Export:
+            phase code: x, lower triangle (ohm/m).
 
       # (11) cmatrix
       cmatrix:
@@ -214,15 +225,12 @@ classes:
         annotations:
           order: 11
           dss_format: matrix
-        related_mappings:
-          - cim:PerLengthPhaseImpedance
+        close_mappings:
+          - cim:PhaseImpedanceData.b
         comments:
           - >-
-            Import: each lower-triangle entry (row, col) is converted to a
-            PhaseImpedanceData.b value via b = 2π × 60 × C_nF × 1e-9 × units_scale
-            (S/m); the full lower-triangle is preserved (not reduced to a
-            diagonal). Export: PhaseImpedanceData.b is converted back to nF/m
-            and reassembled into the lower-triangle cmatrix string.
+            Import: derived; PhaseImpedanceData b = 2 pi baseFreq C (b_from_c): nF -> nS. Export:
+            rule, phase code: c_from_b(b), lower triangle (nF/m); unset -> zeros.
 
       # (12) baseFreq
       baseFreq:
@@ -232,8 +240,13 @@ classes:
         required: false
         annotations:
           order: 12
+        exact_mappings:
+          - cim:PerLengthImpedance.calculatedFrequency
         comments:
-          - "Not stored on CIM PerLengthImpedance; base frequency is a circuit-level property. Used in C→susceptance conversion."
+          - >-
+            Import: copied to PerLengthPhaseImpedance.calculatedFrequency (Hz),
+            PerLengthSequenceImpedance.calculatedFrequency (Hz); also the frequency of the derived
+            b. Export: network.base_frequency (Hz); a calculatedFrequency that differs raises.
 
       # (13) normamps
       normamps:
@@ -243,8 +256,11 @@ classes:
         required: false
         annotations:
           order: 13
-        related_mappings:
-          - cim:CurrentLimit
+        comments:
+          - >-
+            Import: untranscribed; catalog ratings have no home on PerLengthImpedance; instance
+            limits or untranscribed. Export: not written, no rating on a
+            PerLengthImpedance; the Line carries its own.
         todos:
           - "Per-length-impedance-level current limits not yet mapped. Should create a WireInfo.ratedCurrent or OperationalLimitSet if this is needed."
 
@@ -256,8 +272,11 @@ classes:
         required: false
         annotations:
           order: 14
-        related_mappings:
-          - cim:CurrentLimit
+        comments:
+          - >-
+            Import: untranscribed; catalog ratings have no home on PerLengthImpedance; instance
+            limits or untranscribed. Export: not written, no rating on a
+            PerLengthImpedance; the Line carries its own.
         todos:
           - "Emergency rating not yet mapped; same path as normamps."
 
@@ -270,7 +289,9 @@ classes:
         annotations:
           order: 15
         comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed on import).
         todos:
           - "Requires CIM extension to roundtrip."
 
@@ -283,7 +304,9 @@ classes:
         annotations:
           order: 16
         comments:
-          - "Reliability parameter; no CIM equivalent."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed on import).
         todos:
           - "Requires CIM extension to roundtrip."
 
@@ -296,7 +319,9 @@ classes:
         annotations:
           order: 17
         comments:
-          - "Reliability parameter; no CIM equivalent."
+          - >-
+            Import: untranscribed; reliability data; no home in the network profile parts. Export:
+            not written, not in CIM (untranscribed on import).
         todos:
           - "Requires CIM extension to roundtrip."
 
@@ -310,7 +335,9 @@ classes:
         annotations:
           order: 18
         comments:
-          - "OpenDSS-only (N/A): Kron reduction flag applied before CIM storage; result is already reduced in the CIM object."
+          - >-
+            Import: untranscribed; input of the matrix calculation; no CIM home. Export: not
+            written, not in CIM (untranscribed on import).
 
       # (19) Rg
       Rg:
@@ -321,12 +348,12 @@ classes:
         required: false
         annotations:
           order: 19
-        exact_mappings:
+        close_mappings:
           - cim:PerLengthImpedance.rg
         comments:
           - >-
-            Import: PerLengthImpedance.rg = Rg converted to ohm/m, set only
-            if Rg is specified. Export: Rg = rg.to('ohmPerm').
+            Import: untranscribed; Carson earth return per length. Export: not written,
+            PerLengthImpedance.rg set raises (not imported either).
 
       # (20) Xg
       Xg:
@@ -337,12 +364,12 @@ classes:
         required: false
         annotations:
           order: 20
-        exact_mappings:
+        close_mappings:
           - cim:PerLengthImpedance.xg
         comments:
           - >-
-            Import: PerLengthImpedance.xg = Xg converted to ohm/m, set only
-            if Xg is specified. Export: Xg = xg.to('ohmPerm').
+            Import: untranscribed; Carson earth return per length. Export: not written,
+            PerLengthImpedance.xg set raises (not imported either).
 
       # (21) rho
       rho:
@@ -352,8 +379,13 @@ classes:
         required: false
         annotations:
           order: 21
+        close_mappings:
+          - cim:EarthResistivity.rho
         comments:
-          - "OpenDSS-only (N/A): earth resistivity; not persisted on CIM PerLengthImpedance. Use EarthResistivity on the Line for this."
+          - >-
+            Import: untranscribed; earth resistivity; home EarthResistivity.rho, an object of its
+            own, not mapped until a deck sets it. Export: not written, not in CIM (untranscribed on
+            import).
 
       # (22) neutral
       neutral:
@@ -365,7 +397,9 @@ classes:
         annotations:
           order: 22
         comments:
-          - "OpenDSS-only (N/A): Kron reduction index; not persisted after reduction."
+          - >-
+            Import: untranscribed; input of the matrix calculation; no CIM home. Export: not
+            written, not in CIM (untranscribed on import).
 
       # (23) B1
       B1:
@@ -375,8 +409,12 @@ classes:
         required: false
         annotations:
           order: 23
-        close_mappings:
+        exact_mappings:
           - cim:PerLengthSequenceImpedance.bch
+        comments:
+          - >-
+            Import: copied to PerLengthSequenceImpedance.bch (uS/<units>); the alternative to C1.
+            Export: not written, C1 carries the susceptance.
         todos:
           - "B1 input path not yet implemented. B1 (µS/unit) → bch via bch = B1 × 1e-6 / length_factor."
 
@@ -388,8 +426,12 @@ classes:
         required: false
         annotations:
           order: 24
-        close_mappings:
+        exact_mappings:
           - cim:PerLengthSequenceImpedance.b0ch
+        comments:
+          - >-
+            Import: copied to PerLengthSequenceImpedance.b0ch (uS/<units>); the alternative to C0.
+            Export: not written, C0 carries the susceptance.
         todos:
           - "B0 input path not yet implemented."
 
@@ -403,7 +445,10 @@ classes:
         annotations:
           order: 25
         comments:
-          - "OpenDSS-only (N/A): seasonal ratings count; no direct CIM equivalent on PerLengthImpedance."
+          - >-
+            Import: untranscribed; catalog ratings have no home on PerLengthImpedance; instance
+            limits or untranscribed. Export: not written, not in CIM (untranscribed on
+            import).
 
       # (26) Ratings
       Ratings:
@@ -414,8 +459,11 @@ classes:
         required: false
         annotations:
           order: 26
-        related_mappings:
-          - cim:OperationalLimit
+        comments:
+          - >-
+            Import: untranscribed; catalog ratings have no home on PerLengthImpedance; instance
+            limits or untranscribed. Export: not written, not in CIM (untranscribed on
+            import).
         todos:
           - "Seasonal ratings converter not yet implemented for LineCode."
 
@@ -427,8 +475,10 @@ classes:
         required: false
         annotations:
           order: 27
-        related_mappings:
-          - cim:PSRType
+        comments:
+          - >-
+            Import: untranscribed; no home in the network profile parts. Export: not written, not in
+            CIM (untranscribed on import).
         todos:
           - "LineType → PSRType mapping not yet implemented for LineCode."
 
@@ -441,4 +491,6 @@ classes:
         annotations:
           order: 28
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

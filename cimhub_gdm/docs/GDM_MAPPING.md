@@ -175,7 +175,7 @@ series' variable name, type and features; without `time_points`, all of them are
 ## 9. Shared CIM models with the DSS wave
 
 GDM writes the CIM the DSS spoke writes for the same equipment, so a DSS deck and its ditto-made GDM system can be
-compared (tier 4). Where the DSS wave decided a model, GDM follows it:
+compared (a cross-format test). Where the DSS wave decided a model, GDM follows it:
 
 | topic | DSS decision | GDM |
 |---|---|---|
@@ -239,7 +239,7 @@ of the DSS deck sweep. An opt-in second sweep runs the same check over the gdmlo
 The **XML round trip** (`test_xml_round_trip.py`) writes every atom family in one system to cim18v17 XML,
 reloads it, and expects `diff_models` to find nothing. The **DSS/GDM parity** test imports the same deck through the
 DSS spoke and through ditto + `to_cim`, and compares the two models with `diff_models`. It is matched by topology,
-not mRID (tier 4, root `tests/cross_format/`), with ditto's known losses (regulators, angle sign, grounding) as listed
+not mRID (a cross-format test, root `tests/cross_format/`), with ditto's known losses (regulators, angle sign, grounding) as listed
 expected differences. It is written on rc_1 after this branch merges (user, 2026-11-09; `PHASES.md` Phase 5).
 
 ## 13. Open points for approval

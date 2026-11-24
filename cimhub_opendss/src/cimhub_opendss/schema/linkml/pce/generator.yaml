@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -28,13 +28,12 @@ classes:
       - cim:SynchronousMachine
     comments:
       - >-
-        OpenDSS Generator maps to CIM SynchronousMachine. Active/reactive power
-        use generator sign convention: CIM Terminal positive p = power into
-        equipment, so generator p is negative (power flows out). The converter
-        covers only steady-state rating and dispatch attributes (bus, phases,
-        kV, kW, kvar, kVA, connection); dynamics/fault-study parameters
-        (Xd, Xdp, Xdpp, H, D, user models) and dispatch-mode/fuel-model
-        attributes have no equivalent in the steady-state CIM profile used here.
+        Import: a Generator becomes a SynchronousMachine in generator.cimtbl, with a voltage
+        RegulatingControl for model 3; p = -kW and q = -kvar (the load sign). Dynamics settings are
+        untranscribed.
+      - >-
+        Export: SynchronousMachine is written as a Generator (exporter/generator.py), model 3 from
+        its own voltage control.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -44,7 +43,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct string mapping; no conversion needed."
+          - >-
+            Import: copied to SynchronousMachine.name; mRID = gen_ + name, lowercased. Export:
+            Names, the Generator namespace; a wind unit as inverter_pieces names it.
 
       # (1) phases
       phases:
@@ -54,15 +55,12 @@ classes:
         required: false
         minimum_value: 1
         maximum_value: 3
+        related_mappings:
+          - cim:Terminal.phases
         comments:
           - >-
-            OpenDSS-only (N/A): phases is not read directly — the phase count
-            is implied by parsing bus1's node suffix during import, but the
-            resulting phase count is only used for a log message and is not
-            stored on the SynchronousMachine. Export always writes a bare
-            bus1 with no phase suffix, so the exported Generator relies on
-            OpenDSS's default 3-phase assumption regardless of the original
-            phase count.
+            Import: structural; the conductor count; default 3. Export: the phase conductors; a
+            delta across two is 1.
         todos:
           - "Per-phase detail is discarded. A per-phase-aware roundtrip would need RotatingMachinePhase objects (present in CIM18 but not in the cimhub_2026 profile used here — see the commented-out code in the importer)."
         annotations:
@@ -80,11 +78,8 @@ classes:
           - cim:Terminal.ConnectivityNode
         comments:
           - >-
-            Structural mapping via traversal. Import: bus1 (including any
-            phase suffix) is parsed to build the Terminal/ConnectivityNode
-            structure; the phase suffix itself is not separately retained on
-            the SynchronousMachine (see phases comments). Export: bus1 =
-            Terminals[0].ConnectivityNode.name, with no phase suffix appended.
+            Import: structural; node and phases, by the shared phase rule. Export: bus_ref of the
+            phase conductors; a wye machine's neutral is node 0.
         annotations:
           order: 2
 
@@ -97,13 +92,12 @@ classes:
         range: float
         required: false
         minimum_value: 0.0
-        exact_mappings:
+        close_mappings:
           - cim:RotatingMachine.ratedU
         comments:
           - >-
-            Unit conversion only: kV ↔ V.
-            Import: ratedU = cim.Voltage(kv, 'kV').
-            Export: kv = ratedU.to('kV').
+            Import: derived; ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye; default 12.47.
+            Export: ratedU (kV, LL), / sqrt 3 for 1-phase wye.
         annotations:
           order: 3
           dss_default: float(12.47)
@@ -116,14 +110,13 @@ classes:
           dispatch mode.
         range: float
         required: false
-        exact_mappings:
+        close_mappings:
           - cim:RotatingMachine.p
         comments:
           - >-
-            Generator sign convention: DSS kW positive = generation out; CIM
-            Terminal p is negative for a generator (power flows out of
-            equipment). Import: p = cim.ActivePower(-kW, 'kW').
-            Export: kW = -p.to('kW').
+            Import: derived; p (kW) = -kW (the load sign); default 1000. Export: get_der_output
+            total p (kW, generation sign); a wind unit: its share of the connection's p
+            (inverter_pieces).
         annotations:
           order: 4
           dss_default: float(1000.0)
@@ -138,16 +131,13 @@ classes:
         required: false
         minimum_value: -1.0
         maximum_value: 1.0
-        related_mappings:
+        close_mappings:
           - cim:RotatingMachine.q
         comments:
           - >-
-            OpenDSS-only (N/A): pf itself is not stored on CIM, but it feeds a
-            derivation formula used only as a fallback when kvar is not given.
-            Import: kvar = kW × tan(acos(|pf|)), sign-flipped if pf is negative
-            (leading power factor), then combined into q the same way as an
-            explicit kvar (see kvar comments). Export: pf is not recovered from
-            q — the exporter always writes an explicit kvar instead.
+            Import: derived; q (kVAr) = -kvar, kvar replayed from the kW, pf and kvar assignments in
+            deck order (dispatched_kvar): each kW or pf recomputes kvar = kW x tan(acos
+            abs(pf)). Export: not written, kvar carries q.
         annotations:
           order: 5
           dss_default: float(0.88)
@@ -159,14 +149,13 @@ classes:
           Side effect: the power factor value is altered to agree.
         range: float
         required: false
-        exact_mappings:
+        close_mappings:
           - cim:RotatingMachine.q
         comments:
           - >-
-            Generator sign convention (same negation as kW). Import (when
-            kvar is given): q = cim.ReactivePower(-kvar, 'kVAr'). If kvar is
-            omitted, q is instead derived from kW and pf (see pf comments).
-            Export: kvar = -q.to('kVAr').
+            Import: derived; sets the pf, kW / kVA with kvar's sign, at the kW of that moment.
+            Export: get_der_output total q (kVAr, generation sign), after kW; a wind unit: its share
+            of q.
         annotations:
           order: 6
 
@@ -179,8 +168,13 @@ classes:
           7=Const kW kvar current-limited.
         range: GeneratorModel
         required: false
+        related_mappings:
+          - cim:RegulatingCondEq.RegulatingControl
         comments:
-          - "OpenDSS generator model code; no direct CIM equivalent."
+          - >-
+            Import: structural; 1 and 7 dispatch kW/kvar; 3 adds a voltage RegulatingControl; 2, 4,
+            5, 6 raise; default 1. Export: 3 (ConstantPV) when an enabled control regulates its own
+            terminal's voltage, else 1 (ConstantPQ); model 7 comes back as 1.
         todos:
           - "No CIM equivalent for DSS generator model enumeration."
         annotations:
@@ -196,7 +190,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS voltage limit; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; below it the engine models the machine as constant Z; a
+            power-flow setting. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "Requires CIM extension to roundtrip (e.g. operational voltage limits)."
         annotations:
@@ -211,7 +207,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS voltage limit; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; above it the engine models the machine as constant Z; a
+            power-flow setting. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "Requires CIM extension to roundtrip (e.g. operational voltage limits)."
         annotations:
@@ -225,10 +223,13 @@ classes:
           defined as a Loadshape object.
         range: string
         required: false
-        related_mappings:
-          - cim:RegularTimePoint
+        close_mappings:
+          - cim:EnergyConnectionSchedule
         comments:
-          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+          - >-
+            Import: mapped to EnergyConnectionSchedule.name; the machine's EnergyConnectionSchedule
+            <mRID>_yearly: -kW x mult, -kvar x mult per sample. Export: the machine's
+            EnergyConnectionSchedule as a LoadShape, mult = p / kW.
         todos:
           - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
         annotations:
@@ -241,10 +242,10 @@ classes:
           defined as a Loadshape object of 24 hrs, typically.
         range: string
         required: false
-        related_mappings:
-          - cim:RegularTimePoint
         comments:
-          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+          - >-
+            Import: untranscribed; a time-series curve; a snapshot does not use it. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
         annotations:
@@ -257,10 +258,10 @@ classes:
           wind generation. Must be previously defined as a Loadshape object.
         range: string
         required: false
-        related_mappings:
-          - cim:RegularTimePoint
         comments:
-          - "Reference to a DSS LoadShape object. CIM equivalent is a time-series via RegularIntervalSchedule/RegularTimePoint."
+          - >-
+            Import: untranscribed; a time-series curve; a snapshot does not use it. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "LoadShape converter not yet implemented; roundtrip requires mapping DSS LoadShape to CIM RegularIntervalSchedule."
         annotations:
@@ -273,7 +274,10 @@ classes:
         range: DispatchMode
         required: false
         comments:
-          - "OpenDSS dispatch mode; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dispatch setting of time-series solutions; a snapshot does not
+            use it; with a yearly shape, another than Default raises. Export: not written,
+            untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS dispatch mode enumeration."
         annotations:
@@ -288,7 +292,10 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS dispatch threshold; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dispatch setting of time-series solutions; a snapshot does not
+            use it; with a yearly shape, above 0 raises. Export: not written, untranscribed or
+            raising on import; not in CIM.
         todos:
           - "No CIM equivalent for dispatch trigger value."
         annotations:
@@ -301,16 +308,13 @@ classes:
           Connection type. Default is wye.
         range: ConnectionType
         required: false
-        related_mappings:
-          - cim:SynchronousMachine.description
+        close_mappings:
+          - cim:SynchronousMachine.earthing
         comments:
           - >-
-            No dedicated CIM slot for generator winding connection in the
-            standard profile. Import: wye is the default and requires no
-            action; conn=delta sets SynchronousMachine.description to the
-            literal text "conn=delta" as a workaround. Export: description
-            is checked for that exact literal to restore conn=delta;
-            otherwise conn is left unset (wye default).
+            Import: mapped to SynchronousMachine.earthing; wye -> earthing true, delta -> false (no
+            phaseConnection on a machine); default wye. Export: earthing true -> wye, false
+            -> delta; unset raises.
         annotations:
           order: 15
           dss_default: string(wye)
@@ -329,7 +333,10 @@ classes:
         range: GenStatus
         required: false
         comments:
-          - "OpenDSS dispatch status; no CIM equivalent."
+          - >-
+            Import: untranscribed; Fixed/Variable: whether load multipliers scale it; a dispatch
+            setting of time-series solutions; a snapshot does not use it. Export: not written,
+            untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for Fixed/Variable dispatch status."
         annotations:
@@ -342,7 +349,9 @@ classes:
         range: integer
         required: false
         comments:
-          - "Arbitrary DSS classification integer; no CIM equivalent."
+          - >-
+            Import: untranscribed; a DSS report grouping. Export: not written, untranscribed or
+            raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS generator class integer."
         annotations:
@@ -356,8 +365,12 @@ classes:
           Per Unit voltage set point for Model = 3. Default is 1.0.
         range: float
         required: false
+        close_mappings:
+          - cim:RegulatingControl.targetValue
         comments:
-          - "OpenDSS Model=3 voltage set point; no CIM equivalent."
+          - >-
+            Import: derived; model 3: the control's targetValue (V) = Vpu x ratedU; default 1.
+            Export: model 3: the control's target / ratedU.
         todos:
           - "No CIM equivalent for DSS Vpu (Model=3 set point)."
         annotations:
@@ -371,11 +384,12 @@ classes:
           load kvar.
         range: float
         required: false
+        exact_mappings:
+          - cim:SynchronousMachine.maxQ
         comments:
           - >-
-            OpenDSS Model=3 reactive limit; no direct CIM equivalent.
-            Note: PVSystem uses cim:PowerElectronicsConnection.maxQ for this
-            concept, but Generator does not currently map maxkvar.
+            Import: copied to SynchronousMachine.maxQ (kVAr); model 3 only (another model raises);
+            default 2 x kvar. Export: model 3: maxQ (kVAr); unset -> not written.
         todos:
           - "No CIM equivalent currently mapped for Generator maxkvar."
         annotations:
@@ -388,8 +402,12 @@ classes:
           generator can absorb vars.
         range: float
         required: false
+        exact_mappings:
+          - cim:SynchronousMachine.minQ
         comments:
-          - "OpenDSS Model=3 reactive limit; no CIM equivalent currently mapped."
+          - >-
+            Import: copied to SynchronousMachine.minQ (kVAr); model 3 only (another model raises);
+            default -2 x kvar. Export: model 3: minQ (kVAr); unset -> not written.
         todos:
           - "No CIM equivalent currently mapped for Generator minkvar."
         annotations:
@@ -402,7 +420,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS P-V model deceleration factor; no CIM equivalent."
+          - >-
+            Import: untranscribed; a convergence aid of the engine's model 3. Export: not written,
+            untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS pvfactor."
         annotations:
@@ -416,7 +436,9 @@ classes:
         range: boolean
         required: false
         comments:
-          - "OpenDSS dispatch override; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dispatch setting of time-series solutions; a snapshot does not
+            use it. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS forceon flag."
         annotations:
@@ -434,9 +456,8 @@ classes:
           - cim:RotatingMachine.ratedS
         comments:
           - >-
-            Unit conversion only: kVA ↔ VA.
-            Import: ratedS = cim.ApparentPower(kVA, 'kVA').
-            Export: kVA = ratedS.to('kVA').
+            Import: copied to SynchronousMachine.ratedS (kVA); default 1.2 x kW. Export: ratedS
+            (kVA); a wind unit: its share of the inverter's ratedS.
         annotations:
           order: 25
 
@@ -448,9 +469,8 @@ classes:
         required: false
         comments:
           - >-
-            OpenDSS-only (N/A) for now: the current importer only reads kVA,
-            never MVA; if both are given in a DSS file, MVA is silently
-            ignored. No CIM field is set from this property.
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (kVA is). Export: not written, kVA carries ratedS.
         todos:
           - "MVA is not read by the importer. If implemented, it should be treated as an alternate input for RotatingMachine.ratedS when kVA is absent."
         annotations:
@@ -463,7 +483,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -478,7 +500,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -493,7 +517,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine dynamic parameter; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Dynamic/fault study parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -507,7 +533,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine inertia constant; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Dynamic parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -521,7 +549,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine damping constant; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Dynamic parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -535,7 +565,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS user DLL reference; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS UserModel DLL reference."
         annotations:
@@ -548,7 +580,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS user DLL data string; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS UserData string."
         annotations:
@@ -561,7 +595,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS shaft DLL reference; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS ShaftModel DLL reference."
         annotations:
@@ -574,7 +610,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS shaft DLL data string; no CIM equivalent."
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS ShaftData string."
         annotations:
@@ -587,7 +625,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS time offset into duty shape; no CIM equivalent."
+          - >-
+            Import: untranscribed; a time-series curve; a snapshot does not use it. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS DutyStart time offset."
         annotations:
@@ -602,7 +642,9 @@ classes:
         range: boolean
         required: false
         comments:
-          - "OpenDSS simulation diagnostic flag; no CIM equivalent."
+          - >-
+            Import: untranscribed; a DSS debugging switch. Export: not written, untranscribed or
+            raising on import; not in CIM.
         annotations:
           order: 37
           dss_default: "false"
@@ -615,7 +657,9 @@ classes:
         range: boolean
         required: false
         comments:
-          - "OpenDSS Model=7 flag; no CIM equivalent."
+          - >-
+            Import: untranscribed; a power-flow setting of the engine's model. Export: not written,
+            untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS Balanced flag."
         annotations:
@@ -630,7 +674,9 @@ classes:
         range: float
         required: false
         comments:
-          - "Synchronous machine fault study parameter; no CIM equivalent in steady-state profile."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, no machine reactance or inertia in cim18v17; the engine's default.
         todos:
           - "Fault study parameter — requires CIM Dynamics profile extension to roundtrip."
         annotations:
@@ -644,7 +690,9 @@ classes:
         range: boolean
         required: false
         comments:
-          - "OpenDSS fuel model flag; no CIM equivalent."
+          - >-
+            Import: untranscribed; a fuel-limited dispatch setting; a snapshot does not use it.
+            Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS fuel model parameters."
         annotations:
@@ -659,7 +707,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS fuel capacity; no CIM equivalent."
+          - >-
+            Import: untranscribed; a fuel-limited dispatch setting; a snapshot does not use it.
+            Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS FuelkWh."
         annotations:
@@ -673,7 +723,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS fuel level percentage; no CIM equivalent."
+          - >-
+            Import: untranscribed; a fuel-limited dispatch setting; a snapshot does not use it.
+            Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS %Fuel."
         annotations:
@@ -687,7 +739,9 @@ classes:
         range: float
         required: false
         comments:
-          - "OpenDSS fuel reserve percentage; no CIM equivalent."
+          - >-
+            Import: untranscribed; a fuel-limited dispatch setting; a snapshot does not use it.
+            Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS %Reserve."
         annotations:
@@ -701,7 +755,9 @@ classes:
         range: boolean
         required: false
         comments:
-          - "OpenDSS fuel model control; no CIM equivalent."
+          - >-
+            Import: untranscribed; a fuel-limited dispatch setting; a snapshot does not use it.
+            Export: not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS Refuel flag."
         annotations:
@@ -716,7 +772,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS dynamic equation reference; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS DynamicEq reference."
         annotations:
@@ -731,7 +789,9 @@ classes:
         multivalued: true
         required: false
         comments:
-          - "OpenDSS dynamic equation variable references; no CIM equivalent."
+          - >-
+            Import: untranscribed; a dynamics setting; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS DynOut variable list."
         annotations:
@@ -745,7 +805,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS harmonic spectrum reference; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed; harmonics model; no home in the network profile parts. Export:
+            not written, untranscribed or raising on import; not in CIM.
         todos:
           - "No CIM equivalent for DSS spectrum reference."
         annotations:
@@ -760,8 +822,8 @@ classes:
         required: false
         comments:
           - >-
-            Not stored on the CIM SynchronousMachine directly; base frequency
-            is a circuit-level property (cim:BaseVoltage or network metadata).
+            Import: untranscribed; no home on a machine. Export: not written, untranscribed or
+            raising on import; not in CIM.
         todos:
           - "Extract base frequency from CIM circuit metadata on import; do not map to machine object."
         annotations:
@@ -773,8 +835,12 @@ classes:
           Indicates whether this element is enabled.
         range: boolean
         required: false
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS enable/disable flag; CIM machines are always modelled as enabled. No CIM equivalent needed."
+          - >-
+            Import: copied to SynchronousMachine.normallyInService; default true. Export:
+            get_in_service(which='normal'); unset -> not written.
         annotations:
           order: 49
           dss_default: "true"
@@ -786,7 +852,9 @@ classes:
         range: string
         required: false
         comments:
-          - "OpenDSS template inheritance; resolved at parser time, no CIM equivalent needed."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.
         annotations:
           order: 50
 

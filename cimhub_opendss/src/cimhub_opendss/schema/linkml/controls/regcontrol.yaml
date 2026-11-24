@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -24,18 +24,17 @@ classes:
       that monitors a transformer winding and adjusts its tap to regulate
       voltage.
     class_uri: dss:Regcontrol
-    close_mappings:
+    exact_mappings:
       - cim:TapChangerControl
+    close_mappings:
+      - cim:RatioTapChanger
     comments:
       - >-
-        Each DSS Regcontrol creates two CIM objects: TapChangerControl (the
-        regulation settings: target voltage, bandwidth, line drop compensation,
-        reverse settings) and RatioTapChanger (the physical tap changer on a
-        specific transformer end: tap range, step size, PT/CT ratios). The end
-        may be a PowerTransformerEnd or a TransformerTankEnd, depending on how
-        the monitored transformer was imported (tank-based models are typical
-        for regulators). The converter returns a tuple (TapChangerControl,
-        RatioTapChanger).
+        Import: one TapChangerControl rc_ + name and one RatioTapChanger rc_ +
+        name + _tap (regcontrol.cimtbl) on the controlled end of the transformer
+        it names (a VoltageRegulator's AutoTransformerEnd, or an LTC's
+        PowerTransformerEnd). Export: one RegControl per TapChangerControl;
+        another mode raises.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -45,7 +44,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Name applied to both RatioTapChanger and TapChangerControl."
+          - >-
+            Import: TapChangerControl.name and RatioTapChanger.name. Export:
+            Names, the RegControl namespace.
 
       # (1) transformer
       transformer:
@@ -56,15 +57,13 @@ classes:
         required: false
         annotations:
           order: 1
-        related_mappings:
+        close_mappings:
           - cim:RatioTapChanger.TransformerEnd
         comments:
           - >-
-            Import: resolved by name to a PowerTransformerEnd or (for
-            tank-based/regulator transformers) a TransformerTankEnd at the
-            specified winding; RatioTapChanger.TransformerEnd = that end.
-            Export: transformer = TransformerEnd.PowerTransformer.name, or
-            TransformerEnd.TransformerTank.name for tank-based ends.
+            Import: structural; the regulator or LTC, a Transformer no New
+            defines or two RegControls name raises. Export: the DSS Transformer
+            of the tap's unit.
 
       # (2) winding
       winding:
@@ -76,10 +75,14 @@ classes:
         annotations:
           order: 2
           dss_default: int(1)
-        related_mappings:
+        close_mappings:
           - cim:RatioTapChanger.TransformerEnd
+          - cim:RegulatingControl.Terminal
         comments:
-          - "Import: selects the 1-based winding index to identify the PowerTransformerEnd for the RatioTapChanger. Export: winding = End.endNumber."
+          - >-
+            Import: the end xf_<transformer>_<winding> holds the tap changer and
+            its Terminal is monitored; default 1. Export: the winding whose end
+            holds the RatioTapChanger.
 
       # (3) vreg
       vreg:
@@ -91,10 +94,12 @@ classes:
         annotations:
           order: 3
           dss_default: float(120.0)
-        exact_mappings:
-          - cim:TapChangerControl.targetValue
+        close_mappings:
+          - cim:RegulatingControl.targetValue
         comments:
-          - "Import: TapChangerControl.targetValue = vreg. Export: vreg = targetValue."
+          - >-
+            Import: derived; targetValue (V) = vreg x ptratio
+            (secondary_to_primary); default 120. Export: targetValue / ptRatio.
 
       # (4) band
       band:
@@ -105,10 +110,12 @@ classes:
         annotations:
           order: 4
           dss_default: float(3.0)
-        exact_mappings:
-          - cim:TapChangerControl.targetDeadband
+        close_mappings:
+          - cim:RegulatingControl.targetDeadband
         comments:
-          - "Import: TapChangerControl.targetDeadband = band. Export: band = targetDeadband."
+          - >-
+            Import: derived; targetDeadband (V) = band x ptratio; default 3.
+            Export: targetDeadband / ptRatio.
 
       # (5) ptratio
       ptratio:
@@ -122,11 +129,12 @@ classes:
           order: 5
           dss_default: float(60.0)
         exact_mappings:
-          - cim:RatioTapChanger.ptRatio
+          - cim:RegulatingControl.ptRatio
+          - cim:TapChanger.ptRatio
         comments:
           - >-
-            Import: RatioTapChanger.ptRatio = ptratio, or 60.0 if not
-            specified. Export: ptratio = ptRatio.
+            Import: ptRatio on the control and the tap changer; default 60.
+            Export: ptRatio (the two must agree; unset raises).
 
       # (6) CTprim
       CTprim:
@@ -138,14 +146,13 @@ classes:
         annotations:
           order: 6
           dss_default: float(300.0)
-        exact_mappings:
-          - cim:RatioTapChanger.ctRating
+        close_mappings:
+          - cim:TapChanger.ctRating
+          - cim:TapChanger.ctRatio
         comments:
           - >-
-            Import: RatioTapChanger.ctRating = CTprim, or 0.0 if not
-            specified; when ctRating > 0, RatioTapChanger.ctRatio is also
-            derived as ctRating / 0.2 (OpenDSS uses a fixed 0.2 A secondary).
-            Export: CTprim = ctRating.
+            Import: ctRating (A) = CTprim, ctRatio = CTprim / 0.2 (the DSS CT
+            secondary); default 300. Export: ctRating (A); ctRatio is not read.
 
       # (7) R
       R:
@@ -157,13 +164,14 @@ classes:
         annotations:
           order: 7
           dss_default: float(0.0)
-        exact_mappings:
+        close_mappings:
           - cim:TapChangerControl.lineDropR
+          - cim:TapChangerControl.lineDropCompensation
         comments:
           - >-
-            Import: TapChangerControl.lineDropR = R, or 0.0 if not specified;
-            TapChangerControl.lineDropCompensation is set True if R or X is
-            nonzero. Export: R = lineDropR.
+            Import: derived; lineDropR (ohm) = R x ptratio / CTprim,
+            compensation on when R or X is nonzero. Export: lineDropR x CTprim /
+            ptRatio.
 
       # (8) X
       X:
@@ -175,13 +183,12 @@ classes:
         annotations:
           order: 8
           dss_default: float(0.0)
-        exact_mappings:
+        close_mappings:
           - cim:TapChangerControl.lineDropX
         comments:
           - >-
-            Import: TapChangerControl.lineDropX = X, or 0.0 if not specified
-            (see R comments for the lineDropCompensation flag). Export:
-            X = lineDropX.
+            Import: derived; lineDropX (ohm) = X x ptratio / CTprim. Export:
+            lineDropX x CTprim / ptRatio.
 
       # (9) bus
       bus:
@@ -193,7 +200,9 @@ classes:
         annotations:
           order: 9
         comments:
-          - "OpenDSS-only (N/A): remote voltage sensing bus; no direct CIM equivalent on TapChangerControl."
+          - >-
+            Import: raises when set (remote sensing); no deck in the sweep sets
+            it, so a mapping waits for one. Export: unset.
 
       # (10) delay
       delay:
@@ -206,11 +215,11 @@ classes:
           order: 10
           dss_default: float(15.0)
         exact_mappings:
-          - cim:RatioTapChanger.initialDelay
+          - cim:TapChanger.initialDelay
         comments:
           - >-
-            Import: RatioTapChanger.initialDelay = delay, or 15.0 if not
-            specified. Export: delay = initialDelay.
+            Import: initialDelay (s); default 15. Export: initialDelay; unset ->
+            not written.
 
       # (11) reversible
       reversible:
@@ -225,12 +234,7 @@ classes:
           - cim:TapChangerControl.reversible
         comments:
           - >-
-            Import: TapChangerControl.reversible = reversible. When False,
-            none of the reverse-direction fields below (revvreg, revband,
-            revR, revX, revDelay, revNeutral, revThreshold) are read — they
-            keep CIM defaults. Export: reversible = TapChangerControl.reversible;
-            the reverse-direction attributes below are only written when this
-            is True.
+            Import: reversible; default false. Export: reversible.
 
       # (12) revvreg
       revvreg:
@@ -242,12 +246,12 @@ classes:
         annotations:
           order: 12
           dss_default: float(120.0)
-        exact_mappings:
-          - cim:TapChangerControl.reverseTargetValue
+        close_mappings:
+          - cim:RegulatingControl.reverseTargetValue
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reverseTargetValue
-            = revvreg, or 120.0 if not specified. Export: revvreg = reverseTargetValue.
+            Import: derived; reverseTargetValue (V) = revvreg x ptratio; default
+            120. Export: reverseTargetValue / ptRatio.
 
       # (13) revband
       revband:
@@ -258,12 +262,12 @@ classes:
         annotations:
           order: 13
           dss_default: float(3.0)
-        exact_mappings:
-          - cim:TapChangerControl.reverseTargetDeadband
+        close_mappings:
+          - cim:RegulatingControl.reverseTargetDeadband
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reverseTargetDeadband
-            = revband, or 3.0 if not specified. Export: revband = reverseTargetDeadband.
+            Import: derived; reverseTargetDeadband (V) = revband x ptratio;
+            default 3. Export: reverseTargetDeadband / ptRatio.
 
       # (14) revR
       revR:
@@ -274,12 +278,12 @@ classes:
         annotations:
           order: 14
           dss_default: float(0.0)
-        exact_mappings:
+        close_mappings:
           - cim:TapChangerControl.reverseLineDropR
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reverseLineDropR
-            = revR, or 0.0 if not specified. Export: revR = reverseLineDropR.
+            Import: derived; reverseLineDropR (ohm) = revR x ptratio / CTprim.
+            Export: reverseLineDropR x CTprim / ptRatio.
 
       # (15) revX
       revX:
@@ -290,12 +294,12 @@ classes:
         annotations:
           order: 15
           dss_default: float(0.0)
-        exact_mappings:
+        close_mappings:
           - cim:TapChangerControl.reverseLineDropX
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reverseLineDropX
-            = revX, or 0.0 if not specified. Export: revX = reverseLineDropX.
+            Import: derived; reverseLineDropX (ohm) = revX x ptratio / CTprim.
+            Export: reverseLineDropX x CTprim / ptRatio.
 
       # (16) tapdelay
       tapdelay:
@@ -307,11 +311,11 @@ classes:
           order: 16
           dss_default: float(2.0)
         exact_mappings:
-          - cim:RatioTapChanger.subsequentDelay
+          - cim:TapChanger.subsequentDelay
         comments:
           - >-
-            Import: RatioTapChanger.subsequentDelay = tapdelay, or 2.0 if not
-            specified. Export: tapdelay = subsequentDelay.
+            Import: subsequentDelay (s); default 2. Export: subsequentDelay;
+            unset -> not written.
 
       # (17) debugtrace
       debugtrace:
@@ -322,7 +326,8 @@ classes:
         annotations:
           order: 17
         comments:
-          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+          - >-
+            Import: untranscribed (DSS report flag). Export: unset.
 
       # (18) maxtapchange
       maxtapchange:
@@ -335,11 +340,8 @@ classes:
           order: 18
         comments:
           - >-
-            OpenDSS-only (N/A): step limiter for static power-flow solution;
-            no direct CIM equivalent on RatioTapChanger. Not read on import.
-            Export writes maxtapchange=0 only as a side effect of a disabled
-            control (see enabled comments), to pin the tap at its current
-            position; otherwise it is not written.
+            Import: untranscribed (DSS solution control; no home in the network
+            profile parts). Export: unset.
 
       # (19) inversetime
       inversetime:
@@ -351,7 +353,9 @@ classes:
         annotations:
           order: 19
         comments:
-          - "OpenDSS-only (N/A): inverse-time delay mode; no CIM equivalent in the standard profile."
+          - >-
+            Import: untranscribed (DSS solution control; no home in the network
+            profile parts). Export: unset.
 
       # (20) tapwinding
       tapwinding:
@@ -362,7 +366,10 @@ classes:
         annotations:
           order: 20
         comments:
-          - "OpenDSS-only (N/A): tap winding override; no direct CIM equivalent (the RatioTapChanger is attached to the winding that carries taps)."
+          - >-
+            Import: raises when set (a tap winding other than the monitored
+            one); no deck in the sweep sets it, so a mapping waits for one.
+            Export: unset.
 
       # (21) vlimit
       vlimit:
@@ -373,17 +380,14 @@ classes:
         required: false
         annotations:
           order: 21
-        related_mappings:
+        todos:
+          - "Converter bug: uses tcc.limitVoltage (not a real TapChangerControl field) instead of tcc.maxLimitVoltage on both import and export."
+        close_mappings:
           - cim:TapChangerControl.maxLimitVoltage
         comments:
           - >-
-            Intended target: TapChangerControl.maxLimitVoltage, set only when
-            vlimit > 0. Import/export currently read and write a dynamically
-            added ``limitVoltage`` attribute instead of the real
-            maxLimitVoltage field, so vlimit roundtrips within this converter
-            but is not visible to CIM-spec-compliant tools reading maxLimitVoltage.
-        todos:
-          - "Converter bug: uses tcc.limitVoltage (not a real TapChangerControl field) instead of tcc.maxLimitVoltage on both import and export."
+            Import: raises when set; no deck in the sweep sets it, so a mapping
+            waits for one. Export: a control with a voltage limit raises.
 
       # (22) PTphase
       PTphase:
@@ -395,8 +399,13 @@ classes:
         annotations:
           order: 22
           dss_default: int(1)
+        close_mappings:
+          - cim:RegulatingControl.monitoredPhase
         comments:
-          - "OpenDSS-only (N/A): phase monitoring selector; no direct CIM equivalent on TapChangerControl."
+          - >-
+            Import: monitoredPhase = the phase of the winding's conductor
+            PTphase (default 1); MAX and MIN raise. Export: the 1-based place of
+            monitoredPhase among the winding's phase conductors.
 
       # (23) revThreshold
       revThreshold:
@@ -412,9 +421,8 @@ classes:
           - cim:TapChangerControl.reversingPowerThreshold
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reversingPowerThreshold
-            = −revThreshold (sign flipped; 0.0 if reversible but revThreshold
-            not given). Export: revThreshold = −reversingPowerThreshold.
+            Import: reversingPowerThreshold (kW); default 100. Export:
+            reversingPowerThreshold (kW).
 
       # (24) revDelay
       revDelay:
@@ -430,8 +438,7 @@ classes:
           - cim:TapChangerControl.reversingDelay
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reversingDelay
-            = revDelay, or 60.0 if not specified. Export: revDelay = reversingDelay.
+            Import: reversingDelay (s); default 60. Export: reversingDelay (s).
 
       # (25) revNeutral
       revNeutral:
@@ -447,8 +454,7 @@ classes:
           - cim:TapChangerControl.reverseToNeutral
         comments:
           - >-
-            Import (only when reversible=Yes): TapChangerControl.reverseToNeutral
-            = revNeutral, or True if not specified. Export: revNeutral = reverseToNeutral.
+            Import: reverseToNeutral; default false. Export: reverseToNeutral.
 
       # (26) EventLog
       EventLog:
@@ -459,7 +465,8 @@ classes:
         annotations:
           order: 26
         comments:
-          - "OpenDSS-only (N/A): debug logging flag; no CIM equivalent."
+          - >-
+            Import: untranscribed (DSS report flag). Export: unset.
 
       # (27) RemotePTRatio
       RemotePTRatio:
@@ -471,7 +478,9 @@ classes:
         annotations:
           order: 27
         comments:
-          - "OpenDSS-only (N/A): remote PT ratio; no CIM equivalent for remote bus voltage sensing in the standard profile."
+          - >-
+            Import: raises when set (remote sensing); no deck in the sweep sets
+            it, so a mapping waits for one. Export: unset.
 
       # (28) TapNum
       TapNum:
@@ -483,15 +492,11 @@ classes:
         annotations:
           order: 28
         close_mappings:
-          - cim:RatioTapChanger.step
+          - cim:TapChanger.step
         comments:
           - >-
-            Import: RatioTapChanger.step = 1.0 + TapNum × 0.00625 (SSH state;
-            CIM step is a per-unit ratio around 1.0, DSS TapNum is an integer
-            step count from neutral at a fixed 0.625%/step). Export:
-            TapNum = round((step − 1.0) / (stepVoltageIncrement/100)) using the
-            RatioTapChanger's own stepVoltageIncrement if set, otherwise the
-            same 0.625%/step assumption.
+            Import: raises when set (a tap position that overrides the
+            transformer's tap); no deck in the sweep sets it. Export: unset.
 
       # (29) Reset
       Reset:
@@ -502,7 +507,8 @@ classes:
         annotations:
           order: 29
         comments:
-          - "OpenDSS-only (N/A): operational reset flag; no CIM equivalent."
+          - >-
+            Import: untranscribed (a command, not a setting). Export: unset.
 
       # (30) LDC_Z
       LDC_Z:
@@ -513,7 +519,9 @@ classes:
         annotations:
           order: 30
         comments:
-          - "OpenDSS-only (N/A): Beckwith LDC_Z control mode parameter; no CIM equivalent in the standard profile."
+          - >-
+            Import: raises when set (a line-drop impedance); no deck in the
+            sweep sets it, so a mapping waits for one. Export: unset.
 
       # (31) rev_Z
       rev_Z:
@@ -524,7 +532,9 @@ classes:
         annotations:
           order: 31
         comments:
-          - "OpenDSS-only (N/A): Beckwith reverse LDC_Z parameter; no CIM equivalent."
+          - >-
+            Import: raises when set (a reverse line-drop impedance); no deck in
+            the sweep sets it, so a mapping waits for one. Export: unset.
 
       # (32) Cogen
       Cogen:
@@ -536,7 +546,9 @@ classes:
         annotations:
           order: 32
         comments:
-          - "OpenDSS-only (N/A): co-generation mode flag; no CIM equivalent."
+          - >-
+            Import: raises when set (cogeneration); no deck in the sweep sets
+            it, so a mapping waits for one. Export: unset.
 
       # (33) idle
       idle:
@@ -547,7 +559,9 @@ classes:
         annotations:
           order: 33
         comments:
-          - "OpenDSS-only (N/A): idle/disable tap changing mode; no CIM equivalent."
+          - >-
+            Import: raises when set (idle mode); no deck in the sweep sets it,
+            so a mapping waits for one. Export: unset.
 
       # (34) idleReverse
       idleReverse:
@@ -558,7 +572,9 @@ classes:
         annotations:
           order: 34
         comments:
-          - "OpenDSS-only (N/A): reverse idle mode; no CIM equivalent."
+          - >-
+            Import: raises when set (idle mode); no deck in the sweep sets it,
+            so a mapping waits for one. Export: unset.
 
       # (35) idleForward
       idleForward:
@@ -569,7 +585,9 @@ classes:
         annotations:
           order: 35
         comments:
-          - "OpenDSS-only (N/A): forward idle mode; no CIM equivalent."
+          - >-
+            Import: raises when set (idle mode); no deck in the sweep sets it,
+            so a mapping waits for one. Export: unset.
 
       # (36) basefreq
       basefreq:
@@ -580,7 +598,8 @@ classes:
         annotations:
           order: 36
         comments:
-          - "Not stored on CIM TapChangerControl or RatioTapChanger; base frequency is a circuit-level property."
+          - >-
+            Import: untranscribed (no home on a control). Export: unset.
 
       # (37) enabled
       enabled:
@@ -592,16 +611,12 @@ classes:
           order: 37
           dss_default: "true"
         exact_mappings:
+          - cim:RegulatingControl.enabled
           - cim:TapChanger.controlEnabled
         comments:
           - >-
-            Import: if enabled=No, the whole Regcontrol is skipped and no CIM
-            objects are created; otherwise RatioTapChanger.controlEnabled =
-            enabled (SSH attribute; also RatioTapChanger.ltcFlag is always set
-            True, since OpenDSS regulators are load-tap-changing). Export:
-            enabled = controlEnabled; when controlEnabled is False, maxtapchange
-            is also written as 0 (see maxtapchange comments) so OpenDSS holds
-            the tap at its imported position instead of re-regulating.
+            Import: the control's enabled and the tap's controlEnabled; default
+            true. Export: the control's enabled; the tap's must agree.
 
       # (38) like
       like:
@@ -612,4 +627,6 @@ classes:
         annotations:
           order: 38
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.

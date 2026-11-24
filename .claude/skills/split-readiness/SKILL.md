@@ -24,7 +24,7 @@ user does: from PyPI, or through an uncommitted local `uv` path override while c
    `try/except ImportError`.
 2. **Never reference a vendor spoke by path or package name**, in code, comments, docs, `.development/` plans or
    test data paths. If a plan must mention one, name the format (CYME, Synergi), not the package or a file in it.
-3. **No mixed public/vendor tests.** Cross-format tests here (`tests/cross_format/`, tier 4) pair cleared formats
+3. **No mixed public/vendor tests.** Cross-format tests here (`tests/cross_format/`) pair cleared formats
    only. A test that needs a vendor format lives with that vendor spoke.
 4. **Every fixture has a documented public origin**: IEEE test feeders, GridAPPS-D Powergrid-Models, EPRI test
    circuits, MATPOWER cases. Record the source, URL, license and any local edits in the fixture directory's README.

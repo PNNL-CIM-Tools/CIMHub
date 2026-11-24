@@ -43,7 +43,7 @@ CIMHub/
   .development/             # time-bound plans + assessments (this rewrite's plan, wave plans, requests docs)
   cimhub_core/              # thin: cimtbl helpers, CimtblImporter, code tables, export getters, testing harness
   cimhub_<fmt>/             # schema/ reader/ writer/ importer/cimtbl/ exporter/ tests/{atoms,...}
-  tests/cross_format/       # tier 4, public pairs only
+  tests/cross_format/       # cross-format tests, public pairs only
   scripts/test-all.sh
 ```
 
@@ -67,7 +67,7 @@ next to `SKILL.md`. Ported from `cimhub_core/src/cimhub_core/development/`:
 | `linkml-native-schema` | `LINKML_TEMPLATE.md` |
 | `reader-writer` | `READER_WRITER_GUIDE.md`, four-ABC rule from `CONVERTER_API.md` |
 | `export-getters` | assessment §4 + `EXPORTER_FORMAT_EXPECTATIONS.md` §8.2 semantics |
-| `atom-tests` | `ATOM_TEST_CREATION.md` + rewrite plan Phase 4 tier table |
+| `atom-tests` | `ATOM_TEST_CREATION.md` + rewrite plan Phase 4 test-type table |
 | `split-readiness` | split plan §3 rules + leak-gate command |
 
 `.development/` holds only live, time-bound docs: this plan and `UPSTREAM_REQUESTS.md`. A spoke's wave plan and
@@ -127,7 +127,7 @@ were removed in favour of `cimtopology.core`, which carries ported copies of the
   inline Transformer), and their atoms/goldens. `bus_graph.py` is rewritten to build a `cimtopology.core.Network`
   (DSS bus/node parsing stays in the spoke; the walk is `cimtopology.core.walk`).
 - Fresh: the remaining mappers (S3-S5 …), the orchestrator `dss_to_cimtbl.py`, the cim18v17 exporter on the getters,
-  and tier 1-3 tests.
+  and import, bind, export and round-trip tests.
 - Exit: `dss_to_cim` and `cim_to_dss` round-trip `IEEE13_CDPSM` with expected differences listed.
 
 **F2'. GDM** (own session, builder-native, D11). Starts after F1; owns only `cimhub_gdm/`.
@@ -147,7 +147,7 @@ from PyPI (S4).
 ## CIMHub_2_0 after F0
 
 - Frozen for the cleared spokes: no new work there. It stays the **regression oracle**: old converters produce
-  reference outputs that the new tier-3 tests can compare against, read-only. Copy outputs, never import code.
+  reference outputs that the new round-trip tests can compare against, read-only. Copy outputs, never import code.
 - Vendor spokes (cyme, powersimulator, synergi, …) keep working on their old code until their own rewrite.
   Their rewrite then targets CIMHub core through an uncommitted local `uv` path override.
 - The CYME `TransformerDB` slice and its spec stay private. The core contract tests that used it switch to the DSS
@@ -158,7 +158,7 @@ from PyPI (S4).
 - F0: `cd ~/CIMHub && uv sync && uv run pytest` (empty suite passes); every skill appears in a fresh Claude session's
   skill list; the leak-gate grep prints nothing.
 - F1: core tests pass; `grep -rn "data_profile.cim17v40\|cimhub_2026" cimhub_*/src` prints nothing.
-- Per wave: tier 1 golden equality, tier 1b bind, tier 2 field-by-field export, tier 3 round trip;
+- Per wave: import (golden equality), bind, export and round-trip tests;
   `scripts/test-all.sh` green.
 - Before going public: a clean clone outside `~/` with released upstreams: `uv sync && scripts/test-all.sh`,
   `uv build`, `twine check`.

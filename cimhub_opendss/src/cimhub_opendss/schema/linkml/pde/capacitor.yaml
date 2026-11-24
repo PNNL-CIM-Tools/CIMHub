@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -28,9 +28,9 @@ classes:
       - cim:LinearShuntCompensator
     comments:
       - >-
-        OpenDSS Capacitor maps to CIM LinearShuntCompensator. Per-phase
-        susceptance information is carried on LinearShuntCompensatorPhase
-        collections.
+        Import: one LinearShuntCompensator cap_ + name with one section
+        (capacitor.cimtbl); a CapControl adds its RegulatingControl by an
+        Update. Export: one Capacitor per LinearShuntCompensator.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -40,7 +40,9 @@ classes:
         exact_mappings:
           - cim:IdentifiedObject.name
         comments:
-          - "Direct name mapping; no conversion needed."
+          - >-
+            Import: LinearShuntCompensator.name, mRID = cap_ + name, lowercased.
+            Export: Names, the Capacitor namespace.
 
       # (1) bus1
       bus1:
@@ -51,13 +53,14 @@ classes:
         required: false
         annotations:
           order: 1
-        related_mappings:
+        close_mappings:
           - cim:Terminal.ConnectivityNode
+          - cim:Terminal.phases
         comments:
           - >-
-            Structural mapping via traversal: equipment.Terminals[0].ConnectivityNode.name.
-            Phase suffix reconstructed from LinearShuntCompensatorPhase objects ordered
-            by SinglePhaseKind (A=1, B=2, C=3).
+            Import: the node and phases, as a load's (1/2/3 = A/B/C). Export:
+            bus_ref of the phase conductors; a wye's neutral is node 0, so it
+            must be grounded.
 
       # (2) bus2
       bus2:
@@ -69,9 +72,9 @@ classes:
           order: 2
         comments:
           - >-
-            N/A for CIM roundtrip. OpenDSS shunt capacitors are single-terminal in CIM
-            (LinearShuntCompensator has one Terminal; neutral is implicit via grounded=True).
-            Bus2 is meaningful only for two-terminal series capacitor configurations.
+            Import: raises when set (an ungrounded wye or a series capacitor);
+            no deck in the sweep sets it. Export: not written; a shunt has one
+            terminal.
 
       # (3) phases
       phases:
@@ -82,12 +85,10 @@ classes:
         annotations:
           order: 3
           dss_default: int(3)
-        related_mappings:
-          - cim:LinearShuntCompensatorPhase
         comments:
           - >-
-            Import: inferred from the bus phase specification in bus1 via parse_bus_phases().
-            Export: derived as len(shunt.ShuntCompensatorPhase).
+            Import: structural; the conductor count, default 3. Export: the
+            phase conductors; a delta across two is 1.
 
       # (4) kvar
       kvar:
@@ -101,13 +102,15 @@ classes:
         annotations:
           order: 4
           dss_default: float(1200.0)
+        exact_mappings:
+          - cim:ShuntCompensator.nomQ
         close_mappings:
           - cim:LinearShuntCompensator.bPerSection
         comments:
           - >-
-            Import: bPerSection = 0.001 × kvar_total / kV² / Numsteps (kvar → siemens).
-            Export: kvar_total = bPerSection × kV² × 1000 × Numsteps.
-            Same physical concept; CIM stores susceptance per section in SI (siemens).
+            Import: nomQ (kVAr), the total over the phases; more than one step
+            raises; default 1200; with kv, bPerSection = nomQ / nomU^2. Export:
+            get_shunt_reactive_power at the maximum section and nominal voltage.
 
       # (5) kv
       kv:
@@ -120,9 +123,13 @@ classes:
           order: 5
           dss_default: float(12.47)
         exact_mappings:
-          - cim:LinearShuntCompensator.nomU
+          - cim:ShuntCompensator.nomU
+        close_mappings:
+          - cim:LinearShuntCompensator.bPerSection
         comments:
-          - "Unit conversion: kV ↔ V (CIM stores SI base units via cim.Voltage)."
+          - >-
+            Import: nomU (kV) as rated (LN for 1-phase wye, else LL); default
+            12.47; also in bPerSection. Export: nomU (kV).
 
       # (6) conn
       conn:
@@ -133,13 +140,13 @@ classes:
         annotations:
           order: 6
           dss_default: string(wye)
-        exact_mappings:
-          - cim:LinearShuntCompensator.phaseConnection
+        close_mappings:
+          - cim:ShuntCompensator.phaseConnection
+          - cim:ShuntCompensator.grounded
         comments:
           - >-
-            Import: wye → PhaseShuntConnectionKind.Y (grounded=True, b0PerSection=bPerSection);
-            delta → PhaseShuntConnectionKind.D (grounded=False, b0PerSection=0).
-            Export: PhaseShuntConnectionKind.Y → wye; D → delta.
+            Import: wye -> Y, grounded; delta -> D, not grounded; default wye.
+            Export: Y/Yn -> wye, D -> delta; others raise.
 
       # (7) cmatrix
       cmatrix:
@@ -152,13 +159,10 @@ classes:
         annotations:
           order: 7
           dss_format: matrix
-        related_mappings:
-          - cim:LinearShuntCompensatorPhase.bPerSection
         comments:
           - >-
-            Lossy roundtrip: CIM stores only per-phase susceptance (diagonal elements);
-            off-diagonal coupling terms are discarded. Diagonal index for phase i:
-            i*(i+1)/2 + i. Conversion: B = 2π × 60 × C_µF × 1e-6 (siemens).
+            Import: raises when set (a capacitance matrix instead of kvar).
+            Export: not written; kvar carries the susceptance.
 
       # (8) cuf
       cuf:
@@ -169,12 +173,12 @@ classes:
         required: false
         annotations:
           order: 8
-        related_mappings:
-          - cim:LinearShuntCompensatorPhase.bPerSection
-        comments:
-          - "Import: flat per-phase µF array converted to per-phase bPerSection. B = 2π × 60 × C_µF × 1e-6 (siemens)."
         todos:
           - "Exporter: B → µF per-phase path not yet implemented; cuf is not written on export."
+        comments:
+          - >-
+            Import: raises when set (microfarads instead of kvar). Export: not
+            written; kvar carries the susceptance.
 
       # (9) R
       R:
@@ -185,10 +189,12 @@ classes:
         required: false
         annotations:
           order: 9
-        comments:
-          - "OpenDSS filter-capacitor feature (series R for harmonic filter tuning); no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension (e.g. cim:LinearShuntCompensator.seriesR) to roundtrip."
+        comments:
+          - >-
+            Import: 0 is untranscribed, nonzero raises (a series R is not
+            mapped). Export: unset.
 
       # (10) XL
       XL:
@@ -200,10 +206,12 @@ classes:
         required: false
         annotations:
           order: 10
-        comments:
-          - "OpenDSS harmonic filter tuning parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension (e.g. cim:LinearShuntCompensator.seriesXL) to roundtrip."
+        comments:
+          - >-
+            Import: 0 is untranscribed, nonzero raises (a series reactor is not
+            mapped). Export: unset.
 
       # (11) Harm
       Harm:
@@ -214,10 +222,12 @@ classes:
         required: false
         annotations:
           order: 11
-        comments:
-          - "OpenDSS harmonic filter tuning parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension (e.g. cim:LinearShuntCompensator.filterHarmonic) to roundtrip."
+        comments:
+          - >-
+            Import: untranscribed (the tuning harmonic of the R/XL filter).
+            Export: unset.
 
       # (12) Numsteps
       Numsteps:
@@ -228,12 +238,13 @@ classes:
         annotations:
           order: 12
           dss_default: int(1)
-        exact_mappings:
-          - cim:LinearShuntCompensator.maximumSections
+        close_mappings:
+          - cim:ShuntCompensator.maximumSections
         comments:
           - >-
-            Import: mapped to both normalSections and maximumSections.
-            Export: read from maximumSections.
+            Import: maximumSections = 1; more than 1 raises (unequal steps would
+            need a NonlinearShuntCompensator). Export: not written;
+            maximumSections other than 1 raises.
 
       # (13) states
       states:
@@ -245,11 +256,12 @@ classes:
         annotations:
           order: 13
         close_mappings:
-          - cim:LinearShuntCompensator.sections
+          - cim:ShuntCompensator.sections
+          - cim:ShuntCompensator.normalSections
         comments:
           - >-
-            Import: count of on steps (states[i] > 0) stored as sections (float).
-            Export: sections → [1]*current_sections + [0]*(Numsteps - current_sections).
+            Import: sections = normalSections = the steps closed; default all
+            closed. Export: [sections]; normalSections is not written.
 
       # (14) normamps
       normamps:
@@ -259,14 +271,14 @@ classes:
         required: false
         annotations:
           order: 14
-        related_mappings:
-          - cim:OperationalLimit
-        comments:
-          - >-
-            Intended target: a normal-rating CurrentLimit on an OperationalLimitSet
-            attached to this equipment's terminal.
         todos:
           - "Converter not yet implemented; requires OperationalLimitSet + CurrentLimit creation."
+        close_mappings:
+          - cim:CurrentLimit.value
+        comments:
+          - >-
+            Import: raises when set (an OperationalLimitSet, as a line's); no
+            deck in the sweep sets it. Export: unset.
 
       # (15) emergamps
       emergamps:
@@ -276,14 +288,14 @@ classes:
         required: false
         annotations:
           order: 15
-        related_mappings:
-          - cim:OperationalLimit
-        comments:
-          - >-
-            Intended target: an emergency-rating CurrentLimit on an OperationalLimitSet
-            attached to this equipment's terminal.
         todos:
           - "Converter not yet implemented; requires OperationalLimitSet + CurrentLimit creation."
+        close_mappings:
+          - cim:CurrentLimit.value
+        comments:
+          - >-
+            Import: raises when set (an OperationalLimitSet, as a line's); no
+            deck in the sweep sets it. Export: unset.
 
       # (16) faultrate
       faultrate:
@@ -293,10 +305,12 @@ classes:
         required: false
         annotations:
           order: 16
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Import: untranscribed (reliability data; no home in the network
+            profile parts). Export: unset.
 
       # (17) pctperm
       pctperm:
@@ -306,10 +320,12 @@ classes:
         required: false
         annotations:
           order: 17
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Import: untranscribed (reliability data; no home in the network
+            profile parts). Export: unset.
 
       # (18) repair
       repair:
@@ -319,10 +335,12 @@ classes:
         required: false
         annotations:
           order: 18
-        comments:
-          - "Reliability parameter; no CIM equivalent in the standard profile."
         todos:
           - "Requires CIM extension to roundtrip."
+        comments:
+          - >-
+            Import: untranscribed (reliability data; no home in the network
+            profile parts). Export: unset.
 
       # (19) basefreq
       basefreq:
@@ -332,13 +350,12 @@ classes:
         required: false
         annotations:
           order: 19
-        comments:
-          - >-
-            Not stored on CIM LinearShuntCompensator; base frequency is a circuit-level
-            property in CIM. The µF ↔ susceptance conversion uses 60 Hz hardcoded;
-            a non-60-Hz capacitor would need this from circuit context.
         todos:
           - "Extract base frequency from circuit-level CIM attributes for non-60Hz systems."
+        comments:
+          - >-
+            Import: untranscribed (no home on a compensator; bPerSection is at
+            the model's frequency). Export: unset.
 
       # (20) enabled
       enabled:
@@ -349,8 +366,12 @@ classes:
         annotations:
           order: 20
           dss_default: "true"
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): if False, converter returns None. All CIM LinearShuntCompensator objects are assumed enabled."
+          - >-
+            Import: normallyInService; default true. Export:
+            get_in_service(which='normal'); unset -> not written.
 
       # (21) like
       like:
@@ -361,6 +382,8 @@ classes:
         annotations:
           order: 21
         comments:
-          - "OpenDSS-only (N/A): DSS template inheritance resolved at parser time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.
 
 # Enums are imported from common_enums.yaml

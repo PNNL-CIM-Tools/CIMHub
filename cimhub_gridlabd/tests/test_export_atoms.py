@@ -1,4 +1,4 @@
-"""Tier 2 (EXPORT_MAPPING.md, tests): each importer atom deck through the exporter and back.
+"""Export test (EXPORT_MAPPING.md, tests): each importer atom deck through the exporter and back.
 
 atom ``.glm`` -> ``glm_to_cim`` -> ``GlmExporter.to_model`` -> ``GlmWriter`` -> ``GlmReader`` -> ``glm_to_cim``: the two
 CIM models are equal (``cimtables.diff_models``, in SI) except for the differences the spec lists, each matched here

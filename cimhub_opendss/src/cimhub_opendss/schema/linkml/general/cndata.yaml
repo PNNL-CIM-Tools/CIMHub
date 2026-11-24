@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -22,12 +22,25 @@ classes:
     description: >-
       A Cndata object in OpenDSS.
     class_uri: dss:Cndata
+    exact_mappings:
+      - cim:ConcentricNeutralCableInfo
+    comments:
+      - >-
+        Import: CNData becomes a ConcentricNeutralCableInfo in wire.cimtbl, with its normal and
+        emergency CurrentLimit in an OperationalLimitSet. Export: written as CNData
+        (exporter/wire.py).
     attributes:
       name:
         description: Object name. Must be unique per object type.
         range: string
         required: true
         identifier: true
+        exact_mappings:
+          - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.name; mRID = prefix + name, lowercased.
+            Export: Names, one namespace for the three catalogs.
 
       # (1) k
       k:
@@ -37,6 +50,12 @@ classes:
         required: false
         annotations:
           order: 1
+        exact_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandCount
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.neutralStrandCount. Export:
+            cable.neutral_strand_count.
 
       # (2) DiaStrand
       DiaStrand:
@@ -46,6 +65,12 @@ classes:
         required: false
         annotations:
           order: 2
+        close_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandRadius
+        comments:
+          - >-
+            Import: derived; neutralStrandRadius = DiaStrand / 2 (radius_from_diameter), radunits.
+            Export: 2 x cable.neutral_strand_radius (m).
 
       # (3) GmrStrand
       GmrStrand:
@@ -55,6 +80,12 @@ classes:
         required: false
         annotations:
           order: 3
+        exact_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandGmr
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.neutralStrandGmr (<GMRunits>); in GMRunits,
+            as DSS says. Export: cable.neutral_strand_gmr (m).
 
       # (4) Rstrand
       Rstrand:
@@ -64,6 +95,13 @@ classes:
         required: false
         annotations:
           order: 4
+        close_mappings:
+          - cim:ConcentricNeutralCableInfo.neutralStrandRDC20
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.neutralStrandRDC20 (ohm/<Runits>); DSS
+            calls it the strand's AC resistance. Export: cable.neutral_strand_r_dc20 (ohm/m), CIM's
+            only strand resistance.
 
       # (5) SemiconLayer
       SemiconLayer:
@@ -73,6 +111,10 @@ classes:
         required: false
         annotations:
           order: 5
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one. Export: not written, not in CIM (untranscribed or raising on import).
 
       # (6) EpsR
       EpsR:
@@ -82,6 +124,10 @@ classes:
         required: false
         annotations:
           order: 6
+        comments:
+          - >-
+            Import: untranscribed; insulation relative permittivity. Export: not written, no
+            permittivity on CableInfo; the engine's 2.3.
 
       # (7) InsLayer
       InsLayer:
@@ -91,6 +137,12 @@ classes:
         required: false
         annotations:
           order: 7
+        exact_mappings:
+          - cim:WireInfo.insulationThickness
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.insulationThickness (<radunits>). Export:
+            cable.insulation_thickness (m).
 
       # (8) DiaIns
       DiaIns:
@@ -100,6 +152,12 @@ classes:
         required: false
         annotations:
           order: 8
+        exact_mappings:
+          - cim:CableInfo.diameterOverInsulation
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.diameterOverInsulation (<radunits>).
+            Export: cable.diameter_over_insulation (m).
 
       # (9) DiaCable
       DiaCable:
@@ -109,6 +167,14 @@ classes:
         required: false
         annotations:
           order: 9
+        close_mappings:
+          - cim:CableInfo.diameterOverJacket
+          - cim:ConcentricNeutralCableInfo.diameterOverNeutral
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.diameterOverJacket (<radunits>),
+            ConcentricNeutralCableInfo.diameterOverNeutral (<radunits>); the outer diameter. Export:
+            cable.diameter_over_neutral (m), the circle of the strands; unset raises.
 
       # (10) Rdc
       Rdc:
@@ -118,6 +184,13 @@ classes:
         required: false
         annotations:
           order: 10
+        exact_mappings:
+          - cim:ConductorInfo.rDC20
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.rDC20 (ohm/<Runits>); DC resistance (DSS
+            gives no temperature). Export: get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset
+            raises.
 
       # (11) Rac
       Rac:
@@ -128,6 +201,13 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 11
+        close_mappings:
+          - cim:ConductorInfo.rAC25
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.rAC25 (ohm/<Runits>); DSS: resistance at 60
+            Hz, temperature unstated. Export: rule, get_wire_info.r_ac25 (ohm/m); unset -> not
+            written, the engine's 1.02 x Rdc.
 
       # (12) Runits
       Runits:
@@ -137,6 +217,10 @@ classes:
         required: false
         annotations:
           order: 12
+        comments:
+          - >-
+            Import: mapped; the unit of Rdc, Rac, Rstrand in the header (LENGTH_UNIT); unset raises
+            (every wire in the sweep sets it). Export: m (B1).
 
       # (13) GMRac
       GMRac:
@@ -147,6 +231,13 @@ classes:
         minimum_value: 0.0
         annotations:
           order: 13
+        exact_mappings:
+          - cim:WireInfo.gmr
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.gmr (<GMRunits>); unset raises (the
+            engine's 0.7788 x radius default; no deck in the sweep omits it). Export: rule,
+            get_wire_info.gmr (m); unset -> not written, the engine's 0.7788 x radius.
 
       # (14) GMRunits
       GMRunits:
@@ -156,6 +247,10 @@ classes:
         required: false
         annotations:
           order: 14
+        comments:
+          - >-
+            Import: mapped; the unit of GMRac, GmrStrand in the header (LENGTH_UNIT); unset raises
+            (every wire in the sweep sets it). Export: m (B1).
 
       # (15) radius
       radius:
@@ -165,6 +260,12 @@ classes:
         required: false
         annotations:
           order: 15
+        exact_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.radius (<radunits>); one of radius and
+            diam. Export: get_wire_info.radius (m); unset raises.
 
       # (16) radunits
       radunits:
@@ -174,6 +275,10 @@ classes:
         required: false
         annotations:
           order: 16
+        comments:
+          - >-
+            Import: mapped; the unit of radius, diam and every cable dimension in the header
+            (LENGTH_UNIT); unset raises (every wire in the sweep sets it). Export: m (B1).
 
       # (17) normamps
       normamps:
@@ -183,6 +288,13 @@ classes:
         required: false
         annotations:
           order: 17
+        exact_mappings:
+          - cim:ConductingAssetInfo.ratedCurrent
+        comments:
+          - >-
+            Import: copied to ConcentricNeutralCableInfo.ratedCurrent (A); also the normal
+            CurrentLimit of the wire's OperationalLimitSet <mRID>_limits
+            (AssetInfo.OperationalLimitSet). Export: the wire's normal limit, else ratedCurrent (A).
 
       # (18) emergamps
       emergamps:
@@ -192,6 +304,13 @@ classes:
         required: false
         annotations:
           order: 18
+        close_mappings:
+          - cim:CurrentLimit.normalValue
+        comments:
+          - >-
+            Import: structural; the emergency CurrentLimit of the wire's OperationalLimitSet
+            <mRID>_limits (AssetInfo.OperationalLimitSet). Export: rule, the wire's emergency limit
+            (A); unset -> not written, the engine's 1.5 x normamps.
 
       # (19) diam
       diam:
@@ -201,6 +320,12 @@ classes:
         required: false
         annotations:
           order: 19
+        close_mappings:
+          - cim:WireInfo.radius
+        comments:
+          - >-
+            Import: derived; radius = diam / 2 (radius_from_diameter). Export: not written, radius
+            is written instead.
 
       # (20) Seasons
       Seasons:
@@ -210,6 +335,12 @@ classes:
         required: false
         annotations:
           order: 20
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (an indexed rating array that names no calendar season; home
+            OperationalLimitType.season). Export: not written, not in CIM (untranscribed or raising
+            on import).
 
       # (21) Ratings
       Ratings:
@@ -220,6 +351,11 @@ classes:
         required: false
         annotations:
           order: 21
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (with Seasons). Export: not written, not in CIM (untranscribed or raising on
+            import).
 
       # (22) Capradius
       Capradius:
@@ -229,6 +365,11 @@ classes:
         required: false
         annotations:
           order: 22
+        comments:
+          - >-
+            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
+            for one (the radius for capacitance; not WireInfo.coreRadius). Export: not written, not
+            in CIM (untranscribed or raising on import).
 
       # (23) like
       like:
@@ -238,3 +379,7 @@ classes:
         required: false
         annotations:
           order: 23
+        comments:
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping. Export: not written,
+            the writer never writes like=.

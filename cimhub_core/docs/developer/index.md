@@ -28,7 +28,7 @@ that what a reviewer reads is exactly what was built). Every stage returns somet
 | [Canonical shapes](shapes.md) | The `.cimtbl` table shapes in `shapes/` that every importer emits. |
 | [Writing a getter](writing-getters.md) | How a getter in `getters/` is written: NamedTuple returns, `get_qty`, explicit resolution order. |
 | [Units](units.md) | How physical quantities move through import and export. |
-| [Testing](testing.md) | Atoms, goldens, the test tiers and the `cimtbl_testing` helpers. |
+| [Testing](testing.md) | Atoms, goldens, the test types and the `cimtbl_testing` helpers. |
 | [Building the docs](docs.md) | One mkdocs site per package, `scripts/build-docs.sh`, notebooks, the generated schema reference. |
 
 ## Modules

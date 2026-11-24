@@ -98,6 +98,7 @@ class Winding(NamedTuple):
     base_s: float | None  # per phase; a PowerTransformerEnd has none
     r: float | None  # on the model's base_power
     phase_shift: float | None  # deg: the instance PowerTransformerEnd's fixed phaseShift
+    r_dc: float | None = None  # ohm: a TransformerWinding's rDC; an end has none
 
 
 class MeshImpedance(NamedTuple):
@@ -507,6 +508,7 @@ def _winding(number: int, coil: _Coil, r: float | None, voltage_unit: str, power
         base_s=get_qty(source, "baseS", power_unit) if _has(source, "baseS") else None,
         r=r,
         phase_shift=get_qty(coil.end, "phaseShift", "deg") if isinstance(coil.end, cim.PowerTransformerEnd) else None,
+        r_dc=get_qty(source, "rDC", "ohm") if isinstance(source, cim.TransformerWinding) else None,
     )
 
 

@@ -9,7 +9,7 @@ version: 1.0.0
 prefixes:
   linkml: https://w3id.org/linkml/
   dss: https://gridappsd.github.io/dss-graph/
-  cim: http://iec.ch/TC57/CIM100#
+  cim: http://cim.ucaiug.io/cim101/draft#
 
 default_prefix: dss
 default_range: string
@@ -26,15 +26,14 @@ classes:
     class_uri: dss:Load
     exact_mappings:
       - cim:EnergyConsumer
+    close_mappings:
+      - cim:ConformLoad
     comments:
       - >-
-        OpenDSS Load maps to CIM EnergyConsumer. On export, a single
-        EnergyConsumer can produce more than one DSS Load: an unbalanced
-        multi-phase wye load (per-phase kW/kvar not all equal) is split into
-        one single-phase Load per EnergyConsumerPhase so the imbalance is
-        preserved, and a 2-phase wye load below 250 V (a center-tap/split-phase
-        service) is split the same way into two single-phase 120 V loads.
-        Balanced loads export as a single multi-phase Load.
+        Import: one EnergyConsumer ld_ + name (load.cimtbl), or a ConformLoad of
+        its yearly shape's LoadGroup. Export: one Load per EnergyConsumer (also
+        ConformLoad, NonConformLoad, StationSupply), or one per phase when the
+        phases differ.
     attributes:
       name:
         description: Object name. Must be unique per object type.
@@ -43,6 +42,10 @@ classes:
         identifier: true
         exact_mappings:
           - cim:IdentifiedObject.name
+        comments:
+          - >-
+            Import: EnergyConsumer.name, mRID = ld_ + name, lowercased. Export:
+            Names; one load per phase is <name>_<phase>.
 
       # (1) phases
       phases:
@@ -55,16 +58,10 @@ classes:
         annotations:
           order: 1
           dss_default: int(3)
-        related_mappings:
-          - cim:EnergyConsumerPhase
         comments:
           - >-
-            Import: if bus1 has an explicit phase suffix (e.g. ".1.2.3"), that
-            is authoritative; otherwise phases selects that many of A, B, C in
-            order. One EnergyConsumerPhase object is created per resolved
-            phase. Export: phases = len(EnergyConsumerPhase), except a 2-phase
-            delta load exports as phases=1 (DSS represents a single-phase L-L
-            delta load this way).
+            Import: structural; the conductor count, default 3. Export: the
+            phase conductors; a delta across two is 1.
 
       # (2) bus1
       bus1:
@@ -75,10 +72,14 @@ classes:
         required: true
         annotations:
           order: 2
-        related_mappings:
+        close_mappings:
           - cim:Terminal.ConnectivityNode
+          - cim:Terminal.phases
         comments:
-          - "Import: bus name extracted from Terminal[0].ConnectivityNode.name; phase suffix reconstructed from EnergyConsumerPhase.phase values. Export: bus1 = cn.name + '.' + '.'.join(phase_suffix)."
+          - >-
+            Import: the node and phases of the consumer (node 1/2/3 = A/B/C,
+            s1/s2 on a split-phase island). Export: bus_ref of the phase
+            conductors; a wye's neutral is node 0, so it must be grounded.
 
       # (3) kV
       kV:
@@ -94,18 +95,13 @@ classes:
         annotations:
           order: 3
           dss_default: float(12.47)
-        close_mappings:
-          - cim:BaseVoltage.nominalVoltage
+        related_mappings:
+          - cim:ConductingEquipment.BaseVoltage
         comments:
           - >-
-            CIM BaseVoltage.nominalVoltage is always phase-phase (L-L).
-            Import: EnergyConsumer.BaseVoltage.nominalVoltage =
-            Voltage(kV × √3, 'kV') for a single-phase wye load, or
-            Voltage(kV, 'kV') for delta or for 2-/3-phase wye (kV is already
-            L-L in those cases). Export: kV = nominalVoltage.to('kV') / √3 for
-            a single-phase wye load, otherwise kV = nominalVoltage.to('kV').
-            If kV is omitted on import, the voltage is left unset and filled
-            in later by BFS-based repair.
+            Import: checked, not written; it must be within 1 % of the bus's
+            phase voltage, else it raises. Export: the BaseVoltage, LL for delta
+            and 2-3 phases, LN for 1-phase wye.
 
       # (4) kW
       kW:
@@ -118,14 +114,12 @@ classes:
         annotations:
           order: 4
           dss_default: float(10.0)
-        close_mappings:
+        exact_mappings:
           - cim:EnergyConsumer.p
         comments:
           - >-
-            Import: EnergyConsumer.p = ActivePower(kW, 'kW'); if kW is not
-            given but kVA and pf are, kW = kVA × |pf| first (see kVA and pf
-            comments). Export: kW = p.to('kW'). Sign: CIM positive p = power
-            consumed (load convention matches); no sign flip needed for loads.
+            Import: p (kW). Export: p (kW) of get_phase_loads; per phase when
+            the phases differ.
 
       # (5) pf
       pf:
@@ -139,14 +133,12 @@ classes:
         annotations:
           order: 5
           dss_default: float(0.88)
+        close_mappings:
+          - cim:EnergyConsumer.q
         comments:
           - >-
-            Not stored on CIM EnergyConsumer; CIM stores p and q independently.
-            Import: used only when kvar is not explicitly given —
-            kvar = kW × tan(acos(|pf|)), sign-negated if pf is negative
-            (leading). Export: pf is always recomputed as
-            p / sqrt(p² + q²) (1.0 if p and q are both zero); the sign of the
-            original pf is not preserved.
+            Import: derived; with kvar unset, q = kW x tan(acos abs(pf)) with
+            the sign of pf; default 0.88. Export: not written; kvar carries q.
 
       # (6) model
       model:
@@ -162,20 +154,13 @@ classes:
           dss_default: int(1)
           dss_valid_values: "1,2,3,4,5,6,7,8"
         close_mappings:
-          - cim:LoadResponseCharacteristic
+          - cim:EnergyConsumer.LoadResponse
         comments:
           - >-
-            Import: each DSS model value (1-8) selects a fixed ZIP
-            (constant-impedance/current/power) fraction profile for p and q,
-            which is stored on a shared LoadResponseCharacteristic and linked
-            via EnergyConsumer.LoadResponse; model=4 (CVR) instead sets
-            exponentModel=True with CVRwatts/CVRvars as the p/q voltage
-            exponents, and model=8 (ZIPV) reads the 7-element ZIPV array
-            directly into the ZIP fractions. Export: the reverse lookup
-            matches the LoadResponseCharacteristic's ZIP fractions against the
-            same standard profiles (models 1, 2, 3, 5); an exponent model
-            exports as model=4 with CVRwatts/CVRvars; any other combination of
-            fractions exports as model=8 with a ZIPV array (Vminpu fixed at 0.5).
+            Import: 1 -> zip_constant_pq, 2 -> zip_constant_z, 5 ->
+            zip_constant_i, 4 -> an exp_<CVRwatts>_<CVRvars>
+            LoadResponseCharacteristic; 3, 6, 7, 8 raise; default 1. Export: a
+            pure ZIP gives 1, 2 or 5, an exponential 4; a mix raises.
 
       # (7) yearly
       yearly:
@@ -186,10 +171,15 @@ classes:
         required: false
         annotations:
           order: 7
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
         todos:
           - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+        close_mappings:
+          - cim:ConformLoad.LoadGroup
+        comments:
+          - >-
+            Import: the load becomes a ConformLoad of the group lg_<shape>; a
+            shape the deck does not define raises. Export: a ConformLoad's group
+            schedule that is a LoadShape.
 
       # (8) daily
       daily:
@@ -200,10 +190,12 @@ classes:
         required: false
         annotations:
           order: 8
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
         todos:
           - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+        comments:
+          - >-
+            Import: untranscribed; a ConformLoad has one LoadGroup, its yearly
+            shape's. Export: unset.
 
       # (9) duty
       duty:
@@ -215,10 +207,12 @@ classes:
         required: false
         annotations:
           order: 9
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
         todos:
           - "Loadshape converter not yet implemented. DSS LoadShape name should map to a CIM SeasonDayTypeSchedule or RegularIntervalSchedule linked to EnergyConsumer via LoadGroup."
+        comments:
+          - >-
+            Import: untranscribed; a ConformLoad has one LoadGroup, its yearly
+            shape's. Export: unset.
 
       # (10) growth
       growth:
@@ -230,10 +224,11 @@ classes:
         required: false
         annotations:
           order: 10
-        related_mappings:
-          - cim:GrowthShape
         todos:
           - "GrowthShape converter not yet implemented. DSS GrowthShape name should reference a CIM GrowthShape object."
+        comments:
+          - >-
+            Import: untranscribed (a GrowthShape reference). Export: unset.
 
       # (11) conn
       conn:
@@ -244,10 +239,13 @@ classes:
         annotations:
           order: 11
           dss_default: string(wye)
-        exact_mappings:
+        close_mappings:
           - cim:EnergyConsumer.phaseConnection
+          - cim:EnergyConsumer.grounded
         comments:
-          - "Import: DSS 'wye'/'delta' maps to CIM PhaseShuntConnectionKind.Y / D. Export: reverse enum lookup."
+          - >-
+            Import: wye -> Y, grounded; delta -> D, not grounded; default wye.
+            Export: Y/Yn -> wye, D -> delta; others raise.
 
       # (12) kvar
       kvar:
@@ -258,10 +256,12 @@ classes:
         required: false
         annotations:
           order: 12
-        close_mappings:
+        exact_mappings:
           - cim:EnergyConsumer.q
         comments:
-          - "Import: EnergyConsumer.q = ReactivePower(kvar, 'kVAr'). Export: kvar = q.to('kVAr'). Sign: positive q = inductive (lagging) consumption in CIM load convention."
+          - >-
+            Import: q (kVAr). Export: q (kVAr) of get_phase_loads; per phase
+            when the phases differ.
 
       # (13) Rneut
       Rneut:
@@ -275,6 +275,10 @@ classes:
           dss_default: float(-1.0)
         todos:
           - "No CIM equivalent. Requires CIM extension (e.g. custom attribute on EnergyConsumer or dedicated NeutralImpedance class) to round-trip."
+        comments:
+          - >-
+            Import: raises when >= 0 (a wye neutral impedance); no deck in the
+            sweep sets it. Export: unset.
 
       # (14) Xneut
       Xneut:
@@ -288,6 +292,10 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Requires CIM extension alongside Rneut."
+        comments:
+          - >-
+            Import: raises when set; no deck in the sweep sets it. Export:
+            unset.
 
       # (15) status
       status:
@@ -301,6 +309,11 @@ classes:
           order: 15
         todos:
           - "No CIM equivalent for load multiplier status flags. Requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (Fixed/Exempt, whether load multipliers scale
+            it; DSS solution control; no home in the network profile parts).
+            Export: unset.
 
       # (16) class
       load_class:
@@ -316,6 +329,9 @@ classes:
           dss_default: int(1)
         todos:
           - "No CIM equivalent. Could potentially map to a PSRType classification but no standard CIM field exists."
+        comments:
+          - >-
+            Import: untranscribed (a DSS report grouping). Export: unset.
 
       # (17) Vminpu
       Vminpu:
@@ -329,6 +345,11 @@ classes:
           dss_default: float(0.95)
         todos:
           - "No CIM equivalent. Requires CIM extension for per-unit voltage model applicability bounds."
+        comments:
+          - >-
+            Import: untranscribed (below it the engine models the load as
+            constant Z; DSS solution control; no home in the network profile
+            parts). Export: unset.
 
       # (18) Vmaxpu
       Vmaxpu:
@@ -342,6 +363,11 @@ classes:
           dss_default: float(1.05)
         todos:
           - "No CIM equivalent. Requires CIM extension alongside Vminpu."
+        comments:
+          - >-
+            Import: untranscribed (above it the engine models the load as
+            constant Z; DSS solution control; no home in the network profile
+            parts). Export: unset.
 
       # (19) Vminnorm
       Vminnorm:
@@ -355,6 +381,10 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Requires CIM extension for normal-range voltage limit on loads."
+        comments:
+          - >-
+            Import: untranscribed (an EnergyMeter UE threshold; DSS solution
+            control; no home in the network profile parts). Export: unset.
 
       # (20) Vminemerg
       Vminemerg:
@@ -368,6 +398,10 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Requires CIM extension for emergency-range voltage limit on loads."
+        comments:
+          - >-
+            Import: untranscribed (an EnergyMeter EEN threshold; DSS solution
+            control; no home in the network profile parts). Export: unset.
 
       # (21) xfkVA
       xfkVA:
@@ -381,6 +415,11 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Load allocation metadata; requires CIM extension."
+        comments:
+          - >-
+            Import: raises when set; with kW the engine takes whichever comes
+            last, and the record keeps no order. Export: not written; kW carries
+            p.
 
       # (22) allocationfactor
       allocationfactor:
@@ -394,6 +433,10 @@ classes:
           dss_default: float(0.5)
         todos:
           - "No CIM equivalent. Load allocation metadata; requires CIM extension alongside xfkVA."
+        comments:
+          - >-
+            Import: raises when set; it scales xfkVA. Export: not written; kW
+            carries p.
 
       # (23) kVA
       kVA:
@@ -403,13 +446,14 @@ classes:
         required: false
         annotations:
           order: 23
+        close_mappings:
+          - cim:EnergyConsumer.p
+          - cim:EnergyConsumer.q
         comments:
           - >-
-            Not stored on CIM EnergyConsumer; p and q are stored
-            independently. Import: used only when kW is not given — combined
-            with pf to derive kW = kVA × |pf| (see kW comments); kvar is then
-            derived from that kW and pf as usual. Export: not written; kVA is
-            not reconstructed on the DSS side (only kW/kvar/pf are).
+            Import: derived; with kW unset, p = kVA x abs(pf) and q = kVA x
+            sin(acos abs(pf)) with the sign of pf; kW with kVA raises. Export:
+            not written; kW and kvar carry the power.
 
       # (24) %mean
       pct_mean:
@@ -424,6 +468,10 @@ classes:
           dss_default: float(50.0)
         todos:
           - "No CIM equivalent. Monte Carlo study metadata; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (a Monte Carlo setting; DSS solution control).
+            Export: unset.
 
       # (25) %stddev
       pct_stddev:
@@ -438,6 +486,10 @@ classes:
           dss_default: float(10.0)
         todos:
           - "No CIM equivalent. Monte Carlo study metadata; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (a Monte Carlo setting; DSS solution control).
+            Export: unset.
 
       # (26) CVRwatts
       CVRwatts:
@@ -449,16 +501,12 @@ classes:
         annotations:
           order: 26
           dss_default: float(1.0)
-        close_mappings:
+        exact_mappings:
           - cim:LoadResponseCharacteristic.pVoltageExponent
         comments:
           - >-
-            Only meaningful when model=CVR (4). Import:
-            LoadResponseCharacteristic.pVoltageExponent = CVRwatts (or 1.0 if
-            not specified), with exponentModel set True. Export: CVRwatts =
-            pVoltageExponent (or 1.0 if not set), written only when the
-            LoadResponseCharacteristic has exponentModel=True (which exports
-            as model=4).
+            Import: model 4 only; the exp_ row's pVoltageExponent; default 1.
+            Export: pVoltageExponent, model 4 only.
 
       # (27) CVRvars
       CVRvars:
@@ -470,15 +518,12 @@ classes:
         annotations:
           order: 27
           dss_default: float(2.0)
-        close_mappings:
+        exact_mappings:
           - cim:LoadResponseCharacteristic.qVoltageExponent
         comments:
           - >-
-            Only meaningful when model=CVR (4). Import:
-            LoadResponseCharacteristic.qVoltageExponent = CVRvars (or 2.0 if
-            not specified), alongside CVRwatts (see CVRwatts comments).
-            Export: CVRvars = qVoltageExponent (or 2.0 if not set), written
-            alongside CVRwatts under the same condition.
+            Import: model 4 only; the exp_ row's qVoltageExponent; default 2.
+            Export: qVoltageExponent, model 4 only.
 
       # (28) kwh
       kwh:
@@ -491,6 +536,10 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Billing energy metadata; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (sizes the load only in the AllocateLoads
+            command). Export: unset.
 
       # (29) kwhdays
       kwhdays:
@@ -503,6 +552,10 @@ classes:
           dss_default: float(30.0)
         todos:
           - "No CIM equivalent. Billing period metadata; requires CIM extension alongside kwh."
+        comments:
+          - >-
+            Import: untranscribed (sizes the load only in the AllocateLoads
+            command). Export: unset.
 
       # (30) Cfactor
       Cfactor:
@@ -515,6 +568,10 @@ classes:
           dss_default: float(4.0)
         todos:
           - "No CIM equivalent. Load factor metadata; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (sizes the load only in the AllocateLoads
+            command). Export: unset.
 
       # (31) CVRcurve
       CVRcurve:
@@ -526,10 +583,12 @@ classes:
         required: false
         annotations:
           order: 31
-        related_mappings:
-          - cim:SeasonDayTypeSchedule
         todos:
           - "Loadshape converter not yet implemented. CVRcurve LoadShape reference should map to a CIM schedule linked via LoadResponseCharacteristic."
+        comments:
+          - >-
+            Import: untranscribed (a LoadShape reference; not mapped). Export:
+            unset.
 
       # (32) NumCust
       NumCust:
@@ -543,7 +602,9 @@ classes:
         exact_mappings:
           - cim:EnergyConsumer.customerCount
         comments:
-          - "Import: EnergyConsumer.customerCount = NumCust. Export: NumCust = customerCount. Direct integer mapping; no unit conversion."
+          - >-
+            Import: customerCount; default 1. Export: customerCount; per phase
+            on the first load, 0 on the others.
 
       # (33) ZIPV
       ZIPV:
@@ -557,18 +618,10 @@ classes:
         required: false
         annotations:
           order: 33
-        close_mappings:
-          - cim:LoadResponseCharacteristic
         comments:
           - >-
-            Only meaningful when model=ZIPV (8). Import: the 7 elements
-            (p_z, p_i, p_p, q_z, q_i, q_p, Vminpu) are read directly into the
-            matching LoadResponseCharacteristic ZIP-fraction fields (Vminpu is
-            not currently stored). Export: when the LoadResponseCharacteristic's
-            ZIP fractions don't match one of the standard DSS profiles
-            (models 1/2/3/5) and it is not an exponent model, ZIPV is written
-            as [p_z, p_i, p_p, q_z, q_i, q_p, 0.5] — the 7th element (Vminpu)
-            is always exported as a fixed 0.5, since it is not stored on CIM.
+            Import: untranscribed; used only by model 8, which raises. Export:
+            not written; model 8 raises.
 
       # (34) %SeriesRL
       pct_SeriesRL:
@@ -583,6 +636,10 @@ classes:
           dss_default: float(50.0)
         todos:
           - "No CIM equivalent. Harmonic study circuit decomposition; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (harmonics model; no home in the network
+            profile parts). Export: unset.
 
       # (35) RelWeight
       RelWeight:
@@ -596,6 +653,9 @@ classes:
           dss_default: float(1.0)
         todos:
           - "No CIM equivalent. Reliability priority weighting; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (a reliability weighting). Export: unset.
 
       # (36) Vlowpu
       Vlowpu:
@@ -609,6 +669,11 @@ classes:
           dss_default: float(0.50)
         todos:
           - "No CIM equivalent. Voltage-dependent model switching threshold; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (below it the engine models the load as open;
+            DSS solution control; no home in the network profile parts). Export:
+            unset.
 
       # (37) puXharm
       puXharm:
@@ -623,6 +688,10 @@ classes:
           dss_default: float(0.0)
         todos:
           - "No CIM equivalent. Harmonic-mode series reactance; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (harmonics model; no home in the network
+            profile parts). Export: unset.
 
       # (38) XRharm
       XRharm:
@@ -636,6 +705,10 @@ classes:
           dss_default: float(6.0)
         todos:
           - "No CIM equivalent. Harmonic-mode X/R ratio; requires CIM extension alongside puXharm."
+        comments:
+          - >-
+            Import: untranscribed (harmonics model; no home in the network
+            profile parts). Export: unset.
 
       # (39) spectrum
       spectrum:
@@ -649,6 +722,10 @@ classes:
           dss_default: string(defaultload)
         todos:
           - "No CIM equivalent. Harmonic current spectrum reference; requires CIM extension."
+        comments:
+          - >-
+            Import: untranscribed (harmonics model; no home in the network
+            profile parts). Export: unset.
 
       # (40) basefreq
       basefreq:
@@ -660,6 +737,9 @@ classes:
           order: 40
         todos:
           - "Not stored on CIM EnergyConsumer. Base frequency should be extracted from the CIM BaseVoltage or circuit-level object. Converter must derive this from circuit context."
+        comments:
+          - >-
+            Import: untranscribed (no home on a load). Export: unset.
 
       # (41) enabled
       enabled:
@@ -670,8 +750,12 @@ classes:
         annotations:
           order: 41
           dss_default: "true"
+        exact_mappings:
+          - cim:Equipment.normallyInService
         comments:
-          - "OpenDSS-only (N/A): CIM EnergyConsumer has no enabled/disabled flag; CIM consumers are always considered active in the network model."
+          - >-
+            Import: normallyInService; default true. Export:
+            get_in_service(which='normal'); unset -> not written.
 
       # (42) like
       like:
@@ -682,6 +766,8 @@ classes:
         annotations:
           order: 42
         comments:
-          - "OpenDSS-only (N/A): DSS template/copy directive resolved at parse time; no CIM equivalent."
+          - >-
+            Import: untranscribed; the reader resolves like= before mapping.
+            Export: never written.
 
 # Enums are imported from common_enums.yaml

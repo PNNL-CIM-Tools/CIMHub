@@ -41,7 +41,7 @@ PREFIX = "xf_"
 
 _SCALAR = "the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises"
 _THERMAL = "thermal model; no home in the network profile parts"
-_RATING = "instance OperationalLimitSet or untranscribed (plan D9)"
+_RATING = "instance OperationalLimitSet or untranscribed"
 _TAP_CHANGER = "the RatioTapChanger range of a regulated transformer (regcontrol.cimtbl); else untranscribed"
 _RELIABILITY = "reliability data; no home in the network profile parts"
 
@@ -85,8 +85,11 @@ FIELDS = {
     "hsrise": Field("untranscribed", note=_THERMAL),
     "normhkVA": Field("untranscribed", note=_RATING),
     "emerghkVA": Field("untranscribed", note=_RATING),
-    "Seasons": Field("untranscribed", note=_RATING),
-    "Ratings": Field("untranscribed", note=_RATING),
+    "Seasons": Field("structural", note="the number of Ratings; one by default, and a count other than the "
+                                        "Ratings' raises"),
+    "Ratings": Field("copied", (("ApparentPowerLimit", "normalValue", "kVA"),),
+                     "one per season n, of type olt_season<n>, in the OperationalLimitSet <xf>_ratings on the "
+                     "PowerTransformer (seasonal_ratings)"),
     "normamps": Field("untranscribed", note=_RATING),
     "emergamps": Field("untranscribed", note=_RATING),
     "sub": Field("untranscribed", note="DSS report flag"),
@@ -101,7 +104,9 @@ FIELDS = {
     "XRConst": Field("untranscribed", note="harmonics option"),
     "LeadLag": Field("untranscribed", note="PowerTransformer.vectorGroup clock; vectorGroup not mapped yet"),
     "Core": Field("untranscribed", note="core type; no home in the network profile parts"),
-    "RdcOhms": Field("untranscribed", note="home TransformerWinding.rDC; not mapped until a deck sets it"),
+    "RdcOhms": Field("copied", (("TransformerWinding", "rDC", "ohm"),),
+                     "per winding, on a 1-phase transformer's coils; by balanced ends (no TransformerWinding) it "
+                     "raises"),
     "faultrate": Field("untranscribed", note=_RELIABILITY),
     "pct_perm": Field("untranscribed", note=_RELIABILITY),
     "repair": Field("untranscribed", note=_RELIABILITY),
@@ -137,6 +142,7 @@ class Winding(NamedTuple):
     kv: float
     kva: float
     r_percent: float
+    r_dc: float | None  # RdcOhms (ohm), None when the deck leaves it to the engine
 
 
 class End(NamedTuple):
@@ -252,13 +258,84 @@ def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -
     if len(conns) != count:
         raise ValueError(f"Transformer {name}: conns={conns} needs {count} values")
     r_percent = _r_percent(xf, count, notes)
+    r_dc = [float(value) for value in xf.RdcOhms or []] or [None] * count
+    if len(r_dc) != count:
+        raise ValueError(f"Transformer {name}: RdcOhms={xf.RdcOhms} needs {count} values")
     windings = []
-    for index, (spec, conn, kv, kva, r) in enumerate(zip(buses, conns, xf.kVs, xf.kVAs, r_percent), start=1):
+    for index, (spec, conn, kv, kva, r, dc) in enumerate(zip(buses, conns, xf.kVs, xf.kVAs, r_percent, r_dc),
+                                                         start=1):
         bus, given = parse_bus(spec)
         wye = conn.lower() == "wye"
         windings.append(Winding(index, bus, winding_nodes(given, phases, wye, name=name), wye,
-                                float(kv), float(kva), r))
+                                float(kv), float(kva), r, dc))
     return windings
+
+
+def seasonal_ratings(record, label: str) -> list[str]:
+    """The ``Ratings`` (kVA) of a Transformer or XfmrCode, one per season; empty when unset. The engine keeps only
+    ``Seasons`` of them (one by default) and pads a ``Seasons`` alone with zeros, so a count that differs raises."""
+    ratings = list(record.Ratings or [])
+    seasons = record.Seasons if record.Seasons is not None else 1
+    if not ratings:
+        if record.Seasons is not None:
+            raise ValueError(f"{label}: Seasons={record.Seasons} without Ratings; the engine pads its default rating "
+                             "with zeros")
+        return []
+    if len(ratings) != seasons:
+        raise ValueError(f"{label}: Ratings={ratings} with Seasons={seasons}; the engine reads Seasons of them, so "
+                         "the two must agree")
+    return [cell(float(rating)) for rating in ratings]
+
+
+def season_count(native) -> int:
+    """The most seasons any Transformer or XfmrCode rates: the master declares ``olt_season1`` .. that many."""
+    records = [*native.list_by_class(NATIVE_CLASS), *native.list_by_class(schema.Xfmrcode)]
+    return max((len(record.Ratings or []) for record in records), default=0)
+
+
+def season_limit_type(number: int) -> str:
+    return f"olt_season{number}"
+
+
+def rating_rows(owner: str, ratings: list[str], rows: _Tables) -> None:
+    """The OperationalLimitSet ``<owner>_ratings`` of ``owner`` and one ApparentPowerLimit per season rating."""
+    if not ratings:
+        return
+    limit_set = f"{owner}_ratings"
+    rows.rating_sets.append(Row([limit_set, owner]))
+    rows.ratings += [Row([f"{limit_set}_{number}", rating, season_limit_type(number), limit_set])
+                     for number, rating in enumerate(ratings, start=1)]
+
+
+def rating_tables(rows: _Tables, *, configuration: str | None = None) -> list[Table]:
+    """The tables of ``rating_rows``: each set on its Equipment, or, for a ``configuration`` class (a template),
+    each set alone and the template naming it (``EquipmentConfiguration.OperationalLimitSet``, the serialized end of
+    the extension)."""
+    if not rows.rating_sets:
+        return []
+    comment = "the seasonal ratings: Ratings, one ApparentPowerLimit per season"
+    limits = Table("ApparentPowerLimit", [Column("mRID"), Column("normalValue", "kVA"), Column("OperationalLimitType"),
+                                          Column("OperationalLimitSet")], rows.ratings)
+    if configuration is None:
+        return [Table("OperationalLimitSet", [Column("mRID"), Column("Equipment")], rows.rating_sets,
+                      comment=comment), limits]
+    return [Table("OperationalLimitSet", [Column("mRID")], [Row([row.cells[0]]) for row in rows.rating_sets],
+                  comment=comment), limits,
+            Table(configuration, [Column("mRID"), Column("OperationalLimitSet")],
+                  [Row([row.cells[1], row.cells[0]]) for row in rows.rating_sets], update=True)]
+
+
+def dc_resistance_rows(winding_ids: list[str], windings: list[Winding], rows: _Tables) -> None:
+    """``rDC`` (ohm) of each winding that has RdcOhms, as an Update of its TransformerWinding."""
+    rows.dc_resistances += [Row([winding_id, cell(winding.r_dc)]) for winding_id, winding in zip(winding_ids, windings)
+                            if winding.r_dc is not None]
+
+
+def dc_resistance_table(rows: list[Row]) -> list[Table]:
+    if not rows:
+        return []
+    return [Table("TransformerWinding", [Column("mRID"), Column("rDC", "ohm")], rows, update=True,
+                  comment="RdcOhms: the winding's dc resistance, copied")]
 
 
 def _r_percent(xf, count: int, notes: list[str]) -> list[float]:
@@ -348,10 +425,17 @@ class _Tables:
         self.regulators: list[Row] = []
         self.auto_ends: list[Row] = []
         self.auto_mesh: list[Row] = []
+        self.dc_resistances: list[Row] = []
+        self.rating_sets: list[Row] = []
+        self.ratings: list[Row] = []
 
 
 def _map_three_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
                      buses: Mapping[str, BusSystem], rows: _Tables, notes: list[str]) -> None:
+    if xf.RdcOhms:
+        raise ValueError(f"Transformer {xf.name}: RdcOhms on a 3-phase transformer by balanced ends; "
+                         "TransformerWinding.rDC is a tank's winding, which these ends do not have (an XfmrCode "
+                         "template does)")
     for end in ends:
         [winding] = end.windings
         if winding.wye:
@@ -438,6 +522,7 @@ def _map_single_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
             f"{xf_id}_wdg_{winding.number}", tank, cell(rated_u), cell(winding.kv), cell(rated_s), cell(base_kva),
             cell(winding.r_percent), phase_end_id[(end.number, from_node)], phase_end_id[(end.number, to_node)],
         ]))
+    dc_resistance_rows([f"{xf_id}_wdg_{winding.number}" for winding in windings], windings, rows)
     for i, j in [(1, 2), (1, 3), (2, 3)][: 1 if len(windings) == 2 else 3]:
         rows.coil_mesh.append(Row([f"{xf_id}_mesh_{i}{j}", f"{xf_id}_wdg_{i}", f"{xf_id}_wdg_{j}",
                                    cell(_x_percent(xf, (i, j), notes))]))
@@ -464,6 +549,8 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
         raise ValueError(f"Transformer {xf.name}: regulator kVAs {[w.kva for w in windings]} differ")
     if xf.Rneut is not None and float(xf.Rneut) >= 0:
         raise ValueError(f"Transformer {xf.name}: a regulator neutral impedance is not mapped yet")
+    if xf.RdcOhms:
+        raise ValueError(f"Transformer {xf.name}: RdcOhms on a regulator; an AutoTransformerEnd has no rDC")
     unused = [f"{slot}={cell(getattr(xf, slot))}" for slot in ("pct_imag", "pct_noloadloss")
               if getattr(xf, slot) is not None]
     comment = "\n".join(part for part in (
@@ -522,6 +609,7 @@ def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> D
     regulated = regulated_transformers(native)
     rows = _Tables()
     for xf in transformers:
+        own_ratings = seasonal_ratings(xf, f"Transformer {xf.name}")  # the instance's own, not its code's
         is_regulated = str(xf.name).lower() in regulated
         source = None
         by_template = bool(xf.XfmrCode) and not is_regulated
@@ -538,6 +626,8 @@ def map_transformer(native, buses: Mapping[str, BusSystem], container: str) -> D
         missing = [winding.bus for winding in windings if winding.bus not in buses]
         if missing:
             raise ValueError(f"Transformer {xf.name}: no bus voltage for {missing}")
+        ratings = own_ratings if by_template else seasonal_ratings(xf, f"Transformer {xf.name}")
+        rating_rows(xf_id, ratings, rows)
         if is_regulated and is_regulator(windings):
             _map_regulator(xf, xf_id, windings, phases, buses, rows, notes, container, source)
             continue
@@ -603,4 +693,4 @@ def _statements(rows: _Tables) -> list[Table]:
         if table_rows:
             statements.append(Table(class_name, [Column(*c) if isinstance(c, tuple) else Column(c) for c in columns],
                                     table_rows, comment=comment))
-    return statements
+    return statements + dc_resistance_table(rows.dc_resistances) + rating_tables(rows)

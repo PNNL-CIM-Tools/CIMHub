@@ -1,0 +1,7 @@
+// XfmrCode sub of codes.dss (after IEEE13_Assets FdrXfmr), with what no public deck sets: each winding's RdcOhms (the
+// engine's default for it, 85 % of its %R in ohms) and two seasonal Ratings (kVA).
+Clear
+New Circuit.atom basekv=115 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
+New XfmrCode.sub phases=3 windings=2 conns=[delta wye] kVs=[115 12.47] kVAs=[20000 20000] XHL=8 %Rs=[0.5 0.5]
+~ wdg=1 RdcOhms=2.8103125 wdg=2 RdcOhms=0.011014647 Seasons=2 Ratings=[22000 25000]
+New Transformer.sub XfmrCode=sub buses=[sourcebus feeder]

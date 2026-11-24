@@ -5,8 +5,8 @@
 
 Profile = cim18v17
 
-# untranscribed: Xscarray, thermal, n, m, flrise, hsrise, normhkVA, emerghkVA, Seasons, Ratings, normamps, emergamps,
-# sub, subname, ppm_antifloat, bank, XRConst, LeadLag, Core, RdcOhms, faultrate, pct_perm, repair, basefreq, like
+# untranscribed: Xscarray, thermal, n, m, flrise, hsrise, normhkVA, emerghkVA, normamps, emergamps, sub, subname,
+# ppm_antifloat, bank, XRConst, LeadLag, Core, faultrate, pct_perm, repair, basefreq, like
 Table PowerTransformer: mRID, name, EquipmentContainer, normallyInService
     # defaulted: conns=wye
     xf_ct_ab, ct_ab, fdr_atom,

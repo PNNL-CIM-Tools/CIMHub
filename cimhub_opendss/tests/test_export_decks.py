@@ -16,13 +16,13 @@ from test_cimtbl_sweep import SWEEP_STOPS
 
 _ROUNDTRIP = pytest.mark.roundtrip
 _LIMITS, _PPM = "Load.Vminpu/Vmaxpu", "Transformer.ppm_antifloat"
-_TAPS, _CAPS, _EARTH = "Transformer.taps", "Capacitor.states", "earthmodel"
+_TAPS, _CAPS = "Transformer.taps", "Capacitor.states"
 #: decks the engine compiles here -> what the parity solve took from the original (engine_compare.UNTRANSCRIBED).
-#: earthmodel is listed only on decks without geometry (S6g): there it has no EarthResistivity and computes nothing.
+#: earthmodel is not listed: a deck without geometry keeps its Set earthmodel as a floating EarthResistivity (S10-2).
 #: Not here: YYD-Master (it ends in a fault study and writes result files beside itself), IEEE8500 Master-unbal (it
 #: redirects a file the original lacks).
 PARITY = {
-    "IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss": {_EARTH, _LIMITS},
+    "IEEE/IEEE13_CDPSM/IEEE13_CDPSM.dss": {_LIMITS},
     "IEEE/IEEE13_original/IEEE13Nodeckt.dss": {_TAPS},
     "IEEE/IEEE123/IEEE123Master.dss": {_PPM},
     "IEEE/IEEE37/ieee37.dss": {_TAPS},
@@ -33,11 +33,11 @@ PARITY = {
     "IEEE/IEEE4_xfmrs/4Bus-YD-Bal.DSS": {_LIMITS},
     "IEEE/IEEE4_xfmrs/4Bus-YY-Bal.DSS": {_LIMITS},
     "IEEE/IEEE4_xfmrs/4bus-OYOD-UnBal.dss": {_LIMITS, _PPM},
-    "IEEE/IEEE123_PV/IEEE123Master_fixedVR.dss": {_EARTH, _PPM, _TAPS},
+    "IEEE/IEEE123_PV/IEEE123Master_fixedVR.dss": {_PPM, _TAPS},
     "IEEE/IEEE123_deconfliction/IEEE123Master.dss": {_PPM, _TAPS},
     "IEEE/IEEE8500/Master.dss": {_LIMITS, _PPM},
-    "PNNL/IEEE9500/Master-unbal-initial-config.dss": {_EARTH, _LIMITS, _PPM, _TAPS},
-    "UAF/ACEP_PSIL.dss": {_EARTH},
+    "PNNL/IEEE9500/Master-unbal-initial-config.dss": {_LIMITS, _PPM, _TAPS},
+    "UAF/ACEP_PSIL.dss": set(),
 }
 #: decks under CIMHUB_DSS_DECKS (not vendored): slow, so marked roundtrip
 EXTERNAL = {"IEEE/IEEE123_PV/IEEE123Master_fixedVR.dss", "IEEE/IEEE123_deconfliction/IEEE123Master.dss",

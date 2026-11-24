@@ -7,7 +7,7 @@ repository's
 applies.
 
 Related pages: [Converter API](converter-api.md) (the public classes and functions), [Testing](testing.md) (test
-tiers), [Units](units.md) (units on import and export).
+types), [Units](units.md) (units on import and export).
 
 ## Hub and spoke
 

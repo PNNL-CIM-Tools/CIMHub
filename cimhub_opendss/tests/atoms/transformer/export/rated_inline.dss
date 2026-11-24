@@ -1,0 +1,6 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=b13552.1.2.3 basekv=12.47 pu=1 angle=0 R1=0.0188572539876062 X1=0.0754290159504246 R0=0.0211179726288415 X0=0.0633539178865245
+new Transformer.xf_b13552-1a phases=1 windings=2 buses=[b13552.1.0 x_b13552-a.1.0] conns=[wye wye] kVs=[7.2 0.24] kVAs=[40 40] XHL=1.5158 %noloadloss=0.2423 %Rs=[0.36105 0.36105] Seasons=2 Ratings=[44 52] wdg=1 RdcOhms=3.9773268 wdg=2 RdcOhms=0.004419252
+Set voltagebases=[0.24 12.47]
+CalcVoltageBases

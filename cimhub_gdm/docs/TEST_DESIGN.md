@@ -48,7 +48,7 @@ preloaded network" path to maintain.
 1. **Build the system.** `system = gdm_atoms.shell_system()`, plus the family's component(s), from small, explicit
    pydantic construction.
 2. **Import.** `built = GdmImporter().to_cim(system)`.
-3. **Load the golden.** `golden = cimtables.load_model(GOLDEN)`. This is the "golden binds" check (tier 1b).
+3. **Load the golden.** `golden = cimtables.load_model(GOLDEN)`. This is the "golden binds" check (the bind test).
 4. **Assert.** `assert diff_models(golden, built) == []`.
 5. **Derived values,** asserted on the built objects by mRID, each against an independent formula written in the test
    (skill rule 6): ×√3, ωC, the generation sign, the tap step, the control targets. Percent values are read back in
@@ -97,7 +97,7 @@ shell bug shows as one failure, not one per family.
   never in CI): the 8 `gdm_data` DistributionSystems at the pinned data version (2_4_1), with the same "imports or
   stops at a listed reason" rule. `p1rhs7_1247` (13,380 components, center taps, split-phase, fuses) is the scale
   case. If `gdmloader` isn't importable, the test skips.
-- **DSS/GDM parity (tier 4):** one deck through `dss_to_cim` and through ditto + `to_cim`, compared by
+- **DSS/GDM parity (a cross-format test):** one deck through `dss_to_cim` and through ditto + `to_cim`, compared by
   topology in root `tests/cross_format/`, with ditto's losses as listed expected differences
   ([`GDM_MAPPING.md`](GDM_MAPPING.md) §12, §14). Written on rc_1 after this branch merges (user, 2026-11-09): root
   `tests/` is outside this branch, and its DSS importer is behind rc_1's.

@@ -1,0 +1,7 @@
+Clear
+Set defaultbasefreq=60
+New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=115 pu=1 angle=0 R1=0.160376682055275 X1=0.641506728221101 R0=0.179603583012336 X0=0.538810749037007
+new Xfmrcode.xc_sub phases=3 windings=2 conns=[delta wye] kVs=[115 12.47] kVAs=[20000 20000] Xhl=8 %Rs=[0.5 0.5] Seasons=2 Ratings=[22000 25000] wdg=1 RdcOhms=2.8103125 wdg=2 RdcOhms=0.011014647
+new Transformer.xf_sub XfmrCode=xc_sub buses=[sourcebus.1.2.3 feeder.1.2.3]
+Set voltagebases=[12.47 115]
+CalcVoltageBases

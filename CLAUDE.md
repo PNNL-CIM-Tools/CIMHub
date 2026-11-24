@@ -33,7 +33,7 @@ are in `.development/UPSTREAM_REQUESTS.md`.
 | `linkml-native-schema` | writing or editing a native LinkML schema |
 | `reader-writer` | writing a native reader or writer |
 | `export-getters` | writing an exporter, a core getter or a code table |
-| `atom-tests` | writing tests (atoms, goldens, tiers 1-4) |
+| `atom-tests` | writing tests (atoms, goldens, the test types) |
 | `split-readiness` | adding files, fixtures, docs or dependencies (this repo must stay publishable) |
 
 The `.cimtbl` format itself is defined by `cimtables` (its `CLAUDE.md`). Model conventions follow the

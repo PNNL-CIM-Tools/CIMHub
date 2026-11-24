@@ -1,0 +1,4 @@
+// The rated service atom (rated.dss) on a circuit of its own, for the export.
+Clear
+New Circuit.atom basekv=12.47 bus1=B13552 pu=1.0
+New	Transformer.B13552-1A	phases=1	wdg=1	bus=B13552.1	kv=7.2	kVA=40	RdcOhms=3.9773268	wdg=2	bus=X_B13552-A.1	kv=0.24	kVA=40	RdcOhms=0.004419252	%loadloss=0.7221	%noloadloss=.2423	XHL=1.5158	Seasons=2	Ratings=[44 52]
