@@ -90,6 +90,7 @@ def test_controls_bind(caps):
      "controlled by CapControls x and y"),
     ("New CapControl.x capacitor=nothing element=line.l1\n", "capacitor=nothing is no Capacitor"),
     ("New CapControl.x capacitor=c element=line.l1 PTPhase=4\n", "PTPhase=4"),
+    ("New CapControl.x capacitor=c element=line.l1 PTPhase=AVG\n", "PTPhase=AVG is not mapped"),
 ])
 def test_unmapped_banks_and_controls_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"

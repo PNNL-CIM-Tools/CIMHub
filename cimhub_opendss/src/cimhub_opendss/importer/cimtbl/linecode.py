@@ -109,14 +109,13 @@ def lower_triangle(values: list[float], order: int, *, name: str, slot: str) -> 
                      f"{triangle} (lower triangle) or {order * order} (full)")
 
 
-def susceptance(c, frequency, *, name: str, slot: str) -> float:
+def susceptance(c: float, frequency: float | None, *, name: str, slot: str) -> float:
     """``b_from_c`` for one capacitance. C = 0 gives b = 0 with or without a ``baseFreq``."""
-    c = float(c)
     if c == 0.0:
         return 0.0
     if frequency is None:
         raise ValueError(f"LineCode {name}: {slot} needs baseFreq for b")
-    return b_from_c(c, float(frequency))
+    return b_from_c(c, frequency)
 
 
 def is_sequence(code) -> bool:
@@ -232,7 +231,7 @@ def gated_templates(codes, length_unit: str | None, mrid_of) -> dict[str, list[T
 
 def _has_capacitance(code) -> bool:
     values = list(code.cmatrix or []) + [code.C1, code.C0]
-    return any(value is not None and float(value) != 0 for value in values)
+    return any(value is not None and value != 0 for value in values)
 
 
 def with_default_capacitance(code):
@@ -241,7 +240,7 @@ def with_default_capacitance(code):
     if code.cmatrix or not code.rmatrix:
         return code, None
     defaults = dss_defaults(NATIVE_CLASS)
-    c = balanced_matrix(float(defaults["C1"]), float(defaults["C0"]), code.nphases)
+    c = balanced_matrix(defaults["C1"], defaults["C0"], code.nphases)
     return dataclasses.replace(code, cmatrix=list(c.values())), \
         f"defaulted: cmatrix from C1={cell(defaults['C1'])}, C0={cell(defaults['C0'])} (balanced_matrix)"
 
@@ -250,8 +249,7 @@ def with_frequency(code, base_frequency: float):
     """``(code, comment)``: a code with a nonzero C and no ``baseFreq`` takes the deck's base frequency (DSS-3b)."""
     if code.baseFreq is not None or not _has_capacitance(code):
         return code, None
-    return dataclasses.replace(code, baseFreq=cell(float(base_frequency))), \
-        f"defaulted: baseFreq={cell(float(base_frequency))}"
+    return dataclasses.replace(code, baseFreq=base_frequency), f"defaulted: baseFreq={cell(base_frequency)}"
 
 
 def _comment(*parts) -> str | None:
@@ -288,11 +286,9 @@ def _short_sequence_matrices(code):
                          "(no deck in the sweep sets it)")
     if None in (code.r1, code.x1):
         raise ValueError(f"LineCode {code.name}: a {code.nphases}-phase sequence code needs r1 and x1")
-    c1 = float(code.C1) if code.C1 is not None else None
-    c0 = float(code.C0) if code.C0 is not None else None
     r = phase_matrix(code.r1, code.r0, code.nphases)
     x = phase_matrix(code.x1, code.x0, code.nphases)
-    c = phase_matrix(c1, c0, code.nphases) if c1 is not None else {}
+    c = phase_matrix(code.C1, code.C0, code.nphases) if code.C1 is not None else {}
     if code.nphases == 1:
         unused = [f"{slot}={cell(getattr(code, slot))}" for slot in ("r0", "x0", "C0") if getattr(code, slot) is not None]
         note = "derived from a 1-phase sequence code: z = Z1 (phase_matrix)" + \

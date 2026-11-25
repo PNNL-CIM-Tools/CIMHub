@@ -93,6 +93,7 @@ def test_der_binds(der):
 @pytest.mark.parametrize("text, message", [
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 model=2\n", "model=2 is not mapped"),
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 EffCurve=eff\n", "EffCurve not mapped"),
+    ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 P-TCurve=pt\n", "P_TCurve not mapped"),
     ("New PVSystem.x bus1=b2 kv=0.48 Pmpp=10 kVA=12 WattPriority=yes\n", "WattPriority not mapped"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 State=charging\n", "charging with 200 of 200"),
     ("New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 %stored=10 State=discharging\n", "at or below"),

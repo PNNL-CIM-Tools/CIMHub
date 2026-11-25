@@ -281,7 +281,7 @@ classes:
         description: >-
           Number of the phase being monitored for CURRENT control or one of
           {AVG | MAX | MIN} for all phases. Default is 1.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 15
@@ -295,7 +295,7 @@ classes:
         description: >-
           Number of the phase being monitored for VOLTAGE control or one of
           {AVG | MAX | MIN} for all phases. Default is 1.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 16
@@ -314,7 +314,7 @@ classes:
         description: >-
           Name of bus to use for voltage override function. Defaults to monitored
           element bus.
-        range: float
+        range: string
         required: false
         annotations:
           order: 17
@@ -328,7 +328,7 @@ classes:
         description: >-
           {Yes/True* | No/False} Default is YES for CapControl. If Yes, writes
           switching events to a log.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 18

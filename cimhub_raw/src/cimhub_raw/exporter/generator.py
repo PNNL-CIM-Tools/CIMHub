@@ -175,7 +175,7 @@ def _fold_back(device, mbase: float, context) -> tuple[float, float, float]:
     if get_in_service(transformer, which="actual") is False:
         raise ValueError(f"{describe(transformer)}: out of service; a RAW step-up has no status of its own")
     [unit] = get_transformer_units(transformer)
-    model = get_transformer_model(unit, "pu", base_power=cim.ApparentPower(mbase, "MVA"), voltage_unit="kV")
+    model = get_transformer_model(unit, "pu", base_power=mbase, voltage_unit="kV", power_unit="MVA")
     if len(model.windings) != 2 or any(model.core):
         raise ValueError(f"{describe(transformer)}: {len(model.windings)} windings, core {tuple(model.core)}; a RAW "
                          "step-up is 2 windings without a core")

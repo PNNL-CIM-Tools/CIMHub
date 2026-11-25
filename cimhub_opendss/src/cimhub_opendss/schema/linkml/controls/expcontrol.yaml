@@ -79,7 +79,7 @@ classes:
       VregMin:
         description: >-
           Lower limit on adaptive Vreg; defaults to 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 6
@@ -88,7 +88,7 @@ classes:
       VregMax:
         description: >-
           Upper limit on adaptive Vreg; defaults to 1
-        range: string
+        range: float
         required: false
         annotations:
           order: 7
@@ -115,7 +115,7 @@ classes:
       EventLog:
         description: >-
           {Yes/True* | No/False} Default is No for ExpControl
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 10
@@ -124,7 +124,7 @@ classes:
       DeltaQ_factor:
         description: >-
           Convergence parameter; Defaults to 0
-        range: integer
+        range: float
         required: false
         annotations:
           order: 11
@@ -133,7 +133,7 @@ classes:
       PreferQ:
         description: >-
           {Yes/True* | No/False} Default is No for ExpControl
-        range: float
+        range: boolean
         required: false
         annotations:
           order: 12
@@ -152,6 +152,7 @@ classes:
         description: >-
           Alternative to PVSystemList for CIM export and import
         range: string
+        multivalued: true
         required: false
         annotations:
           order: 14

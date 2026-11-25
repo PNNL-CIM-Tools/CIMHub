@@ -110,7 +110,7 @@ classes:
       PhaseFast:
         description: >-
           Name of the TCC Curve object that determines the Phase Fast trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 6
@@ -123,7 +123,7 @@ classes:
       PhaseDelayed:
         description: >-
           Name of the TCC Curve object that determines the Phase Delayed trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 7
@@ -136,7 +136,7 @@ classes:
       GroundFast:
         description: >-
           Name of the TCC Curve object that determines the Ground Fast trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 8
@@ -149,7 +149,7 @@ classes:
       GroundDelayed:
         description: >-
           Name of the TCC Curve object that determines the Ground Delayed trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 9
@@ -162,7 +162,7 @@ classes:
       PhaseTrip:
         description: >-
           Multiplier or actual phase amps for the phase TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 10
@@ -175,7 +175,7 @@ classes:
       GroundTrip:
         description: >-
           Multiplier or actual ground amps (3I0) for the ground TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 11
@@ -188,7 +188,7 @@ classes:
       PhaseInst:
         description: >-
           Actual amps for instantaneous phase trip which is assumed to happen in 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 12
@@ -201,7 +201,7 @@ classes:
       GroundInst:
         description: >-
           Actual amps for instantaneous ground trip which is assumed to happen in 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 13
@@ -214,7 +214,7 @@ classes:
       Reset:
         description: >-
           Reset time in sec for Recloser
-        range: string
+        range: float
         required: false
         annotations:
           order: 14
@@ -262,7 +262,7 @@ classes:
       Delay:
         description: >-
           Fixed delay time (sec) added to Recloser trip time
-        range: string
+        range: float
         required: false
         annotations:
           order: 17
@@ -288,7 +288,7 @@ classes:
       TDPhFast:
         description: >-
           Time dial for Phase Fast trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 19
@@ -301,7 +301,7 @@ classes:
       TDGrFast:
         description: >-
           Time dial for Ground Fast trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 20
@@ -314,7 +314,7 @@ classes:
       TDPhDelayed:
         description: >-
           Time dial for Phase Delayed trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 21
@@ -327,7 +327,7 @@ classes:
       TDGrDelayed:
         description: >-
           Time dial for Ground Delayed trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 22

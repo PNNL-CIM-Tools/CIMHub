@@ -51,7 +51,7 @@ classes:
       MonPhase:
         description: >-
           Number of the phase being monitored or one of {AVG | MAX | MIN} for all phases
-        range: integer
+        range: string
         required: false
         annotations:
           order: 3
@@ -136,7 +136,7 @@ classes:
       ModeDischarge:
         description: >-
           {PeakShave* | Follow | Support | Loadshape | Time | Schedule | I-PeakShave } Mode of operation for the DISCHARGE FUNCTION of this controller
-        range: float
+        range: string
         required: false
         annotations:
           order: 12
@@ -145,7 +145,7 @@ classes:
       ModeCharge:
         description: >-
           {Loadshape | Time* | PeakShaveLow | I-PeakShaveLow} Mode of operation for the CHARGE FUNCTION of this controller
-        range: float
+        range: string
         required: false
         annotations:
           order: 13
@@ -163,7 +163,7 @@ classes:
       TimeChargeTrigger:
         description: >-
           Default time of day (hr) for initiating charging in Time control mode
-        range: string
+        range: float
         required: false
         annotations:
           order: 15
@@ -192,7 +192,7 @@ classes:
       pct_Reserve:
         description: >-
           Use this property to change the % reserve for each Storage element under control of this controller
-        range: string
+        range: float
         required: false
         annotations:
           order: 18
@@ -292,7 +292,7 @@ classes:
       Tup:
         description: >-
           Duration, hrs, of upramp part for SCHEDULE mode
-        range: string
+        range: float
         required: false
         annotations:
           order: 29
@@ -301,7 +301,7 @@ classes:
       TFlat:
         description: >-
           Duration, hrs, of flat part for SCHEDULE mode
-        range: string
+        range: float
         required: false
         annotations:
           order: 30
@@ -310,7 +310,7 @@ classes:
       Tdn:
         description: >-
           Duration, hrs, of downramp part for SCHEDULE mode
-        range: string
+        range: float
         required: false
         annotations:
           order: 31
@@ -337,7 +337,7 @@ classes:
       ResetLevel:
         description: >-
           The level of charge required for allowing the storage to discharge again after reaching the reserve storage level
-        range: string
+        range: float
         required: false
         annotations:
           order: 34

@@ -42,7 +42,7 @@ classes:
       year:
         description: >-
           Array of year values, or a text file spec, corresponding to the multipliers
-        range: integer
+        range: float
         multivalued: true
         required: false
         annotations:
@@ -62,7 +62,7 @@ classes:
       csvfile:
         description: >-
           Switch input of growth curve data to a csv file containing (year, mult) points, one per line
-        range: float
+        range: string
         required: false
         annotations:
           order: 4
@@ -71,7 +71,7 @@ classes:
       sngfile:
         description: >-
           Switch input of growth curve data to a binary file of singles containing (year, mult) points, packed one after another
-        range: float
+        range: string
         required: false
         annotations:
           order: 5
@@ -80,7 +80,7 @@ classes:
       dblfile:
         description: >-
           Switch input of growth curve data to a binary file of doubles containing (year, mult) points, packed one after another
-        range: float
+        range: string
         required: false
         annotations:
           order: 6

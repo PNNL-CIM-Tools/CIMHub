@@ -135,7 +135,7 @@ classes:
       tap:
         description: >-
           Per unit tap that this winding is on. Default is 1.0.
-        range: string
+        range: float
         required: false
         annotations:
           order: 8
@@ -162,7 +162,7 @@ classes:
       Rdcohms:
         description: >-
           Winding dc resistance in OHMS. Default is 0.
-        range: integer
+        range: float
         required: false
         annotations:
           order: 10
@@ -250,7 +250,8 @@ classes:
       taps:
         description: >-
           Use this to specify the per-unit tap positions of all windings at once.
-        range: string
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 16
@@ -328,7 +329,7 @@ classes:
       thermal:
         description: >-
           Thermal time constant of the AutoTrans in hours.
-        range: string
+        range: float
         required: false
         annotations:
           order: 21
@@ -340,7 +341,7 @@ classes:
       n:
         description: >-
           n Exponent for thermal properties in IEEE C57.
-        range: string
+        range: float
         required: false
         annotations:
           order: 22
@@ -352,7 +353,7 @@ classes:
       m:
         description: >-
           m Exponent for thermal properties in IEEE C57.
-        range: string
+        range: float
         required: false
         annotations:
           order: 23
@@ -364,7 +365,7 @@ classes:
       flrise:
         description: >-
           Temperature rise, deg C, for full load.
-        range: string
+        range: float
         required: false
         annotations:
           order: 24
@@ -376,7 +377,7 @@ classes:
       hsrise:
         description: >-
           Hot spot temperature rise, deg C.
-        range: string
+        range: float
         required: false
         annotations:
           order: 25
@@ -466,7 +467,7 @@ classes:
       MaxTap:
         description: >-
           Max per unit tap for the active winding. Default is 1.10.
-        range: string
+        range: float
         required: false
         annotations:
           order: 31
@@ -482,7 +483,7 @@ classes:
       MinTap:
         description: >-
           Min per unit tap for the active winding. Default is 0.90.
-        range: string
+        range: float
         required: false
         annotations:
           order: 32
@@ -629,7 +630,7 @@ classes:
       WdgCurrents:
         description: >-
           (Read only) Makes winding currents available via return on query.
-        range: float
+        range: string
         required: false
         annotations:
           order: 42
@@ -673,7 +674,7 @@ classes:
       faultrate:
         description: >-
           Failure rate per year.
-        range: string
+        range: float
         required: false
         annotations:
           order: 45
@@ -701,7 +702,7 @@ classes:
       repair:
         description: >-
           Hours to repair.
-        range: string
+        range: float
         required: false
         annotations:
           order: 47

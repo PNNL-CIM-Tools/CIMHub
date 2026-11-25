@@ -456,8 +456,7 @@ code-level tests in `test_getters_line_impedance.py`):
 - **Goldens:** `tests/atoms/line/export/*.dss` (mrid).
 - **Float tails clipped (the user, 2026-11-09).** The unit conversions left binary tails
   (`x0=0.0018000000000000002`). Every float the writer writes is now `format_float`, 15 significant digits in the
-  shortest form (`0.0018`, `60`, `1e-05`). The LineCode slots the schema types as text (`C1`, `C0`, `baseFreq`) are
-  formatted by the exporter the same way. The cost is 1e-15 relative: IEEE8500's `X=14.798306633595042` is written
+  shortest form (`0.0018`, `60`, `1e-05`). The cost is 1e-15 relative: IEEE8500's `X=14.798306633595042` is written
   `14.798306633595`. The writer round-trip test therefore compares records at the writer's precision, and the
   engine round trips (IEEE13_CDPSM, IEEE123, IEEE4) are unchanged.
 - **Test harness fix:** `Set defaultbasefreq` outlives `Clear` in the engine. After the 50 Hz Vsource atom, a deck

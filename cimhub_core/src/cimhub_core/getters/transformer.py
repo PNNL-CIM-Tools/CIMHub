@@ -31,8 +31,8 @@ The getter reads one transformer unit: a ``TransformerTank``, a ``PowerTransform
   ``transformer_template_1ph`` shape). Otherwise r is halved over the two windings (DSS's %loadloss). A bank is one
   such tank per can, each on its own ``baseS`` (the can's kVA), placed in tank order (``_bank_windings``).
 
-Every impedance and admittance comes out in percent or pu on one power base: ``base_power`` when the caller declares
-one (``network.base_power`` for RAW), else winding 1's ``ratedS`` (DSS and GLM put every percent on it); an ideal
+Every impedance and admittance comes out in percent or pu on one power base: ``base_power`` (in ``power_unit``) when
+the caller declares one (RAW's MBASE), else winding 1's ``ratedS`` (DSS and GLM put every percent on it); an ideal
 AutoTransformer without one has none. The voltage is always the From winding's own (``ratedU``, or a coil's
 ``baseU``). An end form with a declared ``base_power`` reads each ohm and siemens on that power directly
 (``get_qty(power_base=)``), so its ends need no ``ratedS`` (a RAW 3-winding unit's have none). Otherwise CIM's
@@ -140,14 +140,16 @@ def get_transformer_units(transformer: cim.PowerTransformer | cim.AutoTransforme
     return (transformer,)
 
 
-def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power=None, voltage_unit: str = "V",
-                          power_unit: str = "VA") -> TransformerModel:
+def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power: float | None = None,
+                          voltage_unit: str = "V", power_unit: str = "VA") -> TransformerModel:
     """The unit's windings, mesh impedance and core. ``impedance_unit`` is ``'percent'`` or ``'pu'``, on
-    ``base_power`` (an ApparentPower such as ``network.base_power``), else on winding 1's ``ratedS``, which only an
-    ideal AutoTransformer (no mesh) may leave unset. Raises when a form is ambiguous, a rating a value needs is
-    unset, or two places that hold the same value disagree."""
+    ``base_power`` (in ``power_unit``, like every power the model returns), else on winding 1's ``ratedS``, which
+    only an ideal AutoTransformer (no mesh) may leave unset. Raises when a form is ambiguous, a rating a value needs
+    is unset, or two places that hold the same value disagree."""
     if impedance_unit not in IMPEDANCE_UNITS:
         raise ValueError(f"impedance_unit must be one of {sorted(IMPEDANCE_UNITS)}, not {impedance_unit!r}")
+    if base_power is not None:
+        base_power = cim.ApparentPower(base_power, power_unit)
     form = _form(unit)
     if form is TransformerForm.BY_TANK_IMPEDANCE:
         return _tank_impedance_model(unit, impedance_unit, base_power, voltage_unit, power_unit)

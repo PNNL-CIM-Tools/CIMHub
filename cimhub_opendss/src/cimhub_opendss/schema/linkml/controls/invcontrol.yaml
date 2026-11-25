@@ -67,7 +67,7 @@ classes:
       vvc_curve1:
         description: >-
           Required for VOLTVAR mode
-        range: integer
+        range: string
         required: false
         annotations:
           order: 4
@@ -85,7 +85,7 @@ classes:
       voltage_curvex_ref:
         description: >-
           Required for VOLTVAR and VOLTWATT modes, and defaults to rated
-        range: integer
+        range: string
         required: false
         annotations:
           order: 6
@@ -103,7 +103,7 @@ classes:
       voltwatt_curve:
         description: >-
           Required for VOLTWATT mode
-        range: integer
+        range: string
         required: false
         annotations:
           order: 8
@@ -157,7 +157,7 @@ classes:
       deltaQ_Factor:
         description: >-
           Required for the VOLTVAR and DYNAMICREACCURR modes
-        range: integer
+        range: float
         required: false
         annotations:
           order: 14
@@ -184,7 +184,7 @@ classes:
       VoltwattYAxis:
         description: >-
           Required for VOLTWATT mode
-        range: float
+        range: string
         required: false
         annotations:
           order: 17
@@ -193,7 +193,7 @@ classes:
       RateofChangeMode:
         description: >-
           Required for VOLTWATT and VOLTVAR mode
-        range: float
+        range: string
         required: false
         annotations:
           order: 18
@@ -202,7 +202,7 @@ classes:
       LPFTau:
         description: >-
           Not required
-        range: string
+        range: float
         required: false
         annotations:
           order: 19
@@ -220,7 +220,7 @@ classes:
       deltaP_Factor:
         description: >-
           Required for the VOLTWATT mode
-        range: integer
+        range: float
         required: false
         annotations:
           order: 21
@@ -229,7 +229,7 @@ classes:
       EventLog:
         description: >-
           {Yes/True* | No/False} Default is NO for InvControl
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 22
@@ -238,7 +238,7 @@ classes:
       RefReactivePower:
         description: >-
           Required for any mode that has VOLTVAR, DYNAMICREACCURR and WATTVAR
-        range: float
+        range: string
         required: false
         annotations:
           order: 23
@@ -256,7 +256,7 @@ classes:
       monVoltageCalc:
         description: >-
           Number of the phase being monitored or one of {AVG | MAX | MIN} for all phases
-        range: integer
+        range: string
         required: false
         annotations:
           order: 25
@@ -265,7 +265,8 @@ classes:
       monBus:
         description: >-
           Name of monitored bus used by the voltage-dependente control modes
-        range: float
+        range: string
+        multivalued: true
         required: false
         annotations:
           order: 26
@@ -284,7 +285,7 @@ classes:
       voltwattCH_curve:
         description: >-
           Required for VOLTWATT mode for Storage element in CHARGING state
-        range: integer
+        range: string
         required: false
         annotations:
           order: 28
@@ -293,7 +294,7 @@ classes:
       wattpf_curve:
         description: >-
           Required for WATTPF mode
-        range: float
+        range: string
         required: false
         annotations:
           order: 29
@@ -302,7 +303,7 @@ classes:
       wattvar_curve:
         description: >-
           Required for WATTVAR mode
-        range: float
+        range: string
         required: false
         annotations:
           order: 30
@@ -321,6 +322,7 @@ classes:
         description: >-
           Deprecated, use DERList instead
         range: string
+        multivalued: true
         required: false
         annotations:
           order: 32

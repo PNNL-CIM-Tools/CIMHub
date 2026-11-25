@@ -60,7 +60,7 @@ classes:
       action:
         description: >-
           {Clear | Save | Take | Process}(C)lears or (S)aves current buffer
-        range: float
+        range: string
         required: false
         annotations:
           order: 4

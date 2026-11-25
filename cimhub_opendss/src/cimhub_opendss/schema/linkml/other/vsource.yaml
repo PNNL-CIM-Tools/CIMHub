@@ -522,6 +522,7 @@ classes:
         description: >-
           Per-unit series impedance when Model=Ideal.
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 31

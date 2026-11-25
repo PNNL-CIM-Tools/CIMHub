@@ -283,7 +283,7 @@ classes:
             written, untranscribed or raising on import; not in CIM.
 
       # (15) P-TCurve
-      P-TCurve:
+      P_TCurve:
         description: >-
           An XYCurve object, previously defined, that describes the PV array
           PER UNIT Pmpp vs Temperature curve.
@@ -291,6 +291,7 @@ classes:
         required: false
         annotations:
           order: 15
+          dss_name: "P-TCurve"
         todos:
           - "No CIM equivalent. Temperature derating curve for PV panel; requires CIM extension."
         comments:
@@ -441,7 +442,7 @@ classes:
       duty:
         description: >-
           Load shape to use for duty cycle dispatch simulations.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 25
@@ -482,7 +483,7 @@ classes:
       Tduty:
         description: >-
           Temperature shape to use for duty cycle dispatch simulations.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 28
@@ -564,7 +565,7 @@ classes:
       DutyStart:
         description: >-
           Starting time offset [hours] into the duty cycle shape. Default is 0.
-        range: string
+        range: float
         required: false
         annotations:
           order: 34
@@ -679,7 +680,7 @@ classes:
       Kp:
         description: >-
           It is the proportional gain for the PI controller within the inverter.
-        range: string
+        range: float
         required: false
         annotations:
           order: 42
@@ -692,7 +693,7 @@ classes:
       PITol:
         description: >-
           It is the tolerance (%) for the closed loop controller of the inverter.
-        range: string
+        range: float
         required: false
         annotations:
           order: 43
@@ -720,7 +721,7 @@ classes:
         description: >-
           (Read only) Indicates whether the inverter entered (Yes) or not (No)
           into Safe Mode.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 45
@@ -748,7 +749,8 @@ classes:
         description: >-
           The name of the variables within the Dynamic equation that will be
           used to govern the PVSystem dynamics.
-        range: float
+        range: string
+        multivalued: true
         required: false
         annotations:
           order: 47
@@ -801,7 +803,7 @@ classes:
       spectrum:
         description: >-
           Name of harmonic voltage or current spectrum for this PVSystem element.
-        range: float
+        range: string
         required: false
         annotations:
           order: 51

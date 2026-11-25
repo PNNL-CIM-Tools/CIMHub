@@ -356,7 +356,7 @@ def inline_code(line, phases: int):
                                  f"{', '.join(defaulted_c)}, whose engine default is per {_DEFAULT_C_LENGTH}; a C in "
                                  "two length units is not mapped yet (no deck in the sweep sets one)")
             capacitance_unit = _DEFAULT_C_LENGTH
-    code = schema.Linecode(name=line.name, nphases=phases, units=line.units, baseFreq=cell(line.basefreq), **values)
+    code = schema.Linecode(name=line.name, nphases=phases, units=line.units, baseFreq=line.basefreq, **values)
     comment = f"defaulted: {', '.join(f'{slot}={cell(values[slot])}' for slot in filled)}" if filled else None
     return code, capacitance_unit, comment
 

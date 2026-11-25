@@ -23,7 +23,6 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.device_schedule import DeviceSchedule, get_device_schedule
 from cimhub_core.getters.load_schedule import get_schedule_points
 from cimhub_core.names import export_name
-from cimhub_opendss.dss_writer import format_float
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = ()  # a schedule is not conducting equipment
@@ -60,7 +59,7 @@ class ShapeRegistry:
             taken = sum(1 for key in self.by_content if key[0] == base)
             name = names.name(owner, NAMESPACE, suffix=f"_{taken + 1}" if taken else "")
             self.by_content[content] = name
-            record = NATIVE_CLASS(name=name, npts=len(mult), sinterval=format_float(seconds), mult=mult, qmult=qmult)
+            record = NATIVE_CLASS(name=name, npts=len(mult), sinterval=seconds, mult=mult, qmult=qmult)
         self.by_owner[owner.uri()] = name
         return name, record
 

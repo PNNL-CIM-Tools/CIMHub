@@ -109,7 +109,7 @@ classes:
       conn:
         description: >-
           Voltage sensor Connection: { wye | delta | LN | LL }
-        range: float
+        range: string
         required: false
         annotations:
           order: 9
@@ -118,7 +118,7 @@ classes:
       Deltadirection:
         description: >-
           {1 or -1}  Default is 1:  1-2, 2-3, 3-1
-        range: string
+        range: integer
         required: false
         annotations:
           order: 10
@@ -137,7 +137,7 @@ classes:
       Weight:
         description: >-
           Weighting factor: Default is 1
-        range: string
+        range: float
         required: false
         annotations:
           order: 12

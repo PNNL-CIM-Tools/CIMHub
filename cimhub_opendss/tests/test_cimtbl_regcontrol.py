@@ -76,6 +76,8 @@ def test_regulators_bind(regulators):
      "New RegControl.r transformer=t winding=2\n", "3-phase regulator is mapped as wye"),
     ("New Transformer.t phases=1 buses=[sourcebus.1 b.1] kVs=[7.2 7.2] kVAs=[100 100] taps=[1 1.05]\n",
      "with no RegControl"),
+    ("New Transformer.t phases=3 buses=[sourcebus b] kVs=[12.47 12.47] kVAs=[100 100]\n"
+     "New RegControl.r transformer=t winding=2 PTphase=MAX\n", "r: PTphase=MAX"),
 ])
 def test_unmapped_regulators_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"

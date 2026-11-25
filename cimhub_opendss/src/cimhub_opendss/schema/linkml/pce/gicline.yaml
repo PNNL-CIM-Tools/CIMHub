@@ -69,7 +69,7 @@ classes:
       frequency:
         description: >-
           Source frequency
-        range: string
+        range: float
         required: false
         annotations:
           order: 5
@@ -105,7 +105,7 @@ classes:
       C:
         description: >-
           Value of line blocking capacitance in microfarads
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -132,7 +132,7 @@ classes:
       Lat1:
         description: >-
           Latitude of Bus1 (degrees)
-        range: string
+        range: float
         required: false
         annotations:
           order: 12
@@ -141,7 +141,7 @@ classes:
       Lon1:
         description: >-
           Longitude of Bus1 (degrees)
-        range: string
+        range: float
         required: false
         annotations:
           order: 13
@@ -150,7 +150,7 @@ classes:
       Lat2:
         description: >-
           Latitude of Bus2 (degrees)
-        range: string
+        range: float
         required: false
         annotations:
           order: 14
@@ -159,7 +159,7 @@ classes:
       Lon2:
         description: >-
           Longitude of Bus2 (degrees)
-        range: string
+        range: float
         required: false
         annotations:
           order: 15

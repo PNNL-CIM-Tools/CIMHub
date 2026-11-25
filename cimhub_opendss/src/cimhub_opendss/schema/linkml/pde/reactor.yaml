@@ -133,10 +133,12 @@ classes:
       Rmatrix:
         description: >-
           Resistance matrix, lower triangle, ohms at base frequency.
-        range: integer
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 7
+          dss_format: matrix
         comments:
           - >-
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
@@ -148,10 +150,12 @@ classes:
       Xmatrix:
         description: >-
           Reactance matrix, lower triangle, ohms at base frequency.
-        range: integer
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 8
+          dss_format: matrix
         comments:
           - >-
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
@@ -283,7 +287,7 @@ classes:
         description: >-
           Name of XYCurve object describing per-unit variation of phase
           resistance, R, vs. frequency.
-        range: float
+        range: string
         required: false
         annotations:
           order: 17
@@ -297,7 +301,7 @@ classes:
         description: >-
           Name of XYCurve object describing per-unit variation of phase
           inductance, L=X/w, vs. frequency.
-        range: float
+        range: string
         required: false
         annotations:
           order: 18
@@ -355,7 +359,7 @@ classes:
       faultrate:
         description: >-
           Failure rate per year.
-        range: string
+        range: float
         required: false
         annotations:
           order: 22
@@ -385,7 +389,7 @@ classes:
       repair:
         description: >-
           Hours to repair.
-        range: string
+        range: float
         required: false
         annotations:
           order: 24

@@ -73,7 +73,7 @@ classes:
       CSVFile:
         description: >-
           File of spectrum points with (harmonic, magnitude-percent, angle-degrees) values, one set of 3 per line, in CSV format
-        range: float
+        range: string
         required: false
         annotations:
           order: 5

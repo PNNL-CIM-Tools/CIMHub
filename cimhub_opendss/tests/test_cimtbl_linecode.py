@@ -54,10 +54,10 @@ def test_b_from_c():
 
 
 def test_susceptance_of_zero_needs_no_frequency():
-    assert susceptance("0", None, name="buswork", slot="C1") == 0.0
-    assert susceptance("3.4", "60", name="t", slot="C1") == pytest.approx(b_from_c(3.4, 60.0))
+    assert susceptance(0.0, None, name="buswork", slot="C1") == 0.0
+    assert susceptance(3.4, 60.0, name="t", slot="C1") == pytest.approx(b_from_c(3.4, 60.0))
     with pytest.raises(ValueError, match="t: C1 needs baseFreq"):
-        susceptance("3.4", None, name="t", slot="C1")
+        susceptance(3.4, None, name="t", slot="C1")
 
 
 def test_lower_triangle_and_full_matrix_agree():
@@ -114,23 +114,23 @@ def test_sequence_binds_under_cim18v17(sequence):
 
 
 def test_sequence_b_is_copied_in_microsiemens():
-    code = schema.Linecode(name="b", nphases=3, units="mi", r1=0.1, x1=0.3, B1="5.1", C0="0", baseFreq="60")
+    code = schema.Linecode(name="b", nphases=3, units="mi", r1=0.1, x1=0.3, B1=5.1, C0=0.0, baseFreq=60.0)
     [table, _] = _map(_native(code)).statements
     assert [(column.name, column.unit) for column in table.columns][-3:-1] == [("bch", "uS/mi"), ("b0ch", "nS/mi")]
     assert table.rows[0].cells[-3:-1] == ["5.1", "0.0"]
 
 
 def test_sequence_codes_group_by_header():
-    with_c = schema.Linecode(name="c", nphases=3, units="km", r1=0.1, C1="10", baseFreq="60")
-    with_b = schema.Linecode(name="b", nphases=3, units="km", r1=0.1, B1="3.7")
-    other_unit = schema.Linecode(name="m", nphases=3, units="mi", r1=0.1, C1="10", baseFreq="60")
+    with_c = schema.Linecode(name="c", nphases=3, units="km", r1=0.1, C1=10.0, baseFreq=60.0)
+    with_b = schema.Linecode(name="b", nphases=3, units="km", r1=0.1, B1=3.7)
+    other_unit = schema.Linecode(name="m", nphases=3, units="mi", r1=0.1, C1=10.0, baseFreq=60.0)
     *tables, _ = _map(_native(with_c, with_b, other_unit, with_c)).statements
     assert [len(table.rows) for table in tables] == [2, 1, 1]
 
 
 @pytest.mark.parametrize(("code", "message"), [
-    (schema.Linecode(name="seq1", nphases=1, units="km", r1=0.1, x1=0.3, B1="2"), "seq1: B1/B0 on a 1-phase"),
-    (schema.Linecode(name="cb", nphases=3, units="km", C1="10", B1="3.7"), "cb: sets both C1 and B1"),
+    (schema.Linecode(name="seq1", nphases=1, units="km", r1=0.1, x1=0.3, B1=2.0), "seq1: B1/B0 on a 1-phase"),
+    (schema.Linecode(name="cb", nphases=3, units="km", C1=10.0, B1=3.7), "cb: sets both C1 and B1"),
     (schema.Linecode(name="both", nphases=1, units="ft", r1=0.1, rmatrix=[0.1], xmatrix=[0.2]),
      "both: sets both matrix and sequence"),
     (schema.Linecode(name="bare", nphases=3, units="ft"), "bare: sets no impedance"),

@@ -186,6 +186,9 @@ def map_capcontrol(native, buses: Mapping[str, BusSystem]) -> Document:
         mode = control_mode(control.type, name=control.name)
         terminal, phases = _monitored(control, native, buses, capacitors)
         tokens = _PHASE_TOKEN.findall(phases)
+        if not control.PTPhase.isdigit():  # DSS also takes AVG, MAX and MIN
+            raise ValueError(f"CapControl {control.name}: PTPhase={control.PTPhase} is not mapped; "
+                             "monitoredPhase is one phase")
         pt_phase = int(control.PTPhase)
         if not 1 <= pt_phase <= len(tokens):
             raise ValueError(f"CapControl {control.name}: PTPhase={pt_phase} on a terminal with phases {phases}")

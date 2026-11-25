@@ -6,12 +6,17 @@ import ast
 import dataclasses
 import importlib
 import sys
+import tomllib
+from pathlib import Path
 from typing import Optional
 
 import pytest
 
 from cimhub_core import CimtblImporter, FormatExporter, FormatReader, FormatWriter, GraphModel
-from cimhub_core.scaffold import scaffold_mapper, scaffold_package
+from cimhub_core.scaffold import DEPENDENCIES, scaffold_mapper, scaffold_package
+
+REPO = Path(__file__).resolve().parents[2]
+SHIPPED_SPOKES = ("cimhub_raw", "cimhub_opendss", "cimhub_gridlabd")
 
 
 @dataclasses.dataclass
@@ -56,6 +61,22 @@ def test_package_has_the_spoke_layout(tmp_path):
     assert not (package / "service.py").exists() and not (root / "service.py").exists()
 
 
+def test_package_has_the_project_files(tmp_path):
+    package = scaffold_package("toy", direction="both", parent_dir=tmp_path)
+    project = tomllib.loads((package / "pyproject.toml").read_text())["project"]
+    assert (project["name"], project["readme"]) == ("cimhub_toy", "README.md")
+    assert project["dependencies"] == list(DEPENDENCIES)
+    assert (package / "README.md").exists() and (package / "tests" / "atoms" / "prereqs").is_dir()
+    assert (package / "docs" / "CIMTBL_MAPPING.md").read_text().startswith("# TOY -> .cimtbl -> cim18v17")
+    assert (package / "docs" / "EXPORT_MAPPING.md").read_text().startswith("# cim18v17 -> TOY")
+
+
+@pytest.mark.parametrize("spoke", SHIPPED_SPOKES)
+def test_scaffold_pins_match_the_shipped_spokes(spoke):
+    shipped = tomllib.loads((REPO / spoke / "pyproject.toml").read_text())["project"]["dependencies"]
+    assert set(DEPENDENCIES) <= set(shipped)
+
+
 def test_generated_package_imports(toy_modules):
     reader, writer, importer, exporter = toy_modules
     assert issubclass(reader.ToyReader, FormatReader)
@@ -75,6 +96,8 @@ def test_direction_picks_the_side(tmp_path, direction, present, absent):
     root = scaffold_package("toy", direction=direction, parent_dir=tmp_path) / "src" / "cimhub_toy"
     assert all((root / path).exists() for path in present)
     assert not any((root / path).exists() for path in absent)
+    docs = {path.name for path in (root.parents[1] / "docs").iterdir()}
+    assert docs == {"importer": {"CIMTBL_MAPPING.md"}, "exporter": {"EXPORT_MAPPING.md"}}[direction]
 
 
 def test_bad_direction_raises_and_writes_nothing(tmp_path):

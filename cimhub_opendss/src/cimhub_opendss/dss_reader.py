@@ -313,7 +313,8 @@ class DssReader(FormatReader):
         - ``BatchEdit Class.<regex>`` changes every object of the class whose name the regular expression
           matches (case-insensitive search, as DSS does); it must match at least one.
         - ``Set`` keeps the circuit options in ``KEPT_OPTIONS`` on one ``Options`` object. The other options
-          are solution settings (``mode``, ``controlmode``, ...) and are not part of the model.
+          are solution settings (``mode``, ``controlmode``, ...) and are not part of the model, except
+          ``basefrequency``, which raises (``_options``).
         - ``Open Class.name [terminal]`` adds ``Class.name terminal`` to ``Options.open_terminals``; ``Close``
           removes it. The object must already exist.
         - ``Clear`` discards everything defined before it, as in DSS (a deck may build, solve and rebuild).
@@ -400,6 +401,12 @@ class DssReader(FormatReader):
             option = dss_option(name)
             if option is None:
                 raise DssParseError(f"Set {name}: no DSS option has that name", cmd.source_file, cmd.line_number)
+            if option == "basefrequency":
+                # the engine applies it only to objects defined after it (and to the solution), so a deck that sets
+                # it can hold two base frequencies; the model has one
+                raise DssParseError(f"Set {name}: not read, since objects defined before it keep the old base "
+                                    "frequency; set defaultbasefreq before New Circuit", cmd.source_file,
+                                    cmd.line_number)
             if option in KEPT_OPTIONS:
                 slot = KEPT_OPTIONS[option]
                 kept[slot] = self._convert_value(raw, slot, dss_schema.Options, class_map)

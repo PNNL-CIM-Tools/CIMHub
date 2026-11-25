@@ -17,7 +17,6 @@ from cimtables.graph_write import get_qty
 from cimhub_core.derived.capacitance import c_from_b
 from cimhub_core.getters import describe
 from cimhub_core.getters.line_impedance import get_phase_impedance_code, get_sequence_impedance_code
-from cimhub_opendss.dss_writer import format_float
 from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot
 from cimhub_opendss.schema import opendss_schema as schema
@@ -27,8 +26,6 @@ NATIVE_CLASS = schema.Linecode
 NAMESPACE = "LineCode"
 UNIT = "m"  # B1
 IMPEDANCE_UNIT, ADMITTANCE_UNIT = f"ohm/{UNIT}", f"nS/{UNIT}"  # nS with Hz gives nF (c_from_b)
-#: slots the schema types as text (the reader keeps the file's text), so the writer's float format never sees them
-TEXT_SLOTS = ("C1", "C0", "baseFreq")
 
 _SEQUENCE = "sequence code"
 _MATRIX = "phase code"
@@ -77,9 +74,6 @@ def _linecode(code: cim.PerLengthImpedance, names: Names, frequency: float) -> s
     order = code.conductorCount if isinstance(code, cim.PerLengthPhaseImpedance) else 3
     slots = dict(name=linecode_name(code, names), nphases=order, units=UNIT, baseFreq=frequency,
                  **code_slots(code, frequency))
-    for slot in TEXT_SLOTS:
-        if slot in slots:
-            slots[slot] = format_float(slots[slot])
     return NATIVE_CLASS(**slots)
 
 

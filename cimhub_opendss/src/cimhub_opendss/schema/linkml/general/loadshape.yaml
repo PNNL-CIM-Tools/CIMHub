@@ -142,7 +142,7 @@ classes:
       csvfile:
         description: >-
           Switch input of active power load curve data to a CSV text file containing (hour, mult) points, or simply (mult) values for fixed time interval data, one per line
-        range: integer
+        range: string
         required: false
         annotations:
           order: 7
@@ -156,7 +156,7 @@ classes:
       sngfile:
         description: >-
           Switch input of active power load curve data to a binary file of singles containing (hour, mult) points, or simply (mult) values for fixed time interval data, packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 8
@@ -170,7 +170,7 @@ classes:
       dblfile:
         description: >-
           Switch input of active power load curve data to a binary file of doubles containing (hour, mult) points, or simply (mult) values for fixed time interval data, packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 9
@@ -255,7 +255,7 @@ classes:
       sinterval:
         description: >-
           Specify fixed interval in SECONDS
-        range: string
+        range: float
         required: false
         annotations:
           order: 15
@@ -270,7 +270,7 @@ classes:
       minterval:
         description: >-
           Specify fixed interval in MINUTES
-        range: string
+        range: float
         required: false
         annotations:
           order: 16
@@ -286,7 +286,7 @@ classes:
       Pbase:
         description: >-
           Base P value for normalization
-        range: string
+        range: float
         required: false
         annotations:
           order: 17
@@ -299,7 +299,7 @@ classes:
       Qbase:
         description: >-
           Base Q value for normalization
-        range: string
+        range: float
         required: false
         annotations:
           order: 18
@@ -312,7 +312,8 @@ classes:
       Pmult:
         description: >-
           Synonym for "mult"
-        range: string
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 19
@@ -325,7 +326,7 @@ classes:
       PQCSVFile:
         description: >-
           Switch input to a CSV text file containing (active, reactive) power (P, Q) multiplier pairs, one per row
-        range: float
+        range: string
         required: false
         annotations:
           order: 20

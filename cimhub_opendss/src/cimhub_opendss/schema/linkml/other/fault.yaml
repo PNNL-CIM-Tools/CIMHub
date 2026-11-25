@@ -80,15 +80,17 @@ classes:
         description: >-
           Use this to specify a nodal conductance (G) matrix to represent some arbitrary resistance network
         range: float
+        multivalued: true
         required: false
         annotations:
           order: 6
+          dss_format: matrix
 
       # (7) ONtime
       ONtime:
         description: >-
           Time (sec) at which the fault is established for time varying simulations
-        range: string
+        range: float
         required: false
         annotations:
           order: 7
@@ -106,7 +108,7 @@ classes:
       MinAmps:
         description: >-
           Minimum amps that can sustain a temporary fault
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -133,7 +135,7 @@ classes:
       faultrate:
         description: >-
           Failure rate per year
-        range: string
+        range: float
         required: false
         annotations:
           order: 12
@@ -151,7 +153,7 @@ classes:
       repair:
         description: >-
           Hours to repair
-        range: string
+        range: float
         required: false
         annotations:
           order: 14

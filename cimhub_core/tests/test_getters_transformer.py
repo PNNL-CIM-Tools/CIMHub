@@ -163,7 +163,7 @@ def test_ideal_auto_transformer(tmp_path):
 
 
 def test_ideal_auto_transformer_on_a_declared_base(tmp_path):
-    model = _model(_ideal_regulator(tmp_path), "xf_ideal", cim.VoltageRegulator, base_power=cim.ApparentPower(1, "MVA"))
+    model = _model(_ideal_regulator(tmp_path), "xf_ideal", cim.VoltageRegulator, base_power=1000)
     assert model.base_power == pytest.approx(1000)
 
 
@@ -256,7 +256,7 @@ def test_tank_impedance_two_windings_without_load_loss_is_a_pure_reactance(tmp_p
 
 
 def test_tank_impedance_on_a_system_base(tmp_path):
-    model = _model(_tank_impedance(tmp_path), "xf_ct", impedance_unit="pu", base_power=cim.ApparentPower(10, "kVA"))
+    model = _model(_tank_impedance(tmp_path), "xf_ct", impedance_unit="pu", base_power=10)
     assert [w.r for w in model.windings] == pytest.approx([0.012, 0.024, 0.024])
     assert model.mesh[(1, 2)].x == pytest.approx(0.0408)
 
@@ -398,7 +398,7 @@ def test_unequal_ratings_move_to_winding_1(tmp_path):
 
 def test_system_base_in_pu(tmp_path):
     network = _three_winding(tmp_path)
-    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=100_000)
     assert model.base_power == pytest.approx(100000)
     assert [w.r for w in model.windings] == pytest.approx([0.04, 0.1, 0.1])
     assert model.mesh[(2, 3)].x == pytest.approx(0.8)
@@ -416,7 +416,7 @@ def test_unrated_ends_read_on_a_declared_base_power(tmp_path):
     network = _three_winding(tmp_path)
     for end in network.graph[cim.PowerTransformerEnd].values():
         end.ratedS = None
-    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=100_000)
     assert [w.r for w in model.windings] == pytest.approx([0.04, 0.1, 0.1])
     assert [w.rated_s for w in model.windings] == [None, None, None]
     assert model.mesh[(2, 3)].x == pytest.approx(0.8)
@@ -430,7 +430,7 @@ def test_zero_end_holds_no_core(tmp_path):
     end_1, end_2 = (_get(network, cim.PowerTransformerEnd, mrid) for mrid in ("xf_3w_1", "xf_3w_2"))
     end_1.g, end_1.b = cim.Conductance(1e-4, "S"), cim.Susceptance(-2e-4, "S")
     end_2.g, end_2.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")
-    model = _model(network, "xf_3w", impedance_unit="pu", base_power=cim.ApparentPower(100, "MVA"))
+    model = _model(network, "xf_3w", impedance_unit="pu", base_power=100_000)
     z_base = 115e3 ** 2 / 100e6
     assert model.core == pytest.approx(CoreAdmittance(1e-4 * z_base, -2e-4 * z_base))
     end_1.g, end_1.b = cim.Conductance(0.0, "S"), cim.Susceptance(0.0, "S")

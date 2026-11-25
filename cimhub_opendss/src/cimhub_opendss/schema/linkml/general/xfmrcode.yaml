@@ -144,7 +144,7 @@ classes:
       tap:
         description: >-
           Per unit tap that this winding is normally on. Default is 1.0.
-        range: string
+        range: float
         required: false
         annotations:
           order: 7
@@ -343,7 +343,7 @@ classes:
       thermal:
         description: >-
           Thermal time constant of the transformer in hours.
-        range: string
+        range: float
         required: false
         annotations:
           order: 19
@@ -356,7 +356,7 @@ classes:
       n:
         description: >-
           n Exponent for thermal properties in IEEE C57.
-        range: string
+        range: float
         required: false
         annotations:
           order: 20
@@ -369,7 +369,7 @@ classes:
       m:
         description: >-
           m Exponent for thermal properties in IEEE C57.
-        range: string
+        range: float
         required: false
         annotations:
           order: 21
@@ -382,7 +382,7 @@ classes:
       flrise:
         description: >-
           Temperature rise, deg C, for full load.
-        range: string
+        range: float
         required: false
         annotations:
           order: 22
@@ -395,7 +395,7 @@ classes:
       hsrise:
         description: >-
           Hot spot temperature rise, deg C.
-        range: string
+        range: float
         required: false
         annotations:
           order: 23
@@ -471,7 +471,7 @@ classes:
       MaxTap:
         description: >-
           Max per unit tap for the active winding. Default is 1.10.
-        range: string
+        range: float
         required: false
         annotations:
           order: 28
@@ -489,7 +489,7 @@ classes:
       MinTap:
         description: >-
           Min per unit tap for the active winding. Default is 0.90.
-        range: string
+        range: float
         required: false
         annotations:
           order: 29

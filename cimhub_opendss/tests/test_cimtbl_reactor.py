@@ -64,6 +64,11 @@ def test_reactors_bind(reactors):
     ("New Reactor.x bus1=b1 bus2=b2 kvar=100 kv=4.16\n", "kvar not mapped"),
     ("New Reactor.x bus1=b1 bus2=b2 R=1\n", "X is unset"),
     ("New Reactor.x bus1=b1 bus2=b2 X=1 Parallel=yes\n", "Parallel not mapped"),
+    # the matrices parse as matrices and the curves as names, so they reach the "not mapped" raise
+    ("New Reactor.x bus1=b1 bus2=b2 phases=2 Rmatrix=[1 | 0.1 1] Xmatrix=[2 | 0.2 2]\n",
+     "Rmatrix, Xmatrix not mapped"),
+    ("New XYCurve.rc npts=2 xarray=[60 120] yarray=[1 1.2]\n"
+     "New Reactor.x bus1=b1 bus2=b2 X=1 RCurve=rc LCurve=rc\n", "RCurve, LCurve not mapped"),
 ])
 def test_unmapped_reactors_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"

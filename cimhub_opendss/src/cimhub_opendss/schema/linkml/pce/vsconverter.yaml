@@ -105,7 +105,7 @@ classes:
       m0:
         description: >-
           Fixed or initial value of the modulation index
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -123,7 +123,7 @@ classes:
       Mmin:
         description: >-
           Minimum value of modulation index
-        range: string
+        range: float
         required: false
         annotations:
           order: 11
@@ -132,7 +132,7 @@ classes:
       Mmax:
         description: >-
           Maximum value of modulation index
-        range: string
+        range: float
         required: false
         annotations:
           order: 12

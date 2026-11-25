@@ -33,7 +33,7 @@ classes:
       bus1:
         description: >-
           Name of bus to which the input terminal (1) is connected
-        range: float
+        range: string
         required: false
         annotations:
           order: 1
@@ -42,7 +42,7 @@ classes:
       bus2:
         description: >-
           Name of bus to which the output terminal (2) is connected
-        range: float
+        range: string
         required: false
         annotations:
           order: 2
@@ -69,7 +69,7 @@ classes:
       frequency:
         description: >-
           UPFC working frequency
-        range: string
+        range: float
         required: false
         annotations:
           order: 5
@@ -123,7 +123,7 @@ classes:
       LossCurve:
         description: >-
           Name of the XYCurve for describing the losses behavior as a function of the voltage at the input of the UPFC
-        range: float
+        range: string
         required: false
         annotations:
           order: 11
@@ -177,7 +177,7 @@ classes:
       Element:
         description: >-
           The name of the PD element monitored when operating with reactive power compensation
-        range: float
+        range: string
         required: false
         annotations:
           order: 17

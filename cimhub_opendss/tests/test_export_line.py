@@ -124,8 +124,8 @@ def test_unused_catalogs_are_exported():
 def test_sequence_code_c_is_at_the_deck_frequency():
     code = _record(_model(_network("cables")), schema.Linecode, "3-1/0c_2/0cn_t")
     # c1 = 10.4308823411236 nF/km in the atom
-    assert (code.units, float(code.baseFreq)) == ("m", 60.0)
-    assert float(code.C1) == pytest.approx(10.4308823411236e-3, rel=1e-12)
+    assert (code.units, code.baseFreq) == ("m", 60.0)
+    assert code.C1 == pytest.approx(10.4308823411236e-3, rel=1e-12)
 
 
 def test_matrix_code_without_b_writes_zero_capacitance():

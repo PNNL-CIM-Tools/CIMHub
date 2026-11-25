@@ -53,7 +53,7 @@ passed straight to `get_transformer_model` raises: read each unit this returns.
 ### get_transformer_model
 
 ```python
-get_transformer_model(unit, impedance_unit="percent", *, base_power=None, voltage_unit="V",
+get_transformer_model(unit, impedance_unit="percent", *, base_power: float | None = None, voltage_unit="V",
                       power_unit="VA") -> TransformerModel
 ```
 
@@ -61,7 +61,7 @@ get_transformer_model(unit, impedance_unit="percent", *, base_power=None, voltag
 |---|---|
 | `unit` | a `TransformerTank`, a `PowerTransformer` without tanks, or an `AutoTransformer` |
 | `impedance_unit` | `'percent'` or `'pu'`; anything else raises `ValueError: impedance_unit must be one of ['percent', 'pu'], not ...` |
-| `base_power` | an `ApparentPower` (for example `network.base_power`) every impedance and admittance is put on. Default: winding 1's `ratedS` |
+| `base_power` | the power, in `power_unit`, every impedance and admittance is put on (RAW's MBASE). Default: winding 1's `ratedS` |
 | `voltage_unit` | unit of `rated_u`, `base_u` |
 | `power_unit` | unit of `rated_s`, `base_s` and `TransformerModel.base_power` |
 
@@ -99,8 +99,7 @@ The one unit that may leave the base unset is an ideal `AutoTransformer` (no mes
 `base_power` is `None`.
 
 ```python
-ten_mva = cim.ApparentPower(10, "MVA")
-model = get_transformer_model(unit, "pu", base_power=ten_mva, voltage_unit="kV", power_unit="MVA")
+model = get_transformer_model(unit, "pu", base_power=10, voltage_unit="kV", power_unit="MVA")
 print(model.base_power, model.windings[0].r, model.mesh[1, 2].x)
 # 10.0 0.01 0.16
 ```

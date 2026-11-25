@@ -233,7 +233,9 @@ cimhub_<fmt>/
 ```
 
 The scaffold (`scaffold_package`) writes this layout: reader and writer at the package root, `importer/<fmt>_to_cimtbl.py`
-and `exporter/cim_to_<fmt>.py` with an empty `EXPORT_ORDER`. See
+and `exporter/cim_to_<fmt>.py` with an empty `EXPORT_ORDER`, `pyproject.toml` with the shipped spokes' pins, a
+README, `tests/atoms/prereqs/` and draft `docs/CIMTBL_MAPPING.md` / `EXPORT_MAPPING.md`. The bootstrap session still
+adds the package to the root workspace, and the schema still needs its `scripts/gen-schema.sh` entry. See
 [Starting a new package](converter-api.md#starting-a-new-package).
 
 Skills:

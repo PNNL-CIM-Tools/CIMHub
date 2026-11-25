@@ -7,9 +7,9 @@ Profile = cim18v17
 
 Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate
     # derived from a 1-phase sequence code: z = Z1 (phase_matrix); a 1-phase line does not use r0=1.2467747, x0=1.4672122, C0=4.7725
-    lc_oh-1x_4cu_4cun, OH-1X_4CU_4CUN, 1, 60, true
+    lc_oh-1x_4cu_4cun, OH-1X_4CU_4CUN, 1, 60.0, true
     # derived from a 2-phase sequence code: Zs = (2 Z1 + Z0)/3, Zm = (Z0 - Z1)/3 (phase_matrix)
-    lc_oh-2x_4cu_4cun, OH-2X_4CU_4CUN, 2, 60, true
+    lc_oh-2x_4cu_4cun, OH-2X_4CU_4CUN, 2, 60.0, true
 
 # units=km. row/column are conductor indices of the lower triangle.
 # derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS; 1- and 2-phase sequence codes: r, x, C by phase_matrix (DSS-4)

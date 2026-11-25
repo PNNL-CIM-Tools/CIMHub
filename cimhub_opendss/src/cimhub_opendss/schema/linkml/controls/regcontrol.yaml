@@ -334,7 +334,7 @@ classes:
         description: >-
           Maximum allowable tap change per control iteration in STATIC control
           mode. Default is 16.
-        range: float
+        range: integer
         required: false
         annotations:
           order: 18
@@ -361,7 +361,7 @@ classes:
       tapwinding:
         description: >-
           Winding containing the actual taps, if different than the WINDING property.
-        range: string
+        range: integer
         required: false
         annotations:
           order: 20
@@ -394,7 +394,7 @@ classes:
         description: >-
           For multi-phase transformers, the number of the phase being monitored
           or one of {MAX | MIN} for all phases. Default is 1.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 22
@@ -460,7 +460,7 @@ classes:
       EventLog:
         description: >-
           {Yes/True* | No/False} Default is YES for regulator control.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 26

@@ -132,7 +132,7 @@ classes:
       VarCurve:
         description: >-
           Optional
-        range: float
+        range: string
         required: false
         annotations:
           order: 12
@@ -188,7 +188,7 @@ classes:
       faultrate:
         description: >-
           Failure rate per year
-        range: string
+        range: float
         required: false
         annotations:
           order: 18
@@ -206,7 +206,7 @@ classes:
       repair:
         description: >-
           Hours to repair
-        range: string
+        range: float
         required: false
         annotations:
           order: 20

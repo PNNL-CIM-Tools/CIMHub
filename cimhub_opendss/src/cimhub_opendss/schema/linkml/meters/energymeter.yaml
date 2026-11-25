@@ -51,7 +51,7 @@ classes:
       action:
         description: >-
           {Clear (reset) | Save | Take | Zonedump | Allocate | Reduce} (A)llocate = Allocate loads on the meter zone to match PeakCurrent
-        range: float
+        range: string
         required: false
         annotations:
           order: 3
@@ -117,7 +117,8 @@ classes:
       Mask:
         description: >-
           Mask for adding registers whenever all meters are totalized
-        range: string
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 10
@@ -190,7 +191,7 @@ classes:
       Int_Rate:
         description: >-
           Average number of annual interruptions for head of the meter zone (source side of zone or feeder)
-        range: integer
+        range: float
         required: false
         annotations:
           order: 18
@@ -199,7 +200,7 @@ classes:
       Int_Duration:
         description: >-
           Average annual duration, in hr, of interruptions for head of the meter zone (source side of zone or feeder)
-        range: string
+        range: float
         required: false
         annotations:
           order: 19
@@ -208,7 +209,7 @@ classes:
       SAIFI:
         description: >-
           (Read only) Makes SAIFI result available via return on query (? energymeter
-        range: string
+        range: float
         required: false
         annotations:
           order: 20
@@ -226,7 +227,7 @@ classes:
       SAIDI:
         description: >-
           (Read only) Makes SAIDI result available via return on query (? energymeter
-        range: string
+        range: float
         required: false
         annotations:
           order: 22
@@ -235,7 +236,7 @@ classes:
       CAIDI:
         description: >-
           (Read only) Makes CAIDI result available via return on query (? energymeter
-        range: string
+        range: float
         required: false
         annotations:
           order: 23
@@ -244,7 +245,7 @@ classes:
       CustInterrupts:
         description: >-
           (Read only) Makes Total Customer Interrupts value result available via return on query (? energymeter
-        range: string
+        range: float
         required: false
         annotations:
           order: 24

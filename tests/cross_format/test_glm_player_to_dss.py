@@ -70,7 +70,7 @@ def solve(path: Path, *, mode: str = "snapshot", steps: int = 1) -> list[np.ndar
 
 def test_the_player_is_one_loadshape_both_loads_name(exported):
     [shape] = exported.list_by_class(schema.Loadshape)
-    assert (shape.name, shape.npts, shape.sinterval) == ("zipload", 4, "60")
+    assert (shape.name, shape.npts, shape.sinterval) == ("zipload", 4, 60.0)
     assert shape.mult == VALUES and not shape.qmult  # a GLM base scales p and q together
     assert {str(load.yearly) for load in exported.list_by_class(schema.Load)} == {"zipload"}
 

@@ -301,7 +301,7 @@ classes:
       faultrate:
         description: >-
           Failure rate per year.
-        range: string
+        range: float
         required: false
         annotations:
           order: 16
@@ -331,7 +331,7 @@ classes:
       repair:
         description: >-
           Hours to repair.
-        range: string
+        range: float
         required: false
         annotations:
           order: 18

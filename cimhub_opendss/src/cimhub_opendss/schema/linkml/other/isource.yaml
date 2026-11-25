@@ -51,7 +51,7 @@ classes:
       angle:
         description: >-
           Phase angle in degrees of first phase: e
-        range: integer
+        range: float
         required: false
         annotations:
           order: 3
@@ -60,7 +60,7 @@ classes:
       frequency:
         description: >-
           Source frequency
-        range: string
+        range: float
         required: false
         annotations:
           order: 4
@@ -78,7 +78,7 @@ classes:
       scantype:
         description: >-
           {pos*| zero | none} Maintain specified sequence for harmonic solution
-        range: float
+        range: string
         required: false
         annotations:
           order: 6
@@ -87,7 +87,7 @@ classes:
       sequence:
         description: >-
           {pos*| neg | zero} Set the phase angles for the specified symmetrical component sequence for non-harmonic solution modes
-        range: float
+        range: string
         required: false
         annotations:
           order: 7
@@ -96,7 +96,7 @@ classes:
       Yearly:
         description: >-
           LOADSHAPE object to use for the per-unit current for YEARLY-mode simulations
-        range: float
+        range: string
         required: false
         annotations:
           order: 8
@@ -105,7 +105,7 @@ classes:
       Daily:
         description: >-
           LOADSHAPE object to use for the per-unit current for DAILY-mode simulations
-        range: float
+        range: string
         required: false
         annotations:
           order: 9
@@ -114,7 +114,7 @@ classes:
       Duty:
         description: >-
           LOADSHAPE object to use for the per-unit current for DUTYCYCLE-mode simulations
-        range: float
+        range: string
         required: false
         annotations:
           order: 10

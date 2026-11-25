@@ -61,7 +61,7 @@ classes:
       varidx:
         description: >-
           (Int) read-only, returns the index of the active state variable
-        range: string
+        range: integer
         required: false
         annotations:
           order: 4

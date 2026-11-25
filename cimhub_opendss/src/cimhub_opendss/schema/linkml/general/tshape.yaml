@@ -89,7 +89,7 @@ classes:
       csvfile:
         description: >-
           Switch input of  temperature curve data to a csv file containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, one per line
-        range: integer
+        range: string
         required: false
         annotations:
           order: 7
@@ -98,7 +98,7 @@ classes:
       sngfile:
         description: >-
           Switch input of  temperature curve data to a binary file of singles containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 8
@@ -107,7 +107,7 @@ classes:
       dblfile:
         description: >-
           Switch input of  temperature curve data to a binary file of doubles containing (hour, Temp) points, or simply (Temp) values for fixed time interval data, packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 9
@@ -116,7 +116,7 @@ classes:
       sinterval:
         description: >-
           Specify fixed interval in SECONDS
-        range: string
+        range: float
         required: false
         annotations:
           order: 10
@@ -125,7 +125,7 @@ classes:
       minterval:
         description: >-
           Specify fixed interval in MINUTES
-        range: string
+        range: float
         required: false
         annotations:
           order: 11

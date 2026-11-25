@@ -78,7 +78,7 @@ classes:
       bp1:
         description: >-
           XYCurve defining the input piece-wise linear block
-        range: float
+        range: string
         required: false
         annotations:
           order: 6
@@ -87,7 +87,7 @@ classes:
       bp2:
         description: >-
           XYCurve defining the output piece-wise linear block
-        range: float
+        range: string
         required: false
         annotations:
           order: 7
@@ -105,7 +105,7 @@ classes:
       fsample:
         description: >-
           Sample frequency [Hz} for the digital filter
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -114,7 +114,7 @@ classes:
       rmsmode:
         description: >-
           True if only Hz is used to represent a phase-locked loop (PLL), ignoring the BP1, BP2 and time-domain transformations
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 10
@@ -132,7 +132,7 @@ classes:
       vrmstau:
         description: >-
           Time constant in sensing Vrms for the PLL; defaults to 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 12
@@ -141,7 +141,7 @@ classes:
       irmstau:
         description: >-
           Time constant in producing Irms from the PLL; defaults to 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 13

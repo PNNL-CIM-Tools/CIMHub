@@ -92,7 +92,7 @@ class CodeMatrix(NamedTuple):
     g: dict[tuple[int, int], float] | None
 
 
-# the admittance unit that goes with each whole-line impedance unit a caller may ask for
+# the default admittance unit that goes with each whole-line impedance unit a caller may ask for
 ADMITTANCE_UNIT = {"ohm": "S", "pu": "pu"}
 IMPEDANCE_FIELDS = ("r", "x", "r0", "x0")
 PHASE_CONDUCTORS = (cim.SinglePhaseKind.A, cim.SinglePhaseKind.B, cim.SinglePhaseKind.C)
@@ -103,17 +103,23 @@ DISAGREEMENT_REL_TOL = 1e-6
 def get_line_sequence_impedance(
     line: cim.ACLineSegment,
     unit: str = "ohm",
+    admittance_unit: str | None = None,
     *,
     base_power=None,
     derive: ImpedanceSource = ImpedanceSource.LUMPED,
 ) -> SequenceImpedance:
-    """The whole line's sequence values in ``unit`` ('ohm' with siemens, or 'pu' with pu admittance). 'pu' is on
-    the line's BaseVoltage and ``base_power`` (``network.base_power``), through ``cimtables.impedance.z_base``.
-    Raises ValueError when nothing within ``derive`` gives r and x, or when two sources disagree."""
+    """The whole line's sequence values in ``unit``: 'ohm', with b and g in ``admittance_unit`` (a siemens unit,
+    'S' by default), or 'pu' with pu admittance. 'pu' is on the line's BaseVoltage and ``base_power``
+    (``network.base_power``), through ``cimtables.impedance.z_base``. Raises ValueError when nothing within
+    ``derive`` gives r and x, or when two sources disagree."""
     if unit not in ADMITTANCE_UNIT:
         raise ValueError(f"unit must be one of {sorted(ADMITTANCE_UNIT)}, not {unit!r}")
+    if admittance_unit is None:
+        admittance_unit = ADMITTANCE_UNIT[unit]
+    if unit == "pu" and admittance_unit != "pu":
+        raise ValueError(f"unit 'pu' takes admittance_unit 'pu', not {admittance_unit!r}")
 
-    lumped = _lumped(line, unit, base_power)
+    lumped = _lumped(line, unit, admittance_unit, base_power)
     if lumped is not None:
         # the per-length source only checks the lumped values here, so one that cannot be read whole (no length to
         # multiply by; geometry, whose step 4 is not built) leaves them standing instead of raising
@@ -122,7 +128,9 @@ def get_line_sequence_impedance(
             derive = ImpedanceSource.LUMPED
     per_length = None
     if derive > ImpedanceSource.LUMPED:
-        per_metre = _per_length_sequence(line, "ohm/m", "S/m", derive)
+        # per metre, so times the length in m it is whole-line; pu divides the SI values by z_base
+        per_metre_admittance = "S/m" if unit == "pu" else f"{admittance_unit}/m"
+        per_metre = _per_length_sequence(line, "ohm/m", per_metre_admittance, derive)
         if per_metre is not None:
             per_length = _whole_line(line, per_metre, unit, base_power)
 
@@ -203,7 +211,7 @@ def get_sequence_impedance_code(code: cim.PerLengthSequenceImpedance, impedance_
                              source=ImpedanceSource.PER_LENGTH_SEQ)
 
 
-def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance | None:
+def _lumped(line: cim.ACLineSegment, unit: str, admittance_unit: str, base_power) -> SequenceImpedance | None:
     """Step 1, or None when the line has neither r nor x."""
     r = get_qty(line, "r", unit, system_base=base_power)
     x = get_qty(line, "x", unit, system_base=base_power)
@@ -211,7 +219,6 @@ def _lumped(line: cim.ACLineSegment, unit: str, base_power) -> SequenceImpedance
         return None
     if r is None or x is None:
         raise ValueError(f"{describe(line)}: lumped r and x must be set together (r={r}, x={x})")
-    admittance_unit = ADMITTANCE_UNIT[unit]
     return SequenceImpedance(
         r=r,
         x=x,

@@ -191,7 +191,7 @@ def read_shape(native, shape) -> Shape | None:
     if shape.qmult and len(shape.qmult) != len(shape.mult):
         raise ValueError(f"{label}: qmult has {len(shape.qmult)} values and mult {len(shape.mult)}")
     slot = native.last_of(shape, *INTERVALS)
-    interval = DEFAULT_INTERVAL_H if slot is None else float(getattr(shape, slot))
+    interval = DEFAULT_INTERVAL_H if slot is None else getattr(shape, slot)
     if interval <= 0:
         raise ValueError(f"{label}: {slot or 'interval'}={interval}; an hour array (interval 0) is not mapped")
     unit = INTERVALS[slot or "interval"][0]

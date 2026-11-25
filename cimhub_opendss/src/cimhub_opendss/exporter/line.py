@@ -211,22 +211,16 @@ def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: 
 def _lumped(line: cim.ACLineSegment, frequency: float) -> dict:
     """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length of 0
     raises: a DSS line's impedance is per length, and the engine cannot solve a zero-length line."""
-    whole = get_line_sequence_impedance(line, "ohm")
+    whole = get_line_sequence_impedance(line, "ohm", "nS")  # nS: c_from_b takes nS
     length = get_qty(line, "length", LUMPED_UNIT)
     if length == 0:
         raise ValueError(f"{describe(line)}: length 0 with lumped impedance; a DSS line's impedance is per length, "
                          "and the engine cannot solve a zero-length line")
     length = 1.0 if length is None else length
-    per_km = whole._replace(**{name: _per(getattr(whole, name), length) for name in ("r", "x", "r0", "x0")},
-                            **{name: _per(_nano_siemens(getattr(whole, name)), length)
-                               for name in ("b", "g", "b0", "g0")})
+    per_km = whole._replace(**{name: _per(getattr(whole, name), length)
+                               for name in ("r", "x", "r0", "x0", "b", "g", "b0", "g0")})
     return dict(length=length, units=LUMPED_UNIT, **sequence_slots(line, per_km, frequency))
 
 
 def _per(value: float | None, length: float) -> float | None:
     return None if value is None else value / length
-
-
-def _nano_siemens(value: float | None) -> float | None:
-    """S -> nS (c_from_b takes nS) through the CIMUnit class."""
-    return None if value is None else cim.Susceptance(value, "S").to("nS")

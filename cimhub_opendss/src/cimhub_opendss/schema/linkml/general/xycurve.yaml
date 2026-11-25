@@ -42,7 +42,8 @@ classes:
       Points:
         description: >-
           One way to enter the points in a curve
-        range: integer
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 2
@@ -51,7 +52,8 @@ classes:
       Yarray:
         description: >-
           Alternate way to enter Y values
-        range: integer
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 3
@@ -60,7 +62,8 @@ classes:
       Xarray:
         description: >-
           Alternate way to enter X values
-        range: integer
+        range: float
+        multivalued: true
         required: false
         annotations:
           order: 4
@@ -69,7 +72,7 @@ classes:
       csvfile:
         description: >-
           Switch input of  X-Y curve data to a CSV file containing X, Y points one per line
-        range: integer
+        range: string
         required: false
         annotations:
           order: 5
@@ -78,7 +81,7 @@ classes:
       sngfile:
         description: >-
           Switch input of  X-Y curve data to a binary file of SINGLES containing X, Y points packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 6
@@ -87,7 +90,7 @@ classes:
       dblfile:
         description: >-
           Switch input of  X-Y  curve data to a binary file of DOUBLES containing X, Y points packed one after another
-        range: integer
+        range: string
         required: false
         annotations:
           order: 7
@@ -114,7 +117,7 @@ classes:
       Xshift:
         description: >-
           Shift X property values (in/out) by this amount of offset
-        range: string
+        range: float
         required: false
         annotations:
           order: 10
@@ -123,7 +126,7 @@ classes:
       Yshift:
         description: >-
           Shift Y property values (in/out) by this amount of offset
-        range: string
+        range: float
         required: false
         annotations:
           order: 11
@@ -132,7 +135,7 @@ classes:
       Xscale:
         description: >-
           Scale X property values (in/out) by this factor
-        range: string
+        range: float
         required: false
         annotations:
           order: 12
@@ -141,7 +144,7 @@ classes:
       Yscale:
         description: >-
           Scale Y property values (in/out) by this factor
-        range: string
+        range: float
         required: false
         annotations:
           order: 13

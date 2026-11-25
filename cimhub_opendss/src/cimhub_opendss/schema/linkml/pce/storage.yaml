@@ -674,7 +674,7 @@ classes:
       duty:
         description: >-
           Load shape to use for duty cycle dispatch simulations.
-        range: integer
+        range: string
         required: false
         annotations:
           order: 41
@@ -704,7 +704,7 @@ classes:
       DischargeTrigger:
         description: >-
           Dispatch trigger value for discharging the Storage.
-        range: string
+        range: float
         required: false
         annotations:
           order: 43
@@ -717,7 +717,7 @@ classes:
       ChargeTrigger:
         description: >-
           Dispatch trigger value for charging the Storage.
-        range: string
+        range: float
         required: false
         annotations:
           order: 44
@@ -731,7 +731,7 @@ classes:
         description: >-
           Time of day in fractional hours (0230 = 2.5) at which storage
           element will automatically go into charge state.
-        range: string
+        range: float
         required: false
         annotations:
           order: 45
@@ -840,7 +840,7 @@ classes:
       Kp:
         description: >-
           It is the proportional gain for the PI controller within the inverter.
-        range: string
+        range: float
         required: false
         annotations:
           order: 53
@@ -853,7 +853,7 @@ classes:
       PITol:
         description: >-
           It is the tolerance (%) for the closed loop controller of the inverter.
-        range: string
+        range: float
         required: false
         annotations:
           order: 54
@@ -881,7 +881,7 @@ classes:
         description: >-
           (Read only) Indicates whether the inverter entered (Yes) or not (No)
           into Safe Mode.
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 56
@@ -909,7 +909,8 @@ classes:
         description: >-
           The name of the variables within the Dynamic equation that will be
           used to govern the PVSystem dynamics.
-        range: float
+        range: string
+        multivalued: true
         required: false
         annotations:
           order: 58
@@ -964,7 +965,7 @@ classes:
       spectrum:
         description: >-
           Name of harmonic voltage or current spectrum for this Storage element.
-        range: float
+        range: string
         required: false
         annotations:
           order: 62

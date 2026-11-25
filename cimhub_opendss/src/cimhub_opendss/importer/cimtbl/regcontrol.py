@@ -116,14 +116,14 @@ def tap_range(tap: float, max_tap: float, min_tap: float, num_taps: int, *, name
                     _whole((tap - 1) / increment, what="tap", name=name), float(f"{increment * 100:.12g}"))
 
 
-def _phase_letter(winding, phases: int, pt_phase: int, *, name: str) -> str:
-    """The phase of the winding's conductor ``PTphase`` (1-based)."""
+def _phase_letter(winding, phases: int, pt_phase: str, *, name: str) -> str:
+    """The phase of the winding's conductor ``PTphase`` (1-based; DSS also takes MAX and MIN, which raise)."""
     if phases == 3:
-        if pt_phase not in (1, 2, 3):
+        if pt_phase not in ("1", "2", "3"):
             raise ValueError(f"RegControl {name}: PTphase={pt_phase}")
-        return "ABC"[pt_phase - 1]
+        return "ABC"[int(pt_phase) - 1]
     phase_nodes = [node for node in winding.nodes if node in (1, 2, 3)]
-    if pt_phase != 1 or not phase_nodes:
+    if pt_phase != "1" or not phase_nodes:
         raise ValueError(f"RegControl {name}: PTphase={pt_phase} on a 1-phase winding {winding.nodes}")
     return "ABC"[phase_nodes[0] - 1]
 
@@ -182,7 +182,7 @@ def map_regcontrol(native) -> Document:
         comment = "\n".join(part for part in (*notes, untranscribed_values(FIELDS, control)) if part) or None
         control_rows.append(Row([
             control_id, str(control.name), cell(control.enabled),
-            _phase_letter(winding, phases, int(control.PTphase), name=control.name), cell(ptratio),
+            _phase_letter(winding, phases, control.PTphase, name=control.name), cell(ptratio),
             cell(secondary_to_primary(float(control.vreg), ptratio)),
             cell(secondary_to_primary(float(control.band), ptratio)),
             cell(r != 0 or x != 0), cell(line_drop_ohms(r, ptratio, ct_primary)), cell(line_drop_ohms(x, ptratio, ct_primary)),

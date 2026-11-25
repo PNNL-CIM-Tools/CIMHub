@@ -76,6 +76,17 @@ def test_lumped_ohm_is_on_the_base_voltage_and_system_base(bus_branch):
     assert (z.r, z.x, z.b) == pytest.approx((0.0194 * z_base, 0.0592 * z_base, 0.0528 / z_base))
 
 
+def test_lumped_admittance_in_the_unit_asked_for(bus_branch):
+    z_base = 115e3**2 / 100e6
+    z = get_line_sequence_impedance(_line(bus_branch, "ln_1_2_1"), "ohm", "uS")
+    assert (z.r, z.b) == pytest.approx((0.0194 * z_base, 0.0528 / z_base * 1e6))
+
+
+def test_pu_takes_pu_admittance_only(bus_branch):
+    with pytest.raises(ValueError, match="unit 'pu' takes admittance_unit 'pu', not 'S'"):
+        get_line_sequence_impedance(_line(bus_branch, "ln_1_2_1"), "pu", "S", base_power=bus_branch.base_power)
+
+
 def test_lumped_r_without_x_raises(tmp_path):
     network = _load_atom(tmp_path, "Object ACLineSegment: mRID=ln, node1=a, node2=b, phases=ABC, r (ohm)=1, "
                                    "BaseVoltage=bv_4p16kv, EquipmentContainer=fdr\n")
@@ -93,6 +104,12 @@ def test_sequence_code_times_length(by_impedance):
     assert (z.b, z.b0) == pytest.approx((3932.35e-9 * km, 1690.81e-9 * km))
     assert (z.g, z.g0) == (None, None)
     assert z.source is ImpedanceSource.PER_LENGTH_SEQ
+
+
+def test_sequence_code_admittance_in_the_unit_asked_for(by_impedance):
+    km = 500 * 0.3048 / 1000
+    z = get_line_sequence_impedance(_line(by_impedance, "ln_l2"), "ohm", "nS", derive=ImpedanceSource.PER_LENGTH_SEQ)
+    assert (z.r, z.b, z.b0) == pytest.approx((0.3489 * km, 3932.35 * km, 1690.81 * km))
 
 
 def test_sequence_code_in_pu(by_impedance):

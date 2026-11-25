@@ -107,6 +107,13 @@ def test_an_unknown_set_option_raises(tmp_path):
         read(tmp_path, "Set colour=red\n")
 
 
+@pytest.mark.parametrize("word", ["basefrequency", "basefreq", "base"])
+def test_set_basefrequency_raises(tmp_path, word):
+    # the engine gives the new frequency only to objects defined after it, so the deck may hold two base frequencies
+    with pytest.raises(DssParseError, match=rf"Set {word}: not read.*set defaultbasefreq before New Circuit"):
+        read(tmp_path, f"Set {word}=50\n")
+
+
 def test_batchedit_changes_every_matching_object(tmp_path):
     model = read(tmp_path, "New Load.a1 bus1=b kW=1\nNew Load.a2 bus1=b kW=2\nNew Load.c bus1=b kW=3\n"
                            "BatchEdit Load.a.* model=5\n")

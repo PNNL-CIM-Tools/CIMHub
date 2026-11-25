@@ -34,6 +34,7 @@ classes:
         description: >-
           The list of all the UPFC devices to be controlled by this controller, If left empty, this control will apply for all UPFCs in the model
         range: string
+        multivalued: true
         required: false
         annotations:
           order: 1

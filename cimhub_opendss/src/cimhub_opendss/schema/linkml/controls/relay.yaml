@@ -78,7 +78,7 @@ classes:
       Phasecurve:
         description: >-
           Name of the TCC Curve object that determines the phase trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 6
@@ -87,7 +87,7 @@ classes:
       Groundcurve:
         description: >-
           Name of the TCC Curve object that determines the ground trip
-        range: float
+        range: string
         required: false
         annotations:
           order: 7
@@ -96,7 +96,7 @@ classes:
       PhaseTrip:
         description: >-
           Multiplier or actual phase amps for the phase TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 8
@@ -105,7 +105,7 @@ classes:
       GroundTrip:
         description: >-
           Multiplier or actual ground amps (3I0) for the ground TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -114,7 +114,7 @@ classes:
       TDPhase:
         description: >-
           Time dial for Phase trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 10
@@ -123,7 +123,7 @@ classes:
       TDGround:
         description: >-
           Time dial for Ground trip curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 11
@@ -141,7 +141,7 @@ classes:
       GroundInst:
         description: >-
           Actual  amps for instantaneous ground trip which is assumed to happen in 0
-        range: string
+        range: float
         required: false
         annotations:
           order: 13
@@ -150,7 +150,7 @@ classes:
       Reset:
         description: >-
           Reset time in sec for relay
-        range: string
+        range: float
         required: false
         annotations:
           order: 14
@@ -187,7 +187,7 @@ classes:
       Overvoltcurve:
         description: >-
           TCC Curve object to use for overvoltage relay
-        range: float
+        range: string
         required: false
         annotations:
           order: 18
@@ -196,7 +196,7 @@ classes:
       Undervoltcurve:
         description: >-
           TCC Curve object to use for undervoltage relay
-        range: float
+        range: string
         required: false
         annotations:
           order: 19
@@ -205,7 +205,7 @@ classes:
       kvbase:
         description: >-
           Voltage base (kV) for the relay
-        range: integer
+        range: float
         required: false
         annotations:
           order: 20
@@ -263,7 +263,7 @@ classes:
       overtrip:
         description: >-
           Trip setting (high value) for Generic relay variable
-        range: string
+        range: float
         required: false
         annotations:
           order: 26
@@ -272,7 +272,7 @@ classes:
       undertrip:
         description: >-
           Trip setting (low value) for Generic relay variable
-        range: string
+        range: float
         required: false
         annotations:
           order: 27
@@ -335,7 +335,7 @@ classes:
       Mphase:
         description: >-
           Phase reach multiplier in per-unit for Distance and TD21 functions
-        range: string
+        range: float
         required: false
         annotations:
           order: 34
@@ -344,7 +344,7 @@ classes:
       Mground:
         description: >-
           Ground reach multiplier in per-unit for Distance and TD21 functions
-        range: string
+        range: float
         required: false
         annotations:
           order: 35
@@ -353,7 +353,7 @@ classes:
       EventLog:
         description: >-
           {Yes/True* | No/False} Default is Yes for Relay
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 36
@@ -362,7 +362,7 @@ classes:
       DebugTrace:
         description: >-
           {Yes/True* | No/False} Default is No for Relay
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 37
@@ -371,7 +371,7 @@ classes:
       DistReverse:
         description: >-
           {Yes/True* | No/False} Default is No; reverse direction for distance and td21 types
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 38
@@ -443,7 +443,7 @@ classes:
       DOC_DelayInner:
         description: >-
           Trip time delay (sec) for operation in inner region for DOC relay, defined when "DOC_TripSettingMag" or "DOC_TripSettingHigh" are activate
-        range: string
+        range: float
         required: false
         annotations:
           order: 46
@@ -452,7 +452,7 @@ classes:
       DOC_PhaseCurveInner:
         description: >-
           Name of the TCC Curve object that determines the phase trip for operation in inner region for DOC relay
-        range: float
+        range: string
         required: false
         annotations:
           order: 47
@@ -461,7 +461,7 @@ classes:
       DOC_PhaseTripInner:
         description: >-
           Multiplier for the "DOC_PhaseCurveInner" TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 48
@@ -470,7 +470,7 @@ classes:
       DOC_TDPhaseInner:
         description: >-
           Time dial for "DOC_PhaseCurveInner" TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 49
@@ -479,7 +479,7 @@ classes:
       DOC_P1Blocking:
         description: >-
           {Yes/True* | No/False} Blocking element that impedes relay from tripping if balanced net three-phase active power is in the forward direction (i
-        range: float
+        range: boolean
         required: false
         annotations:
           order: 50

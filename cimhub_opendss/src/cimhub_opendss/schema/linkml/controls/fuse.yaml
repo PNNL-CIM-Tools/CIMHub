@@ -96,7 +96,7 @@ classes:
       FuseCurve:
         description: >-
           Name of the TCC Curve object that determines the fuse blowing
-        range: float
+        range: string
         required: false
         annotations:
           order: 5
@@ -125,7 +125,7 @@ classes:
       Delay:
         description: >-
           Fixed delay time (sec) added to Fuse blowing time determined from the TCC curve
-        range: string
+        range: float
         required: false
         annotations:
           order: 7

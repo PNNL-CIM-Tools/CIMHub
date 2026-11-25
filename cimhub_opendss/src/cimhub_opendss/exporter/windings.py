@@ -66,8 +66,7 @@ def read_unit(unit) -> UnitModel:
         raise ValueError(f"{describe(unit)}: has {len(stored.windings)} windings; 2 or 3 are mapped (Xscarray is not)")
     conductors = _conductors(unit, stored.windings)
     kvas = tuple(_kva(unit, winding, bool(conductors)) for winding in stored.windings)
-    model = get_transformer_model(unit, base_power=cim.ApparentPower(kvas[0], "kVA"), voltage_unit="kV",
-                                  power_unit="kVA")
+    model = get_transformer_model(unit, base_power=kvas[0], voltage_unit="kV", power_unit="kVA")
     return UnitModel(unit, model, conductors, kvas)
 
 

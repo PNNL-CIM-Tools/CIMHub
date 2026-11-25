@@ -65,7 +65,8 @@ written); the `common` rows approved with S1.
       bv_208v,   0.208
   ```
   - `mRID`s are lowercased, like every DSS mRID.
-  - `BaseFrequency` is `Set defaultbasefreq`, else the DSS default of 60 Hz (DSS-3b).
+  - `BaseFrequency` is `Set defaultbasefreq`, else the DSS default of 60 Hz (DSS-3b). `Set basefrequency` raises in
+    the reader: the engine applies it only to objects defined after it, so the deck could hold two base frequencies.
   - The BaseVoltages are one per distinct bus voltage of the topology walk and one per `voltagebases` value, each
     through `nominal_kv`, highest first. A base on no bus is kept (`bv_208v` above): it is what the engine's
     `CalcVoltageBases` snaps bus bases to, so the export writes it back (`Set voltagebases` is every BaseVoltage).
@@ -198,28 +199,28 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 | `x1` | `Optional[float]` | `0.312115`, `0.491691`, `0.560725` | copied | `PerLengthSequenceImpedance.x` (ohm/{length}) |
 | `r0` | `Optional[float]` | `1.294322`, `0.613107`, `0.608571` | copied | `PerLengthSequenceImpedance.r0` (ohm/{length}) |
 | `x0` | `Optional[float]` | `0.287695`, `1.241561`, `1.19452` | copied | `PerLengthSequenceImpedance.x0` (ohm/{length}) |
-| `C1` | `Optional[str]` | `154.240283543118`, `8.96939698228171`, `9.08509466816236` | derived | PerLengthSequenceImpedance bch = 2 pi baseFreq C1 (b_from_c): nF -> nS |
-| `C0` | `Optional[str]` | `154.240283543118`, `4.95311934077534`, `5.10821052765362` | derived | PerLengthSequenceImpedance b0ch = 2 pi baseFreq C0 (b_from_c): nF -> nS |
+| `C1` | `Optional[float]` | `154.240283543118`, `8.96939698228171`, `9.08509466816236` | derived | PerLengthSequenceImpedance bch = 2 pi baseFreq C1 (b_from_c): nF -> nS |
+| `C0` | `Optional[float]` | `154.240283543118`, `4.95311934077534`, `5.10821052765362` | derived | PerLengthSequenceImpedance b0ch = 2 pi baseFreq C0 (b_from_c): nF -> nS |
 | `units` | `Optional[str]` | `mi`, `km` | mapped | the length unit of every per-length header via LENGTH_UNIT; unset: the unit of the lines that use the code, else the deck's magnitude gate (DSS-3) |
 | `rmatrix` | `Union[float, list[float], NoneType]` | `[0.3465, 0.1535, 0.3375, 0.158, 0.156...`, `[0.7526, 0.1535, 0.7475, 0.156, 0.158...`, `[1.3238, 0.2066, 1.3294]` | structural | PhaseImpedanceData r, one row per lower-triangle element |
 | `xmatrix` | `Union[float, list[float], NoneType]` | `[1.0179, 0.3849, 1.0478, 0.4236, 0.50...`, `[1.1814, 0.3849, 1.1983, 0.5017, 0.42...`, `[1.3569, 0.4591, 1.3471]` | structural | PhaseImpedanceData x, one row per lower-triangle element |
 | `cmatrix` | `Union[float, list[float], NoneType]` | `[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]`, `[0.0, 0.0, 0.0]` | derived | PhaseImpedanceData b = 2 pi baseFreq C (b_from_c): nF -> nS |
-| `baseFreq` | `Optional[str]` | `60` | copied | `PerLengthPhaseImpedance.calculatedFrequency` (Hz), `PerLengthSequenceImpedance.calculatedFrequency` (Hz); also the frequency of the derived b; unset with a nonzero C: the deck's base frequency, defaulted (DSS-3b) |
+| `baseFreq` | `Optional[float]` | `60` | copied | `PerLengthPhaseImpedance.calculatedFrequency` (Hz), `PerLengthSequenceImpedance.calculatedFrequency` (Hz); also the frequency of the derived b; unset with a nonzero C: the deck's base frequency, defaulted (DSS-3b) |
 | `normamps` | `Optional[float]` | `730.0`, `340.0`, `230.0` | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
 | `emergamps` | `Optional[float]` | `160.0`, `310.0`, `260.0` | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
-| `faultrate` | `Optional[int]` | `0` | untranscribed | reliability data; no home in the network profile parts |
+| `faultrate` | `Optional[float]` | `0` | untranscribed | reliability data; no home in the network profile parts |
 | `pctperm` | `Optional[float]` | `20.0` | untranscribed | reliability data; no home in the network profile parts |
-| `repair` | `Optional[str]` | `3` | untranscribed | reliability data; no home in the network profile parts |
-| `Kron` | `Optional[str]` |  | untranscribed | input of the matrix calculation; no CIM home |
+| `repair` | `Optional[float]` | `3` | untranscribed | reliability data; no home in the network profile parts |
+| `Kron` | `Union[bool, Bool, NoneType]` |  | untranscribed | input of the matrix calculation; no CIM home |
 | `Rg` | `Optional[float]` |  | untranscribed | Carson earth return per length; home PerLengthImpedance.rg/xg (ohm/<units>), not mapped until a deck sets it (none of the test decks do) |
 | `Xg` | `Optional[float]` |  | untranscribed | Carson earth return per length; home PerLengthImpedance.rg/xg (ohm/<units>), not mapped until a deck sets it (none of the test decks do) |
 | `rho` | `Optional[float]` |  | untranscribed | earth resistivity; home EarthResistivity.rho, an object of its own, not mapped until a deck sets it |
-| `neutral` | `Optional[str]` |  | untranscribed | input of the matrix calculation; no CIM home |
-| `B1` | `Optional[str]` |  | copied | `PerLengthSequenceImpedance.bch` (uS/{length}); the alternative to C1 |
-| `B0` | `Optional[str]` |  | copied | `PerLengthSequenceImpedance.b0ch` (uS/{length}); the alternative to C0 |
+| `neutral` | `Optional[int]` |  | untranscribed | input of the matrix calculation; no CIM home |
+| `B1` | `Optional[float]` |  | copied | `PerLengthSequenceImpedance.bch` (uS/{length}); the alternative to C1 |
+| `B0` | `Optional[float]` |  | copied | `PerLengthSequenceImpedance.b0ch` (uS/{length}); the alternative to C0 |
 | `Seasons` | `Optional[int]` |  | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
-| `Ratings` | `Optional[float]` |  | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
-| `LineType` | `Optional[float]` |  | untranscribed | no home in the network profile parts |
+| `Ratings` | `Union[float, list[float], NoneType]` |  | untranscribed | catalog ratings have no home on PerLengthImpedance; instance limits or untranscribed (plan D9) |
+| `LineType` | `Optional[str]` |  | untranscribed | no home in the network profile parts |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
 **Derived.** `b_from_c(c, f)` = 2πfC: C in nF and f in Hz give b in nS. `susceptance` applies it per value; C = 0
@@ -239,8 +240,10 @@ whose length does not fit `nphases`.
 | two mRIDs give one UUID | IEEE8500 (`lc_1p_#2acsr_#2n` vs `lc_1p_#2arv_#2n`) | CIM-Profiles bug: the mRID seed drops text up to the last `#` (CIMTABLES_REQUESTS R10) |
 | `nphases=4` read as 3 | IEEE13_OCHRE | reader bug: it limits nphases to [1, 3] and substitutes 3, so the 10-value `rmatrix` no longer fits |
 
-**Reader/schema findings** (not mapper issues): `faultrate` is typed `int`, so `0.1` reads as `0`; `LineType` is
-typed `float` (DSS values are words such as `oh`); `C1`/`C0`/`B1`/`B0`/`baseFreq` are typed `str`.
+**Reader/schema findings** (not mapper issues, fixed 2026-11-24): `faultrate` was typed `int`, so `0.1` read as `0`;
+`LineType` was typed `float` (DSS values are words such as `oh`); `C1`/`C0`/`B1`/`B0`/`baseFreq` were typed `str`.
+Every slot now has the engine's property type (`test_schema_types_match_the_engine`), so `baseFreq=60` is the float
+60.0 and its `calculatedFrequency (Hz)` cell is `60.0`, as every other float cell is written (`repr`).
 
 **Expected differences from the hand translation** (`CIMTBL-Models/.../IEEE13_CDPSM`): it carries the 2011 corrected
 off-diagonals; the import keeps the deck's values (`mtx601` r21 = 0.1535).
@@ -644,7 +647,7 @@ each winding's `RdcOhms` and `Seasons=2 Ratings=[22000 25000]`), golden `rated.c
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `kV` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `kVA` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
-| `tap` | `Optional[str]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
+| `tap` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks and bare values into the arrays |
 | `Rneut` | `Optional[float]` |  | structural | TankEnd rground (ohm) of its winding when >= 0; on a 1-phase code raises |
 | `Xneut` | `Optional[float]` |  | structural | TankEnd xground (ohm) of its winding, with Rneut >= 0 |
@@ -656,17 +659,17 @@ each winding's `RdcOhms` and `Seasons=2 Ratings=[22000 25000]`), golden `rated.c
 | `Xht` | `Optional[float]` | `2.04`, `1.632`, `36.0` | structural | mesh 1-3 x; default 35 |
 | `Xlt` | `Optional[float]` | `1.36`, `1.088`, `28.0` | structural | mesh 2-3 x; default 30 |
 | `Xscarray` | `Union[float, list[float], NoneType]` |  | untranscribed | for more than 3 windings, which raise |
-| `thermal` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
-| `n` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
-| `m` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
-| `flrise` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
-| `hsrise` | `Optional[str]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `thermal` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `n` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `m` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `flrise` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
+| `hsrise` | `Optional[float]` |  | untranscribed | thermal model; no home in the network profile parts |
 | `pct_loadloss` | `Optional[float]` | `0.01`, `1.1` | derived | when pct_Rs is unset, r = loadloss / 2 on windings 1 and 2; set with pct_Rs, the two must agree |
 | `pct_noloadloss` | `Optional[float]` | `0.2`, `0.6` | derived | TransformerTankConfiguration.noLoadLoss (kW) = % x winding 1 kVA |
 | `normhkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed |
 | `emerghkVA` | `Optional[float]` |  | untranscribed | a tank rating; instance OperationalLimitSet or untranscribed |
-| `MaxTap` | `Optional[str]` | `1.1` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
-| `MinTap` | `Optional[str]` | `0.9` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
+| `MaxTap` | `Optional[float]` | `1.1` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
+| `MinTap` | `Optional[float]` | `0.9` | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
 | `NumTaps` | `Optional[int]` |  | untranscribed | tap changer range; a regulated instance takes it (S3a); else untranscribed |
 | `pct_imag` | `Optional[float]` | `0.5`, `1.1` | copied | `TransformerTankConfiguration.percentMagnetizingCurrent` (percent) |
 | `ppm_antifloat` | `Optional[float]` |  | untranscribed | numerical aid of the DSS solver |
@@ -1028,9 +1031,9 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `MonitoredTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `SwitchedObj` | `Optional[str]` | `Line.2002200004641085_sw`, `Line.2002200004868472_sw`, `Line.200220000499_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
-| `FuseCurve` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `FuseCurve` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `RatedCurrent` | `Optional[float]` | `100.0`, `65.0`, `15.0` | copied | `Fuse.ratedCurrent` (A) |
-| `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
+| `Delay` | `Optional[float]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
 | `Normal` | `Union[str, list[str], NoneType]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `State` | `Union[str, list[str], NoneType]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
@@ -1046,23 +1049,23 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `SwitchedObj` | `Optional[str]` | `Line.A333_48332_sw`, `Line.G9343_48332_sw`, `Line.L5397_48332_sw` | structural | the Line it switches: SwitchedObj, else MonitoredObj (the DSS default); not a Switch=y line raises |
 | `SwitchedTerm` | `Optional[int]` |  | untranscribed | the switch opens both terminals in CIM; DSS's terminal choice has no home |
 | `NumFast` | `Optional[int]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `PhaseFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `PhaseDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `GroundFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `GroundDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `PhaseTrip` | `Optional[str]` | `1200.0`, `200` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `GroundTrip` | `Optional[str]` | `400.0`, `40` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `PhaseInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `GroundInst` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `Reset` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseTrip` | `Optional[float]` | `1200.0`, `200` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundTrip` | `Optional[float]` | `400.0`, `40` | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `PhaseInst` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `GroundInst` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `Reset` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `Shots` | `Optional[int]` | `3` | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
 | `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
-| `Delay` | `Optional[str]` |  | untranscribed | control timing; no home on a Switch |
+| `Delay` | `Optional[float]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
-| `TDPhFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `TDGrFast` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `TDPhDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `TDGrDelayed` | `Optional[str]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDPhFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDPhDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
+| `TDGrDelayed` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `Normal` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `State` | `Optional[str]` |  | structural | Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on a switch |
@@ -1164,15 +1167,15 @@ headers carry no unit (primary volts, amps).
 | `revX` | `Optional[float]` |  | derived | reverseLineDropX (ohm) = revX x ptratio / CTprim (line_drop_ohms); default 0 |
 | `tapdelay` | `Optional[float]` | `30.0`, `45.0` | copied | `RatioTapChanger.subsequentDelay` (s); default 2 |
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
-| `maxtapchange` | `Optional[float]` |  | untranscribed | DSS solution control; no home in the network profile parts |
+| `maxtapchange` | `Optional[int]` |  | untranscribed | DSS solution control; no home in the network profile parts |
 | `inversetime` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS solution control; no home in the network profile parts |
-| `tapwinding` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap winding other than the monitored one) |
+| `tapwinding` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap winding other than the monitored one) |
 | `vlimit` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (home TapChangerControl.maxLimitVoltage) |
-| `PTphase` | `Optional[int]` |  | structural | TapChangerControl.monitoredPhase = the phase of the winding's conductor PTphase (default 1); MAX/MIN raise |
+| `PTphase` | `Optional[str]` |  | structural | TapChangerControl.monitoredPhase = the phase of the winding's conductor PTphase (default 1); MAX/MIN raise |
 | `revThreshold` | `Optional[float]` | `50.0` | copied | `TapChangerControl.reversingPowerThreshold` (kW); default 100 |
 | `revDelay` | `Optional[float]` |  | copied | `TapChangerControl.reversingDelay` (s); default 60 |
 | `revNeutral` | `Union[bool, Bool, NoneType]` |  | copied | `TapChangerControl.reverseToNeutral`; default false |
-| `EventLog` | `Optional[str]` |  | untranscribed | DSS report flag |
+| `EventLog` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
 | `RemotePTRatio` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `TapNum` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap position that overrides the transformer's tap) |
 | `Reset` | `Union[bool, Bool, NoneType]` |  | untranscribed | a command, not a setting |
@@ -1443,9 +1446,9 @@ On the atoms and the engine decks, as in S3:
 | `states` | `Union[int, list[int], NoneType]` | `[0]`, `[1]` | structural | sections = normalSections = the steps closed (a switch's normalOpen = open rule); default all closed |
 | `normamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an OperationalLimitSet, as a line's) |
 | `emergamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `faultrate` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `faultrate` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
 | `pctperm` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
-| `repair` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `repair` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on a compensator; bPerSection is at the model's frequency |
 | `enabled` | `Union[bool, Bool, NoneType]` | `True` | copied | `LinearShuntCompensator.normallyInService`; default true |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
@@ -1469,10 +1472,10 @@ On the atoms and the engine decks, as in S3:
 | `Vmin` | `Optional[float]` | `7110.0`, `114.0` | untranscribed | the VoltOverride band (V on the PT secondary) |
 | `DelayOFF` | `Optional[float]` | `100.0`, `101.0`, `102.0` | untranscribed | CIM has one aVRDelay (Delay); DSS solution control; no home in the network profile parts |
 | `DeadTime` | `Optional[float]` | `0.0` | untranscribed | DSS solution control; no home in the network profile parts |
-| `CTPhase` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `PTPhase` | `Optional[int]` | `1`, `2` | structural | monitoredPhase = the phase of the monitored terminal's conductor PTPhase (default 1); AVG/MAX/MIN raise |
-| `VBus` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (remote voltage sensing) |
-| `EventLog` | `Optional[str]` |  | untranscribed | DSS report flag |
+| `CTPhase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `PTPhase` | `Optional[str]` | `1`, `2` | structural | monitoredPhase = the phase of the monitored terminal's conductor PTPhase (default 1); AVG/MAX/MIN raise |
+| `VBus` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (remote voltage sensing) |
+| `EventLog` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
 | `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `pctMinkvar` | `Optional[float]` |  | untranscribed | used only by PF control, which raises |
@@ -1841,16 +1844,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the PV's EnergyConnectionSchedule <mRID>_yearly: pv_power at irradiance x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `Tyearly` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `Tdaily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `Tduty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `Tduty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `class_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
 | `UserModel` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
 | `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | derived | yes: an inverter that is off gives no kvar either (pv_power, engine-checked); default no |
-| `DutyStart` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `DutyStart` | `Optional[float]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
 | `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
@@ -1858,16 +1861,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `kvarMax` | `Optional[float]` |  | copied | `PowerElectronicsConnection.maxQ` (kVAr); default kVA |
 | `kvarMaxAbs` | `Optional[float]` |  | derived | minQ (kVAr) = -kvarMaxAbs; default kVA |
 | `kVDC` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `Kp` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `PITol` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Kp` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `PITol` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `SafeVoltage` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `SafeMode` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeMode` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `DynOut` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynOut` | `Union[str, list[str], NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
 | `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `spectrum` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on an inverter |
 | `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `PowerElectronicsConnection.normallyInService`; default true |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
@@ -1915,11 +1918,11 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample (S9); with another DispMode raises |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `duty` | `Optional[int]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
+| `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `DispMode` | `Optional[str]` |  | structural | default, or follow with a yearly shape (S9); another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
-| `DischargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
-| `ChargeTrigger` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
-| `TimeChargeTrig` | `Optional[str]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `DischargeTrigger` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `ChargeTrigger` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
+| `TimeChargeTrig` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `class_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
 | `DynaDLL` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `DynaData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
@@ -1927,16 +1930,16 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `UserData` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
 | `kVDC` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `Kp` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `PITol` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `Kp` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `PITol` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `SafeVoltage` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `SafeMode` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `SafeMode` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `DynOut` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
+| `DynOut` | `Union[str, list[str], NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
 | `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `spectrum` | `Optional[float]` |  | untranscribed | harmonics model; no home in the network profile parts |
+| `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
 | `basefreq` | `Optional[float]` |  | untranscribed | no home on an inverter |
 | `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `PowerElectronicsConnection.normallyInService`; default true |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
@@ -2002,8 +2005,8 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `kvar` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (X from kvar and kV) |
 | `kv` | `Optional[float]` |  | untranscribed | acts only with kvar, which raises |
 | `conn` | `Optional[str]` |  | untranscribed | a series reactor has no neutral |
-| `Rmatrix` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `Xmatrix` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Rmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Xmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `Parallel` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `R` | `Optional[float]` | `0.0` | copied | `SeriesCompensator.r` (ohm), `SeriesCompensator.r0` (ohm); per phase; r0 = r (no mutual); default 0 |
 | `X` | `Optional[float]` | `14.798306633595042`, `0.5` | copied | `SeriesCompensator.x` (ohm), `SeriesCompensator.x0` (ohm); per phase; x0 = x (no mutual); unset raises |
@@ -2012,14 +2015,14 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Z2` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `Z0` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `Z` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `RCurve` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `LCurve` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `RCurve` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `LCurve` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `LmH` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (X from an inductance) |
 | `normamps` | `Optional[float]` | `400.0` | structural | instance OperationalLimitSet rx_<name>_limits: CurrentLimit _norm (olt_normal); nothing from the engine's kvar-derived default |
 | `emergamps` | `Optional[float]` | `400.0` | structural | CurrentLimit _emerg (olt_emergency) in rx_<name>_limits |
-| `faultrate` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `faultrate` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
 | `pctperm` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
-| `repair` | `Optional[str]` |  | untranscribed | a reliability setting; no home in the network profile parts |
+| `repair` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
 | `basefreq` | `Optional[float]` | `60.0` | untranscribed | no home on a compensator; x is at the model's frequency |
 | `enabled` | `Union[bool, Bool, NoneType]` |  | copied | `SeriesCompensator.normallyInService`; default true |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
@@ -2311,20 +2314,20 @@ with no `npts` is S8-5's case too: the engine reads no points from the file eith
 | `hour` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an irregular shape has no RegularIntervalSchedule) |
 | `mean` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
 | `stddev` | `Optional[float]` |  | untranscribed | a Monte Carlo statistic; the engine computes it from mult |
-| `csvfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
-| `sngfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
-| `dblfile` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `csvfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `sngfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `dblfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
 | `action` | `Optional[str]` | `normalize` | derived | normalize: mult and qmult each divided by its largest magnitude, as the engine does (one assigned after it raises); DblSave, SngSave write files and are untranscribed; others raise |
 | `qmult` | `Union[float, list[float], NoneType]` | `[0.4, 0.6, 0.9, 0.7]` | copied | `RegularTimePoint.value2`; in the sidecar; unset: Q follows mult (the engine's rule), value2 unset |
 | `UseActual` | `Union[bool, Bool, NoneType]` |  | structural | Yes raises: a Load naming it takes the shape's peak as its kW, or keeps its own, by command order, which the record does not keep (engine-checked); default No |
 | `Pmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
 | `Qmax` | `Optional[float]` |  | untranscribed | used only with UseActual |
-| `sinterval` | `Optional[str]` | `900` | copied | `ConformLoadSchedule.timeStep` (s); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
-| `minterval` | `Optional[str]` | `15` | copied | `ConformLoadSchedule.timeStep` (min); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
-| `Pbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
-| `Qbase` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
-| `Pmult` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a synonym of mult) |
-| `PQCSVFile` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
+| `sinterval` | `Optional[float]` | `900` | copied | `ConformLoadSchedule.timeStep` (s); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `minterval` | `Optional[float]` | `15` | copied | `ConformLoadSchedule.timeStep` (min); the interval slot the deck assigned last (the engine's rule); 0 (an hour array) raises; none: 1 h |
+| `Pbase` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Qbase` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a normalize base) |
+| `Pmult` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a synonym of mult) |
+| `PQCSVFile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
 | `MemoryMapping` | `Union[bool, Bool, NoneType]` |  | untranscribed | how the engine stores the points |
 | `Mode` | `Optional[float]` |  | untranscribed | generator dispatch; no effect on a Load |
 | `Interpolation` | `Optional[str]` |  | untranscribed | AVG and EDGE agree at the solution steps, which are on the interval grid (TIMESERIES_NEEDS.md X3) |

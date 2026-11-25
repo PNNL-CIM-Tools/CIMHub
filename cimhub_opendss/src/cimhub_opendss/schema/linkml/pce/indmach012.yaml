@@ -105,7 +105,7 @@ classes:
       D:
         description: >-
           Damping constant
-        range: string
+        range: float
         required: false
         annotations:
           order: 9
@@ -159,7 +159,7 @@ classes:
       Slip:
         description: >-
           Initial slip value
-        range: string
+        range: float
         required: false
         annotations:
           order: 15
@@ -168,7 +168,7 @@ classes:
       MaxSlip:
         description: >-
           Max slip value to allow
-        range: string
+        range: float
         required: false
         annotations:
           order: 16
@@ -204,7 +204,7 @@ classes:
       Duty:
         description: >-
           LOADSHAPE object to use for duty cycle simulations
-        range: integer
+        range: string
         required: false
         annotations:
           order: 20
@@ -213,7 +213,7 @@ classes:
       Debugtrace:
         description: >-
           [Yes | No*] Write DebugTrace file
-        range: string
+        range: boolean
         required: false
         annotations:
           order: 21
@@ -222,7 +222,7 @@ classes:
       spectrum:
         description: >-
           Name of harmonic voltage or current spectrum for this IndMach012
-        range: float
+        range: string
         required: false
         annotations:
           order: 22

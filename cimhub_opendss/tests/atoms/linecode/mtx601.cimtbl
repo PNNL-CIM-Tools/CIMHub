@@ -7,7 +7,7 @@ Profile = cim18v17
 
 Table PerLengthPhaseImpedance: mRID, name, conductorCount, calculatedFrequency (Hz), isTemplate
     # untranscribed: normamps=730.0
-    lc_mtx601, mtx601, 3, 60, true
+    lc_mtx601, mtx601, 3, 60.0, true
 
 # units=mi. row/column are conductor indices of the lower triangle.
 # derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS

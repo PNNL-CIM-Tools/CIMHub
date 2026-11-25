@@ -2,6 +2,12 @@
 
 ``scaffold_package`` writes the layout the shipped spokes (``cimhub_raw``, ``cimhub_opendss``) use::
 
+    cimhub_<fmt>/
+        pyproject.toml               # the shipped spokes' build, license and cimhub-core / cim-tables pins
+        README.md
+        docs/CIMTBL_MAPPING.md       # import spec skeleton (the ``cimtbl-mapping-spec`` skill)
+        docs/EXPORT_MAPPING.md       # export spec skeleton
+        tests/atoms/prereqs/         # shared atom prerequisites (the ``atom-tests`` skill)
     cimhub_<fmt>/src/cimhub_<fmt>/
         __init__.py
         <fmt>_reader.py              # FormatReader (importer side)
@@ -12,6 +18,8 @@
         exporter/cim_to_<fmt>.py     # EXPORT_ORDER, export_tables, the FormatExporter subclass, cim_to_<fmt>
 
 The contracts are the ``reader-writer`` and ``cimtbl-import-contract`` skills. Everything targets cim18v17.
+Two steps stay manual: the bootstrap session adds the package to the root ``pyproject.toml`` workspace, and the
+schema gets an entry in ``scripts/gen-schema.sh``.
 
 Usage::
 
@@ -34,6 +42,9 @@ __all__ = ["scaffold_package", "scaffold_mapper"]
 
 #: The values ``scaffold_package`` accepts for ``direction``.
 DIRECTIONS = ("importer", "exporter", "both")
+
+#: The pins every shipped spoke's ``pyproject.toml`` has (``test_scaffold_pins_match_the_shipped_spokes``).
+DEPENDENCIES = ("cimhub-core>=2.1.0a2,<2.2", "cim-topology>=0.1.2a1,<0.2", "cim-tables>=0.1.1a1,<0.2")
 
 
 # -----------------------------------------------------------------------
@@ -73,13 +84,16 @@ def scaffold_package(
     root = package_root / "src" / pkg
 
     _write(root / "__init__.py", "")
+    _create_project_files(package_root, format_name, pkg)
     _create_schema_skeleton(root / "schema", format_name, schema_prefix or format_name)
     if direction in ("importer", "both"):
         _create_reader_stub(root, format_name)
         _create_importer_tree(root / "importer", format_name, pkg)
+        _write(package_root / "docs" / "CIMTBL_MAPPING.md", _IMPORT_SPEC.format(fmt=format_name.upper(), pkg=pkg))
     if direction in ("exporter", "both"):
         _create_writer_stub(root, format_name)
         _create_exporter_tree(root / "exporter", format_name, pkg)
+        _write(package_root / "docs" / "EXPORT_MAPPING.md", _EXPORT_SPEC.format(fmt=format_name.upper(), pkg=pkg))
     return package_root
 
 
@@ -181,6 +195,89 @@ def test_classification_is_complete():
 #     network = cimtbl_to_cim(atom_documents(map_{table}(...)))
 ''')
     return mapper
+
+
+# -----------------------------------------------------------------------
+# Project files and spec skeletons
+# -----------------------------------------------------------------------
+
+def _create_project_files(package_root: Path, fmt: str, pkg: str) -> None:
+    """``pyproject.toml`` as the shipped spokes build, a README, and the atoms' shared ``prereqs/``."""
+    dependencies = "".join(f'  "{requirement}",\n' for requirement in DEPENDENCIES)
+    _write(package_root / "pyproject.toml", f"""\
+[build-system]
+requires = ["setuptools~=80.9"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{pkg}"
+description = "CIMHub {fmt.upper()} converter: {fmt} <-> .cimtbl <-> cim18v17"
+readme = "README.md"
+version = "0.1.0"
+requires-python = ">=3.11"
+license = "BSD-3-Clause"
+maintainers = [
+  {{ name = "Pacific Northwest National Laboratory", email = "gridappsd@pnnl.gov" }},
+]
+dependencies = [
+{dependencies}]
+
+[project.urls]
+"Homepage" = "https://github.com/PNNL-CIM-Tools/CIMHub"
+"Bug Tracker" = "https://github.com/PNNL-CIM-Tools/CIMHub/issues"
+
+[tool.setuptools]
+packages = {{ find = {{ where = ["src"] }} }}
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
+""")
+    _write(package_root / "README.md", f"# {pkg}\n\nCIMHub {fmt.upper()} converter. Import spec: "
+                                       f"`docs/CIMTBL_MAPPING.md`; export spec: `docs/EXPORT_MAPPING.md`.\n")
+    # git keeps no empty directory; prereq.cimtbl files shared by the whole spoke go here
+    _write(package_root / "tests" / "atoms" / "prereqs" / ".gitkeep", "")
+
+
+_IMPORT_SPEC = """\
+# {fmt} -> .cimtbl -> cim18v17 import spec
+
+Status: draft, not approved. Contract: the `cimtbl-import-contract` skill; how to write this spec: the
+`cimtbl-mapping-spec` skill. Samples from: TODO (the public models the field samples came from).
+
+## Artifact files and order
+
+| native class | artifact | shape(s) | depends on |
+|---|---|---|---|
+| TODO | | | |
+
+## master
+
+TODO: containers, BaseFrequency, BaseVoltages.
+
+<!-- One section per native table, anchored by its artifact stem: mapper and atoms, identity, form rules, values,
+the generated field table (cimhub_core.cimtbl.fields_table), derived formulas, defaults, fail fast, sweep result,
+reader/schema findings. -->
+
+## Code tables
+
+## CIM 18 gaps
+
+## Reference model and expected differences
+"""
+
+_EXPORT_SPEC = """\
+# cim18v17 -> {fmt} export spec
+
+Status: draft, not approved. The exporter reads values only through the core getters (the `export-getters` skill),
+and returns the model `{pkg}`'s reader returns, so the writer's output reads back through the importer.
+
+## Layout
+
+TODO: `exporter/` modules in `EXPORT_ORDER`, each with `NATIVE_CLASS`, `CIM_CLASSES`, `SLOTS` and `export(context)`.
+
+<!-- One section per native table: the CIM classes it reads, every slot (written / rule / unset / not mapped, from
+SLOTS), the fail-fast list and the round-trip differences. -->
+"""
 
 
 # -----------------------------------------------------------------------

@@ -83,7 +83,8 @@ you name.
 ### get_line_sequence_impedance
 
 ```python
-get_line_sequence_impedance(line, unit="ohm", *, base_power=None, derive=ImpedanceSource.LUMPED) -> SequenceImpedance
+get_line_sequence_impedance(line, unit="ohm", admittance_unit=None, *, base_power=None,
+                            derive=ImpedanceSource.LUMPED) -> SequenceImpedance
 ```
 
 The whole line's sequence values.
@@ -91,7 +92,8 @@ The whole line's sequence values.
 | Parameter | Meaning |
 |---|---|
 | `line` | an `ACLineSegment` |
-| `unit` | `'ohm'` (admittance in siemens) or `'pu'` (admittance in pu). Anything else raises `ValueError: unit must be one of ['ohm', 'pu'], not ...` |
+| `unit` | `'ohm'` or `'pu'`. Anything else raises `ValueError: unit must be one of ['ohm', 'pu'], not ...` |
+| `admittance_unit` | b and g: with `'ohm'` any siemens unit (`'S'` by default; DSS asks `'nS'`), with `'pu'` only `'pu'` (the default) |
 | `base_power` | the power base for `'pu'`, normally `network.base_power`. The voltage base is the line's BaseVoltage; the conversion is `cimtables.impedance.z_base`. Required for `'pu'` |
 | `derive` | the furthest `ImpedanceSource` step to take |
 
