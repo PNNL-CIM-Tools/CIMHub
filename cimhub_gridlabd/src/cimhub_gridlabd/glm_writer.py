@@ -6,10 +6,13 @@ blocks (``class player { double value; }``), its ``schedule`` blocks (``GlmModel
 then one ``object <class> { ... }`` per record in ``WRITE_ORDER`` (each
 class after the classes it names), the records of a class in name order. A property is the slot's GLM name and its
 value; an unset slot is not written, unless the model holds an expression for it (``<player>.value*K``), written as
-is. Each player's tape (``GlmModel.tapes``) is written to its ``file`` beside the deck, one ``time,value`` row per
-line. Values:
+is. Each player's tape (``GlmModel.tapes``) is written to its ``file`` beside the deck (relative to it, its
+directories made), one ``time,value`` row per line; a player with no ``file`` raises before anything is written.
+Values:
 
-- a number to ``FLOAT_DIGITS`` significant digits, in the slot's schema unit (GLM's fixed units; no unit text);
+- a number to ``FLOAT_DIGITS`` significant digits, then the unit the deck wrote it in (``GlmModel.written_units``,
+  ``distance_AB 30 in``); a value with no written unit is in the slot's schema unit (GLM's fixed units), with no
+  unit text, as the exporter's are;
 - a complex value rectangular, ``a+bj`` (skill ``conductor-geometry``: no leading ``+``, the imaginary sign always
   written);
 - a boolean ``TRUE``/``FALSE``;
@@ -91,10 +94,13 @@ class GlmWriter(FormatWriter):
 
     def write(self, model: GlmModel, destination: str) -> None:
         path = Path(destination)
+        deck = self.deck(model)  # raises on what it cannot write, before any file is written
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.deck(model), encoding="utf-8")
+        path.write_text(deck, encoding="utf-8")
         for player in model.list_by_class(schema.Player):
-            (path.parent / player.file).write_text(tape_text(model.tapes[str(player.name)]), encoding="utf-8")
+            tape = path.parent / player.file
+            tape.parent.mkdir(parents=True, exist_ok=True)
+            tape.write_text(tape_text(model.tapes[str(player.name)]), encoding="utf-8")
 
     def deck(self, model: GlmModel) -> str:
         """The whole deck as text."""
@@ -108,18 +114,23 @@ class GlmWriter(FormatWriter):
         blocks += [_class_block(name, properties) for name, properties in model.classes.items()]
         blocks += [_schedule_block(name, rules) for name, rules in model.schedules.items()]
         players = {str(player.name) for player in model.list_by_class(schema.Player)}
+        no_file = sorted(str(player.name) for player in model.list_by_class(schema.Player) if player.file is None)
+        if no_file:
+            raise ValueError(f"GlmWriter: players {no_file} have no file to write their tape to")
         if players != set(model.tapes):
             raise ValueError(f"GlmWriter: players {sorted(players)} and tapes {sorted(model.tapes)} differ")
         for cls in WRITE_ORDER:
             records = sorted(model.list_by_class(cls), key=lambda record: str(record.name))
-            blocks += [self.serialize(record, model.expressions) for record in records]
+            blocks += [self.serialize(record, model.expressions, model.written_units) for record in records]
         return "\n".join(blocks) + "\n"
 
-    def serialize(self, obj, expressions: dict | None = None) -> str:
+    def serialize(self, obj, expressions: dict | None = None, written_units: dict | None = None) -> str:
         """One ``object <class> { ... }`` block: ``name`` first, then every set slot in schema order, an unset slot
-        with an expression in ``expressions`` (``(name, slot) -> text``) as that text."""
+        with an expression in ``expressions`` (``(name, slot) -> text``) as that text, a value with a unit in
+        ``written_units`` (``(name, slot) -> unit``) followed by it."""
         info = glm_schema.slots(type(obj))
         expressions = expressions or {}
+        written_units = written_units or {}
         lines = [f"object {obj.class_name} {{", f"  name {format_value(obj.name)};"]
         for field in dataclasses.fields(obj):
             value = getattr(obj, field.name)
@@ -130,7 +141,9 @@ class GlmWriter(FormatWriter):
                 if text is not None:
                     lines.append(f"  {info[field.name].native_name} {text};")
                 continue
-            lines.append(f"  {info[field.name].native_name} {format_value(value)};")
+            unit = written_units.get((str(obj.name), field.name))
+            text = format_value(value) if unit is None else f"{format_value(value)} {unit}"
+            lines.append(f"  {info[field.name].native_name} {text};")
         lines.append("}")
         return "\n".join(lines)
 

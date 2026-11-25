@@ -212,7 +212,8 @@ the two insulated phase conductors touch, and the bare neutral touches both. The
 | `conductor_1`, `conductor_2`, `conductor_N` | structural: `WireSequenceConfiguration` 1, 2, 3 (spacing phases `s1`, `s2`, `N`); required | written: the wire at `s1`, `s2`, `N` |
 | `diameter`, `insulation_thickness` | derived: the spacing's distances, D12 = `diameter` + 2 `insulation_thickness`, D1N = D2N = `diameter` + `insulation_thickness` (`in`); both required, in one unit | written: `insulation_thickness` = D12 - D1N, `diameter` = 2 D1N - D12 |
 | `spacing`, `conductor_A`, `conductor_B`, `conductor_C` | raises when set: GridLAB-D's triplex line does not read them | unset |
-| `z11` to `z33`, `c11` to `c33` | raises when set (no readable deck sets a triplex matrix) | written, for a line whose impedance is a matrix: `z11`, `z12`, `z21`, `z22` on `s1`, `s2`, with `N` Kron-reduced out; `c` is never written |
+| `z11`, `z12`, `z21`, `z22` | structural: the matrix form, which GridLAB-D uses as given on legs 1 and 2. A template `PerLengthPhaseImpedance` `lc_<name>` on `s1`, `s2` with b 0 (no shunt admittance), held by `WireConfiguration` `lc_<name>_wc`; its lines are `s1s2`. `z11` and `z22` required, `z12` equal to `z21`; with geometry raises | written, for a line whose impedance is a matrix: on `s1`, `s2`, with `N` Kron-reduced out |
+| the other `z` and every `c` | raises when set: GridLAB-D's triplex line does not read them | unset: `c` is never written |
 | `rating_summer_*`, `rating_winter_*` | structural: as `line_configuration` | unset: ratings are each line's own |
 | object header | untranscribed | not written |
 
@@ -222,7 +223,8 @@ D1N and D2N differ by more than a relative 1e-5: GridLAB-D's triplex spacing is 
 
 **Expected differences.** A triplex matrix's susceptance is not written, and is logged once per configuration:
 GridLAB-D's `triplex_line` has no shunt admittance, so no slot holds it. IEEE 8500's triplex codes carry about 0.1 VAr
-per kft at 240 V. The importer in turn raises on any `z` or `c` of a triplex configuration, so a deck exported from a CIM triplex matrix is not read back.
+per kft at 240 V. The importer reads the exported `z11` to `z22` back as the same `s1`, `s2` matrix; a CIM triplex
+matrix with a neutral row comes back without it (Kron-reduced).
 
 Excerpt from `cimhub_gridlabd/tests/atoms/catalog/catalog.triplex_line_configuration.cimtbl`:
 

@@ -26,7 +26,7 @@ raises, because DSS keeps the one set last and the reader does not record the or
 |---|---|---|
 | `R1 X1 R0 X0` (ohm) | copied to `r`, `x`, `r0`, `x0`; all four must be set | written for a 3-phase source |
 | `MVAsc3 MVAsc1` with `x1r1`, `x0r0` | derived by `thevenin_from_short_circuit`; an unset value takes its DSS default (2000, 2100, 4, 3) and is listed as `defaulted` | written for a 1-phase source, by the exact inverse `short_circuit_from_thevenin` |
-| `Isc3 Isc1` (A) | converted to MVAsc by `mvasc_from_isc`, then as above | never written |
+| `Isc3 Isc1` (A) | the short-circuit power in kVA by `kvasc_from_isc` (kV x A), then as above; kV squared over kVA is kohm, so these rows have their own table with `r (kohm)` ... `x0 (kohm)` | never written |
 | none set | all four MVAsc defaults, as the engine does | not applicable |
 
 | property | import | export |
@@ -41,8 +41,8 @@ raises, because DSS keeps the one set last and the reader does not record the or
 | `MVAsc1` | derived: r0, x0 (thevenin_from_short_circuit) | written: 1-phase: 3 kV^2 / abs(2 Z1 + Z0) |
 | `x1r1` | derived: r, x (thevenin_from_short_circuit) | written: 1-phase: x / r; r = 0 raises |
 | `x0r0` | derived: r0, x0 (thevenin_from_short_circuit) | written: 1-phase: x0 / r0; r0 = 0 raises |
-| `Isc3` | derived: MVAsc3 (mvasc_from_isc), then as MVAsc3 | not written: the ohms or the MVAsc group carries the same impedance |
-| `Isc1` | derived: MVAsc1 (mvasc_from_isc), then as MVAsc1 | not written: the ohms or the MVAsc group carries the same impedance |
+| `Isc3` | derived: the 3-phase short-circuit kVA (kvasc_from_isc), then as MVAsc3; r, x in kohm | not written: the ohms or the MVAsc group carries the same impedance |
+| `Isc1` | derived: the 1-phase short-circuit kVA (kvasc_from_isc), then as MVAsc1; r0, x0 in kohm | not written: the ohms or the MVAsc group carries the same impedance |
 | `R1` | copied to `EnergySource.r` (ohm) | written: 3-phase: get_source.impedance.r (ohm); r, x, r0, x0 unset raises (DSS takes one group) |
 | `X1` | copied to `EnergySource.x` (ohm) | written: 3-phase: get_source.impedance.x (ohm) |
 | `R0` | copied to `EnergySource.r0` (ohm) | written: 3-phase: get_source.impedance.r0 (ohm) |

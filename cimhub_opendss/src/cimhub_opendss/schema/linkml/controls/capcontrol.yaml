@@ -164,8 +164,8 @@ classes:
         comments:
           - >-
             Import: derived; targetValue = (ON + OFF) / 2, voltage x PTratio
-            (V), current x CTratio (A), kvar in var, time in hours; ON on the
-            wrong side of OFF raises; default 300. Export: targetValue -+
+            (V), current x CTratio (A), kvar in kvar (targetValueUnitMultiplier
+            k), time in hours; ON on the wrong side of OFF raises; default 300. Export: targetValue -+
             targetDeadband / 2, divided by the ratio.
 
       # (8) OFFsetting

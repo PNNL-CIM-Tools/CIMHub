@@ -49,7 +49,7 @@ classes:
       Mode:
         description: >-
           Smart inverter function in which the InvControl will control the PC elements specified in DERList, according to the options below:Must be one of: {VOLTVAR* | VOLTWATT | DYNAMICREACCURR | WATTPF |...
-        range: float
+        range: string
         required: false
         annotations:
           order: 2
@@ -58,7 +58,7 @@ classes:
       CombiMode:
         description: >-
           Combination of smart inverter functions in which the InvControl will control the PC elements in DERList, according to the options below: Must be a combination of the following: {VV_VW | VV_DRC}
-        range: float
+        range: string
         required: false
         annotations:
           order: 3

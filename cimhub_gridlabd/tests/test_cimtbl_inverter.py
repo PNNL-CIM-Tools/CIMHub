@@ -224,3 +224,17 @@ def test_legacy_battery_raises(tmp_path):
 
 def test_multipoint_efficiency_raises(tmp_path):
     raises(tmp_path, _inverter("use_multipoint_efficiency TRUE;"), "use_multipoint_efficiency TRUE; not mapped")
+
+
+def test_a_zero_inverter_efficiency_is_gridlabds_default(tmp_path, scope):
+    """``inverter_efficiency 0`` (or below) is GridLAB-D's 0.9 (``inverter.cpp:1398``), not an inverter with no
+    output."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM.parent / "line" / "line.glm"}"\n'
+                    "object meter { name mx; parent n2; phases ABCN; nominal_voltage 2401.78; }\n"
+                    + _inverter("inverter_efficiency 0;"))
+    model = read(path)
+    network = glm_to_cim(model, name=MODEL)
+    assert assert_gridlabd_der(model, network) == 1  # gridlabd_pv_ac's 0.9
+    [pec] = network.list_by_class(cim.PowerElectronicsConnection)
+    assert float(pec.p.to("W")) < 0

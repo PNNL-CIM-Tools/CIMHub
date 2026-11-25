@@ -1,25 +1,26 @@
 # OpenDSS CapControl -> RegulatingControl on the monitored Terminal; the compensator gets it, its
 # delay and controlEnabled by an Update. targetValue = (ON + OFF) / 2, targetDeadband = abs(OFF - ON), in
-# primary units: voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours from midnight.
+# primary units: voltage x PTratio (V), current x CTratio (A), kvar in kvar (targetValueUnitMultiplier k), time in
+# hours from midnight.
 # Source table: CapControl (records: 4)
 # Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#capcontrol
 
 Profile = cim18v17
 
-Table RegulatingControl: mRID, name, mode, discrete=true, enabled, monitoredPhase, ptRatio, ctRatio, targetValue, targetDeadband, Terminal
+Table RegulatingControl: mRID, name, mode, discrete=true, enabled, monitoredPhase, ptRatio, ctRatio, targetValue, targetDeadband, targetValueUnitMultiplier, Terminal
     # derived from ON=150.0, OFF=-225.0
     # defaulted: PTPhase=1, enabled=true
     # untranscribed: VoltOverride=true, Vmax=7740.0, Vmin=7110.0, DelayOFF=90.0
-    cc_kvar, kvar, reactivePower, true, A, 1.0,  1.0,  -37500.0, 375000.0, sw_capsw_T1
+    cc_kvar, kvar, reactivePower, true, A, 1.0,  1.0,  -37.5,  375.0, k, sw_capsw_T1
     # derived from ON=1950.0, OFF=2500.0
     # defaulted: CTratio=60.0, PTPhase=1, enabled=true
-    cc_own,  own,  voltage,       true, A, 1.0,  60.0, 2225.0,   550.0,    cap_own_T1
+    cc_own,  own,  voltage,       true, A, 1.0,  60.0, 2225.0, 550.0, ,  cap_own_T1
     # derived from ON=8.0, OFF=19.0
     # defaulted: terminal=1, PTratio=60.0, CTratio=60.0, Delay=15.0, PTPhase=1, enabled=true
-    cc_time, time, timeScheduled, true, A, 60.0, 60.0, 13.5,     11.0,     cap_cd_T1
+    cc_time, time, timeScheduled, true, A, 60.0, 60.0, 13.5,   11.0,  ,  cap_cd_T1
     # derived from ON=115.0, OFF=125.0
     # defaulted: CTratio=60.0, Delay=15.0, enabled=true
-    cc_volt, volt, voltage,       true, C, 20.0, 60.0, 2400.0,   200.0,    ln_l2_T2
+    cc_volt, volt, voltage,       true, C, 20.0, 60.0, 2400.0, 200.0, ,  ln_l2_T2
 
 # the compensator's control, delay (Delay) and controlEnabled
 Update Table LinearShuntCompensator: mRID, RegulatingControl, aVRDelay (s), controlEnabled

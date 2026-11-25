@@ -9,8 +9,9 @@ deadband, ``pt_phase`` the monitored phases, ``dwell_time`` the aVRDelay; ``cont
 BANK on more), else MANUAL. A control of another mode is written MANUAL at the unit's actual state and logged (GLM's
 VAR, VARVOLT and CURRENT are not mapped either way yet, and GLM has no time control), as an LTC's control is (X5).
 A delta unit raises: GLM's delta capacitor is not mapped either way yet. Units the GLM importer split from one
-automatic INDIVIDUAL capacitor (one-phase units on one bus named ``<base>_<their phase>``, S4a-8) are the GLM
-capacitor ``<base>`` again, VOLT on the phases whose units have a control (``pt_phase``).
+automatic INDIVIDUAL capacitor (one-phase units on one bus named ``<base>_<their phase>``, one of them with a
+voltage control, S4a-8) are the GLM capacitor ``<base>`` again, VOLT on the phases whose units have a control
+(``pt_phase``). Units with no control keep their names: a MANUAL ``cap_B`` is ``cap_B``.
 """
 
 from __future__ import annotations
@@ -51,19 +52,20 @@ SLOTS = {schema.Capacitor: with_default(schema.Capacitor, {
 
 
 def export(context) -> list:
-    by_node = defaultdict(list)
+    by_node, controls = defaultdict(list), {}
     for shunt in context.objects(*CIM_CLASSES):
         by_node[get_terminal_nodes(shunt)[0]].append(shunt)
+        controls[shunt] = _control(shunt, letters(get_conductor_phases(shunt)))
     records = []
     for node, shunts in by_node.items():
-        for units, drop in _groups(shunts, context.names):
-            records.append(_capacitor(units, drop, context.buses[node], context))
+        for units, drop in _groups(shunts, context.names, controls):
+            records.append(_capacitor(units, drop, context.buses[node], context.names, controls))
     return records
 
 
-def _groups(shunts: list, names) -> list[tuple[list, str]]:
-    """``[(units, name ending to drop), ...]`` on one bus: a split capacitor's one-phase units ``<base>_<phase>``
-    together (the importer's S4a-8 inverted), every other unit alone."""
+def _groups(shunts: list, names, controls: dict) -> list[tuple[list, str]]:
+    """``[(units, name ending to drop), ...]`` on one bus: a split capacitor's one-phase units ``<base>_<phase>``,
+    one of them controlled, together (the importer's S4a-8 inverted), every other unit alone."""
     by_base, groups = defaultdict(list), []
     for shunt in shunts:
         phase_letters = letters(get_conductor_phases(shunt))
@@ -74,14 +76,14 @@ def _groups(shunts: list, names) -> list[tuple[list, str]]:
             groups.append(([shunt], ""))
     for units in by_base.values():
         units.sort(key=lambda unit: unit[0])
-        if len({letter for letter, _ in units}) != len(units):
+        if len({letter for letter, _ in units}) != len(units) or not any(controls[shunt] for _, shunt in units):
             groups += [([shunt], "") for _, shunt in units]
         else:
             groups.append(([shunt for _, shunt in units], f"_{units[0][0]}"))
     return groups
 
 
-def _capacitor(units: list, drop: str, bus, context) -> schema.Capacitor:
+def _capacitor(units: list, drop: str, bus, names, unit_controls: dict) -> schema.Capacitor:
     phase_letters, per_phase, voltages, controls = "", {}, set(), {}
     for shunt in units:
         rated = get_shunt_reactive_power(shunt, glm_unit(schema.Capacitor, "capacitor_A"), sections="maximum",
@@ -97,13 +99,13 @@ def _capacitor(units: list, drop: str, bus, context) -> schema.Capacitor:
         for phase, q in rated.per_phase.items():
             per_phase[f"capacitor_{letters((phase,))}"] = q
             per_phase[f"switch{letters((phase,))}"] = state
-        control = _control(shunt, unit_letters)
+        control = unit_controls[shunt]
         if control:
-            controls[unit_letters] = control
+            controls[unit_letters] = dict(control)
     if len(voltages) != 1:
         raise ValueError(f"LinearShuntCompensators {[shunt.mRID for shunt in units]}: rated at {sorted(voltages)} V")
     phase_letters = "".join(sorted(phase_letters))
-    slots = {"name": context.names.name(units[0], drop=drop), "parent": bus.name, "phases": phase_letters + "N",
+    slots = {"name": names.name(units[0], drop=drop), "parent": bus.name, "phases": phase_letters + "N",
              "phases_connected": phase_letters + "N", "nominal_voltage": bus.nominal_voltage,
              "cap_nominal_voltage": voltages.pop(), **per_phase}
     slots.update(_merged_control(units, controls, split=bool(drop)))

@@ -8,6 +8,7 @@ from cimtopology.core import Connection, System, walk
 
 from conftest import deck, deck_params, defines
 from cimhub_gridlabd.glm_reader import GlmParseError, GlmReader
+from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter
 from cimhub_gridlabd.importer.topology import bus_roots, glm_network, line_voltage, service_buses
 
 
@@ -177,3 +178,38 @@ def test_every_deck_walks(relative, stop):
         return
     model, buses = run()
     assert set(buses) == set(bus_roots(model).values())  # every bus is reached
+
+
+ISLAND = """
+object node { name swing; bustype SWING; phases ABCN; nominal_voltage 2401.78; }
+object node { name n1; phases ABCN; nominal_voltage 2401.78; }
+object node { name n2; phases ABCN; nominal_voltage 2401.78; }
+object node { name n3; phases ABCN; nominal_voltage 2401.78; }
+object line_configuration { name lc_1; z11 0.3+1.0j; z22 0.3+1.0j; z33 0.3+1.0j; }
+object overhead_line { name l1; phases ABC; from swing; to n1; length 100; configuration lc_1; }
+object overhead_line { name l2; phases ABC; from n2; to n3; length 100; configuration lc_1; }
+"""
+
+
+def test_an_island_no_swing_reaches_raises(tmp_path):
+    with pytest.raises(ValueError, match="overhead_line l2: its from bus n2 is on an island no swing bus reaches"):
+        GlmImporter("m").to_cimtbl(read(tmp_path, ISLAND))
+
+
+def test_a_device_on_a_lone_bus_raises(tmp_path):
+    connected = ISLAND.replace("object overhead_line { name l2;", "// ")  # n2 and n3 alone, with nothing on them
+    model = read(tmp_path, connected + "object meter { name n9; phases ABCN; nominal_voltage 2401.78; }\n"
+                                       "object load { name ld; parent n9; phases AN; nominal_voltage 2401.78; }\n")
+    with pytest.raises(ValueError, match="load ld: its bus n9 is on an island no swing bus reaches"):
+        GlmImporter("m").to_cimtbl(model)
+
+
+def test_a_link_end_that_names_no_bus_raises(tmp_path):
+    with pytest.raises(ValueError, match="overhead_line l2: to nowhere names no bus object"):
+        glm_network(read(tmp_path, ISLAND.replace("to n3;", "to nowhere;")))
+
+
+@pytest.mark.parametrize("name", ["load", "player", "bus", "zip_fractions"])
+def test_a_model_named_like_a_part_raises(name):
+    with pytest.raises(ValueError, match=f"model name '{name}' is the name of a part file"):
+        GlmImporter(name)

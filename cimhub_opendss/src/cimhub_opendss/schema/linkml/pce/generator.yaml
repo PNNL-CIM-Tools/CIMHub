@@ -369,10 +369,8 @@ classes:
           - cim:RegulatingControl.targetValue
         comments:
           - >-
-            Import: derived; model 3: the control's targetValue (V) = Vpu x ratedU; default 1.
-            Export: model 3: the control's target / ratedU.
-        todos:
-          - "No CIM equivalent for DSS Vpu (Model=3 set point)."
+            Import: derived; model 3: the control's targetValue = Vpu x ratedU in kV
+            (targetValueUnitMultiplier k); default 1. Export: model 3: the control's target / ratedU.
         annotations:
           order: 20
           dss_default: float(1.0)
@@ -389,9 +387,8 @@ classes:
         comments:
           - >-
             Import: copied to SynchronousMachine.maxQ (kVAr); model 3 only (another model raises);
-            default 2 x kvar. Export: model 3: maxQ (kVAr); unset -> not written.
-        todos:
-          - "No CIM equivalent currently mapped for Generator maxkvar."
+            default 2 x kvar, reset by each kW, pf or kvar assignment (reactive_limits). Export:
+            model 3: maxQ (kVAr); unset -> not written.
         annotations:
           order: 21
 
@@ -407,9 +404,8 @@ classes:
         comments:
           - >-
             Import: copied to SynchronousMachine.minQ (kVAr); model 3 only (another model raises);
-            default -2 x kvar. Export: model 3: minQ (kVAr); unset -> not written.
-        todos:
-          - "No CIM equivalent currently mapped for Generator minkvar."
+            default -2 x kvar, reset by each kW, pf or kvar assignment (reactive_limits). Export:
+            model 3: minQ (kVAr); unset -> not written.
         annotations:
           order: 22
 

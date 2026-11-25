@@ -8,11 +8,11 @@ in metres (B1). A line with only lumped values is written inline per km with ``u
 whole-line values divided by the length, or the values themselves at ``length=1`` when the line has none. A neutral
 conductor is not on the bus: a geometry reduces it (B4), and a line without geometry that has one raises.
 
-The lines of a coupled MultiCircuitGroup (H1, ``ExportContext.coupled``) are one DSS line on the group's geometry,
-from bus ``<group>_1`` to ``<group>_2`` over the group's length (the shortest line's), each circuit's phase
-conductors on the next nodes in circuit order (1.2.3, then 4.5.6). A DSS terminal is on one bus and the circuits
-end on different nodes, so each circuit has a jumper ``<line>_jumper1`` from its node 1 onto its nodes, with the
-switches' invented 1 mOhm (B3). At the other end, a line no longer than the group has ``<line>_jumper2``; a longer
+The lines of a coupled MultiCircuitGroup (H1, ``ExportContext.coupled``), spacing lines or lines with geometry, are
+one DSS line on the group's geometry, from bus ``<group>_1`` to ``<group>_2`` over the group's length (the shortest
+line's), each circuit's phase conductors on the next nodes in circuit order (1.2.3, then 4.5.6). A DSS terminal is
+on one bus and the circuits end on different nodes, so each circuit has a jumper ``<line>_jumper1`` from its node 1
+onto its nodes, with the switches' invented 1 mOhm (B3). At the other end, a line no longer than the group has ``<line>_jumper2``; a longer
 one goes on as ``<line>``, its own section on its own positions for the rest of its length (H4). Terminal 1 of
 every line of a group is taken to be at the same end of the structure.
 """
@@ -27,14 +27,14 @@ from cimtables.graph_write import get_qty
 from cimhub_core.export_slots import Slot
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.current_limits import get_current_limits
-from cimhub_core.getters.earth import get_earth_resistivity, get_network_earth
 from cimhub_core.getters.in_service import get_in_service
 from cimhub_core.getters.line_impedance import get_line_code, get_line_geometry, get_line_sequence_impedance
 from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_nodes
 from cimhub_opendss.exporter.buses import bus_ref
 from cimhub_opendss.exporter.linecode import code_slots, linecode_name, sequence_slots
 from cimhub_opendss.exporter.linegeometry import (CoupledGroup, geometry_name, group_value, is_spacing_line,
-                                                  line_offset, spacing_geometry_name, spacing_geometry_owners)
+                                                  line_offset, line_rho, spacing_geometry_name,
+                                                  spacing_geometry_owners)
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = (cim.ACLineSegment,)
@@ -59,8 +59,8 @@ SLOTS = {NATIVE_CLASS: {
     "bus2": Slot("written", "bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1)"),
     "linecode": Slot("written", "the template PerLengthImpedance's LineCode name (get_line_code); a line's own "
                                 "(isTemplate=false) is written inline"),
-    "length": Slot("written", "required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest "
-                              "line's, a remainder the rest of its line, a jumper 1 m (H4)"),
+    "length": Slot("written", "required_qty(length, m); lumped: km, unset -> 1, 0 raises; a coupled group's: its "
+                              "shortest line's, a remainder the rest of its line, a jumper 1 m (H4)"),
     "phases": Slot("written", "the phase conductors (a neutral is reduced, B4); a coupled group's: every line's"),
     "r1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
     "x1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
@@ -76,8 +76,8 @@ SLOTS = {NATIVE_CLASS: {
                              "its LineCode's"),
     "Switch": Slot("not mapped", "a Switch is exported by switch.py"),
     "Rg": Slot("unset", _NOT_IN_CIM), "Xg": Slot("unset", _NOT_IN_CIM),
-    "rho": Slot("written", "a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; "
-                           "a spacing line's: get_network_earth"),
+    "rho": Slot("written", "line_rho: a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> "
+                           "not written; a spacing line's: get_network_earth; a coupled group's: its lines' one"),
     "geometry": Slot("written", "the (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's: "
                                 "spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1)"),
     "units": Slot("written", "m (B1); lumped: km (B6)"),
@@ -143,13 +143,11 @@ def _line(line: cim.ACLineSegment, context, owners: dict[cim.ACLineSegment, cim.
         if configuration.numberOfPhases != len(conductors):
             raise ValueError(f"{describe(line)}: {len(conductors)} phase conductors on {describe(configuration)} "
                              f"of {configuration.numberOfPhases} phases")
-        earth = get_earth_resistivity(configuration)
         slots.update(geometry=geometry_name(configuration, line_offset(line), names),
-                     length=required_qty(line, "length", UNIT), units=UNIT,
-                     rho=earth.rho if earth is not None else None)
+                     length=required_qty(line, "length", UNIT), units=UNIT, rho=line_rho(line, context.network))
     elif is_spacing_line(line):
         slots.update(geometry=spacing_geometry_name(owners[line], names), length=required_qty(line, "length", UNIT),
-                     units=UNIT, rho=get_network_earth(context.network).rho)
+                     units=UNIT, rho=line_rho(line, context.network))
     elif has_neutral:
         raise ValueError(f"{describe(line)}: a neutral conductor without geometry needs LineCode Kron/neutral, which "
                          f"is not mapped (B4)")
@@ -191,7 +189,7 @@ def _coupled_lines(group: cim.MultiCircuitGroup, coupled: CoupledGroup, context,
     nodes = "".join(f".{node}" for node in range(1, count + 1))
     line = NATIVE_CLASS(name=names.name(group, NAMESPACE), bus1=start + nodes, bus2=end + nodes, phases=count,
                         geometry=spacing_geometry_name(group, names), length=coupled.length, units=UNIT,
-                        rho=get_network_earth(context.network).rho, **limits, enabled=enabled)
+                        rho=coupled.rho, **limits, enabled=enabled)
     return [line, *records]
 
 
@@ -211,9 +209,13 @@ def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: 
 
 
 def _lumped(line: cim.ACLineSegment, frequency: float) -> dict:
-    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none."""
+    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length of 0
+    raises: a DSS line's impedance is per length, and the engine cannot solve a zero-length line."""
     whole = get_line_sequence_impedance(line, "ohm")
     length = get_qty(line, "length", LUMPED_UNIT)
+    if length == 0:
+        raise ValueError(f"{describe(line)}: length 0 with lumped impedance; a DSS line's impedance is per length, "
+                         "and the engine cannot solve a zero-length line")
     length = 1.0 if length is None else length
     per_km = whole._replace(**{name: _per(getattr(whole, name), length) for name in ("r", "x", "r0", "x0")},
                             **{name: _per(_nano_siemens(getattr(whole, name)), length)

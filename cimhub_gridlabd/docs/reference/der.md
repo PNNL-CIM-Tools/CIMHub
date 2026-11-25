@@ -146,7 +146,7 @@ at `ratedS`. CIM `p` is minus that. The row comment says when the set point was 
 | `four_quadrant_control_mode` | structural: the dispatch above | a battery `CONSTANT_PQ`, a PV `CONSTANT_PF` |
 | `generator_status` | `normallyInService`: `ONLINE` (default) true, `OFFLINE` false | `OFFLINE` when `normallyInService` is false, else `ONLINE` |
 | `rated_power` | `ratedS (VA)` = it x phases out; `maxQ`, `minQ` = +-`ratedS`; the datasheet's `apparentPowerMaximum`; unset or 0 raises | `ratedS` x the unit's share / phases out |
-| `inverter_efficiency` | derived into `p` (PV); CIM has no inverter efficiency. Unset is 0.9; a written 0 is used as 0, so `p` is 0 | a PV's 1: the losses are in CIM's `p` |
+| `inverter_efficiency` | derived into `p` (PV); CIM has no inverter efficiency. Unset, 0 or negative is 0.9, as GridLAB-D runs it | a PV's 1: the losses are in CIM's `p` |
 | `P_Out` | derived into `p`: a battery's set point (generation sign); a PV's only in the comment | a battery's `p`, generation sign (`get_inverter_units`) |
 | `Q_Out` | a battery: 0 or unset, else raises | a battery's `q`, generation sign |
 | `power_factor` | a PV: `\|pf\|` 1, else raises (default 1); a battery: only in the comment | a PV's p / abs(p + jq), negative when q is; 1 at no output |

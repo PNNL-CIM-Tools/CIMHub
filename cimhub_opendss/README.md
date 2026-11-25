@@ -21,9 +21,14 @@ network = dss_to_cim(DssReader("IEEE13Nodeckt.dss").read_all(), name="IEEE13", a
 cim_to_dss(network, "ieee13_export.dss")
 ```
 
-- `dss_to_cim(model, *, name, authority=..., length_unit=None, network=None, artifact_dir=None)` returns the CIM
-  network. `name` is the model name and the master file stem. Without `artifact_dir` the `.cimtbl` files go to a
-  temporary directory that is removed after loading. `length_unit` overrides the deck's line length unit.
+- `dss_to_cim(model, *, name, authority=..., length_unit=None, device_geometry="point", network=None,
+  artifact_dir=None, time_points=None)` returns the CIM network. `name` is the model name and the master file stem.
+  Without `artifact_dir` the `.cimtbl` files go to a temporary directory that is removed after loading.
+  `length_unit` is the per-length unit of impedances that give no units: a LineCode with none on the code or its
+  lines, and a line's own inline values with none on the line. It replaces the magnitude guess; a code or line with
+  its own `units` keeps them. `device_geometry` draws a two-terminal
+  device's coordinates as a `"point"` midway between its buses or a `"linestring"` from bus to bus. `time_points`
+  is a dict that receives the yearly load shapes' time points; without it they are dropped with a warning.
 - `cim_to_dss(network, destination, **opts)` writes the deck. Options go to `DssExporter().to_model`:
   `name_source` (`'name'`, `'mrid'` or `'uri'`; default `$CIMHUB_NAME_SOURCE`, else `'mrid'`) and
   `circuit_source`, the EnergySource to write as `New Circuit` when the model has several.

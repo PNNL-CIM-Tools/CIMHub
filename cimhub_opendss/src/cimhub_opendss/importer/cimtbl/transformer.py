@@ -56,7 +56,8 @@ FIELDS = {
     "kVA": Field("structural", note=_SCALAR),
     "tap": Field("structural", note=_SCALAR),
     "pct_R": Field("structural", note=_SCALAR),
-    "Rneut": Field("structural", note="rground (ohm) of its winding's end when >= 0; negative = no impedance"),
+    "Rneut": Field("structural", note="rground (ohm) of its winding's end when >= 0; negative = no impedance; "
+                                      ">= 0 on a 1-phase transformer raises"),
     "Xneut": Field("structural", note="xground (ohm) of its winding's end, with Rneut >= 0"),
     "buses": Field("structural", note="end node and terminal phases; one end per distinct bus"),
     "conns": Field("structural", note="connectionKind, grounded, default nodes; default wye"),
@@ -495,6 +496,9 @@ def end_kind(end: End, phases: int, xf=None, winding_count: int = 0) -> tuple[st
 
 def _map_single_phase(xf, xf_id: str, windings: list[Winding], ends: list[End],
                       buses: Mapping[str, BusSystem], rows: _Tables, notes: list[str]) -> None:
+    if xf.Rneut is not None and float(xf.Rneut) >= 0:
+        raise ValueError(f"Transformer {xf.name}: a neutral impedance (Rneut={xf.Rneut}) on a 1-phase transformer "
+                         "is not mapped yet (no deck in the sweep sets one)")
     base_kva = windings[0].kva
     if any(winding.kva != base_kva for winding in windings):
         raise ValueError(f"Transformer {xf.name}: kVAs={[w.kva for w in windings]}; each coil's %R is on its own "

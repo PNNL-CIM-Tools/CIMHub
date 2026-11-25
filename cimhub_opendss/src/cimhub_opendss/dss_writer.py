@@ -52,9 +52,23 @@ def dss_safe_name(name: str) -> str:
     Idempotent, and collision-free for the names seen in practice because the
     replacement is one-for-one on each run of unsafe characters rather than a
     truncation.  Names differing only in an unsafe character would collide; that
-    is a data defect worth surfacing loudly, not silently renaming around.
+    is a data defect, so ``DssWriter.write`` raises on it (``check_safe_names``)
+    rather than renaming around it.
     """
     return _DSS_UNSAFE_RE.sub('_', name)
+
+
+def check_safe_names(records) -> None:
+    """Raise when two records of one class are one DSS name once sanitized, compared lowercased as DSS compares
+    names: DSS would apply the second as an edit of the first."""
+    seen: dict[str, str] = {}
+    for record in records:
+        name = str(record.name)
+        safe = dss_safe_name(name)
+        if safe.lower() in seen:
+            raise ValueError(f"DssWriter: {type(record).__name__} {seen[safe.lower()]!r} and {name!r} are both named "
+                             f"{safe!r} in DSS")
+        seen[safe.lower()] = name
 
 
 #: The deck's classes in definition order: each after everything it references (catalogs before their users, a
@@ -144,6 +158,7 @@ class DssWriter(FormatWriter):
             lines.append(self._set(options, "earthmodel"))  # the engine needs a circuit first
         kinds = _conductor_kinds(model)
         for cls in WRITE_ORDER:
+            check_safe_names(model.list_by_class(cls))
             commands = [self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj)
                         for obj in model.list_by_class(cls)
                         if not (cls is schema.Vsource and str(obj.name).lower() == CIRCUIT_SOURCE)]

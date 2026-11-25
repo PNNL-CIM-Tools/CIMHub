@@ -169,7 +169,7 @@ as the leg pair's 0.2078.
 One `LinearShuntCompensator` per `Capacitor`, mRID `cap_` + the name, lowercased. Only a one-section bank maps.
 
 `nomQ` is `kvar` (the total over the phases) and `nomU` is `kv`, both as the deck rates them. `bPerSection` is
-`nomQ / nomU^2` in siemens, computed from the two values with their units. `maximumSections` is 1, and `sections`
+`nomQ / nomU^2`: kVAr over kV squared is millisiemens, so the column is `bPerSection (mS)` and no factor appears. `maximumSections` is 1, and `sections`
 and `normalSections` are the steps `states` closes. A bank whose `kv` differs
 from its bus's keeps its rated `kv` (13.8 kV on a 13.2 kV bus stays).
 
@@ -180,7 +180,7 @@ from its bus's keeps its rated `kv` (13.8 kV on a 13.2 kV bus stays).
 | `name` | `LinearShuntCompensator.name`; mRID `cap_` + name, lowercased | the CIM name or mRID (`name_source`) |
 | `bus1`, `phases`, `conn` | `node`, `phases`, `phaseConnection` and `grounded`, as for a load; default 3 phases, wye | the same connection rule as a load |
 | `kvar` | `nomQ (kVAr)`, the total over the phases; default 1200; more than one step raises | `kvar=[x]` from `get_shunt_reactive_power(sections='maximum', voltage='nominal')`, in kVAr; `maximumSections` other than 1 raises |
-| `kv` | `nomU (kV)`, and `bPerSection (S)`; line to neutral for a 1-phase wye bank, else line to line; default 12.47 | `nomU`, the voltage `bPerSection` was derived on |
+| `kv` | `nomU (kV)`, and `bPerSection (mS)`; line to neutral for a 1-phase wye bank, else line to line; default 12.47 | `nomU`, the voltage `bPerSection` was derived on |
 | `Numsteps` | `maximumSections`; more than 1 raises (unequal steps would need a `NonlinearShuntCompensator`) | not written; `maximumSections` above 1 raises |
 | `states` | `sections` = `normalSections` = the steps closed; default all closed | `states=[sections]`; `sections` other than 0 or 1 raises; `normalSections` is not written |
 | `enabled` | `normallyInService`; default true | `get_in_service(which='normal')`; unset: not written |
@@ -210,9 +210,9 @@ From [`tests/atoms/capacitor/caps.cimtbl`](https://github.com/PNNL-CIM-Tools/CIM
 
 ```text
 # derived: bPerSection = nomQ / nomU^2 (b_per_section); sections = normalSections = the steps states closes
-Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (kVAr), nomU (kV), bPerSection (S), maximumSections, normalSections, sections, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (kVAr), nomU (kV), bPerSection (mS), maximumSections, normalSections, sections, normallyInService, BaseVoltage, EquipmentContainer=fdr_atom
     # defaulted: conn=wye, Numsteps=1, enabled=true
-    cap_c1,   c1,   b2, C, Y, true,  100.0, 2.4,  0.017361111111111112, 1, 1, 1, true, bv_4p16kv
+    cap_c1,   c1,   b2, C, Y, true,  100.0, 2.4,  17.36111111111111, 1, 1, 1, true, bv_4p16kv
 ```
 
 ## CapControl
@@ -227,13 +227,14 @@ line, `cap_<capacitor>_T<n>` for a capacitor. An element of another class raises
 
 **ON and OFF.** CIM has a target and a deadband in primary units, and DSS has ON and OFF settings on the relay's
 side. The importer writes `targetValue` = (ON + OFF) / 2 and `targetDeadband` = abs(OFF - ON), after scaling by
-`PTratio` (voltage) or `CTratio` (current). The exporter inverts it and divides by the same ratio.
+`PTratio` (voltage) or `CTratio` (current). A kvar control's values stay in kvar, and the row says so with
+`targetValueUnitMultiplier=k`. The exporter inverts it and divides by the same ratio.
 
 | DSS `type` | `RegulatingControl.mode` | ON is | `targetValue` and `targetDeadband` are in |
 |---|---|---|---|
 | `voltage` | `voltage` | below OFF | V: ON and OFF x `PTratio` |
 | `current` | `currentFlow` | above OFF | A: ON and OFF x `CTratio` |
-| `kvar` | `reactivePower` | above OFF | var, from kvar |
+| `kvar` | `reactivePower` | above OFF | kvar, with `targetValueUnitMultiplier=k` |
 | `time` | `timeScheduled` | below OFF | hours from midnight |
 | `pf`, `follow` | raises | | |
 
@@ -285,11 +286,11 @@ From [`tests/atoms/capacitor/caps_capcontrol.cimtbl`](https://github.com/PNNL-CI
 A kvar control on a switch line (ON 150, OFF -225 kvar), then the update of its capacitor:
 
 ```text
-Table RegulatingControl: mRID, name, mode, discrete=true, enabled, monitoredPhase, ptRatio, ctRatio, targetValue, targetDeadband, Terminal
+Table RegulatingControl: mRID, name, mode, discrete=true, enabled, monitoredPhase, ptRatio, ctRatio, targetValue, targetDeadband, targetValueUnitMultiplier, Terminal
     # derived from ON=150.0, OFF=-225.0
     # defaulted: PTPhase=1, enabled=true
     # untranscribed: VoltOverride=true, Vmax=7740.0, Vmin=7110.0, DelayOFF=90.0
-    cc_kvar, kvar, reactivePower, true, A, 1.0,  1.0,  -37500.0, 375000.0, sw_capsw_T1
+    cc_kvar, kvar, reactivePower, true, A, 1.0,  1.0,  -37.5,  375.0, k, sw_capsw_T1
 
 # the compensator's control, delay (Delay) and controlEnabled
 Update Table LinearShuntCompensator: mRID, RegulatingControl, aVRDelay (s), controlEnabled

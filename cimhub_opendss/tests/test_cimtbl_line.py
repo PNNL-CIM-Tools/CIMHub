@@ -65,6 +65,10 @@ def test_codes_bind():
               for limit in network.graph[cim.CurrentLimit].values() if limit.OperationalLimitSet.Equipment is l2}
     assert limits == {"normal": 200, "emergency": 345}
     assert float(l2.length.to("ft")) == pytest.approx(500)
+    # seq2 (units=km) takes the engine's default C1, C0, which are per kft: written per kft, bound the same
+    seq2 = next(seg for seg in network.graph[cim.ACLineSegment].values() if seg.name == "seq2")
+    assert float(seq2.PerLengthImpedance.bch.to("nS/km")) == pytest.approx(4205.281504805234)
+    assert float(seq2.PerLengthImpedance.b0ch.to("nS/km")) == pytest.approx(1978.9560022612868)
 
 
 def test_a_linecode_is_a_template_its_lines_share_and_inline_values_are_the_lines_own():
@@ -118,6 +122,10 @@ def test_geometry_binds():
     ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Recloser.r MonitoredObj=Line.a Shots=4 RecloseIntervals=(1, 2)\n",
      "Shots=4 with 2 RecloseIntervals"),
     ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 rho=50\n", "rho=50.0 without a geometry"),
+    # the engine's default C0 is per kft, the line's C1 per km
+    ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 C1=3 units=km\n", "Line a: sets C1 per km but not C0"),
+    # a deck with no Line still has its switch controls checked
+    ("New Fuse.f MonitoredObj=Line.gone\n", "Line gone: switched by a control or an Open command, but no New"),
 ])
 def test_unmapped_lines_fail_fast(tmp_path, text, message):
     with pytest.raises(ValueError, match=message):

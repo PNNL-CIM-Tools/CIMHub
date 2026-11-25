@@ -1,4 +1,4 @@
-# GridLAB-D triplex_line_configuration -> WireConfiguration + WireSequenceConfiguration on a derived ConductorDistanceSpacing (catalog).
+# GridLAB-D triplex_line_configuration -> WireConfiguration + WireSequenceConfiguration on a derived ConductorDistanceSpacing, PerLengthPhaseImpedance + PhaseImpedanceData (catalog).
 # Source table: triplex_line_configuration (records: 1)
 # Mapping: cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs
 

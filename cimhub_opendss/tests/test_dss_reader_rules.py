@@ -7,7 +7,8 @@ import logging
 import opendssdirect as dss
 import pytest
 
-from cimhub_opendss.dss_reader import DSS_COMMANDS, DssParseError, DssReader, dss_command
+from cimhub_opendss.dss_reader import DSS_COMMANDS, DSS_OPTIONS, DssParseError, DssReader, dss_command, dss_option
+from cimhub_opendss import dss_name_map
 from cimhub_opendss.schema import opendss_schema as schema
 
 
@@ -80,6 +81,30 @@ def test_set_keeps_the_circuit_options_only(tmp_path):
                            "Set mode=snapshot\nSet voltagebases=[115 4.16]\n")
     options = only(model, schema.Options)
     assert (options.voltagebases, options.defaultbasefreq) == ([115.0, 4.16], 50.0)
+
+
+def test_dss_options_match_the_engine():
+    engine = [dss.Executive.Option(i).lower() for i in range(1, dss.Executive.NumOptions() + 1)]
+    assert list(DSS_OPTIONS) == engine
+
+
+@pytest.mark.parametrize("word, option", [
+    ("voltagebase", "voltagebases"), ("DefaultBaseFreq", "defaultbasefrequency"), ("earth", "earthmodel"),
+    ("e", "element"), ("basefrequency", "basefrequency"), ("colour", None),
+])
+def test_a_set_option_is_the_first_option_it_abbreviates(word, option):
+    assert dss_option(word) == option
+
+
+def test_abbreviated_set_options_are_kept(tmp_path):
+    options = only(read(tmp_path, "Set voltagebase=[12.47 0.48] defaultbase=50 earth=deri\n"), schema.Options)
+    assert (options.voltagebases, options.defaultbasefreq, str(options.earthmodel).lower()) == \
+        ([12.47, 0.48], 50.0, "deri")
+
+
+def test_an_unknown_set_option_raises(tmp_path):
+    with pytest.raises(DssParseError, match=r"Set colour: no DSS option has that name"):
+        read(tmp_path, "Set colour=red\n")
 
 
 def test_batchedit_changes_every_matching_object(tmp_path):
@@ -314,6 +339,25 @@ def test_rdcohms_goes_to_the_active_winding(tmp_path):
                            "~ wdg=2 RdcOhms=0.004 wdg=1 RdcOhms=2.1\n")
     [transformer] = model.list_by_class(schema.Transformer)
     assert transformer.RdcOhms == [2.1, 0.004]
+
+
+def test_rneut_on_a_second_winding_raises(tmp_path):
+    """The schema holds one winding's Rneut/Xneut; a second winding's would be lost."""
+    with pytest.raises(DssParseError, match=r"Transformer.t: Rneut on winding 2 after winding 1's neutral"):
+        read(tmp_path, "New Transformer.t phases=3 windings=2 buses=[a b] kVs=[12.47 4.16] kVAs=[500 500] "
+                       "wdg=1 conn=wye Rneut=0 wdg=2 conn=wye Rneut=5\n")
+
+
+def test_a_malformed_schema_yaml_raises(tmp_path):
+    path = tmp_path / "broken.yaml"
+    path.write_text("classes: [unclosed\n")
+    with pytest.raises(ValueError, match=r"broken.yaml: malformed schema YAML"):
+        dss_name_map._load_yaml(path)
+
+
+def test_invcontrol_modes_are_names(tmp_path):
+    control = only(read(tmp_path, "New InvControl.ic Mode=VOLTVAR CombiMode=VV_VW\n"), schema.Invcontrol)
+    assert (control.Mode, control.CombiMode) == ("VOLTVAR", "VV_VW")
 
 
 def test_rdcohms_on_some_windings_only_raises(tmp_path):

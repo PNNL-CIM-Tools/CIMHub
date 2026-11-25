@@ -63,7 +63,7 @@ Table PowerElectronicsConnection: mRID, name, node, phases, phaseConnection, rat
     storage_inv_bres,  inv_bres,  n5,  A,    Y, 10000.0,   4160.0, 0.0,                 0.0, 10000.0,   -10000.0,   true,  storage_inv_bres_info,  bv_4p16kv
     # defaulted: four_quadrant_control_mode=CONSTANT_PF, generator_status=ONLINE, inverter_efficiency=0.9,
     # power_factor=1.0
-    # P_Out as written (GridLAB-D recomputes it, S4b-2): None VA; GridLAB-D's: DC 7177.992 W at Tmodule 122.001 degF
+    # P_Out as written (GridLAB-D recomputes it, S4b-2): unset; GridLAB-D's: DC 7177.992 W at Tmodule 122.001 degF
     # capability: isModeCapableConstantPowerFactor (InverterCapabilities not written: cim-tables cannot reference an Identity row yet)
     pv_inv_pv1,        inv_pv1,   n5,  A,    Y, 10000.0,   4160.0, -6460.1931889418665, 0.0, 10000.0,   -10000.0,   true,  pv_inv_pv1_info,        bv_4p16kv
     # defaulted: four_quadrant_control_mode=CONSTANT_PF, generator_status=ONLINE

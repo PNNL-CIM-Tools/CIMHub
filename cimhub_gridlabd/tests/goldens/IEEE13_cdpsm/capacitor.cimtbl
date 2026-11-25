@@ -4,8 +4,8 @@
 
 Profile = cim18v17
 
-# a unit per set of phases that switch together (S4a-8); sections: the switch state GridLAB-D starts with, OPEN when unset (S4a-9)
-Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
+# a unit per set of phases that switch together (S4a-8); sections: the switch state GridLAB-D starts with, OPEN when unset (S4a-9); nomQ, nomU in their written units, bPerSection = nomQ / nomU^2 in theirs
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (VAr), nomU (V), bPerSection (VAr/V^2), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_IEEE13_cdpsm
     # defaulted: control=MANUAL, time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
     cap_cap_cap1, cap_cap1, 675, ,  600000.0, 4160.004988602778, 0.03467077483488329,  1, 1, bv_4p16kv
     # defaulted: control=MANUAL, time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL

@@ -161,8 +161,9 @@ classes:
         comments:
           - >-
             Import: copied to OverheadWireInfo.ratedCurrent (A); also the normal CurrentLimit of the
-            wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet). Export: the
-            wire's normal limit, else ratedCurrent (A).
+            wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset with
+            emergamps set: emergamps / 1.5, the engine's rule. Export: the wire's normal limit, else
+            ratedCurrent (A).
 
       # (9) emergamps
       emergamps:

@@ -9,7 +9,8 @@ description: 'Complete LinkML schema for GridLAB-D GLM (GridLAB-D Model) file fo
   modules, objects, and their properties.
 
 
-  Generated from C++ source code with 45 classes from the powerflow module.
+  Generated from C++ source code with 77 classes: 46 from the powerflow module, 11 from
+  generators, 19 from residential and 1 from tape.
 
 
   Features:

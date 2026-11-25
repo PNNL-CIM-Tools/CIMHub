@@ -8,10 +8,10 @@ from pathlib import Path
 
 import opendssdirect as dss
 import pytest
-from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
+from cimhub_core.getters.control import get_regulating_control
 from cimhub_opendss import dss_to_cim
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer import dss_to_cimtbl
@@ -52,10 +52,10 @@ def test_matches_golden(caps):
 
 
 def test_derived_settings():
-    assert capacitor.b_per_section(600, 4.16) == pytest.approx(0.0346709, rel=1e-5)
+    assert capacitor.b_per_section(600, 4.16) == pytest.approx(34.6709, rel=1e-5)  # mS
     assert capcontrol.control_mode("volt", name="c") == "voltage"
     assert capcontrol.on_off_target(115, 125, "voltage", ptratio=20, ctratio=60, name="c") == (2400, 200)
-    assert capcontrol.on_off_target(150, -225, "reactivePower", ptratio=1, ctratio=1, name="c") == (-37500, 375000)
+    assert capcontrol.on_off_target(150, -225, "reactivePower", ptratio=1, ctratio=1, name="c") == (-37.5, 375)
     assert capcontrol.on_off_target(300, 200, "currentFlow", ptratio=60, ctratio=60, name="c") == (15000, 6000)
     assert capcontrol.on_off_target(8, 19, "timeScheduled", ptratio=60, ctratio=60, name="c") == (13.5, 11)
     with pytest.raises(ValueError, match="ON 125 is not below OFF 115"):
@@ -67,6 +67,7 @@ def test_controls_bind(caps):
     assert_base_voltages_agree(network)
     banks = {bank.name: bank for bank in network.graph[network.cim.LinearShuntCompensator].values()}
     assert len(banks) == 5 and banks["open"].sections == 0 and banks["cd"].phaseConnection.value == "D"
+    assert float(banks["c3"].bPerSection.to("S")) == pytest.approx(600e3 / 4160 ** 2)  # the mS column, in SI
     own = banks["own"].RegulatingControl
     assert own.Terminal is banks["own"].Terminals[0] and float(banks["own"].aVRDelay.to("s")) == 300
     assert banks["own"].RegulatingControl.RegulatingCondEq == [banks["own"]]
@@ -74,6 +75,8 @@ def test_controls_bind(caps):
     assert banks["c1"].RegulatingControl.monitoredPhase.value == "C"
     assert banks["c3"].RegulatingControl.Terminal.mRID == "sw_capsw_T1"
     assert banks["open"].RegulatingControl is None
+    kvar = next(bank for bank in banks.values() if bank.RegulatingControl and bank.RegulatingControl.name == "kvar")
+    assert get_regulating_control(kvar.RegulatingControl).target == pytest.approx(-37500)  # VAr, in SI
 
 
 @pytest.mark.parametrize("text, message", [
@@ -98,14 +101,17 @@ def test_unmapped_banks_and_controls_fail_fast(tmp_path, text, message):
         capcontrol.map_capcontrol(native, site.buses)
 
 
+#: The unit a control's settings are read in (through targetValueUnitMultiplier), by mode.
+SETTING_UNIT = {"voltage": "V", "currentFlow": "A", "reactivePower": "kVAr", "timeScheduled": None}
+
+
 def _on_off(control) -> tuple[float, float]:
     """The DSS ON and OFF settings rebuilt from a control's target, deadband and mode (the exporter's inverse)."""
     mode = control.mode.value
-    low, high = control.targetValue - control.targetDeadband / 2, control.targetValue + control.targetDeadband / 2
+    settings = get_regulating_control(control, SETTING_UNIT[mode])
+    low, high = settings.target - settings.deadband / 2, settings.target + settings.deadband / 2
     on, off = (high, low) if mode in ("currentFlow", "reactivePower") else (low, high)
-    if mode == "reactivePower":
-        return cim.ReactivePower(on).to("kVAr"), cim.ReactivePower(off).to("kVAr")
-    scale = {"voltage": control.ptRatio, "currentFlow": control.ctRatio, "timeScheduled": 1.0}[mode]
+    scale = {"voltage": control.ptRatio, "currentFlow": control.ctRatio}.get(mode, 1.0)
     return on / scale, off / scale
 
 

@@ -30,6 +30,7 @@ from cimhub_gridlabd.exporter.naming import glm_safe_name
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.glm_writer import GlmWriter
 from cimhub_gridlabd.importer.glm_to_cimtbl import glm_to_cim
+from cimhub_gridlabd.schema import gridlabd as schema
 
 ATOMS = Path(__file__).parent / "atoms"
 DECKS = sorted(path for path in ATOMS.glob("*/*.glm") if path.name != "catalog.glm"
@@ -194,3 +195,79 @@ def test_a_template_line_code_is_a_matrix_configuration(tmp_path):
     configuration = model.by_name(line.configuration)
     assert (configuration.name, configuration.spacing, configuration.conductor_C) == ("mtx", None, None)
     assert _complex(configuration.z33) == pytest.approx(complex(1.3292, 1.3475))
+
+
+def _exported(tmp_path, text: str):
+    """The line atom plus ``text``, imported and exported."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOMS / "line" / "line.glm"}"\n' + text)
+    with cim_scope():
+        network = glm_to_cim(GlmReader(path).read_all(), name="atom")
+        return GlmExporter().to_model(network, name_source="name")
+
+
+def test_a_one_phase_capacitor_keeps_its_phase_suffix(tmp_path):
+    """Only an automatic INDIVIDUAL capacitor's units (with a control) are one GLM capacitor again (S4a-8)."""
+    exported = _exported(tmp_path, "object capacitor { name cap_A; parent n5; phases AN; phases_connected AN; "
+                                   "capacitor_A 50 kVAr; switchA CLOSED; nominal_voltage 2401.78; }\n")
+    assert [str(cap.name) for cap in exported.list_by_class(schema.Capacitor)] == ["cap_A"]
+
+
+TRIPLEX_MATRIX = """\
+Object PerLengthPhaseImpedance: mRID=lc_tpx, name=tpx, conductorCount=2, calculatedFrequency (Hz)=60.0, isTemplate=true
+Table PhaseImpedanceData: identifier, PhaseImpedance=lc_tpx, row, column, r (ohm/mile), x (ohm/mile), b (nS/mile)
+    lc_tpx_11, 1, 1, 1.2, 0.6, 0
+    lc_tpx_21, 2, 1, 0.4, 0.3, 0
+    lc_tpx_22, 2, 2, 1.2, 0.6, 0
+Object WireConfiguration: mRID=lc_tpx_wc, name=tpx, PerLengthImpedance=lc_tpx
+"""
+
+
+def test_a_triplex_matrix_round_trips(tmp_path):
+    """X27 and S2-8: the exporter writes a triplex line's matrix as z11, z12, z21, z22, which the importer reads back
+    as the same s1, s2 PerLengthPhaseImpedance."""
+    exported = tmp_path / "exported.glm"
+    with cim_scope():
+        _first_import(ATOMS / "line" / "line.glm", tmp_path / "first", {})
+    part = tmp_path / "first" / "triplex_line.cimtbl"
+    text = part.read_text().replace("Profile = cim18v17\n", "Profile = cim18v17\n" + TRIPLEX_MATRIX)
+    part.write_text(re.sub(r"(ln_tl_1, tl_1, tn1, tm1,) s1s2N, 30.0, \S+,", r"\1 s1s2, 30.0, lc_tpx_wc,", text))
+    with cim_scope():
+        GlmWriter().write(GlmExporter().to_model(cimtables.load_model(tmp_path / "first" / "atom.cimtbl"),
+                                                 name_source="name"), exported)
+        assert "  z12 0.4+0.3j;" in exported.read_text()
+        glm_to_cim(GlmReader(exported).read_all(), name="atom", artifact_dir=tmp_path / "second")
+    with cim_scope():
+        first = cimtables.load_model(tmp_path / "first" / "atom.cimtbl")
+        second = cimtables.load_model(tmp_path / "second" / "atom.cimtbl")
+        differences = [line for line in cimtables.diff_models(first, second, rel_tol=1e-9) if _unexpected(line)
+                       and not (line.endswith(": missing") and "wc_triplex_line_configuration_1" in line)]
+    assert not differences, "\n".join(differences)  # tl_1's old configuration is unused, so not written
+
+
+def test_a_one_phase_swing_is_a_swing_node_and_solves(tmp_path):
+    """GridLAB-D's substation needs three phases: a one-phase swing is a SWING node at its coil voltage (7200 V, no
+    sqrt 3), which GridLAB-D 6.0 solves (in ``tmp_path``: it writes files beside the deck)."""
+    deck = tmp_path / "one_phase.glm"
+    deck.write_text((ATOMS / "source" / "one_phase.exported.glm").read_text())
+    voltages = solve(deck)
+    assert abs(voltages["swing"][0]) == pytest.approx(7200.0)
+
+
+ONE_PHASE_BASE_POWER = """Profile = cim18v17
+Object Feeder: mRID=fdr, name=fdr
+Object BaseVoltage: mRID=bv_7p2kv, nominalVoltage (kV)=7.2
+Object BasePower: mRID=sbase, basePower (MVA)=10
+Object ConnectivityNode: mRID=a, name=a, BaseVoltage=bv_7p2kv, ConnectivityNodeContainer=fdr
+Object EnergySource: mRID=src, name=src, node=a, phases=A, nominalVoltage (kV)=7.2, voltageMagnitude (kV)=7.2, BaseVoltage=bv_7p2kv, EquipmentContainer=fdr
+"""
+
+
+def test_a_one_phase_swing_with_a_base_power_raises(tmp_path):
+    path = tmp_path / "one_phase.cimtbl"
+    path.write_text(ONE_PHASE_BASE_POWER)
+    with cim_scope():
+        network = cimtables.load_model(path)
+        with pytest.raises(ValueError, match="EnergySource 'src': a one-phase swing is a GLM node, which has no "
+                                             "base_power"):
+            GlmExporter().to_model(network, name_source="name")

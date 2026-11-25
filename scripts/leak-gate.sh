@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # Split-readiness gate: this repo must stay publishable at every commit.
 # Fails on (1) imports of private spokes, (2) path references to private spokes or
-# local checkouts, (3) files over 10 MB. See the split-readiness skill. (In a git worktree .git is a file
-# holding an absolute path, so it is excluded as a file too.)
+# local checkouts, (3) a private format named in package source or anywhere in core, (4) files over 10 MB.
+# See the split-readiness skill. (In a git worktree .git is a file holding an absolute path, so it is excluded
+# as a file too.)
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 PRIVATE='powersimulator|cyme|synergi|powerworld|pscad|arcgis|bmopf|repair|s223'
+# The private formats as plain words. "repair" is left out: it is an English word and an OpenDSS property, and
+# (1) and (2) still catch its spoke. Docs, plans and public fixtures may name a format (skill rule 6), so (3)
+# reads only tracked package source and core, whose code, docs and shapes stay format-neutral.
+FORMATS='powersimulator|cyme|synergi|powerworld|pscad|arcgis|bmopf|s223'
 EXCLUDE=(--exclude-dir=.git --exclude=.git --exclude-dir=.venv --exclude-dir=__pycache__ --exclude=uv.lock --exclude=leak-gate.sh)
 status=0
 
@@ -15,6 +20,9 @@ if grep -rnIE "(from|import) +cimhub_($PRIVATE)" "${EXCLUDE[@]}" .; then
 fi
 if grep -rnIE "cimhub_($PRIVATE)/|/home/[a-z0-9_]+/" "${EXCLUDE[@]}" .; then
     echo "leak-gate: path into a private spoke or a local checkout" >&2; status=1
+fi
+if git grep -nIiwE "$FORMATS" -- 'cimhub_*/src/*' 'cimhub_core/*'; then
+    echo "leak-gate: a private format named in package source or core" >&2; status=1
 fi
 big=$(find . -path ./.git -prune -o -path ./.venv -prune -o -type f -size +10M -print)
 if [[ -n "$big" ]]; then

@@ -70,3 +70,34 @@ def test_round_trip_through_the_reader(tmp_path):
     assert back.by_name("n 1").nominal_voltage == 277.13
     assert (back.by_name("xc").impedance.real, back.by_name("xc").impedance.imag) == (0.011, -0.02)
     assert str(back.by_name("xc").connect_type) == "WYE_WYE"
+
+
+def test_a_written_unit_is_written_back(tmp_path):
+    """``distance_AB 30 in`` stays 30 inches: GridLAB-D reads a bare 30 in the schema's feet."""
+    source = tmp_path / "source.glm"
+    source.write_text("object line_spacing { name s; distance_AB 30 in; distance_AN 5.0; }\n")
+    model = GlmReader(source).read_all()
+    assert '  distance_AB 30 in;' in GlmWriter().serialize(model.by_name("s"), written_units=model.written_units)
+    path = tmp_path / "deck.glm"
+    GlmWriter().write(model, path)
+    back = GlmReader(path).read_all()
+    assert (back.by_name("s").distance_AB, back.unit(back.by_name("s"), "distance_AB")) == (30.0, "in")
+    assert (back.by_name("s").distance_AN, back.unit(back.by_name("s"), "distance_AN")) == (5.0, "ft")
+
+
+def _player_model(file: str | None) -> GlmModel:
+    model = GlmModel()
+    model.add_to_graph(schema.Player(name="p", file=file))
+    model.tapes["p"] = [("2000-01-01 00:00:00", "1.0")]
+    return model
+
+
+def test_a_tape_in_a_subdirectory_is_written(tmp_path):
+    GlmWriter().write(_player_model("tapes/a.player"), tmp_path / "deck.glm")
+    assert (tmp_path / "tapes" / "a.player").read_text() == "2000-01-01 00:00:00,1.0\n"
+
+
+def test_a_player_with_no_file_raises_before_writing(tmp_path):
+    with pytest.raises(ValueError, match=r"GlmWriter: players \['p'\] have no file to write their tape to"):
+        GlmWriter().write(_player_model(None), tmp_path / "deck.glm")
+    assert not (tmp_path / "deck.glm").exists()

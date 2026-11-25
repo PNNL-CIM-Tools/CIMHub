@@ -2869,7 +2869,7 @@ class Line(YAMLRoot):
 class Reactor(YAMLRoot):
     """
     A Reactor object in OpenDSS representing a series or shunt impedance branch. Two-terminal reactors (bus1 + bus2)
-    are mapped to CIM SeriesCompensator. Single-terminal (shunt) reactors are not currently supported and are skipped.
+    are mapped to CIM SeriesCompensator. A single-terminal (shunt) reactor raises on import.
     """
     _inherited_slots: ClassVar[list[str]] = []
 
@@ -3718,8 +3718,8 @@ class Invcontrol(YAMLRoot):
 
     name: Union[str, InvcontrolName] = None
     DERList: Optional[Union[str, list[str]]] = empty_list()
-    Mode: Optional[float] = None
-    CombiMode: Optional[float] = None
+    Mode: Optional[str] = None
+    CombiMode: Optional[str] = None
     vvc_curve1: Optional[int] = None
     hysteresis_offset: Optional[float] = None
     voltage_curvex_ref: Optional[int] = None
@@ -3765,11 +3765,11 @@ class Invcontrol(YAMLRoot):
             self.DERList = [self.DERList] if self.DERList is not None else []
         self.DERList = [v if isinstance(v, str) else str(v) for v in self.DERList]
 
-        if self.Mode is not None and not isinstance(self.Mode, float):
-            self.Mode = float(self.Mode)
+        if self.Mode is not None and not isinstance(self.Mode, str):
+            self.Mode = str(self.Mode)
 
-        if self.CombiMode is not None and not isinstance(self.CombiMode, float):
-            self.CombiMode = float(self.CombiMode)
+        if self.CombiMode is not None and not isinstance(self.CombiMode, str):
+            self.CombiMode = str(self.CombiMode)
 
         if self.vvc_curve1 is not None and not isinstance(self.vvc_curve1, int):
             self.vvc_curve1 = int(self.vvc_curve1)
@@ -9624,10 +9624,10 @@ slots.invcontrol__DERList = Slot(uri=DSS.DERList, name="invcontrol__DERList", cu
                    model_uri=DSS.invcontrol__DERList, domain=None, range=Optional[Union[str, list[str]]])
 
 slots.invcontrol__Mode = Slot(uri=DSS.Mode, name="invcontrol__Mode", curie=DSS.curie('Mode'),
-                   model_uri=DSS.invcontrol__Mode, domain=None, range=Optional[float])
+                   model_uri=DSS.invcontrol__Mode, domain=None, range=Optional[str])
 
 slots.invcontrol__CombiMode = Slot(uri=DSS.CombiMode, name="invcontrol__CombiMode", curie=DSS.curie('CombiMode'),
-                   model_uri=DSS.invcontrol__CombiMode, domain=None, range=Optional[float])
+                   model_uri=DSS.invcontrol__CombiMode, domain=None, range=Optional[str])
 
 slots.invcontrol__vvc_curve1 = Slot(uri=DSS.vvc_curve1, name="invcontrol__vvc_curve1", curie=DSS.curie('vvc_curve1'),
                    model_uri=DSS.invcontrol__vvc_curve1, domain=None, range=Optional[int])

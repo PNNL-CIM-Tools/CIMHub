@@ -116,6 +116,9 @@ Table EnergySource: mRID, name, node, phases, nominalVoltage (V), voltageMagnitu
 | condition | message names |
 |---|---|
 | a parent that is not a bus object, or a parent loop | the object and its chain |
+| a link whose `from` or `to` names no bus object | the link and the name |
+| a link, load, capacitor or inverter on an island no swing bus reaches | the equipment and its bus |
+| a model name that is a part's name (`bus`, `load`, `player`, ...) | the name, when the importer is made |
 | a child bus whose phases are not a subset of its root's | both objects and their phases |
 | a swing bus with a parent | the bus |
 | a source on 2 conductors | the bus and its phases |
@@ -140,7 +143,8 @@ Table EnergySource: mRID, name, node, phases, nominalVoltage (V), voltageMagnitu
   `glm_to_cimtbl.py` before `MAPPING_ORDER`. `CLASSIFIED` (every mapped class's `FIELDS`) drives the master's
   not-mapped list and the expression guard, which now raises only for a slot a mapper reads.
 - Atoms `tests/atoms/bus/feeder` (substation + `base_power`, child load and triplex node, a 480 V meter on a 480 V
-  bus, `SWING_PQ`, center tap) and `tests/atoms/source/swing_node` (taxonomy-style SWING node, polar voltage);
+  bus, `SWING_PQ`, center tap), `tests/atoms/source/swing_node` (taxonomy-style SWING node, polar voltage) and
+  `tests/atoms/source/one_phase` (a one-phase SWING node: its nominalVoltage is the coil's, no sqrt 3);
   goldens `tests/goldens/IEEE13_cdpsm/{bus,source}.cimtbl`; `tests/test_cimtbl_bus.py`.
 - Every deck binds master + bus + source except the two listed deck defects (IEEE123_transactive's `Object`,
   IEEE13_houses' bus-634 center taps).
@@ -878,7 +882,7 @@ at read). GridLAB-D citations are to the C++ source (`powerflow/`, the checkout 
 | 2 | `triplex_line_conductor.cimtbl` | triplex_line_conductor (25) | `OverheadWireInfo` | `tpc_<name>` |
 | 3 | `line_spacing.cimtbl` | line_spacing (238) | `ConductorDistanceSpacing` + `ConductorDistance` (S2-2) | `spc_<name>` |
 | 4 | `line_configuration.cimtbl` | line_configuration: 722 by spacing + conductors, 20 by z-matrix | `WireConfiguration` + `WireSequenceConfiguration`, or `PerLengthPhaseImpedance` + `PhaseImpedanceData` | `wc_<name>`, `lc_<name>` |
-| 4 | `triplex_line_configuration.cimtbl` | triplex_line_configuration (25, all by conductors) | `WireConfiguration` + a derived `ConductorDistanceSpacing` (S2-8) | `wc_<name>`, `wc_<name>_spc` |
+| 4 | `triplex_line_configuration.cimtbl` | triplex_line_configuration (25, all by conductors) | `WireConfiguration` + a derived `ConductorDistanceSpacing` (S2-8); a matrix: `PerLengthPhaseImpedance` + `PhaseImpedanceData` | `wc_<name>`, `wc_<name>_spc`; `lc_<name>`, `lc_<name>_wc` |
 
 **Identity (all six):** prefix + the GLM name in source case (D3, GLM names are case-sensitive), never sanitized
 (`tpc_triplex_4/0 AA` is a quoted cell, I8). An unnamed object is `<class>:<id>` (S0), so
@@ -987,8 +991,8 @@ Table WireSequenceConfiguration: ...  sequenceNumber 1 (conductor_1), 2 (conduct
 |---|---|---|
 | `conductor_1`, `conductor_2`, `conductor_N` | structural | `WireSequenceConfiguration` 1, 2, 3 (GridLAB-D keeps N in its phase C slot, `triplex_line_configuration.cpp:35`); all three required (`triplex_line.cpp` throws) |
 | `diameter`, `insulation_thickness` | derived | the spacing's three distances, in their written unit (in); `triplex_spacing`, cited formula. The exporter inverts it: t = D12 - D1N, d = 2 D1N - D12 |
-| `spacing`, `conductor_A` .. `_C` | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
-| `z11`, `z12`, `z21`, `z22` | structural | no readable deck sets them: set raises until one does |
+| `spacing`, `conductor_A` .. `_C`, `z13`, `z23`, `z31` .. `z33`, `c11` .. `c33` | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `z11`, `z12`, `z21`, `z22` | structural | the matrix form, which GridLAB-D uses as given on legs 1 and 2 (`triplex_line.cpp:315`): a template `PerLengthPhaseImpedance` `lc_<name>` (`conductorCount=2`, `isTemplate=true`) with `PhaseImpedanceData` rows 1 (s1) and 2 (s2), r and x the real and imaginary parts, b 0 (the triplex line has no shunt admittance), held by `WireConfiguration` `lc_<name>_wc` as a line_configuration matrix is (S2-9). z11 and z22 are required, z12 must equal z21, and matrix with geometry raises (GridLAB-D would use the matrix). Its lines are `s1s2` (no N, as a matrix line). This is what the exporter writes for a CIM triplex matrix (X27) |
 
 ### Fail fast (S2)
 
@@ -1199,32 +1203,32 @@ Plan section 7.
 | `conductor_A` | `Optional[str]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
 | `conductor_B` | `Optional[str]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
 | `conductor_C` | `Optional[str]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
-| `conductor_N` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | WireSequenceConfiguration 3 (spacing phase N; GridLAB-D keeps it in its phase C slot); required |
+| `conductor_N` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | geometry: WireSequenceConfiguration 3 (spacing phase N; GridLAB-D keeps it in its phase C slot); required |
 | `spacing` | `Optional[str]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
-| `z11` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z12` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z13` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z21` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z22` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z23` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z31` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z32` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `z33` | `Union[dict, Complex, NoneType]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c11` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c12` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c13` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c21` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c22` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c23` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c31` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c32` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
-| `c33` | `Optional[float]` |  | structural | no readable deck sets a triplex matrix: set raises until one does |
+| `z11` | `Union[dict, Complex, NoneType]` |  | structural | matrix: one PhaseImpedanceData per lower-triangle element on s1, s2, r and x the real and imaginary parts, b 0 (no shunt admittance); z11 and z22 required, z12 must equal z21 |
+| `z12` | `Union[dict, Complex, NoneType]` |  | structural | matrix: one PhaseImpedanceData per lower-triangle element on s1, s2, r and x the real and imaginary parts, b 0 (no shunt admittance); z11 and z22 required, z12 must equal z21 |
+| `z13` | `Union[dict, Complex, NoneType]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `z21` | `Union[dict, Complex, NoneType]` |  | structural | matrix: one PhaseImpedanceData per lower-triangle element on s1, s2, r and x the real and imaginary parts, b 0 (no shunt admittance); z11 and z22 required, z12 must equal z21 |
+| `z22` | `Union[dict, Complex, NoneType]` |  | structural | matrix: one PhaseImpedanceData per lower-triangle element on s1, s2, r and x the real and imaginary parts, b 0 (no shunt admittance); z11 and z22 required, z12 must equal z21 |
+| `z23` | `Union[dict, Complex, NoneType]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `z31` | `Union[dict, Complex, NoneType]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `z32` | `Union[dict, Complex, NoneType]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `z33` | `Union[dict, Complex, NoneType]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c11` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c12` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c13` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c21` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c22` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c23` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c31` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c32` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
+| `c33` | `Optional[float]` |  | structural | inherited from line_configuration and not read by GridLAB-D's triplex line: set raises |
 | `rating_summer_continuous` | `Optional[float]` |  | structural | not on the template (D9): the S3a line mapper puts it on each line's own OperationalLimitSet |
 | `rating_summer_emergency` | `Optional[float]` |  | structural | not on the template (D9): the S3a line mapper puts it on each line's own OperationalLimitSet |
 | `rating_winter_continuous` | `Optional[float]` |  | structural | not on the template (D9): the S3a line mapper puts it on each line's own OperationalLimitSet |
 | `rating_winter_emergency` | `Optional[float]` |  | structural | not on the template (D9): the S3a line mapper puts it on each line's own OperationalLimitSet |
-| `conductor_1` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | WireSequenceConfiguration 1 (spacing phase s1); required |
-| `conductor_2` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | WireSequenceConfiguration 2 (spacing phase s2); required |
+| `conductor_1` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | geometry: WireSequenceConfiguration 1 (spacing phase s1); required |
+| `conductor_2` | `Optional[str]` | `tp_line_conductor`, `triplex_4/0 AA` | structural | geometry: WireSequenceConfiguration 2 (spacing phase s2); required |
 | `insulation_thickness` | `Optional[float]` | `0.08` | derived | see diameter |
 | `diameter` | `Optional[float]` | `0.368`, `0.522` | derived | the spacing's distances (triplex_spacing): D12 = diameter + 2 insulation_thickness, D1N = D2N = diameter + insulation_thickness |
 
@@ -1387,7 +1391,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | OverheadLine field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, OverheadLineName]` | `line_632633`, `line_632645`, `line_632670` | copied | `ACLineSegment.name`; mRID = ln_ + name |
-| `phases` | `Optional[str]` | `ABC`, `CB`, `AC` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `phases` | `Optional[str]` | `ABC`, `CB`, `AC` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line, s1s2 on a triplex matrix (S3a-3) |
 | `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
 | `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
 | `from_node` | `Optional[str]` | `632`, `mid`, `645` | structural | node1: the root bus of the object it names (GLM-4) |
@@ -1402,7 +1406,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `600.0`, `730.0`, `510.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_mtx602_ABC`, `lcon_mtx603_CB`, `lcon_mtx601_ABC` | structural | WireConfiguration = wc_<configuration> (geometry) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1411,7 +1415,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | UndergroundLine field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, UndergroundLineName]` | `line_684652`, `line_692675`, `GC-12-47-1_ul_1` | copied | `ACLineSegment.name`; mRID = ln_ + name |
-| `phases` | `Optional[str]` | `AN`, `ABC`, `ABCN` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `phases` | `Optional[str]` | `AN`, `ABC`, `ABCN` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line, s1s2 on a triplex matrix (S3a-3) |
 | `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
 | `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
 | `from_node` | `Optional[str]` | `684`, `692`, `GC-12-47-1_node_5` | structural | node1: the root bus of the object it names (GLM-4) |
@@ -1426,7 +1430,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` | `247.5`, `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` | `390.0` | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
+| `configuration` | `Optional[str]` | `lcon_607_4`, `lcon_606_0`, `line_configuration:6` | structural | WireConfiguration = wc_<configuration> (geometry) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `800.0`, `500.0`, `340.889` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -1435,7 +1439,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | TriplexLine field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, TriplexLineName]` | `R1-12-47-3_tl_1`, `tl_1`, `tl_2` | copied | `ACLineSegment.name`; mRID = ln_ + name |
-| `phases` | `Optional[str]` | `BS`, `AS` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3) |
+| `phases` | `Optional[str]` | `BS`, `AS` | structural | the phases cell: ABC then N, equal to the configuration's conductors (geometry) or diagonal (matrix); s1s2N on a triplex line, s1s2 on a triplex matrix (S3a-3) |
 | `nominal_voltage` | `Optional[float]` |  | untranscribed | the walk gives the BaseVoltage (GLM-1) |
 | `status` | `Optional[str]` |  | structural | unset or CLOSED; OPEN raises (the walk: a line is not a switch) |
 | `from_node` | `Optional[str]` | `R1-12-47-3_tn_1`, `tn1` | structural | node1: the root bus of the object it names (GLM-4) |
@@ -1450,7 +1454,7 @@ outputs and state (`power_*`, `current_*` but `current_limit`, `fault_*`, `overl
 | `emergency_rating_A` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_B` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
 | `emergency_rating_C` | `Optional[float]` |  | structural | the emergency CurrentLimit of that set |
-| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry, triplex) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
+| `configuration` | `Optional[str]` | `triplex_line_configuration:1`, `tc_rated` | structural | WireConfiguration = wc_<configuration> (geometry) or lc_<configuration>_wc (matrix: the WireConfiguration that holds the template PerLengthPhaseImpedance), S3a-2 |
 | `length` | `Optional[float]` | `30.0` | copied | `ACLineSegment.length` ({unit}); in its written unit; unset raises |
 
 
@@ -2115,7 +2119,7 @@ Update Table EnergyConsumerPhase: mRID, p (W), q (VAr)
 Table EnergyConsumer: ...
     ld_R1-12-47-1_tn_1_12, R1-12-47-1_tn_1_12, R1-12-47-1_tm_1, s1s2, D, false, 1530, 410, zip_constant_pq, bv_240v
 # taxonomy VOLT capacitor, phases_connected ABC, pt_phase B, switches unset (OPEN), under S4a-8 (a)
-Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections, BaseVoltage, EquipmentContainer
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (VAr), nomU (V), bPerSection (VAr/V^2), sections, normalSections, maximumSections, BaseVoltage, EquipmentContainer
     cap_R1-12-47-1_cap_1_B, R1-12-47-1_cap_1_B, R1-12-47-1_node_422, B, Y, true, 300000, 7200, 0.00579, 0, 0, 1, ...
 Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, Terminal
     cc_R1-12-47-1_cap_1_B, R1-12-47-1_cap_1_B, B, 7200, 200, cap_R1-12-47-1_cap_1_B_T1
@@ -2143,7 +2147,7 @@ Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, 
 |---|---|---|
 | `name` | derived | `LinearShuntCompensator.name` = name, or name_<phase> for a per-phase unit (S4a-8); mRID `cap_` + that, the control `cc_` + that |
 | `phases_connected` (else `phases`) | structural | the unit's phases, wye and grounded (S4a-11); D raises |
-| `capacitor_X` | derived | the phase's VAr via pint; `nomQ` = the unit's sum, `bPerSection` = nomQ / nomU² (S4a-10); a phase not connected is dropped and listed in the row comment |
+| `capacitor_X` | derived | in its written unit (one per unit); `nomQ` = the unit's sum, `bPerSection` = nomQ / nomU² in those units, `(MVAr/V^2)` (S4a-10); a phase not connected is dropped and listed in the row comment |
 | `cap_nominal_voltage` | derived | `nomU`: the phase-to-neutral rating (else the bus's `nominal_voltage`, `capacitor.cpp:376`), × √3 on a 2- or 3-phase unit (CIM's line voltage) |
 | `switchA`/`B`/`C` | derived | `sections` = `normalSections` = 1 CLOSED, 0 OPEN, default OPEN (S4a-9); `maximumSections` 1 |
 | `control` | structural | VOLT: a `RegulatingControl` (S4a-12); MANUAL (default): none; VAR, VARVOLT, CURRENT raise |
@@ -2178,7 +2182,7 @@ The mapper raises on:
 | S4a-7 | Artifacts | One per native class: `load.cimtbl`, `triplex_load.cimtbl`, `triplex_node.cimtbl` (plain `triplex_node`s that carry power). Load slots on any other bus class (node, meter, triplex_meter) raise |
 | **S4a-8** | **Capacitor units (option (a), the user's call)** | **GridLAB-D switches each phase separately. Under INDIVIDUAL (the default, all 70 that set it), VOLT switches only the `pt_phase` phases, each on its own phase voltage (`capacitor.cpp:1180-1205`). The other phases stay at their initial state, by default OPEN. (a) Recommended, as S3c's INDIVIDUAL units: one unit per set of phases that switch together. MANUAL or unset is one gang unit, whose switch states must agree (raise otherwise, as S3a's per-phase switch states). Automatic INDIVIDUAL is one 1-phase unit per connected phase, `cap_<name>_<phase>`, with a control on the units whose phase is in `pt_phase`. BANK is one gang unit (no deck). Under (a), 34 taxonomy 3-phase capacitors with `pt_phase B` have phases A and C fixed OPEN, as GridLAB-D runs them, and only B switches. (b) One gang unit per capacitor, controlled on `pt_phase`, as a DSS CapControl would be: all three phases switch on B, which GridLAB-D does not do** |
 | S4a-9 | Initial state | `sections` = `normalSections` = the switch state as GridLAB-D starts it: 1 CLOSED, 0 OPEN, OPEN when unset (`capacitor.cpp:151-195`); never overridden. 45 taxonomy capacitors start OPEN |
-| S4a-10 | Rating | `nomQ` = the sum of the unit's `capacitor_X` (VAr via pint). `nomU` = `cap_nominal_voltage` (LN) × √3 on 2-3 phases. `bPerSection` = nomQ / nomU², which the shunt getter reads back as Q = b × nomU² × sections; on one phase it is GridLAB-D's capacitor_X / Vc² (`capacitor.cpp:394`). Every gang unit in the decks is balanced, so no per-phase b is written; an unbalanced gang unit raises, and the shunt getter keeps its own raise |
+| S4a-10 | Rating | `nomQ` = the sum of the unit's `capacitor_X`, in their written unit. `nomU` = `cap_nominal_voltage` (LN) × √3 on 2-3 phases, in its written unit. `bPerSection` = nomQ / nomU² in those units (`kVAr/V^2`: the units travel with the values, cimtables stores S; one table per unit pair), which the shunt getter reads back as Q = b × nomU² × sections; on one phase it is GridLAB-D's capacitor_X / Vc² (`capacitor.cpp:394`). Every gang unit in the decks is balanced, so no per-phase b is written; an unbalanced gang unit raises, and the shunt getter keeps its own raise |
 | S4a-11 | Connection | `phases_connected` without D is wye, grounded, with or without N: GridLAB-D puts the shunt phase to ground either way. Ungrounded would change the physics on export. D raises (no deck; GridLAB-D's delta rates on LN², `capacitor.cpp:1398`) |
 | S4a-12 | VOLT control | `RegulatingControl` mode voltage, discrete, enabled. It monitors the unit's own terminal (`_T1`) on the unit's phase (a gang unit's: `pt_phase`, one phase or raise). Target and deadband come from `band_from_on_off(voltage_set_low, voltage_set_high)` in primary volts, LN, with no PT: closes at or below low, opens at or above high (`capacitor.cpp:1180`). `aVRDelay` = dwell_time + time_delay, `controlEnabled` true, by the shunt shape's `Update` row. MANUAL has no control; any set points it carries go in the row comment |
 
@@ -2471,9 +2475,9 @@ solvers):** a GLM capacitor is mapped as GridLAB-D runs it, not as a DSS CapCont
 | `current_set_high` | `Optional[float]` |  | untranscribed | read only by the VAR, VARVOLT and CURRENT modes |
 | `current_deadband_center` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
 | `current_deadband` | `Optional[float]` |  | structural | raises when set: no deck sets it, so a mapping waits for one |
-| `capacitor_A` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
-| `capacitor_B` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
-| `capacitor_C` | `Optional[float]` | `200000.0`, `100000.0`, `0.3` | derived | the phase's VAr via pint: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `capacitor_A` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | in its written unit: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `capacitor_B` | `Optional[float]` | `200000.0`, `0.3`, `0.25` | derived | in its written unit: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
+| `capacitor_C` | `Optional[float]` | `200000.0`, `100000.0`, `0.3` | derived | in its written unit: nomQ = the unit's sum, bPerSection = nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, GridLAB-D ignores it (capacitor.cpp:1447) |
 | `cap_nominal_voltage` | `Optional[float]` | `2401.78`, `2400.0`, `2402.0` | derived | nomU: the phase-to-neutral rating (else nominal_voltage, capacitor.cpp:376), x sqrt 3 on 2-3 phases |
 | `time_delay` | `Optional[float]` | `0.0`, `300.0`, `30.0` | derived | aVRDelay = dwell_time + time_delay (s), as S3c-5 |
 | `dwell_time` | `Optional[float]` | `0.0`, `30.0`, `15.0` | derived | with time_delay |
@@ -2593,7 +2597,7 @@ they need GridLAB-D's weather and solar position (no deck).
 | `inverter_type` | structural | `FOUR_QUADRANT`; any other raises (S4b-1). Unset is GridLAB-D's PWM (`inverter.cpp:1350`), which also raises |
 | `four_quadrant_control_mode` | structural | dispatch: `CONSTANT_PF` (the default, `inverter.cpp:515`) on a solar, `CONSTANT_PQ` on a battery, which also takes CONSTANT_PF as the Java defect (S4b-1, S4b-2); others raise. Capability: S4b-11, the mode as read |
 | `rated_power` | derived | `ratedS` = rated_power × phases out: 3, 2, or 1 (S counts as 1; `inverter.cpp:1318-1326`, `:1415`); the per-phase cap of S4b-2; `apparentPowerMaximum`. Unset or 0 raises: GridLAB-D silently uses 25 kVA (`:1409`) |
-| `inverter_efficiency` | derived | into p (S4b-2); CIM has no inverter efficiency. 0 or unset is GridLAB-D's 0.9 (`:1398`) |
+| `inverter_efficiency` | derived | into p (S4b-2); CIM has no inverter efficiency. Unset, 0 or negative is GridLAB-D's 0.9 (`:1398`) |
 | `P_Out` | derived | battery: the set point, p = -P_Out after GridLAB-D's CONSTANT_PQ limits (S4b-2). Solar: GridLAB-D overwrites it in CONSTANT_PF (`inverter.cpp:433`, `:3879`), so it is only listed in the row comment |
 | `power_factor` | derived | CONSTANT_PF: `q` = 0 when \|pf\| = 1; \|pf\| < 1 raises (S4b-3). Not read by CONSTANT_PQ, so on a battery read as CONSTANT_PQ it goes in the row comment |
 | `Q_Out` | derived | CONSTANT_PQ: `q` = 0 when unset or 0; any other value raises (S4b-3) |
@@ -2728,7 +2732,7 @@ A cross-format check should list these as expected divergences, as for S4a-8's c
 | `P_Out` | `Optional[float]` | `50000.0`, `-20000.0`, `30000.0` | derived | battery: the CONSTANT_PQ set point (S4b-2); PV: an output GridLAB-D overwrites (inverter.cpp:3879), listed in the row comment |
 | `Q_Out` | `Optional[float]` |  | derived | CONSTANT_PQ: q = 0 when unset or 0; any other value raises (S4b-3) |
 | `rated_power` | `Optional[float]` | `33333.333`, `15000.0`, `20000.0` | derived | ratedS = rated_power x phases out (3, 2, 1; S is 1, inverter.cpp:1318); maxQ = -minQ = apparentPowerMaximum = ratedS; unset or 0 raises (GridLAB-D's silent 25 kVA, :1409) |
-| `inverter_efficiency` | `Optional[float]` | `0.95`, `1.0`, `0.975` | derived | PV: AC = DC x inverter_efficiency (inverter.cpp:3290); default 0.9 (:1398); CIM has no inverter efficiency |
+| `inverter_efficiency` | `Optional[float]` | `0.95`, `1.0`, `0.975` | derived | PV: AC = DC x inverter_efficiency (inverter.cpp:3290); unset, 0 or negative is 0.9 (:1398); CIM has no inverter efficiency |
 | `soc_reserve` | `Optional[float]` | `0.2`, `0.25` | derived | BatteryUnit.minimumE = soc_reserve x battery_capacity; the battery does not discharge at or below it; default 0 |
 | `power_factor` | `Optional[float]` | `-1.0`, `1.0` | derived | CONSTANT_PF: q = 0 when |pf| = 1; |pf| < 1 raises (S4b-3); not read by CONSTANT_PQ (a battery read as CONSTANT_PQ lists it in the row comment) |
 | `phases` | `Optional[str]` | `ABCN`, `ACN`, `AS` | structural | A, B, C wye to neutral (3 phases: blank); S: s1s2 D across the legs at 240 V (S4b-4). GridLAB-D has no D keyword on an inverter |

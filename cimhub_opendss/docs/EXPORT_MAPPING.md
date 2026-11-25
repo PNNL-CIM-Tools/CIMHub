@@ -314,8 +314,10 @@ One record per template PerLengthImpedance in the network (E3): `isTemplate` tru
 - **One record per (WireConfiguration, ySpacingOffset)** among the lines (E3). It is named
   `<configuration>` at offset unset or 0, and `<configuration>_<offset>m` otherwise (offset in m rounded to the
   mm, `.` written as `p`: `10p363m`). Two offsets of one configuration that round to one name raise.
-- **A WireConfiguration no line uses** is written once, with its spacing's positions as stored (offset 0, the CIM
-  default). One with a PerLengthImpedance and no WireSpacing is a template LineCode, not geometry: LineCode writes
+- **A WireConfiguration no line uses** is written once, offset 0 (the CIM default), on the positions of its spacing
+  that its own WireSequenceConfigurations name: a template spacing may hold several circuits, each its own
+  configuration (the double circuit's two, one of them unused in a feeder exported alone). A configured sequence
+  number with no position raises. One with a PerLengthImpedance and no WireSpacing is a template LineCode, not geometry: LineCode writes
   its code, and it has no earth (`options.earth_model` skips it).
 - **A spacing line** (the EPRI line shape: `ACLineSegment.WireSpacing`, no WireConfiguration, a WireInfo on every
   ACLineSegmentPhase) gets one record per (spacing, ySpacingOffset, conductors), the conductors being each phase's
@@ -325,7 +327,7 @@ One record per template PerLengthImpedance in the network (E3): `isTemplate` tru
   match its positions'. Lines of one `MultiCircuitGroup` at its highest voltage are coupled instead when two or more
   are in the network (H1, S6h).
 - **Positions:**
-  - `get_line_conductor_xy(line)`, or `get_spacing_xy` for an unused configuration, in m: phase conductors, then
+  - `get_line_conductor_xy(line)`, or `get_spacing_xy` on its own sequence numbers for an unused configuration, in m: phase conductors, then
     neutrals. A bundle (`RegularBundlePosition` triplex, `BundlePosition` quadruplex) is expanded into its
     sub-conductors. They are written as `xs` / `hs` with the conductor names in `wires`, and the writer emits the
     cond blocks;
@@ -368,7 +370,8 @@ One record per ACLineSegment (a Switch is not an ACLineSegment; switch.py).
   - `r1 x1 r0 x0` = the whole-line values divided by the length, in ohm/km "for better decimal places";
   - `C1 C0` from `bch`/`b0ch` the same way (nF/km);
   - `length` in km with `units=km`. A line with no length gets `length=1`, so the per-km values are the whole-line
-    values.
+    values. A length of 0 raises: a DSS line's impedance is per length, and the engine cannot solve a zero-length
+    line (probe 2026-11-24: `Matrix Inversion Error`).
 
   The values come from `get_line_sequence_impedance(line, "ohm")` (`LUMPED`). An unset b is C = 0 (rule 8). An
   unset r0/x0 raises, as on a sequence code. A set and nonzero `gch`/`g0ch` raises.
@@ -590,7 +593,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | DSS slot | kind | from / why |
 |---|---|---|
 | name | written | Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm ('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, offset and conductors; a coupled group's: <group>_geometry (H1) |
-| nconds | written | the spacing's positions; a spacing line's: its phases' positions; a coupled group's: its lines' positions, a shared neutral once |
+| nconds | written | the configuration's positions; a spacing line's: its phases' positions; a coupled group's: its lines' positions, a shared neutral once |
 | nphases | written | WireConfiguration.numberOfPhases, required; a spacing line's: its phases other than N, a coupled group's: every line's; position kinds phase then neutral |
 | cond | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | wire | not mapped | the writer folds wires/xs/hs into cond= blocks |
@@ -601,12 +604,12 @@ code-level tests in `test_getters_line_impedance.py`):
 | emergamps | unset | no rating on a WireConfiguration (D9); the Line carries its own |
 | reduce | written | y: the neutrals grounded at both ends, as the impedance getters assume (B4) |
 | spacing | not mapped | positions are written inline (B2) |
-| wires | written | get_configuration_wires, or a spacing line's get_line_phase_wires, by sequence number; any of the three catalogs |
+| wires | written | get_configuration_wires, or a spacing line's get_line_phase_wires (line_wires), by sequence number; any of the three catalogs |
 | cncable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | tscable | not mapped | the writer folds wires/xs/hs into cond= blocks |
 | cncables | not mapped | wires carries every kind (the writer names each block's kind) |
 | tscables | not mapped | wires carries every kind (the writer names each block's kind) |
-| xs | written | get_line_conductor_xy x (m); an unused configuration: get_spacing_xy |
+| xs | written | get_line_conductor_xy x (m); an unused configuration: get_spacing_xy on its WireSequenceConfigurations' sequence numbers |
 | hs | written | get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7) |
 | Seasons | unset | not in CIM (untranscribed on import) |
 | Ratings | unset | not in CIM (untranscribed on import) |
@@ -622,7 +625,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
 | bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
 | linecode | written | the template PerLengthImpedance's LineCode name (get_line_code); a line's own (isTemplate=false) is written inline |
-| length | written | required_qty(length, m); lumped: km, unset -> 1; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
+| length | written | required_qty(length, m); lumped: km, unset -> 1, 0 raises; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
 | phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
 | r1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
 | x1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
@@ -636,7 +639,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | Switch | not mapped | a Switch is exported by switch.py |
 | Rg | unset | not in CIM (untranscribed or raising on import) |
 | Xg | unset | not in CIM (untranscribed or raising on import) |
-| rho | written | a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth |
+| rho | written | line_rho: a geometry line's WireConfiguration EarthResistivity.rho (ohm-m), unset -> not written; a spacing line's: get_network_earth; a coupled group's: its lines' one |
 | geometry | written | the (WireConfiguration, ySpacingOffset) LineGeometry name; a spacing line's: spacing_geometry_name of its owner; a coupled group's: <group>_geometry (H1) |
 | units | written | m (B1); lumped: km (B6) |
 | spacing | not mapped | positions are written inline in the LineGeometry (B2) |
@@ -2088,10 +2091,14 @@ secondary underbuilt on the same poles, drawn with lengths that differ (median 6
 
 - **Which lines are coupled** (`linegeometry.coupled_groups`, found once per export as `ExportContext.coupled`):
   the lines of one `MultiCircuitGroup` at its highest nominal voltage, when two or more of them are in the network.
+  Each is a spacing line or a line with geometry (a WireConfiguration naming a WireSpacing, as on a template
+  double-circuit spacing with a configuration per circuit), and a group may mix the two. A line's wires are its
+  configuration's WireSequenceConfigurations or its phases' WireInfo (`line_wires`), by sequence number, and there
+  must be one on each of its phases' sequence numbers.
   - The group's lines at another voltage (an underbuilt secondary) are written on their own positions, uncoupled
     (H5). One line would put them on a bus with the primary's voltage base.
-  - One line of a group alone, as in a feeder exported on its own, is an ordinary spacing line on its own
-    positions (1, 2, 3, 7 for s1-f2).
+  - One line of a group alone, as in a feeder exported on its own, is an ordinary line on its own positions (1, 2,
+    3, 7 for s1-f2).
   - A group whose coupled lines name one phase position (series pieces of one circuit, such as a span split at a
     tap) is written uncoupled, with a warning (H7): one coupled line cannot carry them.
 - **The geometry** `<group>_geometry`: every line's phase conductors in circuit order (the lines ordered by their
@@ -2101,8 +2108,9 @@ secondary underbuilt on the same poles, drawn with lengths that differ (median 6
   `nphases` is every coupled line's phases, and `reduce=y` (B4).
 - **The line** `<group>`: one Line on the geometry from bus `<group>_1` to `<group>_2`, each circuit's phase
   conductors on the next nodes (`.1.2.3`, then `.4.5.6`), over the shortest line's length (to the mm). The lines
-  must agree on spacing, ySpacingOffset, ratings and in-service state, which the one Line carries. Its `rho` is the
-  network earth, as a spacing line's.
+  must agree on spacing, ySpacingOffset, earth, ratings and in-service state, which the one Line carries. Its `rho`
+  is every line's `line_rho`: a spacing line's network earth, a configuration line's EarthResistivity (unset:
+  none).
 - **The ends.** A DSS terminal is on one bus, and the circuits end on different nodes:
   - each circuit has a jumper `<line>_jumper1` from its node 1 onto its nodes of `<group>_1`, with the switches'
     invented 1 mOhm (B3, now `line.SWITCH_IMPEDANCE`). It is not `Switch=y`: it is a conductor, not a switch;
@@ -2112,8 +2120,9 @@ secondary underbuilt on the same poles, drawn with lengths that differ (median 6
 
   Terminal 1 of every line of a group is taken to be at the same end of the structure, and the coupled span to
   start there: CIM does not say which ends meet, or where along the longer line the shorter one runs.
-- **Raises:** a coupled line that is not a spacing line; coupled lines that differ on spacing, offset, ratings or
-  in-service state; a shared position on different wires; a phase naming another group.
+- **Raises:** a coupled line without geometry; a coupled line whose wires are not on its phases' sequence numbers;
+  coupled lines that differ on spacing, offset, earth, ratings or in-service state; a shared position on different
+  wires; a phase naming another group.
 - **Not imported back.** The DSS importer raises on the group's Line (nodes 4-6 have no phase), so an exported
   multi-circuit deck does not round-trip yet. Importing DSS multi-circuit lines into a MultiCircuitGroup is
   separate work.
@@ -2141,7 +2150,11 @@ A `BusbarSection` is its node's bus. DSS has no element for it, so it writes no 
   - a shared neutral without SharedPhases (H6);
   - an underbuilt secondary left uncoupled (H5);
   - series pieces left uncoupled, with the warning (H7);
-  - five raises.
+  - five raises;
+  - lines on a template spacing's WireConfigurations, and one of them with a spacing line, coupled to the same
+    records as two spacing lines (frame-boundary-agent, 2026-11-24), and two raises (the earths differ, a wire
+    off its line's phases);
+  - an unused configuration of that template written on its own four positions, not the spacing's seven.
 - `test_export_circuit.py`: an empty Feeder of another substation is not counted.
 - `test_export_framework.py`: a BusbarSection writes nothing.
 

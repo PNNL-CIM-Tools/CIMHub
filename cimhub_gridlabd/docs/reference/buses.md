@@ -8,7 +8,7 @@ Every GridLAB-D object that equipment lands on is a bus: `node`, `meter`, `tripl
 | GLM | CIM (cim18v17) | Import (shape) | Export |
 |---|---|---|---|
 | `node`, `meter`, `triplex_node`, `triplex_meter` (every root bus) | `ConnectivityNode`, `BaseVoltage` | `bus.cimtbl` (a `ConnectivityNode` table) | `node`, or `triplex_node` on a split-phase bus |
-| `substation`, any bus with `bustype SWING` | `EnergySource`, `BasePower` | `source.cimtbl` (`source`) | `substation` with `bustype SWING` |
+| `substation`, any bus with `bustype SWING` | `EnergySource`, `BasePower` | `source.cimtbl` (`source`) | `substation` with `bustype SWING`; a one-phase swing a `node` with `bustype SWING` |
 | `module powerflow` `nominal_frequency` | `BaseFrequency` | the master | `module powerflow` `nominal_frequency` |
 | the model | `Substation`, `Feeder`, `Feeder.NormalHeadTerminal` | the master | not written |
 
@@ -37,7 +37,7 @@ A bus's system is read from the walk: three phase (a source, or a polyphase tran
 phase (`triplex_node`). A voltage on a bus object is a phase-to-neutral figure on a three-phase system, so the walk's
 BaseVoltage (line to line) is `nominal_voltage` times the square root of three there, and times two on a split-phase bus.
 
-A bus the walk does not reach (an island with no source) has no `BaseVoltage`, so equipment on it raises in its own mapper, today as a bare `KeyError` on the bus name.
+A bus the walk does not reach (an island with no source) has no `BaseVoltage`: a link, a load, a capacitor or an inverter on it raises a `ValueError` naming the equipment and the bus, and a bus with nothing on it is left out.
 
 The IEEE decks use `${VSOURCE}` without defining it. `GlmReader` takes the macro from its `defines` argument, as
 `gridlabd -D` would:
@@ -82,10 +82,11 @@ Table BaseVoltage: mRID, nominalVoltage (kV)
     bv_240v,   0.24
 ```
 
-Excerpt from the master of `IEEE13_cdpsm.glm`, printed by the example above (`documents.master`). The master is named after the model, so a model name that equals the name of a non-empty part (`transformer`, `load`, `switch`, `bus`, `source`, ...) fails with `document names repeat`.
+Excerpt from the master of `IEEE13_cdpsm.glm`, printed by the example above (`documents.master`). The master is named after the model, so a model name that equals the name of a part (`transformer`, `load`, `player`, `switch`, `bus`, `source`, ...) raises a `ValueError` when the importer is made, before anything is read.
 
 **Fail fast.** A value the reader kept as an expression in a property a mapper reads. The walk raises on a coil that cannot sit on its
-island, on a parent that is not a bus object, on a parent loop, and on a link whose phases are not on both of its ends.
+island, on a parent that is not a bus object, on a parent loop, on a link whose `from` or `to` names no bus object, on a
+link whose phases are not on both of its ends, and on a link or a device on an island no swing bus reaches.
 
 ## node, meter, triplex_node, triplex_meter
 
@@ -100,8 +101,8 @@ also becomes consumers; that is on the [loads](loads.md) page.
 | `parent` | structural: a bus whose parent is a bus has no node; its equipment lands on the root of the chain, and its name is listed on the root's row | not written: every exported bus is a root |
 | `phases` | structural: a child's phase conductors must be a subset of its root's; on a swing bus, `EnergySource.phases` | written: the A, B, C of every terminal on the node, then `N`; a `triplex_node` the service's letter, then `S` |
 | `nominal_voltage` | structural: checked against the walk's kV on the bus's system; a disagreement over 10 % is listed in the table comment, not raised. On a swing bus it is also the source's `nominalVoltage` | written: the `BaseVoltage` over the square root of three on a three-phase bus, unchanged on a single-phase one, over two (one leg, `s1` to `N`) on a split-phase one |
-| `bustype` | structural: `SWING` is an `EnergySource`; `PQ`, `PV` and `SWING_PQ` are a plain bus | not written, except `SWING` on the `substation` |
-| `voltage_A` (`voltage_1` on a triplex bus) | derived, on a swing bus only: the source's `voltageMagnitude` and `voltageAngle` | not written |
+| `bustype` | structural: `SWING` is an `EnergySource`; `PQ`, `PV` and `SWING_PQ` are a plain bus | not written, except `SWING` on the swing (a `substation`, or a one-phase swing's `node`) |
+| `voltage_A` (`voltage_1` on a triplex bus) | derived, on a swing bus only: the source's `voltageMagnitude` and `voltageAngle` | written on a one-phase swing's `node`: `get_source` `voltageMagnitude` at `voltageAngle` |
 | `power_1`, `power_2`, `power_12` (a plain `triplex_node`) | copied to `EnergyConsumer.p` and `q`; see [loads](loads.md) | not written here |
 | `power_A` ... `power_CN`, `current_*`, `shunt_*`, `current_inj_*` (any bus class but a plain `triplex_node`'s `power_1`, `power_2`, `power_12`) | raises when set: a load on the bus object itself; make it a `load` | not written |
 | `voltage_B`, `voltage_C`, `voltage_2`, `voltage_N` | untranscribed: the solver's initial guess | not written |
@@ -157,8 +158,8 @@ itself. A swing bus with a `parent` raises. The `BasePower` is a separate object
 
 | property | import | export |
 |---|---|---|
-| `nominal_voltage` | derived: `EnergySource.nominalVoltage` = `line_voltage(nominal_voltage)` on the bus's system (`V`, as written); unset raises | written: `get_source` `nominalVoltage` over the square root of three |
-| `positive_sequence_voltage` (`voltage_A`, or `voltage_1` on a triplex bus, when it is unset) | derived: `voltageMagnitude` = `line_voltage` of the magnitude of V, `voltageAngle` = arg(V) in degrees; a polar value is taken as written. Unset: `nominal_voltage` at 0 degrees, listed as `defaulted` | written: `get_source` `voltageMagnitude` over the square root of three, at `voltageAngle` |
+| `nominal_voltage` | derived: `EnergySource.nominalVoltage` = `line_voltage(nominal_voltage)` on the bus's system (`V`, as written); unset raises | written: `get_source` `nominalVoltage` over the square root of three on a three-phase system, as is on a one-phase one |
+| `positive_sequence_voltage` (`voltage_A`, or `voltage_1` on a triplex bus, when it is unset) | derived: `voltageMagnitude` = `line_voltage` of the magnitude of V, `voltageAngle` = arg(V) in degrees; a polar value is taken as written. Unset: `nominal_voltage` at 0 degrees, listed as `defaulted` | written: `get_source` `voltageMagnitude` over the square root of three, at `voltageAngle` (a one-phase swing: `voltage_A` on its `node`, not divided) |
 | `phases` | structural: the phase letters, `N` dropped, one or three conductors; `ABC` is a blank cell | written, as for any bus |
 | `reference_phase` | structural: unset or `PHASE_A`; anything else raises | not written |
 | `base_power` | copied to `BasePower.basePower`, in its written unit (`12MVA` is `basePower (MVA)=12.0`) | written: the graph's `BasePower` when it holds one |
@@ -181,8 +182,10 @@ than `PHASE_A`. A swing bus with a parent. On export, two `EnergySource`s (the N
 `EnergySource` that does not have one terminal, and more than one `BasePower`.
 
 **Expected differences.** The source impedance is not written, and the swing's `nominal_voltage` is recomputed from the
-`EnergySource`. `base_power` is written in VA (`12000000`), the unit the schema declares. A source's zone is read as three
-phase on export, whatever its phases, so a one-conductor swing (`phases AN`) comes back with its `nominal_voltage` and its zone's divided by the square root of three (7200 becomes 4156.92).
+`EnergySource`. `base_power` is written in VA (`12000000`), the unit the schema declares. A source's zone is three
+phase on export unless the source is on one conductor: a one-conductor swing (`phases AN`) is single phase, so its
+`nominal_voltage` 7200 comes back 7200. GridLAB-D's `substation` needs all three phases, so a one-phase swing is
+written as a `node` with `bustype SWING` and `voltage_A`, and a model with a `BasePower` then raises on export.
 
 Excerpt from `cimhub_gridlabd/tests/atoms/bus/feeder.source.cimtbl`:
 

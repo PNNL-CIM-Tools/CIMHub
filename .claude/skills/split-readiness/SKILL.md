@@ -43,8 +43,8 @@ user does: from PyPI, or through an uncommitted local `uv` path override while c
 
 ## Leak gate
 
-Run from the repo root before committing. Every command must print nothing (the third lists files to justify or
-remove).
+Run `scripts/leak-gate.sh` from the repo root before committing; it must print `leak-gate: clean`. It runs these
+checks, and each must print nothing (the fourth lists files to justify or remove).
 
 ```bash
 # 1. imports of a vendor spoke (split plan §4.1)
@@ -55,7 +55,11 @@ grep -rnE "(from|import) cimhub_(powersimulator|cyme|synergi|powerworld|pscad|ar
 grep -rnE "cimhub_(powersimulator|cyme|synergi|powerworld|pscad|arcgis|bmopf|repair|s223)\b" . \
     --exclude-dir=.git --exclude-dir=.venv --exclude-dir=split-readiness
 
-# 3. files over 10 MB
+# 3. a vendor format named as a plain word in package source or anywhere in core (code, docs, shapes). Docs,
+#    plans and public fixtures elsewhere may name a format (rule 6); "repair" is an English word, so it is left out
+git grep -nIiwE "powersimulator|cyme|synergi|powerworld|pscad|arcgis|bmopf|s223" -- 'cimhub_*/src/*' 'cimhub_core/*'
+
+# 4. files over 10 MB
 find . \( -path ./.git -o -path ./.venv \) -prune -o -type f -size +10M -print
 ```
 

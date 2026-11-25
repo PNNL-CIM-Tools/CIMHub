@@ -61,7 +61,7 @@ And the deck's settings:
 |---|---|---|---|
 | `module powerflow { nominal_frequency ...; }`, or `#set powerflow::nominal_frequency=...` | `BaseFrequency` | yes; 60 Hz when unset, noted in the master | the module's `nominal_frequency` |
 | the buses' voltages | one `BaseVoltage` per distinct bus voltage the topology walk finds | yes | each bus's `nominal_voltage` from its `BaseVoltage` |
-| the swing bus | `Substation`, `Feeder`, and the `NormalHeadFeeder` of each link's terminal on it | yes | one `substation` with `bustype SWING` |
+| the swing bus | `Substation`, `Feeder`, and the `NormalHeadFeeder` of each link's terminal on it | yes | one `substation` with `bustype SWING` (a one-phase swing: a `node` with `bustype SWING`) |
 
 Notes:
 

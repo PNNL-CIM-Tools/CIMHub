@@ -7,8 +7,10 @@ template ``PerLengthPhaseImpedance`` (``isTemplate=true``) with one ``PhaseImped
 element, rows compacted to 1..n (CIM's range), and b derived from c at the base frequency; its lines share it through
 a ``WireConfiguration`` ``lc_<name>_wc`` that holds it and names no WireSpacing (skill ``wire-configuration``).
 
-A triplex configuration is geometry too: GridLAB-D computes its spacing from ``diameter`` and
+A triplex configuration is geometry or a matrix too. Geometry: GridLAB-D computes its spacing from ``diameter`` and
 ``insulation_thickness`` (``triplex_spacing``), so that spacing is written as a derived ConductorDistanceSpacing.
+Matrix, ``z11``, ``z12``, ``z21``, ``z22`` (legs 1 and 2, which ``triplex_line.cpp`` uses as given): a template
+``PerLengthPhaseImpedance`` on s1, s2 as above, with b = 0 (GridLAB-D's triplex line has no shunt admittance).
 No impedance is computed from geometry (skill ``conductor-geometry``).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s2-catalogs``.
@@ -31,6 +33,8 @@ GEOMETRY_PREFIX, MATRIX_PREFIX = "wc_", "lc_"
 _WIRE, _PHASE = "WireConfiguration", "PerLengthPhaseImpedance"
 _INDEX = "123"
 _LETTER = dict(zip(_INDEX, "ABC"))
+_TRIPLEX_LETTER = {"1": "s1", "2": "s2"}
+TRIPLEX_Z_SLOTS = ("z11", "z12", "z21", "z22")
 Z_SLOTS = tuple(f"z{i}{j}" for i in _INDEX for j in _INDEX)
 C_SLOTS = tuple(f"c{i}{j}" for i in _INDEX for j in _INDEX)
 _RATING = Field("structural", note="not on the template (D9): the S3a line mapper puts it on each line's own "
@@ -57,21 +61,23 @@ LINE_FIELDS = {
 }
 
 _NOT_READ = "inherited from line_configuration and not read by GridLAB-D's triplex line: set raises"
-_TRIPLEX_Z = "no readable deck sets a triplex matrix: set raises until one does"
 
 TRIPLEX_FIELDS = {
     "name": Field("copied", ((_WIRE, "name", None),), "mRID = wc_ + name; its spacing wc_<name>_spc"),
     **HEADER_FIELDS,
     "spacing": Field("structural", note=_NOT_READ),
     **{f"conductor_{letter}": Field("structural", note=_NOT_READ) for letter in "ABC"},
-    "conductor_1": Field("structural", note="WireSequenceConfiguration 1 (spacing phase s1); required"),
-    "conductor_2": Field("structural", note="WireSequenceConfiguration 2 (spacing phase s2); required"),
-    "conductor_N": Field("structural", note="WireSequenceConfiguration 3 (spacing phase N; GridLAB-D keeps it in "
-                                            "its phase C slot); required"),
+    "conductor_1": Field("structural", note="geometry: WireSequenceConfiguration 1 (spacing phase s1); required"),
+    "conductor_2": Field("structural", note="geometry: WireSequenceConfiguration 2 (spacing phase s2); required"),
+    "conductor_N": Field("structural", note="geometry: WireSequenceConfiguration 3 (spacing phase N; GridLAB-D "
+                                            "keeps it in its phase C slot); required"),
     "diameter": Field("derived", note="the spacing's distances (triplex_spacing): D12 = diameter + 2 "
                                       "insulation_thickness, D1N = D2N = diameter + insulation_thickness"),
     "insulation_thickness": Field("derived", note="see diameter"),
-    **{slot: Field("structural", note=_TRIPLEX_Z) for slot in Z_SLOTS + C_SLOTS},
+    **{slot: Field("structural", note=_NOT_READ) for slot in Z_SLOTS + C_SLOTS if slot not in TRIPLEX_Z_SLOTS},
+    **{slot: Field("structural", note="matrix: one PhaseImpedanceData per lower-triangle element on s1, s2, r and x "
+                                      "the real and imaginary parts, b 0 (no shunt admittance); z11 and z22 "
+                                      "required, z12 must equal z21") for slot in TRIPLEX_Z_SLOTS},
     **_RATINGS,
 }
 
@@ -103,14 +109,14 @@ def diagonal_letters(configuration) -> str:
 
 
 def is_matrix(configuration) -> bool:
-    """A line_configuration given by z (and c) values, not by spacing and conductors (S2-9)."""
+    """A line or triplex configuration given by z (and c) values, not by spacing and conductors (S2-9)."""
     return bool(_is_set(configuration, Z_SLOTS + C_SLOTS))
 
 
 def template(configuration) -> str:
     """The mRID of the WireConfiguration a line on ``configuration`` references (S3a-2): its geometry's, or the one
     that holds its matrix (skill ``wire-configuration``)."""
-    if isinstance(configuration, schema.LineConfiguration) and is_matrix(configuration):
+    if is_matrix(configuration):
         return f"{mrid(MATRIX_PREFIX, configuration.name)}_wc"
     return mrid(GEOMETRY_PREFIX, configuration.name)
 
@@ -170,8 +176,11 @@ def _symmetric_value(configuration, prefix: str, i: str, j: str):
     return lower
 
 
-def _matrix(model: GlmModel, configuration, frequency: float) -> list:
-    diagonal = [i for i in _INDEX if _nonzero(configuration, f"z{i}{i}")]
+def _matrix(model: GlmModel, configuration, frequency: float, fields: dict[str, Field] = LINE_FIELDS,
+            phase_names: dict[str, str] = _LETTER) -> list:
+    """The template PerLengthPhaseImpedance of a matrix configuration, its rows the indexes of ``phase_names``
+    (``1``-``3`` for A, B, C; a triplex one's ``1``, ``2`` for s1, s2) whose z_ii is set."""
+    diagonal = [i for i in phase_names if _nonzero(configuration, f"z{i}{i}")]
     if not diagonal:
         raise ValueError(f"{label(configuration)}: every z_ii is unset or 0")
     for slot in _is_set(configuration, Z_SLOTS + C_SLOTS):
@@ -190,7 +199,7 @@ def _matrix(model: GlmModel, configuration, frequency: float) -> list:
         for column, j in enumerate(diagonal[:row], start=1):
             z = _symmetric_value(configuration, "z", i, j)
             c = _symmetric_value(configuration, "c", i, j)
-            letters = _LETTER[i] if i == j else f"{_LETTER[i]}{_LETTER[j]}"
+            letters = phase_names[i] if i == j else f"{phase_names[i]}{phase_names[j]}"
             defaulted = [f"{prefix} = 0" for prefix, value in (("z", z), ("c", c)) if value is None]
             note = f"z{i}{j} ({letters})" + (f"; defaulted: {', '.join(defaulted)}" if defaulted else "")
             if z is None:  # an unset mutual term: GridLAB-D's create() 0
@@ -202,7 +211,7 @@ def _matrix(model: GlmModel, configuration, frequency: float) -> list:
                                  (Column("conductorCount"), str(len(diagonal))),
                                  (Column("calculatedFrequency", "Hz"), cell(frequency)),
                                  (Column("isTemplate"), "true")],
-                        comment=untranscribed_values(LINE_FIELDS, configuration)),
+                        comment=untranscribed_values(fields, configuration)),
         Table("PhaseImpedanceData", [Column("identifier"), Column("PhaseImpedance", default=impedance_mrid),
                                      Column("row"), Column("column"), Column("r", z_unit), Column("x", z_unit),
                                      Column("b", f"nS/{per_length}")], rows,
@@ -254,11 +263,24 @@ def triplex_spacing(diameter: float, insulation_thickness: float) -> tuple[float
     return diameter + 2 * insulation_thickness, diameter + insulation_thickness
 
 
-def _triplex_statements(model: GlmModel, configuration) -> list:
-    stray = _is_set(configuration, ("spacing", "conductor_A", "conductor_B", "conductor_C") + Z_SLOTS + C_SLOTS)
+_TRIPLEX_GEOMETRY = ("conductor_1", "conductor_2", "conductor_N", "diameter", "insulation_thickness")
+
+
+def _triplex_statements(model: GlmModel, configuration, frequency: float) -> list:
+    unread = [slot for slot in Z_SLOTS + C_SLOTS if slot not in TRIPLEX_Z_SLOTS]
+    stray = _is_set(configuration, ("spacing", "conductor_A", "conductor_B", "conductor_C", *unread))
     if stray:
         raise ValueError(f"{label(configuration)}: {', '.join(stray)} not mapped on a triplex configuration (S2-8)")
-    for slot in ("conductor_1", "conductor_2", "conductor_N", "diameter", "insulation_thickness"):
+    matrix = _is_set(configuration, TRIPLEX_Z_SLOTS)
+    if matrix:
+        geometry = _is_set(configuration, _TRIPLEX_GEOMETRY)
+        if geometry:
+            raise ValueError(f"{label(configuration)}: sets both a matrix ({', '.join(matrix)}) and geometry "
+                             f"({', '.join(geometry)}); GridLAB-D would use the matrix (triplex_line.cpp)")
+        if not (_nonzero(configuration, "z11") and _nonzero(configuration, "z22")):
+            raise ValueError(f"{label(configuration)}: a triplex matrix needs z11 and z22 (both legs)")
+        return _matrix(model, configuration, frequency, TRIPLEX_FIELDS, _TRIPLEX_LETTER)
+    for slot in _TRIPLEX_GEOMETRY:
         if getattr(configuration, slot) is None:
             raise ValueError(f"{label(configuration)}: {slot} unset (triplex_line.cpp throws)")
     unit = _one_unit(model, configuration, ["diameter", "insulation_thickness"], "diameter and insulation_thickness")
@@ -282,12 +304,14 @@ def _triplex_statements(model: GlmModel, configuration) -> list:
     ]
 
 
-def map_triplex_line_configuration(model: GlmModel) -> Document:
-    """Every ``triplex_line_configuration`` as a WireConfiguration on a derived ConductorDistanceSpacing."""
+def map_triplex_line_configuration(model: GlmModel, frequency: float) -> Document:
+    """Every ``triplex_line_configuration`` as a WireConfiguration on a derived ConductorDistanceSpacing, or a
+    PerLengthPhaseImpedance."""
     configurations = model.list_by_class(schema.TriplexLineConfiguration)
     statements = [statement for configuration in configurations
-                  for statement in _triplex_statements(model, configuration)]
+                  for statement in _triplex_statements(model, configuration, frequency)]
     return Document(name="triplex_line_configuration", statements=statements, profile=CIM_PROFILE,
                     comment=provenance("triplex_line_configuration", "WireConfiguration + WireSequenceConfiguration "
-                                       "on a derived ConductorDistanceSpacing", len(configurations))
+                                       "on a derived ConductorDistanceSpacing, PerLengthPhaseImpedance + "
+                                       "PhaseImpedanceData", len(configurations))
                     if configurations else None)

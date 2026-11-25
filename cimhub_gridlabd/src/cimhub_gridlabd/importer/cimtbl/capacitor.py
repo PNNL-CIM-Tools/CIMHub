@@ -6,7 +6,8 @@ initial state (``capacitor.cpp:1180-1205``). So a unit is a set of phases that s
 option (a)): a MANUAL capacitor is one gang unit, an automatic INDIVIDUAL one is a 1-phase unit per connected phase
 (``cap_<name>_<phase>``), with a control on the ``pt_phase`` units only, and BANK is one gang unit. A unit is wye and
 grounded (S4a-11); ``nomU`` is the phase-to-neutral rating, x sqrt 3 on 2-3 phases, and ``bPerSection`` = nomQ /
-nomU^2 (S4a-10). ``sections`` is the switch state GridLAB-D starts with, OPEN when unset (S4a-9).
+nomU^2 (S4a-10), each in the units the deck wrote (``MVAr``, ``V``: ``bPerSection (MVAr/V^2)``), one table per pair.
+``sections`` is the switch state GridLAB-D starts with, OPEN when unset (S4a-9).
 
 Mapping spec: ``cimhub_gridlabd/docs/CIMTBL_MAPPING.md#s4a-loads-and-capacitors``; the cross-solver note there says
 where these units differ from a DSS CapControl.
@@ -14,9 +15,9 @@ where these units differ from a DSS CapControl.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import NamedTuple
 
-import cimprofiles.cim18.cim18v17 as cim
 from cimprofiles.units import units
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem, System
@@ -65,7 +66,7 @@ OWN = {
     **{f"{kind}_deadband": Field("structural", note=_NOT_MAPPED) for kind in ("voltage", "VAr", "current")},
     **{f"{kind}_set_{side}": Field("untranscribed", note="read only by the VAR, VARVOLT and CURRENT modes")
        for kind in ("VAr", "current") for side in ("high", "low")},
-    **{f"capacitor_{letter}": Field("derived", note="the phase's VAr via pint: nomQ = the unit's sum, bPerSection "
+    **{f"capacitor_{letter}": Field("derived", note="in its written unit: nomQ = the unit's sum, bPerSection "
                                                     "= nomQ / nomU^2 (S4a-10); on a phase not connected: dropped, "
                                                     "GridLAB-D ignores it (capacitor.cpp:1447)")
        for letter in "ABC"},
@@ -132,15 +133,18 @@ def _quantity(model: GlmModel, record, slot: str, unit: str) -> float:
     return units.Quantity(float(getattr(record, slot)), registry_unit(model.unit(record, slot))).to(unit).magnitude
 
 
-def _phase_vars(model: GlmModel, cap, letters: str) -> list[float]:
-    """Each phase's capacitor_X in VAr, from the unit it is written in (CIMUnit: pint has no var)."""
-    values = []
+def _phase_q(model: GlmModel, cap, letters: str) -> tuple[list[float], str]:
+    """``(each phase's capacitor_X, their unit)``: as written; phases of one unit in different units raise."""
+    values, written = [], set()
     for letter in letters:
         slot = f"capacitor_{letter}"
         if not getattr(cap, slot):
             raise ValueError(f"{label(cap)}: {slot} unset or 0 on a connected phase")
-        values.append(float(cim.ReactivePower(float(getattr(cap, slot)), model.unit(cap, slot)).to("VAr")))
-    return values
+        values.append(float(getattr(cap, slot)))
+        written.add(registry_unit(model.unit(cap, slot)))
+    if len(written) > 1:
+        raise ValueError(f"{label(cap)}: phases {letters} are written in {sorted(written)}; one unit per unit")
+    return values, written.pop()
 
 
 def _comment(model: GlmModel, cap, defaulted: str | None, connected: str) -> str | None:
@@ -160,7 +164,7 @@ def _comment(model: GlmModel, cap, defaulted: str | None, connected: str) -> str
 
 class _Rows:
     def __init__(self):
-        self.shunts: list[Row] = []
+        self.shunts: dict[tuple[str, str], list[Row]] = defaultdict(list)  # (Q unit, V unit) -> rows
         self.controls: list[Row] = []
         self.updates: list[Row] = []
 
@@ -175,22 +179,22 @@ def _capacitor(model: GlmModel, cap, roots: dict[str, str], buses: dict[str, Bus
     rating_slot = "cap_nominal_voltage" if cap.cap_nominal_voltage else "nominal_voltage"
     if not getattr(cap, rating_slot):
         raise ValueError(f"{label(cap)}: no cap_nominal_voltage and no nominal_voltage (capacitor.cpp:380)")
-    coil = _quantity(model, cap, rating_slot, "V")
+    coil, coil_unit = float(getattr(cap, rating_slot)), registry_unit(model.unit(cap, rating_slot))
     delay = _quantity(model, cap, "dwell_time", "s") + _quantity(model, cap, "time_delay", "s")
     comment = _comment(model, cap, defaulted, connected)
     for index, unit in enumerate(units_of(cap)):
         name = f"{cap.name}{unit.suffix}"
         shunt = mrid(PREFIX, name)
-        phase_vars = _phase_vars(model, cap, unit.letters)
-        if len(set(phase_vars)) > 1:
-            raise ValueError(f"{label(cap)}: phases {unit.letters} differ ({phase_vars} VAr) on a gang unit; a "
+        phase_q, q_unit = _phase_q(model, cap, unit.letters)
+        if len(set(phase_q)) > 1:
+            raise ValueError(f"{label(cap)}: phases {unit.letters} differ ({phase_q} {q_unit}) on a gang unit; a "
                              "per-phase rating is not mapped (S4a-10)")
-        nom_q = sum(phase_vars)
+        nom_q = sum(phase_q)
         nom_u = coil if len(unit.letters) == 1 else line_voltage(coil, System.THREE_PHASE)
         sections = 1 if str(getattr(cap, f"switch{unit.letters[0]}")) == "CLOSED" else 0
-        rows.shunts.append(Row([shunt, name, node, phases_cell(unit.letters), cell(nom_q), cell(nom_u),
-                                cell(nom_q / nom_u ** 2), str(sections), str(sections), buses[node].base_voltage],
-                               comment=comment if index == 0 else None))
+        rows.shunts[(q_unit, coil_unit)].append(Row(
+            [shunt, name, node, phases_cell(unit.letters), cell(nom_q), cell(nom_u), cell(nom_q / nom_u ** 2),
+             str(sections), str(sections), buses[node].base_voltage], comment=comment if index == 0 else None))
         if not unit.controlled:
             continue
         control = mrid(CONTROL_PREFIX, name)
@@ -210,14 +214,19 @@ def map_capacitors(model: GlmModel, roots: dict[str, str], buses: dict[str, BusS
     for cap in capacitors:
         _capacitor(model, cap, roots, buses, rows)
     counted = bus.untranscribed_set(model, capacitors, {NATIVE_CLASS: bus.inherited(FIELDS, OWN)})
-    statements = [Table(_SHUNT, [Column("mRID"), Column("name"), Column("node"), Column("phases"),
-                                 Column("phaseConnection", default="Y"), Column("grounded", default="true"),
-                                 Column("nomQ", "VAr"), Column("nomU", "V"), Column("bPerSection", "S"),
-                                 Column("sections"), Column("normalSections"), Column("maximumSections", default="1"),
-                                 Column("BaseVoltage"), Column("EquipmentContainer", default=feeder)], rows.shunts,
-                        comment="\n".join(part for part in (
-                            "a unit per set of phases that switch together (S4a-8); sections: the switch state "
-                            "GridLAB-D starts with, OPEN when unset (S4a-9)", counted) if part))]
+    comment = "\n".join(part for part in (
+        "a unit per set of phases that switch together (S4a-8); sections: the switch state GridLAB-D starts with, "
+        "OPEN when unset (S4a-9); nomQ, nomU in their written units, bPerSection = nomQ / nomU^2 in theirs", counted)
+        if part)
+    statements = []
+    for (q_unit, v_unit), shunts in sorted(rows.shunts.items()):
+        statements.append(Table(_SHUNT, [Column("mRID"), Column("name"), Column("node"), Column("phases"),
+                                         Column("phaseConnection", default="Y"), Column("grounded", default="true"),
+                                         Column("nomQ", q_unit), Column("nomU", v_unit),
+                                         Column("bPerSection", f"{q_unit}/{v_unit}^2"), Column("sections"),
+                                         Column("normalSections"), Column("maximumSections", default="1"),
+                                         Column("BaseVoltage"), Column("EquipmentContainer", default=feeder)], shunts,
+                                comment=comment if not statements else None))
     if rows.controls:
         statements.append(Table(_CONTROL, [Column("mRID"), Column("name"), Column("mode", default="voltage"),
                                            Column("discrete", default="true"), Column("enabled", default="true"),

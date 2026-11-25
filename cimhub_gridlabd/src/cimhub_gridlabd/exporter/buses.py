@@ -1,4 +1,4 @@
-"""ConnectivityNode -> ``node`` / ``triplex_node``, EnergySource -> ``substation`` (the swing)
+"""ConnectivityNode -> ``node`` / ``triplex_node``, EnergySource -> ``substation`` or a SWING ``node`` (the swing)
 (``EXPORT_MAPPING.md#x0-framework-writer-nodes-and-the-swing``, decisions X1, X6).
 
 GLM gives a bus its phase letters and a ``nominal_voltage`` that depends on its system, which CIM does not store:
@@ -8,9 +8,15 @@ transformer: ``cimtopology.core.Topology.voltage_zones``) from what lands in it,
 
 1. a terminal on s1 or s2: split phase, a ``triplex_node`` whose phase letter is the service's (the A, B or C of the
    primary of the centre-tap transformers in the zone, which must agree);
-2. the EnergySource, a transformer end on two or three of A, B, C, or one-phase ends on different phases (a bank,
+2. an EnergySource or a transformer end on two or three of A, B, C, or one-phase ends on different phases (a bank,
    as ``cimtopology``'s walk reads it): three phase;
-3. one-phase transformer ends, all on one phase: single phase.
+3. a one-phase EnergySource or one-phase transformer ends, all on one phase: single phase (the importer's
+   ``source_system``).
+
+The swing's ``nominal_voltage`` and voltage are its EnergySource's on the same rule. A three-phase swing is a
+``substation`` (its ``positive_sequence_voltage``); GridLAB-D's substation needs all three phases, so a one-phase
+swing is a ``node`` with ``bustype SWING`` and ``voltage_A``, the form the importer reads (no ``base_power``: a graph
+with a BasePower raises).
 
 A zone none of these reach raises. A bus's letters are the A, B, C of every terminal on it, then ``N``.
 """
@@ -28,7 +34,7 @@ from cimtopology.core import Branch, Network, System, Topology
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.getters.base_voltage import get_base_voltage
 from cimhub_core.getters.source import get_source
-from cimhub_core.getters.terminals import get_terminal_phases
+from cimhub_core.getters.terminals import get_conductor_phases, get_terminal_phases
 from cimhub_gridlabd.exporter.units import glm_unit
 from cimhub_gridlabd.schema import gridlabd as schema
 
@@ -45,7 +51,8 @@ NODE_SLOTS = {
     "phases": Slot("written", "the A, B, C of every terminal on the node, then N"),
     "nominal_voltage": Slot("written", "the BaseVoltage, LL / sqrt 3 on a three-phase system, LL on a single-phase "
                                        "one (module docstring)"),
-    "bustype": Slot("written", "SWING on the substation only"),
+    "bustype": Slot("written", "SWING on the swing only"),
+    "voltage_A": Slot("written", "a one-phase swing's: get_source voltageMagnitude at voltageAngle"),
 }
 TRIPLEX_SLOTS = {
     "name": NODE_SLOTS["name"],
@@ -54,8 +61,10 @@ TRIPLEX_SLOTS = {
 }
 SUBSTATION_SLOTS = {
     **NODE_SLOTS,
-    "nominal_voltage": Slot("written", "get_source: nominalVoltage / sqrt 3 (the importer's line_voltage inverted)"),
-    "positive_sequence_voltage": Slot("written", "get_source: voltageMagnitude / sqrt 3 at voltageAngle"),
+    "nominal_voltage": Slot("written", "get_source: nominalVoltage, / sqrt 3 on a three-phase system (the "
+                                       "importer's line_voltage inverted)"),
+    "positive_sequence_voltage": Slot("written", "get_source: voltageMagnitude at voltageAngle, / sqrt 3 on a "
+                                                 "three-phase system"),
     "base_power": Slot("written", "the graph's BasePower, when it holds one (network.base_power's 100 MVA default "
                                   "is not CIM's)"),
 }
@@ -100,7 +109,7 @@ def bus_table(network, names) -> dict[cim.ConnectivityNode, Bus]:
         system, service = systems[zone_of[node.mRID]]
         on_node = letters(phase for terminal in terminals[node.mRID] for phase in get_terminal_phases(terminal))
         buses[node] = Bus(names.name(node), system, service if system is System.SPLIT_PHASE else on_node,
-                          _nominal_voltage(node, system))
+                          glm_voltage(get_base_voltage(node, "V", form="LL"), system))
     return buses
 
 
@@ -117,7 +126,7 @@ def export(context) -> list:
     records = []
     for node, bus in context.buses.items():
         if node in swings:
-            records.append(_substation(bus, swings[node], context.network))
+            records.append(_swing(bus, swings[node], context.network))
         elif bus.system is System.SPLIT_PHASE:
             records.append(schema.TriplexNode(name=bus.name, phases=bus.phases, nominal_voltage=bus.nominal_voltage))
         else:
@@ -125,10 +134,10 @@ def export(context) -> list:
     return records
 
 
-def _substation(bus: Bus, source: cim.EnergySource, network) -> schema.Substation:
+def _swing(bus: Bus, source: cim.EnergySource, network) -> schema.Substation | schema.Node:
     unit = glm_unit(schema.Substation, "nominal_voltage")
     values = get_source(source, angle_unit="rad", voltage_unit=unit)
-    magnitude = values.magnitude / math.sqrt(3)
+    magnitude = glm_voltage(values.magnitude, bus.system)
     angle = values.angle or 0.0  # an unset angle is CIM's reference angle, 0
     voltage = schema.Complex(real=magnitude * math.cos(angle), imag=magnitude * math.sin(angle))
     base_powers = list(network.graph.get(cim.BasePower, {}).values())
@@ -136,8 +145,15 @@ def _substation(bus: Bus, source: cim.EnergySource, network) -> schema.Substatio
         raise ValueError(f"{len(base_powers)} BasePowers; GLM's substation takes one base_power")
     base_power = get_qty(base_powers[0], "basePower", glm_unit(schema.Substation, "base_power")) if base_powers \
         else None
-    return schema.Substation(name=bus.name, phases=bus.phases, nominal_voltage=values.nominal_u / math.sqrt(3),
-                             bustype="SWING", positive_sequence_voltage=voltage, base_power=base_power)
+    nominal_voltage = glm_voltage(values.nominal_u, bus.system)
+    if bus.system is not System.THREE_PHASE:
+        if base_power is not None:
+            raise ValueError(f"EnergySource {source.mRID!r}: a one-phase swing is a GLM node, which has no "
+                             "base_power for the graph's BasePower (a substation needs three phases)")
+        return schema.Node(name=bus.name, phases=bus.phases, nominal_voltage=nominal_voltage, bustype="SWING",
+                           voltage_A=voltage)
+    return schema.Substation(name=bus.name, phases=bus.phases, nominal_voltage=nominal_voltage, bustype="SWING",
+                             positive_sequence_voltage=voltage, base_power=base_power)
 
 
 def _single_terminal(equipment) -> cim.Terminal:
@@ -171,7 +187,12 @@ def _zone_systems(network, zone_of: dict[str, str], terminals) -> dict[str, tupl
         if any(phase in SPLIT for terminal in on_node for phase in get_terminal_phases(terminal)):
             split.add(zone_of[node_mrid])
     for source in network.graph.get(cim.EnergySource, {}).values():
-        three.add(zone_of[_single_terminal(source).ConnectivityNode.mRID])
+        zone = zone_of[_single_terminal(source).ConnectivityNode.mRID]
+        source_letters = letters(get_conductor_phases(source))
+        if len(source_letters) == 1:
+            single[zone].add(source_letters)
+        else:
+            three.add(zone)
     for transformer in network.graph.get(cim.PowerTransformer, {}).values():
         ends = [(end, get_terminal_phases(end.Terminal)) for end in transformer.PowerTransformerEnd]
         primary_letters = letters(phase for end, phases in ends if not set(phases) & set(SPLIT) for phase in phases)
@@ -200,8 +221,9 @@ def _zone_systems(network, zone_of: dict[str, str], terminals) -> dict[str, tupl
     return systems
 
 
-def _nominal_voltage(node: cim.ConnectivityNode, system: System) -> float:
-    line_to_line = get_base_voltage(node, "V", form="LL")
+def glm_voltage(line_to_line: float, system: System) -> float:
+    """GLM's voltage of a bus whose system voltage is ``line_to_line``: line to neutral on a three-phase system, one
+    leg on a split-phase one, the coil's on a single-phase one (the importer's ``line_voltage`` inverted)."""
     if system is System.THREE_PHASE:
         return line_to_line / math.sqrt(3)
     if system is System.SPLIT_PHASE:

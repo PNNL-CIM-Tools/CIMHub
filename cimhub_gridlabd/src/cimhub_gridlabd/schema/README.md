@@ -48,7 +48,8 @@ python cimhub_gridlabd/src/cimhub_gridlabd/schema/linkml_generator.py \
 
 - `powerflow` — 46 classes
 - `generators` — 11 classes
-- `residential` — 18 classes
+- `residential` — 19 classes
+- `tape` — 1 class (`player`)
 
 ## Downstream artifacts — the one schema pipeline
 

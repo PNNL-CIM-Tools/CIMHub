@@ -38,7 +38,7 @@ that the word abbreviates (`CalcV` is `calcvoltagebases`, `o` is `open`). Then:
 | `like=other` | Copies every slot the command leaves unset from `other`, which must be defined earlier. `like` itself stays set on the record, and the writer never writes it. |
 | `Edit Class.name props`, `Class.name.prop=value` | Changes an object that must exist; otherwise raises. `wdg=` on an Edit raises, since it would replace whole arrays. |
 | `BatchEdit Class.regex props` | Sets the properties on every object whose name the regular expression matches (a case-insensitive search); matching none raises. |
-| `Set name=value` | Keeps `voltagebases`, `defaultbasefreq` and `earthmodel` (`KEPT_OPTIONS`) on one `Options` record. Every other option is a solution setting and is not part of the model. A kept option is matched by its full name (any case): an abbreviation the engine accepts, such as `Set DefaultBaseF=50`, is dropped without a warning. |
+| `Set name=value` | Keeps `voltagebases`, `defaultbasefrequency` and `earthmodel` (`KEPT_OPTIONS`) on one `Options` record. Every other option is a solution setting and is not part of the model. An option name resolves as the engine resolves it (`dss_option`): the exact name, else the first option in `DSS_OPTIONS`, the engine's order, that it abbreviates. So `Set DefaultBaseF=50` is kept, and `Set e=...` is `element`, not `earthmodel`. A name that is no option raises. |
 | `Open` and `Close` | Add or remove `Class.name terminal` in `Options.open_terminals`; the object must exist. Opening one conductor raises. |
 | `Clear`, `ClearAll` | Discard everything defined so far. |
 | `Redirect`, `Compile`, `BusCoords`, `LatLongCoords` | Handled in step 1. |
@@ -86,7 +86,7 @@ ones.
 |---|---|
 | `kVs=[115, 4.16]`, `kvs=(...)`, quoted lists, `kvar=[(14.4 13.8 / sqr 300 *), ...]` | A list; each element can be an RPN expression (`_parse_array`). |
 | `mult=(file=shape.csv)` | The first column of the file, read relative to the deck that names it (`_read_array_file`). |
-| `wdg=1 bus=A kV=115 wdg=2 bus=B kV=4.16` on a Transformer or XfmrCode | `buses=[A B]`, `kVs=[115 4.16]`, and the same for `kVAs`, `conns`, `taps`, `pct_Rs` (`_preprocess_winding_text`, `_extract_winding_arrays`). A winding left unset while another sets it takes the schema's `dss_default`, with a warning (no default raises). `RdcOhms` has no array form in DSS: each value goes to the active winding's place in the `RdcOhms` list, and since it has no default (the engine's is computed from %R), a winding left unset while another sets it raises. `Rneut` and `Xneut` belong to the active winding, but only the first winding that sets either is kept; a later winding's values are dropped without a warning. |
+| `wdg=1 bus=A kV=115 wdg=2 bus=B kV=4.16` on a Transformer or XfmrCode | `buses=[A B]`, `kVs=[115 4.16]`, and the same for `kVAs`, `conns`, `taps`, `pct_Rs` (`_preprocess_winding_text`, `_extract_winding_arrays`). A winding left unset while another sets it takes the schema's `dss_default`, with a warning (no default raises). `RdcOhms` has no array form in DSS: each value goes to the active winding's place in the `RdcOhms` list, and since it has no default (the engine's is computed from %R), a winding left unset while another sets it raises. `Rneut` and `Xneut` belong to the active winding, which the reader keeps as `wdg=`; the schema holds one winding's, so a second winding that sets either raises. |
 | `cond=1 wire=W x=0 h=28 units=ft` blocks on a LineGeometry | `xs`, `hs` and `wires`, `cncables` or `tscables` arrays (`_extract_linegeometry_arrays`). |
 
 ### Defaults stay unset
@@ -172,9 +172,9 @@ follows a `wdg=` it moves.
 Values go through `_format_value`: `bool` as `Yes` or `No`, a float to 15 significant digits (`format_float`), a list
 as `[a b c]`, a nested dataclass as its name. Names and references go through `dss_safe_name`, which replaces each run
 of characters DSS cannot carry in a name (whitespace, quotes, `<>`, brackets, braces, parentheses, `,`, `=`, `~`, `|`) with one `_`, so a definition
-and every reference to it are spelled alike. The writer does not check for two names that become one: `a b` and
-`a_b` are written as two `new Load.a_b` commands, and DSS applies the second as an edit of the first. The exporter's
-`Names` is what raises on such a collision.
+and every reference to it are spelled alike. Two records of one class whose names become one (`a b` and `A_B`,
+compared lowercased as DSS compares names) raise in `write` (`check_safe_names`): DSS would apply the second as an
+edit of the first. The exporter's `Names` raises on the same collision before the writer sees it.
 
 A LineGeometry with positions is written by `_geometry` as `cond=N wire=W x=.. h=..` blocks. The block keyword
 (`wire`, `cncable` or `tscable`) comes from the wire catalog that defines each conductor, and a conductor in no

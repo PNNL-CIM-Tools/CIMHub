@@ -213,8 +213,9 @@ classes:
         comments:
           - >-
             Import: PowerTransformerEnd.rground (ohm) of winding wdg, else the
-            last, when >= 0 on a 3-phase transformer (negative = none); on a
-            1-phase transformer it is dropped without an error. Export: rground
+            last, when >= 0 on a 3-phase transformer (negative = none); >= 0 on
+            a 1-phase transformer raises, and so does a second winding's (the
+            reader). Export: rground
             (ohm) of the grounded winding, its neutral on node 4.
 
       # (11) Xneut

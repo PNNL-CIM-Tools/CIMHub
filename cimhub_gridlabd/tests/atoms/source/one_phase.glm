@@ -1,0 +1,5 @@
+// S1 atom: a one-phase SWING node, its nominal_voltage the coil's (a single-phase system: no sqrt 3).
+object node { name swing; bustype SWING; phases AN; nominal_voltage 7200; voltage_A 7200; }
+object node { name n1; phases AN; nominal_voltage 7200; }
+object line_configuration { name lc_1; z11 0.3+1.0j; }  // GridLAB-D needs one
+object overhead_line { name l1; phases AN; from swing; to n1; length 100; configuration lc_1; }

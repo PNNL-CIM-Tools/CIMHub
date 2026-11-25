@@ -175,7 +175,7 @@ Table ApparentPowerLimit: mRID, normalValue (kVA), OperationalLimitType, Operati
 | `kVA` | structural: the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises | not written: the active-winding form; the arrays carry every winding |
 | `tap` | structural: the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises | not written: the active-winding form; the arrays carry every winding |
 | `pct_R` | structural: the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises | not written: the active-winding form; the arrays carry every winding |
-| `Rneut` | structural: rground (ohm) of its winding's end when >= 0; negative = no impedance | written: rground (ohm) of winding wdg; its neutral on .4 |
+| `Rneut` | structural: rground (ohm) of its winding's end when >= 0; negative = no impedance; >= 0 on a 1-phase transformer raises | written: rground (ohm) of winding wdg; its neutral on .4 |
 | `Xneut` | structural: xground (ohm) of its winding's end, with Rneut >= 0 | written: xground (ohm) of winding wdg |
 | `buses` | structural: end node and terminal phases; one end per distinct bus | written: bus_ref of each winding's phases: a coil's N on .0; a 3-phase wye solid .1.2.3, else .1.2.3.4 |
 | `conns` | structural: connectionKind, grounded, default nodes; default wye | written: connectionKind D -> delta, Y/Yn/I -> wye; AUTO: wye with a neutral; inline units only; a unit on a TankConfiguration takes it from its XfmrCode |
@@ -214,6 +214,7 @@ Table ApparentPowerLimit: mRID, normalValue (kVA), OperationalLimitType, Operati
 - A mesh whose From winding does not carry winding 1's `kVA`; a 1-phase transformer whose windings differ in `kVA`.
 - An `XfmrCode` that is undefined, or a slot set on both the instance and its code.
 - A transformer named by two `RegControl`s; a regulator with other than two windings on two buses, with unequal `kVA`, or with a neutral impedance.
+- `Rneut` of 0 or more on a 1-phase transformer, and `Rneut` or `Xneut` on a second winding (the reader keeps one winding's neutral impedance).
 - A bus the topology walk did not reach.
 - `RdcOhms` on some windings and not others (the engine's default for the rest, 85 % of %R in ohms, is not
   transcribed); `RdcOhms on a 3-phase transformer by balanced ends`; `RdcOhms on a regulator; an AutoTransformerEnd has

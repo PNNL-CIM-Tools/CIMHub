@@ -258,9 +258,9 @@ phase to ground either way. Each unit carries these values:
 
 | CIM attribute | Value |
 |---|---|
-| `nomQ (VAr)` | the sum of the unit's `capacitor_X`, in VAr |
-| `nomU (V)` | `cap_nominal_voltage` (line to neutral; else the bus's `nominal_voltage`), times sqrt 3 on a 2- or 3-phase unit |
-| `bPerSection (S)` | `nomQ` / `nomU`^2, which the shunt getter reads back as Q = b x `nomU`^2 x sections |
+| `nomQ` | the sum of the unit's `capacitor_X`, in the unit the deck wrote them in (`VAr`, `kVAr`, `MVAr`; one per unit) |
+| `nomU` | `cap_nominal_voltage` (line to neutral; else the bus's `nominal_voltage`), times sqrt 3 on a 2- or 3-phase unit, in its written unit |
+| `bPerSection` | `nomQ` / `nomU`^2 in those units (`MVAr/V^2`), which cimtables stores in S and the shunt getter reads back as Q = b x `nomU`^2 x sections |
 | `sections`, `normalSections` | 1 when the phase's `switchX` is `CLOSED`, else 0; an unset switch is `OPEN`, GridLAB-D's default |
 | `maximumSections` | 1 |
 
@@ -274,11 +274,11 @@ or below the low value and opens at or above the high one. The unit's `Update Ta
 
 | Property | Import | Export |
 |---|---|---|
-| `name` | `LinearShuntCompensator.name` = name, or `<name>_<phase>` for a 1-phase unit of an `INDIVIDUAL` `VOLT` capacitor; mRID `cap_` + that; control `cc_` + that | the CIM name; the 1-phase units `<base>_<phase>` on one bus are the capacitor `<base>` again |
+| `name` | `LinearShuntCompensator.name` = name, or `<name>_<phase>` for a 1-phase unit of an `INDIVIDUAL` `VOLT` capacitor; mRID `cap_` + that; control `cc_` + that | the CIM name; the 1-phase units `<base>_<phase>` on one bus, one of them with a voltage control, are the capacitor `<base>` again |
 | `parent` | `node`: the root bus | the unit's bus |
 | `phases_connected` (else `phases`) | the unit's phases, `Y`, grounded; `D` raises | `phases` and `phases_connected` are the unit's letters then `N` |
 | `nominal_voltage` | not written: the bus's `BaseVoltage` | the bus's |
-| `capacitor_A`, `capacitor_B`, `capacitor_C` | `nomQ (VAr)` (the unit's sum) and `bPerSection (S)`; a phase that is not connected is dropped and listed in the row comment | each phase's Q at `nomU` with every section in (`get_shunt_reactive_power`, `sections='maximum'`) |
+| `capacitor_A`, `capacitor_B`, `capacitor_C` | `nomQ` (the unit's sum, in its written unit) and `bPerSection`; a phase that is not connected is dropped and listed in the row comment | each phase's Q at `nomU` with every section in (`get_shunt_reactive_power`, `sections='maximum'`) |
 | `cap_nominal_voltage` | `nomU (V)` (see above); unset with no `nominal_voltage` raises | `nomU` line to neutral: over sqrt 3 on a polyphase unit, rounded to 6 places |
 | `switchA`, `switchB`, `switchC` | `sections` and `normalSections`; default `OPEN`; a gang unit's must agree | `CLOSED` when the unit's actual sections are above 0, else `OPEN` |
 | `control` | `VOLT`: a `RegulatingControl`; `MANUAL`: none; `VAR`, `VARVOLT`, `CURRENT` raise | `VOLT` for an enabled voltage control, else `MANUAL`; a control of another mode is `MANUAL` at the actual state, with a warning |
@@ -306,6 +306,7 @@ read` comment.
 | a `BANK` that monitors more than one phase | `capacitor c: a BANK monitors one phase, pt_phase is AB` |
 | a gang unit whose switch states differ | `capacitor c: switch states ['CLOSED', 'OPEN'] differ on a gang unit (MANUAL or BANK)` |
 | a gang unit whose phases differ in VAr | `capacitor c: phases ABC differ ([1000.0, 2000.0, 1000.0] VAr) on a gang unit; a per-phase rating is not mapped` |
+| a unit whose phases are written in different units | `capacitor c: phases ABC are written in ['MVAr', 'kVAr']; one unit per unit` |
 | a connected phase with no `capacitor_X` | `capacitor c: capacitor_B unset or 0 on a connected phase` |
 | no `cap_nominal_voltage` and no `nominal_voltage` | `capacitor c: no cap_nominal_voltage and no nominal_voltage` |
 | no connected phase | `capacitor c: no phase connected` |
@@ -318,7 +319,7 @@ read` comment.
 
 | What | Why |
 |---|---|
-| the 1-phase units of an `INDIVIDUAL` capacitor come back as the one capacitor, `VOLT` on the controlled phases | the exporter joins units named `<base>_<phase>` on one bus |
+| the 1-phase units of an `INDIVIDUAL` capacitor come back as the one capacitor, `VOLT` on the controlled phases | the exporter joins units named `<base>_<phase>` on one bus when one of them has a voltage control; a `MANUAL` `cap_B` keeps its name |
 | a `MANUAL` 3-phase capacitor comes back with `phases ABCN` | a unit is wye and grounded with or without `N` |
 | `time_delay` comes back inside `dwell_time` | CIM has one delay, `aVRDelay` |
 | a `capacitor_X` on a phase that is not connected is not written | GridLAB-D ignores it |
@@ -326,7 +327,6 @@ read` comment.
 | a unit with only some of its sections in is `CLOSED` with every section in | GLM has one switch per phase |
 | a control with another mode, or a disabled one, is not written | GLM's control has no form for it; the unit is `MANUAL` at its actual state (a control of another mode logs a warning) |
 | a delta unit raises on export | GLM's delta capacitor is not mapped either way |
-| a lone 1-phase unit named `<base>_<phase>` on that phase loses its suffix | the exporter cannot tell it from a split capacitor's unit: a `MANUAL` capacitor `cap_B` on phase B comes back as `cap` |
 
 ```python
 model, _ = round_trip("capacitor/capacitor.glm")
@@ -357,11 +357,11 @@ object capacitor {
 From `cimhub_gridlabd/tests/atoms/capacitor/capacitor.capacitor.cimtbl`:
 
 ```
-Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (VAr), nomU (V), bPerSection (S), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_atom
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection=Y, grounded=true, nomQ (MVAr), nomU (V), bPerSection (MVAr/V^2), sections, normalSections, maximumSections=1, BaseVoltage, EquipmentContainer=fdr_atom
     # defaulted: time_delay=0.0, dwell_time=0.0, control_level=INDIVIDUAL
     # not connected (GridLAB-D ignores it): capacitor_B=0.05 MVAr, capacitor_C=0.05 MVAr
-    cap_c_one_A,  c_one_A,  n5, A, 50000.0,  2401.78,           0.008667693708720822, 1, 1, bv_4p16kv
-    cap_c_volt_B, c_volt_B, n2, B, 150000.0, 2401.78,           0.026003081126162467, 0, 0, bv_4p16kv
+    cap_c_one_A,  c_one_A,  n5, A, 0.05, 2401.78, 8.667693708720823e-09,  1, 1, bv_4p16kv
+    cap_c_volt_B, c_volt_B, n2, B, 0.15, 2401.78, 2.6003081126162464e-08, 0, 0, bv_4p16kv
 
 Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase, targetValue, targetDeadband, Terminal
     cc_c_volt_B, c_volt_B, B, 2425.0, 150.0, cap_c_volt_B_T1

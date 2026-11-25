@@ -2,7 +2,8 @@
 // delta; kW=0 with pf=0.98 and kvar=0 (they agree); model 7 (current-limited, as model 1); model 3 (a PV bus,
 // after SteamGen1) with Vpu; a 1-phase machine (ratedU x sqrt 3). Order (S4b-8): kvar becomes a pf at the kW of
 // that moment: kW edited after kvar (IEEE9500's Diesel620), kvar before kW, kvar at kW 0 then a kW edit, and pf
-// after kvar.
+// after kvar. Model 3 kvar limits (engine-checked): Maxkvar alone keeps the default Minkvar -2 x kvar, and a later
+// kW edit resets both to +-2 x kvar.
 Clear
 New Circuit.atom basekv=4.16 bus1=sourcebus pu=1.0 MVAsc3=20000 MVAsc1=21000
 New Line.l1 bus1=sourcebus bus2=b1 phases=3 r1=0.1 x1=0.2 r0=0.3 x0=0.6 length=1 units=kft
@@ -22,3 +23,6 @@ New Generator.frozen bus1=b2 kv=0.48 kW=0 kvar=30 kVA=150
 Generator.frozen.kW=50
 New Generator.repf bus1=b2 kv=0.48 kW=620 kvar=30 kVA=775
 Generator.repf.pf=0.9
+New Generator.capped bus1=b1 kV=4.16 kW=1000 kVA=4000 model=3 Vpu=1.02 Maxkvar=500
+New Generator.reset bus1=b1 kV=4.16 kW=1000 kVA=4000 model=3 Vpu=1.02 Maxkvar=500 Minkvar=-50
+Generator.reset.kW=800

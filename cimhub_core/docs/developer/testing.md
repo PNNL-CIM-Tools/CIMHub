@@ -273,6 +273,8 @@ The repo is meant to be public, so every fixture needs a public origin.
   named by an environment variable (`CIMHUB_DSS_DECKS`, `CIMHUB_GLM_DECKS`), and their tests skip when it is unset.
 - Tests do not import vendor spokes, and no test names a path outside the repo. The gate also fails on a
   path into a user's home directory anywhere in the tree, so keep local paths out of docs and comments too.
+- Package source and all of `cimhub_core` (code, docs, shapes) name no vendor format: worked examples use DSS, GLM,
+  RAW or MATPOWER. The gate fails on a vendor format's name there, as a whole word in any case.
 
 The full rules are in the
 [`split-readiness` skill](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.claude/skills/split-readiness/SKILL.md).

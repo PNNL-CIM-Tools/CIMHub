@@ -61,6 +61,22 @@ def test_binds_under_cim18v17():
     assert float(tape.diameterOverScreen.to("in")) == pytest.approx(0.87) and float(tape.tapeLap) == 20.0
 
 
+def test_emergamps_alone_rates_the_wire_as_the_engine_does():
+    """The engine's normamps of a wire that gives only emergamps is emergamps / 1.5."""
+    wire = schema.Wiredata(name="w", Rac=0.3, Runits="km", GMRac=0.1, GMRunits="cm", radunits="cm", diam=0.4,
+                           emergamps=900)
+    dss.Text.Command("Clear")
+    dss.Text.Command("New Circuit.c basekv=4.16")
+    dss.Text.Command("New WireData.w Rac=0.3 Runits=km GMRac=0.1 GMRunits=cm diam=0.4 radunits=cm emergamps=900")
+    dss.Text.Command("? WireData.w.normamps")
+    engine_normamps = float(dss.Text.Result())
+    network = cimtbl_to_cim(atom_documents(limits(), map_wires(_native(Wiredata=[wire]), *CATALOGS[0])))
+    [info] = network.graph[network.cim.OverheadWireInfo].values()
+    ratings = {limit.mRID: float(limit.normalValue.to("A")) for limit in info.OperationalLimitSet.OperationalLimitValue}
+    assert ratings == {"wire_w_norm": pytest.approx(engine_normamps), "wire_w_emerg": 900}
+    assert float(info.ratedCurrent.to("A")) == pytest.approx(engine_normamps) == 600
+
+
 @pytest.mark.parametrize("slots, message", [
     ({"radius": 0.2, "diam": 0.4}, "give one of radius and diam"),
     ({}, "give one of radius and diam"),

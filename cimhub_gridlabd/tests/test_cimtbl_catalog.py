@@ -12,7 +12,7 @@ from cimhub_core.cimtbl_testing import assert_matches_golden
 from cimhub_core.getters.spacing import get_spacing_xy, get_stored_distances
 from cimhub_gridlabd.glm_reader import GlmReader
 from cimhub_gridlabd.importer.cimtbl import conductor, configuration, spacing
-from cimhub_gridlabd.importer.cimtbl.configuration import triplex_spacing
+from cimhub_gridlabd.importer.cimtbl.configuration import is_matrix, triplex_spacing
 from cimhub_gridlabd.importer.glm_to_cimtbl import GlmImporter, glm_to_cim
 from cimhub_gridlabd.schema import gridlabd as schema
 
@@ -157,6 +157,23 @@ object triplex_line_configuration { name tc; conductor_1 t; conductor_2 t; condu
 """, r"triplex_line_configuration tc: diameter unset \(triplex_line.cpp throws\)")
 
 
+def test_triplex_matrix_and_geometry_raises(tmp_path):
+    raises(tmp_path, NETWORK % "" + """
+object triplex_line_conductor { name t; resistance 0.48; geometric_mean_radius 0.0158; }
+object triplex_line_configuration { name tc; conductor_1 t; z11 1.2+0.6j; z22 1.2+0.6j; }
+""", r"triplex_line_configuration tc: sets both a matrix \(z11, z22\) and geometry \(conductor_1\)")
+
+
+def test_triplex_matrix_on_one_leg_raises(tmp_path):
+    raises(tmp_path, NETWORK % "" + "object triplex_line_configuration { name tc; z11 1.2+0.6j; }\n",
+           "triplex_line_configuration tc: a triplex matrix needs z11 and z22")
+
+
+def test_triplex_c_raises(tmp_path):
+    raises(tmp_path, NETWORK % "" + "object triplex_line_configuration { name tc; z11 1.2+0.6j; z22 1.2+0.6j; "
+                                    "c11 10; }\n", r"tc: c11 not mapped on a triplex configuration \(S2-8\)")
+
+
 # -- the deck sweep's check (test_cimtbl_sweep.py) -----------------------------------------------------------------
 
 def assert_catalogs(model, network) -> None:
@@ -167,6 +184,7 @@ def assert_catalogs(model, network) -> None:
     conductors = sum(model.count(cls) for cls, _, _ in conductor.CATALOGS)
     configurations = model.count(schema.LineConfiguration)
     triplex = model.count(schema.TriplexLineConfiguration)
+    triplex_geometry = sum(not is_matrix(record) for record in model.list_by_class(schema.TriplexLineConfiguration))
     assert count(cim.OverheadWireInfo, cim.ConcentricNeutralCableInfo, cim.TapeShieldCableInfo) == conductors
-    assert count(cim.ConductorDistanceSpacing) == model.count(schema.LineSpacing) + triplex
+    assert count(cim.ConductorDistanceSpacing) == model.count(schema.LineSpacing) + triplex_geometry
     assert count(cim.WireConfiguration) == configurations + triplex  # a matrix's holds its template

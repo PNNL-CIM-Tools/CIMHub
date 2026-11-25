@@ -19,7 +19,6 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Mapping
 
-from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
@@ -74,11 +73,12 @@ FIELDS = {
     "status": Field("untranscribed", note="Fixed/Variable: whether load multipliers scale it; " + _DISPATCH
                     + "; with a yearly shape, Fixed raises"),
     "gen_class": Field("untranscribed", note="a DSS report grouping"),
-    "Vpu": Field("derived", note="model 3: the control's targetValue (V) = Vpu x ratedU; default 1"),
+    "Vpu": Field("derived", note="model 3: the control's targetValue = Vpu x ratedU in kV "
+                                 "(targetValueUnitMultiplier k); default 1"),
     "maxkvar": Field("copied", ((_MACHINE, "maxQ", "kVAr"),), "model 3 only (another model raises); default 2 x "
-                                                              "kvar"),
+                                                              "kvar (reactive_limits)"),
     "minkvar": Field("copied", ((_MACHINE, "minQ", "kVAr"),), "model 3 only (another model raises); default -2 x "
-                                                              "kvar"),
+                                                              "kvar (reactive_limits)"),
     "pvfactor": Field("untranscribed", note="a convergence aid of the engine's model 3"),
     "forceon": Field("untranscribed", note=_DISPATCH),
     "kVA": Field("copied", ((_MACHINE, "ratedS", "kVA"),), "default 1.2 x kW"),
@@ -145,6 +145,22 @@ def dispatched_kvar(assignments: Iterable[tuple[str, object]]) -> float:
     return kvar
 
 
+def reactive_limits(assignments: Iterable[tuple[str, object]], kvar: float) -> tuple[float, float]:
+    """``(Maxkvar, Minkvar)`` of a model 3 Generator as the engine holds them (engine-checked): each kW, pf or kvar
+    assignment resets both to +-2 x kvar, so a Maxkvar or Minkvar stays only when assigned after the last of
+    those. ``kvar`` is the dispatched kvar (``dispatched_kvar``)."""
+    max_q = min_q = None
+    for slot, value in assignments:
+        if slot in ("kW", "pf", "kvar"):
+            max_q = min_q = None
+        elif slot == "maxkvar":
+            max_q = float(value)
+        elif slot == "minkvar":
+            min_q = float(value)
+    default = MAXKVAR_PER_KVAR * kvar
+    return (default if max_q is None else max_q), (-default if min_q is None else min_q)
+
+
 def model_name(model) -> str:
     return str(getattr(model, "text", model))
 
@@ -209,12 +225,11 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         model = model_name(generator.model)
         max_q = min_q = None
         if model == _PV_BUS:
-            max_q = float(generator.maxkvar) if generator.maxkvar is not None else MAXKVAR_PER_KVAR * kvar
-            min_q = float(generator.minkvar) if generator.minkvar is not None else -max_q
+            max_q, min_q = reactive_limits(native.assignments(original), kvar)
             control = f"{machine}_ctrl"
-            target = float(cim.Voltage(float(generator.Vpu) * rated_kv, "kV"))
-            controls.append(Row([control, cell(target), f"{machine}_T1"],
-                                comment=f"derived: targetValue (V) = Vpu={cell(float(generator.Vpu))} x ratedU"))
+            target_kv = float(generator.Vpu) * rated_kv
+            controls.append(Row([control, cell(target_kv), f"{machine}_T1"],
+                                comment=f"derived: targetValue (kV) = Vpu={cell(float(generator.Vpu))} x ratedU"))
             updates.append(Row([machine, control]))
         notes = [f"model {model}: {_MAPPED_MODELS[model]}" if model != "ConstantPQ" else None,
                  "kVA defaulted to 1.2 x kW" if generator.kVA is None else None, defaulted,
@@ -234,6 +249,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
     statements = [Table(_MACHINE, columns, machines, comment="p = -kW, q = -kvar (the load sign)")]
     if controls:
         statements.append(Table(_CONTROL, [Column("mRID"), Column("targetValue"), Column("Terminal"),
+                                           Column("targetValueUnitMultiplier", default="k"),
                                            Column("mode", default="voltage"), Column("discrete", default="false"),
                                            Column("enabled", default="true"), Column("targetDeadband", default="0")],
                                 controls, comment="model 3 (PV bus): the machine regulates its own terminal"))

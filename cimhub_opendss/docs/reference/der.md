@@ -16,9 +16,8 @@ classes (copied, mapped, structural, derived, untranscribed) and the conventions
 `InvControl` has no mapper. The master's comment counts it (`not mapped: Invcontrol 1`), so a deck's inverter
 control is not silently lost, but nothing of it reaches CIM. A PV's or battery's own setpoints are
 converted without it. A battery's `VarFollowInverter` acts only with one, so it is untranscribed; a PV's is used in
-the snapshot (see [PVSystem](#pvsystem)). A deck whose `InvControl` gives `mode` or `combimode` as a name
-(`VOLTVAR`) does not read at all today: the reader raises `DssParseError` on it, so the count above is reached only
-with a numeric mode or none.
+the snapshot (see [PVSystem](#pvsystem)). The reader keeps `Mode` and `CombiMode` as the names the deck gives
+(`VOLTVAR`, `VV_VW`).
 
 A yearly `LoadShape` on a device is the device's own `EnergyConnectionSchedule`, which the section of each class
 covers. The load-side shapes are on [Loads, capacitors and shapes](loads.md). The table shapes are on the core
@@ -335,8 +334,8 @@ The control has `targetValue` = `Vpu` x `ratedU`, in volts, and `targetDeadband`
 | `kVA` | `ratedS (kVA)`; default 1.2 x `kW` | `ratedS` |
 | `conn` | `earthing`: wye true, delta false | `earthing` true is wye, false is delta; unset raises |
 | `model` | table above | table above |
-| `Vpu` | model 3: `RegulatingControl.targetValue` (V) = `Vpu` x `ratedU`; default 1 | model 3: `target` / `ratedU` |
-| `maxkvar`, `minkvar` | `maxQ`, `minQ (kVAr)`, model 3 only; default 2 x `kvar` and -`maxkvar`; on another model they raise | model 3: `maxQ`, `minQ`; unset: not written |
+| `Vpu` | model 3: `RegulatingControl.targetValue` = `Vpu` x `ratedU` in kV, with `targetValueUnitMultiplier=k`; default 1 | model 3: `target` / `ratedU` |
+| `maxkvar`, `minkvar` | `maxQ`, `minQ (kVAr)`, model 3 only; default 2 x `kvar` and -2 x `kvar`, as the engine resets both whenever `kW`, `pf` or `kvar` is set, so a `maxkvar` or `minkvar` set before the last of those is the default too; on another model they raise | model 3: `maxQ`, `minQ`; unset: not written |
 | `yearly` | the machine's `EnergyConnectionSchedule` `<mRID>_yearly` (see below) | a LoadShape (see below) |
 | `enabled` | `normallyInService`; default true | `get_in_service(which='normal')`; unset: not written |
 | `MVA`, `UserModel`, `UserData`, `ShaftModel`, `ShaftData` | raises when set | not written |
@@ -378,8 +377,8 @@ raises. The deck reads back as a `SynchronousMachine`.
 ### Generator excerpt
 
 From [`tests/atoms/generator/gens.cimtbl`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/cimhub_opendss/tests/atoms/generator/gens.cimtbl).
-`steam` is a model 3 machine with `Vpu=1.02` on a 4.16 kV bus, so its control's target is 4243.2 V. Its row is
-copied from the file's `SynchronousMachine` table, with the table's header:
+`steam` is a model 3 machine with `Vpu=1.02` on a 4.16 kV bus, so its control's target is 4.2432 kV, written in kV
+with `targetValueUnitMultiplier=k`. Its rows are copied from the file's tables, with each table's header:
 
 ```text
 Table SynchronousMachine: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p (kW), q (kVAr), maxQ (kVAr), minQ (kVAr), earthing, normallyInService, BaseVoltage, type=generator, operatingMode=generator, EquipmentContainer=fdr_atom
@@ -388,12 +387,12 @@ Table SynchronousMachine: mRID, name, node, phases, ratedS (kVA), ratedU (kV), p
     gen_steam,     steam,     b1, ,  4000.0, 4.16,                -1000.0, -539.7428221380871,  1079.4856442761743, -1079.4856442761743, true,  true, bv_4p16kv
 
 # model 3 (PV bus): the machine regulates its own terminal
-Table RegulatingControl: mRID, targetValue, Terminal, mode=voltage, discrete=false, enabled=true, targetDeadband=0
-    # derived: targetValue (V) = Vpu=1.02 x ratedU
-    gen_steam_ctrl, 4243.2, gen_steam_T1
+Table RegulatingControl: mRID, targetValue, Terminal, targetValueUnitMultiplier=k, mode=voltage, discrete=false, enabled=true, targetDeadband=0
+    # derived: targetValue (kV) = Vpu=1.02 x ratedU
+    gen_steam_ctrl,  4.2432, gen_steam_T1
 
 Update Table SynchronousMachine: mRID, RegulatingControl, controlEnabled=true
-    gen_steam, gen_steam_ctrl
+    gen_steam,  gen_steam_ctrl
 ```
 
 Round trip two of the atom's generators. `edited` sets `kW=620 kvar=30` and then `kW=50`, and is model 7:

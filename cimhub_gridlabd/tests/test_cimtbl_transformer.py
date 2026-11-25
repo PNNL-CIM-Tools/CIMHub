@@ -7,6 +7,7 @@ from pathlib import Path
 
 import cimprofiles.cim18.cim18v17 as cim
 import pytest
+from cimtables.document import format_document
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden
@@ -292,3 +293,32 @@ def assert_transformers(model, network) -> None:
     for config in model.list_by_class(schema.TransformerConfiguration):
         assert f"xc_{config.name}" in configurations or f"xb_{config.name}" in banks, config.name
     assert_gridlabd_ohms(model, network)
+
+
+RATED_IN = """
+object meter { name m_k; phases ABCN; nominal_voltage 277.13; }
+object meter { name m_m; phases ABCN; nominal_voltage 277.13; }
+object transformer_configuration { name xc_k; connect_type WYE_WYE; primary_voltage 2401.78;
+                                   secondary_voltage 277.13; power_rating 150; impedance 0.01+0.02j; }
+object transformer_configuration { name xc_m; connect_type WYE_WYE; primary_voltage 2401.78;
+                                   secondary_voltage 277.13; power_rating %s; impedance 0.01+0.02j; }
+object transformer { name xf_k; phases ABCN; from n2; to m_k; configuration xc_k; }
+object transformer { name xf_m; phases ABCN; from n2; to m_m; configuration xc_m; }
+"""
+
+
+def test_losses_are_in_the_rating_s_written_unit(tmp_path, scope):
+    """loadLoss = R x S in power_rating's unit: 0.15 MVA gives MW, the same watts as 150 kVA's kW (I2)."""
+    path = tmp_path / "model.glm"
+    path.write_text(f'#include "{ATOM / "transformer.glm"}"\n' + RATED_IN % "0.15 MVA")
+    model = read(path)
+    text = format_document(parts(model, MODEL)["transformer_configuration"])
+    assert "loadLoss (MW)" in text and "loadLoss (kW)" in text
+    templates = {str(c.mRID): c for c in glm_to_cim(model, name=MODEL).list_by_class(cim.TransformerTankConfiguration)}
+    assert float(templates["xc_xc_m"].loadLoss.to("W")) == pytest.approx(0.01 * 150e3 / 3)  # k = S_coil / S (S3b-4)
+    assert float(templates["xc_xc_m"].loadLoss.to("W")) == pytest.approx(float(templates["xc_xc_k"].loadLoss.to("W")))
+
+
+def test_a_rating_in_another_unit_raises(tmp_path):
+    raises(tmp_path, RATED_IN % "150 kW", r"transformer_configuration xc_m: power_rating is written in kW; VA, kVA, "
+                                          "MVA are mapped")

@@ -8,15 +8,12 @@ names (``%R``, ``class``, ``%mean``) to Python field names (``pct_R``,
 """
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, fields as dc_fields, is_dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional, get_args, get_origin
 
 import yaml
-
-_log = logging.getLogger(__name__)
 
 __all__ = [
     "DssClassMap",
@@ -56,12 +53,13 @@ def _get_schema_dir() -> Path:
 
 @lru_cache(maxsize=64)
 def _load_yaml(yaml_path: Path) -> dict:
-    try:
-        with open(yaml_path) as f:
+    """One schema YAML file; a malformed one raises, naming the file (its classes would otherwise lose their
+    ``dss_name`` mappings without a word)."""
+    with open(yaml_path) as f:
+        try:
             return yaml.safe_load(f) or {}
-    except yaml.YAMLError:
-        _log.debug("Skipping malformed YAML: %s", yaml_path)
-        return {}
+        except yaml.YAMLError as error:
+            raise ValueError(f"{yaml_path}: malformed schema YAML: {error}") from error
 
 
 def _find_class_yaml(class_name: str) -> Optional[dict]:

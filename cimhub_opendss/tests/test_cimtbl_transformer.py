@@ -155,6 +155,7 @@ def _xf(**slots):
     (dict(Seasons=2), "t: Seasons=2 without Ratings"),
     (dict(Ratings=[44, 52]), r"t: Ratings=\[44.0, 52.0\] with Seasons=1"),
     (dict(Seasons=3, Ratings=[44, 52]), r"t: Ratings=\[44.0, 52.0\] with Seasons=3"),
+    (dict(Rneut=0.0, Xneut=0.4), r"Transformer t: a neutral impedance \(Rneut=0.0\) on a 1-phase transformer"),
 ])
 def test_unmapped_transformers_fail_fast(slots, message):
     with pytest.raises(ValueError, match=message):

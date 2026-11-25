@@ -88,6 +88,7 @@ object overhead_line { name l1; phases ABCN; from src; to n1; length 100; }
 def test_child_on_a_phase_its_root_lacks_raises(tmp_path):
     model = text_model(tmp_path, SOURCE % "" + """
 object meter { name m; phases AN; nominal_voltage 7200; }
+object switch { name s; phases A; from n1; to m; status CLOSED; }
 object load { name ld; parent m; phases CN; nominal_voltage 7200; }
 """)
     with pytest.raises(ValueError, match=r"load ld: phases CN are not all on its root bus meter m \(AN\)"):

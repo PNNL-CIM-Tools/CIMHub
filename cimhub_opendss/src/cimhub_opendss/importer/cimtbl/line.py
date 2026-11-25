@@ -14,7 +14,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import NamedTuple
 
-from cimprofiles.units import units
 from cimtables.document import Column, Document, ObjectStatement, Row, Table
 from cimtopology.core import BusSystem, System
 
@@ -266,12 +265,13 @@ def _fuse_phase_states(fuse) -> int | None:
 def opened_lines(native) -> set[str]:
     """Lowered names of the Lines an ``Open`` command opens (either terminal); another class raises."""
     opened = set()
-    for entry in native.list_by_class(schema.Options)[0].open_terminals or []:
-        target = entry.rsplit(" ", 1)[0]
-        kind, _, name = target.partition(".")
-        if kind.lower() != "line":
-            raise ValueError(f"Open {entry}: only a Line's terminal is mapped (as an open switch)")
-        opened.add(name.lower())
+    for options in native.list_by_class(schema.Options):  # none in a fragment with no circuit and no Set
+        for entry in options.open_terminals or []:
+            target = entry.rsplit(" ", 1)[0]
+            kind, _, name = target.partition(".")
+            if kind.lower() != "line":
+                raise ValueError(f"Open {entry}: only a Line's terminal is mapped (as an open switch)")
+            opened.add(name.lower())
     return opened
 
 
@@ -324,31 +324,41 @@ def _template_kind(line) -> str:
     return kinds[0]
 
 
-#: The engine keeps a line's default C1, C0 per kft and converts them to the line's units; its default r0, x0
-#: stay per unit length as they are (checked against the engine).
+#: The engine keeps a line's default C1, C0 per kft, whatever the line's units; its default r0, x0 stay per unit
+#: length as they are (checked against the engine). With no units on the line there is no length to be per.
 _DEFAULT_C_LENGTH = "kft"
 
 
 def inline_code(line, phases: int):
-    """``(LineCode, comment)``: a line's inline values as a LineCode named after the line (DSS-8). A sequence
-    line's unset r1, x1, r0, x0, C1, C0 take the engine's defaults: r and x per unit length as they are, C1 and
-    C0 in nF per kft converted to the line's units."""
+    """``(LineCode, capacitance unit, comment)``: a line's inline values as a LineCode named after the line (DSS-8).
+    A sequence line's unset r1, x1, r0, x0, C1, C0 take the engine's defaults: r and x per unit length as they are,
+    C1 and C0 in nF per kft, so a line with units gets the capacitance unit kft (``Template.capacitance_unit``;
+    ``None``: the line's own). A line that gives one C and takes the other's default, in units other than kft,
+    raises: its C would be in two length units."""
     values = {slot: getattr(line, slot) for slot in _INLINE_SLOTS if getattr(line, slot) not in (None, [])}
     filled = []
+    capacitance_unit = None
     if not any(slot in values for slot in ("rmatrix", "xmatrix", "cmatrix")):
         defaults = dss_defaults(NATIVE_CLASS)
-        unit = _units(line)
         for slot in ("r1", "x1", "r0", "x0", "C1", "C0"):
             alternative = {"C1": "B1", "C0": "B0"}.get(slot)
             if slot in values or (alternative is not None and alternative in values):
                 continue
-            value = defaults[slot]
-            if alternative is not None and unit is not None:
-                value = float(units.Quantity(value, f"nF/{_DEFAULT_C_LENGTH}").to(f"nF/{unit}").magnitude)
-            values[slot] = value
-            filled.append(f"{slot}={cell(value)}")
+            values[slot] = defaults[slot]
+            filled.append(slot)
+        used = ("C1",) if phases == 1 else ("C1", "C0")  # a 1-phase line does not use C0
+        defaulted_c = [slot for slot in used if slot in filled]
+        given_c = [slot for slot in used if slot not in filled and slot in values]
+        unit = _units(line)
+        if defaulted_c and unit is not None:
+            if given_c and unit != _DEFAULT_C_LENGTH:
+                raise ValueError(f"Line {line.name}: sets {', '.join(given_c)} per {unit} but not "
+                                 f"{', '.join(defaulted_c)}, whose engine default is per {_DEFAULT_C_LENGTH}; a C in "
+                                 "two length units is not mapped yet (no deck in the sweep sets one)")
+            capacitance_unit = _DEFAULT_C_LENGTH
     code = schema.Linecode(name=line.name, nphases=phases, units=line.units, baseFreq=cell(line.basefreq), **values)
-    return code, (f"defaulted: {', '.join(filled)}" if filled else None)
+    comment = f"defaulted: {', '.join(f'{slot}={cell(values[slot])}' for slot in filled)}" if filled else None
+    return code, capacitance_unit, comment
 
 
 def _check_unmapped(line) -> None:
@@ -387,11 +397,12 @@ def code_ratings(code) -> dict[str, tuple[float, str]]:
 
 def conductor_ratings(record, wires: Mapping[str, object]) -> dict[str, tuple[float, str]]:
     """``{slot: (amps, source)}`` of the first conductor of a LineGeometry (or a Line with ``spacing=``), as the
-    engine rates the wire (wire_ratings: an unset emergamps is 1.5 x normamps)."""
+    engine rates the wire (wire_ratings: an unset emergamps is 1.5 x normamps, an unset normamps emergamps / 1.5)."""
     names = next(getattr(record, slot) for slot in _GEOMETRY_ARRAYS if getattr(record, slot))
     first = wires[str(names[0]).lower()]
     label = f"{type(first).__name__} {first.name}"
-    return {slot: (amps, f"1.5 x normamps of {label}" if note else label)
+    derived = {"normamps": "emergamps / 1.5", "emergamps": "1.5 x normamps"}
+    return {slot: (amps, f"{derived[slot]} of {label}" if note else label)
             for slot, (amps, note) in wire_mapper.wire_ratings(first).items()}
 
 
@@ -499,6 +510,11 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
     segment and switch; ``base_frequency`` (Hz) and ``length_unit`` are the deck's, as for LineCode (DSS-3, 3b).
     """
     lines = native.list_by_class(NATIVE_CLASS)
+    controls = switch_controls(native)
+    opened = opened_lines(native)
+    names = {str(line.name).lower() for line in lines}
+    for missing in sorted((set(controls) | opened) - names):
+        raise ValueError(f"Line {missing}: switched by a control or an Open command, but no New defines it")
     if not lines:
         return Document(name="line", statements=[], profile=CIM_PROFILE)
     codes = {str(code.name).lower(): code for code in native.list_by_class(schema.Linecode)}
@@ -507,14 +523,9 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
     spacings = {str(s.name).lower(): s for s in native.list_by_class(schema.Linespacing)}
     infos = geometry_mapper.wire_infos(native)
     wires = {str(w.name).lower(): w for native_class, _, _ in wire_mapper.CATALOGS for w in native.list_by_class(native_class)}
-    controls = switch_controls(native)
-    opened = opened_lines(native)
-    names = {str(line.name).lower() for line in lines}
-    for missing in sorted((set(controls) | opened) - names):
-        raise ValueError(f"Line {missing}: switched by a control or an Open command, but no New defines it")
 
     document = _Document()
-    inline_given, inline_gated = [], []  # (line, code, defaulted)
+    inline_given, inline_gated = [], []  # (line, code, capacitance unit, defaulted)
     pending = []  # (line, phases, bus1, bus2, notes) of inline segments, finished after the gate
     for line in lines:
         _check_unmapped(line)
@@ -596,21 +607,21 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
         else:
             phases = line.phases if line.phases is not None else 3
             bus1, bus2, letters = line_phases(line, phases, buses)
-            code, defaulted = inline_code(line, phases)
-            (inline_given if _units(line) else inline_gated).append((line, code, defaulted))
+            code, capacitance_unit, defaulted = inline_code(line, phases)
+            (inline_given if _units(line) else inline_gated).append((line, code, capacitance_unit, defaulted))
             pending.append((line, letters, bus1, bus2, notes))
             continue
         document.segments.setdefault(document_row.columns, []).append(document_row.row)
 
     synthesized = {}
-    for line, code, defaulted in inline_given:
+    for line, code, capacitance_unit, defaulted in inline_given:
         synthesized[str(line.name).lower()] = [linecode_mapper.Template(
-            f"{mrid(PREFIX, line.name, lowercase=True)}_lc", _units(line), None)]
+            f"{mrid(PREFIX, line.name, lowercase=True)}_lc", _units(line), None, capacitance_unit)]
     synthesized.update(linecode_mapper.gated_templates(
-        [code for _, code, _ in inline_gated], length_unit,
+        [code for _, code, _, _ in inline_gated], length_unit,
         lambda code: f"{mrid(PREFIX, code.name, lowercase=True)}_lc"))
     entries = []
-    for line, code, defaulted in inline_given + inline_gated:
+    for line, code, _, defaulted in inline_given + inline_gated:
         [template] = synthesized[str(line.name).lower()]
         note = _comment(f"synthesized: the inline values of Line {line.name}", template.note, defaulted)
         entries.append((code, [template._replace(note=note)]))

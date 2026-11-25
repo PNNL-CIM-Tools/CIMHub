@@ -33,7 +33,7 @@ which go to its `to_cim` method.
 | `artifact_dir` | Keep the `.cimtbl` files here. Without it they go to a temporary directory that is removed after loading. |
 | `network` | An existing cim18v17 network to bind onto, to merge several decks. A bus the decks share by name must have the same base voltage in both, or binding raises. |
 | `authority` | The master's `Authority`. Defaults to `https://github.com/PNNL-CIM-Tools/CIMHub`. |
-| `length_unit` | The per-length unit (`'km'`, `'kft'`, ...) for a `LineCode` that has no units of its own and whose lines set none. It overrides the importer's magnitude check (see [lines](../reference/lines.md)). |
+| `length_unit` | The per-length unit (`'km'`, `'kft'`, ...) for a `LineCode` that has no units of its own and whose lines set none, and for a line's own inline values when the line sets none. It overrides the importer's magnitude check (see [lines](../reference/lines.md)). |
 | `device_geometry` | `"point"` (default) places a two-terminal device, such as a switch or transformer, as a point midway between its buses; `"linestring"` draws it from bus to bus. Any other value raises when the importer is made. |
 | `time_points` | A dict the importer fills with the points of the deck's yearly `LoadShape`s. See [Load shapes and time points](#load-shapes-and-time-points). |
 

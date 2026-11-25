@@ -1,0 +1,36 @@
+clock {
+  timezone UTC0;
+  starttime '2000-01-01 00:00:00';
+  stoptime '2000-01-01 00:00:00';
+}
+#set relax_naming_rules=1
+module powerflow {
+  solver_method NR;
+  nominal_frequency 60;
+  line_capacitance TRUE;
+}
+object line_configuration {
+  name "lc_1";
+  z11 0.3+1j;
+  c11 0;
+}
+object node {
+  name "n1";
+  phases "AN";
+  nominal_voltage 7200;
+}
+object node {
+  name "swing";
+  phases "AN";
+  nominal_voltage 7200;
+  bustype "SWING";
+  voltage_A 7200+0j;
+}
+object overhead_line {
+  name "l1";
+  phases "A";
+  from "swing";
+  to "n1";
+  configuration "lc_1";
+  length 100;
+}

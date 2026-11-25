@@ -226,7 +226,8 @@ classes:
           - cim:EnergySource.x
         comments:
           - >-
-            Import: derived; MVAsc3 (mvasc_from_isc), then as MVAsc3. Export: not written, the ohms
+            Import: derived; the 3-phase short-circuit kVA (kvasc_from_isc), then as MVAsc3, r and x
+            in kohm. Export: not written, the ohms
             or the MVAsc group carries the same impedance.
 
       # (12) Isc1
@@ -244,7 +245,8 @@ classes:
           - cim:EnergySource.x0
         comments:
           - >-
-            Import: derived; MVAsc1 (mvasc_from_isc), then as MVAsc1. Export: not written, the ohms
+            Import: derived; the 1-phase short-circuit kVA (kvasc_from_isc), then as MVAsc1, r0 and
+            x0 in kohm. Export: not written, the ohms
             or the MVAsc group carries the same impedance.
 
       # (13) R1

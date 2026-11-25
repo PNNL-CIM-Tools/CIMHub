@@ -403,4 +403,6 @@ here because it is where the per-phase rule above lives. `get_phase_loads` and
 the inverter its `PowerElectronicsConnectionPhase` children (a machine passes none). Spokes call the wrappers, not
 this function. `DevicePower` has the fields `phases`, `total`
 (`PhasePower`), `per_phase` and `split`, as `PhaseLoads` without `connection` and `grounded`. `PhasePower` is the
-`(p, q)` pair, and `SUM_REL_TOL = 1e-6` is the tolerance of the sum check.
+`(p, q)` pair, and `SUM_REL_TOL = 1e-6` is the tolerance of the sum check. `active_unit` must be a W unit and
+`reactive_unit` a VAr unit, or it raises: pint converts W and VAr into each other, so a swapped pair would otherwise
+pass unnoticed.

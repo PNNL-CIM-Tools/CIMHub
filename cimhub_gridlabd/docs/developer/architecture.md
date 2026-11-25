@@ -34,7 +34,7 @@ the writer. Two exporter modules import from the importer so a rule is written o
 | Core class | Here | Entry point |
 |---|---|---|
 | `FormatReader` | `GlmReader(source, *, defines=None)` binds a `.glm` path and the macros the caller would pass to `gridlabd -D`; `read_all()` parses the file tree and returns a `GlmModel`. | `GlmReader(path).read_all()` |
-| `FormatWriter` | `GlmWriter`: `write(model, destination)` writes the deck and each player's tape beside it; `deck(model)` returns the text; `serialize(obj, expressions=None)` renders one object block. | `GlmWriter().write(model, "out.glm")` |
+| `FormatWriter` | `GlmWriter`: `write(model, destination)` writes the deck and each player's tape beside it; `deck(model)` returns the text; `serialize(obj, expressions=None, written_units=None)` renders one object block. | `GlmWriter().write(model, "out.glm")` |
 | `CimtblImporter` | `GlmImporter(name, *, authority, substation, feeder, time_points)` implements `to_cimtbl`; `to_cim` adds the players' and schedules' points to the core one. `bound_parts` is core's default (none). | `glm_to_cim(model, name=...)` |
 | `FormatExporter` | `GlmExporter(time_points=None).to_model(network, *, name_source, switch_state)` returns a `GlmModel`. | `cim_to_glm(network, "out.glm")` |
 

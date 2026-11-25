@@ -138,10 +138,12 @@ UNITS_GATE = ((0.006, 10.0, "km"), (1e-5, 0.006, "m"))
 
 class Template(NamedTuple):
     """One impedance template a code becomes: its mRID, length unit and how the unit was found (``None``: the
-    code's own ``units``)."""
+    code's own ``units``). ``capacitance_unit`` is the length unit of C1/C0/cmatrix when it is not ``unit`` (a
+    line's engine-default C is per kft, ``line.inline_code``)."""
     mrid: str
     unit: str
     note: str | None
+    capacitance_unit: str | None = None
 
 
 def _units_text(value) -> str | None:
@@ -309,6 +311,7 @@ def _sequence_row(code, template: Template, note: str | None, is_template: bool)
     if code.nphases != 3:
         raise ValueError(f"LineCode {code.name}: nphases={code.nphases}; a sequence code has 1, 2 or 3 phases")
     unit = template.unit
+    c_unit = template.capacitance_unit or unit
     cells = {column.name: (column, cell(getattr(code, slot)))
              for slot, column in copied_columns(FIELDS, _SEQ, length=unit)}
     for c_slot, b_slot, name in _SHUNT:
@@ -318,7 +321,7 @@ def _sequence_row(code, template: Template, note: str | None, is_template: bool)
         if getattr(code, b_slot) is not None:
             raise ValueError(f"LineCode {code.name}: sets both {c_slot} and {b_slot}; "
                              "DSS keeps whichever was set last, which the reader does not record")
-        cells[name] = (Column(name, f"nS/{unit}"),
+        cells[name] = (Column(name, f"nS/{c_unit}"),
                        cell(susceptance(c, code.baseFreq, name=code.name, slot=c_slot)))
     cells["isTemplate"] = (Column("isTemplate"), cell(is_template))
     columns = tuple(column for column, _ in cells.values())
@@ -333,7 +336,7 @@ def impedance_statements(entries, base_frequency: float, *, is_template: bool) -
     with ``is_template=False`` (DSS-8, DSS-14).
     """
     impedances: list[Row] = []
-    data_by_unit: dict[str, list[Row]] = {}
+    data_by_unit: dict[tuple[str, str], list[Row]] = {}  # (r and x length unit, b length unit) -> rows
     sequences_by_columns: dict[tuple[Column, ...], list[Row]] = {}
     derived_matrix = False
     for original, code_templates in entries:
@@ -353,13 +356,13 @@ def impedance_statements(entries, base_frequency: float, *, is_template: bool) -
                 matrices = _matrices(code)
             impedance, data = _phase_rows(code, template, matrices, note, is_template)
             impedances.append(impedance)
-            data_by_unit.setdefault(template.unit, []).extend(data)
+            data_by_unit.setdefault((template.unit, template.capacitance_unit or template.unit), []).extend(data)
 
     statements = []
     if impedances:
         statements.append(Table(_PHASE, [Column("mRID"), *(column for _, column in copied_columns(FIELDS, _PHASE)),
                                          Column("isTemplate")], impedances))
-    for unit, rows in data_by_unit.items():
+    for (unit, c_unit), rows in data_by_unit.items():
         comment = (f"units={unit}. row/column are conductor indices of the lower triangle.\n"
                    "derived: b = 2 pi baseFreq C (b_from_c), from cmatrix (nF) -> nS")
         if derived_matrix:
@@ -367,7 +370,7 @@ def impedance_statements(entries, base_frequency: float, *, is_template: bool) -
         statements.append(Table(
             "PhaseImpedanceData",
             [Column("identifier"), Column("PhaseImpedance"), Column("row"), Column("column"),
-             Column("r", f"ohm/{unit}"), Column("x", f"ohm/{unit}"), Column("b", f"nS/{unit}")],
+             Column("r", f"ohm/{unit}"), Column("x", f"ohm/{unit}"), Column("b", f"nS/{c_unit}")],
             rows, comment=comment,
         ))
     for columns, rows in sequences_by_columns.items():

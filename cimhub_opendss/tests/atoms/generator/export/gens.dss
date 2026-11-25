@@ -3,6 +3,7 @@ Set defaultbasefreq=60
 New Circuit.fdr_atom phases=3 bus1=sourcebus.1.2.3 basekv=4.16 pu=1 angle=0 R1=0.000209861225631438 X1=0.000839444902525753 R0=0.000235020625041835 X0=0.000705061875125506
 new Line.ln_l1 phases=3 bus1=sourcebus.1.2.3 bus2=b1.1.2.3 length=304.8 r1=0.000328083989501312 x1=0.000656167979002625 r0=0.000984251968503937 x0=0.00196850393700787 C1=0.0111548556430446 C0=0.005249343832021 units=m
 new Transformer.xf_t phases=3 windings=2 buses=[b1.1.2.3 b2.1.2.3] conns=[wye wye] kVs=[4.16 0.48] kVAs=[2000 2000] XHL=5 %Rs=[0.2 0.2]
+new Generator.gen_capped phases=3 bus1=b1.1.2.3 kv=4.16 kW=1000 kvar=539.742822138087 model=3 conn=wye Vpu=1.02 maxkvar=500 minkvar=-1079.48564427617 kVA=4000 enabled=Yes
 new Generator.gen_delta phases=3 bus1=b2.1.2.3 kv=0.48 kW=50 kvar=10.1529330317002 model=1 conn=delta kVA=250 enabled=Yes
 new Generator.gen_edited phases=3 bus1=b2.1.2.3 kv=0.48 kW=50 kvar=2.41935483870966 model=1 conn=wye kVA=775 enabled=Yes
 new Generator.gen_frozen phases=3 bus1=b2.1.2.3 kv=0.48 kW=50 kvar=30 model=1 conn=wye kVA=150 enabled=Yes
@@ -12,6 +13,7 @@ new Generator.gen_limited phases=3 bus1=b2.1.2.3 kv=0.48 kW=0 kvar=30 model=1 co
 new Generator.gen_plain phases=3 bus1=b2.1.2.3 kv=0.48 kW=100 kvar=53.9742822138087 model=1 conn=wye kVA=120 enabled=Yes
 new Generator.gen_pq phases=3 bus1=b2.1.2.3 kv=0.48 kW=100 kvar=32.8684105178863 model=1 conn=wye kVA=250 enabled=Yes
 new Generator.gen_repf phases=3 bus1=b2.1.2.3 kv=0.48 kW=620 kvar=300.279704999469 model=1 conn=wye kVA=775 enabled=Yes
+new Generator.gen_reset phases=3 bus1=b1.1.2.3 kv=4.16 kW=800 kvar=431.79425771047 model=3 conn=wye Vpu=1.02 maxkvar=863.588515420939 minkvar=-863.588515420939 kVA=4000 enabled=Yes
 new Generator.gen_single phases=1 bus1=b2.1 kv=0.277 kW=10 kvar=3.28684105178863 model=1 conn=wye kVA=12 enabled=Yes
 new Generator.gen_steam phases=3 bus1=b1.1.2.3 kv=4.16 kW=1000 kvar=539.742822138087 model=3 conn=wye Vpu=1.02 maxkvar=1079.48564427617 minkvar=-1079.48564427617 kVA=4000 enabled=Yes
 new Generator.gen_vars phases=3 bus1=b2.1.2.3 kv=0.48 kW=20 kvar=5 model=1 conn=wye kVA=75 enabled=Yes

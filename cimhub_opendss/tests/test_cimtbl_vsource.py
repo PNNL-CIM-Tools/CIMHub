@@ -8,12 +8,13 @@ from pathlib import Path
 import cimtables
 import opendssdirect as dss
 import pytest
+from cimprofiles.units import units
 
 from cimhub_core.cimtbl import check_fields, cimtbl_to_cim
 from cimhub_core.cimtbl_testing import assert_matches_golden, atom_documents, cim_scope
 from cimtopology.core import walk
 from cimhub_opendss.dss_reader import DssReader
-from cimhub_opendss.importer.cimtbl.vsource import (FIELDS, NATIVE_CLASS, Thevenin, map_vsource, mvasc_from_isc,
+from cimhub_opendss.importer.cimtbl.vsource import (FIELDS, NATIVE_CLASS, Thevenin, kvasc_from_isc, map_vsource,
                                                    thevenin, thevenin_from_short_circuit, with_defaults)
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
@@ -50,6 +51,12 @@ def _active_thevenin(name: str) -> Thevenin:
     return Thevenin(*(float(dss.Properties.Value(slot)) for slot in ("R1", "X1", "R0", "X0")))
 
 
+def _ohms(source, group: str) -> Thevenin:
+    """``thevenin`` in ohms, as the engine gives it (the mapper's values keep their own unit)."""
+    impedance, unit = thevenin(source, group)
+    return Thevenin(*(units.Quantity(value, unit).to("ohm").magnitude for value in impedance))
+
+
 def test_classification_is_complete():
     check_fields(FIELDS, NATIVE_CLASS)
 
@@ -65,8 +72,8 @@ def test_thevenin_from_short_circuit_matches_the_engine(command, args):
 
 
 @pytest.mark.parametrize("phases, factor", [(3, math.sqrt(3)), (1, 1.0)])
-def test_mvasc_from_isc(phases, factor):
-    assert mvasc_from_isc(69.0, 1000.0, 1100.0, phases) == pytest.approx((math.sqrt(3) * 69.0, factor * 69 * 1.1))
+def test_kvasc_from_isc(phases, factor):
+    assert kvasc_from_isc(69.0, 1000.0, 1100.0, phases) == pytest.approx((math.sqrt(3) * 69e3, factor * 69 * 1100))
 
 
 def test_negative_discriminant_raises():
@@ -77,7 +84,8 @@ def test_negative_discriminant_raises():
 def test_isc_matches_the_engine():
     source, group, _ = with_defaults(_source(basekv=69.0, Isc3=1e6, Isc1=1.1e6))
     engine = _engine_thevenin("New Circuit.x basekv=69 Isc3=1000000 Isc1=1100000")
-    assert thevenin(source, group) == pytest.approx(engine, rel=1e-12)
+    assert thevenin(source, group)[1] == "kohm"
+    assert _ohms(source, group) == pytest.approx(engine, rel=1e-12)
 
 
 @pytest.mark.parametrize("slots, message", [
@@ -131,6 +139,15 @@ def test_mvasc_values():
     assert float(source.x0.to("ohm")) == pytest.approx(0.538810749037007)
 
 
+def test_isc_values_bind_in_ohms():
+    """The Isc source's kohm header binds to the engine's ohms."""
+    network = cimtbl_to_cim(atom_documents(_map("isc")), network=cimtables.load_model(ATOMS / "prereq.cimtbl"))
+    [source] = network.graph[network.cim.EnergySource].values()
+    engine = _engine_thevenin("New Circuit.x basekv=69 Isc3=1000000 Isc1=1100000")
+    ours = Thevenin(*(float(getattr(source, slot).to("ohm")) for slot in ("r", "x", "r0", "x0")))
+    assert ours == pytest.approx(engine, rel=1e-12)
+
+
 @pytest.mark.parametrize("relative", ENGINE_DECKS)
 def test_thevenin_matches_the_engine(relative):
     path = deck(relative)
@@ -139,5 +156,5 @@ def test_thevenin_matches_the_engine(relative):
     dss.Text.Command(f"Compile [{path.resolve()}]")
     for original in sources:
         source, group, _ = with_defaults(original)
-        assert thevenin(source, group) == pytest.approx(_active_thevenin(source.name), rel=1e-9, abs=1e-12), \
+        assert _ohms(source, group) == pytest.approx(_active_thevenin(source.name), rel=1e-9, abs=1e-12), \
             source.name

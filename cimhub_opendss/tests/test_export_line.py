@@ -258,6 +258,15 @@ def test_lumped_line_without_length_keeps_its_whole_values():
     assert record.r1 == pytest.approx(line.r.to("ohm"), rel=1e-12)
 
 
+def test_zero_length_lumped_line_raises():
+    """A DSS line's impedance is per length, and the engine cannot solve one of length 0."""
+    network = _network("codes")
+    line = _lumped(network, "seq2", with_length=True)
+    line.length = cim.Length(0.0, "m")
+    with pytest.raises(ValueError, match=r"ACLineSegment.*seq2.*: length 0 with lumped impedance"):
+        _model(network)
+
+
 def test_lumped_line_without_zero_sequence_raises():
     network = _network("codes")
     line = _lumped(network, "seq1", with_length=True)
@@ -630,12 +639,44 @@ Update Table ACLineSegmentPhase: mRID, WireInfo=wire_1/0
 """
 
 
-def _coupled_network(tmp_path, *, lone: bool = False, underbuilt: bool = False):
+#: the double circuit on a template spacing (the boundary example's reference shape): a WireConfiguration per
+#: circuit, each on its own positions of the one spacing, the neutral on 7 in both
+CONFIGURATIONS = """Object WireConfiguration: mRID=wc_a, name=wc_a, numberOfPhases=3, WireSpacing=spc_dbl, EarthResistivity=earth
+Object WireConfiguration: mRID=wc_b, name=wc_b, numberOfPhases=3, WireSpacing=spc_dbl, EarthResistivity=earth
+Table WireSequenceConfiguration: mRID, sequenceNumber, WireConfiguration, WireInfo
+    wc_a_1, 1, wc_a, wire_397
+    wc_a_2, 2, wc_a, wire_397
+    wc_a_3, 3, wc_a, wire_397
+    wc_a_7, 7, wc_a, wire_1/0
+    wc_b_4, 4, wc_b, wire_397
+    wc_b_5, 5, wc_b, wire_397
+    wc_b_6, 6, wc_b, wire_397
+    wc_b_7, 7, wc_b, wire_1/0
+"""
+
+
+def _configured(text: str, configured: tuple[str, ...]) -> str:
+    """``text`` on the template spacing, each line in ``configured`` on its circuit's WireConfiguration with no
+    ACLineSegmentPhase.WireInfo; the others stay spacing lines."""
+    text = text.replace("isTemplate=false, MultiCircuitGroup=dbl", "isTemplate=true")
+    text = text.replace("Object ACLineSegment: mRID=ln_a,", CONFIGURATIONS + "Object ACLineSegment: mRID=ln_a,")
+    rows = []
+    for row in text.splitlines():
+        for line in configured:
+            if row.startswith(f"Object ACLineSegment: mRID={line},"):
+                row = row.replace("WireSpacing=spc_dbl", f"WireConfiguration=wc_{line[-1]}")
+            if row.startswith(f"    {line}_"):
+                row = row.replace("wire_397", "").replace("wire_1/0", "")
+        rows.append(row)
+    return "\n".join(rows)
+
+
+def _coupled_network(tmp_path, *, lone: bool = False, underbuilt: bool = False, configured: tuple[str, ...] = ()):
     """The double circuit; with ``lone`` only ln_a and its load (s1-f2 exported on its own); with ``underbuilt`` a
-    secondary in the group too."""
-    text = COUPLED
+    secondary in the group too; the lines in ``configured`` on WireConfigurations (``_configured``)."""
+    text = _configured(COUPLED, configured) if configured else COUPLED
     if lone:
-        text = "\n".join(row for row in COUPLED.splitlines() if "ln_b" not in row and "ld_b" not in row)
+        text = "\n".join(row for row in text.splitlines() if "ln_b" not in row and "ld_b" not in row)
     if underbuilt:
         text += UNDERBUILT
     path = tmp_path / "coupled.cimtbl"
@@ -762,12 +803,58 @@ def _other_group(network):
                    r"phase of MultiCircuitGroup 'other'"),
     (_other_wire, r"sequence number 7 is OverheadWireInfo 'wire_1/0' on one line and OverheadWireInfo 'wire_397'"),
     (_other_offset, r"its lines' ySpacingOffsets \(m, to the mm\) differ"),
-    (_by_code, r"ACLineSegment 'ln_b': one of 2 lines of MultiCircuitGroup 'dbl', but not a spacing line"),
+    (_by_code, r"ACLineSegment 'ln_b': one of 2 lines of MultiCircuitGroup 'dbl', but has no geometry"),
 ], ids=lambda value: value.__name__.strip("_") if callable(value) else "")
 def test_coupled_group_that_one_line_cannot_carry_raises(mutate, message, tmp_path):
     network = _coupled_network(tmp_path)
     mutate(network)
     with pytest.raises(ValueError, match=message):
+        _spacing_model(network)
+
+
+@pytest.mark.parametrize("configured", [("ln_a", "ln_b"), ("ln_a",)], ids=["configurations", "mixed"])
+def test_configuration_lines_couple_as_spacing_lines(configured, tmp_path):
+    """Lines on WireConfigurations of one template spacing, or one of them and a spacing line, are coupled on the
+    same structure as two spacing lines."""
+    spacing = _spacing_model(_coupled_network(tmp_path))
+    model = _spacing_model(_coupled_network(tmp_path, configured=configured))
+    assert _geometries(model)["dbl_geometry"] == _geometries(spacing)["dbl_geometry"]
+    assert _lines(model) == _lines(spacing)
+
+
+def _no_earth(network):
+    _mrid(network, cim.WireConfiguration, "wc_b").EarthResistivity = None
+
+
+def _neutral_off_its_phase(network):
+    _mrid(network, cim.WireSequenceConfiguration, "wc_b_7").sequenceNumber = 8
+
+
+@pytest.mark.parametrize("mutate, message", [
+    (_no_earth, r"its lines' earth resistivities \(ohm-m\) differ \{'ln_a': 100.0, 'ln_b': None\}"),
+    (_neutral_off_its_phase, r"ACLineSegment 'ln_b' of MultiCircuitGroup 'dbl': wires on sequence numbers "
+                             r"\[4, 5, 6, 8\], ACLineSegmentPhases on \[4, 5, 6, 7\] of 4"),
+], ids=lambda value: value.__name__.strip("_") if callable(value) else "")
+def test_coupled_configuration_lines_that_one_line_cannot_carry_raise(mutate, message, tmp_path):
+    network = _coupled_network(tmp_path, configured=("ln_a", "ln_b"))
+    mutate(network)
+    with pytest.raises(ValueError, match=message):
+        _spacing_model(network)
+
+
+def test_an_unused_configuration_is_written_on_its_own_positions(tmp_path):
+    """A template spacing holds both circuits: with ln_a alone, wc_b is written at offset 0 on its positions 4-7,
+    not on all seven of the spacing's."""
+    network = _coupled_network(tmp_path, lone=True, configured=("ln_a", "ln_b"))
+    geometries = _geometries(_spacing_model(network))
+    assert sorted(geometries) == ["wc_a_12p192m", "wc_b"]
+    unused = geometries["wc_b"]
+    assert (unused.nconds, unused.nphases) == (4, 3)
+    assert unused.xs == pytest.approx([x * 0.3048 for x in (-3.5, 0, 3.5, 0.5)])
+    assert unused.hs == pytest.approx([h * 0.3048 for h in (0, 1.5, 0, -6)])
+    _neutral_off_its_phase(network)
+    with pytest.raises(ValueError, match=r"WireConfiguration 'wc_b': wires on sequence numbers \[4, 5, 6, 8\], "
+                                         r"positions on \[4, 5, 6\]"):
         _spacing_model(network)
 
 # a plain CableInfo (an underground secondary's insulated conductors) is a WireData mirrored above grade (B7) ----------

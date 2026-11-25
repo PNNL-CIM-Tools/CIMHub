@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
@@ -35,7 +34,7 @@ FIELDS = {
     "kvar": Field("copied", ((_SHUNT, "nomQ", "kVAr"),), "the total over the phases; more than one step raises; "
                                                     "default 1200"),
     "kv": Field("copied", ((_SHUNT, "nomU", "kV"),),
-                "as rated (LN for 1-phase wye, else LL); also bPerSection (S) = nomQ / nomU^2 "
+                "as rated (LN for 1-phase wye, else LL); also bPerSection (mS) = nomQ / nomU^2 "
                 "(b_per_section); default 12.47"),
     "conn": Field("mapped", ((_SHUNT, "phaseConnection", None), (_SHUNT, "grounded", None)),
                   "wye -> Y, grounded; delta -> D, not grounded; default wye"),
@@ -68,9 +67,9 @@ Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#capacitor"""
 
 
 def b_per_section(kvar: float, kv: float) -> float:
-    """Susceptance (S) of one section rated ``kvar`` at ``kv``: nomQ / nomU^2 (total kvar on the LL kV of a
-    3-phase bank, a unit's kvar on its own kV otherwise)."""
-    return float(cim.ReactivePower(kvar, "kVAr")) / float(cim.Voltage(kv, "kV")) ** 2
+    """Susceptance of one section rated ``kvar`` at ``kv``: nomQ / nomU^2 (total kvar on the LL kV of a 3-phase
+    bank, a unit's kvar on its own kV otherwise). kVAr and kV give mS, the column's unit."""
+    return kvar / kv ** 2
 
 
 def _check(capacitor) -> None:
@@ -106,7 +105,7 @@ def map_capacitor(native, buses: Mapping[str, BusSystem], container: str) -> Doc
     if not rows:
         return Document(name="capacitor", statements=[], profile=CIM_PROFILE)
     columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("phaseConnection"),
-               Column("grounded"), Column("nomQ", "kVAr"), Column("nomU", "kV"), Column("bPerSection", "S"),
+               Column("grounded"), Column("nomQ", "kVAr"), Column("nomU", "kV"), Column("bPerSection", "mS"),
                Column("maximumSections"), Column("normalSections"), Column("sections"), Column("normallyInService"),
                Column("BaseVoltage"), Column("EquipmentContainer", default=container)]
     table = Table(_SHUNT, columns, rows, comment="derived: bPerSection = nomQ / nomU^2 (b_per_section); "

@@ -39,8 +39,31 @@ _log = logging.getLogger(__name__)
 
 __all__ = ["DssReader", "DssParseError", "KEPT_OPTIONS", "dss_defaults"]
 
-#: ``Set`` options that describe the circuit, kept on the model as ``Options`` (DSS_REWRITE_PLAN.md section 3.4).
-KEPT_OPTIONS = frozenset({"voltagebases", "defaultbasefreq", "earthmodel"})
+#: Every OpenDSS ``Set`` option, lowercased, in the engine's order (``test_dss_options_match_the_engine``).
+DSS_OPTIONS = (
+    "type", "element", "hour", "sec", "year", "frequency", "stepsize", "mode", "random", "number", "time", "class",
+    "object", "circuit", "editor", "tolerance", "maxiterations", "h", "loadmodel", "loadmult", "normvminpu",
+    "normvmaxpu", "emergvminpu", "emergvmaxpu", "%mean", "%stddev", "ldcurve", "%growth", "genkw", "genpf",
+    "capkvar", "addtype", "allowduplicates", "zonelock", "ueweight", "lossweight", "ueregs", "lossregs",
+    "voltagebases", "algorithm", "trapezoidal", "autobuslist", "controlmode", "tracecontrol", "genmult",
+    "defaultdaily", "defaultyearly", "allocationfactors", "cktmodel", "pricesignal", "pricecurve", "terminal",
+    "basefrequency", "harmonics", "maxcontroliter", "bus", "datapath", "keeplist", "reduceoption", "demandinterval",
+    "%normal", "diverbose", "casename", "markercode", "nodewidth", "log", "recorder", "overloadreport",
+    "voltexceptionreport", "cfactors", "showexport", "numallociterations", "defaultbasefrequency", "markswitches",
+    "switchmarkercode", "daisysize", "marktransformers", "transmarkercode", "transmarkersize", "loadshapeclass",
+    "earthmodel", "querylog", "markcapacitors", "markregulators", "markpvsystems", "markstorage", "capmarkercode",
+    "regmarkercode", "pvmarkercode", "storemarkercode", "capmarkersize", "regmarkersize", "pvmarkersize",
+    "storemarkersize", "neglectloady", "markfuses", "fusemarkercode", "fusemarkersize", "markreclosers",
+    "reclosermarkercode", "reclosermarkersize", "registryupdate", "markrelays", "relaymarkercode",
+    "relaymarkersize", "processtime", "totaltime", "steptime", "sampleenergymeters", "miniterations",
+    "dssvisualizationtool", "keepload", "zmag", "seasonrating", "seasonsignal", "linetypes", "eventlogdefault",
+    "longlinecorrection", "showreports", "numcpus", "numcores", "numactors", "activeactor", "cpu", "actorprogress",
+    "parallel", "concatenatereports", "numanodes",
+)
+
+#: ``Set`` options that describe the circuit, kept on the model as ``Options`` (DSS_REWRITE_PLAN.md section 3.4):
+#: the engine's option -> its ``Options`` slot.
+KEPT_OPTIONS = {"voltagebases": "voltagebases", "defaultbasefrequency": "defaultbasefreq", "earthmodel": "earthmodel"}
 
 #: Every OpenDSS executive command, lowercased, in the engine's order (``test_dss_commands_match_the_engine``).
 DSS_COMMANDS = (
@@ -79,14 +102,25 @@ SKIPPED_COMMANDS = frozenset({
 })
 
 
-def dss_command(word: str) -> str | None:
-    """The DSS command ``word`` names, lowercased, or ``None``. As in the engine, an exact name wins; otherwise
-    the first command in ``DSS_COMMANDS`` that ``word`` abbreviates (``CalcV`` is ``calcvoltagebases``, ``o`` is
-    ``open``)."""
+def _engine_name(word: str, names: tuple[str, ...]) -> str | None:
+    """The one of ``names`` that ``word`` names, as the engine resolves a command or an option: an exact
+    (case-insensitive) name wins; otherwise the first in ``names`` that ``word`` abbreviates; else ``None``."""
     word = word.lower()
-    if word in DSS_COMMANDS:
+    if word in names:
         return word
-    return next((command for command in DSS_COMMANDS if command.startswith(word)), None)
+    return next((name for name in names if name.startswith(word)), None)
+
+
+def dss_command(word: str) -> str | None:
+    """The DSS command ``word`` names, lowercased, or ``None`` (``CalcV`` is ``calcvoltagebases``, ``o`` is
+    ``open``)."""
+    return _engine_name(word, DSS_COMMANDS)
+
+
+def dss_option(word: str) -> str | None:
+    """The ``Set`` option ``word`` names, lowercased, or ``None`` (``defaultbasefreq`` is ``defaultbasefrequency``,
+    ``e`` is ``element``)."""
+    return _engine_name(word, DSS_OPTIONS)
 
 
 # ---------------------------------------------------------------------------
@@ -357,11 +391,19 @@ class DssReader(FormatReader):
         return replace(cmd, element_type="Vsource", element_name="source")
 
     def _options(self, cmd: DssCommand) -> dict[str, Any]:
-        """The kept circuit options a ``Set`` command gives, converted like any property."""
+        """The kept circuit options a ``Set`` command gives, converted like any property. An option name resolves
+        as the engine resolves it (``dss_option``: ``Set voltagebase=`` is ``voltagebases``); a name that is no
+        option raises."""
         class_map = get_class_map(dss_schema.Options)
-        return {class_map.field_for(name): self._convert_value(raw, class_map.field_for(name), dss_schema.Options,
-                                                                class_map)
-                for name, raw in cmd.params.items() if name.lower() in KEPT_OPTIONS}
+        kept = {}
+        for name, raw in cmd.params.items():
+            option = dss_option(name)
+            if option is None:
+                raise DssParseError(f"Set {name}: no DSS option has that name", cmd.source_file, cmd.line_number)
+            if option in KEPT_OPTIONS:
+                slot = KEPT_OPTIONS[option]
+                kept[slot] = self._convert_value(raw, slot, dss_schema.Options, class_map)
+        return kept
 
     def _read_with_redirects(
         self, master_path: Path
@@ -544,7 +586,7 @@ class DssReader(FormatReader):
 
         # Pre-process transformer wdg=N per-winding syntax before parsing
         if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text, element_type)
+            param_text = self._preprocess_winding_text(param_text, element_type, element_name)
         params = _resolve_positional(self._param_pairs(param_text), element_type)
 
         return DssCommand(
@@ -575,7 +617,7 @@ class DssReader(FormatReader):
         param_text = f"{prop_name}={rhs}"
 
         if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text, element_type)
+            param_text = self._preprocess_winding_text(param_text, element_type, element_name)
         params = self._parse_params(param_text)
 
         return DssCommand(
@@ -770,7 +812,7 @@ class DssReader(FormatReader):
         return values
 
     @staticmethod
-    def _preprocess_winding_text(param_text: str, element_type: str) -> str:
+    def _preprocess_winding_text(param_text: str, element_type: str, element_name: str) -> str:
         """Rewrite per-winding DSS transformer params into array form.
 
         Transforms the raw parameter text before ``_parse_params`` sees it,
@@ -858,12 +900,14 @@ class DssReader(FormatReader):
             elif key_lower in _WDG_VALUE_KEYS:
                 put(_WDG_VALUE_KEYS[key_lower], active, resolved)
             elif key_lower in _WDG_SCALAR_KEYS:
-                # Rneut/Xneut belong to the active winding; keep the first winding that sets either and emit
-                # "wdg=N" alongside so the binding survives.
+                # Rneut/Xneut belong to the active winding; the schema holds one winding's, so it keeps the winding
+                # that sets them and emits "wdg=N" alongside so the binding survives. A second winding raises.
                 if scalar_neutral_wdg is None:
                     scalar_neutral_wdg = active
-                if active == scalar_neutral_wdg:
-                    scalar_overrides[key.strip()] = resolved
+                if active != scalar_neutral_wdg:
+                    raise ValueError(f"{element_type}.{element_name}: {key.strip()} on winding {active} after "
+                                     f"winding {scalar_neutral_wdg}'s neutral; one winding's Rneut/Xneut is mapped")
+                scalar_overrides[key.strip()] = resolved
             else:
                 non_winding_tokens.append(f"{key.strip()}={resolved}")
 

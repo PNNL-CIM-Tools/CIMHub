@@ -96,6 +96,15 @@ def test_class_without_a_write_order_raises(tmp_path):
         DssWriter().write(model, tmp_path / "deck.dss")
 
 
+def test_names_one_once_sanitized_raise(tmp_path):
+    """DSS would apply the second as an edit of the first."""
+    model = DssReader(ATOMS / "vsource" / "mvasc.dss").read_all()
+    model.add_to_graph(schema.Load(name="a b", bus1="sourcebus", kW=1.0))
+    model.add_to_graph(schema.Load(name="A_B", bus1="sourcebus", kW=2.0))
+    with pytest.raises(ValueError, match=r"DssWriter: Load '(a b|A_B)' and '(a b|A_B)' are both named '(a_b|A_B)'"):
+        DssWriter().write(model, tmp_path / "deck.dss")
+
+
 def test_deck_records_are_not_new_commands():
     with pytest.raises(ValueError, match="Options is not a New command"):
         DssWriter().serialize(schema.Options(name="options"))

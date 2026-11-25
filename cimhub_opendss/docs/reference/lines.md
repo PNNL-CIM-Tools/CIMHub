@@ -120,7 +120,7 @@ construction.
 | `Runits`, `GMRunits`, `radunits` | mapped: header units (`mi`, `kft`, `km`, `m`, `ft`, `in`, `cm`, `mm`); unset raises | written: `m` |
 | `GMRac` | copied to `gmr` (`{gmr_length}`); unset raises, though the engine would take 0.7788 x radius | written when set; unset is left to the engine |
 | `radius`, `diam` | one of the two, copied to `radius` (`{radius_length}`), `diam` as `diam / 2`; both or neither raises | written: `radius` (m), required; `diam` is never written |
-| `normamps` | copied to `ratedCurrent` (A) and the normal `CurrentLimit` | written: the wire's normal limit, else `ratedCurrent` |
+| `normamps` | copied to `ratedCurrent` (A) and the normal `CurrentLimit`; unset with `emergamps` set is `emergamps` / 1.5, the engine's rule, listed as `defaulted` | written: the wire's normal limit, else `ratedCurrent` |
 | `emergamps` | the emergency `CurrentLimit`; unset with `normamps` set is 1.5 x `normamps`, the engine's rule, listed as `defaulted` | written when set; unset is left to the engine |
 | `Seasons`, `Ratings`, `Capradius` | raises when set (not mapped yet) | not written |
 | `like` | resolved by the reader | never written |
@@ -261,10 +261,10 @@ values is mapped`).
 | `geometry=` | `wc_<geometry>` | `geometry=<name>`, with `rho` from the `EarthResistivity` |
 | `spacing=` with `wires`, `cncables` or `tscables` | a synthesized `WireConfiguration` `ln_<name>_wc` on `spc_<spacing>` | a `<line>_geometry` |
 | its own `r1 x1 ...` or `rmatrix ...` | `PerLengthImpedance` `ln_<name>_lc` with `isTemplate=false`, through the LineCode rules | the values inline, per metre |
-| (CIM only) lumped `r`, `x`, `bch` on the segment | not produced by this importer | inline per km, `units=km`, whole-line value / length; no length means `length=1` |
+| (CIM only) lumped `r`, `x`, `bch` on the segment | not produced by this importer | inline per km, `units=km`, whole-line value / length; no length means `length=1`; a length of 0 raises (the engine cannot solve a zero-length line) |
 
 A line's own sequence values left unset take the engine's defaults, listed as `defaulted`: `r`/`x` per unit length as
-they are, and `C1`/`C0` taken as nF per kft and converted to the line's `units` when the line gives them (a line with no `units` keeps the default number as it is). `phases` defaults to the code's or geometry's `nphases`, else 3.
+they are, and `C1`/`C0` in nF per kft, as the engine keeps them, so a line with `units` writes its default `bch`/`b0ch` (or `b`) in `nS/kft` beside its `r` in its own units (a line with no `units` keeps the default number as it is, per its unit). A line that sets one of `C1`/`C0` and leaves the other to the per-kft default, in units other than `kft`, raises (a 1-phase line uses `C1` only). `phases` defaults to the code's or geometry's `nphases`, else 3.
 A line's phases come from its nodes: 1, 2 and 3 are A, B and C (s1 and s2 on a split-phase island), and no nodes means
 conductor k on node k. A geometry line adds an `N` for its neutral, so `ABCN`.
 
@@ -294,6 +294,7 @@ as the engine rates the line. The comment says where each came from. Nothing com
 - `Line l: bus1 phases ABC and bus2 phases BAC differ (a transposition is not mapped)`, a phase conductor on node 0, and a bus the walk did not reach.
 - `phases` that differ from the code's, geometry's or spacing's `nphases`; more than one neutral conductor in a geometry.
 - `rho` on a line with no geometry.
+- One of `C1`/`C0` set and the other left to the per-kft default, in units other than `kft`.
 - A `linecode`, `geometry` or `spacing` that names no such object.
 - On export, a neutral conductor on a line with no geometry (`needs LineCode Kron/neutral, which is not mapped`), a `WireConfiguration` together with `ACLineSegmentPhase.WireInfo`, a phase count that differs from the configuration's `numberOfPhases`, a code with a different `conductorCount`.
 
@@ -386,7 +387,7 @@ model whose `open` is unset. Reclose sequences on any other protected switch rai
 **Fail fast.**
 
 - A control that switches an object other than a `Line` (`only a Line is mapped`), switches no object, or sets `Action`.
-- A control or `Open` that names a `Line` that is not `Switch=y`, or one no `New` defines.
+- A control or `Open` that names a `Line` that is not `Switch=y`, or one no `New` defines, also in a deck with no `Line` at all.
 - `Normal` or `State` that is not `open` or `closed` on every phase; two controls of one line that disagree, or of different classes; a Fuse whose `Normal`/`State` give a different count than the line's phases; an `Open` on a line whose control's `State` is closed.
 
 Excerpt from `cimhub_opendss/tests/atoms/line/codes.cimtbl` (a Fuse, a Recloser with defaulted intervals, and an open

@@ -65,7 +65,7 @@ same keywords except `network` and `artifact_dir`, which go to its `to_cim` meth
 
 | Argument | Meaning |
 |---|---|
-| `name` | Required. The master document's `Model` and file stem, and the default name of the Substation and Feeder. Do not use the name of a part file (`bus`, `load`, `player`): the documents' names must be distinct, or writing raises `document names repeat`. |
+| `name` | Required. The master document's `Model` and file stem, and the default name of the Substation and Feeder. Do not use the name of a part file (`bus`, `load`, `player`): the documents' names must be distinct, so the importer raises a `ValueError` naming it. |
 | `artifact_dir` | Keep the `.cimtbl` files here. Without it they go to a temporary directory that is removed after loading. |
 | `network` | An existing cim18v17 network to bind onto, to merge several models. |
 | `authority` | The master's `Authority`. Defaults to `https://github.com/PNNL-CIM-Tools/CIMHub`. |
@@ -95,7 +95,7 @@ Before any mapper runs, the importer walks the model once with `cimtopology`:
   `BaseVoltage`s. The `nominal_voltage` the model writes on a bus is only checked against the walk: a bus more than
   10 % off is listed in the bus file's comment, not raised.
 
-A bus the walk does not reach has no row, and a load or other equipment on it raises a bare `KeyError` naming the bus.
+A bus the walk does not reach has no row. A link, a load, a capacitor or an inverter on it raises a `ValueError` naming the equipment and the bus.
 
 ## The artifacts
 
@@ -168,8 +168,9 @@ The reader and the importer fail rather than guess. Each message names the file 
 | A value that is not a boolean or an integer for its property | `GlmParseError: <class>.<property>: '<text>' is not an integer` |
 | Two objects with one name | `GlmParseError: name 'x' is already used by the object at <file>:<line>` |
 | A mapped property holds an expression | `ValueError: load l1 (t4.glm:2): constant_power_A is the expression 'LIGHTS*1.2', which no mapper reads yet` |
-| A link whose `from` or `to` is not a bus object, a transformer with no `phases`, or `status OPEN` on a line, series reactor or regulator | `ValueError` naming the class and object, from the walk: `overhead_line l1: status OPEN on a device that is not a switch` |
-| A link whose `from` or `to` names no object | `KeyError: "no object named 'zz'"` |
+| A link whose `from` or `to` names no bus object, a transformer with no `phases`, or `status OPEN` on a line, series reactor or regulator | `ValueError` naming the class and object, from the walk: `overhead_line l1: to zz names no bus object`, `overhead_line l1: status OPEN on a device that is not a switch` |
+| A link or a device on an island no swing bus reaches | `ValueError` naming it and its bus: `overhead_line l2: its from bus n2 is on an island no swing bus reaches, so it has no voltage` |
+| A model name that is a part file's name (`bus`, `load`, `player`, ...) | `ValueError: model name 'load' is the name of a part file (load.cimtbl); give the model another name`, when the importer is made |
 | A source voltage more than 10 % from the swing bus's `nominal_voltage` | `ValueError: substation 150: source voltage 66395.3 V (positive_sequence_voltage) is more than 10% from nominal_voltage 2401.78 V`. The `.glm` or the `defines=` is wrong: IEEE 123 needs `VSOURCE=2401.78`, IEEE 13 needs `66395.28` |
 | A regulator with no `continuous_rating_<phase>` | `ValueError: regulator <name>: no continuous_rating_A; ratedS is the continuous rating x baseU`. GridLAB-D's 1000 A default is not the device's rating, so the importer does not use it |
 | A transformer whose coil voltage does not fit the bus it sits on | `ValueError: Transformer 633-634: its coil on bus 634 gives 0.48 kV, but the island ... is 4.16 kV 3-phase` |

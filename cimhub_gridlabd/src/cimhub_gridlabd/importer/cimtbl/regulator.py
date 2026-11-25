@@ -281,8 +281,7 @@ def _regulator(model: GlmModel, reg, roots: dict[str, str], buses: dict[str, Bus
     control = str(config.Control)
     enabled = control != "MANUAL"
     pt = None if config.power_transducer_ratio is None else float(config.power_transducer_ratio)
-    increment = 0.0 if not config.regulation else units.Quantity(
-        float(config.regulation) / config.raise_taps, "dimensionless").to("percent").magnitude
+    increment = 0.0 if not config.regulation else _quantity(model, config, "regulation", "percent") / config.raise_taps
     delay = _quantity(model, config, "dwell_time", "s") + _quantity(model, config, "time_delay", "s")
     band = [None if getattr(config, slot) is None else _quantity(model, config, slot, "V")
             for slot in ("band_center", "band_width")]

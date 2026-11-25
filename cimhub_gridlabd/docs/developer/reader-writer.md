@@ -125,11 +125,12 @@ fields the mappers read.
 
 `GlmWriter` takes a `GlmModel` and writes one deck.
 
-- `write(model, destination)` writes the deck to `destination`, creating its directory, then each player's tape to
-  `player.file` beside it.
-- `deck(model)` returns the deck as text.
-- `serialize(obj, expressions=None)` renders one `object <class> { ... }` block. `expressions` is
-  `GlmModel.expressions`: a slot that is unset but has an expression is written as that text.
+- `write(model, destination)` builds the deck first (so what it cannot write raises before any file is written), writes
+  it to `destination`, creating its directory, then each player's tape to `player.file` beside it.
+- `deck(model)` returns the deck as text. A player with no `file` raises here.
+- `serialize(obj, expressions=None, written_units=None)` renders one `object <class> { ... }` block. `expressions` is
+  `GlmModel.expressions`: a slot that is unset but has an expression is written as that text. `written_units` is
+  `GlmModel.written_units`: a value written with a unit is written back with it (`distance_AB 30 in;`).
 
 ```python
 from cimhub_gridlabd.glm_writer import GlmWriter
@@ -192,17 +193,17 @@ print(format_complex(schema.Complex(real=-1.5, imag=2)))      # -1.5+2j
 print(format_float(0.0000123))                                # 1.23e-05
 ```
 
-The writer writes numbers in the slot's schema unit and no unit text, since GridLAB-D stores each property in one
-fixed unit. It does not read `GlmModel.written_units`, so a model from `GlmReader` that holds a value written with
-another unit (`30 in`) is written as the bare number, which GridLAB-D then reads in the schema's unit (`distance_AB`
-is in `ft`, so `30 in` becomes 30 ft). The exporter's models are in the schema's units already.
+A value the deck wrote with a unit (`GlmModel.written_units`) is written with that unit, so a model from `GlmReader`
+keeps `30 in` as `30 in`: a bare 30 would be read in the schema's unit (`distance_AB` is in `ft`). Any other value is
+written in the slot's schema unit with no unit text, since GridLAB-D stores each property in one fixed unit. The
+exporter's models hold no written units: they are in the schema's units already.
 
 ### Player tapes
 
 `tape_text(rows)` renders a tape: one `time,value` row per line. `write` writes `tape_text(model.tapes[name])` to
 `<deck directory>/<player.file>`. The exporter names its players' files `<group>.player`, so they land beside the
-deck. `write` creates the deck's directory only, so a `file` with a subdirectory in it (`tapes/a.player`, which the
-reader accepts) fails with `FileNotFoundError` unless that subdirectory exists already.
+deck. A `file` with a subdirectory in it (`tapes/a.player`, which the reader accepts) is written there, the
+subdirectory made. A player with no `file` raises `ValueError` before the deck is written.
 
 ### Schedules
 

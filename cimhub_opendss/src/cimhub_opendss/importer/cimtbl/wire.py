@@ -43,7 +43,9 @@ def _conductor(info: str) -> dict[str, Field]:
                         "which), neither raises"),
         "radunits": Field("mapped", note=_UNITS.format(slots="radius, diam and every cable dimension")),
         "diam": Field("derived", note="radius = diam / 2 (radius_from_diameter)"),
-        "normamps": Field("copied", ((info, "ratedCurrent", "A"),), "also the " + _LIMITS.format(kind="normal")),
+        "normamps": Field("copied", ((info, "ratedCurrent", "A"),), "also the " + _LIMITS.format(kind="normal")
+                          + "; unset with emergamps set: emergamps / 1.5 (wire_ratings, the engine's rule), "
+                            "defaulted"),
         "emergamps": Field("structural", note="the " + _LIMITS.format(kind="emergency") + "; unset: 1.5 x normamps "
                                               "(wire_ratings, the engine's rule), defaulted"),
         "Seasons": Field("structural", note=_NOT_MAPPED + " (an indexed rating array that names no calendar season; "
@@ -116,19 +118,23 @@ Source table: {native} (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#wire-catalogs"""
 
 
-#: The engine's emergency rating of a wire that gives only normamps (``ConductorData``).
+#: The engine's emergency rating over the normal one of a wire that gives only one of them (``ConductorData``).
 EMERGENCY_FACTOR = 1.5
 
 
 def wire_ratings(wire) -> dict[str, tuple[float, str | None]]:
-    """``{"normamps": (amps, None), "emergamps": (amps, note)}`` of a rated wire, ``{}`` of an unrated one. An
-    unset emergamps is 1.5 x normamps, as the engine rates the wire; ``note`` then says so."""
-    if wire.normamps is None:
+    """``{"normamps": (amps, note), "emergamps": (amps, note)}`` of a rated wire, ``{}`` of an unrated one. As the
+    engine rates the wire, an unset emergamps is 1.5 x normamps and an unset normamps is emergamps / 1.5
+    (engine-checked); ``note`` then says so."""
+    if wire.normamps is None and wire.emergamps is None:
         return {}
-    if wire.emergamps is not None:
-        return {"normamps": (float(wire.normamps), None), "emergamps": (float(wire.emergamps), None)}
-    return {"normamps": (float(wire.normamps), None),
-            "emergamps": (EMERGENCY_FACTOR * float(wire.normamps), "defaulted: emergamps = 1.5 x normamps")}
+    if wire.normamps is None:
+        return {"normamps": (float(wire.emergamps) / EMERGENCY_FACTOR, "defaulted: normamps = emergamps / 1.5"),
+                "emergamps": (float(wire.emergamps), None)}
+    if wire.emergamps is None:
+        return {"normamps": (float(wire.normamps), None),
+                "emergamps": (EMERGENCY_FACTOR * float(wire.normamps), "defaulted: emergamps = 1.5 x normamps")}
+    return {"normamps": (float(wire.normamps), None), "emergamps": (float(wire.emergamps), None)}
 
 
 def ac_from_dc(rdc: float) -> float:
@@ -181,9 +187,12 @@ def _wire_row(wire, prefix: str, fields: dict[str, Field]) -> tuple[tuple[Column
         notes.append("defaulted: Rac = 1.02 x Rdc")
     if wire.radius is None:
         values["radius"] = radius_from_diameter(wire.diam)
+    ratings = wire_ratings(wire)
+    if ratings and wire.normamps is None:
+        values["normamps"], note = ratings["normamps"]
+        notes.append(note)
     columns = [column for _, column in pairs]
     texts = [cell(values[slot]) for slot, _ in pairs]
-    ratings = wire_ratings(wire)
     columns.append(Column("OperationalLimitSet"))
     texts.append(f"{mrid(prefix, wire.name, lowercase=True)}_limits" if ratings else None)
     if info in _DERIVED_COLUMN:

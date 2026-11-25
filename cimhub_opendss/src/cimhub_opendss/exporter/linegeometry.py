@@ -5,18 +5,19 @@ written inline (B2): the writer emits them as ``cond=`` blocks, which can mix co
 geometry: no impedance is computed (skill ``conductor-geometry``). Two CIM shapes are written:
 
 - A line with geometry, a WireConfiguration naming a WireSpacing (``get_line_geometry``): one geometry per
-  (configuration, offset) among the lines. A configuration no line uses is written at offset 0, its spacing's
-  positions as stored. A WireConfiguration with a PerLengthImpedance and no WireSpacing is a template LineCode,
+  (configuration, offset) among the lines. A configuration no line uses is written at offset 0 on the spacing's
+  positions its own WireSequenceConfigurations name: a template spacing may hold several circuits, each its own
+  configuration. A WireConfiguration with a PerLengthImpedance and no WireSpacing is a template LineCode,
   which ``linecode.py`` writes.
 - A spacing line, with a direct ``WireSpacing`` and a WireInfo on each ACLineSegmentPhase (the EPRI line shape):
   one geometry per (spacing, offset, conductors), the conductors being each phase's sequence number, wire and
   whether it is the neutral. The spacing may hold several circuits; the line takes the positions of its own
   phases. The geometry is named after the first line that has it (``<line>_geometry``).
 - The lines of one ``MultiCircuitGroup`` at its highest nominal voltage, when two or more are in the network (H1,
-  H5, ``coupled_groups``): one geometry for the group (``<group>_geometry``), every line's phase conductors in circuit
+  H5, ``coupled_groups``), each a spacing line or a line with geometry: one geometry for the group (``<group>_geometry``), every line's phase conductors in circuit
   order and then the neutrals. A position on several lines is one conductor (H6), so a shared neutral is written
   once. ``line.py`` writes the group as one DSS line on it, so the circuits are coupled. Every other line of a group
-  is an ordinary spacing line on its own positions, and so is the rest of a coupled line beyond the group's length
+  is an ordinary line on its own positions, and so is the rest of a coupled line beyond the group's length
   (H4).
 
 DSS takes a WireData only above grade, so a plain CableInfo (a WireData, B7) below grade is written at the same
@@ -33,6 +34,7 @@ from cimtables.graph_write import get_qty
 
 from cimhub_core.getters import describe, required_qty
 from cimhub_core.getters.base_voltage import get_base_voltage
+from cimhub_core.getters.earth import get_earth_resistivity, get_network_earth
 from cimhub_core.getters.line_impedance import get_line_geometry
 from cimhub_core.getters.spacing import ConductorXY, get_line_conductor_xy, get_spacing_xy
 from cimhub_core.getters.wire import get_configuration_wires, get_line_phase_wires
@@ -59,6 +61,7 @@ class CoupledGroup(NamedTuple):
     lines: tuple[cim.ACLineSegment, ...]
     length: float
     remainders: dict[cim.ACLineSegment, float]
+    rho: float | None  # ohm-m, line_rho of every line
 
 _BLOCKS = "the writer folds wires/xs/hs into cond= blocks"
 _NOT_IN_CIM = "not in CIM (untranscribed on import)"
@@ -66,7 +69,7 @@ SLOTS = {NATIVE_CLASS: {
     "name": Slot("written", "Names; <configuration> at offset 0, <configuration>_<offset>m otherwise, to the mm "
                             "('.' as 'p'); a spacing line's: <line>_geometry of the first line with its spacing, "
                             "offset and conductors; a coupled group's: <group>_geometry (H1)"),
-    "nconds": Slot("written", "the spacing's positions; a spacing line's: its phases' positions; a coupled group's: "
+    "nconds": Slot("written", "the configuration's positions; a spacing line's: its phases' positions; a coupled group's: "
                               "its lines' positions, a shared neutral once"),
     "nphases": Slot("written", "WireConfiguration.numberOfPhases, required; a spacing line's: its phases other "
                                "than N, a coupled group's: every line's; position kinds phase then neutral"),
@@ -77,12 +80,13 @@ SLOTS = {NATIVE_CLASS: {
     "emergamps": Slot("unset", "no rating on a WireConfiguration (D9); the Line carries its own"),
     "reduce": Slot("written", "y: the neutrals grounded at both ends, as the impedance getters assume (B4)"),
     "spacing": Slot("not mapped", "positions are written inline (B2)"),
-    "wires": Slot("written", "get_configuration_wires, or a spacing line's get_line_phase_wires, by sequence "
-                             "number; any of the three catalogs"),
+    "wires": Slot("written", "get_configuration_wires, or a spacing line's get_line_phase_wires (line_wires), "
+                             "by sequence number; any of the three catalogs"),
     "cncable": Slot("not mapped", _BLOCKS), "tscable": Slot("not mapped", _BLOCKS),
     "cncables": Slot("not mapped", "wires carries every kind (the writer names each block's kind)"),
     "tscables": Slot("not mapped", "wires carries every kind (the writer names each block's kind)"),
-    "xs": Slot("written", "get_line_conductor_xy x (m); an unused configuration: get_spacing_xy"),
+    "xs": Slot("written", "get_line_conductor_xy x (m); an unused configuration: get_spacing_xy on its "
+                          "WireSequenceConfigurations' sequence numbers"),
     "hs": Slot("written", "get_line_conductor_xy y, above ground (m); a plain CableInfo's abs(y) (B7)"),
     "Seasons": Slot("unset", _NOT_IN_CIM), "Ratings": Slot("unset", _NOT_IN_CIM),
     "LineType": Slot("unset", _NOT_IN_CIM),
@@ -108,6 +112,25 @@ def is_spacing_line(line: cim.ACLineSegment) -> bool:
     return line.WireConfiguration is None and line.WireSpacing is not None
 
 
+def line_wires(line: cim.ACLineSegment) -> dict[int, cim.WireInfo]:
+    """Sequence number -> WireInfo: a line with geometry's from its WireConfiguration, a spacing line's from its
+    ACLineSegmentPhases."""
+    configuration = get_line_geometry(line)
+    if configuration is not None:
+        return dict(get_configuration_wires(configuration))
+    return dict(get_line_phase_wires(line))
+
+
+def line_rho(line: cim.ACLineSegment, network) -> float | None:
+    """The earth resistivity (ohm-m) of a line with geometry: its WireConfiguration's EarthResistivity, None when it
+    names none (DSS's default); a spacing line's the network's one (``get_network_earth``)."""
+    configuration = get_line_geometry(line)
+    if configuration is None:
+        return get_network_earth(network).rho
+    earth = get_earth_resistivity(configuration)
+    return None if earth is None else earth.rho
+
+
 def spacing_geometry_owners(context) -> dict[cim.ACLineSegment, cim.ACLineSegment]:
     """Each spacing line written on its own positions -> the first such line with its spacing, offset and
     conductors, which names their geometry. A coupled line is one only for its remainder (H4)."""
@@ -128,7 +151,8 @@ def spacing_geometry_name(owner, names: Names) -> str:
 def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
     """Each MultiCircuitGroup with two or more lines in the network at its highest nominal voltage -> those lines,
     coupled (H1). The group's lines at another voltage (an underbuilt secondary) stay on their own positions (H5).
-    The coupled lines must be spacing lines on one spacing at one offset. A position several of them name is one
+    The coupled lines must be spacing lines or lines with geometry, either kind, on one spacing at one offset over
+    one earth, each with a wire on each of its phases' positions. A position several of them name is one
     conductor and must be a neutral on each (H6); a phase position on several (series pieces of one circuit) leaves
     the group uncoupled, with a warning (H7). ``cim_to_dss`` calls it once, for ``ExportContext.coupled``."""
     members = {}
@@ -143,12 +167,22 @@ def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
         if len(lines) < 2:
             continue
         for line in lines:
-            if not is_spacing_line(line) or not get_line_phase_wires(line):
-                raise ValueError(f"{describe(line)}: one of {len(lines)} lines of {describe(group)}, but not a spacing "
-                                 f"line (a direct WireSpacing and a WireInfo on each phase); only those are coupled")
-        group_value(group, lines, "spacings", lambda line: line.WireSpacing.mRID)
+            if get_line_geometry(line) is None and not is_spacing_line(line):
+                raise ValueError(f"{describe(line)}: one of {len(lines)} lines of {describe(group)}, but has no "
+                                 f"geometry (a WireConfiguration naming a WireSpacing, or a direct WireSpacing); only "
+                                 f"lines with geometry are coupled")
+            wired = sorted(line_wires(line))
+            phased = sorted(phase.sequenceNumber for phase in line.ACLineSegmentPhases
+                            if phase.sequenceNumber is not None)
+            if wired != phased or len(phased) != len(line.ACLineSegmentPhases):
+                raise ValueError(f"{describe(line)} of {describe(group)}: wires on sequence numbers {wired}, "
+                                 f"ACLineSegmentPhases on {phased} of {len(line.ACLineSegmentPhases)}; a coupled "
+                                 f"line needs each phase on a sequence number with a wire")
+        group_value(group, lines, "spacings",
+                    lambda line: (line.WireSpacing or line.WireConfiguration.WireSpacing).mRID)
         group_value(group, lines, "ySpacingOffsets (m, to the mm)",
                     lambda line: round(line_offset(line), NAME_DECIMALS))
+        rho = group_value(group, lines, "earth resistivities (ohm-m)", lambda line: line_rho(line, network))
         shared = _shared_phase_positions(lines)
         if shared:
             LOGGER.warning("%s: %s name phase positions %s of one another; written uncoupled, on their own positions "
@@ -157,7 +191,7 @@ def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
         lengths = {line: round(required_qty(line, "length", UNIT), NAME_DECIMALS) for line in lines}
         length = min(lengths.values())
         remainders = {line: round(lengths[line] - length, NAME_DECIMALS) for line in lines if lengths[line] > length}
-        groups[group] = CoupledGroup(tuple(sorted(lines, key=_lowest_phase_number)), length, remainders)
+        groups[group] = CoupledGroup(tuple(sorted(lines, key=_lowest_phase_number)), length, remainders, rho)
     return groups
 
 
@@ -190,7 +224,9 @@ def export(context) -> list[schema.Linegeometry]:
                 if configuration.PerLengthImpedance is not None:
                     continue  # a template LineCode
                 raise ValueError(f"{describe(configuration)}: has neither a WireSpacing nor a PerLengthImpedance")
-            positions = get_spacing_xy(configuration.WireSpacing, UNIT)
+            wires = dict(get_configuration_wires(configuration))
+            positions = tuple(position for position in get_spacing_xy(configuration.WireSpacing, UNIT)
+                              if position.sequence_number in wires)
             records.append(_geometry(configuration, 0.0, positions, context.names))
     for owner in dict.fromkeys(spacing_geometry_owners(context).values()):
         records.append(_spacing_geometry(owner, context.names))
@@ -249,7 +285,7 @@ def _coupled_geometry(group: cim.MultiCircuitGroup, lines: tuple[cim.ACLineSegme
     MultiCircuitGroup, it must be its line's."""
     conductors = {}  # sequence number -> (position, wire, is it a neutral)
     for line in lines:
-        wires = dict(get_line_phase_wires(line))
+        wires = line_wires(line)
         phases = {phase.sequenceNumber: phase for phase in line.ACLineSegmentPhases}
         for position in get_line_conductor_xy(line, UNIT):
             number, phase = position.sequence_number, phases[position.sequence_number]

@@ -44,7 +44,7 @@ _CONNECTION = "PowerElectronicsConnection"
 _NOT_MAPPED = "raises when set: no deck sets it, so a mapping waits for one"
 
 #: GridLAB-D's ``inverter::create()``/``init()`` values for the slots each unit's path reads (``inverter.cpp:433-600``,
-#: ``:1342``, ``:1398``: an unset or 0 ``inverter_efficiency`` is 0.9).
+#: ``:1342``, ``:1398``: an unset, 0 or negative ``inverter_efficiency`` is 0.9).
 DEFAULTS = {"four_quadrant_control_mode": "CONSTANT_PF", "generator_status": "ONLINE"}
 PATH_DEFAULTS = {schema.Solar: {**DEFAULTS, "inverter_efficiency": 0.9, "power_factor": 1.0},
                  schema.Battery: {**DEFAULTS, "P_Out": 0.0, "Q_Out": 0.0, "soc_reserve": 0.0}}
@@ -105,8 +105,8 @@ FIELDS = _classify(NATIVE_CLASS, {
     "rated_power": Field("derived", note="ratedS = rated_power x phases out (3, 2, 1; S is 1, inverter.cpp:1318); "
                                          "maxQ = -minQ = apparentPowerMaximum = ratedS; unset or 0 raises "
                                          "(GridLAB-D's silent 25 kVA, :1409)"),
-    "inverter_efficiency": Field("derived", note="PV: AC = DC x inverter_efficiency (inverter.cpp:3290); default 0.9 "
-                                                 "(:1398); CIM has no inverter efficiency"),
+    "inverter_efficiency": Field("derived", note="PV: AC = DC x inverter_efficiency (inverter.cpp:3290); unset, 0 "
+                                                 "or negative is 0.9 (:1398); CIM has no inverter efficiency"),
     "P_Out": Field("derived", note="battery: the CONSTANT_PQ set point (S4b-2); PV: an output GridLAB-D overwrites "
                                    "(inverter.cpp:3879), listed in the row comment"),
     "Q_Out": Field("derived", note="CONSTANT_PQ: q = 0 when unset or 0; any other value raises (S4b-3)"),
@@ -383,10 +383,15 @@ def _inverter(model: GlmModel, inverter, roots: dict[str, str], buses: dict[str,
         unit, unit_defaulted = fill_defaults(SOLAR_FIELDS, unit, _solar_defaults(unit))
         check_solar(model, unit)
         output = pv_output(model, unit)
-        generation = min(output.dc * float(inverter.inverter_efficiency), rated_s) if online else 0.0
-        notes.append(f"P_Out as written (GridLAB-D recomputes it, S4b-2): {cell(inverter.P_Out)} "
-                     f"{model.unit(inverter, 'P_Out')}; GridLAB-D's: DC {cell(round(output.dc, 3))} W at Tmodule "
-                     f"{cell(round(output.module_f, 3))} degF")
+        efficiency = float(inverter.inverter_efficiency)
+        if efficiency <= 0:
+            efficiency = PATH_DEFAULTS[schema.Solar]["inverter_efficiency"]
+            notes.append(f"inverter_efficiency {cell(inverter.inverter_efficiency)} is GridLAB-D's {cell(efficiency)} "
+                         "(inverter.cpp:1398)")
+        generation = min(output.dc * efficiency, rated_s) if online else 0.0
+        written = "unset" if inverter.P_Out is None else f"{cell(inverter.P_Out)} {model.unit(inverter, 'P_Out')}"
+        notes.append(f"P_Out as written (GridLAB-D recomputes it, S4b-2): {written}; GridLAB-D's: DC "
+                     f"{cell(round(output.dc, 3))} W at Tmodule {cell(round(output.module_f, 3))} degF")
     else:
         unit, unit_defaulted = fill_defaults(BATTERY_FIELDS, unit, BATTERY_DEFAULTS)
         check_battery(unit)

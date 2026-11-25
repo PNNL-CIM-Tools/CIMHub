@@ -22,7 +22,7 @@ classes:
     description: >-
       A Reactor object in OpenDSS representing a series or shunt impedance branch.
       Two-terminal reactors (bus1 + bus2) are mapped to CIM SeriesCompensator.
-      Single-terminal (shunt) reactors are not currently supported and are skipped.
+      A single-terminal (shunt) reactor raises on import.
     class_uri: dss:Reactor
     close_mappings:
       - cim:SeriesCompensator
@@ -63,8 +63,7 @@ classes:
       # (2) bus2
       bus2:
         description: >-
-          Name of 2nd bus. If absent, this is a single-terminal shunt reactor
-          (not currently supported by the converter).
+          Name of 2nd bus. If absent, this is a single-terminal shunt reactor.
         range: string
         required: false
         annotations:
@@ -236,8 +235,6 @@ classes:
           - >-
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
             for one. Export: not written, R and X carry the impedance; r0/x0 other than r/x raise.
-        todos:
-          - "Converter does not currently consume Z1 as an R/X source; would need to be added to the import fallback chain to roundtrip models that only set Z1."
 
       # (14) Z2
       Z2:
@@ -266,8 +263,6 @@ classes:
           - >-
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
             for one. Export: not written, R and X carry the impedance; r0/x0 other than r/x raise.
-        todos:
-          - "Converter does not read Z0; wiring it in would let r0/x0 reflect the DSS zero-sequence input instead of defaulting to r/x."
 
       # (16) Z
       Z:
@@ -282,8 +277,6 @@ classes:
           - >-
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
             for one. Export: not written, R and X carry the impedance; r0/x0 other than r/x raise.
-        todos:
-          - "Converter does not currently consume Z as an R/X source; would need to be added to the import fallback chain to roundtrip models that only set Z."
 
       # (17) RCurve
       RCurve:
@@ -326,8 +319,6 @@ classes:
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
             for one (X from an inductance). Export: not written, R and X carry the impedance; r0/x0
             other than r/x raise.
-        todos:
-          - "Converter does not currently consume LmH as an X source; would need to be added to the import fallback chain to roundtrip models that only set LmH."
 
       # (20) normamps
       normamps:
@@ -344,8 +335,6 @@ classes:
             Import: structural; instance OperationalLimitSet rx_<name>_limits: CurrentLimit _norm
             (olt_normal); nothing from the engine's kvar-derived default. Export: get_current_limits
             normal (A); unset -> not written.
-        todos:
-          - "Converter not yet implemented. Should map to a CurrentLimit (limitType=normalOperating) on an OperationalLimitSet for this equipment."
 
       # (21) emergamps
       emergamps:
@@ -361,8 +350,6 @@ classes:
           - >-
             Import: structural; CurrentLimit _emerg (olt_emergency) in rx_<name>_limits. Export:
             get_current_limits emergency (A); unset -> not written.
-        todos:
-          - "Converter not yet implemented. Should map to a CurrentLimit (limitType=emergency) on the OperationalLimitSet."
 
       # (22) faultrate
       faultrate:

@@ -44,7 +44,8 @@ with no schedule.
 | `glm_to_cim(model, *, name, ..., time_points=None)` | Builds a `GlmImporter` and calls `to_cim`. |
 
 The model's name must not equal a part's name: the master and the parts are written as `<name>.cimtbl` and
-`<part>.cimtbl` in one directory, and core raises `document names repeat` for a model called `bus` or `series_reactor`.
+`<part>.cimtbl` in one directory. `GlmImporter` raises a `ValueError` when it is made with a name in `PART_NAMES`
+(`bus`, `source`, `zip_fractions` and every part `MAPPING_ORDER` writes), whether or not the model holds that part.
 
 ### The time points step
 

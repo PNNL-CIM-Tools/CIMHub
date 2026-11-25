@@ -121,9 +121,10 @@ The rules a mapper keeps:
 
 - Values are copied verbatim with the deck's unit in the column header: `Column("r", "ohm/km")`, cell text from
   `cell(value)`. A quantity CIM has no attribute for goes through a named function and is marked `derived` in
-  `FIELDS` and in a table comment. Where the code still converts a unit itself (`vsource.mvasc_from_isc`,
-  `line.inline_code`, and the `cim.ReactivePower` and `cim.Voltage` values in `capacitor.py`, `generator.py` and
-  `capcontrol.py`), a change should move the value into a column header or a named function.
+  `FIELDS` and in a table comment. A formula keeps its units with its values, as
+  `cimhub_core.derived.capacitance` does, and the header names the result's unit: kVAr / kV² is `bPerSection (mS)`,
+  kV² / kVA is `r (kohm)`. A plain-float target (`RegulatingControl.targetValue`) in kvar or kV carries
+  `targetValueUnitMultiplier=k`. No mapper multiplies by 1000 or builds a `cim.X` value.
 - An unset property the mapper needs is a `defaulted:` comment or a raise; never a guess.
 - A property the mapping does not cover raises when the deck sets it (`not mapped yet (no deck in the sweep sets
   them)`). When a deck needs it, the spec gains the mapping first.

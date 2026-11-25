@@ -1,5 +1,5 @@
-# Shape: equipment coordinates (a DSS BusCoords/LatLongCoords file, a GLM node's latitude/longitude, a CYME
-# section's polyline), drawn as a GIS draws them. Each ConductingEquipment gets one Location through the wkt
+# Shape: equipment coordinates (a DSS BusCoords/LatLongCoords file, a GLM node's latitude/longitude, a GIS
+# line's polyline), drawn as a GIS draws them. Each ConductingEquipment gets one Location through the wkt
 # column: a line is a LINESTRING from its first Terminal's bus to its last; any other equipment is one POINT, at
 # its bus for one Terminal and at its buses' centroid for more (a switch or transformer midway). cimtables makes
 # the Location (<mRID>_loc) and a PositionPoint per vertex; the Location takes the CoordinateSystem declared

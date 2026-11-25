@@ -92,6 +92,13 @@ def test_children_on_other_conductors_raise():
         get_phase_loads(load)
 
 
+@pytest.mark.parametrize("units", [("kW", "kW"), ("kVAr", "kVAr"), ("kVAr", "kW")])
+def test_power_units_of_the_wrong_kind_raise(units):
+    """pint converts W and VAr into each other (the `imaginary` unit is dimensionless), so it cannot catch a swap."""
+    with pytest.raises(ValueError, match=rf"active unit {units[0]!r} and reactive unit {units[1]!r}"):
+        get_phase_loads(_load("ld_y1"), *units)
+
+
 def test_unset_p_raises():
     load = _load("ld_y1")
     load.p = None

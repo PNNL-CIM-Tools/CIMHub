@@ -147,8 +147,10 @@ Table EnergySource: mRID, name, node, phases, nominalVoltage (kV), voltageMagnit
      A slot left unset takes its DSS default (`MVAsc3` 2000, `MVAsc1` 2100, `x1r1` 4, `x0r0` 3) under
      `# defaulted`. A Vsource that sets no group takes all four defaults, as the engine does. LineCode raises in
      that case instead, but a bare `New Circuit.x basekv=12.47` is the documented minimal deck.
-  3. **`Isc3 Isc1`** (amps): converted to group 2 (MVAsc3 = √3·kV·Isc3 / 1000, MVAsc1 = f·kV·Isc1 / 1000, with
-     f = √3 on 3 phases and 1 on 1 phase), then as group 2.
+  3. **`Isc3 Isc1`** (amps): the short-circuit power, √3·kV·Isc3 and f·kV·Isc1 (f = √3 on 3 phases and 1 on
+     1 phase; `vsource.kvasc_from_isc`), then as group 2. kV times A is kVA, and kV² / kVA is kohm, so these rows
+     go in their own table with `r (kohm)`, `x (kohm)`, `r0 (kohm)`, `x0 (kohm)`: the units travel with the values
+     and no factor appears.
   - Checked against the engine (`opendssdirect`, 9 digits): IEEE13's MVAsc, all defaults, `MVAsc3` alone, `Isc`, and
     a 1-phase source.
   - `Z1 Z0 Z2 puZ1 puZ0 puZ2 baseMVA` raise when set: no deck in the sweep uses them, so a mapping waits for one.
@@ -309,7 +311,9 @@ IEEE9500 wires give one (km/cm/cm). An unset selector raises; every wire in the 
 so the wire row names its set and the set is written first). The set has two `CurrentLimit`s:
 - `<mRID>_norm` = normamps on `olt_normal`;
 - `<mRID>_emerg` = emergamps on `olt_emergency`. An unset emergamps is 1.5 × normamps, the engine's rule
-  (`wire_ratings`, `# defaulted: emergamps = 1.5 x normamps`).
+  (`wire_ratings`, `# defaulted: emergamps = 1.5 x normamps`). An unset normamps with emergamps set is
+  emergamps / 1.5, also the engine's, written to `ratedCurrent` and `<mRID>_norm` (`# defaulted: normamps =
+  emergamps / 1.5`).
 
 The two limit types are the master's. An unrated wire gets no set (DSS's 400/600 A defaults are not written).
 `Seasons`/`Ratings` raise when set, as on a Line. The line mapper uses the same `wire_ratings` for a geometry
@@ -349,7 +353,7 @@ CNData / TSData), including the filled Rac and the normal and emergency ratings,
 | `GMRunits` | `Optional[str]` | `in`, `cm`, `ft` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` | `0.40132`, `0.39624`, `0.37084` | copied | `OverheadWireInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `230.0`, `340.0`, `730.0` | copied | `OverheadWireInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `normamps` | `Optional[float]` | `230.0`, `340.0`, `730.0` | copied | `OverheadWireInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset with emergamps set: emergamps / 1.5 (wire_ratings, the engine's rule), defaulted |
 | `emergamps` | `Optional[float]` | `200.0`, `239.0`, `172.0` | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.398`, `0.563`, `0.927` | derived | radius = diam / 2 (radius_from_diameter) |
 | `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
@@ -376,7 +380,7 @@ CNData / TSData), including the filled Rac and the normal and emergency ratings,
 | `GMRunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of GMRac, GmrStrand in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` |  | copied | `ConcentricNeutralCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in`, `cm` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `260.0` | copied | `ConcentricNeutralCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `normamps` | `Optional[float]` | `260.0` | copied | `ConcentricNeutralCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset with emergamps set: emergamps / 1.5 (wire_ratings, the engine's rule), defaulted |
 | `emergamps` | `Optional[float]` |  | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.567`, `0.935` | derived | radius = diam / 2 (radius_from_diameter) |
 | `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
@@ -401,7 +405,7 @@ CNData / TSData), including the filled Rac and the normal and emergency ratings,
 | `GMRunits` | `Optional[str]` | `in` | mapped | the unit of GMRac in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
 | `radius` | `Optional[float]` |  | copied | `TapeShieldCableInfo.radius` ({radius_length}); one of radius and diam; both raise (DSS keeps the last, the reader does not record which), neither raises |
 | `radunits` | `Optional[str]` | `in` | mapped | the unit of radius, diam and every cable dimension in the header (LENGTH_UNIT); unset raises (every wire in the sweep sets it) |
-| `normamps` | `Optional[float]` | `165.0` | copied | `TapeShieldCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet) |
+| `normamps` | `Optional[float]` | `165.0` | copied | `TapeShieldCableInfo.ratedCurrent` (A); also the normal CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset with emergamps set: emergamps / 1.5 (wire_ratings, the engine's rule), defaulted |
 | `emergamps` | `Optional[float]` |  | structural | the emergency CurrentLimit of the wire's OperationalLimitSet <mRID>_limits (AssetInfo.OperationalLimitSet); unset: 1.5 x normamps (wire_ratings, the engine's rule), defaulted |
 | `diam` | `Optional[float]` | `0.368` | derived | radius = diam / 2 (radius_from_diameter) |
 | `Seasons` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an indexed rating array that names no calendar season; home OperationalLimitType.season) |
@@ -722,7 +726,9 @@ the neutral on 0.
 - two windings on one bus that are not a split-phase secondary;
 - a bus missing from the topology result;
 - `RdcOhms` on some windings only (the reader), on a 3-phase transformer by balanced ends, or on a regulator;
-- `Seasons` without `Ratings`, or a `Ratings` count other than `Seasons`.
+- `Seasons` without `Ratings`, or a `Ratings` count other than `Seasons`;
+- `Rneut` >= 0 on a 1-phase transformer (a coil's neutral impedance has no row yet), as on a 1-phase XfmrCode;
+- `Rneut`/`Xneut` on a second winding (the reader: the schema holds one winding's).
 
 **DC resistance and seasonal ratings (2026-11-24).** Atom `tests/atoms/transformer/rated.dss` (the EPRI J1
 service with each winding's `RdcOhms` and `Seasons=2 Ratings=[44 52]`), golden `rated.cimtbl`,
@@ -756,7 +762,7 @@ service with each winding's `RdcOhms` and `Seasons=2 Ratings=[44 52]`), golden `
 | `kVA` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises |
 | `tap` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises |
 | `pct_R` | `Optional[float]` |  | structural | the active-winding form; the reader folds wdg= blocks into the arrays, and a bare value raises |
-| `Rneut` | `Optional[float]` | `0.0` | structural | rground (ohm) of its winding's end when >= 0; negative = no impedance |
+| `Rneut` | `Optional[float]` | `0.0` | structural | rground (ohm) of its winding's end when >= 0; negative = no impedance; >= 0 on a 1-phase transformer raises |
 | `Xneut` | `Optional[float]` | `0.4` | structural | xground (ohm) of its winding's end, with Rneut >= 0 |
 | `buses` | `Union[str, list[str], NoneType]` | `['BRKR.1', 'RG60.1']`, `['BRKR.2', 'RG60.2']`, `['BRKR.3', 'RG60.3']` | structural | end node and terminal phases; one end per distinct bus |
 | `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='delta', descrip...`, `[ConnectionType(text='wye', descripti...` | structural | connectionKind, grounded, default nodes; default wye |
@@ -851,13 +857,18 @@ S3b maps it by template.
 **Engine rules found in S3** (each pinned with a probe and kept in a test):
 - **Ratings.** A line copies each of `normamps`/`emergamps` it leaves unset from its LineCode, or from its
   LineGeometry. A geometry rating left unset is its first conductor's. A wire with `normamps` and no `emergamps` is
-  rated 1.5 × normamps. A spacing + wires line takes its first wire's.
+  rated 1.5 × normamps, and one with `emergamps` and no `normamps` has normamps = emergamps / 1.5. A spacing +
+  wires line takes its first wire's.
 - **Default C.** A matrix LineCode without `cmatrix` keeps the engine's default C matrix: self (2 C1 + C0)/3 and
   mutual (C0 − C1)/3 from C1 = 3.4, C0 = 1.6 nF per unit length, on any number of phases
   (`cimhub_core.derived.sequence.balanced_matrix`). IEEE13_original's codes are this case (an amendment to the S2
   LineCode mapper; the row says `# defaulted: cmatrix from C1=3.4, C0=1.6`).
 - **Inline defaults.** A sequence line leaves some of r1, x1, r0, x0, C1, C0 unset; they take the DSS defaults.
-  r and x stay per unit length as they are. C1 and C0 are kept per kft and converted to the line's `units`.
+  r and x stay per unit length as they are. The engine keeps C1 and C0 per kft whatever the line's `units`, so a
+  line with `units` writes them as given, in `bch (nS/kft)`/`b0ch (nS/kft)` (or `b (nS/kft)` on a 1- or 2-phase
+  line) beside its `r (ohm/<units>)`. A line with no `units` has no length to be per, and its defaults go in its
+  gated unit. A line that sets one of C1/C0 (of those it uses: a 1-phase line uses C1 only) and leaves the other to
+  the per-kft default, in units other than kft, raises: its C would be in two length units.
 - **Unitless geometry line.** Its length is in metres.
 
 **Reader fixes in S3** (§3.4 of the plan; each checked against the engine):
@@ -894,7 +905,7 @@ Artifact `line.cimtbl`; shapes `line_by_impedance`, `line_by_wire_configuration`
 - otherwise (a `SwtControl`, or no control) it is a `LoadBreakSwitch`.
 
 What raises: a Fuse or Recloser on a line without `Switch=y`; two controls of different classes on one line; a
-control whose line no `New` defines. In the sweep, every Fuse and Recloser switches the line it monitors.
+control or an `Open` command whose line no `New` defines, also in a deck with no Line at all. In the sweep, every Fuse and Recloser switches the line it monitors.
 
 **Switch state.**
 - `open`: an `Open` command on either terminal (`Options.open_terminals`), or a SwtControl with `State=Open`.
@@ -1285,7 +1296,8 @@ delta bank, and a bank whose `states=[0]`. The same atom carries the CapControls
 **One section.**
 - `nomQ` = kvar (the total over the phases) and `nomU` = kv, as rated. K1's `10548920-1` is 13.8 kV on a 13.2 kV
   bus, and that stays.
-- `bPerSection` (S) = nomQ / nomU² (`b_per_section`, through pint). Every CIM consumer reads b.
+- `bPerSection (mS)` = nomQ / nomU² (`b_per_section`): kVAr over kV² is mS, so no factor appears. Every CIM
+  consumer reads b.
 - `maximumSections=1`. `sections` = `normalSections` = the steps `states` closes (M1's Cap1 and Cap2 are 0), as a
   switch's `normalOpen` follows `open` when nothing else is given.
 
@@ -1306,7 +1318,7 @@ its own, and `rc_<name>` is the RegControl precedent (S4-8).
 
 **Rows.**
 - `RegulatingControl` with `discrete=true`, `enabled`, `mode`, `monitoredPhase`, `ptRatio`, `ctRatio`,
-  `targetValue`, `targetDeadband`.
+  `targetValue`, `targetDeadband`, and `targetValueUnitMultiplier=k` on a kvar control.
   - `Terminal` = `ln_<line>_T<terminal>` or `cap_<capacitor>_T<terminal>`. Any other element raises.
   - `monitoredPhase` is the phase of the monitored terminal's conductor `PTPhase` (EPRI's rule).
 - Then `Update LinearShuntCompensator: mRID=cap_<capacitor>, RegulatingControl=cc_<name>, aVRDelay (s)=<Delay>,
@@ -1318,7 +1330,7 @@ its own, and `rc_<name>` is the RegControl precedent (S4-8).
   units by mode:
   - voltage: × PTratio, in V;
   - current: × CTratio, in A;
-  - kvar: in var, converted through pint;
+  - kvar: in kvar, as the deck gives it, with `targetValueUnitMultiplier=k` (the core getter reads it in var);
   - time: hours from midnight.
 - The type fixes which side ON is on: below OFF for voltage and time, above it for kvar and current. A control with
   ON on the wrong side raises, so the exporter can invert the pair without a sign (EPRI writes a negative deadband
@@ -1326,7 +1338,7 @@ its own, and `rc_<name>` is the RegControl precedent (S4-8).
 
 | control | ON / OFF | ratio | targetValue | targetDeadband |
 |---|---|---|---|---|
-| IEEE8500 `CAPBank0A_Ctrl` (kvar) | 200 / −300 kvar | — | −50,000 var | 500,000 var |
+| IEEE8500 `CAPBank0A_Ctrl` (kvar) | 200 / −300 kvar | — | −50 kvar (k) | 500 kvar (k) |
 | IEEE13_Assets `Cap2` (voltage) | 115 / 125 V | PT 20 | 2,400 V | 200 V |
 | IEEE13_OCHRE `CAP1_ctrl` (voltage, own terminal) | 1,950 / 2,500 V | PT 1 | 2,225 V | 550 V |
 | IEEE13_Assets `Cap1` (time) | 8 / 19 h | — | 13.5 h | 11 h |
@@ -1420,7 +1432,7 @@ On the atoms and the engine decks, as in S3:
 | `bus2` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an ungrounded wye or a series capacitor) |
 | `phases` | `Optional[int]` | `3`, `1` | structural | the conductor count; default 3 |
 | `kvar` | `Union[float, list[float], NoneType]` | `[600.0]`, `[100.0]`, `[300.0]` | copied | `LinearShuntCompensator.nomQ` (kVAr); the total over the phases; more than one step raises; default 1200 |
-| `kv` | `Optional[float]` | `4.16`, `2.4`, `7.2` | copied | `LinearShuntCompensator.nomU` (kV); as rated (LN for 1-phase wye, else LL); also bPerSection (S) = nomQ / nomU^2 (b_per_section); default 12.47 |
+| `kv` | `Optional[float]` | `4.16`, `2.4`, `7.2` | copied | `LinearShuntCompensator.nomU` (kV); as rated (LN for 1-phase wye, else LL); also bPerSection (mS) = nomQ / nomU^2 (b_per_section); default 12.47 |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye` | mapped | `LinearShuntCompensator.phaseConnection`, `LinearShuntCompensator.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
 | `cmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a capacitance matrix instead of kvar) |
 | `cuf` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (microfarads instead of kvar) |
@@ -1449,8 +1461,8 @@ On the atoms and the engine decks, as in S3:
 | `type` | `Optional[str]` | `time`, `voltage`, `kvar` | mapped | `RegulatingControl.mode`; voltage -> voltage, current -> currentFlow, kvar -> reactivePower, time -> timeScheduled (a unique prefix, as the engine reads it: J1's volt); PF and Follow raise; default current |
 | `PTratio` | `Optional[float]` | `20.0`, `1.0`, `60.0` | copied | `RegulatingControl.ptRatio`; default 60 |
 | `CTratio` | `Optional[float]` | `1.0` | copied | `RegulatingControl.ctRatio`; default 60 |
-| `ONsetting` | `Optional[float]` | `8.0`, `115.0`, `150.0` | derived | targetValue = (ON + OFF) / 2 (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours; ON on the wrong side of OFF for the type raises; default 300 |
-| `OFFsetting` | `Optional[float]` | `19.0`, `125.0`, `-225.0` | derived | targetDeadband = abs(OFF - ON) (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours; default 200 |
+| `ONsetting` | `Optional[float]` | `8.0`, `115.0`, `150.0` | derived | targetValue = (ON + OFF) / 2 (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in kvar (targetValueUnitMultiplier k), time in hours; ON on the wrong side of OFF for the type raises; default 300 |
+| `OFFsetting` | `Optional[float]` | `19.0`, `125.0`, `-225.0` | derived | targetDeadband = abs(OFF - ON) (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in kvar (targetValueUnitMultiplier k), time in hours; default 200 |
 | `Delay` | `Optional[float]` | `100.0`, `101.0`, `102.0` | copied | `LinearShuntCompensator.aVRDelay` (s); on the Update row; default 15 |
 | `VoltOverride` | `Union[bool, Bool, NoneType]` | `True`, `False` | untranscribed | a voltage override band of a kvar/current control; no home (maxAllowedTargetValue limits the target, not the voltage) |
 | `Vmax` | `Optional[float]` | `7740.0`, `126.0` | untranscribed | the VoltOverride band (V on the PT secondary) |
@@ -1605,7 +1617,9 @@ Census of the 31 sweep decks, 2026-11-08 (30 read; the balanced ieee9500_2025 co
     %Charge/%Discharge 100, %EffCharge/%EffDischarge 90, %IdlingkW 1, pf 1, wye.
 - **Generator.**
   - q comes from `pf` or `kvar`, and the two override each other in order.
-  - Defaults: kW 1000, pf 0.88, kV 12.47, model 1, Vpu 1, kVA 1.2 × kW, Maxkvar = 2 × kvar, Minkvar = −Maxkvar.
+  - Defaults: kW 1000, pf 0.88, kV 12.47, model 1, Vpu 1, kVA 1.2 × kW, Maxkvar = 2 × kvar, Minkvar = −2 × kvar.
+    Each kW, pf or kvar assignment resets Maxkvar and Minkvar to ±2 × kvar, so a Maxkvar or Minkvar holds only when
+    assigned after the last of them (engine-checked 2026-11-24).
   - Model 3 regulates its terminal to Vpu within Maxkvar/Minkvar. Model 7 dispatches as model 1.
 - **2-phase PV at 0.24 kV on 120 V legs** (ieee9500_2025): the engine's base is 0.24/√3 = 138.6 V. The legs sit at
   0.866 pu, below Vminpu, so it gives 92.8 % of Pmpp. At 0.208 kV it gives 100 %. This is a power-flow result, not a
@@ -1708,7 +1722,8 @@ Mapper `importer/cimtbl/generator.py` (`map_generator`). Artifact `generator.cim
 Atom `tests/atoms/generator/gens.dss`:
 - models 1, 3 and 7; wye and delta;
 - q from pf, from kvar, and from the default 0.88;
-- `kW=0 pf=0.98 kvar=0`; and a 1-phase machine.
+- `kW=0 pf=0.98 kvar=0`; and a 1-phase machine;
+- model 3 with Maxkvar alone (`capped`), and with Maxkvar and Minkvar before a kW edit (`reset`).
 
 **Identity.** `SynchronousMachine` `gen_` + name. A model 3 control is `gen_<name>_ctrl`: the machine has no
 control of its own name, as the shape's `<cap>_ctrl` had.
@@ -1722,10 +1737,11 @@ control of its own name, as the shape's `<cap>_ctrl` had.
 - `normallyInService`, `BaseVoltage`, `EquipmentContainer`.
 
 **Model 3 (PV bus):**
-- `maxQ` = Maxkvar and `minQ` = Minkvar (default ±2 × kvar);
+- `maxQ` = Maxkvar and `minQ` = Minkvar (default ±2 × kvar, reset by each kW, pf or kvar assignment:
+  `reactive_limits`);
 - a `RegulatingControl` `gen_<name>_ctrl`:
   - `mode=voltage`, `discrete=false`, `enabled=true`;
-  - `targetValue` = Vpu × ratedU (V), `targetDeadband=0`;
+  - `targetValue` = Vpu × ratedU in kV with `targetValueUnitMultiplier=k`, `targetDeadband=0`;
   - `Terminal=gen_<name>_T1`;
 - then `Update SynchronousMachine: mRID, RegulatingControl, controlEnabled=true`. This is S4a's own-terminal form
   (U3).
@@ -1945,9 +1961,9 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `SynchronousMachine.earthing`; wye -> earthing true, delta -> false (no phaseConnection on a machine, S4b-5); default wye |
 | `status` | `Union[str, ForwardRef('GenStatus'), NoneType]` |  | untranscribed | Fixed/Variable: whether load multipliers scale it; a dispatch setting of time-series solutions; a snapshot does not use it; with a yearly shape, Fixed raises |
 | `gen_class` | `Optional[int]` |  | untranscribed | a DSS report grouping |
-| `Vpu` | `Optional[float]` | `1.0` | derived | model 3: the control's targetValue (V) = Vpu x ratedU; default 1 |
-| `maxkvar` | `Optional[float]` |  | copied | `SynchronousMachine.maxQ` (kVAr); model 3 only (another model raises); default 2 x kvar |
-| `minkvar` | `Optional[float]` |  | copied | `SynchronousMachine.minQ` (kVAr); model 3 only (another model raises); default -2 x kvar |
+| `Vpu` | `Optional[float]` | `1.0` | derived | model 3: the control's targetValue = Vpu x ratedU in kV (targetValueUnitMultiplier k); default 1 |
+| `maxkvar` | `Optional[float]` |  | copied | `SynchronousMachine.maxQ` (kVAr); model 3 only (another model raises); default 2 x kvar (reactive_limits) |
+| `minkvar` | `Optional[float]` |  | copied | `SynchronousMachine.minQ` (kVAr); model 3 only (another model raises); default -2 x kvar (reactive_limits) |
 | `pvfactor` | `Optional[float]` |  | untranscribed | a convergence aid of the engine's model 3 |
 | `forceon` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dispatch setting of time-series solutions; a snapshot does not use it |
 | `kVA` | `Optional[float]` | `737.0`, `775.0`, `125.0` | copied | `SynchronousMachine.ratedS` (kVA); default 1.2 x kW |

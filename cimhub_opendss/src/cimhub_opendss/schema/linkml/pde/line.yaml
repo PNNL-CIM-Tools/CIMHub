@@ -163,8 +163,6 @@ classes:
             line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
             the line's own code (isTemplate=false) as a LineCode writes it; lumped: the whole-line
             value / km.
-        todos:
-          - "Converter bug: DSS r1 is documented as ohms per unit length, but the direct-impedance path (no linecode) stores it as total ohms without multiplying by length. Roundtrips correctly within this converter, but a line authored elsewhere with a true per-length r1 and length != 1 would import with the wrong total resistance."
 
       # (7) x1
       x1:
@@ -532,8 +530,6 @@ classes:
             Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
             line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
             not written, C1/C0 carries the susceptance.
-        todos:
-          - "B1 input path not yet implemented. B1 (µS/unit) → bch via bch = B1 × 1e-6 × length. When present, should take precedence over C1 for bch calculation."
 
       # (27) B0
       B0:
@@ -550,8 +546,6 @@ classes:
             Import: the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in
             line.cimtbl, per-length values in the line's units; untranscribed on a switch. Export:
             not written, C1/C0 carries the susceptance.
-        todos:
-          - "B0 input path not yet implemented. B0 (µS/unit) → b0ch via b0ch = B0 × 1e-6 × length."
 
       # (28) Seasons
       Seasons:
@@ -585,8 +579,6 @@ classes:
             Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
             for one (with Seasons). Export: not written, not in CIM (untranscribed or raising on
             import).
-        todos:
-          - "Seasonal ratings converter not yet implemented. Ratings array should map to multiple CurrentLimit objects on an OperationalLimitSet, one per season."
 
       # (30) LineType
       LineType:
@@ -763,8 +755,6 @@ classes:
             Import: structural; the line's own impedance's calculatedFrequency and the frequency of
             its b; unset: the deck's. Export: not written, Options.defaultbasefreq is the
             deck's.
-        todos:
-          - "Extract base frequency from circuit-level CIM attributes for non-60 Hz systems."
 
       # (41) enabled
       enabled:

@@ -42,6 +42,8 @@ from cimhub_gridlabd.glm_reader import GlmModel
 from cimhub_gridlabd.schema import gridlabd as schema
 
 BUS_CLASSES = (schema.Node, schema.TriplexNode)
+#: the bus classes that are only a bus, not a device on one
+PLAIN_BUS_CLASSES = (schema.Node, schema.Meter, schema.Substation, schema.TriplexNode, schema.TriplexMeter)
 BRANCH_CLASSES = (schema.OverheadLine, schema.UndergroundLine, schema.TriplexLine, schema.Switch, schema.Fuse,
                   schema.Recloser, schema.Sectionalizer, schema.SeriesReactor, schema.Regulator)
 SWITCHING_CLASSES = (schema.Switch, schema.Fuse, schema.Recloser, schema.Sectionalizer)
@@ -116,11 +118,33 @@ def glm_network(model: GlmModel) -> Network:
     )
 
 
+_WRITTEN = {"from_node": "from", "to": "to"}
+
+
 def _end(record, slot: str, roots: dict[str, str]) -> str:
     bus = getattr(record, slot)
     if bus not in roots:
-        raise ValueError(f"{record.class_name} {record.name}: {slot} {bus} is not a bus object")
+        raise ValueError(f"{record.class_name} {record.name}: {_WRITTEN[slot]} {bus} names no bus object")
     return roots[bus]
+
+
+def check_reached(model: GlmModel, roots: dict[str, str], reached) -> None:
+    """Raise on a link or a device on a bus the walk did not reach (``reached``): an island with no swing bus has no
+    voltage. A plain bus there (a ``node``, ``meter``, ...) with nothing on it is left out of the artifact."""
+    for cls in (*BRANCH_CLASSES, schema.Transformer):
+        for link in model.list_by_class(cls):
+            for slot, written in _WRITTEN.items():
+                bus = roots[getattr(link, slot)]
+                if bus not in reached:
+                    raise ValueError(f"{link.class_name} {link.name}: its {written} bus {bus} is on an island no swing "
+                                     "bus reaches, so it has no voltage")
+    devices = [(record, roots[str(record.name)]) for record in bus_records(model).values()
+               if type(record) not in PLAIN_BUS_CLASSES]  # a load or a capacitor is a bus object itself
+    devices += [(record, roots.get(str(record.parent))) for record in model.list_by_class(schema.Inverter)]
+    for record, bus in sorted(devices, key=lambda device: str(device[0].name)):
+        if bus is not None and bus not in reached:
+            raise ValueError(f"{record.class_name} {record.name}: its bus {bus} is on an island no swing bus reaches, "
+                             "so it has no voltage")
 
 
 def swing_buses(model: GlmModel) -> list:
@@ -156,9 +180,9 @@ def _branches(model: GlmModel, roots: dict[str, str]):
             switching = isinstance(record, SWITCHING_CLASSES)
             if is_open and not switching:
                 raise ValueError(f"{record.class_name} {record.name}: status OPEN on a device that is not a switch")
+            from_bus, to_bus = _end(record, "from_node", roots), _end(record, "to", roots)
             check_end_phases(model, record)
-            yield Branch(str(record.name), _end(record, "from_node", roots), _end(record, "to", roots),
-                         switch=switching, open=is_open)
+            yield Branch(str(record.name), from_bus, to_bus, switch=switching, open=is_open)
 
 
 def _transformer(model: GlmModel, xf, roots: dict[str, str]) -> Transformer:

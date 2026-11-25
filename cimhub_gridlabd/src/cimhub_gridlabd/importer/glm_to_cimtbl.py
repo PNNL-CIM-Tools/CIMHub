@@ -34,7 +34,8 @@ from cimhub_gridlabd.importer.cimtbl import (bus, capacitor, conductor, configur
                                             regulator, series_reactor, spacing, switch, transformer,
                                             transformer_configuration)
 from cimhub_gridlabd.importer.cimtbl.catalog import limit_types
-from cimhub_gridlabd.importer.topology import BRANCH_CLASSES, bus_roots, glm_network, service_buses, swing_buses
+from cimhub_gridlabd.importer.topology import (BRANCH_CLASSES, bus_roots, check_reached, glm_network, service_buses,
+                                               swing_buses)
 from cimhub_gridlabd.schema import gridlabd as schema
 
 #: The master's ``Authority`` unless the caller names another (plan D7).
@@ -67,7 +68,8 @@ MAPPING_ORDER: tuple[tuple[type | str, Callable[[GlmModel, Site], Document]], ..
       for native_class, _, _ in conductor.CATALOGS),
     (schema.LineSpacing, lambda model, site: spacing.map_line_spacing(model)),
     (schema.LineConfiguration, lambda model, site: configuration.map_line_configuration(model, site.base_frequency)),
-    (schema.TriplexLineConfiguration, lambda model, site: configuration.map_triplex_line_configuration(model)),
+    (schema.TriplexLineConfiguration, lambda model, site: configuration.map_triplex_line_configuration(
+        model, site.base_frequency)),
     (schema.TransformerConfiguration, lambda model, site: transformer_configuration.map_transformer_configuration(
         model, transformer_configuration.wirings(model, site.roots, site.buses))),
     *((native_class, lambda model, site, native_class=native_class:
@@ -88,6 +90,10 @@ MAPPING_ORDER: tuple[tuple[type | str, Callable[[GlmModel, Site], Document]], ..
     (schema.Capacitor, lambda model, site: capacitor.map_capacitors(model, site.roots, site.buses, site.feeder)),
     (schema.Inverter, lambda model, site: inverter.map_inverters(model, site.roots, site.buses, site.feeder)),
 )
+
+#: Every part's document name (one ``.cimtbl`` each); the master's must be none of them.
+PART_NAMES = frozenset({"bus", "source", zip_fractions().name,
+                        *(key if isinstance(key, str) else key.class_name for key, _ in MAPPING_ORDER)})
 
 #: Each mapped link class's mRID prefix (a regulator: ``regulator.unit_mrids``). Every link mapper puts its ``from``
 #: on terminal 1 and ``to`` on terminal 2.
@@ -124,6 +130,7 @@ def site(model: GlmModel, name: str, *, substation: str | None = None, feeder: s
     substation = name if substation is None else substation
     feeder = name if feeder is None else feeder
     buses, roots = walk(glm_network(model)), bus_roots(model)
+    check_reached(model, roots, buses)
     return Site(name, buses, roots, mrid("sub_", substation), mrid("fdr_", feeder), base_frequency(model)[0],
                 substation, feeder, service_buses(model, roots))
 
@@ -233,6 +240,9 @@ class GlmImporter(CimtblImporter):
 
     def __init__(self, name: str, *, authority: str = AUTHORITY, substation: str | None = None,
                  feeder: str | None = None, time_points: dict | None = None):
+        if name in PART_NAMES:
+            raise ValueError(f"model name {name!r} is the name of a part file ({name}.cimtbl); give the model another "
+                             "name")
         self.name = name
         self.authority = authority
         self.substation = substation

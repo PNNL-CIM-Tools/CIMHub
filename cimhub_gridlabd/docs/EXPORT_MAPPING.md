@@ -42,13 +42,15 @@ tables at the end of this file are the generated ones.
   namespace, a collision raises. GLM-origin models round-trip under `name_source="name"`.
 - **Buses:** a ConnectivityNode is a `node`, a `triplex_node` on a split-phase bus, the swing's a `substation`. Its
   system is read per voltage zone (`cimtopology.core.Topology.voltage_zones`): s1/s2 split phase (the service letter
-  from its centre taps' primary); the EnergySource, a polyphase transformer end, or one-phase ends on different phases
-  (a bank) three phase; one-phase ends on one phase single phase. `nominal_voltage` is the BaseVoltage over √3, as
-  is, or over 2. Phases: every terminal's A, B, C, then N (S for a triplex bus).
-- **The swing (X6):** one EnergySource, `bustype SWING`, `nominal_voltage` its nominalVoltage/√3 (the importer's
-  `line_voltage` inverted, so the deck's own figure comes back), `positive_sequence_voltage` voltageMagnitude/√3 at
-  voltageAngle, `base_power` the graph's BasePower when it holds one (`network.base_power`'s 100 MVA default is not
-  CIM's). GLM's swing is ideal: the source impedance is not written. Two EnergySources raise (NR takes one).
+  from its centre taps' primary); a polyphase EnergySource or transformer end, or one-phase ends on different phases
+  (a bank) three phase; a one-phase EnergySource, or one-phase ends on one phase, single phase. `nominal_voltage` is
+  the BaseVoltage over √3, as is, or over 2. Phases: every terminal's A, B, C, then N (S for a triplex bus).
+- **The swing (X6):** one EnergySource, `bustype SWING`, `nominal_voltage` its nominalVoltage, over √3 on a
+  three-phase system and as is on a one-phase one (the importer's `line_voltage` inverted, so the deck's own figure
+  comes back), `positive_sequence_voltage` voltageMagnitude at voltageAngle on the same rule. GridLAB-D's substation
+  needs all three phases, so a one-phase swing is a `node` with `bustype SWING` and `voltage_A` instead (the form the
+  importer reads), and a graph with a BasePower then raises: a node has no `base_power`. A substation's
+  `base_power` is the graph's BasePower when it holds one (`network.base_power`'s 100 MVA default is not CIM's). GLM's swing is ideal: the source impedance is not written. Two EnergySources raise (NR takes one).
 
 ## X1: lines and switches
 
@@ -64,7 +66,8 @@ tables at the end of this file are the generated ones.
   `c` = `c_from_b` at the base frequency (b unset: c unset, GridLAB-D's 0); a sequence code is expanded by the getter.
   A triplex matrix's b is not written, logged once per configuration (X27): GridLAB-D 6.0's `triplex_line` has no
   shunt admittance (`triplex_line.cpp:315` fills only the series matrix), so no `triplex_line_configuration` slot
-  holds it. IEEE 8500's triplex codes (3.0 / -2.4 nF per kft) carry about 0.1 VAr per kft at 240 V.
+  holds it. IEEE 8500's triplex codes (3.0 / -2.4 nF per kft) carry about 0.1 VAr per kft at 240 V. The importer
+  reads the triplex `z11`, `z12`, `z21`, `z22` back as an s1, s2 PerLengthPhaseImpedance (S2-8).
 - A template used on different phases is one GLM object per use, `<template>_<letters>`.
 - Conductors: `rAC50` (the GLM importer's), else `rAC25` (the DSS importer's). A bare wire buried in an underground
   configuration gets `outer_diameter` = 1.2 × its diameter (the Java exporter's rule; GridLAB-D needs one). A tape
@@ -118,7 +121,8 @@ Per unit (`get_transformer_units`), the model in pu on winding 1's ratedS:
 - A capacitor per LinearShuntCompensator: `capacitor_X` at nomU with every section in, `switchX` from the actual
   sections, VOLT from an enabled voltage control (the target ± half the deadband, `pt_phase` the monitored phases,
   else the unit's own: a BANK capacitor senses one phase). A control of another mode is MANUAL at the actual state,
-  logged. The importer's per-phase units `<base>_<phase>` are `<base>` again (S4a-8).
+  logged. The importer's per-phase units `<base>_<phase>` are `<base>` again (S4a-8) when one of them has a voltage
+  control, as the importer splits only an automatic capacitor; a one-phase unit with none keeps its name (`cap_B`).
 
 ## X29: load players
 
@@ -221,7 +225,7 @@ season and day type (`get_load_schedule`'s `days`), with their points, is a GLM 
 | a bus's `nominal_voltage` as the deck rounded it | it is the BaseVoltage's: the deck's 2401.78 V is 4160 V / √3 | export test: a regulator end's baseU, neutralU, and its ratedS and mesh x, which follow baseU (S3c-2), 1.2e-6 |
 | a load group with no schedule | written static (X29): a reference to no player would not load | export test: the load atoms' `zipsched` loads come back EnergyConsumers |
 | a player's start zone | its rows are written in GMT (X29) | export test: `startTime` the same instant at +00:00 |
-| `rated_power`, ratings and every slot CIM cannot hold | GridLAB-D's defaults | — |
+| every slot CIM cannot hold | GridLAB-D's defaults | — |
 
 ## Slot tables
 
@@ -235,9 +239,10 @@ default.
 | name | written | Names (X1) |
 | phases | written | the A, B, C of every terminal on the node, then N |
 | nominal_voltage | written | the BaseVoltage, LL / sqrt 3 on a three-phase system, LL on a single-phase one (module docstring) |
-| bustype | written | SWING on the substation only |
+| bustype | written | SWING on the swing only |
+| voltage_A | written | a one-phase swing's: get_source voltageMagnitude at voltageAngle |
 
-102 other slots: unset
+101 other slots: unset
 
 ### triplex_node
 
@@ -255,12 +260,13 @@ default.
 |---|---|---|
 | name | written | Names (X1) |
 | phases | written | the A, B, C of every terminal on the node, then N |
-| nominal_voltage | written | get_source: nominalVoltage / sqrt 3 (the importer's line_voltage inverted) |
-| bustype | written | SWING on the substation only |
-| positive_sequence_voltage | written | get_source: voltageMagnitude / sqrt 3 at voltageAngle |
+| nominal_voltage | written | get_source: nominalVoltage, / sqrt 3 on a three-phase system (the importer's line_voltage inverted) |
+| bustype | written | SWING on the swing only |
+| voltage_A | written | a one-phase swing's: get_source voltageMagnitude at voltageAngle |
+| positive_sequence_voltage | written | get_source: voltageMagnitude at voltageAngle, / sqrt 3 on a three-phase system |
 | base_power | written | the graph's BasePower, when it holds one (network.base_power's 100 MVA default is not CIM's) |
 
-123 other slots: unset
+122 other slots: unset
 
 ### overhead_line_conductor
 

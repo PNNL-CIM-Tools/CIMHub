@@ -2,7 +2,7 @@
 GridLAB-D C++ Source Parser
 
 Extracts class definitions from GridLAB-D C++ source files.
-Uses hybrid approach: Python for extraction, LLM for parsing complex blocks.
+Extracts each class's raw ``gl_publish_variable`` block; ``property_parser.py`` parses the blocks.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class ClassBlock:
     name: str
     parent_class: Optional[str]  # From class X : public Y or PT_INHERIT
     module: str                  # powerflow, residential, etc.
-    publish_block: str          # Raw gl_publish_variable block for LLM
+    publish_block: str          # Raw gl_publish_variable block, parsed by property_parser.py
     doc_comment: str            # Extracted from /** */ blocks
     source_file: Path
     header_file: Optional[Path] = None
@@ -54,7 +54,7 @@ class ClassBlock:
 class GridLABDCppExtractor:
     """
     Extract metadata blocks from GridLAB-D C++ source files.
-    Does NOT parse property details - sends blocks to LLM for that.
+    Does NOT parse property details: property_parser.py parses the blocks.
     """
 
     def __init__(self, gridlabd_source_root: Path):
@@ -262,7 +262,7 @@ def main():
     _log.info(f"{'='*60}")
     _log.info(f"Classes extracted: {len(classes)}")
     _log.info(f"Output written to: {args.output}")
-    _log.info(f"\nNext step: Parse property blocks with LLM")
+    _log.info("\nNext step: parse the property blocks with property_parser.py")
 
 
 if __name__ == '__main__':

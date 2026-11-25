@@ -11,6 +11,7 @@ import pytest
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
+from cimhub_core.getters.control import get_regulating_control
 from cimhub_opendss import dss_to_cim
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer import dss_to_cimtbl
@@ -54,17 +55,26 @@ def test_kvar_replays_the_deck_order():
     assert generator.dispatched_kvar([]) == 60
 
 
+def test_kvar_limits_follow_the_engine_reset():
+    """Each kW, pf or kvar assignment resets Maxkvar and Minkvar to +-2 x kvar (engine-checked)."""
+    assert generator.reactive_limits([("kW", 1000.0)], 50.0) == (100.0, -100.0)
+    assert generator.reactive_limits([("kW", 1000.0), ("maxkvar", 500.0)], 50.0) == (500.0, -100.0)
+    assert generator.reactive_limits([("maxkvar", 500.0), ("minkvar", -50.0), ("kW", 800.0)], 50.0) == (100.0, -100.0)
+
+
 def test_machines_bind(gens):
     network = dss_to_cim(gens, name="atom")
     assert_base_voltages_agree(network)
     machines = {machine.name: machine for machine in network.graph[network.cim.SynchronousMachine].values()}
-    assert len(machines) == 12
+    assert len(machines) == 14
     assert float(machines["pq"].p.to("kW")) == -100 and machines["pq"].type.value == "generator"
     assert machines["delta"].earthing is False and machines["pq"].earthing is True
     steam = machines["steam"]
     control = steam.RegulatingControl
     assert control.Terminal is steam.Terminals[0] and control.RegulatingCondEq == [steam] and steam.controlEnabled
-    assert control.targetValue == pytest.approx(1.02 * 4160)
+    assert get_regulating_control(control, "V").target == pytest.approx(1.02 * 4160)
+    capped = machines["capped"]
+    assert (float(capped.maxQ.to("kVAr")), float(capped.minQ.to("kVAr"))) == pytest.approx((500, -1079.48564427617))
     single = machines["single"]
     assert [phase.phase.value for phase in single.RotatingMachinePhase] == ["A"]
     assert float(single.ratedU.to("kV")) == pytest.approx(0.277 * math.sqrt(3))
@@ -116,7 +126,8 @@ def _engine_differences(network) -> list[str]:
                 differences.append(f"{name}: a model 3 machine has no control")
             continue
         check(f"{name} model", PV_BUS_MODEL, dss.Generators.Model())
-        check(f"{name} Vpu", control.targetValue / float(machine.ratedU.to("V")), float(_ask(f"generator.{name}.Vpu")))
+        target = get_regulating_control(control, "V").target
+        check(f"{name} Vpu", target / float(machine.ratedU.to("V")), float(_ask(f"generator.{name}.Vpu")))
         check(f"{name} Maxkvar", float(machine.maxQ.to("kVAr")), float(_ask(f"generator.{name}.Maxkvar")))
         check(f"{name} Minkvar", float(machine.minQ.to("kVAr")), float(_ask(f"generator.{name}.Minkvar")))
     return differences

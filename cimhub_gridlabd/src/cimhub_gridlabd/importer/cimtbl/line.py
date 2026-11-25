@@ -26,13 +26,16 @@ from cimhub_gridlabd.schema import gridlabd as schema
 PREFIX = "ln_"
 _SEGMENT = "ACLineSegment"
 TRIPLEX_PHASES = "s1s2N"
+#: a triplex line on a matrix: GridLAB-D's matrix is the two legs' (triplex_line.cpp:315), as a matrix line drops N
+TRIPLEX_MATRIX_PHASES = "s1s2"
 
 _OWN = {
     "name": Field("copied", ((_SEGMENT, "name", None),), "mRID = ln_ + name"),
     "phases": Field("structural", note="the phases cell: ABC then N, equal to the configuration's conductors "
-                                       "(geometry) or diagonal (matrix); s1s2N on a triplex line (S3a-3)"),
+                                       "(geometry) or diagonal (matrix); s1s2N on a triplex line, s1s2 on a triplex "
+                                       "matrix (S3a-3)"),
     "status": Field("structural", note="unset or CLOSED; OPEN raises (the walk: a line is not a switch)"),
-    "configuration": Field("structural", note="WireConfiguration = wc_<configuration> (geometry, triplex) or "
+    "configuration": Field("structural", note="WireConfiguration = wc_<configuration> (geometry) or "
                                               "lc_<configuration>_wc (matrix: the WireConfiguration that holds "
                                               "the template PerLengthPhaseImpedance), S3a-2"),
     "length": Field("copied", ((_SEGMENT, "length", "{unit}"),), "in its written unit; unset raises"),
@@ -126,6 +129,8 @@ def _segment(model: GlmModel, line, roots: dict[str, str], buses) -> tuple[tuple
                          f"{_CONFIGURATION[type(line)].class_name} ({line.class_name}.cpp throws)")
     if isinstance(line, schema.TriplexLine):
         phases = _triplex_phases(model, line, roots, buses)
+        if configuration_part.is_matrix(configuration):
+            phases = TRIPLEX_MATRIX_PHASES
     else:
         phases = _phases(line, configuration)
         if not configuration_part.is_matrix(configuration):

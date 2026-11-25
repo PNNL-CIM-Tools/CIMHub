@@ -263,22 +263,29 @@ def _percent(per_unit: float) -> float:
     return units.Quantity(per_unit, "dimensionless").to("percent").magnitude
 
 
-def _kw(model: GlmModel, config, kva: float) -> float:
-    return units.Quantity(kva, registry_unit(model.unit(config, "power_rating"))).to("kW").magnitude
-
-
-def _nameplate(model: GlmModel, config, tank: _Tank) -> list[str | None]:
-    """``percentImpedance``, ``loadLoss`` (kW), ``noLoadLoss`` (kW), ``percentMagnetizingCurrent`` of one tank."""
+def _nameplate(config, tank: _Tank) -> list[str | None]:
+    """``percentImpedance``, ``loadLoss``, ``noLoadLoss`` (in ``_nameplate_columns``' unit),
+    ``percentMagnetizingCurrent`` of one tank."""
     r, x = series(config)
     resistance, reactance = shunt(config)
-    no_load = None if resistance is None else _kw(model, config, tank.s_tank / (resistance * tank.k))
+    no_load = None if resistance is None else tank.s_tank / (resistance * tank.k)
     magnetizing = None if reactance is None else _percent(1 / (reactance * tank.k))
-    return [cell(_percent(math.hypot(r, x) * tank.k)), cell(_kw(model, config, r * tank.k * tank.s_tank)),
-            cell(no_load), cell(magnetizing)]
+    return [cell(_percent(math.hypot(r, x) * tank.k)), cell(r * tank.k * tank.s_tank), cell(no_load),
+            cell(magnetizing)]
 
 
-_NAMEPLATE = [Column("percentImpedance", "percent"), Column("loadLoss", "kW"), Column("noLoadLoss", "kW"),
-              Column("percentMagnetizingCurrent", "percent")]
+#: ``power_rating``'s written unit -> its losses' unit: a per unit of the rating (r x kVA) is a power in kW
+LOSS_UNITS = {"VA": "W", "kVA": "kW", "MVA": "MW"}
+
+
+def _nameplate_columns(model: GlmModel, config) -> list[Column]:
+    """The nameplate columns, the losses in the unit ``power_rating`` is written in (``LOSS_UNITS``)."""
+    rating = registry_unit(model.unit(config, "power_rating"))
+    if rating not in LOSS_UNITS:
+        raise ValueError(f"{label(config)}: power_rating is written in {rating}; {', '.join(LOSS_UNITS)} are mapped")
+    loss = LOSS_UNITS[rating]
+    return [Column("percentImpedance", "percent"), Column("loadLoss", loss), Column("noLoadLoss", loss),
+            Column("percentMagnetizingCurrent", "percent")]
 
 
 class _Statements:
@@ -326,8 +333,8 @@ def _tank_ends(model: GlmModel, config, wiring: Wiring, out: _Statements, commen
     xc = tank_name(config)
     total = total_kva(config)
     n = len(wiring.letters)
-    out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE],
-            Row([xc, str(config.name), *_nameplate(model, config, _Tank(total, _k(wiring, total / n, total)))],
+    out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_nameplate_columns(model, config)],
+            Row([xc, str(config.name), *_nameplate(config, _Tank(total, _k(wiring, total / n, total)))],
                 comment=comment))
     columns = _winding_columns(model, config, [Column("FromTransformerEnd")])
     kinds = CONNECTIONS[str(config.connect_type)]
@@ -365,14 +372,15 @@ def _cans(model: GlmModel, config, wiring: Wiring, out: _Statements, comment: st
     columns = _winding_columns(model, config, [Column("FromTransformerLug"), Column("ToTransformerLug")])
     for can_label in labels:
         can = phase_kva(config, can_label) if _rated_unequally(config, wiring) else total / len(labels)
-        nameplate = _nameplate(model, config, _Tank(can, _k(wiring, can, total)))
+        nameplate = _nameplate(config, _Tank(can, _k(wiring, can, total)))
         if bank:
             xc = tank_name(config, can_label)
-            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE, Column("BankConfiguration")],
+            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_nameplate_columns(model, config),
+                                     Column("BankConfiguration")],
                     Row([xc, f"{config.name}_{can_label}", *nameplate, xb]))
         else:
             xc = tank_name(config)
-            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE],
+            out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_nameplate_columns(model, config)],
                     Row([xc, str(config.name), *nameplate], comment=comment))
         for designation, (end, phase) in (("H1", (1, can_label)), ("H2", (1, "N")), ("X1", (2, can_label)),
                                           ("X2", (2, "N"))):
@@ -392,8 +400,8 @@ def _center_tap(model: GlmModel, config, wiring: Wiring, out: _Statements, comme
     if s <= 0:
         raise ValueError(f"{label(config)}: power{wiring.letters}_rating unset or 0 on a center tap wired on phase "
                          f"{wiring.letters} (transformer.cpp:772)")
-    out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_NAMEPLATE],
-            Row([xc, str(config.name), *_nameplate(model, config, _Tank(s, 1.0))], comment=comment))
+    out.add(_CONFIGURATION, [Column("mRID"), Column("name"), *_nameplate_columns(model, config)],
+            Row([xc, str(config.name), *_nameplate(config, _Tank(s, 1.0))], comment=comment))
     for designation, sequence in CENTER_TAP_LUGS:
         out.add("TransformerLug", _LUG_COLUMNS, Row([f"{xc}_lug_{designation.lower()}", xc, designation,
                                                      str(sequence)]))

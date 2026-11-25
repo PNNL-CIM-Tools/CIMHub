@@ -41,7 +41,7 @@ from cimhub_core.getters.tap_changer import get_tap_steps
 from cimhub_core.getters.terminals import get_terminal_phases
 from cimhub_gridlabd.exporter.buses import letters
 from cimhub_gridlabd.exporter.line import ratings
-from cimhub_gridlabd.exporter.units import glm_unit
+from cimhub_gridlabd.exporter.units import from_percent, glm_unit
 from cimhub_gridlabd.schema import gridlabd as schema
 
 _log = logging.getLogger(__name__)
@@ -219,7 +219,8 @@ def _configuration_slots(regulator: cim.VoltageRegulator, tap: cim.RatioTapChang
     # VoltageRegulator.construction is an enum no getter reads; it only picks GridLAB-D's ratio formula
     regulator_type = "B" if regulator.construction is cim.RegulatorConstructionKind.typeB else "A"
     slots = {"connect_type": "WYE_WYE", "raise_taps": raise_taps, "lower_taps": lower_taps,
-             "regulation": steps.increment / 100 * raise_taps, "Type": regulator_type,
+             "regulation": from_percent(steps.increment, schema.RegulatorConfiguration, "regulation") * raise_taps,
+             "Type": regulator_type,
              **{f"tap_pos_{letter}": round(steps.step - steps.neutral) for letter in phase_letters}}
     slots.update(_control_slots(tap, phase_letters))
     return slots

@@ -2,7 +2,8 @@
 
 DSS gives a source's Thevenin impedance one of three ways (ohms, short-circuit MVA, short-circuit current) and
 keeps the one set last. The reader does not record the order, so a source that sets two raises. MVA and current
-are converted as ``VSource.pas`` ``RecalcElementData`` does; the engine is the test oracle.
+are converted as ``VSource.pas`` ``RecalcElementData`` does; the engine is the test oracle. The units go with the
+values: kV and MVA give ohm, and a current's kV x A gives kVA and so kohm, the header's unit.
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#vsource``.
 """
@@ -42,8 +43,8 @@ FIELDS = {
     "MVAsc1": Field("derived", note="r0, x0 (thevenin_from_short_circuit)"),
     "x1r1": Field("derived", note="r, x (thevenin_from_short_circuit)"),
     "x0r0": Field("derived", note="r0, x0 (thevenin_from_short_circuit)"),
-    "Isc3": Field("derived", note="MVAsc3 (mvasc_from_isc), then as MVAsc3"),
-    "Isc1": Field("derived", note="MVAsc1 (mvasc_from_isc), then as MVAsc1"),
+    "Isc3": Field("derived", note="the 3-phase short-circuit kVA (kvasc_from_isc), then as MVAsc3; r, x in kohm"),
+    "Isc1": Field("derived", note="the 1-phase short-circuit kVA (kvasc_from_isc), then as MVAsc1; r0, x0 in kohm"),
     "R1": Field("copied", ((_SOURCE, "r", "ohm"),)),
     "X1": Field("copied", ((_SOURCE, "x", "ohm"),)),
     "R0": Field("copied", ((_SOURCE, "r0", "ohm"),)),
@@ -87,7 +88,7 @@ Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#vsource"""
 
 
 class Thevenin(NamedTuple):
-    """Sequence impedances, ohms."""
+    """Sequence impedances, in the unit ``thevenin`` returns with them."""
     r1: float
     x1: float
     r0: float
@@ -95,7 +96,8 @@ class Thevenin(NamedTuple):
 
 
 def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: float, x0r0: float) -> Thevenin:
-    """The Thevenin impedance of a source given by short-circuit MVA (``VSource.pas`` ``RecalcElementData``).
+    """The Thevenin impedance of a source given by short-circuit power (``VSource.pas`` ``RecalcElementData``):
+    kV and MVA give ohm, kV and kVA give kohm.
 
     X1 = kV² / MVAsc3 / √(1 + 1/x1r1²), R1 = X1 / x1r1. R0 is the positive root of
     (1 + x0r0²) R0² + 4 (R1 + X1 x0r0) R0 + 4 (R1² + X1²) − (3 kV² / MVAsc1)² = 0, and X0 = R0 x0r0:
@@ -113,10 +115,11 @@ def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: f
     return Thevenin(r1, x1, r0, r0 * x0r0)
 
 
-def mvasc_from_isc(kv: float, isc3: float, isc1: float, phases: int) -> tuple[float, float]:
-    """``(MVAsc3, MVAsc1)`` from short-circuit currents in amps; the 1-phase factor is 1 on a 1-phase source."""
+def kvasc_from_isc(kv: float, isc3: float, isc1: float, phases: int) -> tuple[float, float]:
+    """The 3- and 1-phase short-circuit power from currents: kV and A give kVA. The 1-phase factor is 1 on a
+    1-phase source."""
     factor = _SQRT3 if phases == 3 else 1.0
-    return _SQRT3 * kv * isc3 / 1000, factor * kv * isc1 / 1000
+    return _SQRT3 * kv * isc3, factor * kv * isc1
 
 
 def impedance_group(source) -> str:
@@ -145,14 +148,14 @@ def with_defaults(source):
     return filled, group, comment
 
 
-def thevenin(source, group: str) -> Thevenin:
-    """The Thevenin impedance of a source with its defaults filled."""
+def thevenin(source, group: str) -> tuple[Thevenin, str]:
+    """``(impedance, unit)`` of a source with its defaults filled: ohm as given or from MVAsc, kohm from Isc."""
     if group == "ohms":
-        return Thevenin(source.R1, source.X1, source.R0, source.X0)
-    mvasc3, mvasc1 = source.MVAsc3, source.MVAsc1
+        return Thevenin(source.R1, source.X1, source.R0, source.X0), "ohm"
     if group == "Isc":
-        mvasc3, mvasc1 = mvasc_from_isc(source.basekv, source.Isc3, source.Isc1, source.phases)
-    return thevenin_from_short_circuit(source.basekv, mvasc3, mvasc1, source.x1r1, source.x0r0)
+        kvasc3, kvasc1 = kvasc_from_isc(source.basekv, source.Isc3, source.Isc1, source.phases)
+        return thevenin_from_short_circuit(source.basekv, kvasc3, kvasc1, source.x1r1, source.x0r0), "kohm"
+    return thevenin_from_short_circuit(source.basekv, source.MVAsc3, source.MVAsc1, source.x1r1, source.x0r0), "ohm"
 
 
 def _phases(source) -> tuple[str, str]:
@@ -183,24 +186,26 @@ def map_vsource(native, buses: Mapping[str, BusSystem], container: str) -> Docum
     ``buses`` is the topology walk's result; ``container`` is the EquipmentContainer mRID (the Substation).
     """
     sources = native.list_by_class(NATIVE_CLASS)
-    rows = []
+    rows_by_unit: dict[str, list[Row]] = {}
     for original in sources:
         source, group, defaulted = with_defaults(original)
         bus, phases = _phases(source)
         if bus not in buses:
             raise ValueError(f"Vsource {source.name}: no bus voltage for {bus}")
-        z = thevenin(source, group)
-        rows.append(Row([
+        z, unit = thevenin(source, group)
+        rows_by_unit.setdefault(unit, []).append(Row([
             mrid(PREFIX, source.name, lowercase=True), str(source.name), bus, phases_cell(phases), cell(source.basekv),
             cell(source.basekv * source.pu), cell(source.angle), cell(z.r1), cell(z.x1), cell(z.r0), cell(z.x0),
             cell(source.enabled), buses[bus].base_voltage,
         ], comment=_comment(group, original, defaulted)))
-    if not rows:
+    if not rows_by_unit:
         return Document(name="vsource", statements=[], profile=CIM_PROFILE)
-    columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("nominalVoltage", "kV"),
-               Column("voltageMagnitude", "kV"), Column("voltageAngle", "deg"), Column("r", "ohm"),
-               Column("x", "ohm"), Column("r0", "ohm"), Column("x0", "ohm"), Column("normallyInService"),
-               Column("BaseVoltage"), Column("EquipmentContainer", default=container)]
-    table = Table(_SOURCE, columns, rows, comment=untranscribed_names(FIELDS))
-    return Document(name="vsource", statements=[table], profile=CIM_PROFILE,
+    tables = []
+    for unit, rows in rows_by_unit.items():
+        columns = [Column("mRID"), Column("name"), Column("node"), Column("phases"), Column("nominalVoltage", "kV"),
+                   Column("voltageMagnitude", "kV"), Column("voltageAngle", "deg"), Column("r", unit),
+                   Column("x", unit), Column("r0", unit), Column("x0", unit), Column("normallyInService"),
+                   Column("BaseVoltage"), Column("EquipmentContainer", default=container)]
+        tables.append(Table(_SOURCE, columns, rows, comment=untranscribed_names(FIELDS)))
+    return Document(name="vsource", statements=tables, profile=CIM_PROFILE,
                     comment=_PROVENANCE.format(count=len(sources)))

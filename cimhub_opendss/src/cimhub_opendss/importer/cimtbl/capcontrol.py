@@ -3,8 +3,8 @@
 The control monitors a Terminal of a Line or of its own capacitor, which ``Line``/``Capacitor`` generate first.
 Its ON and OFF settings become a target and a deadband in primary units (EPRI ExportCIMXML's convention):
 targetValue = (ON + OFF) / 2 and targetDeadband = abs(OFF - ON), each x PTratio (voltage), x CTratio (current) or
-in var (kvar). The compensator gets ``RegulatingControl``, ``aVRDelay`` and ``controlEnabled`` by an ``Update``,
-which also breaks the reference cycle of a control on its own capacitor (U3).
+in kvar with ``targetValueUnitMultiplier`` k (kvar). The compensator gets ``RegulatingControl``, ``aVRDelay`` and
+``controlEnabled`` by an ``Update``, which also breaks the reference cycle of a control on its own capacitor (U3).
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#capcontrol``.
 """
@@ -15,7 +15,6 @@ import re
 from collections.abc import Mapping
 from typing import NamedTuple
 
-from cimprofiles.cim18.cim18v17 import cim18v17 as cim
 from cimtables.document import Column, Document, Row, Table
 from cimtopology.core import BusSystem
 
@@ -34,8 +33,8 @@ _CONTROL = "RegulatingControl"
 _SHUNT = "LinearShuntCompensator"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
 _SOLVER = "DSS solution control; no home in the network profile parts"
-_SETTING = ("{target} = {formula} (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in var, "
-            "time in hours")
+_SETTING = ("{target} = {formula} (on_off_target); voltage x PTratio (V), current x CTratio (A), kvar in kvar "
+            "(targetValueUnitMultiplier k), time in hours")
 
 FIELDS = {
     "name": Field("copied", ((_CONTROL, "name", None),), "mRID = cc_ + name, lowercased"),
@@ -81,13 +80,16 @@ _UNMAPPED = tuple(slot for slot, field in FIELDS.items() if field.note.startswit
 #: DSS control type -> RegulatingControlModeKind; ``None``: not mapped. The engine reads a unique prefix.
 _MODES = {"current": "currentFlow", "voltage": "voltage", "kvar": "reactivePower", "time": "timeScheduled",
           "pf": None, "follow": None}
+#: targetValueUnitMultiplier by mode: a kvar control's settings stay in kvar (k VAr); the others' are V, A or hours.
+_KVAR_MULTIPLIER = {"reactivePower": "k"}
 #: Modes whose ON setting is above OFF (switch on when the measured value rises); the others' is below.
 _ON_ABOVE = ("currentFlow", "reactivePower")
 _PHASE_TOKEN = re.compile(r"s[12]|[ABC]")
 
 _PROVENANCE = """OpenDSS CapControl -> RegulatingControl on the monitored Terminal; the compensator gets it, its
 delay and controlEnabled by an Update. targetValue = (ON + OFF) / 2, targetDeadband = abs(OFF - ON), in
-primary units: voltage x PTratio (V), current x CTratio (A), kvar in var, time in hours from midnight.
+primary units: voltage x PTratio (V), current x CTratio (A), kvar in kvar (targetValueUnitMultiplier k), time in
+hours from midnight.
 Source table: CapControl (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#capcontrol"""
 
@@ -113,16 +115,13 @@ def control_mode(control_type, *, name: str) -> str:
 
 def on_off_target(on: float, off: float, mode: str, *, ptratio: float, ctratio: float, name: str) -> Setting:
     """The midpoint and full width of the ON/OFF band (EPRI ExportCIMXML's convention, the width positive), in
-    primary units. ON on the wrong side of OFF for the mode raises, so the pair can be rebuilt from the mode."""
+    primary units: V, A, kvar (as the deck gives it) or hours. ON on the wrong side of OFF for the mode raises, so
+    the pair can be rebuilt from the mode."""
     if (on < off) if mode in _ON_ABOVE else (on > off):
         side = "above" if mode in _ON_ABOVE else "below"
         raise ValueError(f"CapControl {name}: ON {on} is not {side} OFF {off} for a {mode} control")
-    scale = {"voltage": ptratio, "currentFlow": ctratio, "timeScheduled": 1.0}
-    if mode == "reactivePower":
-        on, off = (float(cim.ReactivePower(value, "kVAr")) for value in (on, off))
-    else:
-        on, off = on * scale[mode], off * scale[mode]
-    return Setting(*band_from_on_off(on, off))
+    scale = {"voltage": ptratio, "currentFlow": ctratio, "reactivePower": 1.0, "timeScheduled": 1.0}[mode]
+    return Setting(*band_from_on_off(on * scale, off * scale))
 
 
 def _line_phase_count(line, native) -> int:
@@ -198,14 +197,15 @@ def map_capcontrol(native, buses: Mapping[str, BusSystem]) -> Document:
         comment = "\n".join(part for part in (derived, defaulted, untranscribed_values(FIELDS, control)) if part)
         control_rows.append(Row([
             control_id, str(control.name), mode, cell(control.enabled), tokens[pt_phase - 1], cell(ptratio),
-            cell(ctratio), cell(setting.target), cell(setting.deadband), terminal,
+            cell(ctratio), cell(setting.target), cell(setting.deadband), _KVAR_MULTIPLIER.get(mode), terminal,
         ], comment=comment))
         update_rows.append(Row([mrid(capacitor_mapper.PREFIX, control.capacitor, lowercase=True), control_id,
                                 cell(float(control.Delay)), cell(control.enabled)]))
     statements = [
         Table(_CONTROL, [Column("mRID"), Column("name"), Column("mode"), Column("discrete", default="true"),
                          Column("enabled"), Column("monitoredPhase"), Column("ptRatio"), Column("ctRatio"),
-                         Column("targetValue"), Column("targetDeadband"), Column("Terminal")], control_rows),
+                         Column("targetValue"), Column("targetDeadband"), Column("targetValueUnitMultiplier"),
+                         Column("Terminal")], control_rows),
         Table(_SHUNT, [Column("mRID"), Column("RegulatingControl"), Column("aVRDelay", "s"),
                        Column("controlEnabled")], update_rows, update=True,
               comment="the compensator's control, delay (Delay) and controlEnabled"),

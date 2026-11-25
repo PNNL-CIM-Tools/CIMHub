@@ -46,7 +46,7 @@ Rules:
 - GLM names are global, so there is one namespace. Two objects that end up with one name raise:
   `ACLineSegment 'ln_b' and 'ln_a' are both named 'a' in GLM (name source 'name')`.
 - An object with no `name` (or `mRID`, or `uri()`) to export it under raises, naming its class and mRID.
-- A bus is a `node`, or a `triplex_node` on a split-phase bus, and the swing bus is a `substation`.
+- A bus is a `node`, or a `triplex_node` on a split-phase bus, and the swing bus is a `substation` (a one-phase swing is a `node` with `bustype SWING`: GridLAB-D's substation needs three phases).
 
 ## The header
 

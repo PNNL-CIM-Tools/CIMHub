@@ -297,6 +297,8 @@ classes:
         range: float
         required: false
         description: regulation of voltage regulator in %
+        unit:
+          ucum_code: pu
         annotations:
           order: 18
           value_type: float
