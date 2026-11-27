@@ -14,7 +14,7 @@ from cimhub_opendss.importer.cimtbl.wire import (CATALOGS, ac_from_dc, map_wires
                                                 screen_diameter)
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import CATALOG_DECKS, limits, ENGINE_UNIT, compile_deck, deck
+from conftest import CATALOG_DECKS, limits, ENGINE_UNIT, clear_engine, compile_deck, deck
 
 ATOMS = Path(__file__).parent / "atoms" / "wire"
 
@@ -65,7 +65,7 @@ def test_emergamps_alone_rates_the_wire_as_the_engine_does():
     """The engine's normamps of a wire that gives only emergamps is emergamps / 1.5."""
     wire = schema.Wiredata(name="w", Rac=0.3, Runits="km", GMRac=0.1, GMRunits="cm", radunits="cm", diam=0.4,
                            emergamps=900)
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command("New Circuit.c basekv=4.16")
     dss.Text.Command("New WireData.w Rac=0.3 Runits=km GMRac=0.1 GMRunits=cm diam=0.4 radunits=cm emergamps=900")
     dss.Text.Command("? WireData.w.normamps")

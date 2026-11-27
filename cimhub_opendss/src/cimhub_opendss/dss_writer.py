@@ -24,7 +24,8 @@ _MEANING_INT_RE = re.compile(r'\.(\d+)$')
 # Characters OpenDSS cannot carry inside an object name or a reference to one.
 # A space ends the token, so "Cable_2P_1C_2GA_CU BSD" is parsed as a name plus a
 # stray property and raises "Invalid inline math entry"; the bracket, quote, and
-# brace characters are array/expression delimiters.  Names converted from other
+# brace characters are array/expression delimiters; "!" and "//" start a comment, so
+# the engine reads "New Load.a!b bus1=x" as "New Load.a".  Names converted from other
 # formats do contain these (a cable catalog entry such as "3P_1C_500KCM_CU-<NULL>"),
 # so sanitizing is not optional.
 #
@@ -33,7 +34,7 @@ _MEANING_INT_RE = re.compile(r'\.(\d+)$')
 # reference, and strings the converters build such as bus1= and
 # SwitchedObj=f"Line.{name}").  One rule here keeps a definition and every
 # reference to it spelled the same way; sanitizing per-converter would not.
-_DSS_UNSAFE_RE = re.compile(r'[\s"\'<>\[\]{}(),=~|]+')
+_DSS_UNSAFE_RE = re.compile(r'[\s"\'<>\[\]{}(),=~|!]+|//')
 
 
 #: significant digits of a written float: enough for every deck value, and it clips the binary tails a unit
@@ -42,7 +43,10 @@ FLOAT_DIGITS = 15
 
 
 def format_float(value: float) -> str:
-    """``value`` to ``FLOAT_DIGITS`` significant digits, the shortest form (``60``, ``0.0018``, ``1e-05``)."""
+    """``value`` to ``FLOAT_DIGITS`` significant digits, the shortest form (``60``, ``0.0018``, ``1e-05``). NaN
+    and infinity raise: the engine has no such value."""
+    if not math.isfinite(value):
+        raise ValueError(f"DssWriter: {value!r} is not a finite number")
     return f"{value:.{FLOAT_DIGITS}g}"
 
 
@@ -106,7 +110,7 @@ _CATALOG_KINDS = ((schema.Wiredata, "wire"), (schema.Cndata, "cncable"), (schema
 
 
 def _has_positions(obj) -> bool:
-    return isinstance(obj, schema.Linegeometry) and bool(obj.xs)
+    return isinstance(obj, schema.Linegeometry) and bool(obj.xs or obj.hs)
 
 
 def _conductor_kinds(model: GraphModel) -> dict[str, str]:
@@ -143,9 +147,10 @@ class DssWriter(FormatWriter):
         files written beside the deck (``<stem>_buscoords.csv``, ``<stem>_latlongcoords.csv``).
 
         ``per_class`` writes each class's records to its own file beside the deck (``linecode.dss``, ``line.dss``,
-        ...), which *destination* (the master) ``Redirect``s in ``WRITE_ORDER``."""
+        ...), which *destination* (the master) ``Redirect``s in ``WRITE_ORDER``.
+
+        Every file is formatted before any is written, so a record that fails leaves nothing behind."""
         destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
         options = self._options(model)
         unknown = [cls.__name__ for cls in model.graph if cls not in WRITE_ORDER and cls not in _DECK_RECORDS]
         if unknown:
@@ -157,6 +162,7 @@ class DssWriter(FormatWriter):
         if getattr(options, "earthmodel", None) is not None:
             lines.append(self._set(options, "earthmodel"))  # the engine needs a circuit first
         kinds = _conductor_kinds(model)
+        files: dict[Path, str] = {}  # every file but the master, formatted
         for cls in WRITE_ORDER:
             check_safe_names(model.list_by_class(cls))
             commands = [self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj)
@@ -171,13 +177,19 @@ class DssWriter(FormatWriter):
             if class_file.name == destination.name.lower():
                 raise ValueError(f"DssWriter: the master {destination.name} would be overwritten by the "
                                  f"{cls.__name__} file; name it otherwise")
-            class_file.write_text("\n".join(commands) + "\n", encoding="utf-8")
+            files[class_file] = "\n".join(commands) + "\n"
             lines.append(f"Redirect {class_file.name}")
         if options is not None and options.voltagebases:
             lines += [self._set(options, "voltagebases"), "CalcVoltageBases"]
         for terminal in (options.open_terminals if options is not None else None) or []:
-            lines.append(f"Open {terminal}")
-        lines += self._write_coordinates(model, destination)
+            target, number = str(terminal).rsplit(" ", 1)  # "Class.name terminal", the reader's form
+            lines.append(f"Open {dss_safe_name(target)} {number}")
+        coordinates, commands = self._coordinates(model, destination)
+        files.update(coordinates)
+        lines += commands
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        for path, text in files.items():
+            path.write_text(text, encoding="utf-8")
         destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def serialize(self, obj) -> str:
@@ -219,8 +231,10 @@ class DssWriter(FormatWriter):
         (``wire``, ``cncable``, ``tscable``: the catalog that defines the name), as only blocks can mix kinds."""
         arrays = [getattr(geometry, slot) for slot in _NAME_ARRAYS if getattr(geometry, slot)]
         if len(arrays) != 1 or not len(arrays[0]) == len(geometry.xs) == len(geometry.hs):
-            raise ValueError(f"DssWriter: LineGeometry {geometry.name}: needs one of {list(_NAME_ARRAYS)} with a "
-                             "name per position")
+            counts = ", ".join(f"{len(getattr(geometry, slot) or [])} {slot}" for slot in (*_NAME_ARRAYS, "xs", "hs")
+                               if getattr(geometry, slot) or slot in ("xs", "hs"))
+            raise ValueError(f"DssWriter: LineGeometry {geometry.name}: {counts}; needs one wire, x and h per "
+                             f"conductor, all in one of {list(_NAME_ARRAYS)}")
         parts = [f"new {type(geometry).__name__}.{dss_safe_name(str(geometry.name))}",
                  *self._properties(geometry, skip=(*_GEOMETRY_CURSOR, *_NAME_ARRAYS, "xs", "hs", "units"))]
         for number, (name, x, h) in enumerate(zip(arrays[0], geometry.xs, geometry.hs), start=1):
@@ -251,24 +265,31 @@ class DssWriter(FormatWriter):
             return []
         if not sources or circuit is None:
             raise ValueError("DssWriter: Options.circuit and Vsource.source (New Circuit) come together; "
-                             f"the model has {'only Options.circuit' if circuit else 'only Vsource.source'}")
+                             f"the model has {'only Options.circuit' if circuit is not None else 'only Vsource.source'}")
         return [" ".join([f"New Circuit.{dss_safe_name(str(circuit))}", *self._properties(sources[0])])]
 
     @staticmethod
-    def _write_coordinates(model: GraphModel, destination: Path) -> list[str]:
-        """Write the ``Buscoords`` rows beside the deck, one file per kind; the commands that read them."""
-        commands = []
+    def _coordinates(model: GraphModel, destination: Path) -> tuple[dict[Path, str], list[str]]:
+        """The ``Buscoords`` rows as files beside the deck, one per kind (``{path: text}``), and the commands that
+        read them. A bus is named as the deck names it (sanitized), and a file name the engine would split (``my
+        deck_buscoords.csv``) is quoted."""
+        files, commands = {}, []
         for geographic, command, suffix in ((False, "Buscoords", "buscoords"), (True, "LatLongCoords", "latlongcoords")):
             rows = [row for row in model.list_by_class(schema.Buscoords) if bool(row.geographic) == geographic]
             if not rows:
                 continue
+            text = ""
+            for row in rows:
+                if not all(isinstance(value, (int, float)) and math.isfinite(value) for value in (row.x, row.y)):
+                    raise ValueError(f"DssWriter: Buscoords {row.name!r}: coordinates ({row.x!r}, {row.y!r}) are not "
+                                     "two finite numbers")
+                # LatLongCoords files are lat, long: y first (the reader swaps them back)
+                first, second = (row.y, row.x) if geographic else (row.x, row.y)
+                text += f"{dss_safe_name(str(row.name))}, {first!r}, {second!r}\n"
             path = destination.with_name(f"{destination.stem}_{suffix}.csv")
-            # LatLongCoords files are lat, long: y first (the reader swaps them back)
-            text = "".join(f"{row.name}, {row.y!r}, {row.x!r}\n" if geographic else f"{row.name}, {row.x!r}, {row.y!r}\n"
-                           for row in rows)
-            path.write_text(text, encoding="utf-8")
-            commands.append(f"{command} {path.name}")
-        return commands
+            files[path] = text
+            commands.append(f'{command} "{path.name}"' if _DSS_UNSAFE_RE.search(path.name) else f"{command} {path.name}")
+        return files, commands
 
     # ------------------------------------------------------------------
     # DSS-specific value formatting

@@ -50,11 +50,16 @@ CATALOG_DECKS = [
 ]
 
 
-def compile_deck(path: Path) -> None:
-    """Compile a deck in the engine, from a clean circuit. ``Set defaultbasefreq`` outlives ``Clear``, so it is put
-    back to the engine's 60 Hz first: a 50 Hz deck must not change the next deck's frequency."""
+def clear_engine() -> None:
+    """Clear the engine's circuit. ``Set defaultbasefreq`` outlives ``Clear``, so it is put back to the engine's
+    60 Hz too: a 50 Hz deck must not change the next deck's frequency."""
     opendssdirect.Text.Command("Clear")
     opendssdirect.Text.Command("Set defaultbasefreq=60")
+
+
+def compile_deck(path: Path) -> None:
+    """Compile a deck in the engine, from a clean circuit."""
+    clear_engine()
     opendssdirect.Text.Command(f"Compile [{path.resolve()}]")
 
 

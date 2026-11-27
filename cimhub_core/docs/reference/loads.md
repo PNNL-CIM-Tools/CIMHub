@@ -13,6 +13,7 @@ time. Calling conventions (keyword-only arguments, unit strings, `None` versus r
 | [`get_shunt_admittance`](#get_shunt_admittance) | `LinearShuntCompensator` as g and b | `ShuntAdmittance` |
 | [`get_series_compensator`](#get_series_compensator) | `SeriesCompensator` r, x and varistor | `SeriesCompensatorData` |
 | [`get_load_schedule`](#get_load_schedule) | a load's `LoadGroup` and its schedule | `LoadSchedule` or `None` |
+| [`get_group_schedule`](#get_group_schedule) | a load group's time series or days | `LoadSchedule` |
 | [`get_schedule_points`](#get_schedule_points) | a schedule's `RegularTimePoint` rows | `SchedulePoints` or `None` |
 | [`log_dropped_schedules`](#log_dropped_schedules) | the loads whose schedules a target skips | one warning |
 | [`get_device_schedule`](#get_device_schedule) | an `EnergyConnectionSchedule` and its points | `DeviceSchedule` or `None` |
@@ -297,6 +298,16 @@ with cim_scope():
 `ld_f1` has a group but no schedule; `ld_static` is a plain consumer. Called by cimhub_opendss, cimhub_gridlabd
 and cimhub_gdm.
 
+## get_group_schedule { #get_group_schedule }
+
+```python
+get_group_schedule(group: ConformLoadGroup | NonConformLoadGroup) -> LoadSchedule
+```
+
+`get_load_schedule` for a group: the same `LoadSchedule` and the same rules, for an exporter that walks schedules
+rather than loads (the OpenDSS LoadShape writer skips every schedule that is not its group's time series, so a
+recurring day is no LoadShape). Another object raises `ValueError`. Called by cimhub_opendss.
+
 ## get_schedule_points { #get_schedule_points }
 
 ```python
@@ -313,7 +324,9 @@ schedule has no rows.
 | `value2` | one float per point, or `None` when value2 is unset at every point |
 
 Raises `ValueError` when the sequence numbers are not 0, 1, 2, ... in order, when `value1` is unset at any point, or
-when `value2` is set at only some points.
+when `value2` is set at only some points. The values are as stored: a column in a unit (`W`, `VAr`) keeps its
+`value1Multiplier`/`value2Multiplier` for the caller to read with the unit (GDM's `kilowatt`), and a multiplier column
+(unit `none` or unset) with a multiplier other than `none` raises, since it would be read that many times off.
 
 ```python
 from cimhub_core import time_points

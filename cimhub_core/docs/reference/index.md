@@ -81,6 +81,7 @@ Function and module are under `cimhub_core.getters`. The last column is the page
 | `get_shunt_admittance` | `shunt` | `ShuntAdmittance` | A shunt's g and b for the sections in service. | [loads](loads.md) |
 | `get_series_compensator` | `series_compensator` | `SeriesCompensatorData` | A series compensator's r, x and varistor. | [loads](loads.md) |
 | `get_load_schedule` | `load_schedule` | `LoadSchedule \| None` | A consumer's group and its one schedule. | [loads](loads.md) |
+| `get_group_schedule` | `load_schedule` | `LoadSchedule` | A load group's one time series, or its days. | [loads](loads.md) |
 | `get_schedule_points` | `load_schedule` | `SchedulePoints \| None` | A schedule's `RegularTimePoint` rows. | [loads](loads.md) |
 | `log_dropped_schedules` | `load_schedule` | `None` | Log the schedule groups an exporter does not write. | [loads](loads.md) |
 | `get_device_schedule` | `device_schedule` | `DeviceSchedule \| None` | A device's one `EnergyConnectionSchedule` that has points. | [loads](loads.md) |

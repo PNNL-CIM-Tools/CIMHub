@@ -11,6 +11,7 @@ import pytest
 
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
+from cimhub_core.getters.line_impedance import get_line_code
 from cimhub_opendss import dss_to_cim
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer import dss_to_cimtbl
@@ -126,6 +127,8 @@ def test_geometry_binds():
     ("New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2 C1=3 units=km\n", "Line a: sets C1 per km but not C0"),
     # a deck with no Line still has its switch controls checked
     ("New Fuse.f MonitoredObj=Line.gone\n", "Line gone: switched by a control or an Open command, but no New"),
+    # the engine refuses Shots below 1 (#2020031, #2020032)
+    ("New Line.a bus1=sourcebus bus2=b switch=y\nNew Recloser.r MonitoredObj=Line.a Shots=0\n", "Shots=0"),
 ])
 def test_unmapped_lines_fail_fast(tmp_path, text, message):
     with pytest.raises(ValueError, match=message):
@@ -133,9 +136,9 @@ def test_unmapped_lines_fail_fast(tmp_path, text, message):
 
 
 def _matrix(segment) -> tuple[dict[str, list[list[float]]], float | None] | None:
-    """The segment's r, x (ohm/m) and b (nS/m) as full matrices, and the template's frequency; ``None`` by
-    geometry."""
-    template = segment.PerLengthImpedance
+    """The segment's r, x (ohm/m) and b (nS/m) as full matrices, and the template's frequency (its own or its
+    template LineCode's, ``get_line_code``); ``None`` by geometry."""
+    template = get_line_code(segment)
     if template is None:
         return None
     frequency = float(template.calculatedFrequency.to("Hz")) if template.calculatedFrequency is not None else None
@@ -231,3 +234,33 @@ def test_reclosures_are_reclose_sequences(tmp_path, slots, delays, defaulted):
     assert [row.cells for row in rows] == [[f"sw_a_rs{step}", "sw_a", str(step), delay]
                                            for step, delay in enumerate(delays, 1)]
     assert (rows[0].comment if rows else None) == defaulted
+
+
+def _switch_rows(document) -> list:
+    return [row for statement in document.statements if getattr(statement, "cim_class", None) == "Fuse"
+            for row in statement.rows]
+
+
+def test_a_fuse_rated_zero_amps_keeps_it(tmp_path):
+    """The engine keeps RatedCurrent=0."""
+    document = _map(_read(tmp_path, "New Line.a bus1=sourcebus bus2=b switch=y\n"
+                                    "New Fuse.f MonitoredObj=Line.a RatedCurrent=0\n"))
+    [row] = _switch_rows(document)
+    assert row.cells[5] == "0.0"
+
+
+def test_a_switch_lists_its_rho_as_untranscribed(tmp_path):
+    document = _map(_read(tmp_path, "New Line.a bus1=sourcebus bus2=b switch=y rho=50\n"))
+    [row] = [row for statement in document.statements if getattr(statement, "cim_class", None) == "LoadBreakSwitch"
+             for row in statement.rows]
+    assert "rho=50.0" in row.comment
+
+
+def test_a_linecode_with_no_nphases_has_the_engines_three(tmp_path):
+    """The engine's LineCode nphases defaults to 3 (dss_defaults); the line and its code agree with the engine."""
+    text = ("New Linecode.c r1=0.1 x1=0.2 r0=0.3 x0=0.6 C1=3 C0=1 units=km\n"
+            "New Line.a bus1=sourcebus bus2=b linecode=c length=1 units=km\n")
+    native = _read(tmp_path, text)
+    network = dss_to_cim(native, name="atom")
+    compile_deck(tmp_path / "deck.dss")
+    assert _engine_line_differences(network) == []

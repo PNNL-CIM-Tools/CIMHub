@@ -21,7 +21,7 @@ from cimtables.graph_write import get_qty
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_core.getters import describe
 from cimhub_core.getters.device_schedule import DeviceSchedule, get_device_schedule
-from cimhub_core.getters.load_schedule import get_schedule_points
+from cimhub_core.getters.load_schedule import get_group_schedule, get_schedule_points
 from cimhub_core.names import export_name
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -70,9 +70,15 @@ def shape_name(context, schedule) -> str:
 
 
 def export(context) -> list[schema.Loadshape]:
-    """One LoadShape per ConformLoadSchedule with points (shared when two agree, ``ShapeRegistry``)."""
+    """One LoadShape per group time series with points (shared when two agree, ``ShapeRegistry``). A schedule of a
+    Season or DayType is a recurring day (``get_group_schedule``'s days), not a time series: it has none, and its
+    group's loads are static."""
     shapes = []
     for schedule in context.objects(cim.ConformLoadSchedule):
+        if schedule.ConformLoadGroup is None:
+            raise ValueError(f"{describe(schedule)}: ConformLoadGroup is unset; a LoadShape is a group's curve")
+        if get_group_schedule(schedule.ConformLoadGroup).schedule is not schedule:
+            continue
         points = get_schedule_points(schedule, context.points)
         if points is None:
             continue

@@ -102,6 +102,9 @@ def _transformer(xf, codes) -> Transformer:
 def _coil(winding: _Winding, windings: list[_Winding], phases: int, name: str) -> Coil:
     if phases > 1:
         return Coil(winding.bus, winding.kv, Connection.POLYPHASE, frozenset(winding.nodes[:phases]))
+    if len(set(winding.nodes)) != 2:  # a.1.1 shorts the coil: the engine solves its other side at 0 V
+        raise ValueError(f"Transformer {name}: winding {winding.number} on {winding.bus}{winding.nodes} "
+                         "needs two distinct nodes")
     conductors = frozenset(node for node in winding.nodes if node in _PHASE_NODES)
     on_bus = [other for other in windings if other.bus == winding.bus]
     if len(on_bus) > 1 and is_split_phase(on_bus):

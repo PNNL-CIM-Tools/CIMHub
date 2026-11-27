@@ -45,7 +45,7 @@ FIELDS = {
     "nphases": Field("copied", ((_PHASE, "conductorCount", None),),
                      "the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a "
                      "phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase "
-                     "Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4)"),
+                     "Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4); unset = the engine's default 3 (defaulted)"),
     "r1": Field("copied", ((_SEQ, "r", "ohm/{length}"),)),
     "x1": Field("copied", ((_SEQ, "x", "ohm/{length}"),)),
     "r0": Field("copied", ((_SEQ, "r0", "ohm/{length}"),)),
@@ -154,6 +154,7 @@ def _units_text(value) -> str | None:
 def _resistances(code) -> list[float]:
     """The positive per-unit resistances the magnitude gate looks at: r1, or the rmatrix diagonal."""
     if code.rmatrix:
+        code, _ = with_default_phases(code)
         diagonal = lower_triangle(code.rmatrix, code.nphases, name=code.name, slot="rmatrix")
         values = [value for (row, column), value in diagonal.items() if row == column]
     else:
@@ -187,7 +188,7 @@ def templates(native, length_unit: str | None = None) -> dict[str, list[Template
     codes = native.list_by_class(NATIVE_CLASS)
     line_units: dict[str, set] = {}
     for line in native.list_by_class(schema.Line):
-        if line.linecode:
+        if line.linecode and not line.Switch:  # a switch drops its linecode
             line_units.setdefault(str(line.linecode).lower(), set()).add(_units_text(line.units))
     result: dict[str, list[Template]] = {}
     gated = []
@@ -232,6 +233,14 @@ def gated_templates(codes, length_unit: str | None, mrid_of) -> dict[str, list[T
 def _has_capacitance(code) -> bool:
     values = list(code.cmatrix or []) + [code.C1, code.C0]
     return any(value is not None and value != 0 for value in values)
+
+
+def with_default_phases(code):
+    """``(code, comment)``: a code with no ``nphases`` takes the engine's default (``dss_defaults``: 3)."""
+    if code.nphases is not None:
+        return code, None
+    nphases = dss_defaults(NATIVE_CLASS)["nphases"]
+    return dataclasses.replace(code, nphases=nphases), f"defaulted: nphases={nphases}"
 
 
 def with_default_capacitance(code):
@@ -286,6 +295,9 @@ def _short_sequence_matrices(code):
                          "(no deck in the sweep sets it)")
     if None in (code.r1, code.x1):
         raise ValueError(f"LineCode {code.name}: a {code.nphases}-phase sequence code needs r1 and x1")
+    if code.nphases == 2 and code.C1 is None and code.C0 is not None:
+        raise ValueError(f"LineCode {code.name}: C0={cell(code.C0)} without C1 on a 2-phase sequence code; the "
+                         "engine's default C1 would complete it, which is not mapped yet")
     r = phase_matrix(code.r1, code.r0, code.nphases)
     x = phase_matrix(code.x1, code.x0, code.nphases)
     c = phase_matrix(code.C1, code.C0, code.nphases) if code.C1 is not None else {}
@@ -337,10 +349,11 @@ def impedance_statements(entries, base_frequency: float, *, is_template: bool) -
     derived_matrix = False
     for original, code_templates in entries:
         sequence = is_sequence(original)
-        code, capacitance = with_default_capacitance(original)
+        code, phases = with_default_phases(original)
+        code, capacitance = with_default_capacitance(code)
         code, defaulted = with_frequency(code, base_frequency)
         for template in code_templates:
-            note = _comment(template.note, capacitance, defaulted)
+            note = _comment(template.note, phases, capacitance, defaulted)
             if sequence and code.nphases == 3:
                 columns, row = _sequence_row(code, template, note, is_template)
                 sequences_by_columns.setdefault(columns, []).append(row)

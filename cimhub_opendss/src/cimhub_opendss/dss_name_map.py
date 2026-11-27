@@ -55,7 +55,7 @@ def _get_schema_dir() -> Path:
 def _load_yaml(yaml_path: Path) -> dict:
     """One schema YAML file; a malformed one raises, naming the file (its classes would otherwise lose their
     ``dss_name`` mappings without a word)."""
-    with open(yaml_path) as f:
+    with open(yaml_path, encoding="utf-8") as f:
         try:
             return yaml.safe_load(f) or {}
         except yaml.YAMLError as error:
@@ -106,12 +106,13 @@ class DssClassMap:
     def field_for(self, param: str) -> str:
         """The field a DSS property names: an exact (case-insensitive) match, else the first property, in
         DSS order, that starts with ``param``. DSS accepts abbreviations that way (``ppm`` is
-        ``ppm_antifloat``, ``Vmin`` is ``Vminpu``); the schema's field order is the DSS property order."""
+        ``ppm_antifloat``, ``Vmin`` is ``Vminpu``); the schema's field order is the DSS property order. ``name`` is
+        no DSS property, so no abbreviation names it (``n=2`` on a LoadShape is ``npts``), and an empty name raises."""
         key = param.lower()
         if key in self.param_to_field:
             return self.param_to_field[key]
         for name, field_name in self.param_to_field.items():
-            if name.startswith(key):
+            if key and name != "name" and name.startswith(key):
                 return field_name
         raise ValueError(f"unknown property {param!r} on {self.schema_class.__name__}")
 
@@ -270,8 +271,9 @@ def get_class_map(schema_class: type) -> DssClassMap:
 def build_type_registry() -> dict[str, type]:
     """Return ``{lowered_dss_type: schema_class}`` for all classes in the schema.
 
-    Introspects ``opendss_schema`` to find all ``YAMLRoot`` subclasses.
-    Adds known aliases like ``"circuit" -> Vsource``.
+    Introspects ``opendss_schema`` to find all ``YAMLRoot`` subclasses, less ``Options`` and ``Buscoords``: they
+    hold ``Set`` and ``BusCoords`` values, and the engine has no such class to ``New``.
+    Adds known aliases like ``"circuit" -> Vsource`` and the engine's ``TCC_Curve``.
     """
     import cimhub_opendss.schema.opendss_schema as mod
     from linkml_runtime.utils.yamlutils import YAMLRoot
@@ -288,15 +290,14 @@ def build_type_registry() -> dict[str, type]:
             class_name = getattr(obj, "class_name", attr_name)
             registry[class_name.lower()] = obj
 
+    del registry["options"], registry["buscoords"]
+
     # Known aliases
     vsource = registry.get("vsource")
     if vsource:
         registry["circuit"] = vsource
 
-    # Handle underscore variants (e.g., "tcc_curve")
-    tcc = registry.get("tcc_curve")
-    if tcc:
-        registry["tcccurve"] = tcc
-        registry["tcc curve"] = tcc
+    # The schema class is TccCurve; the engine's is TCC_Curve
+    registry["tcc_curve"] = registry["tcccurve"]
 
     return registry

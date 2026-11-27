@@ -137,9 +137,21 @@ def raises(tmp_path, shape: str, match: str, *, loads: str = LOAD):
     ("New Loadshape.s npts=2 interval=1 action=normalize mult=(1 2)", "mult assigned after action=normalize"),
     ("New Loadshape.s npts=2 interval=1 mult=(1 2) action=other", "action=other is not mapped"),
     ("New Loadshape.s npts=2 interval=1", "no mult"),
-), ids=("useactual", "hour", "interval 0", "npts", "qmult length", "pbase", "normalize order", "action", "no mult"))
+    ("New Loadshape.s npts=2 interval=1 mult=(1 2) action=other action=normalize", "action=other is not mapped"),
+), ids=("useactual", "hour", "interval 0", "npts", "qmult length", "pbase", "normalize order", "action", "no mult",
+        "earlier action"))
 def test_a_shape_off_the_mapping_raises(tmp_path, shape, match):
     raises(tmp_path, shape, match)
+
+
+def test_a_normalize_before_a_save_still_normalizes(tmp_path):
+    """Each action acts when assigned, so a DblSave after normalize leaves the shape normalized (engine-checked:
+    mult [1 2 4] reads back [0.25 0.5 1]). The record keeps only the last action; the history keeps both."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + "New Loadshape.s npts=3 interval=1 mult=[1 2 4] action=normalize action=DblSave\n")
+    native = DssReader(path).read_all()
+    [record] = native.list_by_class(loadshape.NATIVE_CLASS)
+    assert loadshape.read_shape(native, record).mult == [0.25, 0.5, 1.0]
 
 
 def test_a_yearly_naming_no_shape_raises(tmp_path):

@@ -15,6 +15,8 @@ from cimhub_opendss.importer.cimtbl.linecode import (FIELDS, NATIVE_CLASS, b_fro
 from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.schema import opendss_schema as schema
 
+from conftest import clear_engine
+
 ATOMS = Path(__file__).parent / "atoms" / "linecode"
 FEET_PER_MILE = 5280
 
@@ -134,6 +136,8 @@ def test_sequence_codes_group_by_header():
     (schema.Linecode(name="both", nphases=1, units="ft", r1=0.1, rmatrix=[0.1], xmatrix=[0.2]),
      "both: sets both matrix and sequence"),
     (schema.Linecode(name="bare", nphases=3, units="ft"), "bare: sets no impedance"),
+    # the engine fills C1 from its default, so C0 alone would give a C in two sources
+    (schema.Linecode(name="c0", nphases=2, units="km", r1=0.1, x1=0.3, C0=5.0), "c0: C0=5.0 without C1"),
 ])
 def test_ambiguous_or_unmapped_codes_fail_fast(code, message):
     with pytest.raises(ValueError, match=message):
@@ -206,7 +210,7 @@ def test_short_sequence_matrices_match_the_engine():
     data = {}
     for d in network.graph[network.cim.PhaseImpedanceData].values():
         data.setdefault(d.PhaseImpedance.name.lower(), {})[(d.row, d.column)] = d
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command(f"Redirect [{(ATOMS / 'short_sequence.dss').resolve()}]")
     for line, code in (("one", "oh-1x_4cu_4cun"), ("two", "oh-2x_4cu_4cun")):
         dss.Lines.Name(line)
@@ -217,3 +221,19 @@ def test_short_sequence_matrices_match_the_engine():
             assert float(d.r.to("ohm/km")) == pytest.approx(r[k], rel=1e-9)
             assert float(d.x.to("ohm/km")) == pytest.approx(x[k], rel=1e-9)
             assert float(d.b.to("nS/km")) == pytest.approx(b_from_c(c[k], 60.0), rel=1e-9)
+
+
+def test_a_code_with_no_nphases_is_defaulted_to_three():
+    """The engine's default nphases (dss_defaults) is 3; the row says it was defaulted."""
+    code = schema.Linecode(name="c", rmatrix=[0.1, 0.01, 0.1, 0.01, 0.01, 0.1],
+                           xmatrix=[0.3, 0.1, 0.3, 0.1, 0.1, 0.3], units="km")
+    [impedance] = [s for s in _map(_native(code)).statements if s.cim_class == "PerLengthPhaseImpedance"]
+    [row] = impedance.rows
+    assert row.cells[2] == "3" and "defaulted: nphases=3" in row.comment
+
+
+def test_a_switch_does_not_give_its_linecode_a_unit():
+    """A switch drops its linecode, so its units make no second template of a unitless code."""
+    lines = [schema.Line(name="a", bus1="x", linecode="g", units="kft"),
+             schema.Line(name="s", bus1="x", linecode="g", units="mi", Switch=True)]
+    assert [template.unit for template in templates(_native(_sequence_code("g"), lines=lines))["g"]] == ["kft"]

@@ -5,12 +5,13 @@ same elements and the same solved bus voltages as the original.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
 
 from cimhub_opendss import DssReader, DssWriter
-from cimhub_opendss.dss_writer import WRITE_ORDER, format_float
+from cimhub_opendss.dss_writer import WRITE_ORDER, dss_safe_name, format_float
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import deck
@@ -89,6 +90,14 @@ def test_circuit_name_without_its_source_raises(tmp_path):
         DssWriter().write(model, tmp_path / "deck.dss")
 
 
+def test_empty_circuit_name_without_its_source_names_the_circuit(tmp_path):
+    model = DssReader(ATOMS / "vsource" / "mvasc.dss").read_all()
+    del model.graph[schema.Vsource]
+    model.list_by_class(schema.Options)[0].circuit = ""
+    with pytest.raises(ValueError, match="only Options.circuit"):
+        DssWriter().write(model, tmp_path / "deck.dss")
+
+
 def test_class_without_a_write_order_raises(tmp_path):
     model = DssReader(ATOMS / "vsource" / "mvasc.dss").read_all()
     model.add_to_graph(schema.Monitor(name="m1"))
@@ -147,3 +156,69 @@ def test_rdcohms_is_written_per_winding_last():
     assert DssWriter().serialize(transformer) == (
         "new Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[7.2 0.24] kVAs=[25 25] Seasons=2 Ratings=[30 35] "
         "wdg=1 RdcOhms=2.1 wdg=2 RdcOhms=0.004")
+
+
+@pytest.mark.parametrize("name, safe", [("a!b", "a_b"), ("c//d", "c_d"), ("http://x", "http:_x"), ("e/f", "e/f")])
+def test_comment_starts_are_unsafe(name, safe):
+    """The engine reads ``!`` and ``//`` as the start of a comment: ``New Load.a!b bus1=x`` defines Load.a."""
+    assert dss_safe_name(name) == safe
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_non_finite_float_raises(value):
+    with pytest.raises(ValueError, match="not a finite number"):
+        format_float(value)
+
+
+@pytest.mark.parametrize("x, y", [(None, 1.0), (1.0, None), (math.nan, 1.0), (1.0, math.inf)])
+def test_coordinates_that_are_not_two_finite_numbers_raise(x, y, tmp_path):
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    model.list_by_class(schema.Buscoords)[0].x, model.list_by_class(schema.Buscoords)[0].y = x, y
+    with pytest.raises(ValueError, match="Buscoords .*: coordinates .* are not two finite numbers"):
+        DssWriter().write(model, tmp_path / "deck.dss")
+
+
+def test_coordinates_name_the_bus_as_the_deck_does(tmp_path):
+    """A bus name the writer sanitizes in ``bus1=`` is sanitized in the coordinates file too, or it has none."""
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    model.add_to_graph(schema.Buscoords(name="bus 1", x=1.0, y=2.0))
+    DssWriter().write(model, tmp_path / "deck.dss")
+    assert "bus_1, 1.0, 2.0" in (tmp_path / "deck_buscoords.csv").read_text().splitlines()
+
+
+def test_coordinates_file_name_is_quoted(tmp_path):
+    """The engine reads ``Buscoords my deck_buscoords.csv`` as the file ``my``."""
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    DssWriter().write(model, tmp_path / "my deck.dss")
+    assert (tmp_path / "my deck.dss").read_text().splitlines()[-1] == 'Buscoords "my deck_buscoords.csv"'
+
+
+def test_open_target_is_sanitized_as_its_definition(tmp_path):
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    model.add_to_graph(schema.Line(name="sw 2", bus1="b1", bus2="b3", phases=3, Switch=True))
+    model.list_by_class(schema.Options)[0].open_terminals = ["Line.sw 2 1"]
+    DssWriter().write(model, tmp_path / "deck.dss")
+    lines = (tmp_path / "deck.dss").read_text().splitlines()
+    assert "Open Line.sw_2 1" in lines
+    assert any(line.startswith("new Line.sw_2 ") for line in lines)
+
+
+def test_nothing_is_written_when_a_record_fails(tmp_path):
+    """A bad record late in the deck leaves no partial deck, class file or coordinates file behind."""
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    model.add_to_graph(schema.Reactor(name="r", bus1="b1", kvar=math.nan))
+    out = tmp_path / "out"
+    for per_class in (False, True):
+        with pytest.raises(ValueError, match="not a finite number"):
+            DssWriter().write(model, out / "deck.dss", per_class=per_class)
+        assert not out.exists()
+
+
+def test_geometry_with_heights_and_no_positions_raises():
+    """``hs`` alone is no DSS property: the writer needs an x and an h per conductor to write cond= blocks."""
+    geometry = schema.Linegeometry(name="g", nconds=1, hs=[10.0], wires=["w"], units="ft")
+    with pytest.raises(ValueError, match="LineGeometry g has positions"):
+        DssWriter().serialize(geometry)
+    with pytest.raises(ValueError, match=r"LineGeometry g: 1 wires, 0 xs, 1 hs; needs one wire, x and h per "
+                                         "conductor"):
+        DssWriter()._geometry(geometry, {"w": "wire"})

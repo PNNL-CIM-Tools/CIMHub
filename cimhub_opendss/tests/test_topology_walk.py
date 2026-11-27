@@ -13,7 +13,7 @@ from cimhub_opendss.dss_reader import DssReader
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import ENGINE_DECKS, deck
+from conftest import ENGINE_DECKS, compile_deck, deck
 
 FEEDER = Path(__file__).parent / "atoms" / "topology" / "feeder.dss"
 THREE, SINGLE, SPLIT = System.THREE_PHASE, System.SINGLE_PHASE, System.SPLIT_PHASE
@@ -53,6 +53,16 @@ def test_scalar_kv_without_wdg_raises():
         dss_network(native)
 
 
+@pytest.mark.parametrize("bus", ["a.1.1", "a.0.0"])
+def test_one_phase_winding_on_one_node_raises(bus):
+    """``buses=[a.1.1 b.1.0]`` shorts the primary: the engine compiles it and solves bus b at 0 V."""
+    native = type("Native", (), {"list_by_class": staticmethod(lambda cls: [
+        schema.Transformer(name="t", phases=1, buses=[bus, "b.1.0"], kVs=[7.2, 0.24])]
+        if cls is schema.Transformer else [])})()
+    with pytest.raises(ValueError, match=r"Transformer t: winding 1 on a\(.*\) needs two distinct nodes"):
+        dss_network(native)
+
+
 def _against_engine(path: Path) -> tuple[dict, set[str]]:
     """Buses whose voltage differs from the engine's, and buses the engine squashes.
 
@@ -61,8 +71,7 @@ def _against_engine(path: Path) -> tuple[dict, set[str]]:
     0.208 and 0.48) the engine squashes, and the bus is listed as such instead.
     """
     buses = _walk(path)
-    dss.Text.Command("Clear")
-    dss.Text.Command(f"Compile [{path.resolve()}]")
+    compile_deck(path)
     bases_ln = [kv / math.sqrt(3) for kv in dss.Settings.VoltageBases()]
     differ, squashed = {}, set()
     for name in dss.Circuit.AllBusNames():

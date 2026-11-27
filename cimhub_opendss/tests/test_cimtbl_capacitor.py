@@ -91,6 +91,15 @@ def test_controls_bind(caps):
     ("New CapControl.x capacitor=nothing element=line.l1\n", "capacitor=nothing is no Capacitor"),
     ("New CapControl.x capacitor=c element=line.l1 PTPhase=4\n", "PTPhase=4"),
     ("New CapControl.x capacitor=c element=line.l1 PTPhase=AVG\n", "PTPhase=AVG is not mapped"),
+    ("New Capacitor.x bus1=b1 Numsteps=0\n", "Numsteps=0"),  # the engine refuses it (#2020031)
+    ("New Capacitor.x bus1=b1 states=[0 1]\n", r"states=\[0, 1\]; one step state"),  # the engine keeps [0]
+    ("New Capacitor.x bus1=b1 states=[2]\n", r"states=\[2\]; one step state"),
+    ("New CapControl.x capacitor=c element=line.l1 terminal=3\n", "terminal=3 on Line l1"),  # the engine refuses it
+    ("New CapControl.x capacitor=c element=capacitor.c terminal=2\n", "terminal=2 on Capacitor c"),
+    ("New WireData.w Rac=0.3 GMRac=0.1 diam=0.4 runits=km gmrunits=cm radunits=cm\n"
+     "New LineSpacing.sp nconds=2 nphases=2 units=ft x=[0 1] h=[30 30]\n"
+     "New Line.l2 bus1=b1.1.2 bus2=b2.1.2 spacing=sp wires=[w w] length=1 units=kft\n"
+     "New CapControl.x capacitor=c element=line.l2 PTPhase=3\n", "PTPhase=3 on a terminal with phases AB"),
 ])
 def test_unmapped_banks_and_controls_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"

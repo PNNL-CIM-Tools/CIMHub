@@ -48,10 +48,11 @@ def test_matches_golden(loads):
 
 
 def test_derived_power():
-    assert load.reactive_power(10, 0.9) == pytest.approx(4.8432210)
-    assert load.reactive_power(10, -0.9) == pytest.approx(-4.8432210)
-    assert load.reactive_power(10, 1.0) == 0
-    assert load.power_from_kva(313, 0.9) == pytest.approx((281.7, 136.4335), rel=1e-6)
+    assert load.reactive_power("l", 10, 0.9) == pytest.approx(4.8432210)
+    assert load.reactive_power("l", 10, -0.9) == pytest.approx(-4.8432210)
+    assert load.reactive_power("l", -10, 0.9) == pytest.approx(-4.8432210)
+    assert load.reactive_power("l", 10, 1.0) == 0
+    assert load.power_from_kva("l", 313, 0.9) == pytest.approx((281.7, 136.4335), rel=1e-6)
     assert load.exponential_mrid(0.8, 3.0) == "exp_0.8_3"
 
 
@@ -79,6 +80,8 @@ def test_loads_bind(loads):
     ("New Load.x bus1=b1.1.4 phases=1 kV=2.4 kW=10\n", "wye neutral on node 4"),
     ("New Load.x bus1=house phases=3 kV=0.208 kW=10\n", "3-phase device on split-phase bus house"),
     ("New Load.x bus1=nowhere kW=10\n", "the topology walk did not reach it"),
+    ("New Load.x bus1=b1 kV=4.16 kVA=100 pf=0\n", "Load x: power factor 0"),  # the engine gives kvar NaN
+    ("New Load.x bus1=b1 kV=4.16 kW=100 pf=1.2\n", "Load x: power factor 1.2"),  # the engine gives kvar NaN
 ])
 def test_unmapped_loads_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"
@@ -106,6 +109,16 @@ def _engine_load_differences(network) -> list[str]:
             if not math.isclose(value, theirs[key], rel_tol=1e-9, abs_tol=1e-9):
                 differences.append(f"{consumer.name} {key}: {value} vs {theirs[key]}")
     return differences
+
+
+def test_reactive_power_takes_the_sign_of_kw(tmp_path):
+    """kvar = kW x tan(acos |pf|) x sign(pf), so a negative kW flips kvar (engine-checked)."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + "New Load.neg bus1=b1 kV=4.16 kW=-50 pf=0.9\n"
+                    "New Load.negneg bus1=b1 kV=4.16 kW=-50 pf=-0.9\n")
+    network = dss_to_cim(DssReader(path).read_all(), name="atom")
+    compile_deck(path)
+    assert _engine_load_differences(network) == []
 
 
 def test_atom_matches_the_engine(loads):

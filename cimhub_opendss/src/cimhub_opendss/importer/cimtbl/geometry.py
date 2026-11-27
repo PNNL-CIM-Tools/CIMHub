@@ -95,7 +95,7 @@ Source table: {native} (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry"""
 
 
-def _not_mapped(record, fields: dict[str, Field], slots) -> None:
+def _not_mapped(record, slots) -> None:
     unmapped = [slot for slot in slots if getattr(record, slot) not in (None, [], False)]
     if unmapped:
         raise ValueError(f"{type(record).__name__} {record.name}: {', '.join(unmapped)} not mapped yet "
@@ -127,7 +127,7 @@ def map_linespacing(native) -> Document:
     spacings = native.list_by_class(schema.Linespacing)
     statements = []
     for spacing in spacings:
-        _not_mapped(spacing, LINESPACING_FIELDS, ("detailed", "EqDistPhPh", "EqDistPhN", "AvgPhaseHeight",
+        _not_mapped(spacing, ("detailed", "EqDistPhPh", "EqDistPhN", "AvgPhaseHeight",
                                                   "AvgNeutralHeight"))
         statements += spacing_statements(mrid(_SPACING_PREFIX, spacing.name, lowercase=True), spacing.name,
                                          spacing.x, spacing.h, spacing.units, spacing.nphases, spacing.nconds,
@@ -175,13 +175,13 @@ def wire_sequence_table(configuration: str, wire_info_mrids: list[str]) -> Table
 
 
 def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[str]) -> list:
-    _not_mapped(geometry, LINEGEOMETRY_FIELDS, ("conductors",))
+    _not_mapped(geometry, ("conductors",))
     if geometry.nphases is None or geometry.nconds is None:
         raise ValueError(f"LineGeometry {geometry.name}: nphases and nconds must be set")
     configuration = mrid(_GEOMETRY_PREFIX, geometry.name, lowercase=True)
     statements = []
     if geometry.spacing:
-        if geometry.xs or geometry.hs:
+        if geometry.xs or geometry.hs or any(getattr(geometry, slot) not in (None, []) for slot in _FOLDED_SLOTS):
             raise ValueError(f"LineGeometry {geometry.name}: gives both spacing= and inline positions")
         if str(geometry.spacing).lower() not in spacings:
             raise ValueError(f"LineGeometry {geometry.name}: spacing={geometry.spacing!r} is no LineSpacing")
@@ -220,9 +220,10 @@ def map_linegeometry(native) -> Document:
 
 
 def uses_geometry(native) -> bool:
-    """The deck gives a WireConfiguration: a LineGeometry, or a Line by ``spacing=``."""
+    """The deck gives a WireConfiguration: a LineGeometry, or a Line (not a switch, which drops it) by
+    ``spacing=``."""
     return bool(native.list_by_class(schema.Linegeometry)) or any(
-        line.spacing for line in native.list_by_class(schema.Line))
+        line.spacing and not line.Switch for line in native.list_by_class(schema.Line))
 
 
 def _text(value) -> str:
@@ -247,7 +248,7 @@ def earth_statement(native) -> ObjectStatement | None:
     if kind is None:
         raise ValueError(f"earthmodel={_text(model)}: EarthModelKind has {sorted(EARTH_MODELS)}")
     rhos = {float(line.rho) for line in native.list_by_class(schema.Line)
-            if (line.geometry or line.spacing) and line.rho is not None}
+            if (line.geometry or line.spacing) and line.rho is not None and not line.Switch}
     if len(rhos) > 1:
         raise ValueError(f"geometry lines give rho {sorted(rhos)}; one EarthResistivity per deck is mapped")
     if rhos:

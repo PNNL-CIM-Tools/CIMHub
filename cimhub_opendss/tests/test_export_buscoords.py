@@ -66,6 +66,15 @@ def test_two_points_for_one_bus_raise():
         _rows(network)
 
 
+def test_two_points_a_rounding_error_apart_at_zero_are_one():
+    """rel_tol alone never matches 0 against 1e-12 (a reflected device point), so positions also agree within
+    1e-9 absolute."""
+    network = _network("local")
+    [point] = _location(network, "src_source_loc").PositionPoints
+    point.xPosition = "1e-12"
+    assert _rows(network)["sourcebus"][:2] == pytest.approx((0.0, 0.0), abs=1e-9)
+
+
 def test_unknown_coordinate_system_raises():
     network = _network("local")
     for system in network.graph[cim.CoordinateSystem].values():

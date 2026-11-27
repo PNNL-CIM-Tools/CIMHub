@@ -165,7 +165,8 @@ The connection's nameplate: `ratedS` and `ratedU` (both required), `minQ`/`maxQ`
 | `min_q`, `max_q` | the q limits as `(min, max)` in `reactive_unit` and the caller's sign, each `None` when unset |
 | `max_fault_current` | `maxIFault`, per unit of rated current, or `None` |
 
-Raises `ValueError` for a bad `sign`, an unset `ratedS` or `ratedU`, or a `minQ` above `maxQ`.
+Raises `ValueError` for a bad `sign`, an unset `ratedS` or `ratedU`, a `ratedS`, `ratedU` or `maxIFault` of 0 or
+less, or a `minQ` above `maxQ`.
 
 ```python
 with cim_scope():
@@ -345,7 +346,7 @@ get_battery_unit(unit: BatteryUnit, active_unit: str = "W", energy_unit: str = "
 | `state` | `BatteryStateKind` (charging, discharging, ...) or `None` |
 
 Every field is `None` when unset. Raises `ValueError` for a bad `sign`, a unit that is not a
-`BatteryUnit`, or `minP` above `maxP`.
+`BatteryUnit`, a `ratedE` of 0 or less, or `minP` above `maxP`.
 
 ```python
 with cim_scope():
@@ -379,7 +380,7 @@ get_machine_rating(machine: SynchronousMachine, apparent_unit: str = "VA", react
 | `earthing` | `bool` or `None` |
 
 Raises `ValueError` for a bad `sign`, an object that is not a `SynchronousMachine`, an unset `ratedS` or `ratedU`,
-or `minQ` above `maxQ`.
+either of them 0 or less, or `minQ` above `maxQ`.
 
 ```python
 with cim_scope():

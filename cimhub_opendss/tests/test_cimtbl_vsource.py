@@ -19,7 +19,7 @@ from cimhub_opendss.importer.cimtbl.vsource import (FIELDS, NATIVE_CLASS, Theven
 from cimhub_opendss.importer.topology import dss_network
 from cimhub_opendss.schema import opendss_schema as schema
 
-from conftest import ENGINE_DECKS, deck
+from conftest import ENGINE_DECKS, clear_engine, compile_deck, deck
 
 ATOMS = Path(__file__).parent / "atoms" / "vsource"
 CASES = ["mvasc", "ohms", "isc", "defaults", "single_phase"]
@@ -41,7 +41,7 @@ def _source(**slots):
 
 
 def _engine_thevenin(command: str, name: str = "source") -> Thevenin:
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command(command)
     return _active_thevenin(name)
 
@@ -81,6 +81,20 @@ def test_negative_discriminant_raises():
         thevenin_from_short_circuit(12.47, 2000.0, 1e9, 4.0, 3.0)
 
 
+@pytest.mark.parametrize("args, message", [
+    ((12.47, 2000.0, 2100.0, 0.0, 3.0), "x1r1=0"),  # the engine refuses it
+    ((12.47, 2000.0, 2100.0, -2.0, 3.0), "x1r1=-2"),  # the engine gives a negative R1
+    ((12.47, 2000.0, 2100.0, 4.0, -1.0), "x0r0=-1"),  # the engine gives a negative X0
+    ((0.0, 2000.0, 2100.0, 4.0, 3.0), "kV=0"),  # the engine gives no impedance
+    ((12.47, 0.0, 2100.0, 4.0, 3.0), "MVAsc3=0"),  # the engine refuses it
+    ((12.47, 2000.0, 0.0, 4.0, 3.0), "MVAsc1=0"),  # the engine gives an infinite R0
+    ((12.47, 100.0, 1000.0, 4.0, 3.0), "gives R0=-0.853798"),  # the engine gives this negative R0
+])
+def test_a_short_circuit_off_the_mapping_raises(args, message):
+    with pytest.raises(ValueError, match=message):
+        thevenin_from_short_circuit(*args)
+
+
 def test_isc_matches_the_engine():
     source, group, _ = with_defaults(_source(basekv=69.0, Isc3=1e6, Isc1=1.1e6))
     engine = _engine_thevenin("New Circuit.x basekv=69 Isc3=1000000 Isc1=1100000")
@@ -92,6 +106,7 @@ def test_isc_matches_the_engine():
     ({"R1": 0.1, "X1": 1.0, "R0": 0.1, "X0": 1.0, "MVAsc3": 100.0}, "sets the ohms and MVAsc impedance groups"),
     ({"MVAsc3": 100.0, "Isc1": 1000.0}, "sets the MVAsc and Isc impedance groups"),
     ({"R1": 0.1, "X1": 1.0}, "sets only part of R1, X1, R0, X0"),
+    ({"Isc3": 1000.0}, "sets only part of Isc3, Isc1"),
     ({"puZ1": [0.1, 1.0]}, "puZ1 not mapped yet"),
     ({"bus2": "b.0"}, "bus2 not mapped yet"),
 ])
@@ -152,8 +167,7 @@ def test_isc_values_bind_in_ohms():
 def test_thevenin_matches_the_engine(relative):
     path = deck(relative)
     sources = DssReader(path).read_all().list_by_class(NATIVE_CLASS)
-    dss.Text.Command("Clear")
-    dss.Text.Command(f"Compile [{path.resolve()}]")
+    compile_deck(path)
     for original in sources:
         source, group, _ = with_defaults(original)
         assert _ohms(source, group) == pytest.approx(_active_thevenin(source.name), rel=1e-9, abs=1e-12), \

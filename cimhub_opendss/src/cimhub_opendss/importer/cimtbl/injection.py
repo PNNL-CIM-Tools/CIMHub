@@ -100,9 +100,12 @@ def line_kv(kv: float, terminal: DeviceTerminal) -> float:
     return kv * _SQRT3 if terminal.count == 1 and not terminal.delta else kv
 
 
-def reactive_power(kw: float, pf: float) -> float:
-    """kvar at ``kw`` and ``pf``: kW x tan(acos abs(pf)), with the sign of pf."""
-    return math.copysign(kw * math.tan(math.acos(abs(pf))), pf)
+def reactive_power(label: str, kw: float, pf: float) -> float:
+    """kvar at ``kw`` and ``pf``: kW x tan(acos abs(pf)) x sign(pf), so a negative kW flips it (engine-checked).
+    Raises unless 0 < abs(pf) <= 1: the engine's kvar is then NaN or infinite."""
+    if not 0 < abs(pf) <= 1:
+        raise ValueError(f"{label}: power factor {pf:g} is outside 0 < |pf| <= 1 (the engine's kvar is not a number)")
+    return kw * math.copysign(math.tan(math.acos(abs(pf))), pf)
 
 
 def inverter_power(label: str, available_kw: float, kvar: float, kva: float) -> float:

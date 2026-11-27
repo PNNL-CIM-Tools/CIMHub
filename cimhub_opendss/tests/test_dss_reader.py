@@ -170,7 +170,7 @@ class TestParsingPrimitives:
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        params = reader._parse_params("Bus1=671 Model=1 kV=4.16")
+        params = dict(reader._parse_params("Bus1=671 Model=1 kV=4.16"))
         assert params["Bus1"] == "671"
         assert params["Model"] == "1"
         assert params["kV"] == "4.16"
@@ -180,7 +180,7 @@ class TestParsingPrimitives:
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        params = reader._parse_params("kVs=[115, 4.16, 13.2]")
+        params = dict(reader._parse_params("kVs=[115, 4.16, 13.2]"))
         assert "kVs" in params
         assert "115" in params["kVs"]
         assert "4.16" in params["kVs"]
@@ -190,7 +190,7 @@ class TestParsingPrimitives:
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        params = reader._parse_params("XSCArray=[ 0.00979 0.02491 0.02491]")
+        params = dict(reader._parse_params("XSCArray=[ 0.00979 0.02491 0.02491]"))
         assert "XSCArray" in params
         assert "0.00979" in params["XSCArray"]
 
@@ -199,9 +199,9 @@ class TestParsingPrimitives:
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        params = reader._parse_params(
+        params = dict(reader._parse_params(
             "Phases=3 Windings=3 Buses=[sourcebus, 650, 650z, ] kVAs=[1000, 1000, 1000, ]"
-        )
+        ))
         assert params["Phases"] == "3"
         assert params["Windings"] == "3"
         assert "sourcebus" in params["Buses"]
@@ -212,7 +212,7 @@ class TestParsingPrimitives:
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        params = reader._parse_params("%R=0.5 %Mean=50 %StdDev=10")
+        params = dict(reader._parse_params("%R=0.5 %Mean=50 %StdDev=10"))
         assert params["%R"] == "0.5"
         assert params["%Mean"] == "50"
         assert params["%StdDev"] == "10"
@@ -585,12 +585,12 @@ class TestEdgeCases:
             reader.read_all()
 
     def test_empty_params(self):
-        """Parsing empty parameter string returns empty dict."""
+        """Parsing empty parameter string returns no pairs."""
         from cimhub_opendss.dss_reader import DssReader
 
         reader = DssReader("")
-        assert reader._parse_params("") == {}
-        assert reader._parse_params("  ") == {}
+        assert reader._parse_params("") == []
+        assert reader._parse_params("  ") == []
 
     def test_continuation_line_joining(self):
         """Lines starting with ~ should be joined to predecessor."""

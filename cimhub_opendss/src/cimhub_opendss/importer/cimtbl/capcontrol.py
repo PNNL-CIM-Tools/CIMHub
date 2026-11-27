@@ -40,7 +40,9 @@ FIELDS = {
     "name": Field("copied", ((_CONTROL, "name", None),), "mRID = cc_ + name, lowercased"),
     "element": Field("structural", note="Terminal = ln_<line>_T<n> (sw_ for a switch) or cap_<capacitor>_T<n>; "
                                         "another element class raises"),
-    "terminal": Field("structural", note="the element's terminal; default 1"),
+    "terminal": Field("structural", note="the element's terminal: 1 or 2 on a Line (the engine refuses 3), "
+                                         "1 on a Capacitor (a LinearShuntCompensator has one); others raise; "
+                                         "default 1"),
     "capacitor": Field("structural", note="the Update row: LinearShuntCompensator cap_<capacitor> gets "
                                           "RegulatingControl; a capacitor no New defines raises"),
     "type": Field("mapped", ((_CONTROL, "mode", None),),
@@ -125,16 +127,15 @@ def on_off_target(on: float, off: float, mode: str, *, ptratio: float, ctratio: 
 
 
 def _line_phase_count(line, native) -> int:
-    """A line's phases: its own, else its LineCode's or LineGeometry's ``nphases``, else the DSS default 3."""
-    if line.phases is not None:
-        return int(line.phases)
-    for slot, native_class in (("linecode", schema.Linecode), ("geometry", schema.Linegeometry)):
+    """A line's phases as the Line mapper counts them (``line_phase_count``): a switch drops its template."""
+    template = None
+    for slot, native_class in (("linecode", schema.Linecode), ("geometry", schema.Linegeometry),
+                               ("spacing", schema.Linespacing)):
         name = getattr(line, slot)
-        if name:
+        if name and not line.Switch:
             template = {str(t.name).lower(): t for t in native.list_by_class(native_class)}.get(str(name).lower())
-            if template is not None and template.nphases is not None:
-                return int(template.nphases)
-    return 3
+            break
+    return line_mapper.line_phase_count(line, template)
 
 
 def _monitored(control, native, buses, capacitors) -> tuple[str, str]:
@@ -143,6 +144,9 @@ def _monitored(control, native, buses, capacitors) -> tuple[str, str]:
     kind, key = kind.lower(), element.lower()
     terminal = int(control.terminal)
     if kind == "line":
+        if terminal not in (1, 2):
+            raise ValueError(f"CapControl {control.name}: terminal={terminal} on Line {element}; a line has "
+                             "terminals 1 and 2")
         lines = {str(line.name).lower(): line for line in native.list_by_class(schema.Line)}
         if key not in lines:
             raise ValueError(f"CapControl {control.name}: element={control.element} is no Line")
@@ -151,6 +155,9 @@ def _monitored(control, native, buses, capacitors) -> tuple[str, str]:
         prefix = line_mapper.SWITCH_PREFIX if line.Switch else line_mapper.PREFIX
         return f"{mrid(prefix, line.name, lowercase=True)}_T{terminal}", phases
     if kind == "capacitor":
+        if terminal != 1:
+            raise ValueError(f"CapControl {control.name}: terminal={terminal} on Capacitor {element}; a "
+                             "LinearShuntCompensator has one Terminal")
         if key not in capacitors:
             raise ValueError(f"CapControl {control.name}: element={control.element} is no Capacitor")
         capacitor = capacitors[key]

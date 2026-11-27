@@ -106,6 +106,7 @@ def schedule_uri(network, device: str) -> str:
     ("g1", "q", [-1e4, -1e4, -1e4, -1e4], "point 1 has q 10.0 kVAr, not kvar 96.86"),
     ("p1", "q", [0, -1e4, -1e4, 0, 0, 0], "neither the PV's 29.58"),
     ("p2", "p", [0, -1e4, -4e4, -5e4, 0, 0], "points \\[4\\] are above the 48.9898 kW"),
+    ("p2", "p", [0, -1e4, 1e4, -1e4, 0, 0], "points \\[3\\] are below 0 kW; a PVSystem only generates"),
     ("s1", "q", [1e3, 0, 0, 0], "q other than 0"),
     ("s1", "p", [-9e4, 0, 0, 0], "points \\[1\\] are above the battery's 80 kVA"),
 ))

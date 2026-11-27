@@ -144,14 +144,16 @@ Table EnergySource: mRID, name, node, phases, nominalVoltage (kV), voltageMagnit
      - X1 = kV² / MVAsc3 / √(1 + 1/x1r1²) and R1 = X1 / x1r1;
      - R0 is the positive root of (1 + x0r0²)·R0² + 4(R1 + X1·x0r0)·R0 + 4(R1² + X1²) − (3·kV²/MVAsc1)² = 0, and
        X0 = R0 · x0r0;
-     - a negative discriminant raises.
+     - a negative discriminant raises, and so do kV, MVAsc3, MVAsc1 or x1r1 not above 0, x0r0 below 0 and a
+       negative R0: the engine refuses some and computes a negative, infinite or zero impedance for the rest.
      A slot left unset takes its DSS default (`MVAsc3` 2000, `MVAsc1` 2100, `x1r1` 4, `x0r0` 3) under
      `# defaulted`. A Vsource that sets no group takes all four defaults, as the engine does. LineCode raises in
      that case instead, but a bare `New Circuit.x basekv=12.47` is the documented minimal deck.
   3. **`Isc3 Isc1`** (amps): the short-circuit power, √3·kV·Isc3 and f·kV·Isc1 (f = √3 on 3 phases and 1 on
      1 phase; `vsource.kvasc_from_isc`), then as group 2. kV times A is kVA, and kV² / kVA is kohm, so these rows
      go in their own table with `r (kohm)`, `x (kohm)`, `r0 (kohm)`, `x0 (kohm)`: the units travel with the values
-     and no factor appears.
+     and no factor appears. Both must be set; a partial set raises (`Isc3=1000` alone at 12.47 kV gives the engine
+     a negative R0).
   - Checked against the engine (`opendssdirect`, 9 digits): IEEE13's MVAsc, all defaults, `MVAsc3` alone, `Isc`, and
     a 1-phase source.
   - `Z1 Z0 Z2 puZ1 puZ0 puZ2 baseMVA` raise when set: no deck in the sweep uses them, so a mapping waits for one.
@@ -194,7 +196,7 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 | Linecode field | type | samples | kind | target |
 |---|---|---|---|---|
 | `name` | `Union[str, LinecodeName]` | `mtx601`, `mtx602`, `mtx603` | copied | `PerLengthPhaseImpedance.name`, `PerLengthSequenceImpedance.name`, `WireConfiguration.name`; mRID = lc_ + name, lowercased; its WireConfiguration's lc_<name>_wc (DSS-14) |
-| `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4) |
+| `nphases` | `Optional[int]` | `3`, `2` | copied | `PerLengthPhaseImpedance.conductorCount`; the matrix order of rmatrix/xmatrix/cmatrix; a 1- or 2-phase sequence code becomes a phase matrix as the engine builds the line (phase_matrix): 1-phase z = Z1, 2-phase Zs = (2 Z1 + Z0)/3 and Zm = (Z0 - Z1)/3 (DSS-4); unset = the engine's default 3 (defaulted) |
 | `r1` | `Optional[float]` | `0.769009`, `0.3489`, `0.535622` | copied | `PerLengthSequenceImpedance.r` (ohm/{length}) |
 | `x1` | `Optional[float]` | `0.312115`, `0.491691`, `0.560725` | copied | `PerLengthSequenceImpedance.x` (ohm/{length}) |
 | `r0` | `Optional[float]` | `1.294322`, `0.613107`, `0.608571` | copied | `PerLengthSequenceImpedance.r0` (ohm/{length}) |
@@ -227,8 +229,9 @@ both raises. So does a code that sets neither (DSS would apply its defaults).
 gives b = 0 without a `baseFreq` (ACEP_PSIL `buswork` sets none).
 
 **Fail fast.** A `units` value with no mapping; a unitless code whose lines give units on some lines only, or a gate
-median in no band; both C1 and B1 (or C0 and B0); both forms or neither; B1/B0 on a 1- or 2-phase code; a matrix
-whose length does not fit `nphases`.
+median in no band; both C1 and B1 (or C0 and B0); both forms or neither; B1/B0 on a 1- or 2-phase code; C0 without C1 on a 2-phase code (the engine completes it
+with its default C1); a matrix whose length does not fit `nphases`. A code with no `nphases` takes the engine's 3
+(`with_default_phases`, noted `defaulted: nphases=3`). A switch's linecode gives the code no units (DSS-8).
 
 **Deck sweep (2026-11-06).** 9 of the 24 decks with line codes map and bind. The rest stop on:
 
@@ -985,7 +988,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `bus2` | `Optional[str]` | `633.1.2.3`, `645.3.2`, `670.1.2.3` | structural | node2; its phase nodes must equal bus1's (a transposition raises) |
 | `linecode` | `Optional[str]` | `mtx602`, `mtx603`, `mtx601` | structural | ACLineSegment.WireConfiguration = the WireConfiguration of the code's template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc, DSS-3, DSS-14) |
 | `length` | `Optional[float]` | `500.0`, `667.0`, `300.0` | copied | `ACLineSegment.length` ({length}); default 1 (defaulted); none on a switch |
-| `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the phase count; unset = the code's or geometry's nphases, else 3; one that differs from the code's nphases raises (DSS-10) |
+| `phases` | `Optional[int]` | `3`, `2`, `1` | structural | the phase count; unset = the code's, geometry's or spacing's nphases, else 3 (line_phase_count; a switch has no template); one that differs from the code's nphases raises (DSS-10) |
 | `r1` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `x1` | `Optional[float]` | `0.0`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
 | `r0` | `Optional[float]` | `0.0001`, `0.001`, `1.0` | structural | the line's own PerLengthImpedance ln_<name>_lc (isTemplate=false) in line.cimtbl, values per length as written, through the LineCode mapper's rules (DSS-3 units, DSS-3b, DSS-4, DSS-14); on a switch untranscribed |
@@ -998,7 +1001,7 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `Switch` | `Union[bool, Bool, NoneType]` | `True` | structural | a Switch (sw_) instead of an ACLineSegment; class from its control (DSS-9) |
 | `Rg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
 | `Xg` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (Carson earth return; the consumer's choice for geometry) |
-| `rho` | `Optional[float]` |  | structural | the deck's EarthResistivity.rho (ohm-m), which every geometry line must agree on (geometry.earth_statement); on another line it raises |
+| `rho` | `Optional[float]` |  | structural | the deck's EarthResistivity.rho (ohm-m), which every geometry line must agree on (geometry.earth_statement); on another line it raises; a switch lists it untranscribed |
 | `geometry` | `Optional[str]` | `602`, `603`, `601` | structural | ACLineSegment.WireConfiguration = wc_<geometry> |
 | `units` | `Union[str, ForwardRef('LengthUnit'), NoneType]` | `Ft`, `mi`, `km` | mapped | the length unit (LENGTH_UNIT); unset: the template's unit (DSS-3) |
 | `spacing` | `Optional[str]` | `510` | structural | with spacing=: a synthesized WireConfiguration ln_<name>_wc on spc_<spacing>, conductors in order |
@@ -1058,8 +1061,8 @@ DSS-6): `length` 1, `phases` 3, `units` none.
 | `PhaseInst` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `GroundInst` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
 | `Reset` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
-| `Shots` | `Optional[int]` | `3` | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
-| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) |
+| `Shots` | `Optional[int]` | `3` | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) or below 1 (the engine refuses it) |
+| `RecloseIntervals` | `Union[float, list[float], NoneType]` |  | structural | one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] (s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and so does Shots above 4 without intervals (the engine reads past its defaults) or below 1 (the engine refuses it) |
 | `Delay` | `Optional[float]` |  | untranscribed | control timing; no home on a Switch |
 | `Action` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the deprecated form of State) |
 | `TDPhFast` | `Optional[float]` |  | untranscribed | protection setting; no home in cim18v17's protection function blocks (DSS-11) |
@@ -1096,7 +1099,9 @@ DSS-6): `length` 1, `phases` 3, `units` none.
   `xf_<name>_2`.
   - Each end carries `node`, `endNumber`, `grounded`, `baseU` (kV, the coil voltage), `ratedS` (kVA) and
     `BaseVoltage`. Its `phase` is a PhaseCode: `AN` for a line-to-neutral unit, `AB` for a line-to-line unit
-    (IEEE37), `ABCN` for a 3-phase gang unit.
+    (IEEE37), `ABCN` for a 3-phase gang unit. `grounded` when the coil ends on node 0: a wye 1-phase coil with
+    0 among its nodes, a 3-phase gang unit with its star point (the last node) on 0; a star point on node 4
+    floats in the engine.
   - **Impedance (the user's model, 2026-11-07):** one `TransformerMeshImpedance` `xf_<name>_mesh_12` from end 1 to
     end 2, with x = `XHL` and r = %R1 + %R2 (percent). Their base is end 1's `baseU`/`ratedS`, the base CIM-Tables'
     `z_base` gives an `AutoTransformerEnd`. The row comment says it is the engine's stand-in impedance: a
@@ -1105,7 +1110,8 @@ DSS-6): `length` 1, `phases` 3, `units` none.
     an `AutoTransformerEnd`, so they are untranscribed.
 - **LTC** (unequal kV: J1 `SubXfmr`, M1 `M1_XFMR`, one 66/13.8 kV): stays a `PowerTransformer` (DSS-2); the tap
   changer goes on the controlled `PowerTransformerEnd`.
-- **Taps** (the RegControl's transformer only; any other tap ≠ 1 still raises):
+- **Taps** (the RegControl's winding only; a tap ≠ 1 on any other winding, or on a transformer no RegControl
+  names, still raises):
   - The deck's `taps[winding]` becomes `RatioTapChanger.step` = (tap − 1) / increment, where increment =
     (`MaxTap` − `MinTap`) / `NumTaps` (defaults 1.1, 0.9, 32). A step that is not whole within 1e-6 raises.
   - The range: `highStep` = (`MaxTap` − 1) / increment, `lowStep` = −(1 − `MinTap`) / increment, `neutralStep` 0,
@@ -1145,7 +1151,9 @@ headers carry no unit (primary volts, amps).
   120, `band` 3, `ptratio` 60, `CTprim` 300, `delay` 15, `tapdelay` 2, `winding` 1, `revThreshold` 100, `revDelay`
   60.
 - **Fail fast:** remote sensing (`bus=`; 1 in the sweep), `tapwinding`, `vlimit`, `TapNum`, `LDC_Z`, any of the
-  idle/cogen modes; two RegControls on one transformer; a transformer no New defines.
+  idle/cogen modes; two RegControls on one transformer; a transformer no New defines; a tap range the engine
+  takes but no tap changer has (NumTaps < 1, MaxTap ≤ MinTap, a tap outside them); a tap other than 1 on a
+  winding the control does not move (the engine keeps it fixed; a fixed tap is not mapped yet).
 
 | Regcontrol field | type | samples | kind | target |
 |---|---|---|---|---|
@@ -1242,7 +1250,8 @@ repeated IEEE8500/IEEE9500 copies):
   a load no rated voltage: `EnergyConsumer.p` is at the BaseVoltage. So `kV` is checked and not written.
 - **Engine rules** (pinned with probes; 13 engine decks, every load's kW and kvar equal the engine's):
   - kvar wins over pf in either order;
-  - pf alone gives q = kW·tan(acos |pf|) with the sign of pf, and the default pf is 0.88;
+  - pf alone gives q = kW·tan(acos |pf|)·sign(pf) (so a negative kW flips q), and the default pf is 0.88; a pf of 0
+    or above 1 in magnitude gives a NaN or infinite kvar, so the mapper raises (any device);
   - kVA without kW gives kW = kVA·|pf|;
   - kW, kVA and xfkVA override each other in the order given: `kW=10 pf=0.9 xfkVA=20 allocationfactor=0.5` is
     9 kW, but with kW last it is 10 kW. The reader's record keeps no order.
@@ -1387,7 +1396,7 @@ On the atoms and the engine decks, as in S3:
 | `phases` | `Optional[int]` | `1`, `3`, `2` | structural | the conductor count; default 3. On a split-phase island 2 wye phases on 1.2 are two legs to neutral (s1s2, kV is LL by the sqrt 3 rule) |
 | `kV` | `Optional[float]` | `2.4`, `0.277`, `4.16` | structural | checked, not written: the phase voltage it gives (LL for delta and 2-3 phases, LN for 1-phase wye) must be within 1 % of the bus's, else it raises; CIM p is at the BaseVoltage |
 | `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p |
-| `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset (kvar wins in either order, engine-checked); default 0.88 |
+| `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) x sign(pf), when kvar is unset (kvar wins in either order, engine-checked); raises unless 0 < \|pf\| <= 1; default 0.88 |
 | `model` | `Union[str, ForwardRef('LoadModel'), NoneType]` | `ConstantI`, `ConstantPQ`, `ConstantZ` | mapped | `EnergyConsumer.LoadResponse`; 1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, 8 raise; default 1 |
 | `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | mapped | `ConformLoad.LoadGroup`; the shape's group lg_<shape>: the load is a ConformLoad (S8); a shape the deck does not define raises |
 | `daily` | `Optional[str]` | `com` | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
@@ -1442,8 +1451,8 @@ On the atoms and the engine decks, as in S3:
 | `R` | `Union[float, list[float], NoneType]` | `[0.0]` | structural | 0 is untranscribed; nonzero raises (a series R is not mapped) |
 | `XL` | `Union[float, list[float], NoneType]` |  | structural | 0 is untranscribed; nonzero raises (a series reactor is not mapped) |
 | `Harm` | `Union[float, list[float], NoneType]` |  | untranscribed | the tuning harmonic of the R/XL filter |
-| `Numsteps` | `Optional[int]` |  | structural | maximumSections; more than 1 raises (unequal steps would need a NonlinearShuntCompensator); default 1 |
-| `states` | `Union[int, list[int], NoneType]` | `[0]`, `[1]` | structural | sections = normalSections = the steps closed (a switch's normalOpen = open rule); default all closed |
+| `Numsteps` | `Optional[int]` |  | structural | maximumSections; more than 1 raises (unequal steps would need a NonlinearShuntCompensator), and so does 0 (the engine refuses it); default 1 |
+| `states` | `Union[int, list[int], NoneType]` | `[0]`, `[1]` | structural | sections = normalSections = the step's state, 0 or 1 (a switch's normalOpen = open rule); anything but one 0/1 value raises; default closed |
 | `normamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (an OperationalLimitSet, as a line's) |
 | `emergamps` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `faultrate` | `Optional[float]` |  | untranscribed | a reliability setting; no home in the network profile parts |
@@ -1459,7 +1468,7 @@ On the atoms and the engine decks, as in S3:
 |---|---|---|---|---|
 | `name` | `Union[str, CapcontrolName]` | `Cap1`, `Cap2`, `CAPBank1A_Ctrl` | copied | `RegulatingControl.name`; mRID = cc_ + name, lowercased |
 | `element` | `Optional[str]` | `capacitor.cap1`, `line.684611`, `line.CAP_1A` | structural | Terminal = ln_<line>_T<n> (sw_ for a switch) or cap_<capacitor>_T<n>; another element class raises |
-| `terminal` | `Optional[int]` | `2`, `1` | structural | the element's terminal; default 1 |
+| `terminal` | `Optional[int]` | `2`, `1` | structural | the element's terminal: 1 or 2 on a Line (the engine refuses 3), 1 on a Capacitor (a LinearShuntCompensator has one); others raise; default 1 |
 | `capacitor` | `Optional[str]` | `cap1`, `cap2`, `CAPBank1A` | structural | the Update row: LinearShuntCompensator cap_<capacitor> gets RegulatingControl; a capacitor no New defines raises |
 | `type` | `Optional[str]` | `time`, `voltage`, `kvar` | mapped | `RegulatingControl.mode`; voltage -> voltage, current -> currentFlow, kvar -> reactivePower, time -> timeScheduled (a unique prefix, as the engine reads it: J1's volt); PF and Follow raise; default current |
 | `PTratio` | `Optional[float]` | `20.0`, `1.0`, `60.0` | copied | `RegulatingControl.ptRatio`; default 60 |
@@ -1827,7 +1836,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Pmpp` | `Optional[float]` | `5.0`, `300.0`, `1000.0` | copied | `PhotoVoltaicUnit.maxP` (kW); also p (pv_power); default 500 |
 | `pct_Pmpp` | `Optional[float]` |  | derived | p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100 |
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
-| `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
+| `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) x sign(pf), unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
@@ -1840,8 +1849,8 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `model` | `Optional[int]` | `7`, `1` | structural | 1 (constant P, PF) only; any other raises (ieee9500's Mode=7 is model=7, which the engine rejects too); default 1 |
 | `Vminpu` | `Optional[float]` |  | derived | maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9 |
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the PV as constant Z; a power-flow setting |
-| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
+| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
 | `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; the PV's EnergyConnectionSchedule <mRID>_yearly: pv_power at irradiance x mult per sample (S9) |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
@@ -1854,10 +1863,10 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `debugtrace` | `Union[bool, Bool, NoneType]` |  | untranscribed | a DSS debugging switch |
 | `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | derived | yes: an inverter that is off gives no kvar either (pv_power, engine-checked); default no |
 | `DutyStart` | `Optional[float]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
-| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one (var priority is mapped) |
+| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: no deck in the sweep sets it, so a mapping waits for one |
 | `kvarMax` | `Optional[float]` |  | copied | `PowerElectronicsConnection.maxQ` (kVAr); default kVA |
 | `kvarMaxAbs` | `Optional[float]` |  | derived | minQ (kVAr) = -kvarMaxAbs; default kVA |
 | `kVDC` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -1867,7 +1876,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `SafeMode` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynOut` | `Union[str, list[str], NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (no deck in the sweep sets it, so a mapping waits for one) |
 | `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
@@ -1883,7 +1892,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `kv` | `Optional[float]` | `0.48`, `0.208`, `2.4` | derived | ratedU (kV, LL) = kv, x sqrt 3 for 1-phase wye (S4b-4); default 12.47 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
 | `kW` | `Optional[float]` | `150.0`, `-0.0`, `0.0` | derived | replayed in deck order (battery_dispatch, S4b-8): > 0 sets the discharge setpoint and discharging, < 0 the charge setpoint and charging, 0 waiting; capped at kVA |
-| `kvar` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one (q = 0) |
+| `kvar` | `Optional[float]` |  | structural | raises when nonzero: no deck in the sweep sets it, so a mapping waits for one (q = 0) |
 | `pf` | `Optional[float]` | `1.0` | structural | 1 only; another raises (the engine caps q by a kvarMax left from the default kVA); default 1 |
 | `kVA` | `Optional[float]` | `250.0`, `125.0`, `200.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p; default kWrated |
 | `pct_Cutin` | `Optional[float]` |  | untranscribed | an inverter cut-in; 0 by default for storage |
@@ -1892,10 +1901,10 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `VarFollowInverter` | `Union[bool, Bool, NoneType]` |  | untranscribed | acts only with an InvControl |
 | `kvarMax` | `Optional[float]` |  | copied | `PowerElectronicsConnection.maxQ` (kVAr); default kVA |
 | `kvarMaxAbs` | `Optional[float]` |  | derived | minQ (kVAr) = -kvarMaxAbs; default kVA |
-| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `WattPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
+| `PFPriority` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminNoVars` | `Optional[float]` |  | structural | raises when nonzero: no deck in the sweep sets it, so a mapping waits for one |
+| `pct_PminkvarMax` | `Optional[float]` |  | structural | raises when nonzero: no deck in the sweep sets it, so a mapping waits for one |
 | `kWrated` | `Optional[float]` | `100.0`, `5.0`, `250.0` | copied | `BatteryUnit.maxP` (kW); minP = -kWrated; also p by State; default 25 |
 | `pct_kWrated` | `Optional[float]` |  | untranscribed | the kW limit of the dispatch modes, which raise |
 | `kWhrated` | `Optional[float]` | `200.0`, `13.5`, `500.0` | copied | `BatteryUnit.ratedE` (kWh); default 50 |
@@ -1914,12 +1923,12 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `model` | `Optional[int]` |  | structural | 1 (constant P, PF) only; any other raises; default 1 |
 | `Vminpu` | `Optional[float]` |  | derived | maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9 |
 | `Vmaxpu` | `Optional[float]` |  | untranscribed | above it the engine models the battery as constant Z; a power-flow setting |
-| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Balanced` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
+| `LimitCurrent` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
 | `yearly` | `Optional[str]` |  | mapped | `EnergyConnectionSchedule.name`; DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample (S9); with another DispMode raises |
 | `daily` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
 | `duty` | `Optional[str]` |  | untranscribed | a time-series curve; a snapshot does not use it (DSS-11) |
-| `DispMode` | `Optional[str]` |  | structural | default, or follow with a yearly shape (S9); another dispatch mode raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `DispMode` | `Optional[str]` |  | structural | default, or follow with a yearly shape (S9); another dispatch mode raises (no deck in the sweep sets it, so a mapping waits for one) |
 | `DischargeTrigger` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `ChargeTrigger` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
 | `TimeChargeTrig` | `Optional[float]` |  | untranscribed | acts only in a dispatch mode, which raises |
@@ -1936,7 +1945,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `SafeMode` | `Union[bool, Bool, NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynamicEq` | `Optional[str]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `DynOut` | `Union[str, list[str], NoneType]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
-| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (raises when set: no deck in the sweep sets it, so a mapping waits for one) |
+| `ControlMode` | `Optional[str]` |  | structural | GFL only; GFM raises (no deck in the sweep sets it, so a mapping waits for one) |
 | `AmpLimit` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `AmpLimitGain` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `spectrum` | `Optional[str]` |  | untranscribed | harmonics model; no home in the network profile parts |
@@ -2007,7 +2016,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `conn` | `Optional[str]` |  | untranscribed | a series reactor has no neutral |
 | `Rmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `Xmatrix` | `Union[float, list[float], NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `Parallel` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: raises when set: no deck in the sweep sets it, so a mapping waits for one |
+| `Parallel` | `Union[bool, Bool, NoneType]` |  | structural | raises when yes: no deck in the sweep sets it, so a mapping waits for one |
 | `R` | `Optional[float]` | `0.0` | copied | `SeriesCompensator.r` (ohm), `SeriesCompensator.r0` (ohm); per phase; r0 = r (no mutual); default 0 |
 | `X` | `Optional[float]` | `14.798306633595042`, `0.5` | copied | `SeriesCompensator.x` (ohm), `SeriesCompensator.x0` (ohm); per phase; x0 = x (no mutual); unset raises |
 | `Rp` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a parallel R) |
@@ -2317,7 +2326,7 @@ with no `npts` is S8-5's case too: the engine reads no points from the file eith
 | `csvfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
 | `sngfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
 | `dblfile` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the reader reads mult=(file=...)) |
-| `action` | `Optional[str]` | `normalize` | derived | normalize: mult and qmult each divided by its largest magnitude, as the engine does (one assigned after it raises); DblSave, SngSave write files and are untranscribed; others raise |
+| `action` | `Optional[str]` | `normalize` | derived | normalize: mult and qmult each divided by its largest magnitude, as the engine does (one assigned after it raises); DblSave, SngSave write files and are untranscribed; others raise. Every action assigned counts (each acts when assigned), not only the last |
 | `qmult` | `Union[float, list[float], NoneType]` | `[0.4, 0.6, 0.9, 0.7]` | copied | `RegularTimePoint.value2`; in the sidecar; unset: Q follows mult (the engine's rule), value2 unset |
 | `UseActual` | `Union[bool, Bool, NoneType]` |  | structural | Yes raises: a Load naming it takes the shape's peak as its kW, or keeps its own, by command order, which the record does not keep (engine-checked); default No |
 | `Pmax` | `Optional[float]` |  | untranscribed | used only with UseActual |

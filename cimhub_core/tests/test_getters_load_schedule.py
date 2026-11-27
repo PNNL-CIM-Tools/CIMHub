@@ -10,7 +10,8 @@ import pytest
 from cimtables import load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
-from cimhub_core.getters.load_schedule import get_load_schedule, get_schedule_points, log_dropped_schedules
+from cimhub_core.getters.load_schedule import (get_group_schedule, get_load_schedule, get_schedule_points,
+                                               log_dropped_schedules)
 from cimhub_core.time_points import regular_time_points, rows_by_schedule
 
 SHAPES = Path(__file__).parents[1] / "src" / "cimhub_core" / "shapes"
@@ -52,6 +53,13 @@ def test_a_non_conform_load_reads_its_group_schedule(network):
     found = get_load_schedule(_consumer(network, "ld_p1"))
     assert not found.conform and found.schedule.mRID == "ls_plant"
     assert found.step == pytest.approx(3600.0)
+
+
+def test_a_group_reads_as_its_loads_do(network):
+    """An exporter that walks schedules (a DSS LoadShape per group) asks the group: one rule for series and days."""
+    group = _consumer(network, "ld_z1").LoadGroup
+    assert get_group_schedule(group) == get_load_schedule(_consumer(network, "ld_z1"))
+    assert get_group_schedule(_consumer(network, "ld_p1").LoadGroup).conform is False
 
 
 def test_a_plain_consumer_has_none():
@@ -119,3 +127,14 @@ def test_points_off_the_rules_raise(network, value1, value2, numbers, match):
     schedule = _consumer(network, "ld_z1").LoadGroup.ConformLoadSchedules[0]
     with pytest.raises(ValueError, match=match):
         get_schedule_points(schedule, _rows(schedule, value1, value2, numbers))
+
+
+@pytest.mark.parametrize("column", ["value1", "value2"])
+def test_a_scaled_multiplier_raises(network, column):
+    """A multiplier curve (unit none) is unscaled: read as stored, a k would be 1000 times off. A value in W or VAr
+    keeps its multiplier (the plant's k), which its caller reads with the unit."""
+    schedule = _consumer(network, "ld_z1").LoadGroup.ConformLoadSchedules[0]
+    setattr(schedule, f"{column}Multiplier", network.cim.UnitMultiplier.k)
+    with pytest.raises(ValueError, match=rf"{column}Multiplier k on {column}Unit (none|unset); a multiplier curve is "
+                                         "unscaled"):
+        get_schedule_points(schedule, _rows(schedule, [1.0, 0.5], [1.0, 0.4]))

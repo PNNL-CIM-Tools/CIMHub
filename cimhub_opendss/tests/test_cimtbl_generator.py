@@ -48,11 +48,11 @@ def test_matches_golden(gens):
 
 
 def test_kvar_replays_the_deck_order():
-    assert generator.dispatched_kvar([("kW", 620.0), ("kvar", 30.0), ("kW", 0.0)]) == 0
-    assert generator.dispatched_kvar([("kvar", 30.0), ("kW", 100.0)]) == pytest.approx(3.0, rel=1e-3)
-    assert generator.dispatched_kvar([("kW", 0.0), ("kvar", 30.0), ("kW", 50.0)]) == 30
-    assert generator.dispatched_kvar([("kW", 100.0)]) == pytest.approx(53.974282)
-    assert generator.dispatched_kvar([]) == 60
+    assert generator.dispatched_kvar("g", [("kW", 620.0), ("kvar", 30.0), ("kW", 0.0)]) == 0
+    assert generator.dispatched_kvar("g", [("kvar", 30.0), ("kW", 100.0)]) == pytest.approx(3.0, rel=1e-3)
+    assert generator.dispatched_kvar("g", [("kW", 0.0), ("kvar", 30.0), ("kW", 50.0)]) == 30
+    assert generator.dispatched_kvar("g", [("kW", 100.0)]) == pytest.approx(53.974282)
+    assert generator.dispatched_kvar("g", []) == 60
 
 
 def test_kvar_limits_follow_the_engine_reset():

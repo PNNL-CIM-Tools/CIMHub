@@ -111,11 +111,11 @@ def regulates_itself(machine: cim.SynchronousMachine) -> bool:
 
 
 def _generator(machine: cim.SynchronousMachine, names: Names) -> schema.Generator:
-    if machine.earthing not in CONNECTION:
-        raise ValueError(f"{describe(machine)}: earthing {machine.earthing}; it is the Generator's conn (S4b-5)")
     rating = get_machine_rating(machine, "kVA", "kVAr", sign="generation", voltage_unit="kV")
+    if rating.earthing not in CONNECTION:
+        raise ValueError(f"{describe(machine)}: earthing {rating.earthing}; it is the Generator's conn (S4b-5)")
     output = get_der_output(machine, "kW", "kVAr", sign="generation")
-    placed = device_connection(machine, output.phases, CONNECTION[machine.earthing], machine.earthing, names)
+    placed = device_connection(machine, output.phases, CONNECTION[rating.earthing], rating.earthing, names)
     slots = dict(name=names.name(machine, NAMESPACE), bus1=placed.bus1, phases=placed.phases, conn=placed.conn,
                  kv=rated_kv(rating.rated_u, output.phases, placed.conn), kW=output.total.p, kvar=output.total.q,
                  kVA=rating.rated_s, model="ConstantPQ", enabled=get_in_service(machine, which="normal"))
@@ -141,7 +141,8 @@ def _pv_bus(machine: cim.SynchronousMachine, rating) -> dict:
     unmapped = [name for name, value in (("targetDeadband", settings.deadband),
                                          ("minAllowedTargetValue", settings.min_allowed),
                                          ("maxAllowedTargetValue", settings.max_allowed),
-                                         ("reverseTargetValue", settings.reverse_target)) if value not in (None, 0)]
+                                         ("reverseTargetValue", settings.reverse_target),
+                                         ("reverseTargetDeadband", settings.reverse_deadband)) if value not in (None, 0)]
     if unmapped:
         raise ValueError(f"{describe(machine)}: {unmapped} have no Generator slot")
     if control_enabled(machine.RegulatingControl, settings.enabled, equipment.control_enabled) is not True:

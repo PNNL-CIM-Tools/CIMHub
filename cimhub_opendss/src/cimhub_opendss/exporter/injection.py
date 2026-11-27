@@ -23,6 +23,8 @@ from cimhub_opendss.exporter.naming import Names
 
 CONNECTION = {cim.PhaseShuntConnectionKind.Y: "wye", cim.PhaseShuntConnectionKind.Yn: "wye",
               cim.PhaseShuntConnectionKind.D: "delta"}
+#: kW and kVAr: rel_tol alone never matches a 0 against float noise (1e-12)
+POWER_ABS_TOL = 1e-9
 _A, _B, _C = cim.SinglePhaseKind.A, cim.SinglePhaseKind.B, cim.SinglePhaseKind.C
 #: a delta across two phases is the branch from one to the next (IEEE13's 692.3.1); a PhaseCode has no order
 BRANCH = {frozenset(pair): pair for pair in ((_A, _B), (_B, _C), (_C, _A))}
@@ -75,6 +77,7 @@ def rated_kv(rated_u: float, conductors: tuple[cim.SinglePhaseKind, ...], conn: 
 
 
 def equal_phases(per_phase: dict[cim.SinglePhaseKind, PhasePower]) -> bool:
-    """Every phase's p and q alike (rel ``SUM_REL_TOL``): one DSS device carries them (E8)."""
+    """Every phase's p and q alike (rel ``SUM_REL_TOL``, abs ``POWER_ABS_TOL``): one DSS device carries them (E8)."""
     values = list(per_phase.values())
-    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL) for value in values for a, b in zip(value, values[0]))
+    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL, abs_tol=POWER_ABS_TOL)
+               for value in values for a, b in zip(value, values[0]))

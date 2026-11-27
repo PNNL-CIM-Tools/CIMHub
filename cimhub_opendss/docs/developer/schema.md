@@ -43,13 +43,6 @@ uvx --python 3.13 --from linkml gen-python \
 Run it from the repository root. With the same prefixes, the output differs from the committed file only in the
 generation date and the `metamodel_version` line.
 
-!!! warning "The command fails as the schema stands"
-    With LinkML 1.12.1, `gen-python` stops with `ValueError: Prefix: cim mismatch between opendss and load`.
-    `linkml/opendss.yaml` declares `cim` as `http://cim.ucaiug.io/cim101/draft#`, and every class file declares it as
-    `http://iec.ch/TC57/CIM100#`. Make the root file's prefix match the class files before regenerating (a copy of
-    the schema directory with that one line changed regenerates the committed `opendss_schema.py`, apart from the
-    `metamodel_version` line). `gen-doc` only warns about the mismatch, so the site still builds.
-
 After regenerating:
 
 - run `scripts/test-all.sh opendss`: a mapper's `check_fields(FIELDS, NATIVE_CLASS)` test fails on a slot the

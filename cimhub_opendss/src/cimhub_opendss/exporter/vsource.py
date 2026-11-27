@@ -60,6 +60,7 @@ VSOURCE_SLOTS = {
 SLOTS = {NATIVE_CLASS: VSOURCE_SLOTS}
 
 _REL_TOL = 1e-6
+_ABS_TOL = 1e-9  # ohm: rel_tol alone never matches a 0 (IEEE123's R1) against float noise
 
 
 def export(context) -> list[schema.Vsource]:
@@ -76,7 +77,8 @@ def _vsource(source: cim.EnergySource, context) -> schema.Vsource:
         raise ValueError(f"{describe(source)}: {', '.join(unset)} unset; DSS takes R1 X1 R0 X0 as one group")
     for negative, positive in (("r2", "r"), ("x2", "x")):
         value = getattr(impedance, negative)
-        if value is not None and not math.isclose(value, getattr(impedance, positive), rel_tol=_REL_TOL):
+        if value is not None and not math.isclose(value, getattr(impedance, positive), rel_tol=_REL_TOL,
+                                                  abs_tol=_ABS_TOL):
             raise ValueError(f"{describe(source)}: {negative} differs from {positive}; DSS's Z2 group is not mapped")
     if len(values.phases) not in (1, 3):
         raise ValueError(f"{describe(source)}: {len(values.phases)} phases; a Vsource is 1- or 3-phase")

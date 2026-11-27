@@ -624,7 +624,7 @@ code-level tests in `test_getters_line_impedance.py`):
 | bus1 | written | bus_ref(get_terminal_nodes[0], the phase conductors of get_conductor_phases); a coupled group's: <group>_1 on nodes 1..n, its jumpers from each circuit's own bus, a remainder from <group>_2 on its circuit's nodes (H1, H4) |
 | bus2 | written | bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1) |
 | linecode | written | the template PerLengthImpedance's LineCode name (get_line_code); a line's own (isTemplate=false) is written inline |
-| length | written | required_qty(length, m); lumped: km, unset -> 1, 0 raises; a coupled group's: its shortest line's, a remainder the rest of its line, a jumper 1 m (H4) |
+| length | written | required_qty(length, m), <= 0 raises; lumped: km, unset -> 1, <= 0 raises; a coupled group's: its shortest line's (<= 0 raises), a remainder the rest of its line, a jumper 1 m (H4) |
 | phases | written | the phase conductors (a neutral is reduced, B4); a coupled group's: every line's |
 | r1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
 | x1 | written | the line's own sequence code (isTemplate=false), as a LineCode writes it (ohm/m); lumped only (B6): the whole-line value / length in km (ohm/km); a jumper's: SWITCH_IMPEDANCE (B3, H1) |
@@ -1124,9 +1124,9 @@ As built (`tests/test_export_transformer.py`, 28 tests; core `test_derived_regul
 | name | written | Names, the RegControl namespace |
 | transformer | written | the DSS Transformer of the tap's unit (one unit) |
 | winding | written | the winding whose end holds the RatioTapChanger |
-| vreg | written | targetValue (V) / ptRatio (primary_to_secondary) |
+| vreg | written | targetValue (V) / ptRatio (primary_to_secondary); unset raises |
 | band | written | targetDeadband (V) / ptRatio (primary_to_secondary); unset -> not written, the engine's default |
-| ptratio | written | ptRatio, the tap's and the control's agreed; unset raises |
+| ptratio | written | ptRatio, the tap's and the control's agreed; unset or <= 0 raises |
 | CTprim | written | ctRating (A); unset -> not written, and a line drop then raises |
 | R | written | lineDropR (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
 | X | written | lineDropX (ohm) x CTprim / ptRatio (line_drop_volts); unset -> not written (0) |
@@ -1401,14 +1401,14 @@ As built (`tests/test_export_injection.py`, 24 tests; core `test_derived_control
 | DSS slot | kind | from / why |
 |---|---|---|
 | name | written | Names, the CapControl namespace |
-| element | written | the monitored Terminal's equipment: Line.<line or switch>, Capacitor.<shunt>; others raise |
+| element | written | the monitored Terminal's equipment: Line.<line or switch> (a coupled line's: the jumper or remainder at that end, line_element), Capacitor.<shunt>; others raise |
 | terminal | written | the monitored Terminal's sequenceNumber |
 | capacitor | written | the one LinearShuntCompensator the control regulates |
 | type | written | mode voltage, currentFlow, reactivePower, timeScheduled -> voltage, current, kvar, time; others raise |
-| PTratio | written | ptRatio; unset -> not written, and a voltage control raises |
-| CTratio | written | ctRatio; unset -> not written, and a current control raises |
+| PTratio | written | ptRatio; unset -> not written, and a voltage control raises, as does one <= 0 |
+| CTratio | written | ctRatio; unset -> not written, and a current control raises, as does one <= 0 |
 | ONsetting | written | targetValue -+ targetDeadband / 2 (on_off_from_band), voltage / PTratio, current / CTratio; ON below OFF for voltage and time |
-| OFFsetting | written | targetValue +- targetDeadband / 2 (on_off_from_band), voltage / PTratio, current / CTratio; an unset deadband raises |
+| OFFsetting | written | targetValue +- targetDeadband / 2 (on_off_from_band), voltage / PTratio, current / CTratio; an unset target or deadband raises |
 | Delay | written | the shunt's aVRDelay (s); unset -> not written |
 | VoltOverride | unset | untranscribed on import (S4-5); the engine's default |
 | Vmax | unset | untranscribed on import (S4-5); the engine's default |
@@ -1471,7 +1471,8 @@ connection the way the old GDM exporter did:
 - **Per phase (E8, P4):** a connection with one unit and unequal phases gives one 1-phase device per phase,
   `<name>_<phase>`. Each is a 1/n share of the connection and of the unit's own ratings (Pmpp, kWrated, the
   energies, idlingP). Several units with unequal phases raise, and so does a delta inverter with unequal phases.
-- A unit of another class (a PowerElectronicsWindUnit) raises: DSS has no class for it.
+- A unit of a class other than PhotoVoltaicUnit, BatteryUnit and PowerElectronicsWindUnit (a Generator, below)
+  raises: DSS has no class for it.
 
 Each piece's inverter slots:
 
@@ -1846,7 +1847,8 @@ PositionPoint `sequenceNumber` order and each Terminal's point:
 network's ConnectivityNode order:
 - Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
   (S5-3).
-- Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- Two points for one bus that differ beyond `math.isclose` at rel 1e-4 and abs 1e-9 (`POINT_REL_TOL`,
+  `POINT_ABS_TOL`) raise, naming both pieces of equipment.
 - **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
   so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
   (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives
@@ -2273,7 +2275,7 @@ The importer's S9 inverted (`CIMTBL_MAPPING.md#s9-device-shapes`): a PV's, batte
 - PVSystem: mult = p / (Pmpp x irradiance), the irradiance it scales; `%Cutin=0 %Cutout=0`, so the engine gives each
   point's p, low ones too (an off sample has p 0). q: `kvar` when every point's q is the written kvar (an off PV keeps
   it, S9-5), else `pf` = p / hypot(p, q) with q's sign when q is in proportion to p; another q raises, as does a
-  point above the written %Pmpp cap.
+  point above the written %Pmpp cap or below 0 kW (the engine reads a negative multiplier as 0).
 - Storage: `DispMode=follow`; mult = output / kWrated, 0 where the output is the idling loss; `State` is not written
   (the importer raises on a follow-mode battery with one), so its snapshot idles, which batteryState must say
   (waiting). A point above kVA or a q other than 0 raises.

@@ -73,6 +73,8 @@ GEOMETRY = {"name": "g", "nconds": 2, "nphases": 1}
     ({"wires": ["a", "a"], "spacing": "s", "xs": [0, 1], "hs": [9, 9], "units": "ft"}, "both spacing= and inline"),
     ({"wires": ["a", "a"], "spacing": "nope"}, "spacing='nope' is no LineSpacing"),
     ({"wires": ["a", "a"], "x": 0.0}, "without cond= blocks"),
+    ({"wires": ["a", "a"], "spacing": "s", "x": 0.0}, "both spacing= and inline"),
+    ({"wires": ["a", "a"], "spacing": "s", "cond": 2}, "both spacing= and inline"),
 ])
 def test_fail_fast(slots, message):
     wire_a = schema.Wiredata(name="a", Rac=0.3, Runits="km", GMRac=0.1, GMRunits="cm", radunits="cm", diam=1.0)
@@ -168,3 +170,17 @@ def test_no_geometry_keeps_a_set_earthmodel(tmp_path):
 
 def test_no_geometry_and_no_earthmodel_has_no_earth(tmp_path):
     assert _no_geometry(tmp_path, "") is None
+
+
+def test_a_switch_gives_the_earth_no_rho(tmp_path):
+    """A switch drops its spacing and rho (DSS-8), so its rho is not one of the geometry lines'."""
+    earth = _earth(tmp_path, "", "rho=30", "rho=50 switch=y")
+    assert dict((column.name, value) for column, value in earth.cells)["rho"] == "30.0"
+
+
+def test_a_switch_by_spacing_is_no_geometry(tmp_path):
+    path = tmp_path / "deck.dss"
+    path.write_text("Clear\nNew Circuit.atom basekv=4.16 bus1=sourcebus\n"
+                    "New LineSpacing.s nconds=1 nphases=1 x=[0] h=[30] units=ft\n"
+                    "New Line.a bus1=sourcebus.1 bus2=b.1 phases=1 switch=y spacing=s\n")
+    assert earth_statement(DssReader(path).read_all()) is None

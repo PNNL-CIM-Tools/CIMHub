@@ -95,6 +95,7 @@ winding's own (`ratedU`, or a coil's `baseU`).
 | no `base_power` | the base is winding 1's `ratedS` (the percent convention of DSS and GLM) |
 
 A winding's `baseS` is per phase, so the whole-unit power of a coil is winding 1's `ratedS` scaled by the two `baseS`.
+A set `ratedU`, `ratedS`, `baseU` or `baseS` of 0 or less raises `ValueError`, since every percent is on one.
 The one unit that may leave the base unset is an ideal `AutoTransformer` (no mesh impedance, no `ratedS`): its
 `base_power` is `None`.
 

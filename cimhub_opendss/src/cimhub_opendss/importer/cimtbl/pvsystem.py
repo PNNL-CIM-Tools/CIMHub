@@ -32,7 +32,8 @@ NATIVE_CLASS = schema.Pvsystem
 PREFIX = "pv_"
 
 _UNIT = "PhotoVoltaicUnit"
-_NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
+_NO_DECK = "no deck in the sweep sets it, so a mapping waits for one"
+_NOT_MAPPED = "raises when set: " + _NO_DECK
 _SHAPE = "a time-series curve; a snapshot does not use it (DSS-11)"
 _DYNAMICS = "a dynamics setting; no home in the network profile parts"
 _HARMONIC = "harmonics model; no home in the network profile parts"
@@ -47,7 +48,7 @@ FIELDS = {
     "Pmpp": Field("copied", ((_UNIT, "maxP", "kW"),), "also p (pv_power); default 500"),
     "pct_Pmpp": Field("derived", note="p is capped at Pmpp x %Pmpp / 100 (pv_power); default 100"),
     "Temperature": Field("untranscribed", note="acts only through a P-TCurve, which raises"),
-    "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) with the sign of pf, unless kvar was assigned after it "
+    "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) x sign(pf), unless kvar was assigned after it "
                                 "(the last of the two wins, S4b-8); default 1"),
     "conn": Field("mapped", ((CONNECTION, "phaseConnection", None),), "wye -> Y, delta -> D; default wye"),
     "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign), unless pf was assigned after it"),
@@ -64,8 +65,8 @@ FIELDS = {
                                       "which the engine rejects too); default 1"),
     "Vminpu": Field("derived", note="maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9"),
     "Vmaxpu": Field("untranscribed", note="above it the engine models the PV as constant Z; a power-flow setting"),
-    "Balanced": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "LimitCurrent": Field("structural", note="raises when yes: " + _NOT_MAPPED),
+    "Balanced": Field("structural", note="raises when yes: " + _NO_DECK),
+    "LimitCurrent": Field("structural", note="raises when yes: " + _NO_DECK),
     "yearly": Field("mapped", ((loadshape.DEVICE_SCHEDULE, "name", None),),
                     "the PV's EnergyConnectionSchedule <mRID>_yearly: pv_power at irradiance x mult per sample (S9)"),
     "daily": Field("untranscribed", note=_SHAPE),
@@ -80,10 +81,10 @@ FIELDS = {
     "VarFollowInverter": Field("derived", note="yes: an inverter that is off gives no kvar either (pv_power, "
                                                "engine-checked); default no"),
     "DutyStart": Field("untranscribed", note=_SHAPE),
-    "WattPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED + " (var priority is mapped)"),
-    "PFPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "pct_PminNoVars": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
-    "pct_PminkvarMax": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
+    "WattPriority": Field("structural", note="raises when yes: " + _NO_DECK + " (var priority is mapped)"),
+    "PFPriority": Field("structural", note="raises when yes: " + _NO_DECK),
+    "pct_PminNoVars": Field("structural", note="raises when nonzero: " + _NO_DECK),
+    "pct_PminkvarMax": Field("structural", note="raises when nonzero: " + _NO_DECK),
     "kvarMax": Field("copied", ((CONNECTION, "maxQ", "kVAr"),), "default kVA"),
     "kvarMaxAbs": Field("derived", note="minQ (kVAr) = -kvarMaxAbs; default kVA"),
     "kVDC": Field("untranscribed", note=_DYNAMICS),
@@ -93,7 +94,7 @@ FIELDS = {
     "SafeMode": Field("untranscribed", note=_DYNAMICS),
     "DynamicEq": Field("untranscribed", note=_DYNAMICS),
     "DynOut": Field("untranscribed", note=_DYNAMICS),
-    "ControlMode": Field("structural", note="GFL only; GFM raises (" + _NOT_MAPPED + ")"),
+    "ControlMode": Field("structural", note="GFL only; GFM raises (" + _NO_DECK + ")"),
     "AmpLimit": Field("untranscribed", note=_DYNAMICS),
     "AmpLimitGain": Field("untranscribed", note=_DYNAMICS),
     "spectrum": Field("untranscribed", note=_HARMONIC),
@@ -128,7 +129,7 @@ def pv_power(label: str, *, pmpp: float, irradiance: float, pct_pmpp: float, kva
     if panel < pct_cutout / 100 * kva:
         return PvPower(0.0, float(kvar) if kvar is not None and not var_follow else 0.0, True)
     available = min(panel, pmpp * pct_pmpp / 100)
-    q = float(kvar) if kvar is not None else reactive_power(available, pf)
+    q = float(kvar) if kvar is not None else reactive_power(label, available, pf)
     return PvPower(inverter_power(label, available, q, kva), q, False)
 
 
@@ -155,25 +156,29 @@ def _output(native, original, pv, irradiance: float) -> PvPower:
                     var_follow=bool(pv.VarFollowInverter))
 
 
+def check_cutin_band(pv, shape: loadshape.Shape) -> None:
+    """Raise on a sample of ``shape`` that puts the panel between %Cutout and %Cutin of kVA (``pv`` with defaults
+    filled): the inverter stays as it was, which depends on the samples before (and on a snapshot solved first)."""
+    cutout, cutin = (float(pv.pct_Cutout) / 100 * float(pv.kVA), float(pv.pct_Cutin) / 100 * float(pv.kVA))
+    for number, value in enumerate(shape.mult, start=1):
+        panel = float(pv.Pmpp) * (float(pv.irradiance) * value)
+        if cutout <= panel < cutin:
+            raise ValueError(f"PVSystem {pv.name}: sample {number} of yearly={pv.yearly} puts the panel at "
+                             f"{panel:g} kW, between %Cutout ({cutout:g}) and %Cutin ({cutin:g}); the engine keeps "
+                             "the inverter as it was, which is not mapped")
+
+
 def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
     """Each PV's yearly schedule (``<mRID>_yearly``): -``pv_power`` at irradiance x mult at each sample (the load
-    sign; engine-checked). A sample between %Cutout and %Cutin raises: the inverter stays as it was, which depends on
-    the samples before (and on a snapshot solved first)."""
+    sign; engine-checked). A sample between %Cutout and %Cutin raises (``check_cutin_band``)."""
     points, defaults = {}, dss_defaults(NATIVE_CLASS)
     for original in native.list_by_class(NATIVE_CLASS):
         shape = loadshape.device_shape(native, original, f"PVSystem {original.name}")
         if shape is None:
             continue
         pv, _ = fill_defaults(FIELDS, original, defaults)
-        cutout, cutin = (float(pv.pct_Cutout) / 100 * float(pv.kVA), float(pv.pct_Cutin) / 100 * float(pv.kVA))
-        outputs = []
-        for number, value in enumerate(shape.mult, start=1):
-            irradiance = float(pv.irradiance) * value
-            if cutout <= float(pv.Pmpp) * irradiance < cutin:
-                raise ValueError(f"PVSystem {pv.name}: sample {number} of yearly={pv.yearly} puts the panel at "
-                                 f"{float(pv.Pmpp) * irradiance:g} kW, between %Cutout ({cutout:g}) and %Cutin "
-                                 f"({cutin:g}); the engine keeps the inverter as it was, which is not mapped")
-            outputs.append(_output(native, original, pv, irradiance))
+        check_cutin_band(pv, shape)
+        outputs = [_output(native, original, pv, float(pv.irradiance) * value) for value in shape.mult]
         points[mrid(PREFIX, pv.name, lowercase=True) + loadshape.DEVICE_SCHEDULE_SUFFIX] = loadshape.DevicePoints(
             loadshape.point_times(shape), [-output.kw + 0.0 for output in outputs],
             [-output.kvar + 0.0 for output in outputs])
@@ -198,7 +203,9 @@ def map_pvsystem(native, buses: Mapping[str, BusSystem], container: str) -> Docu
                                           comment="\n".join(note for note in notes if note) or None))
         units.append(Row([unit_id(PREFIX, pv), cell(float(pv.Pmpp)), cell(0.0), cell(float(pv.irradiance)),
                           connections[-1].cells[0]]))
-        if loadshape.device_shape(native, original, label) is not None:
+        shape = loadshape.device_shape(native, original, label)
+        if shape is not None:
+            check_cutin_band(pv, shape)
             schedules.append(loadshape.device_schedule_row(connections[-1].cells[0], pv))
     statements = [
         Table(CONNECTION, connection_columns(container), connections,

@@ -109,11 +109,21 @@ def _whole(value: float, *, what: str, name: str) -> int:
 
 
 def tap_range(tap: float, max_tap: float, min_tap: float, num_taps: int, *, name: str) -> TapRange:
-    """The tap changer's steps from DSS's per-unit tap range: increment (MaxTap - MinTap) / NumTaps, neutral at 1."""
+    """The tap changer's steps from DSS's per-unit tap range: increment (MaxTap - MinTap) / NumTaps, neutral at 1.
+    The engine takes NumTaps 0, MaxTap below MinTap and a tap outside the range; none is a tap changer, so they
+    raise."""
+    if num_taps < 1:
+        raise ValueError(f"Transformer {name}: NumTaps={num_taps}; a tap changer needs at least one step")
+    if max_tap <= min_tap:
+        raise ValueError(f"Transformer {name}: MaxTap={max_tap:g} is not above MinTap={min_tap:g}")
     increment = (max_tap - min_tap) / num_taps
-    return TapRange(-_whole((1 - min_tap) / increment, what="MinTap", name=name),
-                    _whole((max_tap - 1) / increment, what="MaxTap", name=name),
-                    _whole((tap - 1) / increment, what="tap", name=name), float(f"{increment * 100:.12g}"))
+    steps = TapRange(-_whole((1 - min_tap) / increment, what="MinTap", name=name),
+                     _whole((max_tap - 1) / increment, what="MaxTap", name=name),
+                     _whole((tap - 1) / increment, what="tap", name=name), float(f"{increment * 100:.12g}"))
+    if not steps.low <= steps.step <= steps.high:
+        raise ValueError(f"Transformer {name}: tap={tap:g} (step {steps.step}) is outside MinTap={min_tap:g} to "
+                         f"MaxTap={max_tap:g}")
+    return steps
 
 
 def _phase_letter(winding, phases: int, pt_phase: str, *, name: str) -> str:
@@ -162,6 +172,10 @@ def map_regcontrol(native) -> Document:
         number = int(control.winding)
         if not 1 <= number <= len(windings):
             raise ValueError(f"RegControl {control.name}: winding={number} of a {len(windings)}-winding transformer")
+        taps = [float(tap) for tap in xf.taps or []]
+        if any(tap != 1.0 for index, tap in enumerate(taps, start=1) if index != number):
+            raise ValueError(f"Transformer {xf.name}: taps={taps} with RegControl {control.name} on winding {number}; "
+                             f"only winding {number}'s tap is mapped (a fixed tap is not mapped yet)")
         winding = windings[number - 1]
         regulator = transformer_mapper.is_regulator(windings)
         end = _end_number(windings, phases, number, regulator, name=xf.name)

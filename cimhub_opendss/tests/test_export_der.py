@@ -283,12 +283,29 @@ def test_waiting_battery_draws_its_idling_loss():
         ("idling", pytest.approx(1.0), None)
 
 
+def test_waiting_battery_without_idling_loss_takes_float_noise_as_zero():
+    """idlingP 0 and p 1e-12 kW: no relative tolerance matches 0, so p and idlingP also agree within 1e-9 kW."""
+    network = _network(ATOMS / "der" / "der.dss")
+    _object(network, cim.BatteryUnit, "storage_batidle_unit").idlingP = cim.ActivePower(0, "kW")
+    _object(network, cim.PowerElectronicsConnection, "storage_batidle").p = cim.ActivePower(1e-12, "kW")
+    storages = {str(r.name).lower(): r for r in _model(network).list_by_class(schema.Storage)}
+    assert storages["batidle"].pct_IdlingkW == pytest.approx(0, abs=1e-9)
+
+
 def test_disabled_machine_control_is_model_1():
     network = _network(ATOMS / "generator" / "gens.dss")
     _object(network, cim.SynchronousMachine, "gen_steam").controlEnabled = False
     _object(network, cim.RegulatingControl, "gen_steam_ctrl").enabled = False
     steam = next(r for r in _model(network).list_by_class(schema.Generator) if r.name == "steam")
     assert (str(steam.model), steam.Vpu, steam.maxkvar) == ("ConstantPQ", None, None)
+
+
+@pytest.mark.parametrize("attribute", ["targetDeadband", "reverseTargetValue", "reverseTargetDeadband"])
+def test_machine_control_setting_without_a_generator_slot_raises(attribute):
+    network = _network(ATOMS / "generator" / "gens.dss")
+    setattr(_object(network, cim.RegulatingControl, "gen_steam_ctrl"), attribute, 100.0)
+    with pytest.raises(ValueError, match=rf"\['{attribute}'\] have no Generator slot"):
+        _model(network)
 
 
 def test_machine_control_of_another_terminal_raises():
@@ -311,3 +328,10 @@ def test_coupled_reactor_raises():
     _object(network, cim.SeriesCompensator, "rx_r1").x0 = cim.Reactance(6, "ohm")
     with pytest.raises(ValueError, match=r"\['x0'\] differ from r/x; a DSS Reactor has no mutual coupling"):
         _model(network)
+
+
+def test_reactor_zero_sequence_a_rounding_error_from_a_zero_positive_is_uncoupled():
+    """HVMV_Sub_HSB has R=0: rel_tol alone never matches r0 1e-15 ohm against it, so they also agree within 1e-9."""
+    network = _network(ATOMS / "reactor" / "reactors.dss")
+    _object(network, cim.SeriesCompensator, "rx_hvmv_sub_hsb").r0 = cim.Resistance(1e-15)
+    assert {str(r.name).lower() for r in _model(network).list_by_class(schema.Reactor)} >= {"hvmv_sub_hsb"}

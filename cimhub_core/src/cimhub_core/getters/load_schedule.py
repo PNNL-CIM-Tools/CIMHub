@@ -4,6 +4,7 @@ A conform load follows its group's curve as a multiplier of its own p and q (a G
 a non-conform load's group schedule is in its value units (``value1Unit``). A group has either one time series (a
 schedule with no Season and no DayType: a player's or a DSS LoadShape's, from its ``startTime``) or a recurring day
 per season and day type (a GridLAB-D schedule's, ``startTime`` a time of day); two time series, or both kinds, raise.
+``get_group_schedule`` gives the same for a group, for an exporter that walks schedules rather than loads.
 The points are in the Parquet sidecar
 (``cimhub_core.time_points``, ``RegularTimePoint``), not on the schedule: ``get_schedule_points`` reads a schedule's
 from the sidecar's rows split by schedule (``time_points.rows_by_schedule``), so this module needs no pyarrow.
@@ -33,16 +34,19 @@ class LoadSchedule(NamedTuple):
 
 def get_load_schedule(consumer: cim.EnergyConsumer) -> LoadSchedule | None:
     """The consumer's group and its one schedule, or ``None`` for a plain EnergyConsumer or a load with no group."""
-    if isinstance(consumer, cim.ConformLoad):
-        conform, group = True, consumer.LoadGroup
-        schedules = [] if group is None else group.ConformLoadSchedules
-    elif isinstance(consumer, cim.NonConformLoad):
-        conform, group = False, consumer.LoadGroup
-        schedules = [] if group is None else group.NonConformLoadSchedules
+    if not isinstance(consumer, (cim.ConformLoad, cim.NonConformLoad)) or consumer.LoadGroup is None:
+        return None
+    return get_group_schedule(consumer.LoadGroup)
+
+
+def get_group_schedule(group: cim.ConformLoadGroup | cim.NonConformLoadGroup) -> LoadSchedule:
+    """The group's one time series, or its days by season and day type."""
+    if isinstance(group, cim.ConformLoadGroup):
+        conform, schedules = True, group.ConformLoadSchedules
+    elif isinstance(group, cim.NonConformLoadGroup):
+        conform, schedules = False, group.NonConformLoadSchedules
     else:
-        return None
-    if group is None:
-        return None
+        raise ValueError(f"{describe(group)}: is not a ConformLoadGroup or NonConformLoadGroup")
     days = tuple(sorted((schedule for schedule in schedules if schedule.Season is not None
                          or schedule.DayType is not None), key=lambda schedule: schedule.mRID))
     series = [schedule for schedule in schedules if schedule not in days]
@@ -62,10 +66,19 @@ class SchedulePoints(NamedTuple):
 
 def get_schedule_points(schedule: cim.RegularIntervalSchedule, rows_by_schedule: dict) -> SchedulePoints | None:
     """The schedule's points from its ``RegularTimePoint`` rows (``rows_by_schedule``: ``{uri: rows}``), or ``None``
-    when it has none. Sequence numbers other than 0, 1, ... in order, or a value2 set at only some points, raise."""
+    when it has none. Sequence numbers other than 0, 1, ... in order, or a value2 set at only some points, raise.
+    The values are as stored: a value in a unit (W, VAr) keeps its multiplier for the caller to read with the unit,
+    and a multiplier curve (unit none or unset) with a multiplier other than none raises, since it would be read
+    that many times off."""
     rows = rows_by_schedule.get(schedule.uri())
     if rows is None:
         return None
+    for column in ("value1", "value2"):
+        unit, multiplier = getattr(schedule, f"{column}Unit"), getattr(schedule, f"{column}Multiplier")
+        if unit in (None, cim.UnitSymbol.none) and multiplier not in (None, cim.UnitMultiplier.none):
+            unit_text = "unset" if unit is None else unit.value
+            raise ValueError(f"{describe(schedule)}: {column}Multiplier {multiplier.value} on {column}Unit "
+                             f"{unit_text}; a multiplier curve is unscaled")
     numbers = rows.column("sequenceNumber").to_pylist()
     if numbers != list(range(len(numbers))):
         raise ValueError(f"{describe(schedule)}: points numbered {numbers[:5]}...; every step from 0 is read, in order")

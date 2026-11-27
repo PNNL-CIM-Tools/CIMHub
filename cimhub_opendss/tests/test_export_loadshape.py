@@ -107,3 +107,26 @@ def test_a_schedule_in_power_units_raises(atom):
     network = cimtables.load_model(directory / "atom.cimtbl")
     with pytest.raises(ValueError, match="values in W; a conform schedule holds multipliers"):
         DssExporter(time_points).to_model(network)
+
+
+def _schedule(network, group_name):
+    return next(schedule for schedule in network.graph[cim.ConformLoadSchedule].values()
+                if schedule.ConformLoadGroup is not None and schedule.ConformLoadGroup.name == group_name)
+
+
+def test_a_recurring_day_is_no_loadshape(atom):
+    """A schedule of a DayType is one day of a recurring week (get_group_schedule's days), not a time series: no
+    LoadShape, and its group's loads are static."""
+    network, time_points, _ = atom
+    _schedule(network, "res").DayType = cim.DayType(mRID="weekday", name="weekday")
+    model = DssExporter(time_points).to_model(network, name_source="name")
+    assert "res" not in {str(shape.name) for shape in model.list_by_class(schema.Loadshape)}
+    assert {str(load.name): load.yearly for load in model.list_by_class(schema.Load)}["r1"] is None
+
+
+def test_a_schedule_of_no_group_raises(atom):
+    network, time_points, _ = atom
+    _schedule(network, "res").ConformLoadGroup = None
+    with pytest.raises(ValueError, match="ConformLoadSchedule .*: ConformLoadGroup is unset; a LoadShape is a "
+                                         "group's curve"):
+        DssExporter(time_points).to_model(network)

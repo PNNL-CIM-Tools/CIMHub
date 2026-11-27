@@ -102,7 +102,15 @@ def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: f
     X1 = kV² / MVAsc3 / √(1 + 1/x1r1²), R1 = X1 / x1r1. R0 is the positive root of
     (1 + x0r0²) R0² + 4 (R1 + X1 x0r0) R0 + 4 (R1² + X1²) − (3 kV² / MVAsc1)² = 0, and X0 = R0 x0r0:
     the 1-phase fault current through 2 Z1 + Z0.
+
+    Raises on what gives no passive source: kV, MVAsc3 or MVAsc1 not above 0, x1r1 not above 0, x0r0 below 0, or a
+    negative R0 (the engine refuses some and computes a negative, infinite or zero impedance for the rest).
     """
+    for what, value in (("kV", kv), ("MVAsc3", mvasc3), ("MVAsc1", mvasc1), ("x1r1", x1r1)):
+        if value <= 0:
+            raise ValueError(f"{what}={value:g}; a short-circuit source needs it above 0")
+    if x0r0 < 0:
+        raise ValueError(f"x0r0={x0r0:g}; a short-circuit source needs it 0 or above")
     x1 = kv ** 2 / mvasc3 / math.sqrt(1 + 1 / x1r1 ** 2)
     r1 = x1 / x1r1
     a = 1 + x0r0 ** 2
@@ -112,6 +120,9 @@ def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: f
     if discriminant < 0:
         raise ValueError(f"MVAsc1={mvasc1} at {kv} kV gives no real R0 for MVAsc3={mvasc3}, x0r0={x0r0}")
     r0 = (-b + math.sqrt(discriminant)) / (2 * a)
+    if r0 < 0:
+        raise ValueError(f"MVAsc1={mvasc1:g} at {kv:g} kV gives R0={r0:g} for MVAsc3={mvasc3:g}, x0r0={x0r0:g}; "
+                         "the engine keeps a negative R0, which is no passive source")
     return Thevenin(r1, x1, r0, r0 * x0r0)
 
 
@@ -133,8 +144,9 @@ def impedance_group(source) -> str:
     if len(groups) > 1:
         raise ValueError(f"Vsource {source.name}: sets the {' and '.join(groups)} impedance groups; DSS keeps "
                          "whichever was set last, which the reader does not record")
-    if groups == ["ohms"] and any(getattr(source, slot) is None for slot in IMPEDANCE_GROUPS["ohms"]):
-        raise ValueError(f"Vsource {source.name}: sets only part of R1, X1, R0, X0")
+    for group in ("ohms", "Isc"):
+        if groups == [group] and any(getattr(source, slot) is None for slot in IMPEDANCE_GROUPS[group]):
+            raise ValueError(f"Vsource {source.name}: sets only part of {', '.join(IMPEDANCE_GROUPS[group])}")
     return groups[0] if groups else "MVAsc"
 
 

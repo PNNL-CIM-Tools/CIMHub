@@ -121,7 +121,7 @@ Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#generator"""
 ENGINE_START = (1000.0, 0.88, 60.0)
 
 
-def dispatched_kvar(assignments: Iterable[tuple[str, object]]) -> float:
+def dispatched_kvar(label: str, assignments: Iterable[tuple[str, object]]) -> float:
     """The kvar the engine dispatches a Generator at, from its ``(slot, value)`` assignments in deck order (S4b-8).
 
     The engine keeps kvar as a power factor: assigning kvar sets pf = kW / sqrt(kW^2 + kvar^2), with kvar's sign, at
@@ -141,7 +141,7 @@ def dispatched_kvar(assignments: Iterable[tuple[str, object]]) -> float:
             else:
                 pf = float(value)
             if pf != 0:
-                kvar = reactive_power(kw, pf)
+                kvar = reactive_power(label, kw, pf)
     return kvar
 
 
@@ -196,7 +196,7 @@ def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
         if shape is None:
             continue
         generator, _ = fill_defaults(FIELDS, original, defaults)
-        kw, kvar = float(generator.kW), dispatched_kvar(native.assignments(original))
+        kw, kvar = float(generator.kW), dispatched_kvar(f"Generator {original.name}", native.assignments(original))
         regulated = model_name(generator.model) == _PV_BUS
         key = mrid(PREFIX, generator.name, lowercase=True) + loadshape.DEVICE_SCHEDULE_SUFFIX
         points[key] = loadshape.DevicePoints(loadshape.point_times(shape), [-kw * value + 0.0 for value in shape.mult],
@@ -218,7 +218,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         delta = is_delta(generator.conn)
         terminal = device_terminal(label, generator.bus1, int(generator.phases), delta, buses)
         kw = float(generator.kW)
-        kvar = dispatched_kvar(native.assignments(original))
+        kvar = dispatched_kvar(f"Generator {original.name}", native.assignments(original))
         kva = float(generator.kVA) if generator.kVA is not None else KVA_PER_KW * kw
         rated_kv = line_kv(float(generator.kv), terminal)
         machine = mrid(PREFIX, generator.name, lowercase=True)

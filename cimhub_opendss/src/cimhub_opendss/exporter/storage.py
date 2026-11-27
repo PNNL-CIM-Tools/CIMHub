@@ -24,6 +24,7 @@ from cimhub_opendss.exporter import loadshape
 from cimhub_core.getters.der import get_battery_unit
 from cimhub_core.getters.phase_power import SUM_REL_TOL
 from cimhub_opendss.exporter.inverter import inverter_pieces
+from cimhub_opendss.exporter.injection import POWER_ABS_TOL
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -99,7 +100,8 @@ def _yearly(context, battery: schema.Storage, piece, found) -> list[schema.Loads
     over = [number for number, p in enumerate(found.p, start=1) if abs(p) > battery.kVA * (1 + SUM_REL_TOL)]
     if over:
         raise ValueError(f"{label}: points {over[:5]} are above the battery's {battery.kVA:g} kVA")
-    mult = [0.0 if math.isclose(p, piece.p, rel_tol=SUM_REL_TOL) else p / battery.kWrated for p in found.p]
+    mult = [0.0 if math.isclose(p, piece.p, rel_tol=SUM_REL_TOL, abs_tol=POWER_ABS_TOL) else p / battery.kWrated
+            for p in found.p]
     battery.State, battery.DispMode = None, "follow"
     battery.yearly, shapes = loadshape.device_yearly(context, found, mult)
     return shapes
@@ -123,11 +125,11 @@ def _storage(piece) -> schema.Storage:
     _check_energy(unit, state, battery)
     idling = _scaled(battery.idling_p, piece.unit_share)
     if sign == 0:
-        if idling is not None and not math.isclose(idling, -piece.p, rel_tol=SUM_REL_TOL):
+        if idling is not None and not math.isclose(idling, -piece.p, rel_tol=SUM_REL_TOL, abs_tol=POWER_ABS_TOL):
             raise ValueError(f"{unit}: waiting with p {-piece.p} kW, not its idlingP {idling} kW")
         idling = -piece.p
     reserve = None
-    if battery.minimum_e is not None and battery.rated_e:
+    if battery.minimum_e is not None and battery.rated_e is not None:
         reserve = battery.minimum_e / battery.rated_e * 100
     kw_rated = battery.max_p * piece.unit_share
     return NATIVE_CLASS(

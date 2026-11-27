@@ -90,6 +90,10 @@ def _yearly(context, pv: schema.Pvsystem, piece, found) -> list[schema.Loadshape
     panel = pv.Pmpp * pv.irradiance
     if panel <= 0:
         raise ValueError(f"{label}: Pmpp x irradiance is {panel} kW; a PVSystem's shape scales a panel above 0")
+    below = [number for number, p in enumerate(found.p, start=1) if p < -POINT_TOL]
+    if below:
+        raise ValueError(f"{label}: points {below[:5]} are below 0 kW; a PVSystem only generates (the engine reads a "
+                         "negative multiplier as 0)")
     cap = pv.Pmpp * pv.pct_Pmpp / 100 if pv.pct_Pmpp is not None else math.inf
     over = [number for number, p in enumerate(found.p, start=1) if p > cap + POINT_TOL]
     if over:

@@ -28,10 +28,13 @@ cim_to_dss(network, "ieee13_export.dss")
   lines, and a line's own inline values with none on the line. It replaces the magnitude guess; a code or line with
   its own `units` keeps them. `device_geometry` draws a two-terminal
   device's coordinates as a `"point"` midway between its buses or a `"linestring"` from bus to bus. `time_points`
-  is a dict that receives the yearly load shapes' time points; without it they are dropped with a warning.
-- `cim_to_dss(network, destination, **opts)` writes the deck. Options go to `DssExporter().to_model`:
-  `name_source` (`'name'`, `'mrid'` or `'uri'`; default `$CIMHUB_NAME_SOURCE`, else `'mrid'`) and
-  `circuit_source`, the EnergySource to write as `New Circuit` when the model has several.
+  is a dict that receives the yearly shapes' time points (loads' and devices'); without it they are dropped with a
+  warning.
+- `cim_to_dss(network, destination, *, per_class=False, time_points=None, **opts)` writes the deck. `per_class=True`
+  writes one file per DSS class beside the master, which `Redirect`s them; `time_points` is the dict of time point
+  tables the yearly shapes are read from. `opts` go to `DssExporter.to_model`: `name_source` (`'name'`, `'mrid'` or
+  `'uri'`; default `$CIMHUB_NAME_SOURCE`, else `'mrid'`), `circuit_source`, the EnergySource to write as
+  `New Circuit` when the model has several, and `switch_state` (`'actual'`, the default, or `'normal'`).
 
 ## What is supported
 
@@ -39,8 +42,9 @@ cim_to_dss(network, "ieee13_export.dss")
 |---|---|---|
 | Circuit / Vsource | yes | yes |
 | Line (matrix, sequence and geometry impedance), LineCode, LineGeometry, LineSpacing, WireData, CNData, TSData | yes | yes |
+| Switches (`Line` with `Switch=y`, Fuse, Recloser, SwtControl) | yes | yes |
 | Transformer, XfmrCode, RegControl | yes | yes |
-| Load, Capacitor, CapControl | yes | yes |
+| Load, LoadShape (`yearly`), Capacitor, CapControl | yes | yes |
 | PVSystem, Storage, Generator | yes | yes |
 | Reactor | yes | yes |
 | Bus coordinates | yes | yes |

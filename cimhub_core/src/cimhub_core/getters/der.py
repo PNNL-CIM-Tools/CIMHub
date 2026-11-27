@@ -13,7 +13,8 @@ service, and an exporter maps it as written.
 ``BatteryUnit.idlingP`` is a loss, "consumed while idling", and is returned as stored in either sign.
 
 ``ratedU`` is line to line, as stored (the DSS importer writes a 1-phase wye device's kV x sqrt 3; its exporter
-undoes that). ``ratedS`` and ``ratedU`` are required.
+undoes that). ``ratedS`` and ``ratedU`` are required. A rating (ratedS, ratedU, maxIFault, ratedE) of 0 or less
+raises: no nameplate has one (and a DSS Generator's Vpu divides by ratedU).
 
 CIM lets several PowerElectronicsUnits share one connection (a PV array and a battery behind one inverter); a
 format with one DC device per inverter takes each unit's share of it (``get_inverter_units``, the GDM exporter's
@@ -159,11 +160,11 @@ def get_inverter_rating(connection: cim.PowerElectronicsConnection, apparent_uni
     _check_sign(sign)
     min_q, max_q = _limits(connection, "minQ", "maxQ", reactive_unit, sign)
     return InverterRating(
-        rated_s=required_qty(connection, "ratedS", apparent_unit),
-        rated_u=required_qty(connection, "ratedU", voltage_unit),
+        rated_s=_rating(connection, "ratedS", apparent_unit, required=True),
+        rated_u=_rating(connection, "ratedU", voltage_unit, required=True),
         min_q=min_q,
         max_q=max_q,
-        max_fault_current=get_qty(connection, "maxIFault", "pu"),
+        max_fault_current=_rating(connection, "maxIFault", "pu", required=False),
     )
 
 
@@ -278,7 +279,7 @@ def get_battery_unit(unit: cim.BatteryUnit, active_unit: str = "W", energy_unit:
     return BatteryRating(
         min_p=min_p,
         max_p=max_p,
-        rated_e=get_qty(unit, "ratedE", energy_unit),
+        rated_e=_rating(unit, "ratedE", energy_unit, required=False),
         stored_e=get_qty(unit, "storedE", energy_unit),
         minimum_e=get_qty(unit, "minimumE", energy_unit),
         charging_efficiency=get_qty(unit, "chargingEfficiency", "percent"),
@@ -296,8 +297,8 @@ def get_machine_rating(machine: cim.SynchronousMachine, apparent_unit: str = "VA
     _check_synchronous(machine)
     min_q, max_q = _limits(machine, "minQ", "maxQ", reactive_unit, sign)
     return MachineRating(
-        rated_s=required_qty(machine, "ratedS", apparent_unit),
-        rated_u=required_qty(machine, "ratedU", voltage_unit),
+        rated_s=_rating(machine, "ratedS", apparent_unit, required=True),
+        rated_u=_rating(machine, "ratedU", voltage_unit, required=True),
         rated_power_factor=machine.ratedPowerFactor,
         min_q=min_q,
         max_q=max_q,
@@ -316,6 +317,14 @@ def get_machine_impedance(machine: cim.SynchronousMachine, unit: str = "ohm") ->
         raise ValueError(f"unit must be one of {list(IMPEDANCE_UNITS)}, not {unit!r}")
     _check_synchronous(machine)
     return MachineImpedance(*(get_qty(machine, name, unit) for name in MACHINE_IMPEDANCE_ATTRIBUTES))
+
+
+def _rating(obj, attribute: str, unit: str, *, required: bool) -> float | None:
+    """A nameplate value in ``unit``: positive, or None when unset and not ``required``. Zero or less raises."""
+    value = required_qty(obj, attribute, unit) if required else get_qty(obj, attribute, unit)
+    if value is not None and value <= 0:
+        raise ValueError(f"{describe(obj)}: {attribute} {value:g} {unit}; a rating is positive")
+    return value
 
 
 def _limits(obj, low_attribute: str, high_attribute: str, unit: str, sign: str) -> tuple[float | None, float | None]:

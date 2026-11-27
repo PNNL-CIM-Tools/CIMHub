@@ -38,7 +38,8 @@ AutoTransformer without one has none. The voltage is always the From winding's o
 (``get_qty(power_base=)``), so its ends need no ``ratedS`` (a RAW 3-winding unit's have none). Otherwise CIM's
 value is read as a percent on its From winding's own ``baseU²/baseS`` and moved to the declared base by the power
 only: z × S_new/S_old, y × S_old/S_new. A winding's ``baseS`` is per phase, so its whole-unit power is winding 1's
-``ratedS`` scaled by the two ``baseS``.
+``ratedS`` scaled by the two ``baseS``. A set rating (``ratedU``, ``ratedS``, ``baseU``, ``baseS``) of 0 or less
+raises, since every percent is on one.
 """
 
 from __future__ import annotations
@@ -154,6 +155,7 @@ def get_transformer_model(unit, impedance_unit: str = "percent", *, base_power: 
     if form is TransformerForm.BY_TANK_IMPEDANCE:
         return _tank_impedance_model(unit, impedance_unit, base_power, voltage_unit, power_unit)
     coils = _coils(unit, form)
+    _check_ratings(coil.source for coil in coils)
     first = coils[0].source
     direct = base_power is not None and form in END_FORMS  # ohm and S read on base_power: no ratedS needed
     ideal = form is TransformerForm.AUTO and not any(coil.source.FromMeshImpedance for coil in coils)
@@ -262,6 +264,7 @@ def _tank_impedance_model(tank: cim.TransformerTank, impedance_unit: str, base_p
         if held or end.FromMeshImpedance or end.ToMeshImpedance:
             raise ValueError(f"{describe(end)}: {held or 'a TransformerMeshImpedance'} beside {describe(tank)}'s "
                              f"percentImpedance; one value would have two homes")
+    _check_ratings([*ends, tank])
     first_va = _can_va(tank, tanks, ends[0])
     result_va = first_va if base_power is None else base_power.to("VA")
     factor = IMPEDANCE_UNITS[impedance_unit]
@@ -623,6 +626,19 @@ def _connection(objects: tuple) -> cim.WindingConnection | None:
             raise ValueError(f"{describe(first_obj)} and {describe(obj)}: connectionKind {first.value} and "
                              f"{kind.value} differ")
     return found[0][1] if found else None
+
+
+#: a winding's ratings, which every percent on it is read on (cimtables' z_base)
+RATINGS = (("ratedU", "V"), ("ratedS", "VA"), ("baseU", "V"), ("baseS", "VA"))
+
+
+def _check_ratings(sources) -> None:
+    """Each set rating of each source is positive: a 0 divides by zero, a negative one flips an impedance's sign."""
+    for source in sources:
+        for attribute, unit in RATINGS:
+            value = get_qty(source, attribute, unit) if _has(source, attribute) else None
+            if value is not None and value <= 0:
+                raise ValueError(f"{describe(source)}: {attribute} {value:g} {unit}; a winding's rating is positive")
 
 
 def _has(obj, attribute: str) -> bool:

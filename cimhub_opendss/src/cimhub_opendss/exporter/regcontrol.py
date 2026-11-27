@@ -28,9 +28,9 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "name": Slot("written", "Names, the RegControl namespace"),
     "transformer": Slot("written", "the DSS Transformer of the tap's unit (one unit)"),
     "winding": Slot("written", "the winding whose end holds the RatioTapChanger"),
-    "vreg": Slot("written", "targetValue (V) / ptRatio (primary_to_secondary)"),
+    "vreg": Slot("written", "targetValue (V) / ptRatio (primary_to_secondary); unset raises"),
     "band": Slot("written", f"targetDeadband (V) {_SECONDARY}"),
-    "ptratio": Slot("written", "ptRatio, the tap's and the control's agreed; unset raises"),
+    "ptratio": Slot("written", "ptRatio, the tap's and the control's agreed; unset or <= 0 raises"),
     "CTprim": Slot("written", "ctRating (A); unset -> not written, and a line drop then raises"),
     "R": Slot("written", f"lineDropR (ohm) {_LINE_DROP}"), "X": Slot("written", f"lineDropX (ohm) {_LINE_DROP}"),
     "bus": Slot("not mapped", "the control must monitor its tap end's Terminal (remote sensing raises)"),
@@ -76,6 +76,11 @@ def _regcontrol(control: cim.TapChangerControl, names: Names) -> schema.Regcontr
     pt_ratio = regulating.pt_ratio
     if pt_ratio is None:
         raise ValueError(f"{describe(control)}: ptRatio is unset; vreg is on the PT secondary")
+    if pt_ratio <= 0:
+        raise ValueError(f"{describe(control)}: ptRatio {pt_ratio}; vreg is on the PT secondary, through a positive "
+                         f"ratio")
+    if regulating.target is None:
+        raise ValueError(f"{describe(control)}: targetValue is unset; a RegControl needs vreg")
     return NATIVE_CLASS(
         name=names.name(control, NAMESPACE),
         transformer=transformer_name,
@@ -115,7 +120,13 @@ def _pt_phase(control, monitored, winding, polyphase: bool) -> int | None:
 def _tap_winding(tap: cim.RatioTapChanger, names: Names):
     """``(DSS Transformer name, winding, polyphase)`` of the tap's end."""
     end = tap.TransformerEnd
-    transformer = end.PowerTransformer if isinstance(end, cim.PowerTransformerEnd) else end.AutoTransformer
+    if isinstance(end, cim.PowerTransformerEnd):
+        transformer = end.PowerTransformer
+    elif isinstance(end, cim.AutoTransformerEnd):
+        transformer = end.AutoTransformer
+    else:
+        shown = describe(end) if end is not None else None
+        raise ValueError(f"{describe(tap)}: its end {shown} is not a PowerTransformerEnd or an AutoTransformerEnd")
     if transformer is None:
         raise ValueError(f"{describe(tap)}: its end {describe(end)} is on no transformer")
     units = windings.units(transformer)

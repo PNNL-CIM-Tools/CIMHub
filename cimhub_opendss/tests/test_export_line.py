@@ -18,7 +18,7 @@ from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter import switch
 from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
 from cimhub_opendss.exporter.linegeometry import geometry_name
-from cimhub_opendss.exporter.options import earth_model
+from cimhub_opendss.exporter.options import EARTH_MODELS, earth_model
 from cimhub_opendss.exporter.naming import Names
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -191,6 +191,13 @@ def test_geometry_name_rounds_the_offset_to_the_mm():
     assert geometry_name(configuration, 10.363199999999999, Names("name")) == "x_10p363m"
 
 
+@pytest.mark.parametrize("offset", [0.0004, -0.0004])
+def test_geometry_name_within_a_mm_of_zero_is_the_configuration(offset):
+    """The name is the offset rounded to the mm, so one that rounds to 0 (or -0.0) has no suffix."""
+    configuration = cim.WireConfiguration(mRID="wc_x", name="x")
+    assert geometry_name(configuration, offset, Names("name")) == "x"
+
+
 def test_two_offsets_within_a_mm_raise():
     network = _network("geometry")
     _object(network, cim.ACLineSegment, "g_m").ySpacingOffset = cim.Length(1.5, "m")
@@ -258,12 +265,26 @@ def test_lumped_line_without_length_keeps_its_whole_values():
     assert record.r1 == pytest.approx(line.r.to("ohm"), rel=1e-12)
 
 
-def test_zero_length_lumped_line_raises():
-    """A DSS line's impedance is per length, and the engine cannot solve one of length 0."""
+@pytest.mark.parametrize("metres", [0.0, -200.0])
+def test_lumped_line_of_length_zero_or_less_raises(metres):
+    """A DSS line's impedance is per length: the engine cannot solve one of length 0, and solves a negative one
+    silently (a voltage rise)."""
     network = _network("codes")
     line = _lumped(network, "seq2", with_length=True)
-    line.length = cim.Length(0.0, "m")
-    with pytest.raises(ValueError, match=r"ACLineSegment.*seq2.*: length 0 with lumped impedance"):
+    line.length = cim.Length(metres, "m")
+    with pytest.raises(ValueError, match=r"ACLineSegment.*seq2.*: length -?[\d.]+ km with lumped impedance"):
+        _model(network)
+
+
+@pytest.mark.parametrize("atom, name", [("codes", "l1"), ("codes", "seq1"), ("geometry", "g601"),
+                                        ("geometry", "s510")])
+@pytest.mark.parametrize("metres", [0.0, -10.0])
+def test_line_of_length_zero_or_less_raises(atom, name, metres):
+    """A template code, an own code, a geometry and a spacing line: the same rule as a lumped one."""
+    network = _network(atom)
+    _object(network, cim.ACLineSegment, name).length = cim.Length(metres, "m")
+    with pytest.raises(ValueError, match=rf"ACLineSegment.*{name}.*: length -?[\d.]+ m; a DSS line needs a "
+                                         r"positive length"):
         _model(network)
 
 
@@ -384,6 +405,11 @@ def test_geometry_lines_write_their_earth():
     [options] = model.list_by_class(schema.Options)
     assert str(options.earthmodel) == "Deri"
     assert _record(model, schema.Line, "g601").rho == 100.0
+
+
+def test_every_earth_model_kind_is_mapped():
+    """earth_model looks EARTH_MODELS up without a guard: a kind a new profile adds must be mapped first."""
+    assert set(EARTH_MODELS) == set(cim.EarthModelKind)
 
 
 def test_two_earth_models_raise():
@@ -748,6 +774,45 @@ def test_a_longer_line_goes_on_as_its_own_section(tmp_path):
     assert dss.Solution.Converged()
 
 
+#: three capacitor controls, each monitoring one end of a coupled line: ln_a's two jumpers and ln_b's remainder
+COUPLED_CONTROLS = """
+Table LinearShuntCompensator: mRID, name, node, phases, phaseConnection, grounded, nomQ (kVAr), nomU (kV), bPerSection (mS), maximumSections, normalSections, sections, BaseVoltage=bv, EquipmentContainer=fdr
+    cap_a1, cap_a1, a1, ABC, Y, true, 300, 12.47, 1.93, 1, 1, 1
+    cap_a2, cap_a2, a1, ABC, Y, true, 300, 12.47, 1.93, 1, 1, 1
+    cap_b,  cap_b,  b1, ABC, Y, true, 300, 12.47, 1.93, 1, 1, 1
+Table RegulatingControl: mRID, name, mode=voltage, discrete=true, enabled=true, monitoredPhase=A, ptRatio=60, targetValue (V)=7200, targetDeadband (V)=240, Terminal
+    cc_a1, cc_a1, ln_a_T1
+    cc_a2, cc_a2, ln_a_T2
+    cc_b,  cc_b,  ln_b_T2
+Update Table LinearShuntCompensator: mRID, RegulatingControl
+    cap_a1, cc_a1
+    cap_a2, cc_a2
+    cap_b,  cc_b
+"""
+
+
+def test_a_capcontrol_on_a_coupled_line_monitors_the_line_that_carries_its_end(tmp_path):
+    """Terminal 1 of a coupled line is its _jumper1's, terminal 2 its _jumper2's or its remainder's (H1, H4)."""
+    path = tmp_path / "coupled.cimtbl"
+    path.write_text(COUPLED.replace("ln_b, name=ln_b, node1=n0, node2=b1, phases=ABCN, sequenceNumbers=4 5 6 7, "
+                                    "length (ft)=500", "ln_b, name=ln_b, node1=n0, node2=b1, phases=ABCN, "
+                                    "sequenceNumbers=4 5 6 7, length (ft)=600") + COUPLED_CONTROLS)
+    network = load_model(path)
+    controls = {str(record.name): (record.element, record.terminal)
+                for record in _spacing_model(network).list_by_class(schema.Capcontrol)}
+    assert controls == {"cc_a1": ("Line.ln_a_jumper1", 1), "cc_a2": ("Line.ln_a_jumper2", 2),
+                        "cc_b": ("Line.ln_b", 2)}
+    written = tmp_path / "coupled.dss"
+    cim_to_dss(network, written, name_source="mrid")
+    compile_deck(written)
+    dss.CapControls.First()
+    elements = set()
+    for _ in range(dss.CapControls.Count()):
+        elements.add((dss.CapControls.MonitoredObj().lower(), dss.CapControls.MonitoredTerm()))
+        dss.CapControls.Next()
+    assert elements == {("line.ln_a_jumper1", 1), ("line.ln_a_jumper2", 2), ("line.ln_b", 2)}
+
+
 def test_shared_neutral_needs_no_shared_phases(tmp_path):
     """H6: a position on several lines is one conductor, as the EPRI ConductorPosition model has it."""
     network = _coupled_network(tmp_path)
@@ -794,6 +859,10 @@ def _by_code(network):
         phase.WireInfo = None
 
 
+def _no_length(network):
+    _mrid(network, cim.ACLineSegment, "ln_a").length = cim.Length(0, "ft")
+
+
 def _other_group(network):
     _mrid(network, cim.ACLineSegmentPhase, "ln_b_N").MultiCircuitGroup = cim.MultiCircuitGroup(mRID="other")
 
@@ -804,6 +873,7 @@ def _other_group(network):
     (_other_wire, r"sequence number 7 is OverheadWireInfo 'wire_1/0' on one line and OverheadWireInfo 'wire_397'"),
     (_other_offset, r"its lines' ySpacingOffsets \(m, to the mm\) differ"),
     (_by_code, r"ACLineSegment 'ln_b': one of 2 lines of MultiCircuitGroup 'dbl', but has no geometry"),
+    (_no_length, r"MultiCircuitGroup 'dbl': its shortest line is 0 m; a DSS line needs a positive length"),
 ], ids=lambda value: value.__name__.strip("_") if callable(value) else "")
 def test_coupled_group_that_one_line_cannot_carry_raises(mutate, message, tmp_path):
     network = _coupled_network(tmp_path)

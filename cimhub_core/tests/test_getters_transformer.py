@@ -713,6 +713,18 @@ def test_unrated_winding_1_raises():
         get_transformer_model(_get(network, cim.PowerTransformer, "xf_sub"))
 
 
+@pytest.mark.parametrize("end", ["xf_sub_1", "xf_sub_2"])
+@pytest.mark.parametrize("attribute, quantity", [("ratedS", cim.ApparentPower), ("ratedU", cim.Voltage)])
+@pytest.mark.parametrize("value", [0.0, -1.0])
+def test_winding_rating_of_zero_or_less_raises(end, attribute, quantity, value):
+    """Every percent is on a winding's rating: a 0 divides by zero, a negative one flips the impedance's sign."""
+    network = _shape("transformer_by_ends")
+    setattr(_get(network, cim.PowerTransformerEnd, end), attribute, quantity(value))
+    with pytest.raises(ValueError, match=rf"PowerTransformerEnd '{end}': {attribute} -?[\d.]+ V?A?; a winding's "
+                                         r"rating is positive"):
+        get_transformer_model(_get(network, cim.PowerTransformer, "xf_sub"))
+
+
 # S6c: a template's kind without grounding (T2), and a 1-phase TankEnd coil's direction (T3) -----------------------
 
 # 1-phase delta-delta TankEnd template; the instance's end 2 runs C -> A (DSS tert.3.1), told by its phase ends

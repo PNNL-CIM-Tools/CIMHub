@@ -11,6 +11,8 @@ from cimhub_opendss.dss_reader import DSS_COMMANDS, DSS_OPTIONS, DssParseError, 
 from cimhub_opendss import dss_name_map
 from cimhub_opendss.schema import opendss_schema as schema
 
+from conftest import ENGINE_UNIT, clear_engine, compile_deck
+
 
 def read(tmp_path, text: str, name: str = "deck.dss"):
     deck = tmp_path / name
@@ -371,3 +373,247 @@ def test_rdcohms_on_some_windings_only_raises(tmp_path):
     with pytest.raises(DssParseError, match=r"RdcOhms: winding \[1\] unset while another winding's is set"):
         read(tmp_path, "New Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[7.2 0.24] kVAs=[25 25] "
                        "wdg=2 RdcOhms=0.004\n")
+
+
+# ---------------------------------------------------------------------------
+# Engine behaviours the reader follows (ported from the PR #14 audit; each checked against opendssdirect)
+# ---------------------------------------------------------------------------
+
+CIRCUIT = "New Circuit.c bus1=src\n"
+
+
+def coordinates(model) -> dict[str, tuple[float, float]]:
+    return {str(row.name): (row.x, row.y) for row in model.list_by_class(schema.Buscoords)}
+
+
+def test_a_set_with_no_option_name_raises(tmp_path):
+    # the engine reads "Set =5" as an unknown parameter; an empty name abbreviates no option
+    with pytest.raises(DssParseError, match="no DSS option has that name"):
+        read(tmp_path, CIRCUIT + "Set =5\n")
+
+
+@pytest.mark.parametrize("target", [r"Sub\Lower.dss", "sub/lower.dss", "(Sub/Lower.dss)", "[Sub/Lower.dss]"])
+def test_redirect_paths_resolve_as_on_windows(tmp_path, target):
+    # backslashes and the () or [] the engine strips; case-insensitive, as the deck's Windows author saw it
+    (tmp_path / "Sub").mkdir()
+    (tmp_path / "Sub" / "Lower.dss").write_text("New Load.l bus1=src kW=1\n")
+    assert [load.name for load in read(tmp_path, CIRCUIT + f"Redirect {target}\n").list_by_class(schema.Load)] == ["l"]
+
+
+def test_a_relative_master_path_resolves_case_insensitively(tmp_path, monkeypatch):
+    (tmp_path / "Sub").mkdir()
+    (tmp_path / "Sub" / "Lower.dss").write_text("New Load.l bus1=src kW=1\n")
+    (tmp_path / "deck.dss").write_text(CIRCUIT + "Redirect sub/lower.dss\n")
+    monkeypatch.chdir(tmp_path)
+    assert [load.name for load in DssReader("deck.dss").read_all().list_by_class(schema.Load)] == ["l"]
+
+
+def test_a_nested_redirect_resolves_against_its_own_folder(tmp_path):
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "inner.dss").write_text("Redirect leaf.dss\nMakeBusList\nBusCoords xy.csv\n")
+    (tmp_path / "sub" / "leaf.dss").write_text("New Line.leaf bus1=src bus2=b\n")
+    (tmp_path / "sub" / "xy.csv").write_text("b, 7, 8\n")
+    (tmp_path / "leaf.dss").write_text("New Line.wrong bus1=src bus2=b\n")
+    (tmp_path / "xy.csv").write_text("b, 1, 2\n")
+    deck = tmp_path / "deck.dss"
+    deck.write_text(CIRCUIT + "Redirect sub/inner.dss\n")
+    model = DssReader(deck).read_all()
+    compile_deck(deck)
+    dss.Circuit.SetActiveBus("b")
+    assert [line.name for line in model.list_by_class(schema.Line)] == dss.Lines.AllNames() == ["leaf"]
+    assert coordinates(model)["b"] == (dss.Bus.X(), dss.Bus.Y()) == (7.0, 8.0)
+
+
+def test_a_redirect_cycle_raises_and_a_diamond_does_not(tmp_path):
+    for name, text in {"b.dss": "Redirect d.dss\n", "c.dss": "Redirect d.dss\n", "d.dss": "! shared\n"}.items():
+        (tmp_path / name).write_text(text)
+    read(tmp_path, CIRCUIT + "Redirect b.dss\nRedirect c.dss\n")
+    (tmp_path / "d.dss").write_text("Redirect b.dss\n")
+    with pytest.raises(DssParseError, match="Redirect cycle"):
+        read(tmp_path, CIRCUIT + "Redirect b.dss\n")
+
+
+@pytest.mark.parametrize("line", ["Redirect", "Compile", "BusCoords", "LatLongCoords"])
+def test_a_file_command_with_no_path_raises(tmp_path, line):
+    with pytest.raises(DssParseError, match="needs a file path"):
+        read(tmp_path, CIRCUIT + line + "\n")
+
+
+def test_a_byte_order_mark_is_skipped(tmp_path):
+    (tmp_path / "xy.csv").write_bytes("﻿b, 1, 2\n".encode())
+    deck = tmp_path / "deck.dss"
+    deck.write_bytes(("﻿" + CIRCUIT + "New Line.l bus1=src bus2=b\nBusCoords xy.csv\n").encode())
+    model = DssReader(deck).read_all()
+    assert ([line.name for line in model.list_by_class(schema.Line)], coordinates(model)) == (["l"], {"b": (1, 2)})
+
+
+def test_coordinate_files_apply_in_deck_order_and_clear_drops_them(tmp_path):
+    for name, text in {"a.csv": "b, 1, 2\n", "ll.csv": "b, 5, 6\n", "c.csv": "b, 3, 4\n"}.items():
+        (tmp_path / name).write_text(text)
+    deck = tmp_path / "deck.dss"
+    deck.write_text(CIRCUIT + "New Line.l bus1=src bus2=b\nMakeBusList\nBusCoords a.csv\nLatLongCoords ll.csv\n"
+                    "BusCoords c.csv\n")
+    model = DssReader(deck).read_all()
+    compile_deck(deck)
+    dss.Circuit.SetActiveBus("b")
+    assert coordinates(model)["b"] == (dss.Bus.X(), dss.Bus.Y()) == (3.0, 4.0)
+    assert coordinates(read(tmp_path, CIRCUIT + "BusCoords a.csv\nClear\n" + CIRCUIT)) == {}
+
+
+def test_a_continuation_after_clear_raises(tmp_path):
+    # the engine has no circuit after Clear (#301); the reader must not extend the discarded load
+    with pytest.raises(DssParseError, match="a continuation with no New or Edit before it"):
+        read(tmp_path, CIRCUIT + "New Load.a bus1=src kW=1\nClear\n~ kW=5\n")
+
+
+def test_a_continuation_extends_a_dotted_edit(tmp_path):
+    text = CIRCUIT + "New Line.l1 bus1=src bus2=b\nNew Line.l2 bus1=src bus2=c\nLine.l1.length=5\n~ phases=1\n"
+    lines = {line.name: line for line in read(tmp_path, text).list_by_class(schema.Line)}
+    clear_engine()
+    for command in text.splitlines():
+        dss.Text.Command(command)
+    for name, line in lines.items():
+        dss.Lines.Name(name)
+        assert (line.phases or 3) == dss.Lines.Phases()
+    assert (lines["l1"].phases, lines["l1"].length) == (1, 5.0)
+
+
+def test_open_takes_a_quoted_element(tmp_path):
+    model = read(tmp_path, CIRCUIT + 'New Line.sw1 bus1=src bus2=b switch=y\nOpen "Line.sw1" 2\n')
+    assert only(model, schema.Options).open_terminals == ["Line.sw1 2"]
+
+
+def test_open_of_terminal_zero_raises(tmp_path):
+    # the engine opens terminal 1 instead, silently
+    with pytest.raises(DssParseError, match="terminal 0 must be 1 or more"):
+        read(tmp_path, CIRCUIT + "New Line.sw1 bus1=src bus2=b switch=y\nOpen Line.sw1 0\n")
+
+
+@pytest.mark.parametrize("line", ["New", "Edit", "BatchEdit"])
+def test_a_bare_element_command_raises(tmp_path, line):
+    # the engine raises #263 / #267: Object Type "" not found
+    with pytest.raises(DssParseError, match="needs Class.name"):
+        read(tmp_path, CIRCUIT + line + "\n")
+
+
+@pytest.mark.parametrize("text, like", [
+    ("New Generator.g bus1=src kW=100 kvar=50 kW=200\n", ""),
+    ("New Generator.g3 bus1=src kW=100 kvar=50 kW=200\nNew Generator.g like=g3 kW=300\n", "g3"),
+    ("New Generator.g3 bus1=src kW=100 kvar=50\nNew Generator.g like=g3 kW=200\n", "g3"),
+])
+def test_the_history_replays_to_the_engine_kvar(tmp_path, text, like):
+    # every assignment in deck order, like= first with its source's whole history: the engine keeps kvar as a
+    # power factor at the kW of the moment
+    from cimhub_opendss.importer.cimtbl.generator import dispatched_kvar
+    model = read(tmp_path, CIRCUIT + text)
+    [generator] = [g for g in model.list_by_class(schema.Generator) if g.name == "g"]
+    clear_engine()
+    for command in (CIRCUIT + text).splitlines():
+        dss.Text.Command(command)
+    dss.Text.Command("? Generator.g.kvar")
+    assert dispatched_kvar("g", model.assignments(generator)) == pytest.approx(float(dss.Text.Result()))
+
+
+def test_an_edit_of_linegeometry_conductors_raises(tmp_path):
+    # an Edit's cond= block would replace every conductor's position with this one's
+    with pytest.raises(DssParseError, match=r"per-conductor properties \(cond=\) on an Edit are not read"):
+        read(tmp_path, "New LineGeometry.g nconds=2 nphases=2 cond=1 x=0 h=10 cond=2 x=1 h=10\n"
+                       "Edit LineGeometry.g cond=2 x=2\n")
+
+
+def test_a_missing_array_file_raises_with_its_line(tmp_path):
+    with pytest.raises(DssParseError, match=r"no-such\.csv.* at line 2"):
+        read(tmp_path, CIRCUIT + "New Loadshape.s npts=2 mult=(file=no-such.csv)\n")
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("windings=3.0 buses=[src b c] kVs=[1 1 1]", 3),
+    ("windings={1 2 +} buses=[src b c] kVs=[1 1 1]", 3),
+])
+def test_a_winding_count_takes_any_number(tmp_path, text, expected):
+    assert only(read(tmp_path, CIRCUIT + f"New Transformer.t phases=1 {text}\n"), schema.Transformer).windings == expected
+
+
+@pytest.mark.parametrize("text", [
+    "phases=1 windings=2 buses=[src b] wdg=(2 1 -) bus=b2 kv=2",
+    "phases=1 windings=2 buses=[src b] wdg={2 1 -} bus=b2 kv=2",
+    "phases=1 windings=2 buses=[src b] wdg=1.0 bus=b2 kv=2",
+    "phases=3 windings=2 buses={src b} kvs={12.47 4.16} kvas={500 500}",
+    "phases=3 windings=2 buses=[src b] kvs=[{12 2 *} 4.16]",
+    "phases=3 windings=2 buses=[src b] kVs=[12.47 4.16] wdg=2 kv={2 2 *}",
+])
+def test_winding_arrays_match_the_engine(tmp_path, text):
+    xf = only(read(tmp_path, CIRCUIT + f"New Transformer.t {text}\n"), schema.Transformer)
+    clear_engine()
+    dss.Text.Command(CIRCUIT.strip())
+    dss.Text.Command(f"New Transformer.t {text}")
+    dss.Transformers.Name("t")
+    engine_kvs = []
+    for winding in range(1, dss.Transformers.NumWindings() + 1):
+        dss.Transformers.Wdg(winding)
+        engine_kvs.append(dss.Transformers.kV())
+    assert [float(kv) for kv in xf.kVs] == pytest.approx(engine_kvs)
+    assert [bus.split(".")[0] for bus in xf.buses][1:] == [bus.split(".")[0] for bus in dss.CktElement.BusNames()][1:]
+
+
+def test_winding_zero_raises(tmp_path):
+    with pytest.raises(DssParseError, match="wdg=0"):
+        read(tmp_path, CIRCUIT + "New Transformer.t phases=1 windings=2 wdg=0 bus=b2\n")
+
+
+@pytest.mark.parametrize("text, slot, expected", [
+    ('New Load.a bus1="pi" kW=1', "bus1", "pi"),
+    ("New Load.a bus1=(1 2 +) kW=1", "bus1", "1 2 +"),
+    ("New Load.a bus1=src kW=1\nLoad.a.kW={2 3 *}", "kW", 6.0),
+    ("New Load.a bus1=src kW=1\nLoad.a.kW=(2 3 *)", "kW", 6.0),
+])
+def test_rpn_is_evaluated_on_numbers_only(tmp_path, text, slot, expected):
+    load = only(read(tmp_path, CIRCUIT + text + "\n"), schema.Load)
+    clear_engine()
+    for command in (CIRCUIT + text).splitlines():
+        dss.Text.Command(command)
+    dss.Text.Command(f"? Load.a.{slot}")
+    engine = dss.Text.Result()
+    assert getattr(load, slot) == expected == (float(engine) if isinstance(expected, float) else engine)
+
+
+def test_rpn_elements_of_an_array_match_the_engine(tmp_path):
+    text = "New Loadshape.s npts=3 mult=[1 {2 3 *} (2 2 +)]"
+    shape = only(read(tmp_path, CIRCUIT + text + "\n"), schema.Loadshape)
+    clear_engine()
+    dss.Text.Command(CIRCUIT.strip())
+    dss.Text.Command(text)
+    dss.LoadShape.Name("s")
+    assert shape.mult == list(dss.LoadShape.PMult()) == [1.0, 6.0, 4.0]
+
+
+def test_a_bad_batchedit_pattern_raises_with_its_line(tmp_path):
+    with pytest.raises(DssParseError, match=r"BatchEdit pattern '\(' is not a regular expression.* at line 3"):
+        read(tmp_path, CIRCUIT + "New Load.a bus1=src kW=1\nBatchEdit Load.( kW=3\n")
+
+
+@pytest.mark.parametrize("text", [
+    "nconds=2 nphases=2 units=m cond=1 x=0 h=10 cond=2 x=1 h=10",
+    "nconds=2 nphases=2 cond=1 x=0 h=10 units=m cond=2 x=1 h=10",
+    "nconds=2 nphases=2 cond=1 x=0 cond=2 x=1 h=9 cond=1 h=10",
+])
+def test_geometry_conductors_match_the_engine(tmp_path, text):
+    # a units= before cond=1 is the first conductor's; a repeated cond= block adds to that conductor
+    geometry = only(read(tmp_path, CIRCUIT + f"New LineGeometry.g {text}\n"), schema.Linegeometry)
+    clear_engine()
+    dss.Text.Command(CIRCUIT.strip())
+    dss.Text.Command(f"New LineGeometry.g {text}")
+    dss.LineGeometries.Name("g")
+    assert (geometry.xs, geometry.hs) == (dss.LineGeometries.Xcoords(), dss.LineGeometries.Ycoords())
+    assert {ENGINE_UNIT[unit] for unit in dss.LineGeometries.Units()} == {str(geometry.units or "ft").lower()}
+
+
+def test_geometry_units_before_cond_count_for_the_mixed_check(tmp_path):
+    with pytest.raises(DssParseError, match="the cond= blocks give positions in different units"):
+        read(tmp_path, "New LineGeometry.g nconds=2 nphases=2 units=m cond=1 x=0 h=10 cond=2 x=1 h=10 units=ft\n")
+
+
+@pytest.mark.parametrize("function", ["rollup", "rolldn"])
+def test_rpn_rollup_and_rolldn_raise(tmp_path, function):
+    with pytest.raises(DssParseError, match=f"RPN {function} is not supported"):
+        read(tmp_path, CIRCUIT + f"New Load.a bus1=src kW=(1 2 3 {function})\n")

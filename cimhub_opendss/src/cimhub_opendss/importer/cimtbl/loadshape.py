@@ -61,7 +61,8 @@ FIELDS = {
     "dblfile": Field("structural", note=_FILE),
     "action": Field("derived", note="normalize: mult and qmult each divided by its largest magnitude, as the engine "
                                     "does (one assigned after it raises); DblSave, SngSave write files and are "
-                                    "untranscribed; others raise"),
+                                    "untranscribed; others raise. Every action assigned counts (each acts when "
+                                    "assigned), not only the last"),
     "qmult": Field("copied", ((_POINT, "value2", None),),
                    "in the sidecar; unset: Q follows mult (the engine's rule), value2 unset"),
     "UseActual": Field("structural", note="Yes raises: a Load naming it takes the shape's peak as its kW, or keeps "
@@ -196,23 +197,25 @@ def read_shape(native, shape) -> Shape | None:
         raise ValueError(f"{label}: {slot or 'interval'}={interval}; an hour array (interval 0) is not mapped")
     unit = INTERVALS[slot or "interval"][0]
     mult, qmult = list(shape.mult), list(shape.qmult) if shape.qmult else None
-    action = str(shape.action).lower() if shape.action is not None else None
-    if action == "normalize":
-        later = _assigned_after(native, shape, "action", ("mult", "qmult"))
+    # each action acts when assigned, so every one counts, not only the record's last
+    actions = [str(value) for assigned, value in native.assignments(shape) if assigned == "action"]
+    for action in actions:
+        if action.lower() != "normalize" and action.lower() not in _FILE_ACTIONS:
+            raise ValueError(f"{label}: action={action} is not mapped (normalize, DblSave, SngSave are)")
+    if any(action.lower() == "normalize" for action in actions):
+        later = _assigned_after_normalize(native, shape, ("mult", "qmult"))
         if later:
             raise ValueError(f"{label}: {', '.join(later)} assigned after action=normalize; the engine normalizes "
                              "only the values before it")
         mult, qmult = normalized(mult), normalized(qmult) if qmult else None
-    elif action is not None and action not in _FILE_ACTIONS:
-        raise ValueError(f"{label}: action={shape.action} is not mapped (normalize, DblSave, SngSave are)")
     return Shape(interval, unit, mult, qmult)
 
 
-def _assigned_after(native, record, slot: str, others: tuple[str, ...]) -> list[str]:
-    """Which of ``others`` the deck assigned to ``record`` after its last ``slot``."""
+def _assigned_after_normalize(native, record, others: tuple[str, ...]) -> list[str]:
+    """Which of ``others`` the deck assigned to ``record`` after its last ``action=normalize``."""
     later, seen = [], False
-    for assigned, _ in native.assignments(record):
-        if assigned == slot:
+    for assigned, value in native.assignments(record):
+        if assigned == "action" and str(value).lower() == "normalize":
             seen, later = True, []
         elif seen and assigned in others and assigned not in later:
             later.append(assigned)

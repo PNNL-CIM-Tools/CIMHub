@@ -59,8 +59,9 @@ SLOTS = {NATIVE_CLASS: {
     "bus2": Slot("written", "bus_ref(get_terminal_nodes[1], the same phases); a coupled group's: <group>_2 (H1)"),
     "linecode": Slot("written", "the template PerLengthImpedance's LineCode name (get_line_code); a line's own "
                                 "(isTemplate=false) is written inline"),
-    "length": Slot("written", "required_qty(length, m); lumped: km, unset -> 1, 0 raises; a coupled group's: its "
-                              "shortest line's, a remainder the rest of its line, a jumper 1 m (H4)"),
+    "length": Slot("written", "required_qty(length, m), <= 0 raises; lumped: km, unset -> 1, <= 0 raises; a coupled "
+                              "group's: its shortest line's (<= 0 raises), a remainder the rest of its line, a jumper "
+                              "1 m (H4)"),
     "phases": Slot("written", "the phase conductors (a neutral is reduced, B4); a coupled group's: every line's"),
     "r1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
     "x1": Slot("written", f"{_OWN} (ohm/m); {_LUMPED} (ohm/km){_JUMPER}"),
@@ -121,6 +122,21 @@ def terminal_buses(equipment, phases, names, far_phases=None) -> tuple[str, str]
     return bus_ref(nodes[0], phases, names), bus_ref(nodes[1], far_phases or phases, names)
 
 
+def line_element(line: cim.ACLineSegment, sequence_number: int, context) -> str:
+    """The DSS Line that carries terminal ``sequence_number`` of ``line``, at the same terminal number: the line's
+    own, or in a coupled group (H1) its ``_jumper1`` at terminal 1 and its ``_jumper2``, or the remainder that keeps
+    its name (H4), at terminal 2."""
+    if sequence_number not in (1, 2):
+        raise ValueError(f"{describe(line)}: terminal {sequence_number}; a DSS line has terminals 1 and 2")
+    for coupled in context.coupled.values():
+        if line in coupled.lines:
+            if sequence_number == 1:
+                return f"Line.{context.names.name(line, NAMESPACE, suffix='_jumper1')}"
+            if line not in coupled.remainders:
+                return f"Line.{context.names.name(line, NAMESPACE, suffix='_jumper2')}"
+    return f"Line.{context.names.name(line, NAMESPACE)}"
+
+
 def ratings(equipment) -> dict:
     """``normamps``/``emergamps`` from the equipment's normal and emergency limits (A); unset is not written."""
     limits = get_current_limits(equipment, "A")
@@ -144,16 +160,16 @@ def _line(line: cim.ACLineSegment, context, owners: dict[cim.ACLineSegment, cim.
             raise ValueError(f"{describe(line)}: {len(conductors)} phase conductors on {describe(configuration)} "
                              f"of {configuration.numberOfPhases} phases")
         slots.update(geometry=geometry_name(configuration, line_offset(line), names),
-                     length=required_qty(line, "length", UNIT), units=UNIT, rho=line_rho(line, context.network))
+                     length=_length(line), units=UNIT, rho=line_rho(line, context.network))
     elif is_spacing_line(line):
-        slots.update(geometry=spacing_geometry_name(owners[line], names), length=required_qty(line, "length", UNIT),
+        slots.update(geometry=spacing_geometry_name(owners[line], names), length=_length(line),
                      units=UNIT, rho=line_rho(line, context.network))
     elif has_neutral:
         raise ValueError(f"{describe(line)}: a neutral conductor without geometry needs LineCode Kron/neutral, which "
                          f"is not mapped (B4)")
     elif code is not None:
         _check_code_phases(line, code, len(conductors))
-        slots.update(length=required_qty(line, "length", UNIT), units=UNIT)
+        slots.update(length=_length(line), units=UNIT)
         if code.isTemplate is False:
             slots.update(_own_code(line, code, context.network.base_frequency.to("Hz")))
         else:
@@ -200,6 +216,15 @@ def _check_code_phases(line: cim.ACLineSegment, code: cim.PerLengthImpedance, co
         raise ValueError(f"{describe(line)}: {count} phase conductors on {describe(code)} of {expected}")
 
 
+def _length(line: cim.ACLineSegment) -> float:
+    """The line's length (m). One of 0 or less raises: the engine cannot solve a zero-length line, and solves a
+    negative one silently (a voltage rise)."""
+    length = required_qty(line, "length", UNIT)
+    if length <= 0:
+        raise ValueError(f"{describe(line)}: length {length:g} {UNIT}; a DSS line needs a positive length")
+    return length
+
+
 def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: float) -> dict:
     """The line's own impedance (``isTemplate=false``) inline; one that other lines use too raises."""
     if code.ACLineSegments != [line]:
@@ -209,13 +234,13 @@ def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: 
 
 
 def _lumped(line: cim.ACLineSegment, frequency: float) -> dict:
-    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length of 0
-    raises: a DSS line's impedance is per length, and the engine cannot solve a zero-length line."""
+    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length of 0 or
+    less raises: a DSS line's impedance is per length (``_length``)."""
     whole = get_line_sequence_impedance(line, "ohm", "nS")  # nS: c_from_b takes nS
     length = get_qty(line, "length", LUMPED_UNIT)
-    if length == 0:
-        raise ValueError(f"{describe(line)}: length 0 with lumped impedance; a DSS line's impedance is per length, "
-                         "and the engine cannot solve a zero-length line")
+    if length is not None and length <= 0:
+        raise ValueError(f"{describe(line)}: length {length:g} {LUMPED_UNIT} with lumped impedance; a DSS line's "
+                         "impedance is per length, and needs a positive length")
     length = 1.0 if length is None else length
     per_km = whole._replace(**{name: _per(getattr(whole, name), length)
                                for name in ("r", "x", "r0", "x0", "b", "g", "b0", "g0")})

@@ -33,7 +33,8 @@ NATIVE_CLASS = schema.Storage
 PREFIX = "storage_"
 
 _UNIT = "BatteryUnit"
-_NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
+_NO_DECK = "no deck in the sweep sets it, so a mapping waits for one"
+_NOT_MAPPED = "raises when set: " + _NO_DECK
 _SHAPE = "a time-series curve; a snapshot does not use it (DSS-11)"
 _DYNAMICS = "a dynamics setting; no home in the network profile parts"
 
@@ -46,7 +47,7 @@ FIELDS = {
     "conn": Field("mapped", ((CONNECTION, "phaseConnection", None),), "wye -> Y, delta -> D; default wye"),
     "kW": Field("derived", note="replayed in deck order (battery_dispatch, S4b-8): > 0 sets the discharge setpoint "
                                 "and discharging, < 0 the charge setpoint and charging, 0 waiting; capped at kVA"),
-    "kvar": Field("structural", note="raises when nonzero: " + _NOT_MAPPED + " (q = 0)"),
+    "kvar": Field("structural", note="raises when nonzero: " + _NO_DECK + " (q = 0)"),
     "pf": Field("structural", note="1 only; another raises (the engine caps q by a kvarMax left from the default "
                                    "kVA); default 1"),
     "kVA": Field("copied", ((CONNECTION, "ratedS", "kVA"),), "also caps p; default kWrated"),
@@ -56,10 +57,10 @@ FIELDS = {
     "VarFollowInverter": Field("untranscribed", note="acts only with an InvControl"),
     "kvarMax": Field("copied", ((CONNECTION, "maxQ", "kVAr"),), "default kVA"),
     "kvarMaxAbs": Field("derived", note="minQ (kVAr) = -kvarMaxAbs; default kVA"),
-    "WattPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "PFPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "pct_PminNoVars": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
-    "pct_PminkvarMax": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
+    "WattPriority": Field("structural", note="raises when yes: " + _NO_DECK),
+    "PFPriority": Field("structural", note="raises when yes: " + _NO_DECK),
+    "pct_PminNoVars": Field("structural", note="raises when nonzero: " + _NO_DECK),
+    "pct_PminkvarMax": Field("structural", note="raises when nonzero: " + _NO_DECK),
     "kWrated": Field("copied", ((_UNIT, "maxP", "kW"),), "minP = -kWrated; also p by State; default 25"),
     "pct_kWrated": Field("untranscribed", note="the kW limit of the dispatch modes, which raise"),
     "kWhrated": Field("copied", ((_UNIT, "ratedE", "kWh"),), "default 50"),
@@ -84,15 +85,15 @@ FIELDS = {
     "Vminpu": Field("derived", note="maxIFault = 1 / Vminpu (the engine's CIM export); default 0.9"),
     "Vmaxpu": Field("untranscribed", note="above it the engine models the battery as constant Z; a power-flow "
                                           "setting"),
-    "Balanced": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "LimitCurrent": Field("structural", note="raises when yes: " + _NOT_MAPPED),
+    "Balanced": Field("structural", note="raises when yes: " + _NO_DECK),
+    "LimitCurrent": Field("structural", note="raises when yes: " + _NO_DECK),
     "yearly": Field("mapped", ((loadshape.DEVICE_SCHEDULE, "name", None),),
                     "DispMode=follow: the battery's EnergyConnectionSchedule <mRID>_yearly, mult x kWrated per sample "
                     "(S9); with another DispMode raises"),
     "daily": Field("untranscribed", note=_SHAPE),
     "duty": Field("untranscribed", note=_SHAPE),
     "DispMode": Field("structural", note="default, or follow with a yearly shape (S9); another dispatch mode raises "
-                                         "(" + _NOT_MAPPED + ")"),
+                                         "(" + _NO_DECK + ")"),
     "DischargeTrigger": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
     "ChargeTrigger": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
     "TimeChargeTrig": Field("untranscribed", note="acts only in a dispatch mode, which raises"),
@@ -109,7 +110,7 @@ FIELDS = {
     "SafeMode": Field("untranscribed", note=_DYNAMICS),
     "DynamicEq": Field("untranscribed", note=_DYNAMICS),
     "DynOut": Field("untranscribed", note=_DYNAMICS),
-    "ControlMode": Field("structural", note="GFL only; GFM raises (" + _NOT_MAPPED + ")"),
+    "ControlMode": Field("structural", note="GFL only; GFM raises (" + _NO_DECK + ")"),
     "AmpLimit": Field("untranscribed", note=_DYNAMICS),
     "AmpLimitGain": Field("untranscribed", note=_DYNAMICS),
     "spectrum": Field("untranscribed", note="harmonics model; no home in the network profile parts"),

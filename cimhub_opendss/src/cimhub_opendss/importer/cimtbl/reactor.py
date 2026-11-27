@@ -26,7 +26,8 @@ NATIVE_CLASS = schema.Reactor
 PREFIX = "rx_"
 
 _SERIES = "SeriesCompensator"
-_NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
+_NO_DECK = "no deck in the sweep sets it, so a mapping waits for one"
+_NOT_MAPPED = "raises when set: " + _NO_DECK
 _RELIABILITY = "a reliability setting; no home in the network profile parts"
 
 FIELDS = {
@@ -39,7 +40,7 @@ FIELDS = {
     "conn": Field("untranscribed", note="a series reactor has no neutral"),
     "Rmatrix": Field("structural", note=_NOT_MAPPED),
     "Xmatrix": Field("structural", note=_NOT_MAPPED),
-    "Parallel": Field("structural", note="raises when yes: " + _NOT_MAPPED),
+    "Parallel": Field("structural", note="raises when yes: " + _NO_DECK),
     "R": Field("copied", ((_SERIES, "r", "ohm"), (_SERIES, "r0", "ohm")), "per phase; r0 = r (no mutual); default 0"),
     "X": Field("copied", ((_SERIES, "x", "ohm"), (_SERIES, "x0", "ohm")), "per phase; x0 = x (no mutual); unset "
                                                                          "raises"),

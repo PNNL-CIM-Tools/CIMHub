@@ -51,6 +51,16 @@ def test_derived_settings():
         regcontrol.tap_range(1.00390625, 1.1, 0.9, 32, name="t")
 
 
+@pytest.mark.parametrize("tap, max_tap, min_tap, num_taps, message", [
+    (1.0, 1.1, 0.9, 0, "NumTaps=0"),  # the engine takes 0, which leaves no step
+    (1.0, 0.9, 1.1, 32, "MaxTap=0.9 is not above MinTap=1.1"),  # the engine takes it
+    (1.2, 1.1, 0.9, 32, r"tap=1.2 \(step 32\) is outside MinTap=0.9 to MaxTap=1.1"),  # the engine keeps it
+])
+def test_a_tap_range_off_the_mapping_raises(tap, max_tap, min_tap, num_taps, message):
+    with pytest.raises(ValueError, match=message):
+        regcontrol.tap_range(tap, max_tap, min_tap, num_taps, name="t")
+
+
 def test_regulators_bind(regulators):
     network = dss_to_cim(regulators, name="atom")
     cim = network.cim
@@ -78,6 +88,9 @@ def test_regulators_bind(regulators):
      "with no RegControl"),
     ("New Transformer.t phases=3 buses=[sourcebus b] kVs=[12.47 12.47] kVAs=[100 100]\n"
      "New RegControl.r transformer=t winding=2 PTphase=MAX\n", "r: PTphase=MAX"),
+    # the engine keeps winding 1's 1.05 while the control moves winding 2
+    ("New Transformer.t phases=1 buses=[sourcebus.1 b.1] kVs=[7.2 7.2] kVAs=[100 100] taps=[1.05 1]\n"
+     "New RegControl.r transformer=t winding=2\n", r"taps=\[1.05, 1.0\] .*only winding 2's tap"),
 ])
 def test_unmapped_regulators_fail_fast(tmp_path, text, message):
     path = tmp_path / "deck.dss"
@@ -165,3 +178,22 @@ def test_regulators_match_the_engine(relative):
         raise
     compile_deck(path)
     assert _engine_regulator_differences(network, taps=False) == []
+
+
+@pytest.mark.parametrize("phases, nodes, kv, grounded", [
+    (3, "", 12.47, ["true", "true"]),  # the default neutral conductor is on node 0
+    (3, ".1.2.3.4", 12.47, ["false", "false"]),  # the star points on node 4 float in the engine
+    (1, ".1", 7.2, ["true", "true"]),
+    (1, ".0.1", 7.2, ["true", "true"]),  # a coil from node 0 to node 1 is grounded too
+])
+def test_a_regulator_is_grounded_by_its_neutral_node(tmp_path, phases, nodes, kv, grounded):
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + f"New Transformer.t phases={phases} buses=[sourcebus{nodes} b{nodes}] kVs=[{kv} {kv}] "
+                              "kVAs=[100 100]\nNew RegControl.r transformer=t winding=2\n")
+    native = DssReader(path).read_all()
+    site = dss_to_cimtbl.site(native)
+    document = transformer.map_transformer(native, site.buses, site.feeder)
+    [ends] = [statement for statement in document.statements if getattr(statement, "cim_class", None) ==
+              "AutoTransformerEnd"]
+    column = [column.name for column in ends.columns].index("grounded")
+    assert [row.cells[column] for row in ends.rows] == grounded

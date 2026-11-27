@@ -44,9 +44,10 @@ FIELDS = {
     "XL": Field("structural", note="0 is untranscribed; nonzero raises (a series reactor is not mapped)"),
     "Harm": Field("untranscribed", note="the tuning harmonic of the R/XL filter"),
     "Numsteps": Field("structural", note="maximumSections; more than 1 raises (unequal steps would need a "
-                                         "NonlinearShuntCompensator); default 1"),
-    "states": Field("structural", note="sections = normalSections = the steps closed (a switch's normalOpen = "
-                                       "open rule); default all closed"),
+                                         "NonlinearShuntCompensator), and so does 0 (the engine refuses it); "
+                                         "default 1"),
+    "states": Field("structural", note="sections = normalSections = the step's state, 0 or 1 (a switch's "
+                                       "normalOpen = open rule); anything but one 0/1 value raises; default closed"),
     "normamps": Field("structural", note=_NOT_MAPPED + " (an OperationalLimitSet, as a line's)"),
     "emergamps": Field("structural", note=_NOT_MAPPED),
     "faultrate": Field("untranscribed", note=_RELIABILITY),
@@ -78,10 +79,14 @@ def _check(capacitor) -> None:
     if unmapped or series:
         raise ValueError(f"Capacitor {capacitor.name}: {', '.join(unmapped + series)} not mapped yet (no deck "
                          "in the sweep sets them)")
-    steps = len(capacitor.kvar or [None])
-    if (capacitor.Numsteps or 1) > 1 or steps > 1:
-        raise ValueError(f"Capacitor {capacitor.name}: {max(steps, capacitor.Numsteps or 1)} steps; only one "
-                         "section is mapped")
+    if capacitor.Numsteps is not None and int(capacitor.Numsteps) < 1:
+        raise ValueError(f"Capacitor {capacitor.name}: Numsteps={capacitor.Numsteps}; the engine refuses fewer than 1")
+    steps = max(len(capacitor.kvar or [None]), int(capacitor.Numsteps or 1))
+    if steps > 1:
+        raise ValueError(f"Capacitor {capacitor.name}: {steps} steps; only one section is mapped")
+    states = [int(state) for state in capacitor.states or []]
+    if states and (len(states) != 1 or states[0] not in (0, 1)):
+        raise ValueError(f"Capacitor {capacitor.name}: states={states}; one step state, 0 or 1, is mapped")
 
 
 def map_capacitor(native, buses: Mapping[str, BusSystem], container: str) -> Document:
@@ -95,7 +100,7 @@ def map_capacitor(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         terminal = device_terminal(f"Capacitor {capacitor.name}", capacitor.bus1, int(capacitor.phases),
                                    is_delta(capacitor.conn), buses)
         kvar, kv = float(capacitor.kvar[0]), float(capacitor.kv)
-        closed = sum(int(state) for state in capacitor.states) if capacitor.states else 1
+        closed = int(capacitor.states[0]) if capacitor.states else 1
         rows.append(Row([
             mrid(PREFIX, capacitor.name, lowercase=True), str(capacitor.name), terminal.bus, phases_cell(terminal.phases),
             terminal.connection, cell(terminal.grounded), cell(kvar), cell(kv), cell(b_per_section(kvar, kv)),

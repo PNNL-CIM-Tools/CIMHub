@@ -60,9 +60,12 @@ Every test checks one hop, so a failure points at one place.
 | round trip | `test_export_decks.py`, `test_cimtbl_sweep.py`, `test_dss_to_cimtbl.py`, `test_dss_writer.py` | Whole decks. Power flow parity after import and export (`assert_same_power_flow`), coordinates, idempotence (a second pass is a fixed point), the reader and writer round trip, and `SWEEP_STOPS`. |
 | cross-format | `tests/cross_format/` at the repository root | The same equipment from two spokes: this spoke's import against another's, matched by topology and compared in SI. Never in a spoke's own `tests/`. |
 
-The reader, writer and topology have tests of their own: `test_dss_reader.py` (name mapping, tokenizing, types, arrays),
+The reader, writer, name map, schema and topology have tests of their own: `test_dss_reader.py` (name mapping,
+tokenizing, types, arrays),
 `test_dss_reader_rules.py` (the command semantics and every fail-fast rule of `DssReader`), `test_dss_writer.py` (a deck
-read, written and read again is the same model, and the engine solves both the same) and `test_topology_walk.py` (the
+read, written and read again is the same model, and the engine solves both the same), `test_dss_name_map.py` (class
+and property names resolved as the engine resolves them), `test_schema_types.py` (each slot's type against the
+engine's property schema) and `test_topology_walk.py` (the
 `Network` builder and bus voltages against the engine). `test_cimtbl_<table>.py` exists for each mapper: `buscoords`,
 `capacitor` (with `CapControl`), `catalogs`, `der`, `device_shape`, `generator`, `geometry`, `line`, `linecode`, `load`,
 `loadshape`, `reactor`, `regcontrol`, `transformer`, `vsource`, `wire` and `xfmrcode`.

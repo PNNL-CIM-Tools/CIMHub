@@ -4,11 +4,14 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import cimprofiles.cim18.cim18v17 as cim
 import opendssdirect as dss
 import pytest
 
 from cimhub_core.cimtbl_testing import cim_scope
+from cimhub_opendss import DssImporter, DssReader
 from cimhub_opendss.exporter import vsource
+from cimhub_opendss.exporter.cim_to_dss import DssExporter
 
 from conftest import compile_deck
 from engine_compare import assert_same_engine_state
@@ -69,3 +72,12 @@ def test_short_circuit_from_thevenin_inverts_the_importer():
         assert math.isclose(value, expected, rel_tol=1e-12)
     with pytest.raises(ValueError, match="no X/R ratio"):
         vsource.short_circuit_from_thevenin(source, 7.2, 0.0, 1.0, 0.1, 0.3)
+
+
+def test_negative_sequence_a_rounding_error_from_a_zero_positive_is_the_same():
+    """IEEE123's R1=0: rel_tol alone never matches r2 1e-15 ohm against r 0, so they also agree within 1e-9 ohm."""
+    network = DssImporter("ohms").to_cim(DssReader(ATOMS / "ohms.dss").read_all())
+    [source] = network.graph[cim.EnergySource].values()
+    source.r2, source.x2 = cim.Resistance(1e-15), source.x
+    [record] = DssExporter().to_model(network, name_source="name").list_by_class(vsource.NATIVE_CLASS)
+    assert (record.R1, record.X1) == (0.0, pytest.approx(0.0001))

@@ -134,12 +134,46 @@ def test_regulator_resistance_is_the_mesh_r_halved():
     assert (transformer.pct_Rs, transformer.taps) == ([0.005, 0.005], [1.0, 1.0625])
 
 
+def test_auto_transformer_kvas_a_rounding_error_apart_are_one():
+    network = _network("regcontrol/regulators")
+    _object(network, cim.AutoTransformerEnd, "xf_reg1_2").ratedS = cim.ApparentPower(1666.0 * (1 + 1e-12), "kVA")
+    assert _record(_model(network), schema.Transformer, "reg1").pct_Rs == [0.005, 0.005]
+
+
 def test_regcontrol_without_pt_ratio_raises():
     network = _network("regcontrol/regulators")
     control = _object(network, cim.TapChangerControl, "rc_reg1")
     tap = _object(network, cim.RatioTapChanger, "rc_reg1_tap")
     control.ptRatio = tap.ptRatio = None
     with pytest.raises(ValueError, match="ptRatio is unset"):
+        _model(network)
+
+
+@pytest.mark.parametrize("ratio", [0.0, -20.0])
+def test_regcontrol_with_a_pt_ratio_of_zero_or_less_raises(ratio):
+    network = _network("regcontrol/regulators")
+    control = _object(network, cim.TapChangerControl, "rc_reg1")
+    tap = _object(network, cim.RatioTapChanger, "rc_reg1_tap")
+    control.ptRatio = tap.ptRatio = ratio
+    with pytest.raises(ValueError, match=f"ptRatio {ratio}; vreg is on the PT secondary, through a positive ratio"):
+        _model(network)
+
+
+def test_disabled_regcontrol_without_target_raises():
+    """The getter lets a disabled control go without a target, but its RegControl still writes vreg."""
+    network = _network("regcontrol/regulators")
+    control = _object(network, cim.TapChangerControl, "rc_reg1")
+    control.targetValue, control.enabled = None, False
+    with pytest.raises(ValueError, match="targetValue is unset; a RegControl needs vreg"):
+        _model(network)
+
+
+@pytest.mark.parametrize("end", [None, cim.TransformerTankEnd(mRID="tank_end")], ids=["none", "tank end"])
+def test_tap_on_another_kind_of_end_raises(end):
+    network = _network("regcontrol/regulators")
+    _object(network, cim.RatioTapChanger, "rc_reg1_tap").TransformerEnd = end
+    with pytest.raises(ValueError, match="RatioTapChanger 'rc_reg1_tap': its end .* is not a PowerTransformerEnd or "
+                                         "an AutoTransformerEnd"):
         _model(network)
 
 
@@ -179,6 +213,15 @@ def test_ungrounded_wye_is_on_node_4_without_rneut():
     assert transformer.buses == ["634.1.2.3", "ug.1.2.3.4"] and transformer.Rneut is None
 
 
+def test_neutral_impedance_on_an_ungrounded_winding_raises():
+    """The engine grounds a wye's neutral through Rneut (0.90 pu where it floats at 0 without), so an ungrounded
+    winding's rground/xground has no DSS home."""
+    network = _network("transformer/inline")
+    _object(network, cim.PowerTransformerEnd, "xf_sub3_2").grounded = False
+    with pytest.raises(ValueError, match="winding 2 has rground/xground but grounded False; DSS's Rneut grounds"):
+        _model(network)
+
+
 def test_two_neutral_impedances_raise():
     network = _network("transformer/inline")
     end = _object(network, cim.PowerTransformerEnd, "xf_sub3_3")
@@ -190,6 +233,17 @@ def test_two_neutral_impedances_raise():
 def test_center_tap_half_is_written_at_the_can_kva():
     transformer = _record(_model(_network("transformer/inline")), schema.Transformer, "ct_bn")
     assert (transformer.kVAs, transformer.buses) == ([25.0] * 3, ["650.2.0", "house2.1.0", "house2.0.2"])
+
+
+@pytest.mark.parametrize("kva", [0.0, -500.0])
+def test_winding_rating_of_zero_or_less_raises(kva):
+    """%R is on each winding's own kVA over winding 1's: a 0 divides by zero, a negative one flips the sign. The
+    transformer getter checks it."""
+    network = _network("transformer/inline")
+    _object(network, cim.PowerTransformerEnd, "xf_xfm1_1").ratedS = cim.ApparentPower(kva, "kVA")
+    with pytest.raises(ValueError, match=r"PowerTransformerEnd 'xf_xfm1_1': ratedS -?[\d.]+ VA; a winding's rating "
+                                         r"is positive"):
+        _model(network)
 
 
 def test_mesh_resistance_raises():

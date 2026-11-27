@@ -125,6 +125,18 @@ def test_inverter_rating_required():
         get_inverter_rating(inverter, sign="generation")
 
 
+@pytest.mark.parametrize("attribute, quantity", [("ratedS", cim.ApparentPower), ("ratedU", cim.Voltage),
+                                                 ("maxIFault", cim.PU)])
+@pytest.mark.parametrize("value", [0.0, -1.0])
+def test_inverter_rating_of_zero_or_less_raises(attribute, quantity, value):
+    """A nameplate rating is positive; maxIFault may be unset, but a set one is positive too."""
+    inverter = _inverter("pv_p1")
+    setattr(inverter, attribute, quantity(value))
+    with pytest.raises(ValueError, match=rf"PowerElectronicsConnection 'pv_p1': {attribute} -?[\d.]+ .*; a rating is "
+                                         r"positive"):
+        get_inverter_rating(inverter, sign="generation")
+
+
 def test_minimum_above_maximum_raises():
     inverter = _inverter("pv_p1")
     inverter.minQ, inverter.maxQ = cim.ReactivePower(300, "kVAr"), cim.ReactivePower(-300, "kVAr")
@@ -247,6 +259,14 @@ def test_battery():
         -100, 100, 200, 100, 40, 90, 90, 1, cim.BatteryStateKind.discharging))
 
 
+@pytest.mark.parametrize("value", [0.0, -200.0])
+def test_battery_rated_energy_of_zero_or_less_raises(value):
+    unit = get_inverter_unit(_inverter("storage_b1"))
+    unit.ratedE = cim.RealEnergy(value, "kWh")
+    with pytest.raises(ValueError, match=r"BatteryUnit '.*': ratedE -?[\d.]+ kWh; a rating is positive"):
+        get_battery_unit(unit, "kW", "kWh", sign="generation")
+
+
 def test_battery_idling_loss_is_as_stored_in_either_sign():
     unit = get_inverter_unit(_inverter("storage_b2"))
     assert get_battery_unit(unit, "kW", sign="load").idling_p == pytest.approx(0.05)
@@ -298,6 +318,16 @@ def test_machine_rating():
         cim.SynchronousMachineKind.generator, cim.SynchronousMachineOperatingMode.generator, True)
     assert (rating.rated_power_factor, rating.q_percent, rating.reference_priority) == (None, None, None)
     assert get_machine_rating(machine, "kVA", "kVAr", sign="load")[3:5] == pytest.approx((-1080, 500))
+
+
+@pytest.mark.parametrize("attribute, quantity", [("ratedS", cim.ApparentPower), ("ratedU", cim.Voltage)])
+@pytest.mark.parametrize("value", [0.0, -4160.0])
+def test_machine_rating_of_zero_or_less_raises(attribute, quantity, value):
+    """A Generator's Vpu is its target / ratedU: a ratedU of 0 divides by zero, a negative one flips the target."""
+    machine = _machine()
+    setattr(machine, attribute, quantity(value))
+    with pytest.raises(ValueError, match=rf"SynchronousMachine 'gen_g3': {attribute} -?[\d.]+ .*; a rating is positive"):
+        get_machine_rating(machine, sign="generation")
 
 
 def test_machine_without_limits():

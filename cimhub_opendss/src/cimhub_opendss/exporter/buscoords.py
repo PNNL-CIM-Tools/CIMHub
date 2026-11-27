@@ -30,6 +30,8 @@ GEOGRAPHIC = {urn: geographic for geographic, (_, _, urn) in COORDINATE_SYSTEMS.
 #: GIS device symbols are positioned by a drafter and may be tens of metres from the span endpoint
 #: they logically occupy the same bus as; 1e-4 relative (≈ 7–11 m at mid-latitudes) accepts that.
 POINT_REL_TOL = 1e-4
+#: and 1e-9 absolute, since no relative tolerance matches 0 against a reflected device point's 1e-12
+POINT_ABS_TOL = 1e-9
 
 SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "name": Slot("written", "the bus (Names.bus) of each Terminal of located equipment"),
@@ -104,7 +106,8 @@ def _place(found: dict, node, point: tuple[float, float], equipment) -> None:
         found[node.mRID] = (*point, equipment)
         return
     x, y, other = found[node.mRID]
-    if not (math.isclose(x, point[0], rel_tol=POINT_REL_TOL) and math.isclose(y, point[1], rel_tol=POINT_REL_TOL)):
+    if not (math.isclose(x, point[0], rel_tol=POINT_REL_TOL, abs_tol=POINT_ABS_TOL)
+            and math.isclose(y, point[1], rel_tol=POINT_REL_TOL, abs_tol=POINT_ABS_TOL)):
         raise ValueError(f"bus {node.mRID!r}: {describe(other)} puts it at ({x}, {y}) and {describe(equipment)} at "
                          f"{point}; a DSS bus has one position")
 

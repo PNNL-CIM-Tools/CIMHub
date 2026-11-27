@@ -157,6 +157,16 @@ def test_a_device_shape_off_the_mapping_raises(tmp_path, devices, match):
     raises(tmp_path, devices, match)
 
 
+def test_a_pv_sample_in_the_hysteresis_band_raises_without_time_points(tmp_path):
+    """The band check is the mapper's, so the artifact alone (no sidecar points) raises too."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + SHAPE + "New PVSystem.x bus1=b1 kV=4.16 kVA=100 Pmpp=100 %cutin=30 %cutout=10 "
+                                      "yearly=s\n")
+    native = DssReader(path).read_all()
+    with pytest.raises(ValueError, match="sample 1 of yearly=s puts the panel at 20 kW, between %Cutout"):
+        dss_to_cimtbl.DssImporter("atom").to_cimtbl(native)
+
+
 def test_a_device_shape_with_qmult_raises(tmp_path):
     raises(tmp_path, "New Generator.x bus1=b1 kV=4.16 kW=10 yearly=s", "has a qmult",
            shape="New Loadshape.s npts=2 interval=1 mult=(1 2) qmult=(1 1)\n")

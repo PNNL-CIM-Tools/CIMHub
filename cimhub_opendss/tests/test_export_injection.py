@@ -9,7 +9,9 @@ import pytest
 
 from cimhub_core.cimtbl_testing import cim_scope
 from cimhub_opendss import DssImporter, DssReader
+from cimhub_core.getters.phase_power import PhasePower
 from cimhub_opendss.exporter.cim_to_dss import DssExporter, cim_to_dss
+from cimhub_opendss.exporter.injection import equal_phases
 from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import deck
@@ -153,6 +155,13 @@ def test_unequal_phases_give_one_load_per_phase():
     assert loads["pq_a"].kV == pytest.approx(4.16 / 3 ** 0.5)
 
 
+def test_phases_a_rounding_error_apart_at_zero_are_equal():
+    """rel_tol alone never matches 0 against 1e-12, so phases also agree within 1e-9 (kW, kVAr)."""
+    A, B = cim.SinglePhaseKind.A, cim.SinglePhaseKind.B
+    assert equal_phases({A: PhasePower(10.0, 0.0), B: PhasePower(10.0, 1e-12)})
+    assert not equal_phases({A: PhasePower(10.0, 0.0), B: PhasePower(10.0, 1e-6)})
+
+
 def test_mixed_zip_fractions_raise():
     network = _network(ATOMS / "load" / "loads.dss")
     response = _object(network, cim.EnergyConsumer, "ld_z").LoadResponse
@@ -203,6 +212,28 @@ def test_voltage_control_without_pt_ratio_raises():
     network = _network(ATOMS / "capacitor" / "caps.dss")
     _object(network, cim.RegulatingControl, "cc_volt").ptRatio = None
     with pytest.raises(ValueError, match="ptRatio is unset"):
+        _model(network)
+
+
+def test_disabled_control_without_target_raises():
+    """The getter lets a disabled control go without a target, but its CapControl still writes ON and OFF."""
+    network = _network(ATOMS / "capacitor" / "caps.dss")
+    control = _object(network, cim.RegulatingControl, "cc_volt")
+    control.targetValue, control.enabled = None, False
+    with pytest.raises(ValueError, match="targetValue is unset; a CapControl needs ON and OFF"):
+        _model(network)
+
+
+@pytest.mark.parametrize("control, attribute", [("cc_volt", "ptRatio"), ("cc_volt", "ctRatio")])
+@pytest.mark.parametrize("ratio", [0.0, -20.0])
+def test_control_with_a_ratio_of_zero_or_less_raises(control, attribute, ratio):
+    """A negative ratio flips ON and OFF on the relay's side, so the engine switches the bank the wrong way."""
+    network = _network(ATOMS / "capacitor" / "caps.dss")
+    regulating = _object(network, cim.RegulatingControl, control)
+    if attribute == "ctRatio":
+        regulating.mode = cim.RegulatingControlModeKind.currentFlow
+    setattr(regulating, attribute, ratio)
+    with pytest.raises(ValueError, match=rf"{attribute} {ratio}; a CapControl's relay ratio is positive"):
         _model(network)
 
 

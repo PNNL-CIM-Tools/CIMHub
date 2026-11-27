@@ -70,7 +70,7 @@ class is listed twice. `buscoords.cimtbl` is not in the list; `bound_parts` adds
 | `BaseFrequency` | `Set defaultbasefreq`, else the DSS default, with a `defaulted:` comment. |
 | `BaseVoltage` | One per distinct bus voltage from the walk and one per `voltagebases` value, highest first. A base on no bus is kept: the engine's `CalcVoltageBases` snaps bus bases to it, so the export writes it back. The comment reconciles the two lists (`on no bus`, `not in voltagebases`). |
 | `OperationalLimitType` | The two limit types, `olt_normal` and `olt_emergency`, which every `CurrentLimit` names, then `olt_season1` .. `olt_season<N>` for the most seasons any `Transformer` or `XfmrCode` rates (`limit_types(seasons)`), which their `ApparentPowerLimit`s name. |
-| comment | `not mapped: Relay 1, ...` lists each DSS class no mapper reads, by count, so nothing disappears silently. A LoadShape no Load names as `yearly` is counted too. |
+| comment | `not mapped: Relay 1, ...` lists each DSS class no mapper reads, by count, so nothing disappears silently. A LoadShape no Load, PVSystem, Storage or Generator names as `yearly` is counted too. |
 
 `READ_BY_OTHERS` lists the classes that another mapper reads in full (`Fuse`, `Recloser`, `SwtControl`, from
 `line.CONTROLS`); they count as mapped.

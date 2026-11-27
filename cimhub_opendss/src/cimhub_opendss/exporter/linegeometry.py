@@ -103,7 +103,8 @@ def line_offset(line: cim.ACLineSegment) -> float:
 
 def geometry_name(configuration: cim.WireConfiguration, offset: float, names: Names) -> str:
     """The DSS name of ``configuration`` at ``offset`` (m), as its record and every Line write it."""
-    suffix = "" if offset == 0 else f"_{round(offset, NAME_DECIMALS)!r}m".replace(".", "p")
+    rounded = round(offset, NAME_DECIMALS)
+    suffix = "" if rounded == 0 else f"_{rounded!r}m".replace(".", "p")
     return names.name(configuration, NAMESPACE, suffix=suffix)
 
 
@@ -190,6 +191,9 @@ def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
             continue
         lengths = {line: round(required_qty(line, "length", UNIT), NAME_DECIMALS) for line in lines}
         length = min(lengths.values())
+        if length <= 0:
+            raise ValueError(f"{describe(group)}: its shortest line is {length:g} {UNIT}; a DSS line needs a positive "
+                             f"length")
         remainders = {line: round(lengths[line] - length, NAME_DECIMALS) for line in lines if lengths[line] > length}
         groups[group] = CoupledGroup(tuple(sorted(lines, key=_lowest_phase_number)), length, remainders, rho)
     return groups

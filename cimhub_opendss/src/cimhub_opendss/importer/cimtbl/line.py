@@ -46,7 +46,8 @@ FIELDS = {
     "bus1": Field("structural", note="node1, and the phases from its nodes: 1/2/3 = A/B/C, s1/s2 on a split-phase "
                                      "island (DSS-5); no nodes = 1..phases"),
     "bus2": Field("structural", note="node2; its phase nodes must equal bus1's (a transposition raises)"),
-    "phases": Field("structural", note="the phase count; unset = the code's or geometry's nphases, else 3; one "
+    "phases": Field("structural", note="the phase count; unset = the code's, geometry's or spacing's nphases, else 3 "
+                                       "(line_phase_count; a switch has no template); one "
                                        "that differs from the code's nphases raises (DSS-10)"),
     "linecode": Field("structural", note="ACLineSegment.WireConfiguration = the WireConfiguration of the code's "
                                          "template for the line's unit (lc_<code>_wc or lc_<code>_<unit>_wc, DSS-3, "
@@ -71,7 +72,8 @@ FIELDS = {
     "Rg": Field("structural", note=_NOT_MAPPED + " (Carson earth return; the consumer's choice for geometry)"),
     "Xg": Field("structural", note=_NOT_MAPPED + " (Carson earth return; the consumer's choice for geometry)"),
     "rho": Field("structural", note="the deck's EarthResistivity.rho (ohm-m), which every geometry line must "
-                                    "agree on (geometry.earth_statement); on another line it raises"),
+                                    "agree on (geometry.earth_statement); on another line it raises; a switch "
+                                    "lists it untranscribed"),
     "EarthModel": Field("untranscribed", note="the earth model of the impedance calculation; the consumer's choice"),
     "EpsRmedium": Field("structural", note=_NOT_MAPPED),
     "HeightOffset": Field("structural", note=_NOT_MAPPED),
@@ -89,7 +91,8 @@ _SWITCHED = "the Line it switches: SwitchedObj, else MonitoredObj (the DSS defau
 _PROTECTION = "protection setting; no home in cim18v17's protection function blocks (DSS-11)"
 _RECLOSE = ("one RecloseSequence <switch>_rs<n> per reclosure, Shots - 1 of them, recloseDelay = RecloseIntervals[n] "
             "(s); unset: the engine's Shots 4, intervals 0.5 2 2 (defaulted). Both given and disagreeing raise, and "
-            "so does Shots above 4 without intervals (the engine reads past its defaults)")
+            "so does Shots above 4 without intervals (the engine reads past its defaults) or below 1 (the engine "
+            "refuses it)")
 _STATE = ("Normal -> normalOpen, State -> open on the switch; with an Open command on the line they must agree")
 
 
@@ -150,7 +153,7 @@ _GEOMETRY_ARRAYS = ("wires", "cncables", "tscables")
 _UNMAPPED = tuple(slot for slot, field in FIELDS.items() if field.note.startswith(_NOT_MAPPED))
 #: Slots a switch has no home for; they are listed on its row (DSS-8).
 _SWITCH_DROPPED = ("linecode", "geometry", "spacing", *_GEOMETRY_ARRAYS, "length", "units", *_INLINE_SLOTS,
-                   "basefreq", "normamps", "emergamps")
+                   "basefreq", "normamps", "emergamps", "rho")
 _PHASE_OF_NODE = {1: "A", 2: "B", 3: "C"}
 _SPLIT_PHASE_OF_NODE = {1: "s1", 2: "s2"}
 #: The engine reads the length of a geometry line with no units in metres (checked against the engine).
@@ -173,6 +176,8 @@ def reclose(recloser) -> Reclose:
     keeps the first Shots - 1 intervals, and giving intervals sets Shots, so both given must agree."""
     defaults = dss_defaults(schema.Recloser)
     shots, intervals = recloser.Shots, recloser.RecloseIntervals or None
+    if shots is not None and shots < 1:
+        raise ValueError(f"Recloser {recloser.name}: Shots={shots}; the engine refuses fewer than 1")
     if shots is not None and intervals is not None and shots - 1 != len(intervals):
         raise ValueError(f"Recloser {recloser.name}: Shots={shots} with {len(intervals)} RecloseIntervals; the "
                          "engine's result depends on their order")
@@ -242,7 +247,8 @@ def switch_controls(native) -> dict[str, SwitchControl]:
             cim_class = classes.get(native_class)
             if cim_class and old.cim_class != "LoadBreakSwitch" and old.cim_class != cim_class:
                 raise ValueError(f"Line {key}: switched by a {old.cim_class} and a {cim_class}")
-            rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent else None
+            rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent is not None \
+                else None
             recloses = reclose(control) if native_class is schema.Recloser else None
             result[key] = SwitchControl(cim_class or old.cim_class, _merged(key, "ratedCurrent", old.rated_current, rated),
                                         _merged(key, "Normal", old.normal_open, _is_open(control, "Normal")),
@@ -273,6 +279,18 @@ def opened_lines(native) -> set[str]:
                 raise ValueError(f"Open {entry}: only a Line's terminal is mapped (as an open switch)")
             opened.add(name.lower())
     return opened
+
+
+def line_phase_count(line, template=None) -> int:
+    """A line's phase count: its own ``phases``, else its template's ``nphases`` (a LineCode, LineGeometry or
+    LineSpacing; a LineCode's defaulted as ``linecode.with_default_phases``), else the engine's default."""
+    if line.phases is not None:
+        return int(line.phases)
+    if isinstance(template, schema.Linecode):
+        template, _ = linecode_mapper.with_default_phases(template)
+    if template is not None:
+        return int(template.nphases)
+    return int(dss_defaults(NATIVE_CLASS)["phases"])
 
 
 def line_phases(line, phases: int, buses: Mapping[str, BusSystem], *, label: str | None = None) -> tuple[str, str, str]:
@@ -534,7 +552,7 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
         if not is_switch and (key in controls or key in opened):
             raise ValueError(f"Line {line.name}: a control or an Open command switches it, but it is not Switch=y")
         if is_switch:
-            phases = line.phases if line.phases is not None else 3
+            phases = line_phase_count(line)
             bus1, bus2, letters = line_phases(line, phases, buses)
             control = controls.get(key, SwitchControl("LoadBreakSwitch", None, None, None))
             if control.fuse_phase_states not in (None, phases):
@@ -556,7 +574,8 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
             code = codes.get(str(line.linecode).lower())
             if code is None:
                 raise ValueError(f"Line {line.name}: linecode={line.linecode} is no LineCode")
-            phases = line.phases if line.phases is not None else code.nphases
+            code, _ = linecode_mapper.with_default_phases(code)
+            phases = line_phase_count(line, code)
             if phases != code.nphases:
                 raise ValueError(f"Line {line.name}: phases={phases} with LineCode {code.name} (nphases="
                                  f"{code.nphases}); the engine's rule is not pinned yet (DSS-10)")
@@ -572,7 +591,7 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
                 spacings.get(str(line.spacing).lower())
             if source is None:
                 raise ValueError(f"Line {line.name}: {kind}={getattr(line, kind)} is no Line{kind.capitalize()}")
-            phases = line.phases if line.phases is not None else source.nphases
+            phases = line_phase_count(line, source)
             if phases != source.nphases:
                 raise ValueError(f"Line {line.name}: phases={phases} with {kind} {source.name} (nphases="
                                  f"{source.nphases})")
@@ -605,7 +624,7 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
                      document,
                      mrid(PREFIX, line.name, lowercase=True))
         else:
-            phases = line.phases if line.phases is not None else 3
+            phases = line_phase_count(line)
             bus1, bus2, letters = line_phases(line, phases, buses)
             code, capacitance_unit, defaulted = inline_code(line, phases)
             (inline_given if _units(line) else inline_gated).append((line, code, capacitance_unit, defaulted))

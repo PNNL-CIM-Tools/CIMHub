@@ -47,8 +47,8 @@ FIELDS = {
                                    "phases, LN for 1-phase wye) must be within 1 % of the bus's, else it raises; "
                                    "CIM p is at the BaseVoltage"),
     "kW": Field("copied", ((_CONSUMER, "p", "kW"),), "consumption is positive p"),
-    "pf": Field("derived", note="q (kVAr) = kW x tan(acos abs(pf)) with the sign of pf, when kvar is unset "
-                                "(kvar wins in either order, engine-checked); default 0.88"),
+    "pf": Field("derived", note="q (kVAr) = kW x tan(acos abs(pf)) x sign(pf), when kvar is unset (kvar wins in "
+                                "either order, engine-checked); raises unless 0 < |pf| <= 1; default 0.88"),
     "model": Field("mapped", ((_CONSUMER, "LoadResponse", None),),
                    "1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, "
                    "8 raise; default 1"),
@@ -110,10 +110,10 @@ Source table: Load (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load"""
 
 
-def power_from_kva(kva: float, pf: float) -> tuple[float, float]:
+def power_from_kva(label: str, kva: float, pf: float) -> tuple[float, float]:
     """(kW, kvar) of a load given kVA and pf, as the engine computes them when kW is unset."""
     kw = kva * abs(pf)
-    return kw, reactive_power(kw, pf)
+    return kw, reactive_power(label, kw, pf)
 
 
 def exponential_mrid(p_exponent: float, q_exponent: float) -> str:
@@ -153,9 +153,9 @@ def _used_defaults(load, defaults: dict) -> dict:
 def _power(original, load) -> tuple[float, float]:
     """(kW, kvar) of a load with defaults filled; ``original`` says which slots the deck set."""
     if original.kVA is not None:
-        return power_from_kva(float(load.kVA), float(load.pf))
+        return power_from_kva(f"Load {load.name}", float(load.kVA), float(load.pf))
     kw = float(load.kW)
-    return kw, float(load.kvar) if load.kvar is not None else reactive_power(kw, float(load.pf))
+    return kw, float(load.kvar) if load.kvar is not None else reactive_power(f"Load {load.name}", kw, float(load.pf))
 
 
 def _response(load) -> str:

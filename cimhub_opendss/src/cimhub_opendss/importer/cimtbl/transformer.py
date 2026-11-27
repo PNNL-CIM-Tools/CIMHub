@@ -563,8 +563,10 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
     rows.regulators.append(Row([xf_id, str(xf.name), container, cell(xf.enabled)], comment=comment))
     for winding in windings:
         phase = regulator_phase(winding, phases, name=xf.name)
+        # grounded when the coil ends on node 0: a 3-phase star point on node 4 floats (engine-checked)
+        grounded = winding.wye and (0 in winding.nodes if phases == 1 else winding.nodes[-1] == 0)
         rows.auto_ends.append(Row([f"{xf_id}_{winding.number}", xf_id, winding.bus, phase, str(winding.number),
-                                   cell(winding.wye and winding.nodes[-1] == 0 if phases == 1 else winding.wye),
+                                   cell(grounded),
                                    cell(winding.kv), cell(winding.kva), buses[winding.bus].base_voltage]))
     r = windings[0].r_percent + windings[1].r_percent
     rows.auto_mesh.append(Row([f"{xf_id}_mesh_12", f"{xf_id}_1", f"{xf_id}_2", cell(r),
