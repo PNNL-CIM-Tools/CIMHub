@@ -4,8 +4,10 @@ from cimtables.graph_write import get_qty
 
 
 def describe(obj) -> str:
-    """``ClassName 'mRID'``, the subject of every getter error message."""
-    return f"{type(obj).__name__} {obj.mRID!r}"
+    """``ClassName 'mRID'``, the subject of every getter error message. A state variable (``Sv*``) is not an
+    IdentifiedObject and has no mRID: it is named by its ``uri()``."""
+    identity = obj.mRID if hasattr(obj, "mRID") else obj.uri()
+    return f"{type(obj).__name__} {identity!r}"
 
 
 def required_qty(obj, attribute: str, unit: str, **bases) -> float:

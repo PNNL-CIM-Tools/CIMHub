@@ -5,6 +5,7 @@ import pytest
 from cimtables import BusBranchModel, load_model
 
 from cimhub_core.cimtbl_testing import cim_scope
+from cimhub_core.getters import required_qty
 from cimhub_core.getters.voltage import NodeVoltage, VoltageLimits, get_node_voltage, get_voltage_limits
 
 # two 138 kV buses, each with a busbar; bus 1 has a solved voltage and limits, bus 2 neither
@@ -54,6 +55,18 @@ def test_node_voltage(tmp_path):
 
 def test_no_node_voltage_is_none(tmp_path):
     assert get_node_voltage(_get(_network(tmp_path), cim.TopologicalNode, "2")) is None
+
+
+def test_an_unsolved_node_voltage_raises_naming_its_node(tmp_path):
+    """An empty SvVoltage (one per bus before a solved state is folded in) is not read as a blank voltage. The
+    SvVoltage itself, which has no mRID, is named by its uri()."""
+    path = tmp_path / "atom.cimtbl"
+    path.write_text(ATOM.replace("    1_sv, 1, 144.9, -4.5\n", "    1_sv, 1, 144.9, -4.5\n    2_sv, 2, , \n"))
+    node = _get(load_model(path, model_cls=BusBranchModel), cim.TopologicalNode, "2")
+    with pytest.raises(ValueError, match=r"TopologicalNode '2': its SvVoltage '[0-9a-f-]+' has no v"):
+        get_node_voltage(node)
+    with pytest.raises(ValueError, match=r"SvVoltage '[0-9a-f-]+': v is unset"):
+        required_qty(node.SvVoltage[0], "v", "V")
 
 
 def test_voltage_limits_by_kind(tmp_path):

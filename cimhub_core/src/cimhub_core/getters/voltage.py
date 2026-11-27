@@ -52,7 +52,9 @@ def get_node_voltage(node: cim.TopologicalNode, voltage_unit: str = "V", angle_u
         raise ValueError(f"{describe(node)}: {len(balanced)} balanced SvVoltages "
                          f"({sorted(str(voltage.uri()) for voltage in balanced)})")
     voltage = balanced[0]
-    return NodeVoltage(required_qty(voltage, "v", voltage_unit), get_qty(voltage, "angle", angle_unit))
+    if voltage.v is None:
+        raise ValueError(f"{describe(node)}: its SvVoltage {voltage.uri()!r} has no v (an unsolved state)")
+    return NodeVoltage(get_qty(voltage, "v", voltage_unit), get_qty(voltage, "angle", angle_unit))
 
 
 def get_voltage_limits(equipment: cim.ConductingEquipment, unit: str = "V") -> VoltageLimits:
