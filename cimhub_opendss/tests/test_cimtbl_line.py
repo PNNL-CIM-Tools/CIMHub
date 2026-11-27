@@ -135,7 +135,9 @@ def test_unmapped_lines_fail_fast(tmp_path, text, message):
 def _matrix(segment) -> tuple[dict[str, list[list[float]]], float | None] | None:
     """The segment's r, x (ohm/m) and b (nS/m) as full matrices, and the template's frequency; ``None`` by
     geometry."""
-    template = segment.PerLengthImpedance
+    template = segment.PerLengthImpedance or (
+        segment.WireConfiguration.PerLengthImpedance if segment.WireConfiguration is not None else None
+    )
     if template is None:
         return None
     frequency = float(template.calculatedFrequency.to("Hz")) if template.calculatedFrequency is not None else None

@@ -144,16 +144,16 @@ def _line(line: cim.ACLineSegment, context, owners: dict[cim.ACLineSegment, cim.
             raise ValueError(f"{describe(line)}: {len(conductors)} phase conductors on {describe(configuration)} "
                              f"of {configuration.numberOfPhases} phases")
         slots.update(geometry=geometry_name(configuration, line_offset(line), names),
-                     length=required_qty(line, "length", UNIT), units=UNIT, rho=line_rho(line, context.network))
+                     length=_positive_length(line, UNIT), units=UNIT, rho=line_rho(line, context.network))
     elif is_spacing_line(line):
-        slots.update(geometry=spacing_geometry_name(owners[line], names), length=required_qty(line, "length", UNIT),
+        slots.update(geometry=spacing_geometry_name(owners[line], names), length=_positive_length(line, UNIT),
                      units=UNIT, rho=line_rho(line, context.network))
     elif has_neutral:
         raise ValueError(f"{describe(line)}: a neutral conductor without geometry needs LineCode Kron/neutral, which "
                          f"is not mapped (B4)")
     elif code is not None:
         _check_code_phases(line, code, len(conductors))
-        slots.update(length=required_qty(line, "length", UNIT), units=UNIT)
+        slots.update(length=_positive_length(line, UNIT), units=UNIT)
         if code.isTemplate is False:
             slots.update(_own_code(line, code, context.network.base_frequency.to("Hz")))
         else:
@@ -200,8 +200,18 @@ def _check_code_phases(line: cim.ACLineSegment, code: cim.PerLengthImpedance, co
         raise ValueError(f"{describe(line)}: {count} phase conductors on {describe(code)} of {expected}")
 
 
+def _positive_length(line: cim.ACLineSegment, unit: str) -> float:
+    length = required_qty(line, "length", unit)
+    if length <= 0:
+        raise ValueError(f"{describe(line)}: length {length} {unit} must be positive")
+    return length
+
+
 def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: float) -> dict:
     """The line's own impedance (``isTemplate=false``) inline; one that other lines use too raises."""
+    if line.PerLengthImpedance is not code:
+        raise ValueError(f"{describe(code)}: isTemplate=false marks one line's own impedance and must be referenced "
+                         f"directly by ACLineSegment.PerLengthImpedance, not via WireConfiguration")
     if code.ACLineSegments != [line]:
         raise ValueError(f"{describe(code)}: isTemplate=false marks one line's own impedance, but "
                          f"{len(code.ACLineSegments)} lines use it")
@@ -209,13 +219,13 @@ def _own_code(line: cim.ACLineSegment, code: cim.PerLengthImpedance, frequency: 
 
 
 def _lumped(line: cim.ACLineSegment, frequency: float) -> dict:
-    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length of 0
+    """B6: the whole-line values per km of the line's length, or at length 1 km when it has none. A length <= 0
     raises: a DSS line's impedance is per length, and the engine cannot solve a zero-length line."""
     whole = get_line_sequence_impedance(line, "ohm", "nS")  # nS: c_from_b takes nS
     length = get_qty(line, "length", LUMPED_UNIT)
-    if length == 0:
-        raise ValueError(f"{describe(line)}: length 0 with lumped impedance; a DSS line's impedance is per length, "
-                         "and the engine cannot solve a zero-length line")
+    if length is not None and length <= 0:
+        raise ValueError(f"{describe(line)}: length {length:g} with lumped impedance; a DSS line's impedance is per "
+                         "length, and the engine cannot solve a zero-length line")
     length = 1.0 if length is None else length
     per_km = whole._replace(**{name: _per(getattr(whole, name), length)
                                for name in ("r", "x", "r0", "x0", "b", "g", "b0", "g0")})

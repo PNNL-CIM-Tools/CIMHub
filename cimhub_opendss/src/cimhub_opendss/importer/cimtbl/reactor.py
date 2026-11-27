@@ -39,7 +39,7 @@ FIELDS = {
     "conn": Field("untranscribed", note="a series reactor has no neutral"),
     "Rmatrix": Field("structural", note=_NOT_MAPPED),
     "Xmatrix": Field("structural", note=_NOT_MAPPED),
-    "Parallel": Field("structural", note="raises when yes: " + _NOT_MAPPED),
+    "Parallel": Field("structural", note="raises when yes: no deck in the sweep sets it, so a mapping waits for one"),
     "R": Field("copied", ((_SERIES, "r", "ohm"), (_SERIES, "r0", "ohm")), "per phase; r0 = r (no mutual); default 0"),
     "X": Field("copied", ((_SERIES, "x", "ohm"), (_SERIES, "x0", "ohm")), "per phase; x0 = x (no mutual); unset "
                                                                          "raises"),

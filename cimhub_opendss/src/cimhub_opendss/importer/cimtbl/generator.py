@@ -157,8 +157,8 @@ def reactive_limits(assignments: Iterable[tuple[str, object]], kvar: float) -> t
             max_q = float(value)
         elif slot == "minkvar":
             min_q = float(value)
-    default = MAXKVAR_PER_KVAR * kvar
-    return (default if max_q is None else max_q), (-default if min_q is None else min_q)
+    default = MAXKVAR_PER_KVAR * abs(kvar)
+    return (default + 0.0 if max_q is None else max_q), (-default + 0.0 if min_q is None else min_q)
 
 
 def model_name(model) -> str:
@@ -219,7 +219,7 @@ def map_generator(native, buses: Mapping[str, BusSystem], container: str) -> Doc
         terminal = device_terminal(label, generator.bus1, int(generator.phases), delta, buses)
         kw = float(generator.kW)
         kvar = dispatched_kvar(native.assignments(original))
-        kva = float(generator.kVA) if generator.kVA is not None else KVA_PER_KW * kw
+        kva = float(generator.kVA) if generator.kVA is not None else KVA_PER_KW * abs(kw)
         rated_kv = line_kv(float(generator.kv), terminal)
         machine = mrid(PREFIX, generator.name, lowercase=True)
         model = model_name(generator.model)

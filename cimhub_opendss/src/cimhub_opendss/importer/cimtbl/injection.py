@@ -101,8 +101,11 @@ def line_kv(kv: float, terminal: DeviceTerminal) -> float:
 
 
 def reactive_power(kw: float, pf: float) -> float:
-    """kvar at ``kw`` and ``pf``: kW x tan(acos abs(pf)), with the sign of pf."""
-    return math.copysign(kw * math.tan(math.acos(abs(pf))), pf)
+    """kvar at ``kw`` and ``pf``: kW x tan(acos abs(pf)), with positive pf keeping kW's sign and negative pf
+    reversing it (OpenDSS convention)."""
+    if not (0 < abs(pf) <= 1):
+        raise ValueError(f"power factor {pf} must satisfy 0 < |pf| <= 1")
+    return kw * math.copysign(math.tan(math.acos(abs(pf))), pf)
 
 
 def inverter_power(label: str, available_kw: float, kvar: float, kva: float) -> float:

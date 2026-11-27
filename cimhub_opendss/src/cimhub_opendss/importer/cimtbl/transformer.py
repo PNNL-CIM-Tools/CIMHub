@@ -160,6 +160,16 @@ class End(NamedTuple):
         return sorted(self.phase_of_node.values(), key=_PHASE_ORDER.index)
 
 
+def is_wye_conn(conn, *, name: str) -> bool:
+    """True for wye (``wye``/``y``/``ln``), False for delta (``delta``/``d``/``ll``); anything else raises."""
+    text = str(getattr(conn, "text", conn)).lower()
+    if text in ("wye", "y", "ln"):
+        return True
+    if text in ("delta", "d", "ll"):
+        return False
+    raise ValueError(f"Transformer {name}: unknown winding connection {conn!r}")
+
+
 def parse_bus(spec: str) -> tuple[str, tuple[int, ...]]:
     """``'650.1.2.3.4'`` -> ``('650', (1, 2, 3, 4))``; the name lowercased (DSS names are case-insensitive)."""
     name, *nodes = str(spec).split(".")
@@ -252,6 +262,8 @@ def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -
     for slot in ("kVs", "kVAs"):
         if len(getattr(xf, slot) or []) != count:
             raise ValueError(f"Transformer {name}: {slot}={getattr(xf, slot)} needs {count} values")
+    if xf.taps and len(xf.taps) != count:
+        raise ValueError(f"Transformer {name}: taps={xf.taps} needs {count} values")
     if not regulated and any(float(tap) != 1.0 for tap in xf.taps or []):
         raise ValueError(f"Transformer {name}: taps={xf.taps} with no RegControl; a fixed tap is not mapped yet")
 
@@ -266,7 +278,7 @@ def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -
     for index, (spec, conn, kv, kva, r, dc) in enumerate(zip(buses, conns, xf.kVs, xf.kVAs, r_percent, r_dc),
                                                          start=1):
         bus, given = parse_bus(spec)
-        wye = conn.lower() == "wye"
+        wye = is_wye_conn(conn, name=name)
         windings.append(Winding(index, bus, winding_nodes(given, phases, wye, name=name), wye,
                                 float(kv), float(kva), r, dc))
     return windings
@@ -563,8 +575,9 @@ def _map_regulator(xf, xf_id: str, windings: list[Winding], phases: int, buses: 
     rows.regulators.append(Row([xf_id, str(xf.name), container, cell(xf.enabled)], comment=comment))
     for winding in windings:
         phase = regulator_phase(winding, phases, name=xf.name)
+        grounded = winding.wye and ((0 in winding.nodes) if phases == 1 else (winding.nodes[-1] == 0))
         rows.auto_ends.append(Row([f"{xf_id}_{winding.number}", xf_id, winding.bus, phase, str(winding.number),
-                                   cell(winding.wye and winding.nodes[-1] == 0 if phases == 1 else winding.wye),
+                                   cell(grounded),
                                    cell(winding.kv), cell(winding.kva), buses[winding.bus].base_voltage]))
     r = windings[0].r_percent + windings[1].r_percent
     rows.auto_mesh.append(Row([f"{xf_id}_mesh_12", f"{xf_id}_1", f"{xf_id}_2", cell(r),

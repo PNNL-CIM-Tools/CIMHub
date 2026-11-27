@@ -104,7 +104,11 @@ def map_buscoords(native, network, device_geometry: str = "point") -> Document:
     coordinates = native.list_by_class(NATIVE_CLASS)
     if not coordinates:
         return Document(name="buscoords", statements=[], profile=CIM_PROFILE)
-    by_bus = {str(point.name): (point.x, point.y) for point in coordinates}
+    by_bus: dict[str, tuple[float, float]] = {}
+    for point in coordinates:
+        if point.x is None or point.y is None:
+            raise ValueError(f"Buscoords {point.name!r}: x and y must both be set (got x={point.x!r}, y={point.y!r})")
+        by_bus[str(point.name).lower()] = (float(point.x), float(point.y))
     equipment = terminal_buses(network)
     rows = []
     for item, nodes in equipment:
@@ -119,6 +123,8 @@ def map_buscoords(native, network, device_geometry: str = "point") -> Document:
     unknown = set(by_bus) - {node.mRID for node in network.graph.get(network.cim.ConnectivityNode, {}).values()}
     if unknown:
         comment += f"\nno such bus: {_listed(unknown)}"
+    if not rows:
+        return Document(name="buscoords", statements=[], profile=CIM_PROFILE, comment=comment)
     statements = [
         _coordinate_system(coordinates),
         Table("PowerSystemResource", [Column("mRID"), Column("wkt")], rows, update=True,

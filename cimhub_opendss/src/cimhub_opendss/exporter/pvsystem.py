@@ -91,6 +91,9 @@ def _yearly(context, pv: schema.Pvsystem, piece, found) -> list[schema.Loadshape
     if panel <= 0:
         raise ValueError(f"{label}: Pmpp x irradiance is {panel} kW; a PVSystem's shape scales a panel above 0")
     cap = pv.Pmpp * pv.pct_Pmpp / 100 if pv.pct_Pmpp is not None else math.inf
+    negative = [number for number, p in enumerate(found.p, start=1) if p < -POINT_TOL]
+    if negative:
+        raise ValueError(f"{label}: points {negative[:5]} are negative; a PVSystem only generates")
     over = [number for number, p in enumerate(found.p, start=1) if p > cap + POINT_TOL]
     if over:
         raise ValueError(f"{label}: points {over[:5]} are above the {cap:g} kW the written %Pmpp caps the PV at")
@@ -100,7 +103,7 @@ def _yearly(context, pv: schema.Pvsystem, piece, found) -> list[schema.Loadshape
                              "gives one or the other")
         pv.kvar, pv.pf = None, math.copysign(piece.p / math.hypot(piece.p, piece.q), piece.q)
     pv.pct_Cutin, pv.pct_Cutout = 0.0, 0.0
-    pv.yearly, shapes = loadshape.device_yearly(context, found, [p / panel for p in found.p])
+    pv.yearly, shapes = loadshape.device_yearly(context, found, [max(0.0, p) / panel for p in found.p])
     return shapes
 
 

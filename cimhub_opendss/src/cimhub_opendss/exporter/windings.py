@@ -197,8 +197,10 @@ def _connection(unit, winding: Winding, auto: bool) -> str:
 def _resistances(unit_model: UnitModel) -> list[float]:
     """%R per winding on its own kVA; an unset r is 0 so the engine's 0.2 % never applies. AUTO: the mesh r halved."""
     unit, model, _, kvas = unit_model
+    if kvas[0] <= 0:
+        raise ValueError(f"{describe(unit)}: winding 1 kVA {kvas[0]} must be positive")
     if model.form is TransformerForm.AUTO:
-        if len(model.windings) != 2 or kvas[0] != kvas[1]:
+        if len(model.windings) != 2 or not math.isclose(kvas[0], kvas[1], rel_tol=1e-9):
             raise ValueError(f"{describe(unit)}: an AutoTransformer is mapped with two windings of one kVA")
         r = model.mesh[(1, 2)].r if (1, 2) in model.mesh else None
         half = 0.0 if r is None else r / 2
@@ -229,6 +231,10 @@ def _neutral_impedance(unit_model: UnitModel) -> dict:
         raise ValueError(f"{describe(unit_model.unit)}: a neutral impedance on windings "
                          f"{[w.number for w in windings]}; one polyphase winding is mapped (the record has one wdg)")
     [winding] = windings
+    is_wye = _connection(unit_model.unit, winding, unit_model.model.form is TransformerForm.AUTO) == "wye"
+    if not is_wye or winding.grounded is not True:
+        raise ValueError(f"{describe(unit_model.unit)}: winding {winding.number} has rground/xground but is not a "
+                         f"grounded wye (grounded={winding.grounded})")
     return dict(wdg=winding.number, Rneut=winding.rground or 0.0, Xneut=winding.xground or 0.0)
 
 

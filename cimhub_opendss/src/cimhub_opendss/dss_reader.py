@@ -37,7 +37,7 @@ from cimhub_opendss.dss_name_map import (
 
 _log = logging.getLogger(__name__)
 
-__all__ = ["DssReader", "DssParseError", "KEPT_OPTIONS", "dss_defaults"]
+__all__ = ["DssModel", "DssReader", "DssParseError", "KEPT_OPTIONS", "dss_defaults"]
 
 #: Every OpenDSS ``Set`` option, lowercased, in the engine's order (``test_dss_options_match_the_engine``).
 DSS_OPTIONS = (
@@ -106,6 +106,8 @@ def _engine_name(word: str, names: tuple[str, ...]) -> str | None:
     """The one of ``names`` that ``word`` names, as the engine resolves a command or an option: an exact
     (case-insensitive) name wins; otherwise the first in ``names`` that ``word`` abbreviates; else ``None``."""
     word = word.lower()
+    if not word:
+        return None
     if word in names:
         return word
     return next((name for name in names if name.startswith(word)), None)
@@ -154,27 +156,39 @@ class DssParseError(Exception):
 class DssCommand:
     """A single parsed DSS command."""
 
-    cmd: str  # "new", "edit", "batchedit", "set", "clear", "open", "close"
+    cmd: str  # "new", "edit", "batchedit", "set", "clear", "open", "close", "buscoords", "latlongcoords"
     element_type: str | None  # "Load", "Transformer" (original case)
     element_name: str | None  # "671", "sub3"
     params: dict[str, str]  # raw key=value (original-case keys)
     source_file: str  # for error reporting
     line_number: int
-    raw_text: str = ""  # full merged text of the command (for per-winding parsing)
+    raw_text: str = ""  # full merged text of the command (for per-winding / geometry parsing)
+    param_list: list[tuple[str, str]] = field(default_factory=list)  # every (key, value) in deck order
+    had_winding_scalars: bool = False  # True if wdg= or per-winding scalar slots were parsed
 
 
 def _resolve_file_case_insensitive(path: Path) -> Path:
-    """Resolve file path case-insensitively on case-sensitive filesystems."""
-    if path.exists():
-        return path
-    parent = path.parent
-    if not parent.is_dir():
-        return path
-    name_lower = path.name.lower()
-    for child in parent.iterdir():
-        if child.name.lower() == name_lower:
-            return child
-    return path
+    """Resolve file path case-insensitively on case-sensitive filesystems (normalizing Windows backslashes)."""
+    normalized = Path(str(path).replace("\\", "/"))
+    if normalized.exists():
+        return normalized
+    parts = normalized.parts
+    if not parts:
+        return normalized
+    current = Path(parts[0])
+    for part in parts[1:]:
+        candidate = current / part
+        if candidate.exists():
+            current = candidate
+            continue
+        if not current.is_dir():
+            return normalized
+        part_lower = part.lower()
+        match = next((child for child in current.iterdir() if child.name.lower() == part_lower), None)
+        if match is None:
+            return normalized
+        current = match
+    return current
 
 
 #: A coordinate row's field separator: a comma (with any spaces around it) or a run of whitespace.
@@ -221,10 +235,6 @@ class DssReader(FormatReader):
         self.source = source
         self._commands: list[DssCommand] | None = None
         self._model: DssModel | None = None
-        # BusCoords CSV paths encountered during file traversal (in encounter order).
-        self._buscoords_paths: list[Path] = []
-        # LatLongCoords CSV paths — same format but (lat, long) → stored as (x=long, y=lat).
-        self._latlongcoords_paths: list[Path] = []
 
     # -----------------------------------------------------------------------
     # Public API  (FormatReader interface)
@@ -249,7 +259,7 @@ class DssReader(FormatReader):
     # Bus coordinates
     # -----------------------------------------------------------------------
 
-    def _read_buscoords(self) -> list:
+    def _read_buscoords(self, entries: list[tuple[Path, bool]]) -> list:
         """Parse every referenced BusCoords/LatLongCoords CSV into Buscoords objects.
 
         Both directives use a headerless ``BusName, c1, c2`` CSV, but the column
@@ -266,11 +276,10 @@ class DssReader(FormatReader):
         raises.
         """
         objects: list = []
-        for csv_path, geographic in [(path, False) for path in self._buscoords_paths] + \
-                [(path, True) for path in self._latlongcoords_paths]:
-            with open(csv_path, encoding="utf-8") as fh:
+        for csv_path, geographic in entries:
+            with open(csv_path, encoding="utf-8-sig") as fh:
                 for line_number, line in enumerate(fh, start=1):
-                    line = re.split(r"!|//", line, maxsplit=1)[0].strip()
+                    line = _strip_comment(line).strip()
                     if not line:
                         continue
                     parts = _COORDINATE_FIELDS.split(line)
@@ -289,8 +298,6 @@ class DssReader(FormatReader):
     def _parse_master(self, master_path: str | Path) -> None:
         """Parse Master.dss and all redirected files into a command list."""
         self._commands = []
-        self._buscoords_paths = []
-        self._latlongcoords_paths = []
         raw_lines = list(self._read_with_redirects(Path(master_path)))
         joined = self._join_continuation_lines(raw_lines)
 
@@ -329,11 +336,17 @@ class DssReader(FormatReader):
         redefined: set[tuple[type, str]] = set()
         options: dict[str, Any] = {}
         history: dict[tuple[type, str], list[tuple[str, Any]]] = {}
+        coord_entries: list[tuple[Path, bool]] = []
+        base_dir = Path(self.source).parent
         for cmd in self._commands:
             if cmd.cmd == "clear":
-                graph, spelled, redefined, options, history = {}, {}, set(), {}, {}
+                graph, spelled, redefined, options, history, coord_entries = {}, {}, set(), {}, {}, []
                 continue
             try:
+                if cmd.cmd in ("buscoords", "latlongcoords"):
+                    csv_path = _resolve_file_case_insensitive(base_dir / cmd.params["path"])
+                    coord_entries.append((csv_path, cmd.cmd == "latlongcoords"))
+                    continue
                 if cmd.cmd == "set":
                     options.update(self._options(cmd))
                     continue
@@ -346,23 +359,27 @@ class DssReader(FormatReader):
                 if schema_class is None:
                     raise ValueError(f"unknown DSS class {cmd.element_type!r}")
                 bucket = graph.setdefault(schema_class, {})
-                values = self._values(cmd, schema_class)
+                values, assignments = self._values(cmd, schema_class)
                 if cmd.cmd == "batchedit":
                     for obj in _batch_edit(bucket, cmd.element_name, values):
-                        history[(schema_class, str(obj.name).lower())].extend(values.items())
+                        history[(schema_class, str(obj.name).lower())].extend(assignments)
                     continue
                 key = (schema_class, cmd.element_name.lower())
                 if cmd.cmd == "new" and key not in spelled:
                     obj = schema_class(name=cmd.element_name, **values)
                     inherited = []
                     if getattr(obj, "like", None):
-                        inherited = _inherit(obj, bucket.get(spelled.get((schema_class, str(obj.like).lower()), "")))
+                        source_key = (schema_class, str(obj.like).lower())
+                        inherited = _inherit(obj, bucket.get(spelled.get(source_key, "")),
+                                             history.get(source_key, []))
                     bucket[cmd.element_name] = obj
                     spelled[key] = cmd.element_name
-                    history[key] = [*inherited, *values.items()]
+                    history[key] = [*inherited, *assignments]
                     continue
                 if key not in spelled:
                     raise ValueError("Edit of an object no New defines")
+                if cmd.had_winding_scalars:
+                    raise ValueError("per-winding properties (wdg=) on an Edit are not supported")
                 if cmd.cmd == "new" and key not in redefined:
                     redefined.add(key)
                     _log.warning("%s:%d: New %s.%s again; applied as an edit, as DSS does",
@@ -370,14 +387,16 @@ class DssReader(FormatReader):
                 obj = bucket[spelled[key]]
                 for field_name, value in values.items():
                     setattr(obj, field_name, value)
-                history[key].extend(values.items())
+                history[key].extend(assignments)
             except (ValueError, TypeError) as e:
-                raise DssParseError(f"{cmd.element_type}.{cmd.element_name}: {e}",
-                                    cmd.source_file, cmd.line_number) from e
+                target = f"{cmd.element_type}.{cmd.element_name}" if cmd.element_type else cmd.cmd
+                raise DssParseError(f"{target}: {e}", cmd.source_file, cmd.line_number) from e
 
+        if options.get("open_terminals") == []:
+            options.pop("open_terminals")
         if options:
             graph[dss_schema.Options] = {"options": dss_schema.Options(name="options", **options)}
-        for bc in self._read_buscoords():
+        for bc in self._read_buscoords(coord_entries):
             graph.setdefault(dss_schema.Buscoords, {})[str(bc.name)] = bc
         return DssModel(graph=graph, history=history)
 
@@ -421,13 +440,18 @@ class DssReader(FormatReader):
         with ``/*`` and ends on the line that holds ``*/``; the engine skips both lines whole, and so does this.
         """
         base_dir = master_path.parent
+        visiting: set[Path] = set()
 
         def _process_file(
             file_path: Path,
         ) -> Iterator[tuple[str, Path, int]]:
+            resolved_file = _resolve_file_case_insensitive(file_path)
+            if not resolved_file.exists():
+                raise FileNotFoundError(f"DSS file not found: {file_path}")
+            canonical = resolved_file.resolve()
+            visiting.add(canonical)
             try:
-                resolved_file = _resolve_file_case_insensitive(file_path)
-                with open(resolved_file, "r", encoding="utf-8") as fh:
+                with open(resolved_file, "r", encoding="utf-8-sig") as fh:
                     in_block_comment = False
                     for line_num, raw_line in enumerate(fh, start=1):
                         if in_block_comment or raw_line.startswith("/*"):
@@ -439,34 +463,23 @@ class DssReader(FormatReader):
 
                         command = dss_command(line.split(None, 1)[0])
                         if command in ("redirect", "compile"):
-                            # Extract target file name
                             rest = line.split(None, 1)
-                            if len(rest) > 1:
-                                target_name = rest[1].strip().strip("\"'")
-                                target_path = _resolve_file_case_insensitive(base_dir / target_name)
-                                if not target_path.exists():
-                                    raise DssParseError(f"Redirect target not found: {target_path}",
-                                                        str(file_path), line_num)
-                                yield from _process_file(target_path)
+                            if len(rest) < 2 or not rest[1].strip():
+                                raise DssParseError(f"{command}: missing file path", str(file_path), line_num)
+                            target_name = rest[1].strip().strip("\"'()[]")
+                            target_path = _resolve_file_case_insensitive(base_dir / target_name)
+                            if not target_path.exists():
+                                raise DssParseError(f"Redirect target not found: {target_path}",
+                                                    str(file_path), line_num)
+                            if target_path.resolve() in visiting:
+                                raise DssParseError(f"Redirect cycle detected: {target_path}",
+                                                    str(file_path), line_num)
+                            yield from _process_file(target_path)
                             continue
 
-                        # BusCoords / LatLongCoords: CSV format bus,c1,c2.
-                        # BusCoords: c1=x, c2=y. LatLongCoords: c1=lat, c2=long → swap to x=long, y=lat.
-                        if command in ("buscoords", "latlongcoords"):
-                            rest = line.split(None, 1)
-                            if len(rest) > 1:
-                                csv_name = rest[1].strip().strip("\"'")
-                                csv_path = _resolve_file_case_insensitive(base_dir / csv_name)
-                                if command == "latlongcoords":
-                                    self._latlongcoords_paths.append(csv_path)
-                                else:
-                                    self._buscoords_paths.append(csv_path)
-                            continue
-
-                        yield line, file_path, line_num
-
-            except FileNotFoundError:
-                raise FileNotFoundError(f"DSS file not found: {file_path}")
+                        yield line, resolved_file, line_num
+            finally:
+                visiting.discard(canonical)
 
         yield from _process_file(master_path)
 
@@ -500,7 +513,12 @@ class DssReader(FormatReader):
                 continued = None
             if continued is None:
                 result.append((line, file_path, line_num))
-                if dss_command(first_word) in ("new", "edit"):
+                cmd = dss_command(first_word)
+                if cmd in ("clear", "clearall"):
+                    last_element_idx = None
+                elif cmd in ("new", "edit", "batchedit") or (
+                    cmd is None and "=" in line and line.split("=", 1)[0].count(".") >= 2
+                ):
                     last_element_idx = len(result) - 1
             elif last_element_idx is not None:
                 prev_line, prev_file, prev_num = result[last_element_idx]
@@ -534,6 +552,11 @@ class DssReader(FormatReader):
             return self._parse_set_command(rest, file_path, line_number)
         if command in ("clear", "clearall"):
             return DssCommand("clear", None, None, {}, file_path, line_number)
+        if command in ("buscoords", "latlongcoords"):
+            target = rest.strip().strip("\"'()[]")
+            if not target:
+                raise ValueError(f"{command} needs a file path")
+            return DssCommand(command, None, None, {"path": target}, file_path, line_number)
         if command in ("open", "close"):
             return self._parse_open_or_close(command, rest, file_path, line_number)
         if command in SKIPPED_COMMANDS:
@@ -546,7 +569,7 @@ class DssReader(FormatReader):
     def _parse_open_or_close(command: str, rest: str, file_path: str, line_number: int) -> DssCommand:
         """``Open Class.name [terminal [conductor]]``; the engine reads the arguments by position, so
         ``terminal=2`` and ``2`` are the same. The terminal defaults to 1; opening one conductor raises."""
-        values = [token.split("=", 1)[-1] for token in _join_equals(_tokenize_dss(rest))]
+        values = [_strip_quotes(token.split("=", 1)[-1]) for token in _tokenize_dss(rest)]
         if not values or "." not in values[0]:
             raise ValueError(f"{command} needs Class.name")
         element_type, element_name = values[0].split(".", 1)
@@ -555,46 +578,54 @@ class DssReader(FormatReader):
             raise ValueError(f"{command} of conductor {values[2]} only is not read (no deck in the sweep does it)")
         return DssCommand(command, element_type, element_name, {"terminal": terminal}, file_path, line_number)
 
+    @staticmethod
+    def _has_winding_scalars(param_text: str) -> bool:
+        """True if *param_text* sets ``wdg=`` or any per-winding scalar transformer property."""
+        winding_scalars = {"wdg", "bus", "kv", "kva", "conn", "tap", "%r", "rdcohms", "rneut", "xneut"}
+        for tok in _tokenize_dss(param_text):
+            if "=" in tok and tok.partition("=")[0].strip().lower() in winding_scalars:
+                return True
+        return False
+
     def _parse_new_or_edit(
         self, cmd: str, rest: str, file_path: str, line_number: int
     ) -> DssCommand | None:
         """Parse ``New Type.Name params...`` or ``Edit Type.Name params...``."""
         if not rest.strip():
-            return None
+            raise ValueError(f"{cmd} needs Class.name")
 
-        # Split off the Type.Name token (may be quoted)
+        # Split off the Type.Name token (may be quoted, or prefixed with object=/element=)
         rest = rest.strip()
-        if rest.startswith('"'):
-            end_quote = rest.index('"', 1)
+        for prefix in ("object=", "element="):
+            if rest.lower().startswith(prefix):
+                rest = rest[len(prefix):].strip()
+                break
+        if rest.startswith(('"', "'")):
+            quote = rest[0]
+            end_quote = rest.find(quote, 1)
+            if end_quote == -1:
+                raise ValueError(f"unclosed quote in {rest!r}")
             type_name_token = rest[1:end_quote]
-            param_text = rest[end_quote + 1 :].strip()
-        elif rest.startswith("'"):
-            end_quote = rest.index("'", 1)
-            type_name_token = rest[1:end_quote]
-            param_text = rest[end_quote + 1 :].strip()
+            param_text = rest[end_quote + 1:].strip()
         else:
             parts = rest.split(None, 1)
             type_name_token = parts[0]
             param_text = parts[1] if len(parts) > 1 else ""
-
-        # Strip optional "object=" or "element=" prefix in DSS commands (e.g. New object=circuit.ieee123)
-        if type_name_token.lower().startswith(("object=", "element=")):
-            type_name_token = type_name_token.split("=", 1)[1]
 
         # Split Type.Name
         if "." not in type_name_token:
             raise ValueError(f"expected Class.name, got {type_name_token!r}")
 
         element_type, element_name = type_name_token.split(".", 1)
-        if element_type.lower().startswith("object="):
-            element_type = element_type.split("=", 1)[1]
-        elif element_type.lower().startswith("element="):
-            element_type = element_type.split("=", 1)[1]
 
         # Pre-process transformer wdg=N per-winding syntax before parsing
+        had_winding_scalars = False
         if element_type.lower() in ("transformer", "xfmrcode"):
+            had_winding_scalars = self._has_winding_scalars(param_text)
+            if had_winding_scalars and cmd != "new":
+                raise ValueError("per-winding properties (wdg=) on an Edit are not supported")
             param_text = self._preprocess_winding_text(param_text, element_type, element_name)
-        params = _resolve_positional(self._param_pairs(param_text), element_type)
+        params, param_list = _resolve_positional(self._param_pairs(param_text), element_type)
 
         return DssCommand(
             cmd=cmd,
@@ -604,6 +635,8 @@ class DssReader(FormatReader):
             source_file=file_path,
             line_number=line_number,
             raw_text=param_text,
+            param_list=param_list,
+            had_winding_scalars=had_winding_scalars,
         )
 
     def _parse_dotted_edit(
@@ -619,13 +652,13 @@ class DssReader(FormatReader):
         if len(parts) < 3:
             return None
         element_type = parts[0]
-        element_name = parts[1]
-        prop_name = ".".join(parts[2:])  # Handle unlikely multi-dot props
+        element_name = ".".join(parts[1:-1])
+        prop_name = parts[-1]
         param_text = f"{prop_name}={rhs}"
 
-        if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text, element_type, element_name)
-        params = self._parse_params(param_text)
+        if element_type.lower() in ("transformer", "xfmrcode") and self._has_winding_scalars(param_text):
+            raise ValueError("per-winding properties (wdg=) on an Edit are not supported")
+        params, param_list = self._named_pairs(param_text)
 
         return DssCommand(
             cmd="edit",
@@ -634,13 +667,15 @@ class DssReader(FormatReader):
             params=params,
             source_file=file_path,
             line_number=line_number,
+            raw_text=param_text,
+            param_list=param_list,
         )
 
     def _parse_set_command(
         self, rest: str, file_path: str, line_number: int
     ) -> DssCommand | None:
         """Parse ``Set Key=Value ...``."""
-        params = self._parse_params(rest)
+        params, param_list = self._named_pairs(rest)
         if not params:
             return None
         return DssCommand(
@@ -650,6 +685,7 @@ class DssReader(FormatReader):
             params=params,
             source_file=file_path,
             line_number=line_number,
+            param_list=param_list,
         )
 
     # -----------------------------------------------------------------------
@@ -657,15 +693,22 @@ class DssReader(FormatReader):
     # -----------------------------------------------------------------------
 
     @staticmethod
-    def _parse_params(text: str) -> dict[str, str]:
-        """``Key1=Value1 Key2=Value2 ...`` as a dict; a value with no property name raises (``Set`` and the
-        dotted edit name every property)."""
+    def _named_pairs(text: str) -> tuple[dict[str, str], list[tuple[str, str]]]:
+        """``Key1=Value1 Key2=Value2 ...`` as ``(dict, ordered list)``; a value with no property name raises."""
         params: dict[str, str] = {}
+        ordered: list[tuple[str, str]] = []
         for key, value in DssReader._param_pairs(text):
             if key is None:
                 raise ValueError(f"the value {value!r} names no property")
+            params.pop(key, None)
             params[key] = value
-        return params
+            ordered.append((key, value))
+        return params, ordered
+
+    @staticmethod
+    def _parse_params(text: str) -> dict[str, str]:
+        """``Key1=Value1 Key2=Value2 ...`` as a dict; a value with no property name raises."""
+        return DssReader._named_pairs(text)[0]
 
     @staticmethod
     def _param_pairs(text: str) -> list[tuple[str | None, str]]:
@@ -787,36 +830,34 @@ class DssReader(FormatReader):
     # Instance construction
     # -----------------------------------------------------------------------
 
-    def _values(self, cmd: DssCommand, schema_class: type) -> dict[str, Any]:
-        """``{field: value}`` for the properties a ``New`` or ``Edit`` command sets.
-
-        Transformer and XfmrCode ``wdg=N`` blocks become the per-winding arrays (``buses``, ``kVs``, ...),
-        so they are only accepted on a ``New``: an ``Edit`` with ``wdg=`` would replace whole arrays.
-        """
+    def _values(self, cmd: DssCommand, schema_class: type) -> tuple[dict[str, Any], list[tuple[str, Any]]]:
+        """``({field: value}, [(field, value), ...])`` for the properties a ``New`` or ``Edit`` command sets."""
         class_map = get_class_map(schema_class)
-        params = dict(cmd.params)
-        lowered = {k.lower() for k in params}
+        pairs = list(cmd.param_list) if cmd.param_list else list(cmd.params.items())
+        lowered = {k.lower() for k, _ in pairs}
         element_type = cmd.element_type.lower()
-        if element_type in ("transformer", "xfmrcode") and "wdg" in lowered:
-            if cmd.cmd != "new":
-                raise ValueError("per-winding properties (wdg=) on an Edit are not supported")
-            params.update(_extract_winding_arrays(cmd.raw_text))
         if element_type == "linegeometry" and "cond" in lowered:
-            params.update(_extract_linegeometry_arrays(cmd.raw_text))
+            if cmd.cmd != "new":
+                raise ValueError("per-conductor properties (cond=) on an Edit are not supported")
+            for k, v in _extract_linegeometry_arrays(cmd.raw_text).items():
+                pairs.append((k, v))
 
         values: dict[str, Any] = {}
-        for param_name, raw_value in params.items():
+        assignments: list[tuple[str, Any]] = []
+        for param_name, raw_value in pairs:
             field_name = class_map.field_for(param_name)
             if field_name == "name":
                 continue
-            file_ref = _FILE_ARRAY.match(raw_value.strip())
+            file_ref = _FILE_ARRAY.match(raw_value.strip()) if field_name in class_map.multivalued else None
             if file_ref:
                 raw_value = _read_array_file(Path(cmd.source_file).parent / file_ref.group(1).strip("\"' "))
             try:
-                values[field_name] = self._convert_value(raw_value, field_name, schema_class, class_map)
+                converted = self._convert_value(raw_value, field_name, schema_class, class_map)
             except ValueError as e:
                 raise ValueError(f"{param_name}={raw_value!r}: {e}") from e
-        return values
+            values[field_name] = converted
+            assignments.append((field_name, converted))
+        return values, assignments
 
     @staticmethod
     def _preprocess_winding_text(param_text: str, element_type: str, element_name: str) -> str:
@@ -871,8 +912,9 @@ class DssReader(FormatReader):
         # Walk the tokens in order, as DSS applies them. A per-winding scalar (bus, kV, kVA, conn, tap, %R,
         # RdcOhms) goes to the active winding: the last wdg=, else the last winding an array set (an array sets every
         # winding), else winding 1. On a 2-winding transformer kVA sets both windings (all engine-checked).
-        count = next((int(_try_eval_rpn(tok.partition("=")[2])) for tok in merged
-                      if tok.partition("=")[0].strip().lower() == "windings"), 2)
+        winding_counts = [int(float(_try_eval_rpn(tok.partition("=")[2]))) for tok in merged
+                          if tok.partition("=")[0].strip().lower() == "windings"]
+        count = winding_counts[-1] if winding_counts else 2
         array_keys = {name.lower(): name for name in _WDG_ARRAY_MAP.values()} | {"%rs": "pct_Rs"}
         winding_data: dict[str, list[str]] = {}
         non_winding_tokens: list[str] = []
@@ -892,14 +934,17 @@ class DssReader(FormatReader):
             key, _, value = tok.partition("=")
             key_lower = key.strip().lower()
             if key_lower == "wdg":
-                active = int(value)
+                active = int(float(_try_eval_rpn(value)))
+                if active < 1:
+                    raise ValueError(f"{element_type}.{element_name}: wdg={active} must be >= 1")
                 continue
             if key_lower in array_keys:
                 items = _array_items(value)
-                winding_data[array_keys[key_lower]] = [_try_eval_rpn(item) for item in items]
+                target = array_keys[key_lower]
+                winding_data[target] = items if target in ("buses", "conns") else [_try_eval_rpn(item) for item in items]
                 active = max(len(items), 1)
                 continue
-            resolved = _try_eval_rpn(value)
+            resolved = value if key_lower in ("bus", "conn") else _try_eval_rpn(value)
             if key_lower in _WDG_ARRAY_MAP:
                 target = _WDG_ARRAY_MAP[key_lower]
                 for number in (range(1, 3) if key_lower == "kva" and count == 2 else (active,)):
@@ -958,20 +1003,29 @@ class DssReader(FormatReader):
         if field_name in class_map.multivalued:
             return DssReader._parse_array(val, field_name, schema_class, class_map)
 
-        # Scalar: evaluate RPN expressions first
-        val = _try_eval_rpn(val)
+        # Get the Python field type from the dataclass before RPN so string fields are never evaluated as math
+        fld_type = _get_field_type(schema_class, field_name)
+        actual_type = _unwrap_optional(fld_type)
+        type_name = getattr(actual_type, "__name__", str(actual_type)) if actual_type is not None else ""
+        is_numeric = (field_name not in class_map.enum_value_maps and
+                      (actual_type in (int, float) or type_name in ("int", "float")))
 
-        # Strip surrounding quotes (for plain quoted strings / already-evaluated values)
+        if is_numeric:
+            if val.startswith("{") and val.endswith("}"):
+                val = rpn_value(val)
+            else:
+                val = _try_eval_rpn(val)
+
+        # Strip surrounding quotes (and non-RPN braces on strings)
         if len(val) >= 2 and val[0] in ('"', "'") and val[-1] == val[0]:
             val = val[1:-1]
+        elif len(val) >= 2 and val[0] == "{" and val[-1] == "}":
+            val = val[1:-1].strip()
         val = val.rstrip(",")  # DSS delimits with commas too: npts='1,' is 1
 
         # Check for enum (scalar enum)
         if field_name in class_map.enum_value_maps:
             return DssReader._convert_enum(val, field_name, class_map)
-
-        # Get the Python field type from the dataclass
-        fld_type = _get_field_type(schema_class, field_name)
 
         return DssReader._convert_scalar(val, fld_type)
 
@@ -1030,13 +1084,25 @@ class DssReader(FormatReader):
             return DssReader._parse_enum_array(raw_value, field_name, class_map)
 
         inner = raw_value.strip()
+        field_args = get_args(_get_field_type(schema_class, field_name))
+        is_str_array = list[str] in field_args
+        is_int_array = list[int] in field_args
+
+        # A single RPN expression for a numeric multivalued field, e.g. kvar=(600 3 /) or kvar={600 3 /}
+        if not is_str_array and len(inner) >= 2 and (
+            (inner[0], inner[-1]) in (("(", ")"), ("{", "}"), ('"', '"'), ("'", "'"))
+        ):
+            single = rpn_value(inner) if inner[0] == "{" else _try_eval_rpn(inner)
+            if single != inner:
+                num = float(single)
+                return [int(num) if is_int_array else num]
 
         # Strip the outermost array delimiter (but NOT inner ones — they may be RPN).
         # DSS takes quotes as array delimiters too: kvs="4.8 4.8".
         if len(inner) >= 2 and (inner[0] in "([" and inner[-1] in ")]" or inner[0] in "'\"" and inner[-1] == inner[0]):
             inner = inner[1:-1].strip()
 
-        # Extract elements: quoted strings and paren-groups are kept intact for RPN eval
+        # Extract elements: quoted strings and paren/brace-groups are kept intact for RPN eval
         elements: list[str] = []
         i = 0
         current: list[str] = []
@@ -1061,10 +1127,10 @@ class DssReader(FormatReader):
                     current = []
                 in_quote = ch
                 current = [ch]
-            elif ch in "([":
+            elif ch in "([{":
                 depth += 1
                 current.append(ch)
-            elif ch in ")]":
+            elif ch in ")]}":
                 depth = max(0, depth - 1)
                 current.append(ch)
                 if depth == 0:
@@ -1088,17 +1154,18 @@ class DssReader(FormatReader):
             return []
 
         # Names (buses, wires, cables) stay text: "634" is a bus, not 634.0
-        if list[str] in get_args(_get_field_type(schema_class, field_name)):
+        if is_str_array:
             return [_strip_quotes(elem) for elem in elements]
 
         # Evaluate each element (RPN or plain)
         results: list[Any] = []
         for elem in elements:
-            evaluated = _try_eval_rpn(elem)
+            evaluated = rpn_value(elem) if elem.startswith("{") and elem.endswith("}") else _try_eval_rpn(elem)
             # Strip quotes from plain string results
             if len(evaluated) >= 2 and evaluated[0] in ('"', "'") and evaluated[-1] == evaluated[0]:
                 evaluated = evaluated[1:-1]
-            results.append(float(evaluated))  # a numeric array; name arrays (list[str]) returned above
+            num = float(evaluated)  # a numeric array; name arrays (list[str]) returned above
+            results.append(int(num) if is_int_array else num)
 
         return results
 
@@ -1147,24 +1214,42 @@ _FILE_ARRAY = re.compile(r"^[(\[]\s*file\s*=\s*([^)\]]+)[)\]]$", re.IGNORECASE)
 def _read_array_file(path: Path) -> str:
     """The values of a ``file=`` array as DSS array text, ``[v1 v2 ...]``."""
     path = _resolve_file_case_insensitive(path)
-    values = [line.replace(",", " ").split()[0] for line in path.read_text(encoding="utf-8").splitlines()
-              if line.strip()]
+    if not path.exists():
+        raise ValueError(f"array file not found: {path}")
+    values = []
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = _strip_comment(raw_line).replace(",", " ").strip()
+        if line:
+            values.append(line.split()[0])
     return "[" + " ".join(values) + "]"
 
 
-def _inherit(obj: Any, source: Any) -> list[tuple[str, Any]]:
+def _inherit(obj: Any, source: Any, source_history: list[tuple[str, Any]] | None = None) -> list[tuple[str, Any]]:
     """``like=``: copy every slot ``obj`` leaves unset from ``source``, defined earlier in the deck; the
-    ``(slot, value)`` pairs copied, for the history."""
+    ``(slot, value)`` pairs copied, in ``source``'s assignment order, for the history."""
     if source is None:
         raise ValueError(f"like={obj.like!r}: no object of that name is defined before it")
-    copied = []
+    copied_slots: dict[str, Any] = {}
     for slot in dc_fields(obj):
         if slot.name not in ("name", "like") and getattr(obj, slot.name) in _UNSET:
             value = getattr(source, slot.name)
+            if isinstance(value, list):
+                value = list(value)
             setattr(obj, slot.name, value)
             if value not in _UNSET:
-                copied.append((slot.name, value))
-    return copied
+                copied_slots[slot.name] = value
+    if not copied_slots:
+        return []
+    ordered: list[tuple[str, Any]] = []
+    seen: set[str] = set()
+    for slot_name, hist_value in source_history or ():
+        if slot_name in copied_slots:
+            ordered.append((slot_name, list(hist_value) if isinstance(hist_value, list) else hist_value))
+            seen.add(slot_name)
+    for slot_name, value in copied_slots.items():
+        if slot_name not in seen:
+            ordered.append((slot_name, value))
+    return ordered
 
 
 def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
@@ -1174,7 +1259,10 @@ def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
     key = (schema_class, cmd.element_name.lower())
     if key not in spelled:
         raise ValueError(f"{cmd.cmd.capitalize()} of an object no New defines")
-    terminal = f"{schema_class.__name__}.{spelled[key]} {int(cmd.params['terminal'])}"
+    term = int(cmd.params["terminal"])
+    if term < 1:
+        raise ValueError(f"{cmd.cmd.capitalize()} terminal {term} must be >= 1")
+    terminal = f"{schema_class.__name__}.{spelled[key]} {term}"
     if cmd.cmd == "open" and terminal not in opened:
         opened.append(terminal)
     if cmd.cmd == "close" and terminal in opened:
@@ -1183,13 +1271,16 @@ def _open_or_close(opened: list[str], cmd: DssCommand, types: dict[str, type],
 
 def _batch_edit(bucket: dict[str, Any], pattern: str, values: dict[str, Any]) -> list[Any]:
     """``BatchEdit``: set ``values`` on every object whose name ``pattern`` matches; the objects changed."""
-    regex = re.compile(pattern, re.IGNORECASE)
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error as error:
+        raise ValueError(f"BatchEdit invalid pattern {pattern!r}: {error}") from error
     matched = [obj for name, obj in bucket.items() if regex.search(name)]
     if not matched:
         raise ValueError(f"BatchEdit pattern {pattern!r} matches no object")
     for obj in matched:
         for field_name, value in values.items():
-            setattr(obj, field_name, value)
+            setattr(obj, field_name, list(value) if isinstance(value, list) else value)
     return matched
 
 
@@ -1232,7 +1323,13 @@ def _eval_rpn(expr: str) -> float:
                     raise ValueError("RPN division by zero")
                 stack.append(y / x)
             elif tl == "^":
-                stack.append(y ** x)
+                try:
+                    power = y ** x
+                except (OverflowError, ZeroDivisionError) as error:
+                    raise ValueError(f"RPN exponent error: {error}") from error
+                if isinstance(power, complex):
+                    raise ValueError(f"RPN complex result from {y}^{x}")
+                stack.append(power)
             continue
         # Unary functions
         if tl in ("sqrt", "sqr", "inv", "ln", "exp", "log10",
@@ -1251,7 +1348,10 @@ def _eval_rpn(expr: str) -> float:
             elif tl == "ln":
                 stack.append(_math.log(x))
             elif tl == "exp":
-                stack.append(_math.exp(x))
+                try:
+                    stack.append(_math.exp(x))
+                except OverflowError as error:
+                    raise ValueError(f"RPN exp overflow: {error}") from error
             elif tl == "log10":
                 stack.append(_math.log10(x))
             elif tl == "sin":
@@ -1275,14 +1375,14 @@ def _eval_rpn(expr: str) -> float:
             y = stack.pop()
             stack.append(_math.degrees(_math.atan2(y, x)))
             continue
-        # Stack manipulation
+        # Stack manipulation (X = stack[-1] is top: rolldn moves X to bottom; rollup moves bottom to X)
         if tl == "rollup":
             if stack:
-                stack.insert(0, stack.pop())
+                stack.append(stack.pop(0))
             continue
         if tl == "rolldn":
             if stack:
-                stack.append(stack.pop(0))
+                stack.insert(0, stack.pop())
             continue
         if tl == "swap":
             if len(stack) >= 2:
@@ -1293,6 +1393,8 @@ def _eval_rpn(expr: str) -> float:
 
     if not stack:
         raise ValueError("RPN expression produced empty stack")
+    if not _math.isfinite(stack[-1]):
+        raise ValueError(f"RPN expression produced non-finite value {stack[-1]!r}")
     return stack[-1]
 
 
@@ -1321,7 +1423,7 @@ def _try_eval_rpn(val: str) -> str:
     s = val.strip()
     # Detect delimiters that signal RPN (parens and quotes only — NOT square
     # brackets, which are DSS array delimiters)
-    pairs = {'"': '"', "'": "'", "(": ")"}
+    pairs = {'"': '"', "'": "'", "(": ")", "{": "}"}
     if not s:
         return val
     opener = s[0]
@@ -1333,7 +1435,7 @@ def _try_eval_rpn(val: str) -> str:
     # don't try RPN — fall through to normal parsing
     try:
         float(inner)
-        return inner if opener == "(" else val  # (122) is 122; a quoted number keeps its quotes for stripping
+        return inner if opener in ("(", "{") else val  # (122) is 122; a quoted number keeps its quotes for stripping
     except ValueError:
         pass
     # Require at least one RPN operator/function token.  If the expression
@@ -1359,151 +1461,22 @@ def _array_items(value: str) -> list[str]:
     return [item for item in _tokenize_dss(text.replace(",", " ").replace("|", " ")) if item]
 
 
-def _extract_winding_arrays(raw_text: str) -> dict[str, str]:
-    """Parse per-winding transformer params into array-form params.
-
-    OpenDSS supports specifying transformer windings as repeated ``wdg=N bus=X
-    kv=Y kva=Z ...`` blocks (typically via ``~`` continuation lines merged into
-    one text string).  This function scans the merged text, splits it on
-    ``wdg=`` boundaries, and returns array-form params like
-    ``{"buses": "[bus1 bus2]", "kVs": "[kv1 kv2]", ...}`` suitable for the
-    standard param-to-field mapping.
-    """
-    import re as _re
-
-    # Split on wdg= boundaries (case-insensitive)
-    blocks = _re.split(r'(?i)\bwdg\s*=', raw_text)
-    if len(blocks) < 2:
-        return {}
-
-    # Each block after the split starts with the winding number followed by
-    # the winding's key=value params.  Parse each block independently.
-    winding_data: dict[int, dict[str, str]] = {}
-    for block in blocks[1:]:
-        # First token is the winding number
-        parts = block.strip().split(None, 1)
-        if not parts:
-            continue
-        try:
-            wdg_num = int(parts[0])
-        except ValueError:
-            continue
-        wdg_text = parts[1] if len(parts) > 1 else ""
-
-        # Parse key=value pairs in this block (stop at next wdg= if any)
-        wdg_params: dict[str, str] = {}
-        # Simple scan: tokenise by whitespace, handle brackets
-        depth = 0
-        tokens: list[str] = []
-        cur: list[str] = []
-        for ch in wdg_text:
-            if ch in '([':
-                depth += 1
-                cur.append(ch)
-            elif ch in ')]':
-                depth = max(0, depth - 1)
-                cur.append(ch)
-            elif ch in ' \t' and depth == 0:
-                if cur:
-                    tokens.append(''.join(cur))
-                    cur = []
-            else:
-                cur.append(ch)
-        if cur:
-            tokens.append(''.join(cur))
-
-        i = 0
-        while i < len(tokens):
-            tok = tokens[i]
-            if '=' in tok:
-                key, _, val = tok.partition('=')
-                key = key.strip()
-                if not key and i > 0:
-                    key = tokens[i - 1]
-                if val:
-                    wdg_params[key.lower()] = val
-                else:
-                    # value is next token
-                    if i + 1 < len(tokens):
-                        wdg_params[key.lower()] = tokens[i + 1]
-                        i += 1
-            elif tok == '=':
-                # key was previous token, value is next
-                if i > 0 and i + 1 < len(tokens):
-                    wdg_params[tokens[i - 1].lower()] = tokens[i + 1]
-                    i += 1
-            i += 1
-
-        winding_data[wdg_num] = wdg_params
-
-    if not winding_data:
-        return {}
-
-    # Sort by winding number and assemble arrays
-    sorted_wnds = sorted(winding_data.keys())
-    buses = [winding_data[w].get('bus', '') for w in sorted_wnds]
-    kvs = [winding_data[w].get('kv', '') for w in sorted_wnds]
-    kvas = [winding_data[w].get('kva', '') for w in sorted_wnds]
-    conns = [winding_data[w].get('conn', '') for w in sorted_wnds]
-    taps = [winding_data[w].get('tap', '') for w in sorted_wnds]
-    pct_rs = [winding_data[w].get('%r', '') for w in sorted_wnds]
-
-    result: dict[str, str] = {}
-
-    # Rneut/Xneut are per-winding but the schema holds one scalar pair plus the
-    # "wdg" selector, so carry the first winding that sets either and record which
-    # winding it came from. Without "wdg" the importer would fall back to the last
-    # winding (what OpenDSS does for the array form), which is the wrong one here.
-    for wdg_num in sorted_wnds:
-        wdg_params = winding_data[wdg_num]
-        if not (wdg_params.get('rneut') or wdg_params.get('xneut')):
-            continue
-        result['wdg'] = str(wdg_num)
-        if wdg_params.get('rneut'):
-            result['Rneut'] = wdg_params['rneut']
-        if wdg_params.get('xneut'):
-            result['Xneut'] = wdg_params['xneut']
-        break
-
-    if any(buses):
-        result['buses'] = '[' + ' '.join(buses) + ']'
-    if any(kvs):
-        result['kVs'] = '[' + ' '.join(kvs) + ']'
-    if any(kvas):
-        result['kVAs'] = '[' + ' '.join(kvas) + ']'
-    if any(c for c in conns):
-        result['conns'] = '[' + ' '.join(conns) + ']'
-    if any(t for t in taps if t):
-        result['taps'] = '[' + ' '.join(t if t else '1.0' for t in taps) + ']'
-    if any(pct_rs):
-        result['pct_Rs'] = '[' + ' '.join(pct_rs) + ']'
-    return result
-
-
 def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
     """Parse per-conductor LineGeometry params into array-form params.
 
     OpenDSS per-conductor syntax uses ``cond=N wire=X x=... h=... units=...``
     blocks (via ``~`` continuation lines merged into one text string).
-    This function splits on ``cond=`` boundaries, accumulates positions
-    and cable references into arrays, and returns them as array-form params
-    suitable for the standard field mapping::
-
-        {"xs": "[x1 x2 x3]", "hs": "[h1 h2 h3]",
-         "cncables": "[cn1 cn2 cn3]", "wires": "[w1 w2]", ...}
-
-    These correspond to the ``xs``, ``hs``, ``cncables``, ``tscables``, and
-    ``wires`` multivalued fields on the Linegeometry schema.
     """
-    import re as _re
-
-    # Split on cond= boundaries (case-insensitive)
-    blocks = _re.split(r'(?i)\bcond\s*=', raw_text)
+    blocks = re.split(r'(?i)\bcond\s*=', raw_text)
     if len(blocks) < 2:
         return {}
 
+    units_val = ""
+    for tok in _tokenize_dss(blocks[0]):
+        if "=" in tok and tok.partition("=")[0].strip().lower() == "units":
+            units_val = tok.partition("=")[2].strip()
+
     cond_data: dict[int, dict[str, str]] = {}
-    units_val = ''
     block_units: list[str] = []  # each block's unit: its own, else the last given, else DSS's initial ft
     for block in blocks[1:]:
         parts = block.strip().split(None, 1)
@@ -1515,46 +1488,16 @@ def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
             continue
         cond_text = parts[1] if len(parts) > 1 else ""
 
-        # Simple key=value extraction for this conductor block
         cond_params: dict[str, str] = {}
-        depth = 0
-        tokens: list[str] = []
-        cur: list[str] = []
-        for ch in cond_text:
-            if ch in '([':
-                depth += 1
-                cur.append(ch)
-            elif ch in ')]':
-                depth = max(0, depth - 1)
-                cur.append(ch)
-            elif ch in ' \t' and depth == 0:
-                if cur:
-                    tokens.append(''.join(cur))
-                    cur = []
-            else:
-                cur.append(ch)
-        if cur:
-            tokens.append(''.join(cur))
+        for tok in _tokenize_dss(cond_text):
+            if "=" in tok:
+                key, _, val = tok.partition("=")
+                cond_params[key.strip().lower()] = val.strip()
 
-        i = 0
-        while i < len(tokens):
-            tok = tokens[i]
-            if '=' in tok:
-                key, _, val = tok.partition('=')
-                key = key.strip().lower()
-                if not key and i > 0:
-                    key = tokens[i - 1].lower()
-                if val:
-                    cond_params[key] = val
-                elif i + 1 < len(tokens):
-                    cond_params[key] = tokens[i + 1]
-                    i += 1
-            i += 1
-
-        cond_data[cond_num] = cond_params
-        if 'units' in cond_params:
-            units_val = cond_params['units']
-        block_units.append((units_val or 'ft').lower())
+        cond_data.setdefault(cond_num, {}).update(cond_params)
+        if "units" in cond_params:
+            units_val = cond_params["units"]
+        block_units.append((units_val or "ft").lower())
 
     if not cond_data:
         return {}
@@ -1563,46 +1506,37 @@ def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
                          "one geometry has one length unit")
 
     sorted_conds = sorted(cond_data.keys())
-    xs = [cond_data[c].get('x', '') for c in sorted_conds]
-    hs = [cond_data[c].get('h', '') for c in sorted_conds]
-    wires = [cond_data[c].get('wire', '') for c in sorted_conds]
-    cncables = [cond_data[c].get('cncable', '') for c in sorted_conds]
-    tscables = [cond_data[c].get('tscable', '') for c in sorted_conds]
+    xs = [cond_data[c].get("x", "") for c in sorted_conds]
+    hs = [cond_data[c].get("h", "") for c in sorted_conds]
+    if any(xs) and not all(xs):
+        missing = [c for c, val in zip(sorted_conds, xs) if not val]
+        raise ValueError(f"LineGeometry cond {missing} missing x coordinate")
+    if any(hs) and not all(hs):
+        missing = [c for c, val in zip(sorted_conds, hs) if not val]
+        raise ValueError(f"LineGeometry cond {missing} missing h coordinate")
+    wires = [cond_data[c].get("wire", "") for c in sorted_conds]
+    cncables = [cond_data[c].get("cncable", "") for c in sorted_conds]
+    tscables = [cond_data[c].get("tscable", "") for c in sorted_conds]
 
-    # NOTE: a geometry may mix conductor kinds -- IEEE13's LineGeometry.607 is
-    # `cond=1 tscable=TS_1/0` then `cond=2 wire=CU_1/0`. OpenDSS array syntax has no
-    # empty element, so each of the three name arrays below is compacted and the
-    # cond-order interleaving between them is not recoverable from the schema
-    # object alone. `conductors` is a scalar slot, so there is nowhere to put it.
-    # The importer therefore resolves mixed geometries from `conductor_names`,
-    # which keeps every conductor in cond order in a single list.
     result: dict[str, str] = {}
     if any(xs):
-        result['xs'] = '[' + ' '.join(xs) + ']'
+        result["xs"] = "[" + " ".join(xs) + "]"
     if any(hs):
-        result['hs'] = '[' + ' '.join(hs) + ']'
-    # Names in cond order, whichever kind each slot used.
-    ordered_names = [
-        w or cn or ts for w, cn, ts in zip(wires, cncables, tscables)
-    ]
-    kinds_used = sum(
-        1 for group in (wires, cncables, tscables) if any(group)
-    )
+        result["hs"] = "[" + " ".join(hs) + "]"
+    ordered_names = [w or cn or ts for w, cn, ts in zip(wires, cncables, tscables)]
+    kinds_used = sum(1 for group in (wires, cncables, tscables) if any(group))
 
     if kinds_used > 1:
-        # Mixed assembly: one cond-ordered list, so conductor 1 stays conductor 1.
-        # `get_wire_info` resolves each name across all three CIM WireInfo classes,
-        # so the DSS array a name arrived in carries no information the importer needs.
-        result['wires'] = '[' + ' '.join(n for n in ordered_names if n) + ']'
+        result["wires"] = "[" + " ".join(n for n in ordered_names if n) + "]"
     else:
         if any(w for w in wires if w):
-            result['wires'] = '[' + ' '.join(w for w in wires if w) + ']'
+            result["wires"] = "[" + " ".join(w for w in wires if w) + "]"
         if any(cn for cn in cncables if cn):
-            result['cncables'] = '[' + ' '.join(cn for cn in cncables if cn) + ']'
+            result["cncables"] = "[" + " ".join(cn for cn in cncables if cn) + "]"
         if any(ts for ts in tscables if ts):
-            result['tscables'] = '[' + ' '.join(ts for ts in tscables if ts) + ']'
+            result["tscables"] = "[" + " ".join(ts for ts in tscables if ts) + "]"
     if units_val:
-        result['units'] = units_val
+        result["units"] = units_val
     return result
 
 
@@ -1650,28 +1584,34 @@ def rpn_value(text: str) -> str:
     return repr(_eval_rpn(inner))
 
 
-def _resolve_positional(pairs: list[tuple[str | None, str]], element_type: str) -> dict[str, str]:
-    """``{property: value}``: a value with no name goes to the property after the last one given (the first
-    property at the start), in the schema's DSS order, as DSS's parser does. ``{...}`` values are evaluated."""
+def _resolve_positional(
+    pairs: list[tuple[str | None, str]], element_type: str
+) -> tuple[dict[str, str], list[tuple[str, str]]]:
+    """``({property: value}, [(property, value), ...])``: a value with no name goes to the property after the last
+    one given (the first property at the start), in the schema's DSS order, as DSS's parser does."""
     params: dict[str, str] = {}
+    ordered: list[tuple[str, str]] = []
     schema_class = build_type_registry().get(element_type.lower())
+    by_order = {order: slot for slot, order in _property_order(schema_class).items()} if schema_class is not None else {}
     pointer = 0
     for key, value in pairs:
-        if value.strip().startswith("{") and value.strip().endswith("}"):
-            value = rpn_value(value)
         if key is not None:
+            params.pop(key, None)
             params[key] = value
+            ordered.append((key, value))
             if schema_class is not None:
                 pointer = _property_order(schema_class).get(get_class_map(schema_class).field_for(key), pointer)
             continue
         if schema_class is None or element_type.lower() in _BLOCK_CLASSES:
             raise ValueError(f"{element_type}: the positional value {value!r} is not read on this class")
         pointer += 1
-        by_order = {order: slot for slot, order in _property_order(schema_class).items()}
         if pointer not in by_order:
             raise ValueError(f"{element_type}: positional value {value!r} is past the last property")
-        params[by_order[pointer]] = value
-    return params
+        slot = by_order[pointer]
+        params.pop(slot, None)
+        params[slot] = value
+        ordered.append((slot, value))
+    return params, ordered
 
 
 @functools.cache

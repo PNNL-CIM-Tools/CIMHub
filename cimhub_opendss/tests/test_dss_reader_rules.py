@@ -233,6 +233,7 @@ def test_block_comments_and_open_match_the_engine(tmp_path):
     deck.write_text(BLOCKS_AND_OPENS)
     model = DssReader(deck).read_all()
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(f"Redirect [{deck}]")
     assert [load.name for load in model.list_by_class(schema.Load)] == dss.Loads.AllNames()
     engine = []
@@ -277,6 +278,7 @@ def test_positional_values_match_the_engine(tmp_path):
     deck.write_text(POSITIONAL)
     codes = {code.name: code for code in DssReader(deck).read_all().list_by_class(schema.Linecode)}
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(f"Redirect [{deck}]")
     for name, code in codes.items():
         dss.LineCodes.Name(name)
@@ -311,6 +313,7 @@ def test_winding_scalars_match_the_engine(tmp_path, text):
     # on a 2-winding transformer kVA sets both
     xf = only(read(tmp_path, f"New Circuit.c bus1=src\nNew Transformer.t {text}\n"), schema.Transformer)
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command("New Circuit.c bus1=src")
     dss.Text.Command(f"New Transformer.t {text}")
     dss.Transformers.Name("t")

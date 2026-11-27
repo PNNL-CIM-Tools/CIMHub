@@ -19,6 +19,8 @@ CONNECTION = "PowerElectronicsConnection"
 
 def max_fault_current(vminpu: float) -> float:
     """``maxIFault`` (per unit of rated current) of an inverter that holds its power down to ``vminpu``."""
+    if vminpu <= 0:
+        raise ValueError(f"Vminpu={vminpu} must be positive")
     return 1 / vminpu
 
 
@@ -38,7 +40,7 @@ def connection_row(prefix: str, device, terminal: DeviceTerminal, *, kva: float,
     return Row([
         mrid(prefix, device.name, lowercase=True), str(device.name), terminal.bus, phases_cell(terminal.phases),
         terminal.connection, cell(kva), cell(line_kv(float(device.kv), terminal)), cell(p + 0.0), cell(q + 0.0),
-        cell(kvar_max), cell(-kvar_max_abs), cell(max_fault_current(float(device.Vminpu))), cell(device.enabled),
+        cell(kvar_max), cell(-kvar_max_abs + 0.0), cell(max_fault_current(float(device.Vminpu))), cell(device.enabled),
         terminal.system.base_voltage,
     ], comment=comment)
 

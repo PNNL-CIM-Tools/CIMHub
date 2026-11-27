@@ -81,14 +81,17 @@ def export(context) -> list:
 
 def _record(wire: cim.WireInfo, names: Names):
     values = get_wire_info(wire, UNIT, f"ohm/{UNIT}")
-    if values.r_dc20 is None and values.r_ac25 is None:
-        raise ValueError(f"{describe(wire)}: rDC20 and rAC25 are unset; DSS needs a resistance")
+    if values.r_ac25 is not None and values.r_ac50 is not None:
+        raise ValueError(f"{describe(wire)}: sets both rAC25 and rAC50; DSS takes one Rac")
+    rac = values.r_ac25 if values.r_ac25 is not None else values.r_ac50
+    if values.r_dc20 is None and rac is None:
+        raise ValueError(f"{describe(wire)}: rDC20, rAC25 and rAC50 are unset; DSS needs a resistance")
     if values.radius is None:
         raise ValueError(f"{describe(wire)}: radius is unset")
     native = NATIVE[values.kind]
     slots = dict(
         name=wire_name(wire, names),
-        Rdc=values.r_dc20, Rac=values.r_ac25, Runits=UNIT,
+        Rdc=values.r_dc20, Rac=rac, Runits=UNIT,
         GMRac=values.gmr, GMRunits=UNIT,
         radius=values.radius, radunits=UNIT,
         normamps=values.limits.normal if values.limits.normal is not None else values.rated_current,

@@ -160,7 +160,7 @@ def battery_dispatch(name: str, assignments: Iterable[tuple[str, object]], *, kw
 
     The engine checks the stored energy against full and the reserve when the state is assigned, with the energy of
     that moment, so an energy assigned after the last State or kW raises (no deck in the sweep does it)."""
-    state, discharge, charge, note, energy_after = "idling", None, None, None, None
+    state, discharge, charge, note, energy_after, state_set = "idling", None, None, None, None, False
     for slot, value in assignments:
         if slot in _ENERGY:
             energy_after = slot
@@ -173,10 +173,11 @@ def battery_dispatch(name: str, assignments: Iterable[tuple[str, object]], *, kw
                 discharge = kw
             elif kw < 0:
                 charge = -kw
-            note = f"kW={kw:g} after State={state}: {by_kw}" if by_kw != state else note
+            if state_set and by_kw != state:
+                note = f"kW={kw:g} after State={state}: {by_kw}"
             state = by_kw
         elif slot == "State":
-            state, note = engine_state(value, name=name), None
+            state, note, state_set = engine_state(value, name=name), None, True
         elif slot == "pct_Discharge":
             discharge = None
         elif slot == "pct_Charge":
@@ -276,7 +277,7 @@ def map_storage(native, buses: Mapping[str, BusSystem], container: str) -> Docum
                              comment="\n".join(note for note in notes if note) or None)
         connections.append(row)
         units.append(Row([unit_id(PREFIX, battery), cell(rated), cell(stored), cell(minimum), cell(kw_rated),
-                          cell(-kw_rated), cell(float(battery.pct_EffCharge)), cell(float(battery.pct_EffDischarge)),
+                          cell(-kw_rated + 0.0), cell(float(battery.pct_EffCharge)), cell(float(battery.pct_EffDischarge)),
                           cell(idling_kw), dispatch.state, row.cells[0]]))
         if loadshape.device_shape(native, original, f"Storage {battery.name}") is not None:
             schedules.append(loadshape.device_schedule_row(row.cells[0], battery))

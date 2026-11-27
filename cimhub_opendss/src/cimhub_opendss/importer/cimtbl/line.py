@@ -150,7 +150,7 @@ _GEOMETRY_ARRAYS = ("wires", "cncables", "tscables")
 _UNMAPPED = tuple(slot for slot, field in FIELDS.items() if field.note.startswith(_NOT_MAPPED))
 #: Slots a switch has no home for; they are listed on its row (DSS-8).
 _SWITCH_DROPPED = ("linecode", "geometry", "spacing", *_GEOMETRY_ARRAYS, "length", "units", *_INLINE_SLOTS,
-                   "basefreq", "normamps", "emergamps")
+                   "basefreq", "normamps", "emergamps", "rho")
 _PHASE_OF_NODE = {1: "A", 2: "B", 3: "C"}
 _SPLIT_PHASE_OF_NODE = {1: "s1", 2: "s2"}
 #: The engine reads the length of a geometry line with no units in metres (checked against the engine).
@@ -173,6 +173,8 @@ def reclose(recloser) -> Reclose:
     keeps the first Shots - 1 intervals, and giving intervals sets Shots, so both given must agree."""
     defaults = dss_defaults(schema.Recloser)
     shots, intervals = recloser.Shots, recloser.RecloseIntervals or None
+    if shots is not None and int(shots) < 1:
+        raise ValueError(f"Recloser {recloser.name}: Shots={shots} must be >= 1")
     if shots is not None and intervals is not None and shots - 1 != len(intervals):
         raise ValueError(f"Recloser {recloser.name}: Shots={shots} with {len(intervals)} RecloseIntervals; the "
                          "engine's result depends on their order")
@@ -180,6 +182,8 @@ def reclose(recloser) -> Reclose:
         return Reclose(tuple(float(interval) for interval in intervals), None)
     defaulted = [] if shots is not None else [f"Shots={defaults['Shots']}"]
     shots = shots if shots is not None else defaults["Shots"]
+    if shots == 1:
+        return Reclose((), "defaulted: " + ", ".join(defaulted) if defaulted else None)
     if shots - 1 > len(defaults["RecloseIntervals"]):
         raise ValueError(f"Recloser {recloser.name}: Shots={shots} without RecloseIntervals; the engine has "
                          f"{len(defaults['RecloseIntervals'])} default intervals and reads past them")
@@ -242,7 +246,7 @@ def switch_controls(native) -> dict[str, SwitchControl]:
             cim_class = classes.get(native_class)
             if cim_class and old.cim_class != "LoadBreakSwitch" and old.cim_class != cim_class:
                 raise ValueError(f"Line {key}: switched by a {old.cim_class} and a {cim_class}")
-            rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent else None
+            rated = float(control.RatedCurrent) if native_class is schema.Fuse and control.RatedCurrent is not None else None
             recloses = reclose(control) if native_class is schema.Recloser else None
             result[key] = SwitchControl(cim_class or old.cim_class, _merged(key, "ratedCurrent", old.rated_current, rated),
                                         _merged(key, "Normal", old.normal_open, _is_open(control, "Normal")),
@@ -288,7 +292,12 @@ def line_phases(line, phases: int, buses: Mapping[str, BusSystem], *, label: str
         bus, given = parse_bus(spec)
         if bus not in buses:
             raise ValueError(f"{label}: bus {bus} has no voltage (the topology walk did not reach it)")
+        extra = [node for node in given[phases:] if node != 0]
+        if extra:
+            raise ValueError(f"{label}: bus {spec} gives {len(given)} nodes for {phases} phase(s)")
         nodes = (given + tuple(range(len(given) + 1, phases + 1)))[:phases]
+        if len(set(nodes)) != len(nodes):
+            raise ValueError(f"{label}: bus {spec} repeats a phase node in {nodes}")
         names = _SPLIT_PHASE_OF_NODE if buses[bus].system is System.SPLIT_PHASE else _PHASE_OF_NODE
         unknown = [node for node in nodes if node not in names]
         if unknown:
@@ -556,10 +565,11 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
             code = codes.get(str(line.linecode).lower())
             if code is None:
                 raise ValueError(f"Line {line.name}: linecode={line.linecode} is no LineCode")
-            phases = line.phases if line.phases is not None else code.nphases
-            if phases != code.nphases:
+            code_phases = 3 if code.nphases is None else int(code.nphases)
+            phases = line.phases if line.phases is not None else code_phases
+            if phases != code_phases:
                 raise ValueError(f"Line {line.name}: phases={phases} with LineCode {code.name} (nphases="
-                                 f"{code.nphases}); the engine's rule is not pinned yet (DSS-10)")
+                                 f"{code_phases}); the engine's rule is not pinned yet (DSS-10)")
             own_unit = _units(line)
             choices = code_templates[str(code.name).lower()]
             template = choices[0] if len(choices) == 1 else next(t for t in choices if t.unit == own_unit)
@@ -577,8 +587,8 @@ def map_line(native, buses: Mapping[str, BusSystem], container: str, *, base_fre
                 raise ValueError(f"Line {line.name}: phases={phases} with {kind} {source.name} (nphases="
                                  f"{source.nphases})")
             neutrals = source.nconds - source.nphases
-            if neutrals > 1:
-                raise ValueError(f"Line {line.name}: {kind} {source.name} has {neutrals} neutral conductors; one is "
+            if neutrals < 0 or neutrals > 1:
+                raise ValueError(f"Line {line.name}: {kind} {source.name} has {neutrals} neutral conductors; 0 or 1 is "
                                  "mapped")
             bus1, bus2, letters = line_phases(line, phases, buses)
             unit = _units(line)

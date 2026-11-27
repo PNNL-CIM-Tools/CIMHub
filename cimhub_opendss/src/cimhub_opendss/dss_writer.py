@@ -11,6 +11,8 @@ from dataclasses import fields, is_dataclass
 from enum import IntEnum
 from pathlib import Path
 
+from linkml_runtime.utils.metamodelcore import Bool
+
 from cimhub_core import GraphModel
 from cimhub_core.base import FormatWriter
 from cimhub_core.serialization import get_schema_annotations
@@ -24,16 +26,16 @@ _MEANING_INT_RE = re.compile(r'\.(\d+)$')
 # Characters OpenDSS cannot carry inside an object name or a reference to one.
 # A space ends the token, so "Cable_2P_1C_2GA_CU BSD" is parsed as a name plus a
 # stray property and raises "Invalid inline math entry"; the bracket, quote, and
-# brace characters are array/expression delimiters.  Names converted from other
-# formats do contain these (a cable catalog entry such as "3P_1C_500KCM_CU-<NULL>"),
-# so sanitizing is not optional.
+# brace characters are array/expression delimiters; "!" and "//" start inline
+# comments.  Names converted from other formats do contain these (a cable
+# catalog entry such as "3P_1C_500KCM_CU-<NULL>"), so sanitizing is not optional.
 #
 # Applied in the writer rather than in the ~20 converter modules because a name
 # is written in three places (the "new Class.NAME" prefix, a nested-dataclass
 # reference, and strings the converters build such as bus1= and
 # SwitchedObj=f"Line.{name}").  One rule here keeps a definition and every
 # reference to it spelled the same way; sanitizing per-converter would not.
-_DSS_UNSAFE_RE = re.compile(r'[\s"\'<>\[\]{}(),=~|]+')
+_DSS_UNSAFE_RE = re.compile(r'[\s"\'<>\[\]{}(),=~|!]+|//')
 
 
 #: significant digits of a written float: enough for every deck value, and it clips the binary tails a unit
@@ -43,6 +45,8 @@ FLOAT_DIGITS = 15
 
 def format_float(value: float) -> str:
     """``value`` to ``FLOAT_DIGITS`` significant digits, the shortest form (``60``, ``0.0018``, ``1e-05``)."""
+    if not math.isfinite(value):
+        raise ValueError(f"DssWriter: non-finite float {value!r}")
     return f"{value:.{FLOAT_DIGITS}g}"
 
 
@@ -106,7 +110,7 @@ _CATALOG_KINDS = ((schema.Wiredata, "wire"), (schema.Cndata, "cncable"), (schema
 
 
 def _has_positions(obj) -> bool:
-    return isinstance(obj, schema.Linegeometry) and bool(obj.xs)
+    return isinstance(obj, schema.Linegeometry) and bool(obj.xs or obj.hs)
 
 
 def _conductor_kinds(model: GraphModel) -> dict[str, str]:
@@ -136,7 +140,7 @@ class DssWriter(FormatWriter):
     # FormatWriter interface
     # ------------------------------------------------------------------
 
-    def write(self, model: GraphModel, destination: str, *, per_class: bool = False) -> None:
+    def write(self, model: GraphModel, destination: str | Path, *, per_class: bool = False) -> None:
         """Write *model* to the deck *destination* (a ``.dss`` path), in this order: ``Clear``; ``Set
         defaultbasefreq``; ``New Circuit``; ``Set earthmodel``; the records in ``WRITE_ORDER``; ``Set voltagebases`` and
         ``CalcVoltageBases``; one ``Open`` per open terminal; ``Buscoords``/``LatLongCoords`` naming the coordinates
@@ -145,9 +149,9 @@ class DssWriter(FormatWriter):
         ``per_class`` writes each class's records to its own file beside the deck (``linecode.dss``, ``line.dss``,
         ...), which *destination* (the master) ``Redirect``s in ``WRITE_ORDER``."""
         destination = Path(destination)
-        destination.parent.mkdir(parents=True, exist_ok=True)
         options = self._options(model)
-        unknown = [cls.__name__ for cls in model.graph if cls not in WRITE_ORDER and cls not in _DECK_RECORDS]
+        unknown = [cls.__name__ for cls, bucket in model.graph.items()
+                   if bucket and cls not in WRITE_ORDER and cls not in _DECK_RECORDS]
         if unknown:
             raise ValueError(f"DssWriter: no write order for {sorted(unknown)}")
         lines = ["Clear"]
@@ -157,6 +161,7 @@ class DssWriter(FormatWriter):
         if getattr(options, "earthmodel", None) is not None:
             lines.append(self._set(options, "earthmodel"))  # the engine needs a circuit first
         kinds = _conductor_kinds(model)
+        class_files: list[tuple[Path, list[str]]] = []
         for cls in WRITE_ORDER:
             check_safe_names(model.list_by_class(cls))
             commands = [self._geometry(obj, kinds) if _has_positions(obj) else self.serialize(obj)
@@ -171,13 +176,19 @@ class DssWriter(FormatWriter):
             if class_file.name == destination.name.lower():
                 raise ValueError(f"DssWriter: the master {destination.name} would be overwritten by the "
                                  f"{cls.__name__} file; name it otherwise")
-            class_file.write_text("\n".join(commands) + "\n", encoding="utf-8")
+            class_files.append((class_file, commands))
             lines.append(f"Redirect {class_file.name}")
         if options is not None and options.voltagebases:
             lines += [self._set(options, "voltagebases"), "CalcVoltageBases"]
         for terminal in (options.open_terminals if options is not None else None) or []:
-            lines.append(f"Open {terminal}")
-        lines += self._write_coordinates(model, destination)
+            lines.append(f"Open {self._format_open_terminal(terminal)}")
+        coord_files, coord_commands = self._prepare_coordinates(model, destination)
+        lines += coord_commands
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        for class_file, commands in class_files:
+            class_file.write_text("\n".join(commands) + "\n", encoding="utf-8")
+        for coord_path, text in coord_files:
+            coord_path.write_text(text, encoding="utf-8")
         destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def serialize(self, obj) -> str:
@@ -197,7 +208,7 @@ class DssWriter(FormatWriter):
         ordered = sorted(
             (f for f in fields(obj) if f.name not in ('name', 'like', *skip)),
             key=lambda f: _LEADING_SLOTS.index(f.name) - len(_LEADING_SLOTS) if f.name in _LEADING_SLOTS
-            else schema_annots.get(f.name, {}).get('order', 9999),
+            else int(schema_annots.get(f.name, {}).get('order', 9999)),
         )
         parts, per_winding = [], []
         for f in ordered:
@@ -206,7 +217,8 @@ class DssWriter(FormatWriter):
                 continue
             field_annots = schema_annots.get(f.name, {})
             if f.name in _PER_WINDING_SLOTS and value:
-                per_winding += [f"wdg={number} {f.name}={format_float(float(item))}"
+                dss_name = field_annots.get('dss_name', f.name)
+                per_winding += [f"wdg={number} {dss_name}={format_float(float(item))}"
                                 for number, item in enumerate(value, start=1)]
                 continue
             formatted = self._format_value(value, field_annots)
@@ -246,7 +258,7 @@ class DssWriter(FormatWriter):
         """``New Circuit.<Options.circuit>`` with the slots of ``Vsource.source``, or nothing for a fragment (a
         catalog deck the reader also reads without a circuit); one without the other raises."""
         sources = [obj for obj in model.list_by_class(schema.Vsource) if str(obj.name).lower() == CIRCUIT_SOURCE]
-        circuit = options.circuit if options is not None else None
+        circuit = options.circuit if options is not None and options.circuit else None
         if not sources and circuit is None:
             return []
         if not sources or circuit is None:
@@ -255,20 +267,33 @@ class DssWriter(FormatWriter):
         return [" ".join([f"New Circuit.{dss_safe_name(str(circuit))}", *self._properties(sources[0])])]
 
     @staticmethod
-    def _write_coordinates(model: GraphModel, destination: Path) -> list[str]:
-        """Write the ``Buscoords`` rows beside the deck, one file per kind; the commands that read them."""
-        commands = []
+    def _format_open_terminal(terminal: str) -> str:
+        """Sanitize the ``Class.name`` target in an ``Open <Class.name> <terminal>`` entry."""
+        text = str(terminal).strip()
+        if " " not in text:
+            return dss_safe_name(text)
+        target, term = text.rsplit(" ", 1)
+        return f"{dss_safe_name(target)} {term}"
+
+    @staticmethod
+    def _prepare_coordinates(model: GraphModel, destination: Path) -> tuple[list[tuple[Path, str]], list[str]]:
+        """Format the ``Buscoords`` rows beside the deck, one file per kind; the file payloads and commands."""
+        files, commands = [], []
         for geographic, command, suffix in ((False, "Buscoords", "buscoords"), (True, "LatLongCoords", "latlongcoords")):
             rows = [row for row in model.list_by_class(schema.Buscoords) if bool(row.geographic) == geographic]
             if not rows:
                 continue
+            lines = []
+            for row in rows:
+                if row.x is None or row.y is None:
+                    raise ValueError(f"DssWriter: Buscoords {row.name!r} has unset coordinate (x={row.x!r}, y={row.y!r})")
+                bus = dss_safe_name(str(row.name))
+                lines.append(f"{bus}, {row.y!r}, {row.x!r}\n" if geographic else f"{bus}, {row.x!r}, {row.y!r}\n")
             path = destination.with_name(f"{destination.stem}_{suffix}.csv")
-            # LatLongCoords files are lat, long: y first (the reader swaps them back)
-            text = "".join(f"{row.name}, {row.y!r}, {row.x!r}\n" if geographic else f"{row.name}, {row.x!r}, {row.y!r}\n"
-                           for row in rows)
-            path.write_text(text, encoding="utf-8")
-            commands.append(f"{command} {path.name}")
-        return commands
+            files.append((path, "".join(lines)))
+            filename = f'"{path.name}"' if _DSS_UNSAFE_RE.search(path.name) else path.name
+            commands.append(f"{command} {filename}")
+        return files, commands
 
     # ------------------------------------------------------------------
     # DSS-specific value formatting
@@ -282,8 +307,8 @@ class DssWriter(FormatWriter):
         """
         field_annots = field_annots or {}
 
-        # Boolean: must come before int since bool subclasses int
-        if isinstance(value, bool):
+        # Boolean: must come before int since bool and LinkML Bool subclass int
+        if isinstance(value, (bool, Bool)):
             return 'Yes' if value else 'No'
 
         # IntEnum (e.g. old-style LoadModel)
@@ -317,9 +342,9 @@ class DssWriter(FormatWriter):
                 return DssWriter._format_matrix(list(value))
             # Members are often object names (wires=[...], conns=[...]), so
             # they need the same sanitizing a bare name reference gets.
-            return '[' + ' '.join(
-                dss_safe_name(v) if isinstance(v, str) else DssWriter._format_value(v) for v in value
-            ) + ']'
+            items = [dss_safe_name(v) if isinstance(v, str) else DssWriter._format_value(v) for v in value]
+            items = [item for item in items if item is not None]
+            return '[' + ' '.join(items) + ']' if items else None
 
         # Nested dataclass -> reference by name
         if is_dataclass(value) and not isinstance(value, type):
@@ -333,8 +358,11 @@ class DssWriter(FormatWriter):
         # (per_length_impedance) hand back an already-formatted "[a |b c]" string
         # rather than a list, and sanitizing that ate the brackets and row
         # separators -- silently zeroing every line impedance in the model.
-        if isinstance(value, str) and field_annots.get('dss_format') != 'matrix':
-            return dss_safe_name(value)
+        if isinstance(value, str):
+            if not value:
+                return None
+            if field_annots.get('dss_format') != 'matrix':
+                return dss_safe_name(value)
 
         if isinstance(value, float):
             return format_float(value)
@@ -348,6 +376,8 @@ class DssWriter(FormatWriter):
         Output: [l11 |l21 l22 |l31 l32 l33]
         """
         n = int((-1 + math.sqrt(1 + 8 * len(values))) / 2)
+        if n < 1 or n * (n + 1) // 2 != len(values):
+            raise ValueError(f"DssWriter: matrix has {len(values)} entries, not a lower triangle")
         parts = []
         idx = 0
         for row in range(1, n + 1):

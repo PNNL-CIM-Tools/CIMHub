@@ -23,6 +23,7 @@ from cimhub_core.getters import describe
 from cimhub_core.getters.device_schedule import DeviceSchedule, get_device_schedule
 from cimhub_core.getters.load_schedule import get_schedule_points
 from cimhub_core.names import export_name
+from cimhub_opendss.dss_writer import dss_safe_name
 from cimhub_opendss.schema import opendss_schema as schema
 
 CIM_CLASSES = ()  # a schedule is not conducting equipment
@@ -51,13 +52,18 @@ class ShapeRegistry:
     def claim(self, names, owner, seconds: float, mult: list[float],
               qmult: list[float] | None = None) -> tuple[str, schema.Loadshape | None]:
         """The name of the LoadShape that gives ``owner``'s points, and its record when it is new."""
-        base = export_name(owner, names.source).lower()
+        base = dss_safe_name(export_name(owner, names.source)).lower()
         content = (base, seconds, tuple(mult), tuple(qmult or ()))
         if content in self.by_content:
             name, record = self.by_content[content], None
         else:
-            taken = sum(1 for key in self.by_content if key[0] == base)
-            name = names.name(owner, NAMESPACE, suffix=f"_{taken + 1}" if taken else "")
+            used = {existing.lower() for existing in self.by_content.values()}
+            suffix = ""
+            n = 2
+            while dss_safe_name(export_name(owner, names.source) + suffix).lower() in used:
+                suffix = f"_{n}"
+                n += 1
+            name = names.name(owner, NAMESPACE, suffix=suffix)
             self.by_content[content] = name
             record = NATIVE_CLASS(name=name, npts=len(mult), sinterval=seconds, mult=mult, qmult=qmult)
         self.by_owner[owner.uri()] = name
@@ -70,15 +76,24 @@ def shape_name(context, schedule) -> str:
 
 
 def export(context) -> list[schema.Loadshape]:
-    """One LoadShape per ConformLoadSchedule with points (shared when two agree, ``ShapeRegistry``)."""
+    """One LoadShape per non-recurring ConformLoadSchedule with points (shared when two agree, ``ShapeRegistry``)."""
     shapes = []
     for schedule in context.objects(cim.ConformLoadSchedule):
+        if schedule.Season is not None or schedule.DayType is not None:
+            continue
         points = get_schedule_points(schedule, context.points)
         if points is None:
             continue
-        for unit in (schedule.value1Unit, schedule.value2Unit if points.value2 is not None else None):
+        if schedule.ConformLoadGroup is None:
+            raise ValueError(f"{describe(schedule)}: ConformLoadGroup is unset")
+        checks = [(schedule.value1Unit, schedule.value1Multiplier)]
+        if points.value2 is not None:
+            checks.append((schedule.value2Unit, schedule.value2Multiplier))
+        for unit, multiplier in checks:
             if unit not in MULTIPLIER_UNITS:
                 raise ValueError(f"{describe(schedule)}: values in {unit.value}; a conform schedule holds multipliers")
+            if multiplier not in (None, cim.UnitMultiplier.none):
+                raise ValueError(f"{describe(schedule)}: multiplier {multiplier.value}; a conform schedule holds unscaled multipliers")
         seconds = get_qty(schedule, "timeStep", "s")
         if seconds is None or seconds <= 0:
             raise ValueError(f"{describe(schedule)}: timeStep {seconds} s; a LoadShape needs a positive interval")

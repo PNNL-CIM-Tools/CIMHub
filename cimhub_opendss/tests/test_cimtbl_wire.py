@@ -66,6 +66,7 @@ def test_emergamps_alone_rates_the_wire_as_the_engine_does():
     wire = schema.Wiredata(name="w", Rac=0.3, Runits="km", GMRac=0.1, GMRunits="cm", radunits="cm", diam=0.4,
                            emergamps=900)
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command("New Circuit.c basekv=4.16")
     dss.Text.Command("New WireData.w Rac=0.3 Runits=km GMRac=0.1 GMRunits=cm diam=0.4 radunits=cm emergamps=900")
     dss.Text.Command("? WireData.w.normamps")

@@ -79,7 +79,7 @@ def _shape(context, consumer, static: set) -> str | None:
     found = get_load_schedule(consumer)
     if found is None:
         return None
-    if found.conform and found.schedule is not None and found.schedule.uri() in context.points:
+    if found.conform and found.schedule is not None and found.group.uri() in context.shapes.by_owner:
         return loadshape.shape_name(context, found.schedule)
     static.add(str(found.group.name or found.group.mRID))
     return None

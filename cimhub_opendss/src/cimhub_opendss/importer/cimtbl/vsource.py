@@ -99,12 +99,16 @@ def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: f
     """The Thevenin impedance of a source given by short-circuit power (``VSource.pas`` ``RecalcElementData``):
     kV and MVA give ohm, kV and kVA give kohm.
 
-    X1 = kV² / MVAsc3 / √(1 + 1/x1r1²), R1 = X1 / x1r1. R0 is the positive root of
+    R1 = kV² / MVAsc3 / √(1 + x1r1²), X1 = R1 x1r1. R0 is the positive root of
     (1 + x0r0²) R0² + 4 (R1 + X1 x0r0) R0 + 4 (R1² + X1²) − (3 kV² / MVAsc1)² = 0, and X0 = R0 x0r0:
     the 1-phase fault current through 2 Z1 + Z0.
     """
-    x1 = kv ** 2 / mvasc3 / math.sqrt(1 + 1 / x1r1 ** 2)
-    r1 = x1 / x1r1
+    if kv <= 0 or mvasc3 <= 0 or mvasc1 <= 0:
+        raise ValueError(f"kv={kv}, MVAsc3={mvasc3}, MVAsc1={mvasc1} must all be positive")
+    if x1r1 < 0 or x0r0 < 0:
+        raise ValueError(f"x1r1={x1r1}, x0r0={x0r0} must be non-negative")
+    r1 = kv ** 2 / mvasc3 / math.sqrt(1 + x1r1 ** 2)
+    x1 = r1 * x1r1
     a = 1 + x0r0 ** 2
     b = 4 * (r1 + x1 * x0r0)
     c = 4 * (r1 ** 2 + x1 ** 2) - (3 * kv ** 2 / mvasc1) ** 2
@@ -112,6 +116,8 @@ def thevenin_from_short_circuit(kv: float, mvasc3: float, mvasc1: float, x1r1: f
     if discriminant < 0:
         raise ValueError(f"MVAsc1={mvasc1} at {kv} kV gives no real R0 for MVAsc3={mvasc3}, x0r0={x0r0}")
     r0 = (-b + math.sqrt(discriminant)) / (2 * a)
+    if r0 < 0:
+        raise ValueError(f"MVAsc1={mvasc1} at {kv} kV gives negative R0={r0:g} for MVAsc3={mvasc3}, x0r0={x0r0}")
     return Thevenin(r1, x1, r0, r0 * x0r0)
 
 
@@ -135,6 +141,8 @@ def impedance_group(source) -> str:
                          "whichever was set last, which the reader does not record")
     if groups == ["ohms"] and any(getattr(source, slot) is None for slot in IMPEDANCE_GROUPS["ohms"]):
         raise ValueError(f"Vsource {source.name}: sets only part of R1, X1, R0, X0")
+    if groups == ["Isc"] and any(getattr(source, slot) is None for slot in ("Isc3", "Isc1")):
+        raise ValueError(f"Vsource {source.name}: sets only part of Isc3, Isc1")
     return groups[0] if groups else "MVAsc"
 
 
@@ -165,7 +173,9 @@ def _phases(source) -> tuple[str, str]:
     if source.phases == 3 and phase_nodes in ((), (1, 2, 3)):
         return bus, "ABC"
     if source.phases == 1 and len(phase_nodes) <= 1:
-        return bus, _NODE_PHASE[phase_nodes[0] if phase_nodes else 1]
+        node = phase_nodes[0] if phase_nodes else 1
+        if node in _NODE_PHASE:
+            return bus, _NODE_PHASE[node]
     raise ValueError(f"Vsource {source.name}: phases={source.phases} on {source.bus1}; only a 3-phase source "
                      "on nodes 1.2.3 or a 1-phase source on one of 1, 2, 3 is mapped")
 

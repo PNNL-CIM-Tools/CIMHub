@@ -69,6 +69,8 @@ Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#capacitor"""
 def b_per_section(kvar: float, kv: float) -> float:
     """Susceptance of one section rated ``kvar`` at ``kv``: nomQ / nomU^2 (total kvar on the LL kV of a 3-phase
     bank, a unit's kvar on its own kV otherwise). kVAr and kV give mS, the column's unit."""
+    if kv <= 0:
+        raise ValueError(f"Capacitor kv={kv} must be positive")
     return kvar / kv ** 2
 
 
@@ -79,9 +81,11 @@ def _check(capacitor) -> None:
         raise ValueError(f"Capacitor {capacitor.name}: {', '.join(unmapped + series)} not mapped yet (no deck "
                          "in the sweep sets them)")
     steps = len(capacitor.kvar or [None])
-    if (capacitor.Numsteps or 1) > 1 or steps > 1:
-        raise ValueError(f"Capacitor {capacitor.name}: {max(steps, capacitor.Numsteps or 1)} steps; only one "
-                         "section is mapped")
+    if (capacitor.Numsteps is not None and capacitor.Numsteps != 1) or steps > 1:
+        raise ValueError(f"Capacitor {capacitor.name}: {max(steps, capacitor.Numsteps if capacitor.Numsteps is not None else 1)} "
+                         "steps; only one section is mapped")
+    if capacitor.states and (len(capacitor.states) != 1 or int(capacitor.states[0]) not in (0, 1)):
+        raise ValueError(f"Capacitor {capacitor.name}: states={capacitor.states}; one 0/1 step state is mapped")
 
 
 def map_capacitor(native, buses: Mapping[str, BusSystem], container: str) -> Document:

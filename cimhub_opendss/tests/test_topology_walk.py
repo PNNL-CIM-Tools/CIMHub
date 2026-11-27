@@ -62,6 +62,7 @@ def _against_engine(path: Path) -> tuple[dict, set[str]]:
     """
     buses = _walk(path)
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(f"Compile [{path.resolve()}]")
     bases_ln = [kv / math.sqrt(3) for kv in dss.Settings.VoltageBases()]
     differ, squashed = {}, set()

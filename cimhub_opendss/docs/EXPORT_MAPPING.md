@@ -241,8 +241,8 @@ puts catalogs before lines and controls after them. `options_record` fills `open
     - CN: `neutralStrandCount`, `neutralStrandRadius`, `neutralStrandGmr`, `neutralStrandRDC20`;
     - TS: `tapeThickness`, `tapeLap`.
 
-    Unset is None. Any other WireInfo subclass raises. A set `rAC50`/`rAC75` raises: only rAC25 is read until a
-    producer writes the others.
+    Unset is None. Any other WireInfo subclass raises. `rAC50` is read into `Rac` when `rAC25` is unset (setting both
+    `rAC25` and `rAC50` raises); a set `rAC75` raises.
   - **`get_configuration_wires(configuration) -> tuple[(sequence_number, WireInfo), ...]`.** These are the
     `WireSequenceConfiguration`s in sequence-number order. A repeated or missing number raises.
 - **`getters/line_impedance.py`**, code-level getters (B5): `get_phase_impedance_code(code, impedance_unit,
@@ -1471,7 +1471,8 @@ connection the way the old GDM exporter did:
 - **Per phase (E8, P4):** a connection with one unit and unequal phases gives one 1-phase device per phase,
   `<name>_<phase>`. Each is a 1/n share of the connection and of the unit's own ratings (Pmpp, kWrated, the
   energies, idlingP). Several units with unequal phases raise, and so does a delta inverter with unequal phases.
-- A unit of another class (a PowerElectronicsWindUnit) raises: DSS has no class for it.
+- A unit of another class outside `PhotoVoltaicUnit`, `BatteryUnit`, and `PowerElectronicsWindUnit` raises: DSS has no
+  class for it.
 
 Each piece's inverter slots:
 
@@ -1846,7 +1847,7 @@ PositionPoint `sequenceNumber` order and each Terminal's point:
 network's ConnectivityNode order:
 - Equipment without a Location gives none, so a bus no located equipment touches has no coordinates, as on import
   (S5-3).
-- Two points for one bus (rel 1e-9) raise, naming both pieces of equipment.
+- Two points for one bus (rel 1e-4, abs 1e-9) raise, naming both pieces of equipment.
 - **Device points (F8, 2026-11-10):** the importer puts a switch, fuse or transformer at its buses' centroid (S5-8),
   so a device point places only the buses no Terminal point placed. With k of its N buses open, each goes at
   (N · point − Σ placed) / k: a two-terminal device next to one placed bus reflects it across the point, which gives

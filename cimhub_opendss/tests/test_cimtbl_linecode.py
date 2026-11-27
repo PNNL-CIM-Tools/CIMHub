@@ -207,6 +207,7 @@ def test_short_sequence_matrices_match_the_engine():
     for d in network.graph[network.cim.PhaseImpedanceData].values():
         data.setdefault(d.PhaseImpedance.name.lower(), {})[(d.row, d.column)] = d
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(f"Redirect [{(ATOMS / 'short_sequence.dss').resolve()}]")
     for line, code in (("one", "oh-1x_4cu_4cun"), ("two", "oh-2x_4cu_4cun")):
         dss.Lines.Name(line)

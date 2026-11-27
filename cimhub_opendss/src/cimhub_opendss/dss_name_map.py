@@ -51,11 +51,11 @@ def _get_schema_dir() -> Path:
 # YAML loading (cached)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=64)
+@lru_cache(maxsize=None)
 def _load_yaml(yaml_path: Path) -> dict:
     """One schema YAML file; a malformed one raises, naming the file (its classes would otherwise lose their
     ``dss_name`` mappings without a word)."""
-    with open(yaml_path) as f:
+    with open(yaml_path, encoding="utf-8") as f:
         try:
             return yaml.safe_load(f) or {}
         except yaml.YAMLError as error:
@@ -108,10 +108,12 @@ class DssClassMap:
         DSS order, that starts with ``param``. DSS accepts abbreviations that way (``ppm`` is
         ``ppm_antifloat``, ``Vmin`` is ``Vminpu``); the schema's field order is the DSS property order."""
         key = param.lower()
+        if not key:
+            raise ValueError(f"unknown property {param!r} on {self.schema_class.__name__}")
         if key in self.param_to_field:
             return self.param_to_field[key]
         for name, field_name in self.param_to_field.items():
-            if name.startswith(key):
+            if name != "name" and name.startswith(key):
                 return field_name
         raise ValueError(f"unknown property {param!r} on {self.schema_class.__name__}")
 
@@ -288,14 +290,19 @@ def build_type_registry() -> dict[str, type]:
             class_name = getattr(obj, "class_name", attr_name)
             registry[class_name.lower()] = obj
 
+    # Synthetic deck-level dataclasses are not DSS New classes
+    registry.pop("options", None)
+    registry.pop("buscoords", None)
+
     # Known aliases
     vsource = registry.get("vsource")
     if vsource:
         registry["circuit"] = vsource
 
-    # Handle underscore variants (e.g., "tcc_curve")
-    tcc = registry.get("tcc_curve")
+    # Handle underscore variants (e.g., "TCC_Curve")
+    tcc = registry.get("tcccurve") or registry.get("tcc_curve")
     if tcc:
+        registry["tcc_curve"] = tcc
         registry["tcccurve"] = tcc
         registry["tcc curve"] = tcc
 

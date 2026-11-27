@@ -121,14 +121,17 @@ def on_off_target(on: float, off: float, mode: str, *, ptratio: float, ctratio: 
         side = "above" if mode in _ON_ABOVE else "below"
         raise ValueError(f"CapControl {name}: ON {on} is not {side} OFF {off} for a {mode} control")
     scale = {"voltage": ptratio, "currentFlow": ctratio, "reactivePower": 1.0, "timeScheduled": 1.0}[mode]
+    if scale <= 0:
+        raise ValueError(f"CapControl {name}: ratio {scale} must be positive for a {mode} control")
     return Setting(*band_from_on_off(on * scale, off * scale))
 
 
 def _line_phase_count(line, native) -> int:
-    """A line's phases: its own, else its LineCode's or LineGeometry's ``nphases``, else the DSS default 3."""
+    """A line's phases: its own, else its LineCode's, LineGeometry's or LineSpacing's ``nphases``, else 3."""
     if line.phases is not None:
         return int(line.phases)
-    for slot, native_class in (("linecode", schema.Linecode), ("geometry", schema.Linegeometry)):
+    for slot, native_class in (("linecode", schema.Linecode), ("geometry", schema.Linegeometry),
+                               ("spacing", schema.Linespacing)):
         name = getattr(line, slot)
         if name:
             template = {str(t.name).lower(): t for t in native.list_by_class(native_class)}.get(str(name).lower())
@@ -143,6 +146,8 @@ def _monitored(control, native, buses, capacitors) -> tuple[str, str]:
     kind, key = kind.lower(), element.lower()
     terminal = int(control.terminal)
     if kind == "line":
+        if terminal not in (1, 2):
+            raise ValueError(f"CapControl {control.name}: terminal={terminal} on Line {element}; must be 1 or 2")
         lines = {str(line.name).lower(): line for line in native.list_by_class(schema.Line)}
         if key not in lines:
             raise ValueError(f"CapControl {control.name}: element={control.element} is no Line")
@@ -151,6 +156,8 @@ def _monitored(control, native, buses, capacitors) -> tuple[str, str]:
         prefix = line_mapper.SWITCH_PREFIX if line.Switch else line_mapper.PREFIX
         return f"{mrid(prefix, line.name, lowercase=True)}_T{terminal}", phases
     if kind == "capacitor":
+        if terminal != 1:
+            raise ValueError(f"CapControl {control.name}: terminal={terminal} on shunt Capacitor {element}; must be 1")
         if key not in capacitors:
             raise ValueError(f"CapControl {control.name}: element={control.element} is no Capacitor")
         capacitor = capacitors[key]

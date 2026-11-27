@@ -252,7 +252,7 @@ with ON on the wrong side of OFF for its type raises, so the exporter can rebuil
 | `PTratio`, `CTratio` | `ptRatio`, `ctRatio`; default 60 | written when set; a voltage control needs `ptRatio` and a current control needs `ctRatio`, else it raises |
 | `ONsetting`, `OFFsetting` | `targetValue`, `targetDeadband` (derived); defaults 300 and 200 | ON and OFF = target -+ deadband / 2 (`on_off_from_band`), then divided by the ratio; an unset `targetDeadband` raises |
 | `Delay` | `LinearShuntCompensator.aVRDelay (s)` on the update row; default 15 | the shunt's `aVRDelay`; unset: not written |
-| `PTPhase` | `monitoredPhase`: the phase of the monitored terminal's conductor `PTPhase` (default 1); a number past the conductors raises, and `AVG`, `MAX` and `MIN` fail in the reader (`DssParseError`) | the 1-based place of `monitoredPhase` among the monitored equipment's phase conductors |
+| `PTPhase` | `monitoredPhase`: the phase of the monitored terminal's conductor `PTPhase` (default 1); a number past the conductors raises, and `AVG`, `MAX` and `MIN` raise `ValueError` in the mapper | the 1-based place of `monitoredPhase` among the monitored equipment's phase conductors |
 | `enabled` | `RegulatingControl.enabled`, and `controlEnabled` on the update row; default true | the control's `enabled`; the shunt's `controlEnabled` must agree |
 | `VoltOverride`, `Vmax`, `Vmin`, `DelayOFF`, `DeadTime` | untranscribed: no CIM home | not written, so the engine's defaults |
 | `CTPhase`, `VBus`, `UserModel`, `UserData`, `ControlSignal` | raises when set | not written |

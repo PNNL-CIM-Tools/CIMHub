@@ -76,6 +76,10 @@ def _regcontrol(control: cim.TapChangerControl, names: Names) -> schema.Regcontr
     pt_ratio = regulating.pt_ratio
     if pt_ratio is None:
         raise ValueError(f"{describe(control)}: ptRatio is unset; vreg is on the PT secondary")
+    if pt_ratio <= 0:
+        raise ValueError(f"{describe(control)}: ptRatio={pt_ratio}; vreg needs a positive PT ratio")
+    if regulating.target is None:
+        raise ValueError(f"{describe(control)}: targetValue is unset; a RegControl needs vreg")
     return NATIVE_CLASS(
         name=names.name(control, NAMESPACE),
         transformer=transformer_name,
@@ -115,7 +119,12 @@ def _pt_phase(control, monitored, winding, polyphase: bool) -> int | None:
 def _tap_winding(tap: cim.RatioTapChanger, names: Names):
     """``(DSS Transformer name, winding, polyphase)`` of the tap's end."""
     end = tap.TransformerEnd
-    transformer = end.PowerTransformer if isinstance(end, cim.PowerTransformerEnd) else end.AutoTransformer
+    if isinstance(end, cim.PowerTransformerEnd):
+        transformer = end.PowerTransformer
+    elif isinstance(end, cim.AutoTransformerEnd):
+        transformer = end.AutoTransformer
+    else:
+        raise ValueError(f"{describe(tap)}: its end {describe(end)} is not a PowerTransformerEnd or AutoTransformerEnd")
     if transformer is None:
         raise ValueError(f"{describe(tap)}: its end {describe(end)} is on no transformer")
     units = windings.units(transformer)

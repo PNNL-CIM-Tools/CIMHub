@@ -6,8 +6,9 @@ The topology walk runs once (``site``); the master holds the containers, BaseFre
 order of the class parts (DSS_REWRITE_PLAN.md section 2): catalogs before the instances that use them. Each slice
 adds its mappers here. ``buscoords.cimtbl`` is the one ``bound_parts`` part, imported last: it reads the bound
 Terminals of every other part's equipment (S5-2). A DSS class nothing reads is listed by count on the master's
-comment (DSS-11), so nothing disappears silently; a LoadShape no Load names as ``yearly`` is counted there too. The
-yearly shapes' points are not in the artifact but in the caller's ``time_points`` (S8, ``DssImporter``).
+comment (DSS-11), so nothing disappears silently; a LoadShape no Load, PVSystem, Storage or Generator names as
+``yearly`` is counted there too. The yearly shapes' points are not in the artifact but in the caller's ``time_points``
+(S8/S9, ``DssImporter``).
 
 Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#master`` and ``#buses``.
 """
@@ -143,7 +144,7 @@ def map_master(native, parts: list[Document], site: Site, *, name: str, authorit
     """The master document: containers, BaseFrequency, BaseVoltages, then one ``Import`` per non-empty part."""
     mapped = {native_class for native_class, _ in MAPPING_ORDER} | {schema.Options, buscoords.NATIVE_CLASS,
                                                                     *READ_BY_OTHERS}
-    counts = [(cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped]
+    counts = [(cls.__name__, native.count(cls)) for cls in native.graph if cls not in mapped and native.count(cls)]
     if loadshape.unmapped_count(native):
         counts.append((loadshape.NATIVE_CLASS.__name__, loadshape.unmapped_count(native)))  # no Load's yearly
     counts.sort()

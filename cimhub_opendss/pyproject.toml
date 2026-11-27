@@ -30,9 +30,12 @@ classifiers = [
 ]
 dependencies = [
   "cimhub-core>=2.1.0a2,<2.2",
+  "cim-profiles>=0.2.0a8,<0.3",
   "cim-topology>=0.1.2a1,<0.2",
   "cim-tables>=0.1.1a1,<0.2",
+  "linkml-runtime~=1.9.5",
   "pyyaml",
+  "rdflib",
 ]
 
 [project.optional-dependencies]
@@ -49,4 +52,4 @@ time-points = [
 packages = { find = { where = ["src"] } }
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml"]
+"cimhub_opendss.schema" = ["linkml/*.yaml", "linkml/*/*.yaml"]

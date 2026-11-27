@@ -177,6 +177,8 @@ def instance_template(xf, buses: Mapping[str, BusSystem]) -> Template:
             rated_u, base_u = winding.kv, winding.kv / math.sqrt(3) if winding.wye else winding.kv
             rated_s, base_s = winding.kva, winding.kva / 3
         else:
+            if end.bus not in buses:
+                raise ValueError(f"Transformer {xf.name}: bus {end.bus} has no voltage (the topology walk did not reach it)")
             from_node, to_node = winding.nodes
             rated_u = transformer_mapper.coil_rated_u(winding, end.phase_of_node[from_node],
                                                       end.phase_of_node[to_node], buses[end.bus])

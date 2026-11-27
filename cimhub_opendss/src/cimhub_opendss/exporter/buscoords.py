@@ -104,7 +104,8 @@ def _place(found: dict, node, point: tuple[float, float], equipment) -> None:
         found[node.mRID] = (*point, equipment)
         return
     x, y, other = found[node.mRID]
-    if not (math.isclose(x, point[0], rel_tol=POINT_REL_TOL) and math.isclose(y, point[1], rel_tol=POINT_REL_TOL)):
+    if not (math.isclose(x, point[0], rel_tol=POINT_REL_TOL, abs_tol=1e-9)
+            and math.isclose(y, point[1], rel_tol=POINT_REL_TOL, abs_tol=1e-9)):
         raise ValueError(f"bus {node.mRID!r}: {describe(other)} puts it at ({x}, {y}) and {describe(equipment)} at "
                          f"{point}; a DSS bus has one position")
 

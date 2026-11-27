@@ -13,11 +13,10 @@ import cimprofiles.cim18.cim18v17 as cim
 from cimhub_core.derived.control_band import on_off_from_band
 from cimhub_core.getters import describe
 from cimhub_core.getters.control import get_equipment_control
-from cimhub_core.getters.terminals import get_conductor_phases
+from cimhub_core.getters.terminals import get_conductor_phases, get_switch_sides
 from cimhub_opendss.exporter import line, switch
 from cimhub_opendss.exporter.capacitor import capacitor_name
 from cimhub_opendss.exporter.controls import control_enabled, pt_phase
-from cimhub_opendss.exporter.naming import Names
 from cimhub_core.export_slots import Slot, with_default
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -56,7 +55,7 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
 def export(context) -> list[schema.Capcontrol]:
     """One CapControl per RegulatingControl (a TapChangerControl is another class, RegControl's), except a
     machine's own, which its Generator carries (model 3)."""
-    return [_capcontrol(control, context.names) for control in context.objects(*CIM_CLASSES)
+    return [_capcontrol(control, context) for control in context.objects(*CIM_CLASSES)
             if not _machines_own(control)]
 
 
@@ -65,7 +64,8 @@ def _machines_own(control: cim.RegulatingControl) -> bool:
     return len(regulated) == 1 and isinstance(regulated[0], cim.SynchronousMachine)
 
 
-def _capcontrol(control: cim.RegulatingControl, names: Names) -> schema.Capcontrol:
+def _capcontrol(control: cim.RegulatingControl, context) -> schema.Capcontrol:
+    names = context.names
     if control.mode not in TYPE:
         mode = control.mode.value if control.mode is not None else None
         raise ValueError(f"{describe(control)}: mode {mode}; a CapControl is voltage, current, kvar or time")
@@ -79,11 +79,14 @@ def _capcontrol(control: cim.RegulatingControl, names: Names) -> schema.Capcontr
                                          ("reverseTargetDeadband", settings.reverse_deadband)) if value is not None]
     if unmapped:
         raise ValueError(f"{describe(control)}: {unmapped} have no CapControl slot")
+    if settings.target is None:
+        raise ValueError(f"{describe(control)}: targetValue is unset; a CapControl needs ON and OFF")
     if settings.deadband is None:
         raise ValueError(f"{describe(control)}: targetDeadband is unset; a CapControl needs ON and OFF")
     on, off = on_off_from_band(settings.target, settings.deadband, on_above=control.mode in ON_ABOVE)
     ratio = _relay_ratio(control, settings)
-    element, terminal, conductors = _monitored(settings.terminal, names)
+    element, terminal, conductors, single_phase = _monitored(settings.terminal, context)
+    place = pt_phase(control, settings.monitored_phases, conductors)
     return NATIVE_CLASS(
         name=names.name(control, NAMESPACE),
         element=element,
@@ -95,7 +98,7 @@ def _capcontrol(control: cim.RegulatingControl, names: Names) -> schema.Capcontr
         ONsetting=on / ratio,
         OFFsetting=off / ratio,
         Delay=equipment.delay,
-        PTPhase=pt_phase(control, settings.monitored_phases, conductors),
+        PTPhase=1 if single_phase and place is not None else place,
         enabled=control_enabled(control, settings.enabled, equipment.control_enabled),
     )
 
@@ -117,22 +120,43 @@ def _relay_ratio(control: cim.RegulatingControl, settings) -> float:
     if ratio is None:
         raise ValueError(f"{describe(control)}: {attribute} is unset; a {control.mode.value} CapControl setting is on "
                          f"the relay's side")
+    if ratio <= 0:
+        raise ValueError(f"{describe(control)}: {attribute}={ratio}; a {control.mode.value} CapControl needs a "
+                         f"positive ratio")
     return ratio
 
 
-def _monitored(terminal: cim.Terminal, names: Names) -> tuple[str, int, list[cim.SinglePhaseKind]]:
-    """``(element, terminal, phase conductors)`` of the monitored Terminal, as the element's record writes them."""
+def _monitored(terminal: cim.Terminal, context) -> tuple[str, int, list[cim.SinglePhaseKind], bool]:
+    """``(element, terminal, phase conductors, single_phase_element)`` of the monitored Terminal."""
+    names = context.names
     equipment = terminal.ConductingEquipment
+    if terminal.sequenceNumber is None:
+        raise ValueError(f"{describe(terminal)}: has no sequenceNumber")
+    single_phase = False
     if isinstance(equipment, cim.ACLineSegment):
-        element = f"Line.{names.name(equipment, line.NAMESPACE)}"
+        coupled = {seg: group for group in context.coupled.values() for seg in group.lines}
+        if equipment in coupled:
+            if terminal.sequenceNumber == 1:
+                element = f"Line.{names.name(equipment, line.NAMESPACE, suffix='_jumper1')}"
+            elif equipment in coupled[equipment].remainders:
+                element = f"Line.{names.name(equipment, line.NAMESPACE)}"
+            else:
+                element = f"Line.{names.name(equipment, line.NAMESPACE, suffix='_jumper2')}"
+        else:
+            element = f"Line.{names.name(equipment, line.NAMESPACE)}"
+        conductors = [phase for phase in get_conductor_phases(equipment) if phase is not cim.SinglePhaseKind.N]
     elif isinstance(equipment, switch.CIM_CLASSES):
         element = f"Line.{switch.switch_name(equipment, names)}"
+        sides = get_switch_sides(equipment)
+        if terminal.sequenceNumber not in (1, 2):
+            raise ValueError(f"{describe(terminal)}: sequenceNumber {terminal.sequenceNumber} on switch")
+        conductors = [phase for phase in sides[terminal.sequenceNumber - 1] if phase is not cim.SinglePhaseKind.N]
     elif isinstance(equipment, cim.LinearShuntCompensator):
         element = f"Capacitor.{capacitor_name(equipment, names)}"
+        conductors = [phase for phase in get_conductor_phases(equipment) if phase is not cim.SinglePhaseKind.N]
+        single_phase = (equipment.phaseConnection is cim.PhaseShuntConnectionKind.D and len(conductors) == 2) or (
+            len(conductors) == 1)
     else:
         raise ValueError(f"{describe(terminal)}: on {describe(equipment)}; a CapControl monitors a line, a switch or "
                          f"a capacitor")
-    if terminal.sequenceNumber is None:
-        raise ValueError(f"{describe(terminal)}: has no sequenceNumber")
-    conductors = [phase for phase in get_conductor_phases(equipment) if phase is not cim.SinglePhaseKind.N]
-    return element, terminal.sequenceNumber, conductors
+    return element, terminal.sequenceNumber, conductors, single_phase

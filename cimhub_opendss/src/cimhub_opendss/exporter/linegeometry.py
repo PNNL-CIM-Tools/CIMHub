@@ -103,7 +103,8 @@ def line_offset(line: cim.ACLineSegment) -> float:
 
 def geometry_name(configuration: cim.WireConfiguration, offset: float, names: Names) -> str:
     """The DSS name of ``configuration`` at ``offset`` (m), as its record and every Line write it."""
-    suffix = "" if offset == 0 else f"_{round(offset, NAME_DECIMALS)!r}m".replace(".", "p")
+    rounded = round(offset, NAME_DECIMALS) + 0.0
+    suffix = "" if rounded == 0 else f"_{rounded!r}m".replace(".", "p")
     return names.name(configuration, NAMESPACE, suffix=suffix)
 
 
@@ -190,6 +191,8 @@ def coupled_groups(network) -> dict[cim.MultiCircuitGroup, CoupledGroup]:
             continue
         lengths = {line: round(required_qty(line, "length", UNIT), NAME_DECIMALS) for line in lines}
         length = min(lengths.values())
+        if length <= 0:
+            raise ValueError(f"{describe(group)}: coupled line length {length} m must be positive")
         remainders = {line: round(lengths[line] - length, NAME_DECIMALS) for line in lines if lengths[line] > length}
         groups[group] = CoupledGroup(tuple(sorted(lines, key=_lowest_phase_number)), length, remainders, rho)
     return groups
@@ -207,8 +210,11 @@ def group_value(group: cim.MultiCircuitGroup, lines, what: str, value_of):
 def export(context) -> list[schema.Linegeometry]:
     """One LineGeometry per (configuration, offset) over the lines, then one per unused configuration, then one per
     spacing-line owner."""
+    whole = {line for group in context.coupled.values() for line in group.lines if line not in group.remainders}
     first_line = {}
     for line in context.objects(cim.ACLineSegment):
+        if line in whole:
+            continue
         configuration = get_line_geometry(line)
         if configuration is not None:
             first_line.setdefault((configuration, line_offset(line)), line)

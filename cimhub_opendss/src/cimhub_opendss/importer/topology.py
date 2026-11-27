@@ -20,7 +20,9 @@ from typing import NamedTuple
 
 from cimtopology.core import Branch, Coil, Connection, Network, Source, System, Transformer
 
+from cimhub_core.cimtbl import cell
 from cimhub_opendss.importer.cimtbl import vsource as vsource_mapper
+from cimhub_opendss.importer.cimtbl.injection import is_delta
 from cimhub_opendss.importer.cimtbl.transformer import is_split_phase, parse_bus, winding_nodes
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -86,7 +88,7 @@ def _transformer(xf, codes) -> Transformer:
     phases = _slot(xf, code, "phases") or _DSS_DEFAULT_PHASES
     buses = list(xf.buses or [])
     kvs = _slot(xf, code, "kVs") or []
-    conns = [str(conn).lower() for conn in _slot(xf, code, "conns") or []] or ["wye"] * len(buses)
+    conns = [cell(conn) for conn in _slot(xf, code, "conns") or []] or ["wye"] * len(buses)
     count = _slot(xf, code, "windings") or len(buses)
     if not (len(buses) == len(kvs) == len(conns) == count):
         raise ValueError(f"Transformer {xf.name}: windings={count}, buses={buses}, kVs={kvs}, conns={conns}; "
@@ -94,7 +96,7 @@ def _transformer(xf, codes) -> Transformer:
     windings = []
     for number, (spec, kv, conn) in enumerate(zip(buses, kvs, conns), start=1):
         bus, given = parse_bus(spec)
-        windings.append(_Winding(number, bus, winding_nodes(given, phases, conn == "wye", name=xf.name), float(kv)))
+        windings.append(_Winding(number, bus, winding_nodes(given, phases, not is_delta(conn), name=xf.name), float(kv)))
     coils = tuple(_coil(winding, windings, phases, xf.name) for winding in windings)
     return Transformer(f"Transformer.{xf.name}".lower(), coils)
 
@@ -102,6 +104,9 @@ def _transformer(xf, codes) -> Transformer:
 def _coil(winding: _Winding, windings: list[_Winding], phases: int, name: str) -> Coil:
     if phases > 1:
         return Coil(winding.bus, winding.kv, Connection.POLYPHASE, frozenset(winding.nodes[:phases]))
+    if len(set(winding.nodes)) != 2:
+        raise ValueError(f"Transformer {name}: winding {winding.number} on {winding.bus}{winding.nodes} "
+                         "needs two distinct nodes")
     conductors = frozenset(node for node in winding.nodes if node in _PHASE_NODES)
     on_bus = [other for other in windings if other.bus == winding.bus]
     if len(on_bus) > 1 and is_split_phase(on_bus):

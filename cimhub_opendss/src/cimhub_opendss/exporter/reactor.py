@@ -47,7 +47,7 @@ def export(context) -> list[schema.Reactor]:
 def _reactor(compensator: cim.SeriesCompensator, names: Names) -> schema.Reactor:
     data = get_series_compensator(compensator)
     coupled = [name for name, zero, positive in (("r0", data.r0, data.r), ("x0", data.x0, data.x))
-               if zero is not None and not math.isclose(zero, positive)]
+               if zero is not None and not math.isclose(zero, positive, abs_tol=1e-9)]
     if coupled:
         raise ValueError(f"{describe(compensator)}: {coupled} differ from r/x; a DSS Reactor has no mutual coupling")
     if data.varistor_present:

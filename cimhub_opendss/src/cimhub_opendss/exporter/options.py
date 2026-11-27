@@ -72,4 +72,8 @@ def earth_model(network) -> str | None:
     if not found:
         return None
     [model] = found
-    return EARTH_MODELS[model] if model is not None else None
+    if model is None:
+        return None
+    if model not in EARTH_MODELS:
+        raise ValueError(f"EarthModelKind {model.value!r} is not mapped ({sorted(m.value for m in EARTH_MODELS)} are)")
+    return EARTH_MODELS[model]

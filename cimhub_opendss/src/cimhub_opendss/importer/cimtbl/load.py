@@ -11,6 +11,7 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#load``.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 
 from cimtables.document import Column, Document, Row, Table
@@ -112,8 +113,9 @@ Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load"""
 
 def power_from_kva(kva: float, pf: float) -> tuple[float, float]:
     """(kW, kvar) of a load given kVA and pf, as the engine computes them when kW is unset."""
-    kw = kva * abs(pf)
-    return kw, reactive_power(kw, pf)
+    if not (0 <= abs(pf) <= 1):
+        raise ValueError(f"power factor {pf} must satisfy |pf| <= 1")
+    return kva * abs(pf), kva * math.copysign(math.sin(math.acos(abs(pf))), pf)
 
 
 def exponential_mrid(p_exponent: float, q_exponent: float) -> str:
@@ -129,6 +131,9 @@ def _check(load) -> None:
         raise ValueError(f"Load {load.name}: {', '.join(unmapped)} not mapped yet (no deck in the sweep sets them)")
     if load.kW is not None and load.kVA is not None:
         raise ValueError(f"Load {load.name}: kW with kVA; the engine takes whichever comes last, and the record "
+                         "keeps no order")
+    if load.kVA is not None and load.kvar is not None:
+        raise ValueError(f"Load {load.name}: kVA with kvar; the engine takes whichever comes last, and the record "
                          "keeps no order")
     if load.xfkVA is not None or load.allocationfactor is not None:
         raise ValueError(f"Load {load.name}: xfkVA/allocationfactor not mapped (with kW the engine takes "

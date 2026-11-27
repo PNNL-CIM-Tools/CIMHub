@@ -99,7 +99,8 @@ def _yearly(context, battery: schema.Storage, piece, found) -> list[schema.Loads
     over = [number for number, p in enumerate(found.p, start=1) if abs(p) > battery.kVA * (1 + SUM_REL_TOL)]
     if over:
         raise ValueError(f"{label}: points {over[:5]} are above the battery's {battery.kVA:g} kVA")
-    mult = [0.0 if math.isclose(p, piece.p, rel_tol=SUM_REL_TOL) else p / battery.kWrated for p in found.p]
+    mult = [0.0 if math.isclose(p, piece.p, rel_tol=SUM_REL_TOL, abs_tol=1e-9) else p / battery.kWrated
+            for p in found.p]
     battery.State, battery.DispMode = None, "follow"
     battery.yearly, shapes = loadshape.device_yearly(context, found, mult)
     return shapes
@@ -118,16 +119,20 @@ def _storage(piece) -> schema.Storage:
         state = battery.state.value if battery.state is not None else None
         raise ValueError(f"{unit}: batteryState {state}; a Storage State is charging, discharging or waiting")
     state, sign = STATES[battery.state]
-    if (sign > 0 and piece.p <= 0) or (sign < 0 and piece.p >= 0):
+    if (sign > 0 and piece.p <= 0) or (sign < 0 and piece.p >= 0) or (sign == 0 and piece.p > 0):
         raise ValueError(f"{unit}: {battery.state.value} with p {-piece.p} kW (the load sign)")
     _check_energy(unit, state, battery)
+    if battery.idling_p is not None and battery.idling_p < 0:
+        raise ValueError(f"{unit}: idlingP {battery.idling_p} kW must be non-negative")
     idling = _scaled(battery.idling_p, piece.unit_share)
     if sign == 0:
-        if idling is not None and not math.isclose(idling, -piece.p, rel_tol=SUM_REL_TOL):
+        if idling is not None and not math.isclose(idling, -piece.p, rel_tol=SUM_REL_TOL, abs_tol=1e-9):
             raise ValueError(f"{unit}: waiting with p {-piece.p} kW, not its idlingP {idling} kW")
         idling = -piece.p
+    if battery.rated_e is not None and battery.rated_e <= 0:
+        raise ValueError(f"{unit}: ratedE {battery.rated_e} kWh must be positive")
     reserve = None
-    if battery.minimum_e is not None and battery.rated_e:
+    if battery.minimum_e is not None and battery.rated_e is not None:
         reserve = battery.minimum_e / battery.rated_e * 100
     kw_rated = battery.max_p * piece.unit_share
     return NATIVE_CLASS(

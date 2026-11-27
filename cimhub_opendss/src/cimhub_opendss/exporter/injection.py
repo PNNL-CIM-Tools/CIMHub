@@ -77,4 +77,4 @@ def rated_kv(rated_u: float, conductors: tuple[cim.SinglePhaseKind, ...], conn: 
 def equal_phases(per_phase: dict[cim.SinglePhaseKind, PhasePower]) -> bool:
     """Every phase's p and q alike (rel ``SUM_REL_TOL``): one DSS device carries them (E8)."""
     values = list(per_phase.values())
-    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL) for value in values for a, b in zip(value, values[0]))
+    return all(math.isclose(a, b, rel_tol=SUM_REL_TOL, abs_tol=1e-9) for value in values for a, b in zip(value, values[0]))

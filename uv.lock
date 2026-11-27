@@ -464,10 +464,13 @@ name = "cimhub-opendss"
 version = "2.1.0"
 source = { editable = "cimhub_opendss" }
 dependencies = [
+    { name = "cim-profiles" },
     { name = "cim-tables" },
     { name = "cim-topology" },
     { name = "cimhub-core" },
+    { name = "linkml-runtime" },
     { name = "pyyaml" },
+    { name = "rdflib" },
 ]
 
 [package.optional-dependencies]
@@ -477,11 +480,14 @@ time-points = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cim-profiles", editable = "../CIM-Profiles" },
     { name = "cim-tables", editable = "../CIM-Tables" },
     { name = "cim-topology", editable = "../CIM-Graph-Topology-Processor" },
     { name = "cimhub-core", editable = "cimhub_core" },
     { name = "cimhub-core", extras = ["time-points"], marker = "extra == 'time-points'", editable = "cimhub_core" },
+    { name = "linkml-runtime", specifier = "~=1.9.5" },
     { name = "pyyaml" },
+    { name = "rdflib" },
 ]
 provides-extras = ["time-points"]
 

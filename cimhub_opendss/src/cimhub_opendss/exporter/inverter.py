@@ -57,7 +57,7 @@ def inverter_pieces(connection: cim.PowerElectronicsConnection, unit_class: type
         if balanced:
             name = names.name(connection if len(units) == 1 else share.unit, namespace)
             pieces.append(_piece(connection, name, share.unit, share.share, 1.0, share.p, share.q, output.phases,
-                                 names))
+                                 output.connection, names))
             continue
         if len(units) > 1:
             raise ValueError(f"{describe(connection)}: unequal phases and {len(units)} units; one of them is mapped")
@@ -67,24 +67,27 @@ def inverter_pieces(connection: cim.PowerElectronicsConnection, unit_class: type
         for phase, power in output.per_phase.items():
             name = names.name(connection, namespace, suffix=f"_{phase.value.lower()}")
             fraction = 1 / len(output.per_phase)
-            pieces.append(_piece(connection, name, share.unit, fraction, fraction, power.p, power.q, (phase,), names))
+            pieces.append(_piece(connection, name, share.unit, fraction, fraction, power.p, power.q, (phase,),
+                                 output.connection, names))
     return pieces
 
 
 def _piece(connection, name: str, unit, share: float, unit_share: float, p: float, q: float, conductors,
-           names: Names) -> InverterPiece:
-    slots = _slots(connection, conductors, share, names)
+           phase_connection, names: Names) -> InverterPiece:
+    slots = _slots(connection, conductors, phase_connection, share, names)
     if math.hypot(p, q) > slots["kVA"] * (1 + KVA_REL_TOL):
         raise ValueError(f"{describe(connection)}: {describe(unit)} gives {p:g} kW and {q:g} kvar, above its "
                          f"{slots['kVA']:g} kVA share of the inverter (its maxP share {share:g})")
     return InverterPiece(name, unit, share, unit_share, p, q, slots)
 
 
-def _slots(connection: cim.PowerElectronicsConnection, conductors, share: float, names: Names) -> dict:
+def _slots(connection: cim.PowerElectronicsConnection, conductors, phase_connection, share: float, names: Names) -> dict:
     """The inverter's own slots for a device on ``conductors`` with ``share`` of its rating."""
     rating = get_inverter_rating(connection, "kVA", "kVAr", sign="generation", voltage_unit="kV")
+    if rating.max_fault_current is not None and rating.max_fault_current <= 0:
+        raise ValueError(f"{describe(connection)}: maxIFault={rating.max_fault_current} must be positive")
     # cim18v17's PowerElectronicsConnection has no grounded: a wye inverter's neutral is ground, as on import
-    placed = device_connection(connection, conductors, connection.phaseConnection, True, names)
+    placed = device_connection(connection, conductors, phase_connection, True, names)
     return dict(
         bus1=placed.bus1, phases=placed.phases, conn=placed.conn, kv=rated_kv(rating.rated_u, conductors, placed.conn),
         kVA=share * rating.rated_s,

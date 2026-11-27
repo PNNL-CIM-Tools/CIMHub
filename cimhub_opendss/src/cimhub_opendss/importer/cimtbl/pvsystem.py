@@ -80,10 +80,10 @@ FIELDS = {
     "VarFollowInverter": Field("derived", note="yes: an inverter that is off gives no kvar either (pv_power, "
                                                "engine-checked); default no"),
     "DutyStart": Field("untranscribed", note=_SHAPE),
-    "WattPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED + " (var priority is mapped)"),
-    "PFPriority": Field("structural", note="raises when yes: " + _NOT_MAPPED),
-    "pct_PminNoVars": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
-    "pct_PminkvarMax": Field("structural", note="raises when nonzero: " + _NOT_MAPPED),
+    "WattPriority": Field("structural", note="raises when yes: no deck in the sweep sets it (var priority is mapped)"),
+    "PFPriority": Field("structural", note="raises when yes: no deck in the sweep sets it, so a mapping waits for one"),
+    "pct_PminNoVars": Field("structural", note="raises when nonzero: no deck in the sweep sets it, so a mapping waits for one"),
+    "pct_PminkvarMax": Field("structural", note="raises when nonzero: no deck in the sweep sets it, so a mapping waits for one"),
     "kvarMax": Field("copied", ((CONNECTION, "maxQ", "kVAr"),), "default kVA"),
     "kvarMaxAbs": Field("derived", note="minQ (kVAr) = -kvarMaxAbs; default kVA"),
     "kVDC": Field("untranscribed", note=_DYNAMICS),
@@ -126,7 +126,10 @@ def pv_power(label: str, *, pmpp: float, irradiance: float, pct_pmpp: float, kva
     (``VarFollowInverter``; engine-checked)."""
     panel = pmpp * irradiance
     if panel < pct_cutout / 100 * kva:
-        return PvPower(0.0, float(kvar) if kvar is not None and not var_follow else 0.0, True)
+        q = float(kvar) if kvar is not None and not var_follow else 0.0
+        if abs(q) > kva:
+            raise ValueError(f"{label}: {q:.6g} kvar is above its {kva:.6g} kVA")
+        return PvPower(0.0, q, True)
     available = min(panel, pmpp * pct_pmpp / 100)
     q = float(kvar) if kvar is not None else reactive_power(available, pf)
     return PvPower(inverter_power(label, available, q, kva), q, False)
@@ -155,6 +158,20 @@ def _output(native, original, pv, irradiance: float) -> PvPower:
                     var_follow=bool(pv.VarFollowInverter))
 
 
+def _validate_yearly_samples(native, original, pv, shape) -> list[PvPower]:
+    """Evaluate and validate each yearly sample, failing fast on samples in the [%Cutout, %Cutin) hysteresis band."""
+    cutout, cutin = (float(pv.pct_Cutout) / 100 * float(pv.kVA), float(pv.pct_Cutin) / 100 * float(pv.kVA))
+    outputs = []
+    for number, value in enumerate(shape.mult, start=1):
+        irradiance = float(pv.irradiance) * value
+        if cutout <= float(pv.Pmpp) * irradiance < cutin:
+            raise ValueError(f"PVSystem {pv.name}: sample {number} of yearly={pv.yearly} puts the panel at "
+                             f"{float(pv.Pmpp) * irradiance:g} kW, between %Cutout ({cutout:g}) and %Cutin "
+                             f"({cutin:g}); the engine keeps the inverter as it was, which is not mapped")
+        outputs.append(_output(native, original, pv, irradiance))
+    return outputs
+
+
 def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
     """Each PV's yearly schedule (``<mRID>_yearly``): -``pv_power`` at irradiance x mult at each sample (the load
     sign; engine-checked). A sample between %Cutout and %Cutin raises: the inverter stays as it was, which depends on
@@ -165,15 +182,7 @@ def schedule_points(native) -> dict[str, loadshape.DevicePoints]:
         if shape is None:
             continue
         pv, _ = fill_defaults(FIELDS, original, defaults)
-        cutout, cutin = (float(pv.pct_Cutout) / 100 * float(pv.kVA), float(pv.pct_Cutin) / 100 * float(pv.kVA))
-        outputs = []
-        for number, value in enumerate(shape.mult, start=1):
-            irradiance = float(pv.irradiance) * value
-            if cutout <= float(pv.Pmpp) * irradiance < cutin:
-                raise ValueError(f"PVSystem {pv.name}: sample {number} of yearly={pv.yearly} puts the panel at "
-                                 f"{float(pv.Pmpp) * irradiance:g} kW, between %Cutout ({cutout:g}) and %Cutin "
-                                 f"({cutin:g}); the engine keeps the inverter as it was, which is not mapped")
-            outputs.append(_output(native, original, pv, irradiance))
+        outputs = _validate_yearly_samples(native, original, pv, shape)
         points[mrid(PREFIX, pv.name, lowercase=True) + loadshape.DEVICE_SCHEDULE_SUFFIX] = loadshape.DevicePoints(
             loadshape.point_times(shape), [-output.kw + 0.0 for output in outputs],
             [-output.kvar + 0.0 for output in outputs])
@@ -198,7 +207,9 @@ def map_pvsystem(native, buses: Mapping[str, BusSystem], container: str) -> Docu
                                           comment="\n".join(note for note in notes if note) or None))
         units.append(Row([unit_id(PREFIX, pv), cell(float(pv.Pmpp)), cell(0.0), cell(float(pv.irradiance)),
                           connections[-1].cells[0]]))
-        if loadshape.device_shape(native, original, label) is not None:
+        shape = loadshape.device_shape(native, original, label)
+        if shape is not None:
+            _validate_yearly_samples(native, original, pv, shape)
             schedules.append(loadshape.device_schedule_row(connections[-1].cells[0], pv))
     statements = [
         Table(CONNECTION, connection_columns(container), connections,

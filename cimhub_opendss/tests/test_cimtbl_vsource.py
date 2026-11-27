@@ -42,6 +42,7 @@ def _source(**slots):
 
 def _engine_thevenin(command: str, name: str = "source") -> Thevenin:
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(command)
     return _active_thevenin(name)
 
@@ -153,6 +154,7 @@ def test_thevenin_matches_the_engine(relative):
     path = deck(relative)
     sources = DssReader(path).read_all().list_by_class(NATIVE_CLASS)
     dss.Text.Command("Clear")
+    dss.Text.Command("Set defaultbasefreq=60")
     dss.Text.Command(f"Compile [{path.resolve()}]")
     for original in sources:
         source, group, _ = with_defaults(original)

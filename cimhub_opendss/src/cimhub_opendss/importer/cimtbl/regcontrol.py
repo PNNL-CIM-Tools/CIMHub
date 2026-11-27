@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from cimtables.document import Column, Document, Row, Table
+from linkml_runtime.utils.metamodelcore import Bool
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, fill_defaults, mrid, untranscribed_values
 from cimhub_core.derived.regulator import line_drop_ohms, secondary_to_primary
@@ -110,10 +111,17 @@ def _whole(value: float, *, what: str, name: str) -> int:
 
 def tap_range(tap: float, max_tap: float, min_tap: float, num_taps: int, *, name: str) -> TapRange:
     """The tap changer's steps from DSS's per-unit tap range: increment (MaxTap - MinTap) / NumTaps, neutral at 1."""
+    if num_taps <= 0:
+        raise ValueError(f"Transformer {name}: NumTaps={num_taps} must be positive")
+    if max_tap <= min_tap:
+        raise ValueError(f"Transformer {name}: MaxTap={max_tap} must be greater than MinTap={min_tap}")
     increment = (max_tap - min_tap) / num_taps
-    return TapRange(-_whole((1 - min_tap) / increment, what="MinTap", name=name),
-                    _whole((max_tap - 1) / increment, what="MaxTap", name=name),
-                    _whole((tap - 1) / increment, what="tap", name=name), float(f"{increment * 100:.12g}"))
+    low = -_whole((1 - min_tap) / increment, what="MinTap", name=name)
+    high = _whole((max_tap - 1) / increment, what="MaxTap", name=name)
+    step = _whole((tap - 1) / increment, what="tap", name=name)
+    if not low <= step <= high:
+        raise ValueError(f"Transformer {name}: tap={tap} (step {step}) is outside [{min_tap}, {max_tap}]")
+    return TapRange(low, high, step, float(f"{increment * 100:.12g}"))
 
 
 def _phase_letter(winding, phases: int, pt_phase: str, *, name: str) -> str:
@@ -147,7 +155,9 @@ def map_regcontrol(native) -> Document:
     tap_defaults = {slot: dss_defaults(schema.Transformer)[slot] for slot in _TAP_DEFAULTS}
     control_rows, tap_rows = [], []
     for original in controls:
-        unmapped = [slot for slot in _UNMAPPED if getattr(original, slot) not in (None, [], False)]
+        unmapped = [slot for slot in _UNMAPPED
+                    if (val := getattr(original, slot)) not in (None, [])
+                    and not (isinstance(val, (bool, Bool)) and not val)]
         if unmapped:
             raise ValueError(f"RegControl {original.name}: {', '.join(unmapped)} not mapped yet (no deck in the "
                              "sweep sets them)")
@@ -162,6 +172,9 @@ def map_regcontrol(native) -> Document:
         number = int(control.winding)
         if not 1 <= number <= len(windings):
             raise ValueError(f"RegControl {control.name}: winding={number} of a {len(windings)}-winding transformer")
+        if xf.taps and any(float(t) != 1.0 for i, t in enumerate(xf.taps, start=1) if i != number):
+            raise ValueError(f"Transformer {xf.name}: fixed non-1 tap on a winding other than controlled winding "
+                             f"{number} ({xf.taps}); only the controlled winding's tap is mapped")
         winding = windings[number - 1]
         regulator = transformer_mapper.is_regulator(windings)
         end = _end_number(windings, phases, number, regulator, name=xf.name)
@@ -177,6 +190,8 @@ def map_regcontrol(native) -> Document:
         steps = tap_range(tap, float(tap_slots["MaxTap"]), float(tap_slots["MinTap"]), int(tap_slots["NumTaps"]),
                           name=xf.name)
         ptratio, ct_primary = float(control.ptratio), float(control.CTprim)
+        if ptratio <= 0 or ct_primary <= 0:
+            raise ValueError(f"RegControl {control.name}: ptratio={ptratio} and CTprim={ct_primary} must be positive")
         r, x = float(control.R), float(control.X)
         control_id = mrid(PREFIX, control.name, lowercase=True)
         comment = "\n".join(part for part in (*notes, untranscribed_values(FIELDS, control)) if part) or None

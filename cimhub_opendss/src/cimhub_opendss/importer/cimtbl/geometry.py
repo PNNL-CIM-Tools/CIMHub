@@ -95,19 +95,23 @@ Source table: {native} (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#linespacing-and-linegeometry"""
 
 
-def _not_mapped(record, fields: dict[str, Field], slots) -> None:
-    unmapped = [slot for slot in slots if getattr(record, slot) not in (None, [], False)]
+def _not_mapped(record, slots) -> None:
+    unmapped = [slot for slot in slots if getattr(record, slot) not in (None, [])]
     if unmapped:
         raise ValueError(f"{type(record).__name__} {record.name}: {', '.join(unmapped)} not mapped yet "
                          "(no deck in the sweep sets them)")
 
 
-def spacing_statements(spacing_mrid: str, name: str, xs: list[float], hs: list[float], units, nphases: int,
-                       nconds: int, *, comment: str | None = None) -> list:
+def spacing_statements(spacing_mrid: str, name: str, xs: list[float] | None, hs: list[float] | None, units,
+                       nphases: int | None, nconds: int | None, *, comment: str | None = None) -> list:
     """An ``XYSpacing`` template and its ``XYConductorPosition`` table: conductors 1..nphases are phases, the
     rest neutrals."""
-    if len(xs) != nconds or len(hs) != nconds:
-        raise ValueError(f"{name}: {len(xs)} x and {len(hs)} h values for nconds={nconds}")
+    if nphases is None or nconds is None:
+        raise ValueError(f"{name}: nphases and nconds must be set")
+    if nphases < 1 or nphases > nconds:
+        raise ValueError(f"{name}: nphases={nphases} must be between 1 and nconds={nconds}")
+    if xs is None or hs is None or len(xs) != nconds or len(hs) != nconds:
+        raise ValueError(f"{name}: {len(xs or [])} x and {len(hs or [])} h values for nconds={nconds}")
     if units is None:
         raise ValueError(f"{name}: the positions have no units")
     unit = lookup(LENGTH_UNIT, str(units).lower(), slot="units", record_id=name)
@@ -127,8 +131,9 @@ def map_linespacing(native) -> Document:
     spacings = native.list_by_class(schema.Linespacing)
     statements = []
     for spacing in spacings:
-        _not_mapped(spacing, LINESPACING_FIELDS, ("detailed", "EqDistPhPh", "EqDistPhN", "AvgPhaseHeight",
-                                                  "AvgNeutralHeight"))
+        if spacing.detailed is not None and not spacing.detailed:
+            raise ValueError(f"Linespacing {spacing.name}: detailed=No not mapped yet (no deck in the sweep sets it)")
+        _not_mapped(spacing, ("EqDistPhPh", "EqDistPhN", "AvgPhaseHeight", "AvgNeutralHeight"))
         statements += spacing_statements(mrid(_SPACING_PREFIX, spacing.name, lowercase=True), spacing.name,
                                          spacing.x, spacing.h, spacing.units, spacing.nphases, spacing.nconds,
                                          comment=untranscribed_values(LINESPACING_FIELDS, spacing))
@@ -175,13 +180,16 @@ def wire_sequence_table(configuration: str, wire_info_mrids: list[str]) -> Table
 
 
 def _geometry_statements(geometry, infos: dict[str, list[str]], spacings: set[str]) -> list:
-    _not_mapped(geometry, LINEGEOMETRY_FIELDS, ("conductors",))
+    _not_mapped(geometry, ("conductors",))
     if geometry.nphases is None or geometry.nconds is None:
         raise ValueError(f"LineGeometry {geometry.name}: nphases and nconds must be set")
+    if geometry.nphases < 1 or geometry.nphases > geometry.nconds:
+        raise ValueError(f"LineGeometry {geometry.name}: nphases={geometry.nphases} must be between 1 and "
+                         f"nconds={geometry.nconds}")
     configuration = mrid(_GEOMETRY_PREFIX, geometry.name, lowercase=True)
     statements = []
     if geometry.spacing:
-        if geometry.xs or geometry.hs:
+        if geometry.xs or geometry.hs or any(getattr(geometry, slot) not in (None, []) for slot in _FOLDED_SLOTS):
             raise ValueError(f"LineGeometry {geometry.name}: gives both spacing= and inline positions")
         if str(geometry.spacing).lower() not in spacings:
             raise ValueError(f"LineGeometry {geometry.name}: spacing={geometry.spacing!r} is no LineSpacing")
@@ -220,9 +228,9 @@ def map_linegeometry(native) -> Document:
 
 
 def uses_geometry(native) -> bool:
-    """The deck gives a WireConfiguration: a LineGeometry, or a Line by ``spacing=``."""
+    """The deck gives a WireConfiguration: a LineGeometry, or a non-switch Line by ``spacing=``."""
     return bool(native.list_by_class(schema.Linegeometry)) or any(
-        line.spacing for line in native.list_by_class(schema.Line))
+        line.spacing and not line.Switch for line in native.list_by_class(schema.Line))
 
 
 def _text(value) -> str:
@@ -247,7 +255,7 @@ def earth_statement(native) -> ObjectStatement | None:
     if kind is None:
         raise ValueError(f"earthmodel={_text(model)}: EarthModelKind has {sorted(EARTH_MODELS)}")
     rhos = {float(line.rho) for line in native.list_by_class(schema.Line)
-            if (line.geometry or line.spacing) and line.rho is not None}
+            if not line.Switch and (line.geometry or line.spacing) and line.rho is not None}
     if len(rhos) > 1:
         raise ValueError(f"geometry lines give rho {sorted(rhos)}; one EarthResistivity per deck is mapped")
     if rhos:
