@@ -48,7 +48,7 @@ convert through it. Every package has its own documentation.</p>
 
     PSS/E RAW v34 transmission cases to CIM, bus-branch.
 
-    [:octicons-arrow-right-24: Source and README](https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_raw)
+    [:octicons-arrow-right-24: PSS/E RAW docs](https://pnnl-cim-tools.github.io/CIMHub/raw/)
 
 -   :material-graph:{ .lg .middle } __cimhub-gdm__
 

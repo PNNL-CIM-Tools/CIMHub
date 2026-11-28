@@ -54,6 +54,7 @@ WECC 240 bus case. Other cases are not distributed.
 
 ## Documentation
 
+- [Documentation](https://pnnl-cim-tools.github.io/CIMHub/raw/): user guide, conversion reference, developer docs and the LinkML schema reference
 - [RAW v34 to `.cimtbl` mapping spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_raw/docs/CIMTBL_MAPPING.md)
 - [CIM to RAW v34 export spec](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_raw/docs/EXPORT_MAPPING.md)
 - [CIMHub architecture](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/architecture.md) and [converter API](https://github.com/PNNL-CIM-Tools/CIMHub/blob/main/cimhub_core/docs/developer/converter-api.md)

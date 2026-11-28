@@ -2,7 +2,8 @@
 
 LinkML classes for the PSS/E RAW version 34 record layout: one YAML module per record type under `classes/`,
 shared types in `types/common_types.yaml`, and `main.yaml` importing them all. `raw34_schema.py` is generated from
-`main.yaml` with `gen-python`; regenerate it after any YAML change.
+`main.yaml` with `gen-python`. Regenerate it after any YAML change with `scripts/gen-schema.sh raw` (run from the
+repository root), and commit the YAML and the module together.
 
 `composite_id.py` assigns the natural key of record types that need more than one field (a load is bus + ID).
 The reader uses it, and the exporter must use the same function, so both directions build identical IDs.

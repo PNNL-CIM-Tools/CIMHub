@@ -12,7 +12,7 @@ atoms in `tests/atoms/substation/`. R4b (the transformer forms R4 raised on: fix
 impedance correction tables, fixed ratios, one winding out, CONT 0 and negative, load-drop compensation) approved
 and implemented 2026-11-09; atom `tests/atoms/transformer/forms_r4b.raw`. P2a (shunt FACTS devices, VSC DC lines)
 and P2b (two-terminal DC lines) approved and implemented 2026-11-09; atoms in `tests/atoms/dc/`. R3b's implicit step-up transformers approved and implemented 2026-11-09; atom `tests/atoms/generator/step_up.raw`. R1b / R2b (a branch between two base voltages, a series capacitor with a length, a multi-section line holding one; switched shunts with MODSW 3 and 6) approved and implemented 2026-11-09; atoms `tests/atoms/branch/mixed_base.raw`, `tests/atoms/shunt/plant_and_facts.raw`. R3c (generators with WMOD 2 and 3) approved and implemented 2026-11-09; atom `tests/atoms/generator/renewables.raw`. Goldens: `tests/goldens/IEEE14/`, `tests/goldens/IEEE118/`; tests:
-`tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](../../.development/RAW_REWRITE_PLAN.md).
+`tests/test_raw_to_cimtbl.py`. Plan: [`RAW_REWRITE_PLAN.md`](https://github.com/PNNL-CIM-Tools/CIMHub/blob/develop/.development/RAW_REWRITE_PLAN.md).
 Format: the `cimtbl-mapping-spec` skill; contract: the `cimtbl-import-contract` skill; shapes: the `cimtbl-shapes`
 skill.
 

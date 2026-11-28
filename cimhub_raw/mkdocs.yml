@@ -1,0 +1,52 @@
+# cimhub-raw's site, served at https://pnnl-cim-tools.github.io/CIMHub/raw/. Build everything with
+# scripts/build-docs.sh, or this site alone: scripts/build-docs.sh raw (add --serve to preview). The schema
+# reference (docs/schema/) is generated from the LinkML schema by that script and never committed.
+INHERIT: ../mkdocs.base.yml
+site_name: CIMHub PSS/E RAW
+site_url: https://pnnl-cim-tools.github.io/CIMHub/raw/
+site_description: PSS/E RAW v34 cases to and from CIM (cim18v17) - the reader, writer, importer and exporter
+edit_uri: edit/develop/cimhub_raw/docs/
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/PNNL-CIM-Tools/CIMHub/tree/develop/cimhub_raw
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cimhub-raw/
+
+not_in_nav: |
+  schema/*
+
+nav:
+  - Home: index.md
+  - User guide:
+      - guide/index.md
+      - Getting started:
+          - Installation: guide/installation.md
+          - Quick start: guide/quickstart.ipynb
+      - Converting:
+          - Import (RAW to CIM): guide/import.md
+          - Export (CIM to RAW): guide/export.md
+          - Round trip: guide/roundtrip.md
+          - What converts: guide/coverage.md
+  - Conversion reference:
+      - reference/index.md
+      - Case, buses, areas and zones: reference/buses.md
+      - Substations and node-breaker data: reference/substations.md
+      - Branches, switches and multi-section lines: reference/branches.md
+      - Transformers and impedance correction: reference/transformers.md
+      - Loads and shunts: reference/loads.md
+      - Generators: reference/generators.md
+      - DC lines and FACTS devices: reference/dc.md
+  - Developer docs:
+      - developer/index.md
+      - Architecture: developer/architecture.md
+      - Reader and writer: developer/reader-writer.md
+      - The importer: developer/importer.md
+      - The exporter: developer/exporter.md
+      - The LinkML schema: developer/schema.md
+      - Testing: developer/testing.md
+      - Mapping specs:
+          - Import mapping (.cimtbl): CIMTBL_MAPPING.md
+          - Export mapping: EXPORT_MAPPING.md
+  - Schema reference: schema/index.md

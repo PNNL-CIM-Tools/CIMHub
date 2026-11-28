@@ -12,12 +12,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # Packages whose site has moved to the shared template (mkdocs.base.yml); add each one as it migrates.
-SITES=(core opendss gridlabd)
+SITES=(core opendss gridlabd raw)
 
 # The LinkML root schema of each spoke that has a schema reference.
 declare -A SCHEMA=(
     [opendss]=src/cimhub_opendss/schema/linkml/opendss.yaml
     [gridlabd]=src/cimhub_gridlabd/schema/linkml/main.yaml
+    [raw]=src/cimhub_raw/schema/raw_v34/main.yaml
 )
 
 MKDOCS=(uvx --python 3.13 --with-requirements docs/requirements.txt mkdocs)
