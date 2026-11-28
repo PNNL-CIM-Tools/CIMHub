@@ -988,3 +988,33 @@ def test_a_floating_earth_writes_the_earthmodel(tmp_path):
                     "New Line.a bus1=sourcebus bus2=b r1=0.1 x1=0.2\n")
     network = DssImporter("atom").to_cim(DssReader(path).read_all())
     assert earth_model(network) == "Carson"
+
+
+# Rac is rAC25, else rAC50: a GridLAB-D-imported wire carries only its 50 C value (decision 11) -------------------------
+MILE = 1609.344
+RAC_COLUMNS = {
+    "rAC50": ("rAC50 (ohm/mi)", "0.44"),
+    "both": ("rAC25 (ohm/mi), rAC50 (ohm/mi)", "0.44, 0.47"),
+}
+
+
+def _rac_network(tmp_path, columns):
+    header, values = RAC_COLUMNS[columns]
+    text = BURIED.format(wire_class="OverheadWireInfo", y=2.5, y_up=2.45, y_down=2.55)
+    text = text.replace("rAC25 (ohm/mi)", header).replace("ug_4/0, 0.44,", f"ug_4/0, {values},")
+    path = tmp_path / f"rac_{columns}.cimtbl"
+    path.write_text(text)
+    return load_model(path)
+
+
+@pytest.mark.parametrize("columns", ["rAC50", "both"])
+def test_wire_rac_is_rac25_else_rac50(columns, tmp_path):
+    [wire] = _spacing_model(_rac_network(tmp_path, columns)).list_by_class(schema.Wiredata)
+    assert wire.Rac == pytest.approx(0.44 / MILE)
+
+
+def test_wire_with_only_rac50_solves_with_it_in_the_engine(tmp_path):
+    written = tmp_path / "rac50.dss"
+    cim_to_dss(_rac_network(tmp_path, "rAC50"), written, name_source="mrid")
+    values = _catalog_values(written, "WireData", "wire_ug", ("Rac",))
+    assert values["Rac"] == pytest.approx(0.44 / MILE, rel=1e-9)

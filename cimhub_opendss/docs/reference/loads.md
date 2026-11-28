@@ -55,9 +55,12 @@ One `EnergyConsumer` per `Load`, mRID `ld_` + the name, lowercased. A load that 
 `NonConformLoad` or `StationSupply` each becomes a `Load`. CIM gives a load no rated voltage: `p` and `q` are
 at the `BaseVoltage` of the bus.
 
-**Power.** `p` is `kW`. `q` is `kvar`; with `kvar` unset it is `kW` x tan(acos abs(`pf`)) with the sign of `pf`
-(default 0.88), and `kvar` wins over `pf` in either order. With `kW` unset, `kVA` gives `p` = `kVA` x abs(`pf`) and
-`q` = `kVA` x sin(acos abs(`pf`)), signed by `pf`. The values are in kW and kVAr, as the column headers say.
+**Power.** The last of `kW`, `kvar` and `kVA` picks the pair the engine computes from: (`kW`, `pf`), (`kW`,
+`kvar`) or (`kVA`, `pf`); `pf` never changes it, so `kvar` wins over `pf` in either order. (`kW`, `pf`) gives
+`q` = `kW` x tan(acos abs(`pf`)) with the sign of `pf` (default 0.88); (`kVA`, `pf`) gives `p` = `kVA` x abs(`pf`).
+At the end of each command the engine recomputes the other values from the pair, so the mapper replays the deck
+command by command: `kVA=100 kvar=30` is 10 kW in one command and 88 kW with `kvar` in a later `Edit`. The values
+are in kW and kVAr, as the column headers say.
 
 **Phases and connection.** The bus's node numbers give the phases: 1, 2, 3 are A, B, C, and on a split-phase
 island 1 and 2 are `s1` and `s2`. A node list left out is the DSS default (conductor k on node k). `conn=wye` is
@@ -88,7 +91,7 @@ The three `zip_` rows come from the fixed `zip_fractions.cimtbl` that every dist
 | `kW` | `EnergyConsumer.p (kW)` | `get_phase_loads` total p, in kW |
 | `kvar` | `EnergyConsumer.q (kVAr)` | `get_phase_loads` total q, in kVAr |
 | `pf` | derived into `q` | not written |
-| `kVA` | derived into `p` and `q` when `kW` is unset; raises with `kW` | not written |
+| `kVA` | derived into `p` and `q` when it is the last of `kW`, `kvar` and `kVA` | not written |
 | `model` | `LoadResponse` (table above); default 1 | `get_load_response` |
 | `CVRwatts`, `CVRvars` | `LoadResponseCharacteristic.pVoltageExponent`, `qVoltageExponent`; model 4 only; defaults 1 and 2 | model 4 only, from the response's exponents |
 | `conn` | `phaseConnection` and `grounded`; default wye | Y and Yn are wye, D is delta; another kind raises |
@@ -109,7 +112,6 @@ silently.
 
 | Rule | Message |
 |---|---|
-| `kW` with `kVA` | `Load a: kW with kVA; the engine takes whichever comes last, and the record keeps no order` |
 | `kV` more than 1 % off its bus | `Load a: kV=12.47 on bus b1, whose ABC Y phase voltage is 4.16 kV; CIM has no load rating, so p would be at the wrong voltage` |
 | `model` 3, 6, 7 or 8 | `Load a: model ConstantPQuadQ is not mapped (models 1, 2, 4 and 5 are)` |
 | `yearly` names no LoadShape | `Load a: yearly=nope names no LoadShape of the deck` |

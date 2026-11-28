@@ -429,8 +429,14 @@ form), `606` (inline CN positions) and `607` (inline: a TS phase and a bare CU n
 
 **LineSpacing → `linespacing.cimtbl`.** An `XYSpacing` `spc_<name>` (`isTemplate=true`) and one
 `XYConductorPosition` per conductor: `sequenceNumber` 1..nconds, `xCoord`/`yCoord` from `x`/`h` in the
-spacing's `units`, and `kind` `phase` for 1..nphases, `neutral` after (DSS's convention). The equivalent-distance
-form (`detailed`, `EqDistPhPh`, ...) has no positions and raises; no deck uses it.
+spacing's `units`, and `kind` `phase` for 1..nphases, `neutral` after (DSS's convention). `detailed=Yes` is the
+engine default (LineSpacing.pas:213 sets FEquivalentSpacing := not detailed, FALSE by default at :327) and maps the
+positions as usual. The equivalent-spacing form, `detailed=No`, has no positions and raises, and so does
+`EqDistPhPh`, `EqDistPhN`, `AvgPhaseHeight` or `AvgNeutralHeight` set at any value: it takes every phase-phase and
+neutral-neutral distance from EqDistPhPh, every phase-neutral one from EqDistPhN, and the image distances from
+2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum for a phase-neutral pair (LineConstants.pas:218-297), which no
+set of XY positions reproduces in general (M19, decision 10, 2026-11-27; rc_2 had `detailed` inverted). No deck uses
+it, and opendssdirect 0.9.4 does not know these slots, so the tests check the mapper alone.
 
 **LineGeometry → `linegeometry.cimtbl`.** A `WireConfiguration` `wc_<name>` (`numberOfPhases` = nphases) and one
 `WireSequenceConfiguration` per conductor, naming its `WireInfo`. Its `WireSpacing` is:
@@ -487,11 +493,11 @@ IEEE13_Assets and IEEE4 decks). Checked by hand 2026-11-07, all match: IEEE9500 
 | `x` | `Union[float, list[float], NoneType]` | `[-4.0, -1.0, 3.0, 0.0]`, `[-4.0, 3.0, 0.0]`, `[0.5, 0.0]` | structural | XYConductorPosition.xCoord ({length}), one per conductor |
 | `h` | `Union[float, list[float], NoneType]` | `[28.0, 28.0, 28.0, 24.0]`, `[28.0, 28.0, 24.0]`, `[29.0, 24.0]` | structural | XYConductorPosition.yCoord ({length}), one per conductor |
 | `units` | `Optional[str]` | `ft` | mapped | the length unit of xCoord and yCoord (LENGTH_UNIT); unset raises |
-| `detailed` | `Union[bool, Bool, NoneType]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
-| `EqDistPhPh` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
-| `EqDistPhN` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
-| `AvgPhaseHeight` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
-| `AvgNeutralHeight` | `Optional[str]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (the equivalent-distance form has no positions) |
+| `detailed` | `Union[bool, Bool, NoneType]` |  | structural | Yes (the default, LineSpacing.pas:213, :327) maps the positions; No (the equivalent-spacing form) raises: it has no positions |
+| `EqDistPhPh` | `Optional[str]` |  | structural | raises when set, at any value: detailed=No takes phase-phase and neutral-neutral distances from EqDistPhPh, phase-neutral ones from EqDistPhN and the image distances from 2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum (LineConstants.pas:218-297), which no XY positions reproduce in general |
+| `EqDistPhN` | `Optional[str]` |  | structural | raises when set, at any value: detailed=No takes phase-phase and neutral-neutral distances from EqDistPhPh, phase-neutral ones from EqDistPhN and the image distances from 2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum (LineConstants.pas:218-297), which no XY positions reproduce in general |
+| `AvgPhaseHeight` | `Optional[str]` |  | structural | raises when set, at any value: detailed=No takes phase-phase and neutral-neutral distances from EqDistPhPh, phase-neutral ones from EqDistPhN and the image distances from 2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum (LineConstants.pas:218-297), which no XY positions reproduce in general |
+| `AvgNeutralHeight` | `Optional[str]` |  | structural | raises when set, at any value: detailed=No takes phase-phase and neutral-neutral distances from EqDistPhPh, phase-neutral ones from EqDistPhN and the image distances from 2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum (LineConstants.pas:218-297), which no XY positions reproduce in general |
 | `like` | `Optional[str]` |  | untranscribed | the reader resolves like= before mapping |
 
 | Linegeometry field | type | samples | kind | target |
@@ -774,7 +780,7 @@ service with each winding's `RdcOhms` and `Seasons=2 Ratings=[44 52]`), golden `
 | `conns` | `Union[str, ForwardRef('ConnectionType'), list[Union[str, ForwardRef('ConnectionType')]], NoneType]` | `[ConnectionType(text='delta', descrip...`, `[ConnectionType(text='wye', descripti...` | structural | connectionKind, grounded, default nodes; default wye |
 | `kVs` | `Union[float, list[float], NoneType]` | `[2.4, 2.4]`, `[115.0, 4.16, 13.2]`, `[4.16, 0.48]` | structural | 3-phase: end ratedU; 1-phase: winding baseU, ratedU derived (x sqrt 3, x 2) |
 | `kVAs` | `Union[float, list[float], NoneType]` | `[1666.0, 1666.0]`, `[5000.0, 5000.0, 1000.0]`, `[500.0, 500.0]` | structural | end ratedS / winding ratedS (halves / 2); winding 1's kVA is every baseS |
-| `taps` | `Union[float, list[float], NoneType]` | `[1.0, 1.0625]`, `[1.0, 1.05]`, `[1.0, 1.06875]` | structural | the regulated winding's tap is RatioTapChanger.step (regcontrol.cimtbl); any other tap other than 1 raises |
+| `taps` | `Union[float, list[float], NoneType]` | `[1.0, 1.0625]`, `[1.0, 1.05]`, `[1.0, 1.06875]` | structural | the regulated winding's tap is RatioTapChanger.step (regcontrol.cimtbl); any other tap other than 1 raises; values past the winding count are ignored and missing ones are 1, as in the engine (winding_taps) |
 | `XHL` | `Optional[float]` | `0.01`, `2.0`, `5.75` | structural | mesh 1-2 x (percent on winding 1's kVA); default 7 |
 | `XHT` | `Optional[float]` | `0.025` | structural | mesh 1-3 x; default 35 |
 | `XLT` | `Optional[float]` | `0.025` | structural | mesh 2-3 x; default 30 |
@@ -1117,6 +1123,9 @@ DSS-6): `length` 1, `phases` 3, `units` none.
   - The range: `highStep` = (`MaxTap` − 1) / increment, `lowStep` = −(1 − `MinTap`) / increment, `neutralStep` 0,
     `stepVoltageIncrement` = increment × 100 (percent), `neutralU` = the winding kV.
   - These sit in the RegControl's rows, because they belong to the tap changer.
+  - A `taps` list is read as the engine reads it (M46, decision 7, `transformer.winding_taps`): values past the
+    winding count are ignored (`windings=2 taps=[1.05 1.02 0.98]` is 1.05, 1.02), and a shorter list leaves the
+    other windings at 1.0 (`windings=3 taps=[1.05]`).
 - **A regulator by XfmrCode** (the 36 coded RegControls in the sweep) takes the code's values, as the engine copies
   them; the row comment names the code. CIM has no template for an AutoTransformer, so this needs neither U2 nor
   S3b.
@@ -1154,6 +1163,11 @@ headers carry no unit (primary volts, amps).
   idle/cogen modes; two RegControls on one transformer; a transformer no New defines; a tap range the engine
   takes but no tap changer has (NumTaps < 1, MaxTap ≤ MinTap, a tap outside them); a tap other than 1 on a
   winding the control does not move (the engine keeps it fixed; a fixed tap is not mapped yet).
+- **Unset means unset or at its default** (decision 14, 2026-11-27): an unmapped slot equal to its `dss_default`
+  counts as unset, because the engine default changes nothing: `vlimit` 0, `LDC_Z` 0, `rev_Z` 0, `Cogen` No
+  (engine readback; RegControl.pas:606, 624, 635, 656). Any other value raises. A slot with no default raises at
+  any value: `TapNum=0` too, because setting TapNum moves the tap (RegControl.pas:1469, `Set_TapNum`;
+  `taps=[1 1.025]` with `TapNum=0` is tap 1.0 in the engine). rc_2 dropped every falsy value (`TapNum=0`, `idle=No`).
 
 | Regcontrol field | type | samples | kind | target |
 |---|---|---|---|---|
@@ -1185,7 +1199,7 @@ headers carry no unit (primary volts, amps).
 | `revNeutral` | `Union[bool, Bool, NoneType]` |  | copied | `TapChangerControl.reverseToNeutral`; default false |
 | `EventLog` | `Union[bool, Bool, NoneType]` |  | untranscribed | DSS report flag |
 | `RemotePTRatio` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
-| `TapNum` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap position that overrides the transformer's tap) |
+| `TapNum` | `Optional[int]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (a tap position that overrides the transformer's tap); even 0 raises: setting it moves the tap, so it has no default |
 | `Reset` | `Union[bool, Bool, NoneType]` |  | untranscribed | a command, not a setting |
 | `LDC_Z` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `rev_Z` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
@@ -1253,8 +1267,17 @@ repeated IEEE8500/IEEE9500 copies):
   - pf alone gives q = kW·tan(acos |pf|)·sign(pf) (so a negative kW flips q), and the default pf is 0.88; a pf of 0
     or above 1 in magnitude gives a NaN or infinite kvar, so the mapper raises (any device);
   - kVA without kW gives kW = kVA·|pf|;
-  - kW, kVA and xfkVA override each other in the order given: `kW=10 pf=0.9 xfkVA=20 allocationfactor=0.5` is
-    9 kW, but with kW last it is 10 kW. The reader's record keeps no order.
+  - **the load spec type (M4, decision 7, 2026-11-27):** the last of kW, kvar and kVA the deck assigns picks the
+    pair the engine computes from: (kW, pf), (kW, kvar) or (kVA, pf); pf never changes it. `kVA=100 kW=50` is
+    50 kW at pf 0.88, `kW=50 kVA=100` is 88 kW, `kVA=100 kW=50 kvar=30` is 50 kW and 30 kvar;
+  - at the end of each command the engine recomputes the other values from the pair (Load.pas:681, 1138-1160):
+    (kVA, pf) sets kW = kVA·|pf|, and (kW, kvar) sets pf = kW / √(kW² + kvar²) with the sign of kW·kvar. A later
+    pair can read one of them, so the value depends on where the commands end: `kVA=100 kvar=30` is 10 kW in one
+    command and 88 kW with kvar in a later Edit; `kW=50 kvar=30 kW=100` is 53.97 kvar in one command and 60 across
+    two. A `~` line is a command of its own. The mapper replays the history command by command
+    (`load.load_power` over `DssModel.commands`), so every order maps as the engine gives it;
+  - kW and xfkVA override each other in the order given: `kW=10 pf=0.9 xfkVA=20 allocationfactor=0.5` is
+    9 kW, but with kW last it is 10 kW. xfkVA is not mapped.
   - CapControl defaults: type current, ON 300, OFF 200, PTratio 60, CTratio 60, Delay 15; a Capacitor's are
     1200 kvar at 12.47 kV.
 
@@ -1290,7 +1313,7 @@ Mapper: `cimhub_opendss/importer/cimtbl/load.py` (`map_load`). Artifact `load.ci
 
 **What raises:**
 - `kV` more than 1 % off its bus's phase voltage (LL for delta and 2-3 phases, LN for 1-phase wye);
-- `kW` with `kVA` or `xfkVA` (K1, which stops earlier on DSS-10);
+- `xfkVA` (K1, which stops earlier on DSS-10);
 - `Rneut` ≥ 0;
 - the unmapped models.
 
@@ -1395,15 +1418,15 @@ On the atoms and the engine decks, as in S3:
 | `bus1` | `str` | `611.3`, `634.1`, `634.2` | structural | node; the nodes give the phases: 1/2/3 are A/B/C, and s1/s2 on a split-phase island (DSS-5); an omitted node is the DSS default (conductor k on node k) |
 | `phases` | `Optional[int]` | `1`, `3`, `2` | structural | the conductor count; default 3. On a split-phase island 2 wye phases on 1.2 are two legs to neutral (s1s2, kV is LL by the sqrt 3 rule) |
 | `kV` | `Optional[float]` | `2.4`, `0.277`, `4.16` | structural | checked, not written: the phase voltage it gives (LL for delta and 2-3 phases, LN for 1-phase wye) must be within 1 % of the bus's, else it raises; CIM p is at the BaseVoltage |
-| `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p |
-| `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) x sign(pf), when kvar is unset (kvar wins in either order, engine-checked); raises unless 0 < \|pf\| <= 1; default 0.88 |
+| `kW` | `Optional[float]` | `170.0`, `160.0`, `120.0` | copied | `EnergyConsumer.p` (kW); consumption is positive p; the last of kW, kvar and kVA picks the pair: (kW, pf), (kW, kvar) or (kVA, pf); each command's end recomputes the rest from it, so the history is replayed command by command (load_power); default 10 |
+| `pf` | `Optional[float]` | `0.85`, `0.97`, `0.87` | derived | q (kVAr) = kW x tan(acos abs(pf)) x sign(pf) with kW last (kVA last: see kVA); pf never changes the pair, so kvar wins in either order (engine-checked); raises unless 0 < \|pf\| <= 1; default 0.88 |
 | `model` | `Union[str, ForwardRef('LoadModel'), NoneType]` | `ConstantI`, `ConstantPQ`, `ConstantZ` | mapped | `EnergyConsumer.LoadResponse`; 1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, 8 raise; default 1 |
 | `yearly` | `Optional[str]` | `Other`, `Commercial`, `AggLoadProfile` | mapped | `ConformLoad.LoadGroup`; the shape's group lg_<shape>: the load is a ConformLoad (S8); a shape the deck does not define raises |
 | `daily` | `Optional[str]` | `com` | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
 | `duty` | `Optional[str]` |  | untranscribed | a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8) |
 | `growth` | `Optional[str]` |  | untranscribed | a GrowthShape reference; not mapped (DSS-11) |
 | `conn` | `Union[str, ForwardRef('ConnectionType'), NoneType]` | `wye`, `delta` | mapped | `EnergyConsumer.phaseConnection`, `EnergyConsumer.grounded`; wye -> Y, grounded; delta -> D, not grounded; default wye |
-| `kvar` | `Optional[float]` | `80.0`, `110.0`, `90.0` | copied | `EnergyConsumer.q` (kVAr) |
+| `kvar` | `Optional[float]` | `80.0`, `110.0`, `90.0` | copied | `EnergyConsumer.q` (kVAr); with kvar last: p = kW, q = kvar; the last of kW, kvar and kVA picks the pair: (kW, pf), (kW, kvar) or (kVA, pf); each command's end recomputes the rest from it, so the history is replayed command by command (load_power) |
 | `Rneut` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one (>= 0: a wye neutral impedance) |
 | `Xneut` | `Optional[float]` |  | structural | raises when set: no deck in the sweep sets it, so a mapping waits for one |
 | `status` | `Union[str, ForwardRef('LoadStatus'), NoneType]` | `Variable`, `Fixed` | untranscribed | Fixed/Exempt: whether load multipliers scale it; DSS solution control; no home in the network profile parts |
@@ -1414,7 +1437,7 @@ On the atoms and the engine decks, as in S3:
 | `Vminemerg` | `Optional[float]` |  | untranscribed | an EnergyMeter EEN threshold; DSS solution control; no home in the network profile parts |
 | `xfkVA` | `Optional[float]` | `1.70148`, `397.465666666668`, `25.1736633333333` | structural | raises: not mapped, and with kW the engine takes whichever comes last (K1 only, behind DSS-10) |
 | `allocationfactor` | `Optional[float]` | `1.2136`, `1.2096`, `1.2172` | structural | raises: it scales xfkVA |
-| `kVA` | `Optional[float]` | `313.0` | derived | with kW unset: p = kVA x abs(pf), q = kVA x sin(acos abs(pf)) with the sign of pf (ACEP_PSIL); raises with kW: the engine takes whichever of kW, kVA and xfkVA comes last, and the record keeps no order |
+| `kVA` | `Optional[float]` | `313.0` | derived | with kVA last: p = kVA x abs(pf), q = kVA x sin(acos abs(pf)) with the sign of pf (ACEP_PSIL); the last of kW, kvar and kVA picks the pair: (kW, pf), (kW, kvar) or (kVA, pf); each command's end recomputes the rest from it, so the history is replayed command by command (load_power) |
 | `pct_mean` | `Optional[float]` |  | untranscribed | a Monte Carlo setting; DSS solution control; no home in the network profile parts |
 | `pct_stddev` | `Optional[float]` |  | untranscribed | a Monte Carlo setting; DSS solution control; no home in the network profile parts |
 | `CVRwatts` | `Optional[float]` | `0.8`, `0.7` | copied | `LoadResponseCharacteristic.pVoltageExponent`; model 4 only (the exp_ row); default 1; unused by other models |
@@ -1504,7 +1527,8 @@ The S4b spec is its own section below, [S4b](#s4b-approved-and-done-2026-11-08).
 - **S4-2:** a load's `kV` is checked against its bus (1 %) and not written; off by more, it raises. The alternative
   is to rescale p and q to the bus voltage by the model's exponent. No deck needs that.
 - **S4-3:** `kW` with `kVA` or `xfkVA` raises, because the order decides the value and the record keeps none. `kVA`
-  without `kW` is derived (ACEP_PSIL). The alternative is the reader keeping the last of the three; K1 is the only
+  without `kW` is derived (ACEP_PSIL). *Superseded for kVA by decision 7 (2026-11-27): the history's last of kW,
+  kvar and kVA picks the pair (S4a engine rules, above); xfkVA still raises.* The alternative is the reader keeping the last of the three; K1 is the only
   user, and it stops on DSS-10 first.
 - **S4-4:** CapControl target/deadband by EPRI's midpoint and width, deadband positive, in primary units by mode
   (V, A, var, hours). The side of ON is checked per type.
@@ -1575,8 +1599,9 @@ every `(slot, value)` in deck order, from `New`, edits, `BatchEdit`, and the slo
 (`generator.dispatched_kvar`, `storage.battery_dispatch`, PVSystem's `last_of(pf, kvar)`). Only the history replaces
 order guesses; the records stay verbatim.
 
-Not replayed: a Load's kW/kVA/xfkVA (S4-3 stays). kVA last takes the pf that kvar implied (`kW=10 kvar=3` then
-`kVA=20` is 19.2 kW), which needs its own replay, and only K1 reaches it, after DSS-10.
+A Load replays its history command by command (`load.load_power` over `DssModel.commands`, decision 7). kVA in a
+later command takes the pf that kvar implied (`kW=10 kvar=3` then `kVA=20` is 19.2 kW), but in the same command the
+pf before kvar (S4a engine rules).
 
 S4b maps the rest of the injections and the series reactor: PVSystem and Storage (shape `der`), Generator (new
 shape `synchronous_machine`) and Reactor (new shape `series_compensator`). Its exit is the full IEEE13_CDPSM artifact
@@ -1682,7 +1707,9 @@ prefix keeps IEEE13_CDPSM's `PVSystem.School` and `Storage.School` apart.
 - `model` other than 1;
 - `EffCurve` or `P-TCurve` (both change the snapshot power);
 - `WattPriority` or `PFPriority` set to yes; a nonzero `%PminNoVars` or `%PminkvarMax`;
-- `UserModel`/`UserData`; `ControlMode=GFM`; `Balanced` or `LimitCurrent` set to yes.
+- `UserModel`/`UserData`; `ControlMode=GFM`; `Balanced` or `LimitCurrent` set to yes;
+- a kvar above kVA, on or off (M38, decision 9, 2026-11-27): below %Cutout the engine clamps it to kvarMax
+  (`Pmpp=100 kVA=100 irradiance=0.05 kvar=150` gives 100 kvar), and reactive capability is not modelled yet.
 
 **Untranscribed:**
 - the Yearly/Daily/Duty and T-curves, which are time series that a snapshot does not use;
@@ -1723,7 +1750,9 @@ Mapper `importer/cimtbl/storage.py` (`map_storage`). Artifact `storage.cimtbl`; 
 - `DispMode` other than default;
 - `model` other than 1;
 - `EffCurve`, `UserModel`/`UserData`, `DynaDLL`/`DynaData`;
-- `WattPriority`/`PFPriority` set to yes, a nonzero `%PminNoVars`/`%PminkvarMax`, `Balanced`/`LimitCurrent` set to yes.
+- `WattPriority`/`PFPriority` set to yes, a nonzero `%PminNoVars`/`%PminkvarMax`, `Balanced`/`LimitCurrent` set to yes;
+- a negative `%IdlingkW` (decision 12, 2026-11-27): the engine takes it and the idling battery generates, but the
+  exporter raises on a negative idlingP, so the import raises too.
 
 **Untranscribed:** the curves, `DischargeTrigger`/`ChargeTrigger`/`TimeChargeTrig` (dispatch modes, which raise),
 `%Idlingkvar` (deprecated), `%CutIn`/`%CutOut`, `%kWRated`, `Vmaxpu`, and the dynamics slots, as for PVSystem.
@@ -1838,7 +1867,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `Temperature` | `Optional[float]` |  | untranscribed | acts only through a P-TCurve, which raises |
 | `pf` | `Optional[float]` | `1.0` | derived | q = -kW x tan(acos abs(pf)) x sign(pf), unless kvar was assigned after it (the last of the two wins, S4b-8); default 1 |
 | `conn` | `Optional[str]` | `wye`, `delta` | mapped | `PowerElectronicsConnection.phaseConnection`; wye -> Y, delta -> D; default wye |
-| `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it |
+| `kvar` | `Optional[float]` |  | derived | q (kVAr) = -kvar (the load sign), unless pf was assigned after it; above kVA it raises, off or on (the engine clamps it to kvarMax; decision 9) |
 | `kVA` | `Optional[float]` | `5.0`, `300.0`, `1500.0` | copied | `PowerElectronicsConnection.ratedS` (kVA); also caps p (var priority); default 500 |
 | `pct_Cutin` | `Optional[float]` | `0.1` | structural | acts only after the inverter turns off; the snapshot state uses %Cutout; a yearly sample between %Cutout and %Cutin raises (S9); default 20 |
 | `pct_Cutout` | `Optional[float]` | `0.1` | derived | p = 0 when Pmpp x irradiance is below %Cutout of kVA, q too unless kvar is set (VarFollowInverter); default 20 |
@@ -1916,7 +1945,7 @@ Generated from each mapper's `FIELDS` (samples: the 31 sweep decks).
 | `pct_Charge` | `Optional[float]` |  | derived | the charge setpoint kWrated x %Charge / 100 until a kW < 0 sets it; default 100 |
 | `pct_EffCharge` | `Optional[float]` |  | copied | `BatteryUnit.chargingEfficiency` (percent); default 90 |
 | `pct_EffDischarge` | `Optional[float]` |  | copied | `BatteryUnit.dischargingEfficiency` (percent); default 90 |
-| `pct_IdlingkW` | `Optional[float]` |  | derived | idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1 |
+| `pct_IdlingkW` | `Optional[float]` |  | derived | idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1; negative raises (decision 12) |
 | `pct_Idlingkvar` | `Optional[float]` |  | untranscribed | deprecated in the engine |
 | `pct_R` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
 | `pct_X` | `Optional[float]` |  | untranscribed | a dynamics setting; no home in the network profile parts |
@@ -2059,7 +2088,8 @@ added that cim18v17's `RotatingMachinePhase` names a 1-phase machine's phase.
 - **S4b-9:** a balanced three-phase device (phases `ABC`) has a blank `phases` cell, so no per-phase children
   and no `Terminal.phases` (above); U10 asks CIM-Tables for the balanced form.
 - **S4b-8 (approved 2026-11-08):** the reader keeps each record's assignment history (`DssModel`), and the Generator,
-  PVSystem and Storage mappers replay it as the engine does (above). The Load keeps S4-3.
+  PVSystem and Storage mappers replay it as the engine does (above). The Load replays it command by command
+  (decision 7, 2026-11-27).
 
 ## S5 (approved and done 2026-11-08)
 

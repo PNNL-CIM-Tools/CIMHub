@@ -214,11 +214,24 @@ def test_nothing_is_written_when_a_record_fails(tmp_path):
         assert not out.exists()
 
 
-def test_geometry_with_heights_and_no_positions_raises():
-    """``hs`` alone is no DSS property: the writer needs an x and an h per conductor to write cond= blocks."""
-    geometry = schema.Linegeometry(name="g", nconds=1, hs=[10.0], wires=["w"], units="ft")
+def test_geometry_with_heights_and_no_x_writes_x_zero(tmp_path):
+    """A conductor with no x is at x=0 in the engine (``nconds=`` puts every conductor at (0, 0),
+    LineGeometry.pas:1075), so the writer writes x=0 and the deck reads back with it."""
+    geometry = schema.Linegeometry(name="g", nconds=1, nphases=1, hs=[10.0], wires=["w"], units="ft")
     with pytest.raises(ValueError, match="LineGeometry g has positions"):
         DssWriter().serialize(geometry)
-    with pytest.raises(ValueError, match=r"LineGeometry g: 1 wires, 0 xs, 1 hs; needs one wire, x and h per "
-                                         "conductor"):
-        DssWriter()._geometry(geometry, {"w": "wire"})
+    assert DssWriter()._geometry(geometry, {"w": "wire"}).endswith(" cond=1 wire=w x=0 h=10 units=ft")
+    model = DssReader(ATOMS / "buscoords" / "local.dss").read_all()
+    model.add_to_graph(schema.Wiredata(name="w", diam=0.5, GMRac=0.2, Rac=0.3))
+    model.add_to_graph(geometry)
+    DssWriter().write(model, tmp_path / "deck.dss")
+    [read_back] = DssReader(tmp_path / "deck.dss").read_all().list_by_class(schema.Linegeometry)
+    assert (read_back.xs, read_back.hs) == ([0.0], [10.0])
+
+
+def test_a_full_matrix_is_written_as_its_lower_triangle(tmp_path):
+    """``rmatrix=[1 2 3 | 2 4 5 | 3 5 6]`` used to come back as ``[1 |2 3 |2 4 5]`` (the first six values)."""
+    deck = tmp_path / "in.dss"
+    deck.write_text("New Linecode.lc nphases=3 rmatrix=[1 2 3 | 2 4 5 | 3 5 6] xmatrix=[1 |0 1 |0 0 1]\n")
+    [code] = DssReader(deck).read_all().list_by_class(schema.Linecode)
+    assert "rmatrix=[1 |2 4 |3 5 6]" in DssWriter().serialize(code)

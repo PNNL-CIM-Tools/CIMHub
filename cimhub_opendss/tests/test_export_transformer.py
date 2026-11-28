@@ -192,6 +192,17 @@ def test_line_drop_without_ct_rating_raises():
         _model(network)
 
 
+def test_zero_line_drop_is_unset_as_the_engine_default():
+    """R, X, revR and revX of 0 are their dss_defaults values, so they count as unset (decision 14): no ctRating
+    is needed and nothing is written."""
+    network = _network("regcontrol/regulators")
+    control = _object(network, cim.TapChangerControl, "rc_reg1")
+    control.lineDropR, control.lineDropX = cim.Resistance(0.0, "ohm"), cim.Reactance(0.0, "ohm")
+    _object(network, cim.RatioTapChanger, "rc_reg1_tap").ctRating = None
+    record = _record(_model(network), schema.Regcontrol, "reg1")
+    assert (record.R, record.X, record.revR, record.revX) == (None, None, None, None)
+
+
 def test_regcontrol_in_another_mode_raises():
     network = _network("regcontrol/regulators")
     _object(network, cim.TapChangerControl, "rc_ltc").mode = cim.RegulatingControlModeKind.currentFlow

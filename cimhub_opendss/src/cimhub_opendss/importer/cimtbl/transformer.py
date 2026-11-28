@@ -34,6 +34,7 @@ from cimtables.document import Column, Document, Row, Table
 
 from cimhub_core.cimtbl import CIM_PROFILE, Field, cell, mrid, untranscribed_names
 from cimtopology.core import BusSystem
+from cimhub_opendss.dss_reader import dss_defaults
 from cimhub_opendss.schema import opendss_schema as schema
 
 NATIVE_CLASS = schema.Transformer
@@ -64,7 +65,8 @@ FIELDS = {
     "kVs": Field("structural", note="3-phase: end ratedU; 1-phase: winding baseU, ratedU derived (x sqrt 3, x 2)"),
     "kVAs": Field("structural", note="end ratedS / winding ratedS (halves / 2); winding 1's kVA is every baseS"),
     "taps": Field("structural", note="the regulated winding's tap is RatioTapChanger.step (regcontrol.cimtbl); "
-                                     "any other tap other than 1 raises"),
+                                     "any other tap other than 1 raises; values past the winding count are "
+                                     "ignored and missing ones are 1, as in the engine (winding_taps)"),
     "XHL": Field("structural", note="mesh 1-2 x (percent on winding 1's kVA); default 7"),
     "XHT": Field("structural", note="mesh 1-3 x; default 35"),
     "XLT": Field("structural", note="mesh 2-3 x; default 30"),
@@ -237,6 +239,13 @@ def _defaulted(slot: str, value, notes: list[str]):
     return value
 
 
+def winding_taps(xf, count: int) -> list[float]:
+    """The per-unit tap of each of ``count`` windings, as the engine reads ``taps`` (engine-checked): a longer list
+    is cut to ``count``, and a winding a shorter list leaves out keeps the default ``tap`` (1.0)."""
+    taps = [float(tap) for tap in xf.taps or []][:count]
+    return taps + [float(dss_defaults(NATIVE_CLASS)["tap"])] * (count - len(taps))
+
+
 def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -> list[Winding]:
     """The windings of one transformer, with DSS defaults filled and listed in ``notes``. Only a regulated
     transformer may have a tap other than 1 (its RatioTapChanger.step)."""
@@ -252,7 +261,7 @@ def windings_of(xf, phases: int, notes: list[str], *, regulated: bool = False) -
     for slot in ("kVs", "kVAs"):
         if len(getattr(xf, slot) or []) != count:
             raise ValueError(f"Transformer {name}: {slot}={getattr(xf, slot)} needs {count} values")
-    if not regulated and any(float(tap) != 1.0 for tap in xf.taps or []):
+    if not regulated and any(tap != 1.0 for tap in winding_taps(xf, count)):
         raise ValueError(f"Transformer {name}: taps={xf.taps} with no RegControl; a fixed tap is not mapped yet")
 
     conns = [cell(conn) for conn in xf.conns or []] or [_defaulted("conns", "wye", notes)] * count

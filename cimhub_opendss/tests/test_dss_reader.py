@@ -592,17 +592,17 @@ class TestEdgeCases:
         assert reader._parse_params("") == []
         assert reader._parse_params("  ") == []
 
-    def test_continuation_line_joining(self):
-        """Lines starting with ~ should be joined to predecessor."""
+    def test_continuation_lines(self, tmp_path):
+        """A ``~`` line is an Edit of its own; a Transformer's is joined to the command it continues."""
+        import cimhub_opendss.schema.opendss_schema as dss
         from cimhub_opendss.dss_reader import DssReader
 
-        reader = DssReader("")
-        raw = [
-            ("New Transformer.t1 phases=3", Path("t.dss"), 1),
-            ("~ wdg=1 bus=a kv=115", Path("t.dss"), 2),
-            ("~ wdg=2 bus=b kv=4.16", Path("t.dss"), 3),
-        ]
-        joined = reader._join_continuation_lines(raw)
-        assert len(joined) == 1
-        assert "wdg=1" in joined[0][0]
-        assert "wdg=2" in joined[0][0]
+        deck = tmp_path / "t.dss"
+        deck.write_text("New Load.l bus1=a\n~ kW=5\nNew Transformer.t1 phases=3\n~ wdg=1 bus=a kv=115\n"
+                        "~ wdg=2 bus=b kv=4.16\n")
+        reader = DssReader(deck)
+        model = reader.read_all()
+        assert [(cmd.cmd, cmd.element_name, cmd.line_number) for cmd in reader._commands] == [
+            ("new", "l", 1), ("edit", "l", 2), ("new", "t1", 3)]
+        [transformer] = model.list_by_class(dss.Transformer)
+        assert (transformer.buses, transformer.kVs) == (["a", "b"], [115.0, 4.16])

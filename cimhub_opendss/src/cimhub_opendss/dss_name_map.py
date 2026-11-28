@@ -269,35 +269,22 @@ def get_class_map(schema_class: type) -> DssClassMap:
 
 @lru_cache(maxsize=1)
 def build_type_registry() -> dict[str, type]:
-    """Return ``{lowered_dss_type: schema_class}`` for all classes in the schema.
-
-    Introspects ``opendss_schema`` to find all ``YAMLRoot`` subclasses, less ``Options`` and ``Buscoords``: they
-    hold ``Set`` and ``BusCoords`` values, and the engine has no such class to ``New``.
-    Adds known aliases like ``"circuit" -> Vsource`` and the engine's ``TCC_Curve``.
+    """Return ``{lowered_dss_type: schema_class}`` for the classes ``opendss_schema`` defines (not the LinkML
+    classes it imports), less ``Options`` and ``Buscoords``: they hold ``Set`` and ``BusCoords`` values, and the
+    engine has no such class to ``New``. ``circuit`` is ``Vsource`` (``New Circuit``), and ``TccCurve`` is keyed by
+    the engine's name ``tcc_curve`` only.
     """
     import cimhub_opendss.schema.opendss_schema as mod
     from linkml_runtime.utils.yamlutils import YAMLRoot
 
     registry: dict[str, type] = {}
-    for attr_name in dir(mod):
-        obj = getattr(mod, attr_name)
-        if (
-            isinstance(obj, type)
-            and issubclass(obj, YAMLRoot)
-            and obj is not YAMLRoot
-            and hasattr(obj, "class_name")
-        ):
-            class_name = getattr(obj, "class_name", attr_name)
-            registry[class_name.lower()] = obj
+    for obj in vars(mod).values():
+        if (isinstance(obj, type) and issubclass(obj, YAMLRoot) and obj.__module__ == mod.__name__
+                and hasattr(obj, "class_name")):  # enums are YAMLRoot too, with no class_name
+            registry[obj.class_name.lower()] = obj
 
     del registry["options"], registry["buscoords"]
-
-    # Known aliases
-    vsource = registry.get("vsource")
-    if vsource:
-        registry["circuit"] = vsource
-
-    # The schema class is TccCurve; the engine's is TCC_Curve
-    registry["tcc_curve"] = registry["tcccurve"]
-
+    registry["circuit"] = registry["vsource"]
+    # the engine's class is TCC_Curve (General/TCC_Curve.pas:92); it has no class "tcccurve"
+    registry["tcc_curve"] = registry.pop("tcccurve")
     return registry

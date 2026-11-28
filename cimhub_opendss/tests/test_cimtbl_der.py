@@ -174,3 +174,15 @@ def test_der_match_the_engine(relative):
         raise
     compile_deck(path)
     assert _engine_differences(network) == []
+
+
+def test_a_negative_idling_loss_raises(tmp_path):
+    """The engine takes a negative %IdlingkW (opendssdirect 0.9.4: ``kWrated=100 %IdlingkW=-2 State=idling``
+    generates 2 kW while idling; Storage.pas:988 assigns it unchecked). An idling loss is a draw, and the exporter
+    raises on a negative idlingP (decision 12), so the import raises too and the two directions agree."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + "New Storage.x bus1=b2 kv=0.48 kWrated=100 kWhrated=200 %IdlingkW=-2\n")
+    native = DssReader(path).read_all()
+    site = dss_to_cimtbl.site(native)
+    with pytest.raises(ValueError, match=r"Storage x: %IdlingkW=-2 is negative"):
+        storage.map_storage(native, site.buses, site.feeder)

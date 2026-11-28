@@ -7,7 +7,8 @@ import logging
 import opendssdirect as dss
 import pytest
 
-from cimhub_opendss.dss_reader import DSS_COMMANDS, DSS_OPTIONS, DssParseError, DssReader, dss_command, dss_option
+from cimhub_opendss.dss_reader import (DSS_COMMANDS, DSS_OPTIONS, DssParseError, DssReader, dss_command, dss_defaults,
+                                       dss_option)
 from cimhub_opendss import dss_name_map
 from cimhub_opendss.schema import opendss_schema as schema
 
@@ -234,7 +235,7 @@ def test_block_comments_and_open_match_the_engine(tmp_path):
     deck = tmp_path / "deck.dss"
     deck.write_text(BLOCKS_AND_OPENS)
     model = DssReader(deck).read_all()
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command(f"Redirect [{deck}]")
     assert [load.name for load in model.list_by_class(schema.Load)] == dss.Loads.AllNames()
     engine = []
@@ -278,7 +279,7 @@ def test_positional_values_match_the_engine(tmp_path):
     deck = tmp_path / "deck.dss"
     deck.write_text(POSITIONAL)
     codes = {code.name: code for code in DssReader(deck).read_all().list_by_class(schema.Linecode)}
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command(f"Redirect [{deck}]")
     for name, code in codes.items():
         dss.LineCodes.Name(name)
@@ -312,7 +313,7 @@ def test_winding_scalars_match_the_engine(tmp_path, text):
     # a bare kV/kVA/conn/%R goes to the active winding (the last wdg=, else the last an array set, else 1);
     # on a 2-winding transformer kVA sets both
     xf = only(read(tmp_path, f"New Circuit.c bus1=src\nNew Transformer.t {text}\n"), schema.Transformer)
-    dss.Text.Command("Clear")
+    clear_engine()
     dss.Text.Command("New Circuit.c bus1=src")
     dss.Text.Command(f"New Transformer.t {text}")
     dss.Transformers.Name("t")
@@ -596,9 +597,14 @@ def test_a_bad_batchedit_pattern_raises_with_its_line(tmp_path):
     "nconds=2 nphases=2 units=m cond=1 x=0 h=10 cond=2 x=1 h=10",
     "nconds=2 nphases=2 cond=1 x=0 h=10 units=m cond=2 x=1 h=10",
     "nconds=2 nphases=2 cond=1 x=0 cond=2 x=1 h=9 cond=1 h=10",
+    "nconds=2 nphases=2 cond=1 x=-1 h=10 cond=2 h=10",
+    "nconds=2 nphases=2 cond=1 h=10 cond=2 x=1 h=10",
+    "nconds=1 nphases=1 cond=1 h=10",
 ])
 def test_geometry_conductors_match_the_engine(tmp_path, text):
-    # a units= before cond=1 is the first conductor's; a repeated cond= block adds to that conductor
+    """A units= before cond=1 is the first conductor's; a repeated cond= block adds to that conductor. A conductor
+    with no x is at x=0: ``nconds=`` puts every conductor at (0, 0) (LineGeometry.pas:1075-1076), and the engine gave
+    Xcoords ``[-1, 0]``, ``[0, 1]`` and ``[0]`` for the last three."""
     geometry = only(read(tmp_path, CIRCUIT + f"New LineGeometry.g {text}\n"), schema.Linegeometry)
     clear_engine()
     dss.Text.Command(CIRCUIT.strip())
@@ -606,6 +612,13 @@ def test_geometry_conductors_match_the_engine(tmp_path, text):
     dss.LineGeometries.Name("g")
     assert (geometry.xs, geometry.hs) == (dss.LineGeometries.Xcoords(), dss.LineGeometries.Ycoords())
     assert {ENGINE_UNIT[unit] for unit in dss.LineGeometries.Units()} == {str(geometry.units or "ft").lower()}
+
+
+def test_a_geometry_conductor_with_no_height_raises(tmp_path):
+    """The engine puts it at h=0 (LineGeometry.pas:1076; Ycoords ``[0, 10]`` for this deck), on the ground; the
+    reader raises rather than guess that the deck meant it."""
+    with pytest.raises(DssParseError, match=r"LineGeometry.g: cond=1 has no h .* at line 1"):
+        read(tmp_path, "New LineGeometry.g nconds=2 nphases=2 cond=1 x=1 cond=2 x=2 h=10\n")
 
 
 def test_geometry_units_before_cond_count_for_the_mixed_check(tmp_path):
@@ -617,3 +630,228 @@ def test_geometry_units_before_cond_count_for_the_mixed_check(tmp_path):
 def test_rpn_rollup_and_rolldn_raise(tmp_path, function):
     with pytest.raises(DssParseError, match=f"RPN {function} is not supported"):
         read(tmp_path, CIRCUIT + f"New Load.a bus1=src kW=(1 2 3 {function})\n")
+
+
+# ---------------------------------------------------------------------------
+# Decisions 2, 3, 4 and 6 of the PR #14 port (each probed in opendssdirect 0.9.4)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("line", [
+    "New Load.l bus1=a kW= kvar=5",
+    "Edit Load.base kW= kvar=5",
+    "New Transformer.t phases=3 windings=2 buses=[a b] kvs= kvas=[100 100]",
+])
+def test_a_blank_after_equals_takes_the_next_word_and_raises_as_the_engine_does(tmp_path, line):
+    """A blank after ``=`` is no empty value: the parser skips it and reads the next word as the value
+    (Parser/ParserDel.pas:434-439). Each of these raises ``(#303) ... Invalid inline math entry`` in the engine
+    (``kW`` is given the text ``kvar``)."""
+    with pytest.raises(DssParseError, match=r"in .*deck\.dss at line 3"):
+        read(tmp_path, CIRCUIT + "New Load.base bus1=a kW=10 kvar=3\n" + line + "\n")
+
+
+TWO_WINDINGS = "New Transformer.t phases=3 windings=2 buses=[a b] kVs=[12.47 4.16] kVAs=[500 400] %Rs=[1 2]\n"
+THREE_WINDINGS = ("New Transformer.t phases=3 windings=3 buses=[a b c] kVs=[12.47 4.16 0.48] kVAs=[500 400 300] "
+                  "%Rs=[1 2 3]\n")
+
+
+def _windings(record) -> list[tuple[float, float, float, float, bool]]:
+    """``(kV, kVA, tap, %R, delta)`` per winding of a read Transformer or XfmrCode; an unset array is the DSS
+    default."""
+    defaults = dss_defaults(type(record))
+    count = record.windings or defaults["windings"]
+
+    def column(values, scalar):
+        return list(values) if values else [defaults[scalar]] * count
+
+    return [(float(kv), float(kva), float(tap), float(r), str(getattr(conn, "text", conn)).lower() == "delta")
+            for kv, kva, tap, r, conn in zip(column(record.kVs, "kV"), column(record.kVAs, "kVA"),
+                                             column(record.taps, "tap"), column(record.pct_Rs, "pct_R"),
+                                             column(record.conns, "conn"))]
+
+
+def _engine_windings(name: str) -> list[tuple[float, float, float, float, bool]]:
+    dss.Transformers.Name(name)
+    windings = []
+    for number in range(1, dss.Transformers.NumWindings() + 1):
+        dss.Transformers.Wdg(number)
+        windings.append((dss.Transformers.kV(), dss.Transformers.kVA(), dss.Transformers.Tap(), dss.Transformers.R(),
+                         dss.Transformers.IsDelta()))
+    return windings
+
+
+TAPPED = ("New Transformer.t phases=3 windings=2 buses=[a b] conns=[delta wye] kVs=[12.47 4.16] kVAs=[500 400] "
+          "%Rs=[1 2] taps=[1.05 1.02]")
+#: the per-winding values the engine resets ``windings=`` to (kV, kVA, tap, %R, delta)
+FRESH = (12.47, 1000, 1, 0.2, False)
+
+
+@pytest.mark.parametrize("text, expected", [
+    # kVA on winding 1 sets every winding, and on a 2-winding transformer either winding's sets both
+    # (Transformer.pas:571-578)
+    (TWO_WINDINGS + "Edit Transformer.t kva=600\n",
+     [(12.47, 600, 1, 1, False), (4.16, 600, 1, 2, False)]),
+    (TWO_WINDINGS + "Edit Transformer.t wdg=1\nEdit Transformer.t kva=600\n",
+     [(12.47, 600, 1, 1, False), (4.16, 600, 1, 2, False)]),
+    (THREE_WINDINGS + "Edit Transformer.t wdg=1 kVA=50\n",
+     [(12.47, 50, 1, 1, False), (4.16, 50, 1, 2, False), (0.48, 50, 1, 3, False)]),
+    # IEEE34's regulator tap: winding 2 only, winding 1 keeps the default tap
+    ("New Transformer.t phases=1 windings=2 buses=[a.1 b.1] kVs=[14.376 14.376] kVAs=[1666 1666]\n"
+     "Transformer.t.wdg=2 Tap=(0.00625 12 * 1 +)\n",
+     [(14.376, 1666, 1, 0.2, False), (14.376, 1666, 1.075, 0.2, False)]),
+    # an array, however short, leaves the last winding active (Transformer.pas:731-737)
+    (THREE_WINDINGS + "Edit Transformer.t kv=5\n",
+     [(12.47, 500, 1, 1, False), (4.16, 400, 1, 2, False), (5, 300, 1, 3, False)]),
+    (THREE_WINDINGS + "Edit Transformer.t wdg=1\nEdit Transformer.t kVs=[5]\nEdit Transformer.t kv=7\n",
+     [(5, 500, 1, 1, False), (4.16, 400, 1, 2, False), (7, 300, 1, 3, False)]),
+    # a short array keeps the windings it leaves out ("Ignore omitted values", Transformer.pas:796-801)
+    (TAPPED + "\nEdit Transformer.t taps=[0.9]\n",
+     [(12.47, 500, 0.9, 1, True), (4.16, 400, 1.02, 2, False)]),
+    # wdg= stays active across Edit, ~ and dotted edits of the same object
+    (THREE_WINDINGS + "Edit Transformer.t wdg=2\nEdit Transformer.t kv=5\n",
+     [(12.47, 500, 1, 1, False), (5, 400, 1, 2, False), (0.48, 300, 1, 3, False)]),
+    (THREE_WINDINGS + "Edit Transformer.t wdg=2\n~ kv=5 %R=0.7\n",
+     [(12.47, 500, 1, 1, False), (5, 400, 1, 0.7, False), (0.48, 300, 1, 3, False)]),
+    (THREE_WINDINGS + "Transformer.t.wdg=1\nTransformer.t.kv=5\n",
+     [(5, 500, 1, 1, False), (4.16, 400, 1, 2, False), (0.48, 300, 1, 3, False)]),
+    # another transformer's wdg= does not move this one's
+    (THREE_WINDINGS + "Edit Transformer.t wdg=1\nNew Transformer.u phases=3 windings=2 buses=[x y] wdg=2 kv=1\n"
+     "Edit Transformer.t kv=5\n",
+     [(5, 500, 1, 1, False), (4.16, 400, 1, 2, False), (0.48, 300, 1, 3, False)]),
+    # a New's last wdg= stays active
+    ("New Transformer.t phases=3 windings=2 wdg=1 bus=a kv=12.47 wdg=2 bus=b kv=4.16\nEdit Transformer.t tap=1.05\n",
+     [(12.47, 1000, 1, 0.2, False), (4.16, 1000, 1.05, 0.2, False)]),
+    # windings= makes every winding anew, even at the same count (Transformer.pas:985-994, SetNumWindings)
+    (TAPPED + "\nEdit Transformer.t windings=2\n", [FRESH, FRESH]),
+    (TAPPED.replace("windings=2 ", "") + " windings=2\n", [FRESH, FRESH]),
+])
+def test_per_winding_edits_go_to_the_active_winding(tmp_path, text, expected):
+    """The engine keeps each transformer's active winding across commands (``ActiveWinding`` is a field of the
+    object, set to 1 when it is created, Transformer.pas:924), and an edit's kV, kVA, tap or %R goes to it.
+    ``expected`` is what opendssdirect 0.9.4 gave for each deck: ``(kV, kVA, tap, %R, delta)`` per winding."""
+    model = read(tmp_path, CIRCUIT + text)
+    [transformer] = [record for record in model.list_by_class(schema.Transformer) if record.name == "t"]
+    compile_deck(tmp_path / "deck.dss")
+    assert _engine_windings("t") == [pytest.approx(winding) for winding in expected]
+    assert _windings(transformer) == [pytest.approx(winding) for winding in expected]
+
+
+def test_per_winding_edits_of_an_xfmrcode_go_to_its_active_winding(tmp_path):
+    """The engine gave ``[(12.47, 500, 1.05, 1), (5, 400, 1, 2), (0.48, 300, 1, 3)]`` (kV, kVA, tap, %R) for the
+    transformer that uses the code (XfmrCode.pas:273, 319)."""
+    model = read(tmp_path, CIRCUIT + "New XfmrCode.x phases=3 windings=3 kVs=[12.47 4.16 0.48] kVAs=[500 400 300] "
+                                     "%Rs=[1 2 3]\nEdit XfmrCode.x wdg=2\nEdit XfmrCode.x kv=5\nXfmrCode.x.wdg=1\n"
+                                     "XfmrCode.x.tap=1.05\nNew Transformer.t XfmrCode=x buses=[a b c]\n")
+    compile_deck(tmp_path / "deck.dss")
+    expected = [(12.47, 500, 1.05, 1, False), (5, 400, 1, 2, False), (0.48, 300, 1, 3, False)]
+    assert _engine_windings("t") == [pytest.approx(winding) for winding in expected]
+    assert _windings(only(model, schema.Xfmrcode)) == [pytest.approx(winding) for winding in expected]
+
+
+def test_a_neutral_edit_keeps_the_winding_of_the_first(tmp_path):
+    """The engine resets Rneut to -1 (its default) on ``windings=``; the reader leaves it unset, which is that
+    default."""
+    model = read(tmp_path, TWO_WINDINGS + "Edit Transformer.t wdg=1 Rneut=0\nEdit Transformer.t Xneut=0.4\n")
+    transformer = only(model, schema.Transformer)
+    assert (transformer.wdg, transformer.Rneut, transformer.Xneut) == (1, 0.0, 0.4)
+    with pytest.raises(DssParseError, match=r"Rneut on winding 2 after winding 1's neutral.* at line 3"):
+        read(tmp_path, TWO_WINDINGS + "Edit Transformer.t wdg=1 Rneut=0\nEdit Transformer.t wdg=2 Rneut=5\n")
+    model = read(tmp_path, TWO_WINDINGS + "Edit Transformer.t wdg=2 Rneut=5\nEdit Transformer.t windings=2\n")
+    transformer = only(model, schema.Transformer)
+    assert (transformer.wdg, transformer.Rneut) == (None, None)
+
+
+def test_a_winding_past_the_last_raises(tmp_path):
+    """The engine raises ``(#2020031) Transformer.t.Wdg: Invalid value (4).`` (Transformer.pas:624)."""
+    with pytest.raises(DssParseError, match=r"wdg=4: the windings are 1 to 3 .* at line 3"):
+        read(tmp_path, CIRCUIT + THREE_WINDINGS + "Edit Transformer.t wdg=4 kv=9\n")
+
+
+def test_a_per_winding_batchedit_raises(tmp_path):
+    """The engine sets each matched transformer's own active winding; the reader does not follow that."""
+    with pytest.raises(DssParseError, match=r"BatchEdit of per-winding properties .* at line 2"):
+        read(tmp_path, TWO_WINDINGS + "BatchEdit Transformer..* kv=5\n")
+
+
+# ---------------------------------------------------------------------------
+# W17 matrices in rows, W16 empty values, M4 command boundaries
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("matrix", [
+    "[1 2 3 | 2 4 5 | 3 5 6]",  # full
+    "[1 | 2 4 | 3 5 6]",  # lower triangle
+    "[1 | 2 4 5 | 3 5 6]",  # mixed
+    "[1 2 9 | 2 4 9 | 3 5 6]",  # a later row overwrites the upper values an earlier one wrote
+])
+def test_a_matrix_in_rows_is_its_lower_triangle_as_the_engine_reads_it(tmp_path, matrix):
+    """``ParseAsSymMatrix`` (Parser/ParserDel.pas:817-829) writes M[i,j] and M[j,i] for each value j of row i, later
+    rows over earlier ones; the engine gave Rmatrix ``[1 2 3 | 2 4 5 | 3 5 6]`` for each of these."""
+    code = only(read(tmp_path, CIRCUIT + f"New Linecode.lc nphases=3 rmatrix={matrix} xmatrix=[1 |0 1 |0 0 1]\n"),
+                schema.Linecode)
+    compile_deck(tmp_path / "deck.dss")
+    dss.LineCodes.Name("lc")
+    full = dss.LineCodes.Rmatrix()
+    assert code.rmatrix == [full[row * 3 + column] for row in range(3) for column in range(row + 1)]
+
+
+def test_a_matrix_row_shorter_than_its_number_raises(tmp_path):
+    """The engine reads ``[1 | 2 | 3 5 6]`` with M[2,2]=0: a row that stops short leaves an earlier row's value or 0
+    (Parser/ParserDel.pas:822-826)."""
+    with pytest.raises(DssParseError, match=r"rmatrix=.*matrix row 2 has 1 value; it needs 2 or more .* at line 2"):
+        read(tmp_path, CIRCUIT + "New Linecode.lc nphases=3 rmatrix=[1 | 2 | 3 5 6]\n")
+
+
+@pytest.mark.parametrize("line", [
+    "New Load.l bus1=a kW=",
+    'New Load.l bus1=a kW=""',
+    "New Load.l bus1=a kW=''",
+    "New Load.l bus1=a kW=()",
+    "New Load.l bus1=a kW=[]",
+    "New Load.l bus1=a kW={}",
+    'New Load.l bus1=a kW="" kvar=5',
+    "New Load.l kW=10 bus1=",
+    "New Load.l bus1=a yearly=",
+    "New Load.l bus1=a model=",
+    'New Line.ln bus1=a bus2=b linecode=""',
+    "New Transformer.t phases=3 windings=2 buses=[a b] kvs=[]",
+    "Edit Load.base kW=",
+    "Load.base.kW=",
+    "BatchEdit Load..* kW=",
+    "~ kW=",
+])
+def test_an_empty_value_raises(tmp_path, line):
+    """The engine reads an empty value as the end of the command: it drops that property and every later one on the
+    line without a word (``WHILE Length(Param)>0``, Load.pas:566, Transformer.pas:491), so ``New Load.l bus1=a
+    kW="" kvar=5`` keeps the default kvar. The reader raises instead."""
+    with pytest.raises(DssParseError, match=r"=.* is empty; the engine silently drops it and every later property on "
+                                            r"the line.* at line 3"):
+        read(tmp_path, CIRCUIT + "New Load.base bus1=a kW=10 kvar=3\n" + line + "\n")
+
+
+def test_a_blank_after_equals_is_no_empty_value(tmp_path):
+    """The engine gives ``Edit Load.base kW= 5`` kW=5: the parser skips the blank (Parser/ParserDel.pas:434-439)."""
+    model = read(tmp_path, CIRCUIT + "New Load.base bus1=a kW=10\nEdit Load.base kW= 5\n")
+    assert only(model, schema.Load).kW == 5.0
+
+
+def test_each_command_is_its_own_group_in_the_history(tmp_path):
+    """The engine recalculates a Load's kW/kvar/kVA/pf once at the end of each command (Load.pas:681), and a ``~`` line
+    is a command of its own (``DoMoreCmd``, Executive/ExecHelper.pas:887): ``New Load.l bus1=a kvar=50 kW=100`` gives
+    kvar 53.97 (kW and the default pf), while ``New Load.l bus1=a kvar=50`` then ``~ kW=100`` gives kvar 500."""
+    model = read(tmp_path, CIRCUIT + "New Load.l bus1=a kvar=50\n~ kW=100\nLoad.l.pf=0.9\nBatchEdit Load..* kvar=1\n")
+    load = only(model, schema.Load)
+    assert model.commands(load) == [[("bus1", "a"), ("kvar", 50.0)], [("kW", 100.0)], [("pf", 0.9)], [("kvar", 1.0)]]
+    assert model.assignments(load) == [("bus1", "a"), ("kvar", 50.0), ("kW", 100.0), ("pf", 0.9), ("kvar", 1.0)]
+    compile_deck(tmp_path / "deck.dss")
+    dss.Text.Command("? Load.l.kW")
+    assert dss.Text.Result() == "100"
+
+
+def test_a_like_copy_gives_the_source_commands_first(tmp_path):
+    """``like=`` copies the source's state as it stands (``MakeLike`` copies kWBase, kvarBase, LoadSpecType and
+    PFNominal, Load.pas:716-721), which is what replaying the source's commands gives; the rest of the ``New`` is one
+    command after them. The engine gave ``New Load.l like=base kvar=10`` kvar 10 and pf 0.995 for a base of kW=100
+    pf=0.5."""
+    model = read(tmp_path, CIRCUIT + "New Load.base bus1=a kW=100\n~ pf=0.5\nNew Load.l like=base bus1=b kvar=10\n")
+    [load] = [record for record in model.list_by_class(schema.Load) if record.name == "l"]
+    assert model.commands(load) == [[("bus1", "a"), ("kW", 100.0)], [("pf", 0.5)],
+                                    [("like", "base"), ("bus1", "b"), ("kvar", 10.0)]]

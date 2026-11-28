@@ -332,7 +332,8 @@ classes:
           - >-
             Import: only the regulated winding's tap, as RatioTapChanger.step =
             (tap - 1) / increment (regcontrol.cimtbl); any other tap other than
-            1 raises. Export: 1, and get_tap_ratio(actual) on the winding with
+            1 raises. Values past the winding count are ignored and missing
+            ones are 1, as in the engine. Export: 1, and get_tap_ratio(actual) on the winding with
             the RatioTapChanger.
 
       # (17) XHL

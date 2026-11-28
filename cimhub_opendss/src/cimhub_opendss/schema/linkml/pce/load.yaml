@@ -137,8 +137,10 @@ classes:
           - cim:EnergyConsumer.q
         comments:
           - >-
-            Import: derived; with kvar unset, q = kW x tan(acos abs(pf)) with
-            the sign of pf; default 0.88. Export: not written; kvar carries q.
+            Import: derived; with kW or kVA assigned last of kW, kvar and kVA,
+            q = kW x tan(acos abs(pf)) with the sign of pf; pf never changes
+            which pair the engine uses; default 0.88. Export: not written;
+            kvar carries q.
 
       # (6) model
       model:
@@ -260,8 +262,10 @@ classes:
           - cim:EnergyConsumer.q
         comments:
           - >-
-            Import: q (kVAr). Export: q (kVAr) of get_phase_loads; per phase
-            when the phases differ.
+            Import: q (kVAr) when kvar is assigned last of kW, kvar and kVA,
+            with kW as the engine holds it; the deck is replayed command by
+            command. Export: q (kVAr) of get_phase_loads; per phase when the
+            phases differ.
 
       # (13) Rneut
       Rneut:
@@ -451,9 +455,10 @@ classes:
           - cim:EnergyConsumer.q
         comments:
           - >-
-            Import: derived; with kW unset, p = kVA x abs(pf) and q = kVA x
-            sin(acos abs(pf)) with the sign of pf; kW with kVA raises. Export:
-            not written; kW and kvar carry the power.
+            Import: derived; when kVA is assigned last of kW, kvar and kVA,
+            p = kVA x abs(pf) and q = kVA x sin(acos abs(pf)) with the sign of
+            pf as the engine holds it; the deck is replayed command by
+            command. Export: not written; kW and kvar carry the power.
 
       # (24) %mean
       pct_mean:

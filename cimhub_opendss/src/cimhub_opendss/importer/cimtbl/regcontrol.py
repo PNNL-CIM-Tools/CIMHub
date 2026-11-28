@@ -65,7 +65,8 @@ FIELDS = {
     "debugtrace": Field("untranscribed", note="DSS report flag"),
     "EventLog": Field("untranscribed", note="DSS report flag"),
     "Reset": Field("untranscribed", note="a command, not a setting"),
-    "TapNum": Field("structural", note=_NOT_MAPPED + " (a tap position that overrides the transformer's tap)"),
+    "TapNum": Field("structural", note=_NOT_MAPPED + " (a tap position that overrides the transformer's tap); "
+                                                     "even 0 raises: setting it moves the tap, so it has no default"),
     "RemotePTRatio": Field("structural", note=_NOT_MAPPED),
     "LDC_Z": Field("structural", note=_NOT_MAPPED),
     "rev_Z": Field("structural", note=_NOT_MAPPED),
@@ -146,6 +147,13 @@ def _end_number(windings, phases: int, number: int, regulator: bool, *, name: st
     return next(end.number for end in ends if any(w.number == number for w in end.windings))
 
 
+def _is_set(value, default) -> bool:
+    """An unmapped slot counts as set unless it is unset or equal to its ``dss_default`` (decision 14): the engine
+    default changes nothing. A slot with no default, such as TapNum (setting it moves the tap), is set at any
+    value, 0 included."""
+    return value is not None and (default is None or value != default)
+
+
 def map_regcontrol(native) -> Document:
     """Every ``RegControl`` as a ``TapChangerControl`` and its ``RatioTapChanger`` in one ``regcontrol`` document."""
     controls = native.list_by_class(NATIVE_CLASS)
@@ -155,13 +163,15 @@ def map_regcontrol(native) -> Document:
     codes = {str(code.name).lower(): code for code in native.list_by_class(schema.Xfmrcode)}
     transformer_mapper.regulated_transformers(native)  # two controls on one transformer raise
     tap_defaults = {slot: dss_defaults(schema.Transformer)[slot] for slot in _TAP_DEFAULTS}
+    defaults = dss_defaults(NATIVE_CLASS)
+    mapped_defaults = {slot: value for slot, value in defaults.items() if slot not in _UNMAPPED}  # the rest reach no value
     control_rows, tap_rows = [], []
     for original in controls:
-        unmapped = [slot for slot in _UNMAPPED if getattr(original, slot) not in (None, [], False)]
+        unmapped = [slot for slot in _UNMAPPED if _is_set(getattr(original, slot), defaults.get(slot))]
         if unmapped:
             raise ValueError(f"RegControl {original.name}: {', '.join(unmapped)} not mapped yet (no deck in the "
                              "sweep sets them)")
-        control, defaulted = fill_defaults(FIELDS, original, dss_defaults(NATIVE_CLASS))
+        control, defaulted = fill_defaults(FIELDS, original, mapped_defaults)
         xf = transformers.get(str(control.transformer).lower())
         if xf is None:
             raise ValueError(f"RegControl {control.name}: transformer={control.transformer} is no Transformer")
@@ -172,7 +182,7 @@ def map_regcontrol(native) -> Document:
         number = int(control.winding)
         if not 1 <= number <= len(windings):
             raise ValueError(f"RegControl {control.name}: winding={number} of a {len(windings)}-winding transformer")
-        taps = [float(tap) for tap in xf.taps or []]
+        taps = transformer_mapper.winding_taps(xf, len(windings))
         if any(tap != 1.0 for index, tap in enumerate(taps, start=1) if index != number):
             raise ValueError(f"Transformer {xf.name}: taps={taps} with RegControl {control.name} on winding {number}; "
                              f"only winding {number}'s tap is mapped (a fixed tap is not mapped yet)")
@@ -187,7 +197,7 @@ def map_regcontrol(native) -> Document:
         if unset:
             notes.append(f"defaulted: Transformer {xf.name} "
                          + ", ".join(f"{slot}={cell(tap_defaults[slot])}" for slot in unset))
-        tap = float(xf.taps[number - 1]) if xf.taps else 1.0
+        tap = taps[number - 1]
         steps = tap_range(tap, float(tap_slots["MaxTap"]), float(tap_slots["MinTap"]), int(tap_slots["NumTaps"]),
                           name=xf.name)
         ptratio, ct_primary = float(control.ptratio), float(control.CTprim)

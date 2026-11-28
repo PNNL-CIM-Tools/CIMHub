@@ -24,6 +24,12 @@ _CONFIGURATION = "WireConfiguration"
 _RATING = "no home on a WireConfiguration; instance limits or untranscribed (plan D9)"
 _FOLDED = "the reader folds the cond= blocks into the arrays; set alone (no cond=) it raises"
 _NOT_MAPPED = "raises when set: no deck in the sweep sets it, so a mapping waits for one"
+_EQUIVALENT = ("raises when set, at any value: detailed=No takes phase-phase and neutral-neutral distances from "
+               "EqDistPhPh, phase-neutral ones from EqDistPhN and the image distances from 2 x AvgPhaseHeight, "
+               "2 x AvgNeutralHeight or their sum (LineConstants.pas:218-297), which no XY positions reproduce in "
+               "general")
+#: The equivalent-spacing slots: set at all, they raise (``_EQUIVALENT``).
+_EQUIVALENT_SLOTS = ("EqDistPhPh", "EqDistPhN", "AvgPhaseHeight", "AvgNeutralHeight")
 
 LINESPACING_FIELDS = {
     "name": Field("copied", ((_SPACING, "name", None),), "mRID = spc_ + name, lowercased; isTemplate = true"),
@@ -33,11 +39,12 @@ LINESPACING_FIELDS = {
     "x": Field("structural", note="XYConductorPosition.xCoord ({length}), one per conductor"),
     "h": Field("structural", note="XYConductorPosition.yCoord ({length}), one per conductor"),
     "units": Field("mapped", note="the length unit of xCoord and yCoord (LENGTH_UNIT); unset raises"),
-    "detailed": Field("structural", note=_NOT_MAPPED + " (the equivalent-distance form has no positions)"),
-    "EqDistPhPh": Field("structural", note=_NOT_MAPPED + " (the equivalent-distance form has no positions)"),
-    "EqDistPhN": Field("structural", note=_NOT_MAPPED + " (the equivalent-distance form has no positions)"),
-    "AvgPhaseHeight": Field("structural", note=_NOT_MAPPED + " (the equivalent-distance form has no positions)"),
-    "AvgNeutralHeight": Field("structural", note=_NOT_MAPPED + " (the equivalent-distance form has no positions)"),
+    "detailed": Field("structural", note="Yes (the default, LineSpacing.pas:213, :327) maps the positions; No "
+                                         "(the equivalent-spacing form) raises: it has no positions"),
+    "EqDistPhPh": Field("structural", note=_EQUIVALENT),
+    "EqDistPhN": Field("structural", note=_EQUIVALENT),
+    "AvgPhaseHeight": Field("structural", note=_EQUIVALENT),
+    "AvgNeutralHeight": Field("structural", note=_EQUIVALENT),
     "like": Field("untranscribed", note="the reader resolves like= before mapping"),
 }
 
@@ -102,6 +109,17 @@ def _not_mapped(record, slots) -> None:
                          "(no deck in the sweep sets them)")
 
 
+def _check_detailed(spacing) -> None:
+    """Raise on the equivalent-spacing form (``_EQUIVALENT``): ``detailed=No`` or any of its four slots set.
+    ``detailed=Yes`` is the engine default and maps the positions."""
+    if spacing.detailed is not None and not spacing.detailed:
+        raise ValueError(f"LineSpacing {spacing.name}: detailed=No (the equivalent-spacing form) has no positions")
+    equivalent = [slot for slot in _EQUIVALENT_SLOTS if getattr(spacing, slot) is not None]
+    if equivalent:
+        raise ValueError(f"LineSpacing {spacing.name}: {', '.join(equivalent)} not mapped yet (the "
+                         "equivalent-spacing form has no positions)")
+
+
 def spacing_statements(spacing_mrid: str, name: str, xs: list[float], hs: list[float], units, nphases: int,
                        nconds: int, *, comment: str | None = None) -> list:
     """An ``XYSpacing`` template and its ``XYConductorPosition`` table: conductors 1..nphases are phases, the
@@ -127,8 +145,7 @@ def map_linespacing(native) -> Document:
     spacings = native.list_by_class(schema.Linespacing)
     statements = []
     for spacing in spacings:
-        _not_mapped(spacing, ("detailed", "EqDistPhPh", "EqDistPhN", "AvgPhaseHeight",
-                                                  "AvgNeutralHeight"))
+        _check_detailed(spacing)
         statements += spacing_statements(mrid(_SPACING_PREFIX, spacing.name, lowercase=True), spacing.name,
                                          spacing.x, spacing.h, spacing.units, spacing.nphases, spacing.nconds,
                                          comment=untranscribed_values(LINESPACING_FIELDS, spacing))

@@ -51,7 +51,8 @@ FIELDS = {
     "pf": Field("derived", note="q = -kW x tan(acos abs(pf)) x sign(pf), unless kvar was assigned after it "
                                 "(the last of the two wins, S4b-8); default 1"),
     "conn": Field("mapped", ((CONNECTION, "phaseConnection", None),), "wye -> Y, delta -> D; default wye"),
-    "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign), unless pf was assigned after it"),
+    "kvar": Field("derived", note="q (kVAr) = -kvar (the load sign), unless pf was assigned after it; above kVA "
+                                  "it raises, off or on (the engine clamps it to kvarMax; decision 9)"),
     "kVA": Field("copied", ((CONNECTION, "ratedS", "kVA"),), "also caps p (var priority); default 500"),
     "pct_Cutin": Field("structural", note="acts only after the inverter turns off; the snapshot state uses %Cutout; "
                                           "a yearly sample between %Cutout and %Cutin raises (S9); default 20"),
@@ -124,9 +125,13 @@ def pv_power(label: str, *, pmpp: float, irradiance: float, pct_pmpp: float, kva
     """The engine's snapshot output of a PV (generator sign): off when the panel's power (Pmpp x irradiance) is
     below %Cutout of kVA, else that power capped at %Pmpp of Pmpp, with its kvar (``kvar``, or from ``pf`` when it
     is ``None``), cut to fit kVA (var priority). Off, it gives no kW, and a set ``kvar`` unless ``var_follow``
-    (``VarFollowInverter``; engine-checked)."""
+    (``VarFollowInverter``; engine-checked). A kvar above kVA raises, off or on: the engine clamps it to kvarMax,
+    and reactive capability is not modelled yet (decision 9)."""
     panel = pmpp * irradiance
     if panel < pct_cutout / 100 * kva:
+        if kvar is not None and abs(float(kvar)) > kva:
+            raise ValueError(f"{label}: {float(kvar):.6g} kvar is above its {kva:.6g} kVA (off, below %Cutout); the "
+                             "engine clamps it to kvarMax, and reactive capability is not modelled yet")
         return PvPower(0.0, float(kvar) if kvar is not None and not var_follow else 0.0, True)
     available = min(panel, pmpp * pct_pmpp / 100)
     q = float(kvar) if kvar is not None else reactive_power(label, available, pf)

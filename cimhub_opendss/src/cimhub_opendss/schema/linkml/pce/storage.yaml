@@ -521,7 +521,7 @@ classes:
         comments:
           - >-
             Import: derived; idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default
-            1. Export: idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be).
+            1; negative raises. Export: idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be).
 
       # (31) %Idlingkvar
       pct_Idlingkvar:

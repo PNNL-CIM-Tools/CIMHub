@@ -292,6 +292,23 @@ def test_waiting_battery_without_idling_loss_takes_float_noise_as_zero():
     assert storages["batidle"].pct_IdlingkW == pytest.approx(0, abs=1e-9)
 
 
+def test_waiting_battery_with_generation_raises():
+    """A waiting battery only draws its idling loss; generation is the wrong sign (decision 12)."""
+    network = _network(ATOMS / "der" / "der.dss")
+    _object(network, cim.BatteryUnit, "storage_batidle_unit").idlingP = None
+    _object(network, cim.PowerElectronicsConnection, "storage_batidle").p = cim.ActivePower(-5, "kW")
+    with pytest.raises(ValueError, match=r"BatteryUnit 'storage_batidle_unit': waiting with generation 5(\.0)? kW"):
+        _model(network)
+
+
+def test_negative_idling_loss_raises():
+    """idlingP is consumed while idling; a negative one is the wrong sign (decision 12)."""
+    network = _network(ATOMS / "der" / "der.dss")
+    _object(network, cim.BatteryUnit, "storage_school_unit").idlingP = cim.ActivePower(-1, "kW")
+    with pytest.raises(ValueError, match=r"BatteryUnit 'storage_school_unit': idlingP -1(\.0)? kW is negative"):
+        _model(network)
+
+
 def test_disabled_machine_control_is_model_1():
     network = _network(ATOMS / "generator" / "gens.dss")
     _object(network, cim.SynchronousMachine, "gen_steam").controlEnabled = False

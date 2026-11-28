@@ -32,6 +32,42 @@ Where the result differs from the line above:
   schedules are skipped (valid recurring days, not a time series). X25: raises on a multiplier on a unitless curve only (GDM's W+k is right).
 - Follow-up, not done: the gridlabd player keeps its own `is_day` rule; it could call `get_group_schedule`.
 
+## Decisions applied (2026-11-27, uncommitted on rc_2)
+
+The user's answers to section 5, and what was done. Every rule below was checked against opendssdirect 0.9.4 and
+EPRI's Pascal source (`~/electricdss-code/Version8/Source`); the tests cite file:line.
+- 1 (W17): the reader replays `ParseAsSymMatrix` (Parser/ParserDel.pas:817-829) on `|` rows and stores the
+  lower triangle; a row shorter than its index raises. A flat list longer than one row is rejected by the engine.
+- 2 (W16): the engine silently drops an empty value and the rest of the command (Load.pas:566); the reader raises
+  instead (fail fast). `kW= 5` is not empty.
+- 3 (W4/R41): a missing cond x is 0 (LineGeometry.pas:1075). Reader fills it; the writer writes x=0. A position with
+  no h raises (deviation: the engine would put it at h=0).
+- 4 (N6): only engine class names resolve; `tcccurve` / `tcc curve` raise #263. fmonitor, generic5, pycontrol and
+  windgen exist in EPRI's source but not in opendssdirect; left as is.
+- 5 (P1-P3): not edited (bootstrap session). linkml-runtime is a runtime dep (the generated schema imports it);
+  declare `linkml-runtime~=1.9.5` and `cim-profiles` (pin 0.2.0 at release); no rdflib.
+- 6 (R17): the active winding is tracked per object across commands; `windings=` resets the windings; a short array
+  keeps the other windings' values; `wdg=` past the last raises; a per-winding BatchEdit raises.
+- 7 (M4/M46): `DssModel.commands()` keeps command boundaries (each `~` line is its own command, ExecHelper.pas:887);
+  the Load mapper replays the engine's per-command recalculation (Load.pas:634-681, 1138-1160). `taps` longer than windings is cut; shorter keeps the earlier taps.
+- 8 (M5/M6): already the load sign (p = -kW, q = -kvar); engine-default kVA/Maxkvar/Minkvar keep their signs.
+- 9 (M38): raises; logged in `.development/TODO.md`.
+- 10 (M19): `detailed=Yes` maps; `detailed=No` and EqDist*/Avg* raise (LineConstants.pas:218-297: no XY positions
+  reproduce the equivalent-spacing form).
+- 11 (X41): DSS Rac = rAC25, else rAC50 (in the exporter; GLM prefers rAC50). Writing both on import is not done.
+- 12 (X34/X35): export raises on a waiting battery with generation and on a negative idlingP; import raises on a
+  negative %IdlingkW.
+- 13 (X7): no change; a phase-to-phase capacitor is a real device.
+- 14 (M41): an unmapped RegControl slot at its `dss_default` is unset, any other value raises (`TapNum=0` raises: it
+  moves the tap). `dss_default` added for vlimit, LDC_Z, rev_Z and Cogen.
+
+Open: a `~` after `New X.b like=a` edits `a` in the engine (DSSClass.pas:256); `like=` cannot supply a required
+`bus1`; the Load "defaulted:" comment can list kW=10 when an earlier kVA set kW (comment only).
+
+Not done, found along the way: a second `New` of an existing object (engine #266); `XfmrCode=` resizing windings;
+`Edit windings=N` bus names; per-winding MaxTap/MinTap/NumTaps; the same drop-on-falsy rule in geometry
+`conductors` and the PV/Storage unmapped lists.
+
 ## 1. Port: engine-verified or spec-backed bug fixes
 
 ### Reader (`dss_reader.py`)
@@ -69,7 +105,7 @@ Where the result differs from the line above:
 - [x] W9 Buscoords with x/y None raises
 - [x] W10 sanitize the bus name in the coordinates CSV (rc_2 leaves `bus_1` without coordinates)
 - [x] W11 quote the coordinates filename (always quote; simpler)
-- [ ] W17 non-triangular matrix: raise or convert (see decision 1). rc_2 silently corrupts a full 3×3
+- [x] W17 non-triangular matrix: raise or convert (see decision 1). rc_2 silently corrupts a full 3×3
 - [x] N2 `encoding="utf-8"` when loading schema yaml
 - [x] N3 `field_for("")` raises
 - [x] N4 prefix match skips `name` (`New Loadshape.s n=2` loses npts on rc_2)
@@ -82,14 +118,14 @@ Where the result differs from the line above:
 - [x] M1 kvar takes kW's sign (`kW=-50 pf=0.9` gives kvar -24.2 in the engine)
 - [x] M2 `reactive_power` raises unless 0 < |pf| ≤ 1
 - [x] M3 **rc_2 fix, not the PR formula:** `power_from_kva` raises on pf=0 (the engine gives NaN; the PR's (0, kVA) is wrong)
-- [ ] M4 kVA together with kvar raises (or resolve by order, see decision 7)
+- [x] M4 kVA together with kvar raises (or resolve by order, see decision 7)
 - [x] M12 Capacitor Numsteps=0 raises (rc_2 maps it as 1)
 - [x] M13 Capacitor `states` must be one value, 0 or 1
 - [x] M15 CapControl phase count also from LineSpacing.nphases. **Share one helper with line.py**
 - [x] M16 CapControl Line terminal must be 1 or 2
 - [x] M17 CapControl Capacitor terminal must be 1
 - [x] M18 geometry `_not_mapped`: drop the unused `fields` parameter
-- [ ] M19 LineSpacing `detailed`: No raises, Yes maps (rc_2 has it inverted); update the spec note
+- [x] M19 LineSpacing `detailed`: No raises, Yes maps (rc_2 has it inverted); update the spec note
 - [x] M22 `spacing=` with folded cond/wire/x/h slots raises
 - [x] M23 switch lines are excluded from geometry, earth rho and linecode unit templates; add `rho` to `_SWITCH_DROPPED`
 - [x] M24 Recloser Shots < 1 raises (skip the Shots=1 branch)
@@ -98,12 +134,12 @@ Where the result differs from the line above:
 - [x] M34 2-phase sequence code with C0 but no C1 raises
 - [x] M35/M36 loadshape actions from the assignment history (`normalize` then `DblSave`). Drop the PR's `shape.action` fallback
 - [x] M37 de-duplicate the PV/reactor "raises when" notes, properly (a `_RAISES` constant, all 6 notes); regenerate CIMTBL_MAPPING.md
-- [ ] M38 PV below cutout with |kvar| > kVA: raise or clamp (see decision 9)
+- [x] M38 PV below cutout with |kvar| > kVA: raise or clamp (see decision 9)
 - [x] M39 PV hysteresis band check in `map_pvsystem`. **Only the check**, not the double pass over every sample
 - [x] M40 tap_range: NumTaps > 0, MaxTap > MinTap, tap within range
-- [ ] M41 RegControl unmapped-slot test: see decision 14 (both the rc_2 and PR rules are wrong)
+- [x] M41 RegControl unmapped-slot test: see decision 14 (both the rc_2 and PR rules are wrong)
 - [x] M42 a non-1 fixed tap on a non-controlled winding raises (rc_2 drops it)
-- [ ] M46 `taps` length ≠ windings: raise or pad (see decision 7)
+- [x] M46 `taps` length ≠ windings: raise or pad (see decision 7)
 - [x] M47 regulator `grounded`: 3-phase uses nodes[-1]==0, 1-phase uses 0 in nodes (`.1.2.3.4` floats in the engine)
 - [x] M48 **rc_2 fix, not the PR formula:** raise clearly on x1r1 ≤ 0 (the engine refuses it; the PR returns X1=0)
 - [x] M49 Vsource kv/MVAsc > 0, x0r0 ≥ 0, R0 ≥ 0
@@ -135,7 +171,7 @@ Where the result differs from the line above:
 - [x] X38 winding-1 kVA ≤ 0 raises
 - [x] X39 AutoTransformer kVA compare uses `isclose`
 - [x] X40 rground/xground on a winding that isn't a grounded wye raises (the engine grounds it silently)
-- [ ] X41 wire Rac = rAC25, else rAC50 (rc_2 drops rAC50 silently, so a GLM line fails to export). Update the Slot text and EXPORT_MAPPING.md:244; see decision 11
+- [x] X41 wire Rac = rAC25, else rAC50 (rc_2 drops rAC50 silently, so a GLM line fails to export). Update the Slot text and EXPORT_MAPPING.md:244; see decision 11
 
 ### Docs and tests (true of rc_2 already)
 - [x] README `cim_to_dss` signature and the support table (Switches, LoadShape)

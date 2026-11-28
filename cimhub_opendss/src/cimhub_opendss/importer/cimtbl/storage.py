@@ -77,7 +77,8 @@ FIELDS = {
                                         "100"),
     "pct_EffCharge": Field("copied", ((_UNIT, "chargingEfficiency", "percent"),), "default 90"),
     "pct_EffDischarge": Field("copied", ((_UNIT, "dischargingEfficiency", "percent"),), "default 90"),
-    "pct_IdlingkW": Field("derived", note="idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1"),
+    "pct_IdlingkW": Field("derived", note="idlingP (kW) = %IdlingkW x kWrated / 100, also p when waiting; default 1; "
+                                          "negative raises (decision 12)"),
     "pct_Idlingkvar": Field("untranscribed", note="deprecated in the engine"),
     "pct_R": Field("untranscribed", note=_DYNAMICS),
     "pct_X": Field("untranscribed", note=_DYNAMICS),
@@ -216,6 +217,9 @@ def _check(storage) -> None:
                          "them)")
     if storage.model is not None and int(storage.model) != 1:
         raise ValueError(f"Storage {storage.name}: model={storage.model} is not mapped (model 1 is)")
+    if storage.pct_IdlingkW is not None and float(storage.pct_IdlingkW) < 0:
+        raise ValueError(f"Storage {storage.name}: %IdlingkW={storage.pct_IdlingkW:g} is negative; an idling loss is a "
+                         "draw (the engine would generate it, and the exporter raises on a negative idlingP)")
     if (mode == _FOLLOW) != (storage.yearly is not None):
         raise ValueError(f"Storage {storage.name}: DispMode={storage.DispMode} with yearly={storage.yearly}; only a "
                          "follow-mode battery's yearly shape is mapped (S9-6)")

@@ -228,16 +228,18 @@ class DssWriter(FormatWriter):
 
     def _geometry(self, geometry, kinds: dict[str, str]) -> str:
         """A LineGeometry with positions: its other slots, then one ``cond=`` block per conductor naming its kind
-        (``wire``, ``cncable``, ``tscable``: the catalog that defines the name), as only blocks can mix kinds."""
+        (``wire``, ``cncable``, ``tscable``: the catalog that defines the name), as only blocks can mix kinds. With
+        heights and no ``xs``, each conductor is at x=0, the engine's default (LineGeometry.pas:1075)."""
         arrays = [getattr(geometry, slot) for slot in _NAME_ARRAYS if getattr(geometry, slot)]
-        if len(arrays) != 1 or not len(arrays[0]) == len(geometry.xs) == len(geometry.hs):
+        xs = geometry.xs or [0.0] * len(geometry.hs or [])
+        if len(arrays) != 1 or not len(arrays[0]) == len(xs) == len(geometry.hs):
             counts = ", ".join(f"{len(getattr(geometry, slot) or [])} {slot}" for slot in (*_NAME_ARRAYS, "xs", "hs")
                                if getattr(geometry, slot) or slot in ("xs", "hs"))
             raise ValueError(f"DssWriter: LineGeometry {geometry.name}: {counts}; needs one wire, x and h per "
                              f"conductor, all in one of {list(_NAME_ARRAYS)}")
         parts = [f"new {type(geometry).__name__}.{dss_safe_name(str(geometry.name))}",
                  *self._properties(geometry, skip=(*_GEOMETRY_CURSOR, *_NAME_ARRAYS, "xs", "hs", "units"))]
-        for number, (name, x, h) in enumerate(zip(arrays[0], geometry.xs, geometry.hs), start=1):
+        for number, (name, x, h) in enumerate(zip(arrays[0], xs, geometry.hs), start=1):
             kind = kinds.get(str(name).lower())
             if kind is None:
                 raise ValueError(f"DssWriter: LineGeometry {geometry.name}: conductor {name!r} is in no wire catalog")

@@ -163,7 +163,7 @@ class DssCommand:
     params: list[tuple[str, str]]  # raw (key, value) in deck order (original-case keys); a key may repeat
     source_file: str  # for error reporting
     line_number: int
-    raw_text: str = ""  # full merged text of the command (for per-winding parsing)
+    raw_text: str = ""  # full merged text of the command (for the LineGeometry cond= blocks)
 
 
 def _resolve_file_case_insensitive(path: Path) -> Path:
@@ -192,15 +192,23 @@ class DssModel(GraphModel):
     The engine applies a deck's assignments in order, and for some properties the order decides the value: a
     Generator keeps ``kvar`` as a power factor taken at the kW of that moment, and a Storage's ``State`` picks one of
     the setpoints that ``kW`` sets. A record keeps only the last value of each slot, so the history keeps every
-    ``(slot, value)`` the deck assigned, in deck order (``New``, edits, ``BatchEdit``, and the slots ``like=`` copies,
-    first). Mappers replay it where the order matters (CIMTBL_MAPPING.md S4b-8).
+    ``(slot, value)`` the deck assigned, in deck order and grouped by command (``New``, edits, ``BatchEdit``; a
+    ``like=`` copy gives the source's commands first). Mappers replay it where the order matters (CIMTBL_MAPPING.md
+    S4b-8).
     """
 
-    history: dict[tuple[type, str], list[tuple[str, Any]]] = field(default_factory=dict, repr=False)
+    history: dict[tuple[type, str], list[list[tuple[str, Any]]]] = field(default_factory=dict, repr=False)
+
+    def commands(self, record) -> list[list[tuple[str, Any]]]:
+        """``(slot, value)`` the deck assigned to ``record``, one list per command, in deck order. The engine
+        recalculates some values once at the end of each command (a Load's kW/kvar/kVA/pf, Load.pas:681). A ``~``
+        line is a command of its own, except on a Transformer, XfmrCode, AutoTrans or LineGeometry, whose ``~`` lines
+        the reader joins to the command they continue (``_parse_master``)."""
+        return self.history.get((type(record), str(record.name).lower()), [])
 
     def assignments(self, record) -> list[tuple[str, Any]]:
         """``(slot, value)`` in the order the deck assigned them to ``record``."""
-        return self.history.get((type(record), str(record.name).lower()), [])
+        return [assignment for command in self.commands(record) for assignment in command]
 
     def last_of(self, record, *slots: str) -> str | None:
         """Which of ``slots`` the deck assigned last to ``record`` (``None`` when it assigned none)."""
@@ -288,14 +296,35 @@ class DssReader(FormatReader):
     # -----------------------------------------------------------------------
 
     def _parse_master(self, master_path: str | Path) -> None:
-        """Parse Master.dss and all redirected files into a command list."""
-        self._commands = []
-        raw_lines = list(self._read_with_redirects(Path(master_path)))
-        joined = self._join_continuation_lines(raw_lines)
+        """Parse Master.dss and all redirected files into a command list.
 
-        for line, file_path, line_number in joined:
+        A ``~`` (``More``, ``M``) line edits the object of the most recent ``New``/``Edit`` (or
+        ``Class.name.property=value`` edit; none after a ``Clear``), even with ``Set`` commands between them, and
+        is a command of its own, as in the engine (``DoMoreCmd``, Executive/ExecHelper.pas:887): the engine
+        recalculates a Load's kW/kvar at the end of each. A Transformer, XfmrCode, AutoTrans or LineGeometry ``~``
+        line is joined to the command it continues instead, since the reader folds their ``wdg=``/``cond=`` blocks
+        per command; the engine's result is the same. A continuation before any ``New`` or ``Edit`` raises.
+        """
+        self._commands = []
+        last: tuple[int, str] | None = None  # index in self._commands and text of the last New/Edit
+        for line, file_path, line_number in self._read_with_redirects(Path(master_path)):
             try:
-                cmd = self._parse_command_line(line, str(file_path), line_number)
+                continued = _continued_text(line)
+                if continued is None:
+                    cmd = self._parse_command_line(line, str(file_path), line_number)
+                    if cmd is not None and cmd.cmd in ("new", "edit"):
+                        last = (len(self._commands), line)
+                    elif cmd is not None and cmd.cmd == "clear":
+                        last = None
+                elif last is None:
+                    raise ValueError("a continuation with no New or Edit before it")
+                elif self._commands[last[0]].element_type.lower() in _BLOCK_CLASSES:
+                    head = self._commands[last[0]]
+                    last = (last[0], f"{last[1]} {continued}")
+                    self._commands[last[0]] = self._parse_command_line(last[1], head.source_file, head.line_number)
+                    continue
+                else:
+                    cmd = self._parse_continuation(self._commands[last[0]], continued, str(file_path), line_number)
             except ValueError as e:
                 raise DssParseError(f"{e}: {line}", str(file_path), line_number) from e
             if cmd is not None:
@@ -311,6 +340,8 @@ class DssReader(FormatReader):
         - ``Edit`` (and ``Class.name.property=value``) changes an object that must already exist.
         - ``BatchEdit Class.<regex>`` changes every object of the class whose name the regular expression
           matches (case-insensitive search, as DSS does); it must match at least one.
+        - A Transformer or XfmrCode keeps its active winding from one command to the next, as in DSS: an edit's
+          ``kV=`` goes to the winding the object's last ``wdg=`` (or array) left active (``_resolve_windings``).
         - ``Set`` keeps the circuit options in ``KEPT_OPTIONS`` on one ``Options`` object. The other options
           are solution settings (``mode``, ``controlmode``, ...) and are not part of the model, except
           ``basefrequency``, which raises (``_options``).
@@ -329,11 +360,13 @@ class DssReader(FormatReader):
         spelled: dict[tuple[type, str], str] = {}  # (class, lowered name) -> name as first written
         redefined: set[tuple[type, str]] = set()
         options: dict[str, Any] = {}
-        history: dict[tuple[type, str], list[tuple[str, Any]]] = {}
+        history: dict[tuple[type, str], list[list[tuple[str, Any]]]] = {}
         coordinate_files: list[tuple[Path, bool]] = []
+        active_windings: dict[tuple[type, str], int] = {}  # (class, lowered name) -> the winding wdg= left active
         for cmd in self._commands:
             if cmd.cmd == "clear":
                 graph, spelled, redefined, options, history, coordinate_files = {}, {}, set(), {}, {}, []
+                active_windings = {}
                 continue
             if cmd.cmd in ("buscoords", "latlongcoords"):
                 [(_, csv_path)] = cmd.params
@@ -352,11 +385,19 @@ class DssReader(FormatReader):
                 if schema_class is None:
                     raise ValueError(f"unknown DSS class {cmd.element_type!r}")
                 bucket = graph.setdefault(schema_class, {})
+                if schema_class in _WINDING_CLASSES and cmd.cmd != "batchedit":
+                    key = (schema_class, cmd.element_name.lower())
+                    record = bucket.get(spelled.get(key, ""))
+                    if record is not None and _sets_windings(cmd, schema_class):
+                        _reset_windings(record)
+                    params, active_windings[key] = _resolve_windings(cmd.params, schema_class, record,
+                                                                     active_windings.get(key, 1))
+                    cmd = replace(cmd, params=params)
                 assigned = self._values(cmd, schema_class)
                 values = dict(assigned)
                 if cmd.cmd == "batchedit":
                     for obj in _batch_edit(bucket, cmd.element_name, values):
-                        history[(schema_class, str(obj.name).lower())].extend(assigned)
+                        history[(schema_class, str(obj.name).lower())].append(assigned)
                     continue
                 key = (schema_class, cmd.element_name.lower())
                 if cmd.cmd == "new" and key not in spelled:
@@ -365,10 +406,11 @@ class DssReader(FormatReader):
                     if getattr(obj, "like", None):
                         source_key = (schema_class, str(obj.like).lower())
                         _inherit(obj, bucket.get(spelled.get(source_key, "")))
-                        inherited = history[source_key]  # like= copies every slot, so it replays all of them
+                        # like= copies the source's state as it stands, which replaying its commands gives
+                        inherited = history[source_key]
                     bucket[cmd.element_name] = obj
                     spelled[key] = cmd.element_name
-                    history[key] = [*inherited, *assigned]
+                    history[key] = [*inherited, assigned]
                     continue
                 if key not in spelled:
                     raise ValueError("Edit of an object no New defines")
@@ -379,7 +421,7 @@ class DssReader(FormatReader):
                 obj = bucket[spelled[key]]
                 for field_name, value in values.items():
                     setattr(obj, field_name, value)
-                history[key].extend(assigned)
+                history[key].append(assigned)
             except (ValueError, TypeError) as e:
                 raise DssParseError(f"{cmd.element_type}.{cmd.element_name}: {e}",
                                     cmd.source_file, cmd.line_number) from e
@@ -462,50 +504,6 @@ class DssReader(FormatReader):
             reading.pop()
 
         yield from _process_file(_resolve_file_case_insensitive(master_path))
-
-    # -----------------------------------------------------------------------
-    # Continuation-line joining
-    # -----------------------------------------------------------------------
-
-    @staticmethod
-    def _join_continuation_lines(
-        raw_lines: list[tuple[str, Path, int]],
-    ) -> list[tuple[str, Path, int]]:
-        """Merge ``~`` (and ``More``, ``M``) continuation lines with the element they extend.
-
-        In OpenDSS a ``~`` continues the most recent ``New``/``Edit`` element
-        command (or ``Class.name.property=value`` edit; none after a ``Clear``),
-        even when ``set`` commands, comments, or blank lines appear in
-        between (comments/blanks are already stripped upstream). Appending to the
-        immediate predecessor would misattach ``~`` params to an intervening
-        ``set`` command — e.g. a ``New Circuit`` whose ``~ pu=1.05`` line follows
-        a couple of ``set`` commands. A continuation before any ``New`` or ``Edit`` raises.
-        """
-        result: list[tuple[str, Path, int]] = []
-        last_element_idx: int | None = None
-
-        for line, file_path, line_num in raw_lines:
-            first_word, rest = (line.split(None, 1) + [""])[:2]
-            if line.startswith("~"):
-                continued = line[1:].strip()
-            elif dss_command(first_word) in ("more", "m"):
-                continued = rest.strip()
-            else:
-                continued = None
-            if continued is None:
-                result.append((line, file_path, line_num))
-                if dss_command(first_word) in ("new", "edit") or _is_dotted_edit(line):
-                    last_element_idx = len(result) - 1
-                elif dss_command(first_word) in ("clear", "clearall"):
-                    last_element_idx = None
-            elif last_element_idx is not None:
-                prev_line, prev_file, prev_num = result[last_element_idx]
-                result[last_element_idx] = (prev_line + " " + continued, prev_file, prev_num)
-            else:
-                raise DssParseError(f"{first_word}: a continuation with no New or Edit before it",
-                                    str(file_path), line_num)
-
-        return result
 
     # -----------------------------------------------------------------------
     # Command parsing
@@ -593,10 +591,8 @@ class DssReader(FormatReader):
         elif element_type.lower().startswith("element="):
             element_type = element_type.split("=", 1)[1]
 
-        # Pre-process transformer wdg=N per-winding syntax before parsing
-        if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text, element_type, element_name)
         params = _resolve_positional(self._param_pairs(param_text), element_type)
+        _check_values(params)
 
         return DssCommand(
             cmd=cmd,
@@ -622,10 +618,8 @@ class DssReader(FormatReader):
         element_name = parts[1]
         prop_name = ".".join(parts[2:])  # Handle unlikely multi-dot props
         param_text = f"{prop_name}={rhs}"
-
-        if element_type.lower() in ("transformer", "xfmrcode"):
-            param_text = self._preprocess_winding_text(param_text, element_type, element_name)
         params = self._parse_params(param_text)
+        _check_values(params)
 
         return DssCommand(
             cmd="edit",
@@ -635,6 +629,15 @@ class DssReader(FormatReader):
             source_file=file_path,
             line_number=line_number,
         )
+
+    def _parse_continuation(self, head: DssCommand, text: str, file_path: str, line_number: int) -> DssCommand:
+        """A ``~`` line as an ``Edit`` of the object ``head`` names (``Vsource.source`` after ``New Circuit``)."""
+        element_type, element_name = head.element_type, head.element_name
+        if element_type.lower() == "circuit":
+            element_type, element_name = "Vsource", "source"
+        params = _resolve_positional(self._param_pairs(text), element_type)
+        _check_values(params)
+        return DssCommand("edit", element_type, element_name, params, file_path, line_number, raw_text=text)
 
     def _parse_set_command(
         self, rest: str, file_path: str, line_number: int
@@ -789,16 +792,19 @@ class DssReader(FormatReader):
     def _values(self, cmd: DssCommand, schema_class: type) -> list[tuple[str, Any]]:
         """``(field, value)`` for the properties a ``New`` or ``Edit`` command sets, in deck order.
 
-        Transformer and XfmrCode ``wdg=N`` blocks have become the per-winding arrays (``buses``, ``kVs``, ...)
-        and LineGeometry ``cond=N`` blocks the per-conductor arrays (``xs``, ``hs``, ...), so both are only
-        accepted on a ``New``: an ``Edit`` would replace whole arrays with one winding's or conductor's values.
+        Transformer and XfmrCode winding scalars have become the per-winding arrays (``buses``, ``kVs``, ...;
+        ``_resolve_windings``). A ``BatchEdit`` of them raises: the engine sets each matched object's own active
+        winding. LineGeometry ``cond=N`` blocks become the per-conductor arrays (``xs``, ``hs``, ...), and are only
+        accepted on a ``New``: an ``Edit`` would replace whole arrays with one conductor's values.
         """
         class_map = get_class_map(schema_class)
         params = list(cmd.params)
         lowered = {k.lower() for k, _ in params}
         element_type = cmd.element_type.lower()
-        if element_type in ("transformer", "xfmrcode") and "wdg" in lowered and cmd.cmd != "new":
-            raise ValueError("per-winding properties (wdg=) on an Edit are not supported")
+        if (schema_class in _WINDING_CLASSES and cmd.cmd == "batchedit"
+                and any(class_map.field_for(name) in _WINDING_PROPERTIES for name, _ in params)):
+            raise ValueError("BatchEdit of per-winding properties is not read: the engine sets each matched "
+                             "object's own active winding")
         if element_type == "linegeometry" and "cond" in lowered:
             if cmd.cmd != "new":
                 raise ValueError("per-conductor properties (cond=) on an Edit are not read")
@@ -818,131 +824,6 @@ class DssReader(FormatReader):
                 raise ValueError(f"{param_name}={raw_value!r}: {e}") from e
         return values
 
-    @staticmethod
-    def _preprocess_winding_text(param_text: str, element_type: str, element_name: str) -> str:
-        """Rewrite per-winding DSS transformer params into array form.
-
-        Transforms the raw parameter text before ``_parse_params`` sees it,
-        so duplicate keys (``wdg=1 bus=X wdg=2 bus=Y``) become array keys
-        (``buses=[X,Y]``).
-
-        Works on the token stream to avoid dict key-collision issues.
-        """
-        _WDG_ARRAY_MAP = {
-            "bus": "buses",
-            "kv": "kVs",
-            "kva": "kVAs",
-            "conn": "conns",
-            "tap": "taps",
-            "%r": "pct_Rs",
-        }
-        _WDG_SCALAR_KEYS = {"rneut", "xneut"}
-        #: per-winding values with no array form in DSS: each goes to the active winding's place in its array
-        _WDG_VALUE_KEYS = {"rdcohms": "RdcOhms"}
-
-        tokens = _tokenize_dss(param_text)
-
-        # Pre-merge spaced equals: "key" "=" "value" -> "key=value"
-        merged: list[str] = []
-        i = 0
-        while i < len(tokens):
-            tok = tokens[i]
-            if i + 1 < len(tokens) and tokens[i + 1] == "=" and "=" not in tok:
-                m = tok + "="
-                if i + 2 < len(tokens) and "=" not in tokens[i + 2]:
-                    m += tokens[i + 2]
-                    i += 3
-                else:
-                    i += 2
-                merged.append(m)
-            elif tok == "=" and merged:
-                prev = merged.pop()
-                m = prev + "="
-                if i + 1 < len(tokens) and "=" not in tokens[i + 1]:
-                    m += tokens[i + 1]
-                    i += 2
-                else:
-                    i += 1
-                merged.append(m)
-            else:
-                merged.append(tok)
-                i += 1
-
-        # Walk the tokens in order, as DSS applies them. A per-winding scalar (bus, kV, kVA, conn, tap, %R,
-        # RdcOhms) goes to the active winding: the last wdg=, else the last winding an array set (an array sets every
-        # winding), else winding 1. On a 2-winding transformer kVA sets both windings (all engine-checked).
-        count = next((int(float(_try_eval_rpn(tok.partition("=")[2]))) for tok in merged
-                      if tok.partition("=")[0].strip().lower() == "windings"), 2)
-        array_keys = {name.lower(): name for name in _WDG_ARRAY_MAP.values()} | {"%rs": "pct_Rs"}
-        winding_data: dict[str, list[str]] = {}
-        non_winding_tokens: list[str] = []
-        scalar_overrides: dict[str, str] = {}
-        scalar_neutral_wdg: int | None = None
-        active = 1
-
-        def put(target: str, number: int, value: str) -> None:
-            values = winding_data.setdefault(target, [])
-            values.extend([""] * (number - len(values)))
-            values[number - 1] = value
-
-        for tok in merged:
-            if "=" not in tok:
-                non_winding_tokens.append(tok)
-                continue
-            key, _, value = tok.partition("=")
-            key_lower = key.strip().lower()
-            if key_lower == "wdg":
-                active = int(float(_try_eval_rpn(value)))
-                if active < 1:
-                    raise ValueError(f"{element_type}.{element_name}: wdg={value}; windings are numbered from 1")
-                continue
-            # RPN on numbers only: a bus or connection is a name (bus=(1 2 +) is the bus "1 2 +", as in the engine)
-            if key_lower in array_keys:
-                items = _array_items(value)
-                is_name = array_keys[key_lower] in _WDG_NAME_ARRAYS
-                winding_data[array_keys[key_lower]] = items if is_name else [_try_eval_rpn(item) for item in items]
-                active = max(len(items), 1)
-                continue
-            if key_lower in _WDG_ARRAY_MAP:
-                target = _WDG_ARRAY_MAP[key_lower]
-                resolved = value if target in _WDG_NAME_ARRAYS else _try_eval_rpn(value)
-                for number in (range(1, 3) if key_lower == "kva" and count == 2 else (active,)):
-                    put(target, number, resolved)
-            elif key_lower in _WDG_VALUE_KEYS:
-                put(_WDG_VALUE_KEYS[key_lower], active, _try_eval_rpn(value))
-            elif key_lower in _WDG_SCALAR_KEYS:
-                # Rneut/Xneut belong to the active winding; the schema holds one winding's, so it keeps the winding
-                # that sets them and emits "wdg=N" alongside so the binding survives. A second winding raises.
-                if scalar_neutral_wdg is None:
-                    scalar_neutral_wdg = active
-                if active != scalar_neutral_wdg:
-                    raise ValueError(f"{element_type}.{element_name}: {key.strip()} on winding {active} after "
-                                     f"winding {scalar_neutral_wdg}'s neutral; one winding's Rneut/Xneut is mapped")
-                scalar_overrides[key.strip()] = value
-            else:
-                non_winding_tokens.append(f"{key.strip()}={value}")
-
-        defaults = schema_defaults(build_type_registry()[element_type.lower()], "dss_default")
-        for array_key, values in winding_data.items():
-            values.extend([""] * (count - len(values)) if any(values) else [])
-            unset = [number for number, value in enumerate(values, start=1) if value == ""]
-            if unset:
-                # The array cannot hold an unset winding: it takes the engine's per-winding default, as DSS does
-                scalar = _WINDING_SCALAR[array_key]
-                if scalar not in defaults:
-                    raise ValueError(f"{array_key}: winding {unset} unset while another winding's is set, and "
-                                     f"{scalar} has no default")
-                _log.warning("%s: winding %s unset while another winding's is set; the DSS default %s=%s",
-                             array_key, unset, scalar, defaults[scalar])
-                values = [str(defaults[scalar]) if value == "" else value for value in values]
-            non_winding_tokens.append(f"{array_key}=[{','.join(values)}]")
-        if scalar_overrides and scalar_neutral_wdg is not None:
-            non_winding_tokens.append(f"wdg={scalar_neutral_wdg}")
-        for k, v in scalar_overrides.items():
-            non_winding_tokens.append(f"{k}={v}")
-
-        return " ".join(non_winding_tokens)
-
     # -----------------------------------------------------------------------
     # Type conversion
     # -----------------------------------------------------------------------
@@ -960,6 +841,8 @@ class DssReader(FormatReader):
         # Multivalued fields: pass raw to _parse_array which handles RPN per-element.
         # Do NOT call _try_eval_rpn here — it would collapse the whole array to one value.
         if field_name in class_map.multivalued:
+            if "|" in val and get_schema_annotations(schema_class).get(field_name, {}).get("dss_format") == "matrix":
+                return DssReader._lower_triangle(val, field_name, schema_class, class_map)
             return DssReader._parse_array(val, field_name, schema_class, class_map)
 
         # A delimited number is an RPN expression: (2 3 *), {2 3 *}, "2 3 *". Other text only loses its
@@ -1100,6 +983,23 @@ class DssReader(FormatReader):
             results.append(float(evaluated))  # a numeric array; name arrays (list[str]) returned above
 
         return results
+
+    @staticmethod
+    def _lower_triangle(raw_value: str, field_name: str, schema_class: type, class_map: DssClassMap) -> list[float]:
+        """A matrix written in ``|`` rows, as its lower triangle row by row.
+
+        The engine writes M[i,j] and M[j,i] for each value j of row i, later rows over earlier ones
+        (``ParseAsSymMatrix``, Parser/ParserDel.pas:817-829). So M[i,j] for j <= i ends as row i's j-th value: the
+        first i values of each row are the triangle, whether the deck spells the triangle, the whole matrix or a mix.
+        A row with fewer than i values raises (the engine leaves an earlier row's value there, or 0)."""
+        triangle: list[float] = []
+        for number, row in enumerate(_strip_delimiters(raw_value.strip()).split("|"), start=1):
+            values = DssReader._parse_array(row, field_name, schema_class, class_map)
+            if len(values) < number:
+                raise ValueError(f"matrix row {number} has {len(values)} value{'s' * (len(values) != 1)}; it needs "
+                                 f"{number} or more")
+            triangle += values[:number]
+        return triangle
 
     @staticmethod
     def _parse_enum_array(
@@ -1435,6 +1335,13 @@ def _extract_linegeometry_arrays(raw_text: str) -> dict[str, str]:
     sorted_conds = sorted(cond_data.keys())
     xs = [cond_data[c].get('x', '') for c in sorted_conds]
     hs = [cond_data[c].get('h', '') for c in sorted_conds]
+    if any(xs) or any(hs):
+        # nconds= puts every conductor at (0, 0) (LineGeometry.pas:1075), so one with no x is at x=0, as in the
+        # engine; one with no h would be on the ground, which the reader does not guess a deck meant
+        no_height = [number for number, h in zip(sorted_conds, hs) if not h]
+        if no_height:
+            raise ValueError(f"cond={no_height[0]} has no h (the engine would put it on the ground, at h=0)")
+        xs = [x or '0' for x in xs]
     wires = [cond_data[c].get('wire', '') for c in sorted_conds]
     cncables = [cond_data[c].get('cncable', '') for c in sorted_conds]
     tscables = [cond_data[c].get('tscable', '') for c in sorted_conds]
@@ -1488,6 +1395,23 @@ def _strip_delimiters(text: str) -> str:
     return text
 
 
+def _continued_text(line: str) -> str | None:
+    """The text a ``~`` (``More``, ``M``) line continues with, or ``None`` for any other line."""
+    if line.startswith("~"):
+        return line[1:].strip()
+    word, rest = (line.split(None, 1) + [""])[:2]
+    return rest.strip() if dss_command(word) in ("more", "m") else None
+
+
+def _check_values(params: list[tuple[str, str]]) -> None:
+    """An empty value (``kW=``, ``kW=""``, ``kW=()``, ...) raises: the engine reads it as the end of the command and
+    drops that property and every later one without a word (``WHILE Length(Param)>0``, Load.pas:566)."""
+    for name, value in params:
+        if not _strip_delimiters(value.strip()).strip():
+            raise ValueError(f"{name}={value} is empty; the engine silently drops it and every later property on "
+                             "the line")
+
+
 def _is_dotted_edit(line: str) -> bool:
     """``Class.name.property=value``: an edit with no command word."""
     return dss_command(line.split(None, 1)[0]) is None and "=" in line and line.split("=", 1)[0].count(".") >= 2
@@ -1519,6 +1443,106 @@ _WINDING_SCALAR = {"buses": "bus", "kVs": "kV", "kVAs": "kVA", "conns": "conn", 
                    "RdcOhms": "RdcOhms"}
 #: The per-winding arrays that hold names, which RPN leaves alone.
 _WDG_NAME_ARRAYS = ("buses", "conns")
+#: A winding scalar and the per-winding array it sets one place of (RdcOhms has no array form: it is its own).
+_WINDING_ARRAY = {scalar: array for array, scalar in _WINDING_SCALAR.items()}
+#: The slots ``windings=`` resets: the engine makes every winding anew (Transformer.pas:985 ``SetNumWindings``),
+#: keeping only the buses.
+_WINDINGS_RESET = ("conns", "kVs", "kVAs", "taps", "pct_Rs", "RdcOhms", "wdg", "Rneut", "Xneut")
+#: Every per-winding property, and ``windings``, which resets them.
+_WINDING_PROPERTIES = frozenset({*_WINDING_SCALAR, *_WINDING_ARRAY, "wdg", "Rneut", "Xneut", "windings"})
+_WINDING_CLASSES = (dss_schema.Transformer, dss_schema.Xfmrcode)
+
+
+def _sets_windings(cmd: DssCommand, schema_class: type) -> bool:
+    class_map = get_class_map(schema_class)
+    return any(class_map.field_for(name) == "windings" for name, _ in cmd.params)
+
+
+def _reset_windings(record: Any) -> None:
+    """``windings=`` on an existing Transformer or XfmrCode: every per-winding value returns to the default."""
+    for slot in _WINDINGS_RESET:
+        setattr(record, slot, [] if isinstance(getattr(record, slot), list) else None)
+
+
+def _resolve_windings(params: list[tuple[str, str]], schema_class: type, record: Any,
+                      active: int) -> tuple[list[tuple[str, str]], int]:
+    """A Transformer or XfmrCode command's properties with each winding scalar folded into its per-winding array,
+    and the winding active after the command.
+
+    The engine applies them in order (Transformer.pas:501-511, ``TTransf.Edit``): ``wdg=N`` makes winding N
+    active, and a winding scalar (bus, kV, kVA, conn, tap, %R, RdcOhms) sets the active winding's place. kVA on
+    winding 1 sets every winding, and on a 2-winding transformer either winding's kVA sets both
+    (Transformer.pas:571). An array sets the windings it lists, keeps the others, and leaves the last winding active
+    (Transformer.pas:731-737, ``InterpretAllkVRatings``). ``windings=`` makes every winding anew, so the per-winding
+    values before it go (the buses stay). Rneut/Xneut keep the winding that sets them, as ``wdg=N`` beside them.
+
+    The active winding outlives the command, so the caller passes the one the last command left. ``record`` is the
+    object an edit changes (``None`` for a ``New``); an array the command changes starts from its values. Only the
+    arrays the command sets are returned; a winding they leave unset takes the engine's per-winding default.
+    """
+    class_map = get_class_map(schema_class)
+    defaults = schema_defaults(schema_class, "dss_default")
+    count = int(record.windings) if record is not None and record.windings else int(defaults["windings"])
+    arrays: dict[str, list[str]] = {}  # the arrays the command sets, as text
+    neutrals: list[tuple[str, str]] = []
+    neutral_winding = record.wdg if record is not None and (record.Rneut, record.Xneut) != (None, None) else None
+    passed: list[tuple[str, str]] = []
+
+    def array(slot: str) -> list[str]:
+        if slot not in arrays:
+            arrays[slot] = [str(item) for item in getattr(record, slot) or []] if record is not None else []
+        return arrays[slot]
+
+    for name, value in params:
+        slot = class_map.field_for(name)
+        if slot == "windings":
+            count = int(float(_try_eval_rpn(value)))
+            for dropped in [kept for kept in arrays if kept != "buses"]:
+                del arrays[dropped]
+            neutrals, neutral_winding = [], None
+            passed.append((name, value))
+        elif slot == "wdg":
+            active = int(float(_try_eval_rpn(value)))
+            if not 1 <= active <= count:
+                raise ValueError(f"wdg={value}: the windings are 1 to {count}")
+        elif slot in _WINDING_ARRAY:
+            target = _WINDING_ARRAY[slot]
+            resolved = value if target in _WDG_NAME_ARRAYS else _try_eval_rpn(value)
+            for number in range(1, count + 1) if slot == "kVA" and (active == 1 or count == 2) else (active,):
+                values = array(target)
+                values.extend([""] * (number - len(values)))
+                values[number - 1] = resolved
+        elif slot in _WINDING_SCALAR:
+            # RPN on numbers only: a bus or connection is a name (bus=(1 2 +) is the bus "1 2 +", as in the engine)
+            items = _array_items(value)
+            array(slot)[:len(items)] = items if slot in _WDG_NAME_ARRAYS else [_try_eval_rpn(item) for item in items]
+            active = count
+        elif slot in ("Rneut", "Xneut"):
+            # the schema holds one winding's neutral, so a second winding's raises
+            neutral_winding = active if neutral_winding is None else neutral_winding
+            if active != neutral_winding:
+                raise ValueError(f"{name} on winding {active} after winding {neutral_winding}'s neutral; one "
+                                 "winding's Rneut/Xneut is mapped")
+            neutrals.append((name, value))
+        else:
+            passed.append((name, value))
+
+    for slot, values in arrays.items():
+        values.extend([""] * (count - len(values)))
+        unset = [number for number, value in enumerate(values, start=1) if value == ""]
+        if unset:
+            # The array cannot hold an unset winding: it takes the engine's per-winding default, as DSS does
+            scalar = _WINDING_SCALAR[slot]
+            if scalar not in defaults:
+                raise ValueError(f"{slot}: winding {unset} unset while another winding's is set, and {scalar} has "
+                                 "no default")
+            _log.warning("%s: winding %s unset while another winding's is set; the DSS default %s=%s",
+                         slot, unset, scalar, defaults[scalar])
+            values = [str(defaults[scalar]) if value == "" else value for value in values]
+        passed.append((slot, f"[{','.join(values)}]"))
+    if neutrals:
+        passed += [("wdg", str(neutral_winding)), *neutrals]
+    return passed, active
 #: Classes whose properties the reader rewrites by winding or conductor block, so a positional value raises.
 _BLOCK_CLASSES = ("transformer", "xfmrcode", "autotrans", "linegeometry")
 

@@ -1,7 +1,9 @@
 """OpenDSS ``Load`` -> ``load.cimtbl``: one ``EnergyConsumer`` per load (DSS-7), a ``ConformLoad`` of its shape's
 group when it names a ``yearly`` LoadShape (S8, ``loadshape.py``).
 
-p and q are the deck's kW and kvar (q from ``pf`` when kvar is unset). The voltage response is a shared
+p and q come from the pair the engine's load spec type picks: the last of kW, kvar and kVA the deck assigns gives
+(kW, pf), (kW, kvar) or (kVA, pf), and each command's end recomputes the rest from it, so the mapper replays the
+history command by command (``load_power``). The voltage response is a shared
 ``LoadResponseCharacteristic``: ``zip_constant_pq`` / ``_z`` / ``_i`` from the fixed core ``zip_fractions.cimtbl``
 for models 1, 2 and 5, and one exponential row ``exp_<CVRwatts>_<CVRvars>`` in this file per pair model 4 uses.
 CIM gives a load no rated voltage (p is at the BaseVoltage), so ``kV`` must agree with its bus.
@@ -11,6 +13,7 @@ Mapping spec: ``cimhub_opendss/docs/CIMTBL_MAPPING.md#load``.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 
 from cimtables.document import Column, Document, Row, Table
@@ -33,8 +36,8 @@ _SHAPE = "a LoadShape reference; LoadShape is not mapped (DSS-11)"
 _ROLE = "a second shape has no home: a ConformLoad has one LoadGroup, its yearly shape's (S8)"
 _SOLVER = "DSS solution control; no home in the network profile parts"
 _HARMONIC = "harmonics model; no home in the network profile parts"
-_ORDER = ("raises with kW: the engine takes whichever of kW, kVA and xfkVA comes last, and the record keeps no "
-          "order")
+_PAIR = ("the last of kW, kvar and kVA picks the pair: (kW, pf), (kW, kvar) or (kVA, pf); each command's end "
+         "recomputes the rest from it, so the history is replayed command by command (load_power)")
 
 FIELDS = {
     "name": Field("copied", ((_CONSUMER, "name", None),), "mRID = ld_ + name, lowercased"),
@@ -46,9 +49,10 @@ FIELDS = {
     "kV": Field("structural", note="checked, not written: the phase voltage it gives (LL for delta and 2-3 "
                                    "phases, LN for 1-phase wye) must be within 1 % of the bus's, else it raises; "
                                    "CIM p is at the BaseVoltage"),
-    "kW": Field("copied", ((_CONSUMER, "p", "kW"),), "consumption is positive p"),
-    "pf": Field("derived", note="q (kVAr) = kW x tan(acos abs(pf)) x sign(pf), when kvar is unset (kvar wins in "
-                                "either order, engine-checked); raises unless 0 < |pf| <= 1; default 0.88"),
+    "kW": Field("copied", ((_CONSUMER, "p", "kW"),), "consumption is positive p; " + _PAIR + "; default 10"),
+    "pf": Field("derived", note="q (kVAr) = kW x tan(acos abs(pf)) x sign(pf) with kW last (kVA last: see kVA); "
+                                "pf never changes the pair, so kvar wins in either order (engine-checked); raises "
+                                "unless 0 < |pf| <= 1; default 0.88"),
     "model": Field("mapped", ((_CONSUMER, "LoadResponse", None),),
                    "1 zip_constant_pq, 2 zip_constant_z, 5 zip_constant_i, 4 exp_<CVRwatts>_<CVRvars>; 3, 6, 7, "
                    "8 raise; default 1"),
@@ -60,7 +64,7 @@ FIELDS = {
     "growth": Field("untranscribed", note="a GrowthShape reference; not mapped (DSS-11)"),
     "conn": Field("mapped", ((_CONSUMER, "phaseConnection", None), (_CONSUMER, "grounded", None)),
                   "wye -> Y, grounded; delta -> D, not grounded; default wye"),
-    "kvar": Field("copied", ((_CONSUMER, "q", "kVAr"),)),
+    "kvar": Field("copied", ((_CONSUMER, "q", "kVAr"),), "with kvar last: p = kW, q = kvar; " + _PAIR),
     "Rneut": Field("structural", note=_NOT_MAPPED + " (>= 0: a wye neutral impedance)"),
     "Xneut": Field("structural", note=_NOT_MAPPED),
     "status": Field("untranscribed", note="Fixed/Exempt: whether load multipliers scale it; " + _SOLVER),
@@ -72,8 +76,8 @@ FIELDS = {
     "xfkVA": Field("structural", note="raises: not mapped, and with kW the engine takes whichever comes last "
                                       "(K1 only, behind DSS-10)"),
     "allocationfactor": Field("structural", note="raises: it scales xfkVA"),
-    "kVA": Field("derived", note="with kW unset: p = kVA x abs(pf), q = kVA x sin(acos abs(pf)) with the sign of pf "
-                                 "(ACEP_PSIL); " + _ORDER),
+    "kVA": Field("derived", note="with kVA last: p = kVA x abs(pf), q = kVA x sin(acos abs(pf)) with the sign of pf "
+                                 "(ACEP_PSIL); " + _PAIR),
     "pct_mean": Field("untranscribed", note="a Monte Carlo setting; " + _SOLVER),
     "pct_stddev": Field("untranscribed", note="a Monte Carlo setting; " + _SOLVER),
     "CVRwatts": Field("copied", ((_RESPONSE, "pVoltageExponent", None),),
@@ -110,12 +114,6 @@ Source table: Load (records: {count})
 Mapping: cimhub_opendss/docs/CIMTBL_MAPPING.md#load"""
 
 
-def power_from_kva(label: str, kva: float, pf: float) -> tuple[float, float]:
-    """(kW, kvar) of a load given kVA and pf, as the engine computes them when kW is unset."""
-    kw = kva * abs(pf)
-    return kw, reactive_power(label, kw, pf)
-
-
 def exponential_mrid(p_exponent: float, q_exponent: float) -> str:
     """The mRID of an exponential load model: ``exp_0.8_3``."""
     return f"exp_{p_exponent:g}_{q_exponent:g}"
@@ -127,35 +125,62 @@ def _check(load) -> None:
         slot == "Rneut" and float(load.Rneut) < 0)]
     if unmapped:
         raise ValueError(f"Load {load.name}: {', '.join(unmapped)} not mapped yet (no deck in the sweep sets them)")
-    if load.kW is not None and load.kVA is not None:
-        raise ValueError(f"Load {load.name}: kW with kVA; the engine takes whichever comes last, and the record "
-                         "keeps no order")
     if load.xfkVA is not None or load.allocationfactor is not None:
         raise ValueError(f"Load {load.name}: xfkVA/allocationfactor not mapped (with kW the engine takes "
                          "whichever comes last, and the record keeps no order)")
 
 
-def _used_defaults(load, defaults: dict) -> dict:
+def _used_defaults(load, pair: str, defaults: dict) -> dict:
     """The defaults this load reads: not the slots that raise when set, not kW when kVA sizes it, not pf when kvar
-    is given, not the CVR exponents unless it is model 4, so the row comment names only defaults that reach a
-    value."""
+    does, not the CVR exponents unless it is model 4, so the row comment names only defaults that reach a value.
+    ``pair`` is the slot that picked the pair (``load_power``)."""
     model = load.model if load.model is not None else defaults["model"]
     unused = {*_UNMAPPED, "xfkVA", "allocationfactor"}  # set, they raise; unset, they reach no value
-    if load.kVA is not None:
+    if pair == "kVA":
         unused.add("kW")
-    if load.kvar is not None:
+    if pair == "kvar":
         unused.add("pf")
     if str(getattr(model, "text", model)) != _EXPONENTIAL:
         unused |= {"CVRwatts", "CVRvars"}
     return {slot: value for slot, value in defaults.items() if slot not in unused}
 
 
-def _power(original, load) -> tuple[float, float]:
-    """(kW, kvar) of a load with defaults filled; ``original`` says which slots the deck set."""
-    if original.kVA is not None:
-        return power_from_kva(f"Load {load.name}", float(load.kVA), float(load.pf))
-    kw = float(load.kW)
-    return kw, float(load.kvar) if load.kvar is not None else reactive_power(f"Load {load.name}", kw, float(load.pf))
+def spec_pair(native, original) -> str:
+    """The slot of kW, kvar and kVA the deck assigned last: the engine's load spec type, which picks the pair the
+    engine computes from, (kW, pf), (kW, kvar) or (kVA, pf). A bare load is kW with pf."""
+    return native.last_of(original, "kW", "kvar", "kVA") or "kW"
+
+
+def load_power(label: str, commands: list[list[tuple[str, object]]], defaults: dict) -> tuple[float, float]:
+    """(kW, kvar) of a load as the engine gives it, replayed from its assignments grouped by command
+    (``DssModel.commands``) from the engine's start, ``defaults`` kW and pf (engine-checked).
+
+    Within a command, kW, kvar or kVA sets its value and the pair, (kW, pf), (kW, kvar) or (kVA, pf); pf sets only pf
+    (Load.pas:634-672). At the end of each command the engine recomputes the rest from the pair (Load.pas:681,
+    1138-1160): (kVA, pf) sets kW = kVA x abs(pf), and (kW, kvar) sets pf = kW / sqrt(kW^2 + kvar^2) with the sign of
+    kW x kvar. So ``kVA=100 kvar=30`` is 10 kW in one command and 88 kW across two."""
+    kw, pf, kvar, kva = float(defaults["kW"]), float(defaults["pf"]), None, None
+    pair = "kW"
+    for command in commands:
+        for slot, value in command:
+            if slot == "pf":
+                pf = float(value)
+            elif slot in ("kW", "kvar", "kVA"):
+                pair = slot
+                if slot == "kW":
+                    kw = float(value)
+                elif slot == "kvar":
+                    kvar = float(value)
+                else:
+                    kva = float(value)
+        if pair == "kVA":
+            kw = kva * abs(pf)
+        elif pair == "kvar" and math.hypot(kw, kvar) > 0:
+            sign = -1.0 if kw * kvar < 0 else 1.0
+            pf = sign * kw / math.hypot(kw, kvar)
+    if pair == "kvar":
+        return kw, kvar
+    return kw, reactive_power(label, kw, pf)
 
 
 def _response(load) -> str:
@@ -175,7 +200,8 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
     rows, conform_rows, exponents = [], [], {}
     for original in loads:
         _check(original)
-        load, defaulted = fill_defaults(FIELDS, original, _used_defaults(original, defaults))
+        load, defaulted = fill_defaults(FIELDS, original, _used_defaults(original, spec_pair(native, original),
+                                                                           defaults))
         label = f"Load {load.name}"
         terminal = device_terminal(label, load.bus1, int(load.phases), is_delta(load.conn), buses)
         expected = rated_phase_kv(terminal)
@@ -186,7 +212,7 @@ def map_load(native, buses: Mapping[str, BusSystem], container: str) -> Document
         response = _response(load)
         if response.startswith("exp_"):
             exponents[response] = (float(load.CVRwatts), float(load.CVRvars))
-        kw, kvar = _power(original, load)
+        kw, kvar = load_power(label, native.commands(original), defaults)
         values = [
             mrid(PREFIX, load.name, lowercase=True), str(load.name), terminal.bus, phases_cell(terminal.phases),
             terminal.connection, cell(terminal.grounded), cell(kw), cell(kvar), cell(int(load.NumCust)), response,

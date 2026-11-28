@@ -12,9 +12,11 @@ import pytest
 from cimhub_core.cimtbl import check_fields
 from cimhub_core.cimtbl_testing import assert_matches_golden, cim_scope
 from cimhub_opendss import dss_to_cim
-from cimhub_opendss.dss_reader import DssReader
+from cimhub_opendss.dss_name_map import get_class_map
+from cimhub_opendss.dss_reader import DssReader, dss_defaults
 from cimhub_opendss.importer import dss_to_cimtbl
 from cimhub_opendss.importer.cimtbl import regcontrol, transformer
+from cimhub_opendss.schema import opendss_schema as schema
 
 from conftest import ENGINE_DECKS, compile_deck, deck
 
@@ -197,3 +199,67 @@ def test_a_regulator_is_grounded_by_its_neutral_node(tmp_path, phases, nodes, kv
               "AutoTransformerEnd"]
     column = [column.name for column in ends.columns].index("grounded")
     assert [row.cells[column] for row in ends.rows] == grounded
+
+
+def test_winding_taps_follow_the_engine():
+    """opendssdirect 0.9.4: a ``taps`` list longer than ``windings`` is cut (``windings=2 taps=[1.05 1.02 0.98]``
+    gives taps 1.05 and 1.02) and a shorter one leaves the other windings at their tap, 1.0 on a new transformer
+    (``windings=3 taps=[1.05]`` gives 1.05, 1.0, 1.0). EPRI's source agrees: Transformer.pas:787-805
+    (InterpretAllTaps) loops over NumWindings only and leaves an omitted value's puTap as it was."""
+    assert transformer.winding_taps(schema.Transformer(name="t", taps=[1.05, 1.02, 0.98]), 2) == [1.05, 1.02]
+    assert transformer.winding_taps(schema.Transformer(name="t", taps=[1.05]), 3) == [1.05, 1.0, 1.0]
+    assert transformer.winding_taps(schema.Transformer(name="t"), 2) == [1.0, 1.0]
+
+
+def test_a_taps_list_longer_than_windings_matches_the_engine(tmp_path):
+    """The engine ignores a third tap on a 2-winding regulator (opendssdirect 0.9.4: ``taps=[1 1.025 0.98]`` gives
+    winding 2 tap 1.025), so the extra value neither raises nor moves the tap."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + "New Transformer.t phases=1 buses=[sourcebus.1 b.1] kVs=[7.2 7.2] kVAs=[100 100] "
+                              "taps=[1 1.025 0.98]\nNew RegControl.r transformer=t winding=2\n")
+    network = dss_to_cim(DssReader(path).read_all(), name="atom")
+    compile_deck(path)
+    assert _engine_regulator_differences(network, taps=True) == []
+
+
+_REGULATOR = ("New Transformer.t phases=1 buses=[sourcebus.1 b.1] kVs=[7.2 7.2] kVAs=[100 100] taps=[1 1.025]\n"
+              "New RegControl.r transformer=t winding=2 ")
+
+
+@pytest.mark.parametrize("slot, engine_name", [("vlimit", "VLimit"), ("LDC_Z", "LDC_Z"), ("rev_Z", "Rev_Z"),
+                                               ("Cogen", "Cogen")])
+def test_unmapped_slot_defaults_are_the_engines(tmp_path, slot, engine_name):
+    """An unmapped RegControl slot set to its ``dss_default`` counts as unset (decision 14), so each default must be
+    the engine's: a bare RegControl reads back VLimit 0, LDC_Z 0, Rev_Z 0 and Cogen No (opendssdirect 0.9.4;
+    RegControl.pas:606, 624, 635, 656 set LDC_Z, revLDC_Z, CogenEnabled and Vlimit)."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + _REGULATOR + "\n")
+    compile_deck(path)
+    dss.Circuit.SetActiveElement("RegControl.r")
+    engine = DssReader._convert_value(dss.Properties.Value(engine_name).lower(), slot, schema.Regcontrol,
+                                      get_class_map(schema.Regcontrol))
+    assert dss_defaults(schema.Regcontrol)[slot] == engine
+
+
+@pytest.mark.parametrize("setting", ["vlimit=0", "LDC_Z=0", "rev_Z=0", "Cogen=No"])
+def test_an_unmapped_slot_at_its_default_maps(tmp_path, setting):
+    """The engine default of an unmapped slot changes nothing (opendssdirect 0.9.4: winding 2's tap stays 1.025
+    with each of these set), so it maps as unset."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + _REGULATOR + setting + "\n")
+    network = dss_to_cim(DssReader(path).read_all(), name="atom")
+    compile_deck(path)
+    assert _engine_regulator_differences(network, taps=True) == []
+
+
+@pytest.mark.parametrize("setting, slot", [("TapNum=0", "TapNum"), ("LDC_Z=2", "LDC_Z"), ("vlimit=125", "vlimit"),
+                                           ("Cogen=Yes", "Cogen")])
+def test_an_unmapped_slot_off_its_default_raises(tmp_path, setting, slot):
+    """Any other value raises. ``TapNum`` has no default: setting it moves the tap (opendssdirect 0.9.4:
+    ``taps=[1 1.025]`` with ``TapNum=0`` gives winding 2 tap 1.0; RegControl.pas:1469 Set_TapNum writes
+    PresentTap), so even TapNum=0 raises, where rc_2 dropped it."""
+    path = tmp_path / "deck.dss"
+    path.write_text(CIRCUIT + _REGULATOR + setting + "\n")
+    native = DssReader(path).read_all()
+    with pytest.raises(ValueError, match=f"RegControl r: {slot} not mapped"):
+        regcontrol.map_regcontrol(native)

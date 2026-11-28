@@ -380,14 +380,16 @@ classes:
         required: false
         annotations:
           order: 21
+          dss_default: float(0.0)
         todos:
           - "Converter bug: uses tcc.limitVoltage (not a real TapChangerControl field) instead of tcc.maxLimitVoltage on both import and export."
         close_mappings:
           - cim:TapChangerControl.maxLimitVoltage
         comments:
           - >-
-            Import: raises when set; no deck in the sweep sets it, so a mapping
-            waits for one. Export: a control with a voltage limit raises.
+            Import: raises when set to anything but its default 0 (no limit); no
+            deck in the sweep sets it, so a mapping waits for one. Export: a
+            control with a voltage limit raises.
 
       # (22) PTphase
       PTphase:
@@ -495,8 +497,9 @@ classes:
           - cim:TapChanger.step
         comments:
           - >-
-            Import: raises when set (a tap position that overrides the
-            transformer's tap); no deck in the sweep sets it. Export: unset.
+            Import: raises when set, even to 0 (a tap position that overrides
+            the transformer's tap: setting it moves the tap, so it has no
+            default); no deck in the sweep sets it. Export: unset.
 
       # (29) Reset
       Reset:
@@ -518,10 +521,12 @@ classes:
         required: false
         annotations:
           order: 30
+          dss_default: float(0.0)
         comments:
           - >-
-            Import: raises when set (a line-drop impedance); no deck in the
-            sweep sets it, so a mapping waits for one. Export: unset.
+            Import: raises when set to anything but its default 0 (a line-drop
+            impedance); no deck in the sweep sets it, so a mapping waits for
+            one. Export: unset.
 
       # (31) rev_Z
       rev_Z:
@@ -531,10 +536,12 @@ classes:
         required: false
         annotations:
           order: 31
+          dss_default: float(0.0)
         comments:
           - >-
-            Import: raises when set (a reverse line-drop impedance); no deck in
-            the sweep sets it, so a mapping waits for one. Export: unset.
+            Import: raises when set to anything but its default 0 (a reverse
+            line-drop impedance); no deck in the sweep sets it, so a mapping
+            waits for one. Export: unset.
 
       # (32) Cogen
       Cogen:
@@ -545,10 +552,12 @@ classes:
         required: false
         annotations:
           order: 32
+          dss_default: "false"
         comments:
           - >-
-            Import: raises when set (cogeneration); no deck in the sweep sets
-            it, so a mapping waits for one. Export: unset.
+            Import: raises when set to anything but its default No
+            (cogeneration); no deck in the sweep sets it, so a mapping waits
+            for one. Export: unset.
 
       # (33) idle
       idle:

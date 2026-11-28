@@ -56,12 +56,13 @@ SLOTS = {NATIVE_CLASS: with_default(NATIVE_CLASS, {
     "pct_stored": Slot("not mapped", "kWhstored carries the energy"),
     "pct_reserve": Slot("written", "minimumE / ratedE x 100; either unset -> not written"),
     "State": Slot("written", "batteryState charging, discharging, waiting -> charging, discharging, idling; others "
-                             "raise, and so does an output of the wrong sign"),
+                             "raise, and so does an output of the wrong sign (generation while waiting too)"),
     "pct_Discharge": Slot("written", "discharging: the unit's output / kWrated x 100"),
     "pct_Charge": Slot("written", "charging: -(the unit's output) / kWrated x 100"),
     "pct_EffCharge": Slot("written", "chargingEfficiency (percent); unset -> not written"),
     "pct_EffDischarge": Slot("written", "dischargingEfficiency (percent); unset -> not written"),
-    "pct_IdlingkW": Slot("written", "idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be)"),
+    "pct_IdlingkW": Slot("written", "idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be); "
+                                    "a negative idlingP raises"),
     "Vminpu": Slot("written", "1 / maxIFault (the importer's rule inverted); unset -> not written"),
     "model": Slot("not mapped", "model 1, the engine's default; others raise on import"),
     "enabled": Slot("written", "get_in_service(which='normal'); unset -> not written"),
@@ -122,6 +123,11 @@ def _storage(piece) -> schema.Storage:
     state, sign = STATES[battery.state]
     if (sign > 0 and piece.p <= 0) or (sign < 0 and piece.p >= 0):
         raise ValueError(f"{unit}: {battery.state.value} with p {-piece.p} kW (the load sign)")
+    # the engine honours both, but the spec's wrong-sign rule makes them a mismatched input (decision 12)
+    if sign == 0 and piece.p > POWER_ABS_TOL:
+        raise ValueError(f"{unit}: waiting with generation {piece.p} kW; a waiting battery only draws its idling loss")
+    if battery.idling_p is not None and battery.idling_p < 0:
+        raise ValueError(f"{unit}: idlingP {battery.idling_p} kW is negative; it is a loss consumed while idling")
     _check_energy(unit, state, battery)
     idling = _scaled(battery.idling_p, piece.unit_share)
     if sign == 0:

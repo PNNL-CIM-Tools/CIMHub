@@ -234,15 +234,15 @@ puts catalogs before lines and controls after them. `options_record` fills `open
 
 - **`getters/wire.py`**
   - **`get_wire_info(wire, length_unit="m", resistance_unit="ohm/m", current_unit="A") -> WireValues`.** It reads
-    `rDC20`, `rAC25`, `gmr` and `radius`, and the ratings: `ratedCurrent`, and the `CurrentLimits` of the wire's
+    `rDC20`, `rAC25`, `rAC50`, `gmr` and `radius`, and the ratings: `ratedCurrent`, and the `CurrentLimits` of the wire's
     `AssetInfo.OperationalLimitSet` (normal, emergency). `ratedCurrent` and a normal limit that are both set must
     agree. A cable also gets `cable: CableValues`:
     - `insulationThickness`, and the diameters over insulation, jacket, neutral and screen;
     - CN: `neutralStrandCount`, `neutralStrandRadius`, `neutralStrandGmr`, `neutralStrandRDC20`;
     - TS: `tapeThickness`, `tapeLap`.
 
-    Unset is None. Any other WireInfo subclass raises. A set `rAC50`/`rAC75` raises: only rAC25 is read until a
-    producer writes the others.
+    Unset is None. Any other WireInfo subclass raises. Only rAC25 (the DSS importer's) and rAC50 (the GLM
+    importer's) are read; a set `rAC75` raises until a producer writes one.
   - **`get_configuration_wires(configuration) -> tuple[(sequence_number, WireInfo), ...]`.** These are the
     `WireSequenceConfiguration`s in sequence-number order. A repeated or missing number raises.
 - **`getters/line_impedance.py`**, code-level getters (B5): `get_phase_impedance_code(code, impedance_unit,
@@ -275,7 +275,7 @@ each name in only one catalog. A plain CableInfo (no neutral or shield) is a Wir
 
 | DSS slot | from |
 |---|---|
-| Rdc / Rac | rDC20 / rAC25 (ohm/m). Each is written when set; both unset raises. Rac unset is the engine's 1.02 x Rdc, the importer's rule inverted |
+| Rdc / Rac | rDC20 / rAC25, else rAC50 (ohm/m). DSS has one Rac, labelled 25 C, so rAC25 wins when both are set; a GridLAB-D-imported wire has only rAC50 (decision 11). Each is written when set; all unset raises. Rac unset is the engine's 1.02 x Rdc, the importer's rule inverted |
 | GMRac | gmr (m). Unset is left unset, and the engine takes 0.7788 x radius (E4) |
 | radius | radius (m), required. `diam` is never written |
 | normamps / emergamps | the wire's normal / emergency limit, else ratedCurrent for normamps. emergamps unset is left unset: the engine's 1.5 x normamps |
@@ -441,7 +441,7 @@ code-level tests in `test_getters_line_impedance.py`):
   network of them. The `cables` atom puts every catalog kind on a line instead, so the engine sees each one.
 - **Engine catalog values** (`cables`): every WireData/CNData/TSData property of the export equals the original's in
   the engine, each converted to metres by its own unit selector (rel 1e-9).
-- **Getters:** `get_wire_info` (the three kinds, ratings agreement, rAC50 raises), `get_configuration_wires`,
+- **Getters:** `get_wire_info` (the three kinds, ratings agreement, rAC75 raises), `get_configuration_wires`,
   `get_asset_info_current_limits`, the code-level impedance getters, and `c_from_b` as the inverse of `b_from_c`
   (1e-12).
 - **Lumped lines:** the `codes` network with `seq2`'s code replaced by its whole-line lumped values, with and without
@@ -483,7 +483,7 @@ code-level tests in `test_getters_line_impedance.py`):
 |---|---|---|
 | name | written | Names, one namespace for the three catalogs |
 | Rdc | written | get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises |
-| Rac | rule | get_wire_info.r_ac25 (ohm/m); unset -> not written, the engine's 1.02 x Rdc |
+| Rac | rule | get_wire_info.r_ac25 (ohm/m), else r_ac50 (a GridLAB-D wire's 50 C value); both unset -> not written, the engine's 1.02 x Rdc |
 | Runits | written | m (B1) |
 | GMRac | rule | get_wire_info.gmr (m); unset -> not written, the engine's 0.7788 x radius |
 | GMRunits | written | m (B1) |
@@ -503,7 +503,7 @@ code-level tests in `test_getters_line_impedance.py`):
 |---|---|---|
 | name | written | Names, one namespace for the three catalogs |
 | Rdc | written | get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises |
-| Rac | rule | get_wire_info.r_ac25 (ohm/m); unset -> not written, the engine's 1.02 x Rdc |
+| Rac | rule | get_wire_info.r_ac25 (ohm/m), else r_ac50 (a GridLAB-D wire's 50 C value); both unset -> not written, the engine's 1.02 x Rdc |
 | Runits | written | m (B1) |
 | GMRac | rule | get_wire_info.gmr (m); unset -> not written, the engine's 0.7788 x radius |
 | GMRunits | written | m (B1) |
@@ -532,7 +532,7 @@ code-level tests in `test_getters_line_impedance.py`):
 |---|---|---|
 | name | written | Names, one namespace for the three catalogs |
 | Rdc | written | get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises |
-| Rac | rule | get_wire_info.r_ac25 (ohm/m); unset -> not written, the engine's 1.02 x Rdc |
+| Rac | rule | get_wire_info.r_ac25 (ohm/m), else r_ac50 (a GridLAB-D wire's 50 C value); both unset -> not written, the engine's 1.02 x Rdc |
 | Runits | written | m (B1) |
 | GMRac | rule | get_wire_info.gmr (m); unset -> not written, the engine's 0.7788 x radius |
 | GMRunits | written | m (B1) |
@@ -1500,15 +1500,16 @@ Each piece's inverter slots:
 ### Storage (P6)
 
 - `State` from batteryState: discharging, charging, waiting → idling. full, empty and unset raise. An output of the
-  wrong sign for the state raises, and so do charging a full battery and discharging at or below its reserve (the
-  engine idles both, S4b).
+  wrong sign for the state raises (a waiting battery with generation too: it only draws its idling loss), and so do
+  charging a full battery and discharging at or below its reserve (the engine idles both, S4b).
 - **The output is `%Discharge`/`%Charge`** = |p| / kWrated x 100, and `kW` is never written. The engine keeps the
   setpoint as a percent of the kWrated at the moment `kW` is assigned, and the writer puts kW before kWrated.
   Probe: `kW=-5` then `kWrated=5` charges at 1 kW.
 - `kWrated` = maxP x 1/n; minP must be -maxP (one kWrated both ways). `kWhrated`, `kWhstored` scaled likewise;
   `%reserve` = minimumE / ratedE x 100; `%EffCharge`, `%EffDischarge` from the efficiencies.
 - `%IdlingkW` = idlingP / kWrated x 100 (new in cim18v17). A waiting battery's p must equal its idlingP (scaled)
-  when both are set; otherwise its p is the idling loss.
+  when both are set; otherwise its p is the idling loss. A negative idlingP raises: it is a loss. The engine honours
+  both wrong signs, but the user chose to treat them as a mismatched input (decision 12).
 - q must be 0, as on import.
 - The writer's order puts the energies before `State`, which the engine checks when the state is assigned.
 
@@ -1680,12 +1681,12 @@ As built (`tests/test_export_der.py`, 29 tests; core `test_getters_der.py`, `tes
 | kWhstored | written | storedE (kWh), x 1/n for one of n phases; unset -> not written |
 | pct_stored | not mapped | kWhstored carries the energy |
 | pct_reserve | written | minimumE / ratedE x 100; either unset -> not written |
-| State | written | batteryState charging, discharging, waiting -> charging, discharging, idling; others raise, and so does an output of the wrong sign |
+| State | written | batteryState charging, discharging, waiting -> charging, discharging, idling; others raise, and so does an output of the wrong sign (generation while waiting too) |
 | pct_Discharge | written | discharging: the unit's output / kWrated x 100 |
 | pct_Charge | written | charging: -(the unit's output) / kWrated x 100 |
 | pct_EffCharge | written | chargingEfficiency (percent); unset -> not written |
 | pct_EffDischarge | written | dischargingEfficiency (percent); unset -> not written |
-| pct_IdlingkW | written | idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be) |
+| pct_IdlingkW | written | idlingP / kWrated x 100; waiting: its p (which idlingP, when set, must be); a negative idlingP raises |
 | pct_Idlingkvar | unset | untranscribed or raising on import; not in CIM |
 | pct_R | unset | untranscribed or raising on import; not in CIM |
 | pct_X | unset | untranscribed or raising on import; not in CIM |

@@ -29,7 +29,8 @@ _NOT_IN_CIM = "not in CIM (untranscribed or raising on import)"
 _COMMON = {
     "name": Slot("written", "Names, one namespace for the three catalogs"),
     "Rdc": Slot("written", "get_wire_info.r_dc20 (ohm/m); Rdc and Rac both unset raises"),
-    "Rac": Slot("rule", "get_wire_info.r_ac25 (ohm/m); unset -> not written, the engine's 1.02 x Rdc"),
+    "Rac": Slot("rule", "get_wire_info.r_ac25 (ohm/m), else r_ac50 (a GridLAB-D wire's 50 C value); both unset -> "
+                        "not written, the engine's 1.02 x Rdc"),
     "Runits": Slot("written", "m (B1)"),
     "GMRac": Slot("rule", "get_wire_info.gmr (m); unset -> not written, the engine's 0.7788 x radius"),
     "GMRunits": Slot("written", "m (B1)"),
@@ -81,14 +82,16 @@ def export(context) -> list:
 
 def _record(wire: cim.WireInfo, names: Names):
     values = get_wire_info(wire, UNIT, f"ohm/{UNIT}")
-    if values.r_dc20 is None and values.r_ac25 is None:
-        raise ValueError(f"{describe(wire)}: rDC20 and rAC25 are unset; DSS needs a resistance")
+    # DSS has one Rac and labels it 25 C, so rAC25 wins; a GridLAB-D-imported wire has only rAC50 (decision 11)
+    rac = values.r_ac25 if values.r_ac25 is not None else values.r_ac50
+    if values.r_dc20 is None and rac is None:
+        raise ValueError(f"{describe(wire)}: rDC20, rAC25 and rAC50 are unset; DSS needs a resistance")
     if values.radius is None:
         raise ValueError(f"{describe(wire)}: radius is unset")
     native = NATIVE[values.kind]
     slots = dict(
         name=wire_name(wire, names),
-        Rdc=values.r_dc20, Rac=values.r_ac25, Runits=UNIT,
+        Rdc=values.r_dc20, Rac=rac, Runits=UNIT,
         GMRac=values.gmr, GMRunits=UNIT,
         radius=values.radius, radunits=UNIT,
         normamps=values.limits.normal if values.limits.normal is not None else values.rated_current,

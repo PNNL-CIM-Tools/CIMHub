@@ -133,9 +133,9 @@ classes:
           order: 6
         comments:
           - >-
-            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
-            for one (the equivalent-distance form has no positions). Export: not written; the
-            LineGeometry carries the positions inline (B2).
+            Import: structural; Yes (the default, LineSpacing.pas:213 and :327) maps the
+            positions; No (the equivalent-spacing form) raises: it has no positions. Export: not
+            written; the LineGeometry carries the positions inline (B2).
 
       # (7) EqDistPhPh
       EqDistPhPh:
@@ -147,9 +147,10 @@ classes:
           order: 7
         comments:
           - >-
-            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
-            for one (the equivalent-distance form has no positions). Export: not written; the
-            LineGeometry carries the positions inline (B2).
+            Import: structural; raises when set, at any value: detailed=No takes the distances
+            from EqDistPhPh and EqDistPhN and the image distances from AvgPhaseHeight and
+            AvgNeutralHeight (LineConstants.pas:218-297), which no XY positions reproduce in
+            general. Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (8) EqDistPhN
       EqDistPhN:
@@ -161,9 +162,10 @@ classes:
           order: 8
         comments:
           - >-
-            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
-            for one (the equivalent-distance form has no positions). Export: not written; the
-            LineGeometry carries the positions inline (B2).
+            Import: structural; raises when set, at any value: detailed=No takes the distances
+            from EqDistPhPh and EqDistPhN and the image distances from AvgPhaseHeight and
+            AvgNeutralHeight (LineConstants.pas:218-297), which no XY positions reproduce in
+            general. Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (9) AvgPhaseHeight
       AvgPhaseHeight:
@@ -175,9 +177,10 @@ classes:
           order: 9
         comments:
           - >-
-            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
-            for one (the equivalent-distance form has no positions). Export: not written; the
-            LineGeometry carries the positions inline (B2).
+            Import: structural; raises when set, at any value: detailed=No takes the distances
+            from EqDistPhPh and EqDistPhN and the image distances from AvgPhaseHeight and
+            AvgNeutralHeight (LineConstants.pas:218-297), which no XY positions reproduce in
+            general. Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (10) AvgNeutralHeight
       AvgNeutralHeight:
@@ -189,9 +192,10 @@ classes:
           order: 10
         comments:
           - >-
-            Import: structural; raises when set: no deck in the sweep sets it, so a mapping waits
-            for one (the equivalent-distance form has no positions). Export: not written; the
-            LineGeometry carries the positions inline (B2).
+            Import: structural; raises when set, at any value: detailed=No takes the distances
+            from EqDistPhPh and EqDistPhN and the image distances from AvgPhaseHeight and
+            AvgNeutralHeight (LineConstants.pas:218-297), which no XY positions reproduce in
+            general. Export: not written; the LineGeometry carries the positions inline (B2).
 
       # (11) like
       like:

@@ -213,6 +213,7 @@ classes:
         comments:
           - >-
             Import: derived; q (kVAr) = -kvar (the load sign), unless pf was assigned after it.
+            Above kVA it raises, off or on (the engine clamps it to kvarMax).
             Export: the unit's share of q (generation sign: -q).
 
       # (11) kVA

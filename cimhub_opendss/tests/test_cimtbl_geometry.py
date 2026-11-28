@@ -184,3 +184,32 @@ def test_a_switch_by_spacing_is_no_geometry(tmp_path):
                     "New LineSpacing.s nconds=1 nphases=1 x=[0] h=[30] units=ft\n"
                     "New Line.a bus1=sourcebus.1 bus2=b.1 phases=1 switch=y spacing=s\n")
     assert earth_statement(DssReader(path).read_all()) is None
+
+
+SPACING = {"name": "s", "nconds": 3, "nphases": 3, "x": [0.0, 1.0, 2.0], "h": [9.0, 9.0, 9.0], "units": "ft"}
+
+
+def test_a_detailed_spacing_maps_its_positions():
+    """``detailed=Yes`` is the engine's default: the positions give the distances (LineSpacing.pas:213 sets
+    FEquivalentSpacing := not detailed, default FALSE at :327; LineConstants.pas:218 uses the x, y positions). So it
+    maps exactly as an unset ``detailed`` does. opendssdirect 0.9.4 does not know the slot, so this is mapper-only."""
+    detailed = map_linespacing(_native(Linespacing=[schema.Linespacing(**SPACING, detailed=True)]))
+    plain = map_linespacing(_native(Linespacing=[schema.Linespacing(**SPACING)]))
+    assert detailed.statements == plain.statements
+
+
+@pytest.mark.parametrize("slots, message", [
+    ({"detailed": False}, "detailed=No"),
+    ({"EqDistPhPh": "0"}, "EqDistPhPh not mapped yet"),
+    ({"EqDistPhN": "3"}, "EqDistPhN not mapped yet"),
+    ({"AvgPhaseHeight": "28"}, "AvgPhaseHeight not mapped yet"),
+    ({"AvgNeutralHeight": "24"}, "AvgNeutralHeight not mapped yet"),
+])
+def test_the_equivalent_spacing_form_raises(slots, message):
+    """``detailed=No`` takes every phase-phase and neutral-neutral distance from EqDistPhPh, every phase-neutral
+    one from EqDistPhN, and the image distances from 2 x AvgPhaseHeight, 2 x AvgNeutralHeight or their sum
+    (LineConstants.pas:218-297). In general no set of XY positions reproduces that, so it raises, and so does each
+    of the four slots, at any value, 0 included."""
+    native = _native(Linespacing=[schema.Linespacing(**SPACING, **slots)])
+    with pytest.raises(ValueError, match=message):
+        map_linespacing(native)

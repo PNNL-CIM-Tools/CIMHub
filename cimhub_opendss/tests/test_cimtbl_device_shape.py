@@ -170,3 +170,13 @@ def test_a_pv_sample_in_the_hysteresis_band_raises_without_time_points(tmp_path)
 def test_a_device_shape_with_qmult_raises(tmp_path):
     raises(tmp_path, "New Generator.x bus1=b1 kV=4.16 kW=10 yearly=s", "has a qmult",
            shape="New Loadshape.s npts=2 interval=1 mult=(1 2) qmult=(1 1)\n")
+
+
+@pytest.mark.parametrize("kvar", [150, -150])
+def test_an_inverter_that_is_off_with_kvar_above_kva_raises(kvar):
+    """Off (below %Cutout), the engine clamps a kvar above kVA to kvarMax (opendssdirect 0.9.4: Pmpp=100 kVA=100
+    irradiance=0.05 with kvar=150 gives Q 100 and reads kvar back as 100; kvar=-150 gives -100). Reactive capability
+    is not modelled yet, so it raises (decision 9)."""
+    off = dict(pmpp=100, irradiance=0.05, pct_pmpp=100, kva=100, pct_cutout=20, pf=1)
+    with pytest.raises(ValueError, match="pv: .*kvar is above its 100 kVA"):
+        pvsystem.pv_power("pv", **off, kvar=kvar)
